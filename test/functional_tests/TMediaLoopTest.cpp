@@ -196,6 +196,35 @@ private slots:
         QVERIFY2(cleanedUp, "A loops=3 track never finished and released its source - the deferred cleanup did not take over from the last pass.");
     }
 
+    // Staged rather than played: only a backend that delivers EndOfMedia before StoppedState
+    // announces a pass from inside continuePlaying()'s setSource(), and no runner this suite has
+    // does. sourceChanged stands in for that announcement, being emitted from inside the same
+    // setSource() call.
+    void test_continuingToTheNextPassClearsTheEarlierAnnouncement()
+    {
+        const QString path = qsl("%1/pass.wav").arg(mProbeDir.path());
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(wavBytes());
+        file.close();
+
+        TMediaData data{};
+        TMediaPlayer player(nullptr, data);
+        QVERIFY(player.isInitialized());
+
+        bool announcedFromInsideSetSource = false;
+        connect(player.mediaPlayer(), &QMediaPlayer::sourceChanged, player.mediaPlayer(), [&](const QUrl&) {
+            player.noteEndAnnounced();
+            announcedFromInsideSetSource = true;
+        });
+
+        player.continuePlaying(QUrl::fromLocalFile(path));
+        player.mediaPlayer()->stop();
+
+        QVERIFY2(announcedFromInsideSetSource, "setSource() emitted nothing synchronously, so the ordering this test is about was never staged.");
+        QVERIFY2(!player.endAnnounced(), "The new pass started already counted as announced, so its own ending would be swallowed as a duplicate.");
+    }
+
     // The deferred cleanup must still fire for a genuinely finished track, otherwise the
     // media source release added by #9237 is lost. Releasing the source is what this asserts
     // on because playingMedia() has already dropped the player by the time the cleanup runs.

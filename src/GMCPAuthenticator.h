@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "utils.h"
 
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -30,6 +31,7 @@
 #include <QString>
 #include <QVariantMap>
 
+#include <chrono>
 #include <functional>
 
 class OAuthClientFlow;
@@ -58,19 +60,28 @@ public:
 
 private:
     void handleAuthUrl(const QString& packageMessage, const QString& data);
-    void openSignInUrl(const QUrl& url, const QString& provider);
+    // The single place where a sign-in web address may reach the system browser, for both the
+    // server-driven (Char.Login.URL) and the client-driven flow. Auto-opens only against evidence that
+    // the player wants to sign in and consumes it, otherwise offers the address as a link.
+    // answersTheGamesSignInOffer marks an address reached from Char.Login.Default, where connecting is
+    // itself that evidence - once per connection.
+    void offerOrOpenSignInUrl(const QUrl& url, const QString& provider, bool answersTheGamesSignInOffer);
+    bool openSignInUrl(const QUrl& url, const QString& provider);
     void startClientDrivenOAuth();
     void cancelClientDrivenOAuth();
     void announceBrowserHandoff(const QString& provider);
-    void sendAuthCode(QString code, QString codeVerifier, const QString& redirectUri);
+    void sendAuthCode(QString code, QString codeVerifier, const QString& redirectUri, QString nonce);
     void selectAuthMethod();
+    void scheduleSignInAttempt();
     void attemptReconnect();
     // Reads the stored sign-in entry ({account, provider?, token?}) and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to
     // selectAuthMethod(). allowToken is false on the connection straight after a rejection, so a
     // not-yet-rewritten entry cannot loop us back into another rejected reconnect.
     void readStoredSignIn(bool allowToken);
-    void sendReconnect(const QString& account, QString token);
+    // Returns false when it refused to send: the token is a bearer secret and never goes out over a
+    // cleartext transport. It is scrubbed either way, and only a true return means a result is awaited.
+    bool sendReconnect(const QString& account, QString token);
     // Sends the resume form of Char.Login.Credentials: {account, provider, version}, no password -
     // asking the game to restart the browser sign-in for the provider remembered from an earlier
     // Char.Login.URL. The absence of a password (not the presence of provider) is what distinguishes it.
@@ -90,6 +101,8 @@ private:
     void storeResumeHint(const QString& account, const QString& provider);
     void discardReconnectToken(std::function<void(bool success)> callback = {});
     void resetPerConnectionState();
+    // Per socket connection, unlike resetPerConnectionState() which runs per Char.Login.Default.
+    void resetForNewConnection();
 
     bool clientDrivenOAuthAvailable() const;
 
@@ -165,6 +178,18 @@ private:
     // callback, so a result arriving after a newer connection began is discarded instead of driving a
     // sign-in on the wrong attempt. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mAuthAttemptGeneration = 0;
+
+    // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in
+    // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how
+    // much the server sent, and unlike a hard per-connection cap never refuses a legitimate re-offer.
+    inline static constexpr std::chrono::milliseconds scmSignInAttemptInterval = std::chrono::seconds(1);
+    QElapsedTimer mLastSignInAttempt;
+    bool mSignInAttemptPending = false;
+    // Bumped whenever a connection begins or ends, so a deferred attempt from a previous one is dropped.
+    unsigned int mSignInScheduleGeneration = 0;
+    // One automatic browser hand-off per connection for an address reached from the game's sign-in
+    // offer, so a server cannot turn a burst of frames into a burst of tabs.
+    bool mUnpromptedBrowserOpenAvailable = true;
 };
 
 #endif // MUDLET_AUTHENTICATOR_H

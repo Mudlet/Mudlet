@@ -87,6 +87,7 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EventLoopPump.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
     FontManager.cpp
@@ -315,6 +316,7 @@ set(mudlet_HDRS
     EditorToggleActiveCommand.h
     EditorUndoStack.h
     enums.h
+    EventLoopPump.h
     exitstreewidget.h
     FileOpenHandler.h
     FontManager.h
@@ -766,7 +768,7 @@ endif(USE_UPDATER)
 # Embed the LeakSanitizer suppression list into the binary so that
 # sanitizer-enabled builds (PTBs, testing AppImages) filter third-party noise
 # out of leak reports without needing LSAN_OPTIONS set at runtime; picked up
-# by __lsan_default_suppressions() in main.cpp
+# by __lsan_default_suppressions() in LsanHooks.cpp
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${mudlet_SOURCE_DIR}/asan-suppressions.txt")
 file(READ "${mudlet_SOURCE_DIR}/asan-suppressions.txt" MUDLET_LSAN_SUPPRESSIONS_CONTENT)
 string(REPLACE "\\" "\\\\" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
@@ -774,6 +776,15 @@ string(REPLACE "\"" "\\\"" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPR
 string(REPLACE "\n" "\\n" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LsanSuppressions.h.in" "${CMAKE_CURRENT_BINARY_DIR}/LsanSuppressions.h" @ONLY)
 target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+# LeakSanitizer resolves its hooks as weak symbols and a weak reference never
+# pulls a member out of a static archive, so they cannot live in
+# ${LIB_MUDLET_TARGET}: binaries that bring their own main() (the Qt Test ones,
+# via QTEST_MAIN) would link no suppressions at all. An OBJECT library puts the
+# definitions on the link line of every target that links it.
+add_library(mudlet_lsan_hooks OBJECT LsanHooks.cpp)
+target_include_directories(mudlet_lsan_hooks PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+set_target_properties(mudlet_lsan_hooks PROPERTIES AUTOMOC OFF POSITION_INDEPENDENT_CODE ON)
 
 if(USE_3DMAPPER)
   target_link_libraries(${LIB_MUDLET_TARGET} OpenGL::GLU)
@@ -790,7 +801,7 @@ target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
 add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
-target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
+target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
