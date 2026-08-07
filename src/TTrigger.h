@@ -172,14 +172,19 @@ public:
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
 
-    // Non-zero only for a root trigger that was created while a line was being
-    // processed, and only until that line is done with - see TriggerUnit's
-    // same-line creation chains. Everything this trigger's script goes on to
-    // create during that line joins the same chain, which is what tells a
-    // trigger re-creating itself apart from a script creating a batch of
-    // unrelated triggers.
+    // Set when the trigger is registered as a root node while a line is being
+    // processed, and cleared when that line is done with - see TriggerUnit's
+    // same-line creation chains. The id names the lineage this trigger belongs
+    // to, the generation is how many creations deep in it this trigger sits;
+    // everything its script creates during that line joins the same lineage one
+    // generation further down.
     int sameLineChainId() const { return mSameLineChainId; }
-    void setSameLineChainId(const int chainId) { mSameLineChainId = chainId; }
+    int sameLineGeneration() const { return mSameLineGeneration; }
+    void setSameLineChain(const int chainId, const int generation)
+    {
+        mSameLineChainId = chainId;
+        mSameLineGeneration = generation;
+    }
 
 
 private:
@@ -205,7 +210,6 @@ private:
 
     QList<int> mPatternKinds;
     QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
-    int mSameLineChainId = 0;
 
     // Lua code as a string to run
     QString mScript;
@@ -235,6 +239,8 @@ private:
     bool mModuleMember = false;
     // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
     int mExpiryCount = -1;
+    int mSameLineChainId = 0;
+    int mSameLineGeneration = 0;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

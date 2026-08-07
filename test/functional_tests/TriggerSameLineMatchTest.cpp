@@ -225,7 +225,7 @@ private slots:
         QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected the same-line re-creation abort error in the console buffer");
         // one fire from the trigger already there, then one per budgeted creation;
         // the trailing # keeps the check from also passing on ten times the number
-        const int expectedFires = 1 + static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        const int expectedFires = 1 + TriggerUnit::scmMaxSameLineGenerations;
         QVERIFY2(bufferContains(qsl("LOOPFIRES=%1#").arg(expectedFires)), qPrintable(qsl("Expected the re-arming trigger to fire exactly %1 times").arg(expectedFires)));
     }
 
@@ -288,7 +288,7 @@ private slots:
                                                                "echo('KEPTFIRES=' .. keptFires .. '#\\n')\n"));
 
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        const int firesPerLine = 1 + static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        const int firesPerLine = 1 + TriggerUnit::scmMaxSameLineGenerations;
         QVERIFY2(bufferContains(qsl("KEPTFIRES=%1#").arg(2 * firesPerLine)),
                  qPrintable(qsl("Expected the second line to cost the same %1 fires as the first, not a multiple of them").arg(firesPerLine)));
     }
@@ -313,7 +313,7 @@ private slots:
                                                                "echo('PERMACTIVE=' .. isActive('Perm Loop', 'trigger') .. '#\\n')\n"
                                                                "echo('PERMEXISTS=' .. exists('Perm Loop', 'trigger') .. '#\\n')\n"));
 
-        const int expectedFires = 1 + static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        const int expectedFires = 1 + TriggerUnit::scmMaxSameLineGenerations;
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
         QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected a permanent trigger re-creating itself to be stopped too");
         QVERIFY2(bufferContains(qsl("PERMFIRES=%1#").arg(expectedFires)), qPrintable(qsl("Expected the re-arming permanent trigger to fire exactly %1 times").arg(expectedFires)));
@@ -331,7 +331,7 @@ private slots:
         QVERIFY(host);
         host->mEchoLuaErrors = true;
 
-        const int bulkCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) + 1;
+        const int bulkCount = TriggerUnit::scmMaxSameLineGenerations + 1;
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("bulkFires = 0\n"
                                                                "tempRegexTrigger('^bulkgate$', [=[\n"
                                                                "  for i = 1, %1 do\n"
@@ -348,8 +348,8 @@ private slots:
         QVERIFY2(bufferContains(qsl("BULKFIRES=%1#").arg(bulkCount)), qPrintable(qsl("Expected all %1 triggers armed on the previous line to survive and fire").arg(bulkCount)));
     }
 
-    // Two scripts arming triggers on one line used to share a single budget, so
-    // whichever ran second lost triggers it had every right to create.
+    // Two scripts arming triggers on one line get a budget each, so neither can
+    // exhaust the other's - together they come to more than one budget's worth.
     void test_twoScriptsArmingOnOneLineKeepBothSetsOfTriggers()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -357,7 +357,7 @@ private slots:
         QVERIFY(host);
         host->mEchoLuaErrors = true;
 
-        const int eachCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) - 400;
+        const int eachCount = (TriggerUnit::scmMaxSameLineGenerations / 2) + 1;
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("firesA, firesB = 0, 0\n"
                                                                "tempRegexTrigger('^sharedgate$', [=[\n"
                                                                "  for i = 1, %1 do\n"
@@ -379,8 +379,39 @@ private slots:
         QVERIFY2(bufferContains(qsl("SHARED=%1,%1#").arg(eachCount)), qPrintable(qsl("Expected both scripts to keep all %1 of the triggers they armed").arg(eachCount)));
     }
 
-    // Permanent triggers take the same path and are the more painful loss: a
-    // "rebuild my triggers when the game says X" routine would have lost the lot.
+    // The batch is armed by a trigger that was itself created on this line, so
+    // creator and batch share a lineage. Counting a lineage's members rather than
+    // its generations condemns the whole batch here, which is the room-capture
+    // shape: the room-title trigger creates the capture trigger, and the capture
+    // trigger is what arms the batch.
+    void test_bulkCreationsFromAMidLineTriggerAreNotStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        const int bulkCount = TriggerUnit::scmMaxSameLineGenerations + 1;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("deepFires = 0\n"
+                                                               "tempRegexTrigger('^deepgate$', [===[\n"
+                                                               "  tempRegexTrigger('^deepgate$', [==[\n"
+                                                               "    for i = 1, %1 do\n"
+                                                               "      tempRegexTrigger('^deeppay$', [[deepFires = deepFires + 1]])\n"
+                                                               "    end\n"
+                                                               "  ]==], 1)\n"
+                                                               "]===], 1)\n"
+                                                               "feedTriggers('deepgate\\n')\n"
+                                                               "feedTriggers('deeppay\\n')\n"
+                                                               "echo('DEEPFIRES=' .. deepFires .. '#\\n')\n")
+                                                                   .arg(bulkCount));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A batch is one generation wherever it is armed from, and must not be mistaken for a runaway");
+        QVERIFY2(bufferContains(qsl("DEEPFIRES=%1#").arg(bulkCount)), qPrintable(qsl("Expected all %1 triggers armed by a trigger created on the same line to survive and fire").arg(bulkCount)));
+    }
+
+    // Permanent triggers take the same path, and are the more painful loss - a
+    // "rebuild my triggers when the game says X" routine arms them in bulk.
     void test_bulkPermanentCreationsAreNotStopped()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -388,7 +419,7 @@ private slots:
         QVERIFY(host);
         host->mEchoLuaErrors = true;
 
-        const int bulkCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) + 1;
+        const int bulkCount = TriggerUnit::scmMaxSameLineGenerations + 1;
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("permBulkFires = 0\n"
                                                                "function permBulkStep() permBulkFires = permBulkFires + 1 end\n"
                                                                "tempRegexTrigger('^permgate$', [=[\n"
@@ -433,9 +464,10 @@ private slots:
         QVERIFY2(bufferContains(qsl("INNOCENT=1#")), "Expected the trigger armed by an unrelated script on the same line to survive the runaway's abort and fire");
     }
 
-    // Exactly at the limit the chain is left alone; the test above it, which adds
-    // one more link, is stopped. Same number of fires either way, so the abort
-    // message is what tells the two apart.
+    // A lineage of exactly the budget's depth ends on its own; the trip is on the
+    // generation after it, which test_selfRecreatingTriggerIsStopped() pins from
+    // the other side. Both land on the same fire count, so the presence or
+    // absence of the abort message is what tells the two apart.
     void test_chainExactlyAtTheLimitIsNotStopped()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -443,7 +475,7 @@ private slots:
         QVERIFY(host);
         host->mEchoLuaErrors = true;
 
-        const int limit = static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        const int limit = TriggerUnit::scmMaxSameLineGenerations;
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("boundFires = 0\n"
                                                                "function boundStep()\n"
                                                                "  boundFires = boundFires + 1\n"
@@ -471,7 +503,7 @@ private slots:
         QVERIFY(host);
         host->mEchoLuaErrors = true;
 
-        const int bulkCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) + 1;
+        const int bulkCount = TriggerUnit::scmMaxSameLineGenerations + 1;
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("laterFires = 0\n"
                                                                "tempRegexTrigger('^egate$', [==[\n"
                                                                "  tempRegexTrigger('^esecond$', [=[\n"

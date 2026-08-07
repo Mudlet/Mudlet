@@ -1297,24 +1297,26 @@ bool TTrigger::compileScript()
 }
 
 namespace {
-// Tracks the innermost trigger running its script so feedTriggers() can name the
-// culprit when aborting an endless loop, and so a trigger created by that script
-// joins its same-line creation chain; RAII restores the prior values on exit.
+// Tracks the innermost trigger running its script, so feedTriggers() can name the
+// culprit when aborting an endless loop, and the same-line creation lineage of
+// that trigger's root, so anything the script creates joins it; RAII restores the
+// prior values on exit.
 class ExecutingTriggerGuard
 {
 public:
-    ExecutingTriggerGuard(TriggerUnit* pUnit, const QString* pName, const int chainId)
+    ExecutingTriggerGuard(TriggerUnit* pUnit, const QString* pName, const int chainId, const int generation)
     : mpUnit(pUnit)
     , mpPreviousName(pUnit->currentExecutingTriggerName())
     , mPreviousChainId(pUnit->currentSameLineChainId())
+    , mPreviousGeneration(pUnit->currentSameLineGeneration())
     {
         mpUnit->setCurrentExecutingTriggerName(pName);
-        mpUnit->setCurrentSameLineChainId(chainId);
+        mpUnit->setCurrentSameLineChain(chainId, generation);
     }
     ~ExecutingTriggerGuard()
     {
         mpUnit->setCurrentExecutingTriggerName(mpPreviousName);
-        mpUnit->setCurrentSameLineChainId(mPreviousChainId);
+        mpUnit->setCurrentSameLineChain(mPreviousChainId, mPreviousGeneration);
     }
 
     ExecutingTriggerGuard(const ExecutingTriggerGuard&) = delete;
@@ -1324,18 +1326,22 @@ private:
     TriggerUnit* mpUnit;
     const QString* mpPreviousName;
     int mPreviousChainId;
+    int mPreviousGeneration;
 };
 } // namespace
 
 void TTrigger::execute()
 {
-    // Chains are recorded on root triggers, so a trigger nested in a folder or a
-    // filter chain creates on behalf of the root its subtree hangs from.
+    // Only root triggers carry a lineage, so a trigger nested in a folder or a
+    // filter chain reads the one on the root its subtree hangs from. Creations
+    // that go under a parent rather than to the root list are outside this
+    // accounting altogether, as they are outside the list processDataStream()
+    // walks.
     const TTrigger* pRoot = this;
     while (pRoot->getParent()) {
         pRoot = pRoot->getParent();
     }
-    const ExecutingTriggerGuard executingTriggerGuard(mpHost->getTriggerUnit(), &mName, pRoot->sameLineChainId());
+    const ExecutingTriggerGuard executingTriggerGuard(mpHost->getTriggerUnit(), &mName, pRoot->sameLineChainId(), pRoot->sameLineGeneration());
 
     if (mSoundTrigger) { /* eventually something should be added to the gui to change sound volumes. 100=full volume */
         QString mediaFileName = mSoundFile;
