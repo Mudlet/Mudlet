@@ -99,6 +99,7 @@ set(mudlet_SRCS
     KeyUnit.cpp
     LabelInteractionHandler.cpp
     LuaInterface.cpp
+    LuaLiteral.cpp
     main.cpp
     mapInfoContributorManager.cpp
     MiddleMousePanHandler.cpp
@@ -328,6 +329,7 @@ set(mudlet_HDRS
     KeyUnit.h
     LabelInteractionHandler.h
     LuaInterface.h
+    LuaLiteral.h
     mapInfoContributorManager.h
     MiddleMousePanHandler.h
     MMCP.h

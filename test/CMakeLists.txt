@@ -12,6 +12,7 @@ find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Widgets)
 set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
+    LuaLiteralTest
     TLinkStoreTest
     TMxpTagParserTest
     TMxpSendTagHandlerTest
