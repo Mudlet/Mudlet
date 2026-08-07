@@ -20,20 +20,27 @@ hostile to the person reading it and neither of them administers the server.
 ## What Mudlet guarantees
 
 **Only six URI schemes are accepted.** `send:`, `prompt:`, `http:`, `https:`, `ftp:` and
-`preset:`. Everything else is refused with a warning, in `TBuffer::decodeOSC()`. There is no
-path from an OSC 8 link to a platform URL handler, so the `file:` and custom-scheme
-dispatches that other terminals have had to defend against do not arise here.
+`preset:`. Everything else is refused with a warning, in `TBuffer::decodeOSC()`. Web links
+do still reach the platform handler via `QDesktopServices::openUrl()`, but only ever as
+`http:`, `https:` or `ftp:` — the `file:` and arbitrary custom-scheme dispatches that other
+terminals have had to defend against cannot be reached from an OSC 8 link at all. Note that
+`ftp:` can be bound to a registered application on Windows and macOS.
 
 **Link payloads cannot become code.** Mudlet transports a link's action as generated Lua
 source that is executed when the link is clicked. Any remote text embedded in that source is
 quoted through `LuaLiteral::quote()`, which picks a long-bracket level (`[[`, `[=[`, `[==[`,
-…) the payload can neither close nor, under Lua 5.1's deprecated-nesting rule, reopen.
+…) that the payload can neither close, nor reopen under Lua 5.1's deprecated-nesting rule,
+nor complete early by merging with the closing bracket appended after it.
 
 This matters more than it might sound. Mudlet's Lua interpreter is created with
 `luaL_openlibs()`, so `os.execute`, `io.popen` and `loadstring` are all reachable. Before
 this was quoted, a `]]` in a server-supplied payload closed the string and the remainder ran
-as code on a single left click. `LuaLiteralTest` locks the property down by evaluating every
-generated literal in a real Lua state and asserting the payload comes back as data.
+as code on a single left click. `LuaLiteralTest` locks the property down by evaluating
+generated literals in a real Lua state and asserting the payload comes back as data: a table
+of hand-picked adversarial payloads, plus an exhaustive sweep of every string up to five
+characters over the `[`, `]`, `=`, `a` alphabet. The exhaustive sweep exists because the
+hand-picked table originally missed payloads ending in `]`, which is a real shape — `say
+[OOC]`, `get sword from bag[1]`, `http://[::1]`.
 
 **Link metadata cannot lie about where a link goes.** Tooltips, menu labels, menu titles and
 the default hint that shows a link's target are passed through
@@ -49,7 +56,7 @@ guess cannot decide whether server markup is live.
 
 **A user can turn the whole feature off.** The per-profile "Enable OSC 8 hyperlinks from the
 server" preference defaults to on. Unchecking it makes Mudlet ignore OSC 8 sequences *and*
-stop advertising every `OSC_HYPERLINKS*` capability over NEW-ENVIRON, so a server that
+advertise `0` for every `OSC_HYPERLINKS*` capability over NEW-ENVIRON, so a server that
 honours the handshake falls back to MXP or plain text instead of emitting links into a void.
 
 Toggling it mid-session tells the server immediately, rather than waiting for a reconnect.
@@ -63,14 +70,27 @@ so a server that requested just the umbrella `OSC_HYPERLINKS` receives only that
 **Link body text is not sanitized.** Only metadata is. Bidi and zero-width handling in
 ordinary game output is a broader question than OSC 8 and would need its own change.
 
+**The escaped set is enumerated, not exhaustive.** `UntrustedText::unsafeCharacter()` lists
+specific code points. Known invisible characters outside it include U+00AD soft hyphen,
+U+3164 Hangul filler, U+2800 braille blank and the U+E0000–E007F tag block. Widening the set
+is a data change; assume it is incomplete rather than assuming coverage.
+
+**Turning the preference off does not retract links already on screen.** The check happens
+as sequences are decoded, so links drawn before the change stay clickable until the buffer
+is cleared.
+
+**A link that combines `menu` with `selection` does not get a `selected=` callback.** Its
+commands come from the menu items rather than the base URI, so there is no single payload to
+append the state to, and sending the base command instead would run something the user did
+not pick. Selection state is still tracked and styled; only the server callback is skipped.
+
 **A `send:` link fires a game command on one left click, with no confirmation.** That is the
 feature working as designed, not an oversight. Server authors should not put irreversible
 actions behind a bare `send:` link without their own confirmation step.
 
 **The Lua interpreter is not sandboxed.** Quoting closes the path from OSC 8 to code
 execution, but a Mudlet *package* the user installs still has unrestricted `os` and `io`
-access. That is a separate, much larger piece of work with real compatibility cost; see
-`build/SECURITY_REVIEW_IO_OS_LIBRARIES.md`.
+access. That is a separate, much larger piece of work with real compatibility cost.
 
 **`openUrl()` accepts any scheme when called from Lua.** It is script-facing, and a script
 that can call it can already call `os.execute`, so narrowing it would break packages for no

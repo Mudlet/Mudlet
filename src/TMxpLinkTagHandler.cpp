@@ -21,6 +21,7 @@
 #include "TMxpLinkTagHandler.h"
 #include "LuaLiteral.h"
 #include "TMxpClient.h"
+#include "UntrustedText.h"
 
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
@@ -38,7 +39,8 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         return MXP_TAG_NOT_HANDLED;
     }
 
-    const QString hint = tag->hasAttribute(qsl("hint")) ? tag->getAttributeValue(qsl("hint")) : href;
+    // Server-supplied, and lands in the same tooltip as an OSC 8 hint.
+    const QString hint = UntrustedText::forDisplay(tag->hasAttribute(qsl("hint")) ? tag->getAttributeValue(qsl("hint")) : href);
 
     href = qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
 

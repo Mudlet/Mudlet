@@ -23,7 +23,7 @@
 
 bool UntrustedText::unsafeCharacter(char32_t codePoint)
 {
-    // C0 and C1 controls, which include CR, LF and NEL.
+    // C0 controls, DEL, and C1 controls - which include CR, LF and NEL.
     if (codePoint <= 0x1F || (codePoint >= 0x7F && codePoint <= 0x9F)) {
         return true;
     }

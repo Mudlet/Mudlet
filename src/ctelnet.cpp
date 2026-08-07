@@ -2195,8 +2195,8 @@ void cTelnet::sendInfoNewEnvironValues(const QStringList& vars)
         }
     }
 
-    // Nothing the server asked for changed, so say nothing at all rather than
-    // sending an empty INFO.
+    // Every candidate was filtered out, so send nothing rather than an empty
+    // INFO subnegotiation.
     if (payload.empty()) {
         return;
     }
@@ -2212,11 +2212,11 @@ void cTelnet::sendInfoNewEnvironValues(const QStringList& vars)
     socketOutRaw(output);
 }
 
-// The OSC 8 preference flips every one of these at once.
 void cTelnet::sendInfoNewEnvironOSCHyperlinks()
 {
     // Derived from the advertised set rather than a second hand-kept list, so a
-    // capability added later is announced without touching this.
+    // capability added later is announced without touching this - as long as it
+    // keeps the OSC_HYPERLINKS prefix.
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
     QStringList vars;

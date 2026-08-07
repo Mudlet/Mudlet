@@ -3128,10 +3128,6 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
         break;
     case static_cast<quint8>('8'): {
-        if (!mpHost->mEnableOSC8Hyperlinks) {
-            return;
-        }
-
         QStringView rest = QStringView(sequence).mid(1); // skip selector "8"
         int firstSemi = rest.indexOf(';');
 
@@ -3267,6 +3263,14 @@ void TBuffer::decodeOSC(const QString& sequence)
             mCurrentHyperlinkStartColumn = 0;
             mCurrentHyperlinkText.clear();
             break;
+        }
+
+        // Deliberately below the terminator branch above: the close is the only
+        // thing that clears mHyperlinkActive, so refusing it would leave a link
+        // open forever and mark the rest of the session clickable. Turning the
+        // preference off mid-link must still let that link finish.
+        if (!mpHost->mEnableOSC8Hyperlinks) {
+            return;
         }
 
         if (!rawUrl.isEmpty()) {

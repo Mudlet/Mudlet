@@ -25,14 +25,16 @@
 class UntrustedText
 {
 public:
-    // True for code points that render as invisible, zero-width, direction
-    // reordering, or line breaking text. Such a character lets remote metadata
-    // display one target while the link carries another.
+    // True for the enumerated set of code points that render as invisible,
+    // zero-width, direction reordering, or line breaking text - not a general
+    // test for those properties. Such a character lets remote metadata display
+    // one target while the link carries another. The set is deliberately
+    // narrow; widen it in the implementation rather than assuming coverage.
     static bool unsafeCharacter(char32_t codePoint);
 
-    // Replaces every unsafe code point with a visible \u{XXXX} escape, leaving
-    // all other text - including non-Latin scripts and astral plane code
-    // points - untouched.
+    // Replaces every unsafe code point with a visible \u{...} escape carrying
+    // its hex value, leaving all other text - including non-Latin scripts and
+    // astral plane code points - untouched.
     static QString forDisplay(const QString& text);
 };
 

@@ -88,6 +88,16 @@ private slots:
         QTest::newRow("trailing newline") << QStringLiteral("look\n");
         QTest::newRow("embedded newline") << QStringLiteral("look\nnorth");
         QTest::newRow("single close bracket") << QStringLiteral("a]b");
+        // A payload ending in "]" merges with the closer appended after it and
+        // shuts the literal one character early. Ordinary MUD commands and bare
+        // IPv6 URLs end this way.
+        QTest::newRow("trailing close bracket") << QStringLiteral("look north]");
+        QTest::newRow("bare close bracket") << QStringLiteral("]");
+        QTest::newRow("ooc tag") << QStringLiteral("say [OOC]");
+        QTest::newRow("inventory slot") << QStringLiteral("get sword from bag[1]");
+        QTest::newRow("ipv6 url") << QStringLiteral("http://[::1]");
+        QTest::newRow("trailing closer prefix level 1") << QStringLiteral("a]]b]=");
+        QTest::newRow("trailing closer prefix level 2") << QStringLiteral("a]]b]=]c]==");
         QTest::newRow("level 0 breakout") << QStringLiteral("]],false) os.execute([[touch /tmp/pwned]]) --");
         QTest::newRow("level 1 breakout") << QStringLiteral("]=],false) os.execute([=[x]=]) --");
         QTest::newRow("both levels") << QStringLiteral("a]]b]=]c");
@@ -132,6 +142,36 @@ private slots:
         lua_getglobal(state.get(), "captured");
         QVERIFY(lua_isstring(state.get(), -1));
         QCOMPARE(QString::fromUtf8(lua_tostring(state.get(), -1)), payload);
+    }
+
+    // The hand-picked rows above only catch payload shapes someone thought of;
+    // the trailing-']' case survived review precisely because nobody did. Every
+    // string over the bracket alphabet is cheap enough to just enumerate.
+    void testExhaustiveBracketAlphabet()
+    {
+        const QList<QChar> alphabet = {QLatin1Char('['), QLatin1Char(']'), QLatin1Char('='), QLatin1Char('a')};
+
+        QStringList current = {QString()};
+        int checked = 0;
+        for (int length = 1; length <= 5; ++length) {
+            QStringList next;
+            for (const QString& prefix : std::as_const(current)) {
+                for (const QChar letter : std::as_const(alphabet)) {
+                    next.append(prefix + letter);
+                }
+            }
+            current = next;
+
+            for (const QString& payload : std::as_const(current)) {
+                const QString result = evaluate(LuaLiteral::quote(payload));
+                if (result.isNull() || result != payload) {
+                    QFAIL(qPrintable(QStringLiteral("payload %1 did not round-trip; literal was %2").arg(payload, LuaLiteral::quote(payload))));
+                }
+                ++checked;
+            }
+        }
+
+        QCOMPARE(checked, 1364);
     }
 
     void testLevelEscalation()

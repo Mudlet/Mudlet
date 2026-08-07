@@ -1587,8 +1587,11 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 // in an explicit document rather than letting that guess decide
                 // whether the markup is live. white-space:pre keeps the line
                 // breaks the plain-text path used to give.
+                // An empty string is how QToolTip is told to hide, so it has to
+                // stay empty rather than becoming an empty document.
                 const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
-                QToolTip::showText(event->globalPosition().toPoint(), qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped()));
+                const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
+                QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
                 // Update hover state for CSS pseudo-class support
                 // Don't set hover state for disabled links - they should stay disabled
@@ -2374,6 +2377,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
                         if (!hyperlinkStyling.menuTitle.isEmpty()) {
                             auto titleLabel = new QLabel(hyperlinkStyling.menuTitle, popup);
+                            // The server picks this text and QLabel defaults to Qt::AutoText,
+                            // which would render markup in it.
+                            titleLabel->setTextFormat(Qt::PlainText);
                             titleLabel->setFont(font());
 
                             // Build stylesheet from title style properties
@@ -3552,10 +3558,17 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
     }
 
     const bool newSelected = mgr->isSelected(group, value);
-    const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
-    const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
-    if (!rebuiltUri.isEmpty()) {
-        uri = rebuiltUri;
+
+    // A menu link's commands are built from its menu items and the base URI's
+    // command is discarded, so baseCommand matches none of what can actually be
+    // run here. Callers pass the item the user picked; rebuilding from the base
+    // would send something they did not choose.
+    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1) {
+        const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
+        const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
+        if (!rebuiltUri.isEmpty()) {
+            uri = rebuiltUri;
+        }
     }
 
     mpBuffer->setLinkSelected(linkIndex, newSelected);
@@ -3646,6 +3659,9 @@ void TTextEdit::showLinkContextMenu()
 
     if (!hyperlinkStyling.menuTitle.isEmpty()) {
         auto titleLabel = new QLabel(hyperlinkStyling.menuTitle, popup);
+        // The server picks this text and QLabel defaults to Qt::AutoText,
+        // which would render markup in it.
+        titleLabel->setTextFormat(Qt::PlainText);
         titleLabel->setFont(font());
 
         QStringList styleProps;

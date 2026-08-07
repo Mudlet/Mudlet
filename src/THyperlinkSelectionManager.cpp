@@ -84,16 +84,19 @@ void THyperlinkSelectionManager::clearAllSelections()
 
 QString THyperlinkSelectionManager::addSelectedParameter(const QString& command, bool isSelected) const
 {
-    QUrl url(command);
-    QUrlQuery query(url);
+    // Split on '?' by hand rather than parsing the whole thing as a QUrl. This
+    // is a game command, not a URL: QUrl::path() would drop everything after a
+    // '#' (an ordinary character in a MUD command) and would percent-decode a
+    // second time, since the payload was already decoded once when the URI was
+    // parsed. Only the query portion is ours to rewrite.
+    const int queryStart = command.indexOf(QLatin1Char('?'));
+    const QString base = queryStart >= 0 ? command.left(queryStart) : command;
+
+    QUrlQuery query(queryStart >= 0 ? command.mid(queryStart + 1) : QString());
     query.removeQueryItem(qsl("selected"));
     query.addQueryItem(qsl("selected"), isSelected ? qsl("true") : qsl("false"));
 
-    QString cleanCommand = url.path();
-    if (!query.isEmpty()) {
-        cleanCommand += qsl("?") + query.query(QUrl::FullyEncoded);
-    }
-    return cleanCommand;
+    return base + QLatin1Char('?') + query.query(QUrl::FullyEncoded);
 }
 
 QString THyperlinkSelectionManager::modifyUriForSelection(Mudlet::HyperlinkStyling::ActionScheme scheme, const QString& baseCommand, const QString& group, const QString& value) const

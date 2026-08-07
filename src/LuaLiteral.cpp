@@ -23,11 +23,16 @@
 
 QString LuaLiteral::quote(const QString& text)
 {
-    // Escalate the bracket level until the text can neither close the literal
-    // nor, under Lua 5.1's deprecated-nesting rule, reopen it. The loop
-    // terminates because a run of n '=' cannot occur in text shorter than n.
+    // Escalate the bracket level until the text can do none of three things:
+    // close the literal outright; reopen it, which Lua 5.1 rejects under its
+    // deprecated-nesting rule; or merge with the closing bracket appended after
+    // it. That last one is why endsWith is here - text ending in ']' followed
+    // by this level's '=' run is completed into a closing bracket by the first
+    // character of the closer, shutting the literal one character early.
+    // Terminates because none of the three patterns fits in text shorter than
+    // the '=' run it requires.
     QString equals;
-    while (text.contains(qsl("]%1]").arg(equals)) || text.contains(qsl("[%1[").arg(equals))) {
+    while (text.contains(qsl("]%1]").arg(equals)) || text.contains(qsl("[%1[").arg(equals)) || text.endsWith(qsl("]%1").arg(equals))) {
         equals += QLatin1Char('=');
     }
 
