@@ -201,13 +201,10 @@ bool TCommandLine::event(QEvent* event)
             return true;
         }
 
-        // A user's own key binding beats the profile tab switching shortcuts,
-        // the precedence handleCtrlTabChange() below describes - but those are
-        // QShortcuts on the main window, and QShortcutMap consumes a matching
-        // key before the KeyPress is ever delivered here, so the binding has to
-        // be spotted now. Only the keys those shortcuts occupy are asked about,
-        // and asked without running anything - the binding runs when the
-        // KeyPress that this claim lets through arrives:
+        // QShortcutMap consumes a key matching one of the profile switching
+        // shortcuts before the KeyPress ever reaches here, so a user binding on
+        // one has to be spotted now - and only spotted, since the binding runs
+        // off the KeyPress this claim lets through:
         if (keybindingWouldMatchProfileSwitchShortcut(ke)) {
             ke->accept();
             return true;
@@ -1357,14 +1354,6 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
         // hasn't created one then we fallback to tab switching - however
         // since some locales need the SHIFT modifier to enter numbers from the
         // top keyboard row (e.g. French AZERTY) we must ignore that one!
-        //
-        // Since the "Switch to profile N" QShortcuts were added this branch is
-        // no longer where that precedence is decided: whenever such a shortcut
-        // is set, the key only arrives here at all because event() claimed the
-        // ShortcutOverride for a matching binding, so the binding always wins
-        // and the tab switch below runs through the shortcut instead. The
-        // fallback still matters for Ctrl+0, which has no shortcut, and for
-        // shortcuts the user has cleared or remapped.
         if (keybindingMatched(ke)) {
             // Ah the user HAS created a matching binding:
             return true;
