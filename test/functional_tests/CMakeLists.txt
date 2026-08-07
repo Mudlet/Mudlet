@@ -48,6 +48,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
     DialogTeardownTest.cpp
+    EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
     ProfileSwitchShortcutTest.cpp
@@ -69,7 +70,7 @@ set(FUNCTIONAL_TEST_UTILS
 # output - built but deliberately not registered with ctest:
 add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_UTILS})
 add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
-target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 
 # Report-only perf harness for manual before/after comparisons
@@ -81,7 +82,7 @@ set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_executable(PipelineBenchmark PipelineBenchmark.cpp ${FUNCTIONAL_TEST_UTILS})
 add_dependencies(PipelineBenchmark ${LIB_MUDLET_TARGET})
-target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 set_target_properties(PipelineBenchmark PROPERTIES ENABLE_EXPORTS ON)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
@@ -92,15 +93,32 @@ if(REGISTER_PERF_BENCHMARK)
         TIMEOUT 600)
 endif()
 
+# These still leak and stay unchecked until their defects are fixed:
+# - dlgTriggerEditorUndoRedoTest: never destroys its dlgTriggerEditor, leaving
+#   ~3.4MB of tree-item QIcon/QPixmap behind
+# - UpdaterTeardownTest: Qt's one-time system CA-certificate store load on
+#   first TLS use, cached for the process lifetime
+set(leakCheckExcludedTests
+    dlgTriggerEditorUndoRedoTest
+    UpdaterTeardownTest
+)
+
+# mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file} ${FUNCTIONAL_TEST_UTILS})
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
-    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    # Apple's ASan runtime has no LeakSanitizer
+    if(APPLE OR test_name IN_LIST leakCheckExcludedTests)
+        set(leakCheck "detect_leaks=0")
+    else()
+        set(leakCheck "detect_leaks=1")
+    endif()
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
