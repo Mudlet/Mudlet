@@ -76,13 +76,11 @@ public slots:
     void slot_updateLogin(const QString&);
     void slot_updatePassword(const QString&);
     // Not used:    void slot_updateWebsite(const QString&);
-    void slot_deleteProfileCheck(const QString&);
     void slot_updateDescription();
 
     void slot_itemClicked(QListWidgetItem*);
     void slot_addProfile();
     void slot_deleteProfile();
-    void slot_reallyDeleteProfile();
 
     void slot_updateAutoConnect(int state);
     void slot_updateAutoReconnect(int state);
@@ -134,6 +132,7 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    void showRemovalProblem(const QString& message);
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
@@ -163,12 +162,6 @@ private:
     QTabBar* mpTabBar = nullptr;
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
-    QLineEdit* delete_profile_lineedit = nullptr;
-    QPushButton* delete_button = nullptr;
-    // The confirmation dialog is not modal, so the profile to delete is taken
-    // from here rather than from whatever happens to be selected by the time
-    // the user confirms:
-    QString mProfileToDelete;
     QString mDiscordApplicationId;
     QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;

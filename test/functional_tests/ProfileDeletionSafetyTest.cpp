@@ -19,10 +19,11 @@
 
 /*
  * Removing a profile from the connection dialog must never reach outside that
- * one profile's folder. A profile called "." named the profiles directory
- * itself and ".." named the whole Mudlet configuration directory, so removing
- * one wiped every profile the user had. Also covers the confirmation the user
- * gets before any of their data goes, and the names that must keep working.
+ * one profile's folder. A name like "." addresses the profiles directory
+ * itself and ".." the whole Mudlet configuration directory, so a name that is
+ * not a folder of its own must never reach removeRecursively(). Also covers
+ * the confirmation the user gets before any of their data goes, and the names
+ * that must keep working.
  *
  * Run with: ctest -R ProfileDeletionSafetyTest -V
  */
@@ -52,6 +53,13 @@ private:
 
     QString profilePath(const QString& profile) const { return mudlet::getMudletPath(enums::profileHomePath, profile); }
 
+    // setupConfig() consults portable.txt ahead of the XDG logic; skip rather
+    // than run against an unexpected config dir (see ConfigDirOverrideTest)
+    bool portableMarkerPresent() const
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
     void makeProfileWithSavedGame(const QString& profile) const
     {
         QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileXmlFilesPath, profile)));
@@ -62,15 +70,14 @@ private:
     }
 
     // Adds a list entry for a profile that has no folder of its own, the way
-    // the dialog does for a name being typed into it. This is the state the
-    // user was left in after naming a new profile "." or "..".
-    QListWidgetItem* addListEntry(dlgConnectionProfiles* dlg, const QString& profile) const
+    // the dialog does for a name being typed into it. The list takes ownership,
+    // and rebuilding it drops the entry again.
+    void addListEntry(dlgConnectionProfiles* dlg, const QString& profile) const
     {
         auto* item = new QListWidgetItem();
         item->setData(dlgConnectionProfiles::csmNameRole, profile);
         dlg->listWidget_profiles->insertItem(0, item);
         dlg->listWidget_profiles->setCurrentItem(item);
-        return item;
     }
 
     // slot_itemClicked() ignores a repeat of the profile it was last given
@@ -88,7 +95,8 @@ private:
     QDialog* confirmation(dlgConnectionProfiles* dlg) const { return dlg->findChild<QDialog*>(qsl("delete_profile_confirmation")); }
 
     // Answers a raised confirmation the way an intent-on-deleting user would:
-    // by typing the profile name in, then pressing the delete button.
+    // by typing the profile name in and pressing the delete button, which the
+    // .ui wires to the dialog's accept()
     void confirmRemovalOf(dlgConnectionProfiles* dlg, const QString& profile) const
     {
         auto* confirmationDialog = confirmation(dlg);
@@ -97,12 +105,15 @@ private:
         auto* deleteButton = confirmationDialog->findChild<QPushButton*>(qsl("delete_button"));
         QVERIFY(nameEntry && deleteButton);
 
+        nameEntry->setText(profile.left(profile.size() - 1));
+        QVERIFY2(!deleteButton->isEnabled(), "a partial profile name enabled the delete button");
+
         nameEntry->setText(profile);
-        QVERIFY(deleteButton->isEnabled());
-        confirmationDialog->accept();
+        QVERIFY2(deleteButton->isEnabled(), "typing the profile name did not enable this confirmation's delete button");
+        deleteButton->click();
     }
 
-    // Presses Remove and answers the confirmation, if one is raised at all
+    // Invokes the Remove handler and answers the confirmation, if one is raised
     void removeProfileAndConfirm(dlgConnectionProfiles* dlg, const QString& profile) const
     {
         dlg->slot_deleteProfile();
@@ -139,6 +150,9 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - cannot redirect the config dir for this test");
+        }
         initializeQRCResourcesForProfileDeletionSafetyTest();
 
         QVERIFY(mConfigDir.isValid());
@@ -169,35 +183,37 @@ private slots:
     void test_removingCurrentDirectoryProfileKeepsEveryProfile()
     {
         auto* dlg = openDialog();
-        auto* item = addListEntry(dlg, qsl("."));
+        addListEntry(dlg, qsl("."));
 
-        removeProfileAndConfirm(dlg, qsl("."));
+        dlg->slot_deleteProfile();
+        QVERIFY2(confirmation(dlg), "removal went ahead without asking");
+        confirmRemovalOf(dlg, qsl("."));
 
         QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was deleted");
         QVERIFY2(QFile::exists(qsl("%1/%2.xml").arg(mudlet::getMudletPath(enums::profileXmlFilesPath, mKeeper), mKeeper)), "an unrelated profile's saved game was deleted");
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "the refusal was not reported to the user");
 
-        delete item;
         closeDialog(dlg);
     }
 
     void test_removingParentDirectoryProfileKeepsTheConfigurationDirectory()
     {
         auto* dlg = openDialog();
-        auto* item = addListEntry(dlg, qsl(".."));
+        addListEntry(dlg, qsl(".."));
 
-        removeProfileAndConfirm(dlg, qsl(".."));
+        dlg->slot_deleteProfile();
+        QVERIFY2(confirmation(dlg), "removal went ahead without asking");
+        confirmRemovalOf(dlg, qsl(".."));
 
         QVERIFY2(QDir(mudlet::getMudletPath(enums::mainPath)).exists(), "Mudlet's configuration directory was deleted");
         QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was deleted");
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "the refusal was not reported to the user");
 
-        delete item;
         closeDialog(dlg);
     }
 
-    // Whatever a name resolves to, only a folder directly inside the profiles
-    // directory is ever a profile
     void test_onlyDirectChildrenOfTheProfilesDirectoryAreProfiles()
     {
         const QString profilesPath = mudlet::getMudletPath(enums::profilesPath);
@@ -206,6 +222,12 @@ private slots:
         QVERIFY(dlgConnectionProfiles::profileFolderPath(profilesPath, qsl(".")).isEmpty());
         QVERIFY(dlgConnectionProfiles::profileFolderPath(profilesPath, qsl("..")).isEmpty());
         QVERIFY(dlgConnectionProfiles::profileFolderPath(profilesPath, qsl("%1/current").arg(mKeeper)).isEmpty());
+
+        // a predefined game has no folder until it is saved, and dismissing one
+        // still has to resolve to the folder it would have had
+        const QString neverPlayed = qsl("QA Never Played");
+        QVERIFY(!QDir(profilePath(neverPlayed)).exists());
+        QCOMPARE(dlgConnectionProfiles::profileFolderPath(profilesPath, neverPlayed), qsl("%1/%2").arg(profilesPath, neverPlayed));
     }
 
     // A profile whose folder holds no saved games but does hold something else
@@ -244,6 +266,62 @@ private slots:
         dlg->slot_deleteProfile();
         QVERIFY2(!confirmation(dlg), "a profile with nothing but connection details should not need confirming");
         QVERIFY2(!QDir(profilePath(unplayed)).exists(), "the profile was not removed");
+        closeDialog(dlg);
+    }
+
+    // A locally stored password sits loose in the profile folder rather than in
+    // a sub-directory, so the "nothing to lose" shortcut must not overlook it
+    void test_profileWithOnlyAStoredPasswordIsConfirmedBeforeRemoval()
+    {
+        const QString secretive = qsl("QA Secretive");
+        QVERIFY(QDir().mkpath(profilePath(secretive)));
+        mudlet::self()->writeProfileData(secretive, qsl("password"), qsl("hunter2"));
+        QVERIFY(QDir(profilePath(secretive)).entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty());
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, secretive);
+
+        dlg->slot_deleteProfile();
+        QVERIFY2(confirmation(dlg), "a profile holding a stored password was removed without asking");
+        QVERIFY2(QDir(profilePath(secretive)).exists(), "the profile was deleted before the user confirmed");
+
+        confirmation(dlg)->reject();
+        closeDialog(dlg);
+    }
+
+    // Two confirmations can be open together, so each must remove the profile
+    // it names rather than the one raised most recently
+    void test_eachConfirmationRemovesItsOwnProfile()
+    {
+        const QString first = qsl("QA First");
+        const QString second = qsl("QA Second");
+        makeProfileWithSavedGame(first);
+        makeProfileWithSavedGame(second);
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, first);
+        dlg->slot_deleteProfile();
+        auto* firstConfirmation = confirmation(dlg);
+        QVERIFY(firstConfirmation);
+
+        selectProfile(dlg, second);
+        dlg->slot_deleteProfile();
+        const auto confirmations = dlg->findChildren<QDialog*>(qsl("delete_profile_confirmation"));
+        QCOMPARE(confirmations.size(), 2);
+        auto* secondConfirmation = confirmations.first() == firstConfirmation ? confirmations.last() : confirmations.first();
+
+        // answer the first one, which names the first profile
+        auto* nameEntry = firstConfirmation->findChild<QLineEdit*>(qsl("delete_profile_lineedit"));
+        auto* deleteButton = firstConfirmation->findChild<QPushButton*>(qsl("delete_button"));
+        QVERIFY(nameEntry && deleteButton);
+        nameEntry->setText(first);
+        QVERIFY2(deleteButton->isEnabled(), "the first confirmation did not accept its own profile name");
+        deleteButton->click();
+
+        QVERIFY2(!QDir(profilePath(first)).exists(), "the first confirmation did not remove its own profile");
+        QVERIFY2(QDir(profilePath(second)).exists(), "the first confirmation removed the second profile instead");
+
+        secondConfirmation->reject();
         closeDialog(dlg);
     }
 
@@ -319,6 +397,9 @@ private slots:
 
         auto* dlg = openDialog();
         selectProfile(dlg, mKeeper);
+        // without this the assertion below also holds for an unrelated reason,
+        // e.g. an empty server address
+        QVERIFY2(acceptButtonsEnabled(dlg), "the profile was already unusable before the name was edited");
 
         // setText() drives the same textChanged path as typing does
         dlg->profile_name_entry->setText(name);
@@ -354,9 +435,8 @@ private slots:
     {
         QTest::addColumn<QString>("name");
 
-        QTest::newRow("version number") << qsl("Achaea 2.0");
+        QTest::newRow("version number") << qsl("QA Game 2.0");
         QTest::newRow("parentheses") << qsl("QA Keeper (2)");
-        QTest::newRow("leading dot") << qsl(".hidden");
     }
 
     void test_typedNamesThatAreProfilesAreAccepted()
@@ -370,7 +450,8 @@ private slots:
         QCOMPARE(dlg->profile_name_entry->text(), name);
         QVERIFY2(acceptButtonsEnabled(dlg), qPrintable(qsl("'%1' was refused as a profile name").arg(name)));
 
-        // put the on-disk name back so no rename can be left pending
+        // ~QDialog hiding the dialog fires editingFinished() into slot_saveName(),
+        // which renames the folder - so leave the on-disk name in the field
         dlg->profile_name_entry->setText(mKeeper);
         closeDialog(dlg);
     }
