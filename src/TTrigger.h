@@ -172,6 +172,15 @@ public:
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
 
+    // Non-zero only for a root trigger that was created while a line was being
+    // processed, and only until that line is done with - see TriggerUnit's
+    // same-line creation chains. Everything this trigger's script goes on to
+    // create during that line joins the same chain, which is what tells a
+    // trigger re-creating itself apart from a script creating a batch of
+    // unrelated triggers.
+    int sameLineChainId() const { return mSameLineChainId; }
+    void setSameLineChainId(const int chainId) { mSameLineChainId = chainId; }
+
 
 private:
     TTrigger() = default;
@@ -196,6 +205,7 @@ private:
 
     QList<int> mPatternKinds;
     QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
+    int mSameLineChainId = 0;
 
     // Lua code as a string to run
     QString mScript;

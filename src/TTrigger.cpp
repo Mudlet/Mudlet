@@ -1298,30 +1298,44 @@ bool TTrigger::compileScript()
 
 namespace {
 // Tracks the innermost trigger running its script so feedTriggers() can name the
-// culprit when aborting an endless loop; RAII restores the prior value on exit.
-class ExecutingTriggerNameGuard
+// culprit when aborting an endless loop, and so a trigger created by that script
+// joins its same-line creation chain; RAII restores the prior values on exit.
+class ExecutingTriggerGuard
 {
 public:
-    ExecutingTriggerNameGuard(TriggerUnit* pUnit, const QString* pName)
+    ExecutingTriggerGuard(TriggerUnit* pUnit, const QString* pName, const int chainId)
     : mpUnit(pUnit)
-    , mpPrevious(pUnit->currentExecutingTriggerName())
+    , mpPreviousName(pUnit->currentExecutingTriggerName())
+    , mPreviousChainId(pUnit->currentSameLineChainId())
     {
         mpUnit->setCurrentExecutingTriggerName(pName);
+        mpUnit->setCurrentSameLineChainId(chainId);
     }
-    ~ExecutingTriggerNameGuard() { mpUnit->setCurrentExecutingTriggerName(mpPrevious); }
+    ~ExecutingTriggerGuard()
+    {
+        mpUnit->setCurrentExecutingTriggerName(mpPreviousName);
+        mpUnit->setCurrentSameLineChainId(mPreviousChainId);
+    }
 
-    ExecutingTriggerNameGuard(const ExecutingTriggerNameGuard&) = delete;
-    ExecutingTriggerNameGuard& operator=(const ExecutingTriggerNameGuard&) = delete;
+    ExecutingTriggerGuard(const ExecutingTriggerGuard&) = delete;
+    ExecutingTriggerGuard& operator=(const ExecutingTriggerGuard&) = delete;
 
 private:
     TriggerUnit* mpUnit;
-    const QString* mpPrevious;
+    const QString* mpPreviousName;
+    int mPreviousChainId;
 };
 } // namespace
 
 void TTrigger::execute()
 {
-    const ExecutingTriggerNameGuard executingTriggerNameGuard(mpHost->getTriggerUnit(), &mName);
+    // Chains are recorded on root triggers, so a trigger nested in a folder or a
+    // filter chain creates on behalf of the root its subtree hangs from.
+    const TTrigger* pRoot = this;
+    while (pRoot->getParent()) {
+        pRoot = pRoot->getParent();
+    }
+    const ExecutingTriggerGuard executingTriggerGuard(mpHost->getTriggerUnit(), &mName, pRoot->sameLineChainId());
 
     if (mSoundTrigger) { /* eventually something should be added to the gui to change sound volumes. 100=full volume */
         QString mediaFileName = mSoundFile;

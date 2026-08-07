@@ -28,6 +28,7 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QHash>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
@@ -84,16 +85,24 @@ public:
     // is deferred to doCleanup() once mProcessingDepth returns to 0.
     const QString* currentExecutingTriggerName() const { return mpCurrentExecutingTriggerName; }
     void setCurrentExecutingTriggerName(const QString* pName) { mpCurrentExecutingTriggerName = pName; }
+    // The same-line creation chain of the trigger whose script is running, so a
+    // trigger it creates joins that chain rather than starting one - see
+    // registerTrigger(). Zero while nothing is running, or while the running
+    // trigger predates the line being processed.
+    int currentSameLineChainId() const { return mCurrentSameLineChainId; }
+    void setCurrentSameLineChainId(const int chainId) { mCurrentSameLineChainId = chainId; }
     // Turns an endless self-feeding-trigger loop into a catchable Lua error before
     // it overflows the stack. Sized for the smallest platform stack (~1MB on
     // Windows, where the original crash hit before Lua's own 200-C-call guard):
     // a few times any legitimate nesting, comfortably below the native limit.
     inline static const int scmMaxProcessingDepth = 50;
-    // How many triggers created while one line is processed may match that same
-    // line. Separate from the depth above, which measures the C stack: nothing
-    // recurses here, it is the list processDataStream() walks that grows. A
-    // room-capture script needs a handful, so 100 is ample.
-    inline static const qsizetype scmMaxSameLineCreations = 100;
+    // How far one chain of same-line creations may extend while a single line is
+    // processed. Separate from the depth above, which measures the C stack:
+    // nothing recurses here, it is the list processDataStream() walks that grows.
+    // Counted per chain rather than over the line as a whole, so a script
+    // creating a batch of unrelated triggers - each of which starts a chain of
+    // its own - never runs out of budget however big the batch is.
+    inline static const qsizetype scmMaxSameLineCreations = 1000;
 
     QList<TTrigger*> uninstallList;
 
@@ -105,7 +114,8 @@ private:
     void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
-    void stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPass);
+    void startOrExtendSameLineChain(TTrigger* pT);
+    void stopSameLineCreationLoop(const int chainId);
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;
@@ -124,6 +134,21 @@ private:
     // pass can match the ones created during it against the line being
     // processed - see processDataStream(). Cleared once the outermost pass ends.
     QList<TTrigger*> mRootNodesAddedWhileProcessing;
+    // Per same-line creation chain: how many triggers it has added to the line
+    // being processed, and the name of the trigger whose script started it.
+    // Keyed by chain id, so a trigger dying mid-line cannot leave a stale
+    // pointer behind. Cleared once the outermost pass ends.
+    struct SameLineChain
+    {
+        QString startedBy;
+        qsizetype creations = 0;
+    };
+    QHash<int, SameLineChain> mSameLineChains;
+    int mCurrentSameLineChainId = 0;
+    // Ids are never reused: a trigger unregistered mid-line keeps the id it was
+    // given but is no longer in the list that clears them at the end of the pass,
+    // so reuse could file it under a later chain. Zero means "no chain".
+    int mLastSameLineChainId = 0;
     QElapsedTimer mSameLineLoopReportTimer;
 };
 

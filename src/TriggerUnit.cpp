@@ -243,8 +243,29 @@ bool TriggerUnit::registerTrigger(TTrigger* pT)
     addTriggerRootNode(pT);
     if (mProcessingDepth > 0) {
         mRootNodesAddedWhileProcessing.append(pT);
+        startOrExtendSameLineChain(pT);
     }
     return true;
+}
+
+// A trigger created by a trigger that was itself created while this line was
+// being processed extends that trigger's chain; anything created from a script
+// that predates the line starts a chain of its own. Only a chain that keeps
+// extending itself can go on forever, so a batch of unrelated triggers - one
+// chain each, all of length one - is never mistaken for a runaway.
+void TriggerUnit::startOrExtendSameLineChain(TTrigger* pT)
+{
+    int chainId = mCurrentSameLineChainId;
+    if (!chainId) {
+        if (++mLastSameLineChainId <= 0) {
+            mLastSameLineChainId = 1;
+        }
+        chainId = mLastSameLineChainId;
+        const QString* pStartedBy = mpCurrentExecutingTriggerName;
+        mSameLineChains[chainId].startedBy = pStartedBy ? *pStartedBy : QString();
+    }
+    pT->setSameLineChainId(chainId);
+    ++mSameLineChains[chainId].creations;
 }
 
 void TriggerUnit::unregisterTrigger(TTrigger* pT)
@@ -307,26 +328,24 @@ int TriggerUnit::getNewID()
     return ++mMaxID;
 }
 
-// Stopping the pass is not enough: what the loop created is still live and still
+// Stopping the pass is not enough: what the chain created is still live and still
 // matching, so the next line would start with a budget's worth of them and each
 // would spawn a budget's worth again, costing a multiple of the line before it.
-// Everything registered during the pass is disowned, not just the loop's
-// offspring: the list records no lineage, so an unrelated capture trigger armed
-// on the same line is caught too. Permanent triggers get deactivate() and
-// not setIsActive(false), which would clear the user-active state XMLexport saves
-// and leave them switched off after a restart.
-void TriggerUnit::stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPass)
+// Only the runaway chain is disowned - a capture trigger an unrelated script
+// armed on the same line belongs to a chain of its own and is left alone. The
+// whole list is scanned rather than the tail of this pass, because a chain
+// started inside a nested feedTriggers() pass can carry on growing in the pass
+// that contains it. Permanent triggers get deactivate() and not setIsActive(false),
+// which would clear the user-active state XMLexport saves and leave them switched
+// off after a restart.
+void TriggerUnit::stopSameLineCreationLoop(const int chainId)
 {
-    QString triggerName;
     int killedCount = 0;
     int deactivatedCount = 0;
-    for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
-        auto trigger = mRootNodesAddedWhileProcessing.at(i);
-        if (!trigger) {
+    for (auto trigger : std::as_const(mRootNodesAddedWhileProcessing)) {
+        if (!trigger || trigger->sameLineChainId() != chainId) {
             continue;
         }
-        // keeps the last: the newest link in the chain names the culprit
-        triggerName = trigger->getName();
         if (trigger->isTemporary()) {
             trigger->setIsActive(false);
             markCleanup(trigger);
@@ -336,10 +355,11 @@ void TriggerUnit::stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPas
             ++deactivatedCount;
         }
     }
+    const QString triggerName = mSameLineChains.value(chainId).startedBy;
 
-    qWarning().nospace() << "TriggerUnit::processDataStream(...) aborting: triggers created while processing one line reached the limit of " << scmMaxSameLineCreations
+    qWarning().nospace() << "TriggerUnit::processDataStream(...) aborting: one chain of triggers created while processing a line reached the limit of " << scmMaxSameLineCreations
                          << " - probably a trigger that re-creates itself. Profile: " << (mpHost ? mpHost->getName() : QString()) << ", triggers removed: " << killedCount
-                         << ", deactivated: " << deactivatedCount << ", last one created: " << triggerName;
+                         << ", deactivated: " << deactivatedCount << ", chain started by: " << triggerName;
     if (!mpHost) {
         return;
     }
@@ -392,7 +412,15 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         if (mProcessingDepth == 0) {
             // Deletion is deferred while any pass runs, so these pointers stayed
             // valid; drop them before doCleanup() frees the underlying triggers.
+            // A trigger that outlives the line it was created on stops being part
+            // of a chain, so its own creations start counting afresh.
+            for (auto trigger : std::as_const(mRootNodesAddedWhileProcessing)) {
+                if (trigger) {
+                    trigger->setSameLineChainId(0);
+                }
+            }
             mRootNodesAddedWhileProcessing.clear();
+            mSameLineChains.clear();
             doCleanup();
         }
     });
@@ -421,15 +449,18 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // current line - so the list grows in front of the loop, and a trigger that
     // re-creates itself never lets the line finish. Nothing else catches that: no
     // C++ frame recurses, so mProcessingDepth stays put and the feedTriggers()
-    // depth guard never sees it.
-    const qsizetype sameLineCreationBudget = firstNodeAddedThisPass + scmMaxSameLineCreations;
+    // depth guard never sees it. Only the chain that is extending itself gets
+    // stopped; every other chain the line started carries on matching, which is
+    // the difference between a runaway and a script arming a batch of triggers.
     for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
-        if (i >= sameLineCreationBudget) {
-            stopSameLineCreationLoop(firstNodeAddedThisPass);
-            break;
-        }
         auto trigger = mRootNodesAddedWhileProcessing.at(i);
         if (!trigger || !trigger->isActive()) {
+            continue;
+        }
+        // stopSameLineCreationLoop() deactivates the whole chain, so the check
+        // above skips its remaining members and this runs once per chain
+        if (mSameLineChains.value(trigger->sameLineChainId()).creations > scmMaxSameLineCreations) {
+            stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
         trigger->match(subject, data, line);

@@ -321,6 +321,146 @@ private slots:
         QVERIFY2(bufferContains(qsl("PERMEXISTS=%1#").arg(expectedFires + 1)), "Expected the stopped permanent triggers to still exist - stopping them is not deleting them");
     }
 
+    // A script arming a batch of unrelated triggers is not a runaway, however
+    // big the batch: each of them starts a creation chain of its own, and none
+    // of those chains ever gets a second link.
+    void test_bulkUnrelatedCreationsAreNotStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        const int bulkCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) + 1;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("bulkFires = 0\n"
+                                                               "tempRegexTrigger('^bulkgate$', [=[\n"
+                                                               "  for i = 1, %1 do\n"
+                                                               "    tempRegexTrigger('^bulkpay$', [[bulkFires = bulkFires + 1]])\n"
+                                                               "  end\n"
+                                                               "]=], 1)\n"
+                                                               "feedTriggers('bulkgate\\n')\n"
+                                                               "feedTriggers('bulkpay\\n')\n"
+                                                               "echo('BULKFIRES=' .. bulkFires .. '#\\n')\n")
+                                                                   .arg(bulkCount));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A batch of unrelated triggers must not be mistaken for a trigger re-creating itself");
+        QVERIFY2(bufferContains(qsl("BULKFIRES=%1#").arg(bulkCount)), qPrintable(qsl("Expected all %1 triggers armed on the previous line to survive and fire").arg(bulkCount)));
+    }
+
+    // Two scripts arming triggers on one line used to share a single budget, so
+    // whichever ran second lost triggers it had every right to create.
+    void test_twoScriptsArmingOnOneLineKeepBothSetsOfTriggers()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        const int eachCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) - 400;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("firesA, firesB = 0, 0\n"
+                                                               "tempRegexTrigger('^sharedgate$', [=[\n"
+                                                               "  for i = 1, %1 do\n"
+                                                               "    tempRegexTrigger('^payA$', [[firesA = firesA + 1]])\n"
+                                                               "  end\n"
+                                                               "]=], 1)\n"
+                                                               "tempRegexTrigger('^sharedgate$', [=[\n"
+                                                               "  for i = 1, %1 do\n"
+                                                               "    tempRegexTrigger('^payB$', [[firesB = firesB + 1]])\n"
+                                                               "  end\n"
+                                                               "]=], 1)\n"
+                                                               "feedTriggers('sharedgate\\n')\n"
+                                                               "feedTriggers('payA\\n')\n"
+                                                               "feedTriggers('payB\\n')\n"
+                                                               "echo('SHARED=' .. firesA .. ',' .. firesB .. '#\\n')\n")
+                                                                   .arg(eachCount));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("SHARED=%1,%1#").arg(eachCount)), qPrintable(qsl("Expected both scripts to keep all %1 of the triggers they armed").arg(eachCount)));
+    }
+
+    // Permanent triggers take the same path and are the more painful loss: a
+    // "rebuild my triggers when the game says X" routine would have lost the lot.
+    void test_bulkPermanentCreationsAreNotStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        const int bulkCount = static_cast<int>(TriggerUnit::scmMaxSameLineCreations) + 1;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("permBulkFires = 0\n"
+                                                               "function permBulkStep() permBulkFires = permBulkFires + 1 end\n"
+                                                               "tempRegexTrigger('^permgate$', [=[\n"
+                                                               "  for i = 1, %1 do\n"
+                                                               "    permRegexTrigger('PermBulk' .. i, '', {'^permpay$'}, [[permBulkStep()]])\n"
+                                                               "  end\n"
+                                                               "]=], 1)\n"
+                                                               "feedTriggers('permgate\\n')\n"
+                                                               "feedTriggers('permpay\\n')\n"
+                                                               "echo('PERMBULK=' .. permBulkFires .. '#\\n')\n"
+                                                               "echo('PERMBULKACTIVE=' .. isActive('PermBulk%1', 'trigger') .. '#\\n')\n")
+                                                                   .arg(bulkCount));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("PERMBULK=%1#").arg(bulkCount)), qPrintable(qsl("Expected all %1 permanent triggers armed on the previous line to survive and fire").arg(bulkCount)));
+        QVERIFY2(bufferContains(qsl("PERMBULKACTIVE=1#")), "Expected the permanent triggers to be left switched on");
+    }
+
+    // The whole point of the budget being per chain: the runaway loses its
+    // triggers, the script that happened to arm a trigger on the same line does not.
+    void test_runawayChainSparesTriggersFromOtherScripts()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("innocentFires = 0\n"
+                                                               "function armRunaway()\n"
+                                                               "  tempRegexTrigger('^runline$', [[armRunaway()]], 1)\n"
+                                                               "end\n"
+                                                               "armRunaway()\n"
+                                                               "tempRegexTrigger('^runline$', [=[\n"
+                                                               "  tempRegexTrigger('^innocent$', [[innocentFires = innocentFires + 1]])\n"
+                                                               "]=], 1)\n"
+                                                               "feedTriggers('runline\\n')\n"
+                                                               "feedTriggers('innocent\\n')\n"
+                                                               "echo('INNOCENT=' .. innocentFires .. '#\\n')\n"));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "Expected the self-recreating chain to still be stopped");
+        QVERIFY2(bufferContains(qsl("INNOCENT=1#")), "Expected the trigger armed by an unrelated script on the same line to survive the runaway's abort and fire");
+    }
+
+    // Exactly at the limit the chain is left alone; the test above it, which adds
+    // one more link, is stopped. Same number of fires either way, so the abort
+    // message is what tells the two apart.
+    void test_chainExactlyAtTheLimitIsNotStopped()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+
+        const int limit = static_cast<int>(TriggerUnit::scmMaxSameLineCreations);
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("boundFires = 0\n"
+                                                               "function boundStep()\n"
+                                                               "  boundFires = boundFires + 1\n"
+                                                               "  if boundFires <= %1 then\n"
+                                                               "    tempRegexTrigger('^boundline$', [[boundStep()]], 1)\n"
+                                                               "  end\n"
+                                                               "end\n"
+                                                               "tempRegexTrigger('^boundline$', [[boundStep()]], 1)\n"
+                                                               "feedTriggers('boundline\\n')\n"
+                                                               "echo('BOUNDFIRES=' .. boundFires .. '#\\n')\n")
+                                                                   .arg(limit));
+
+        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
+        QVERIFY2(!bufferContains(qsl("Trigger processing stopped to prevent a freeze")), "A chain of exactly the budget's length ends on its own and must not be stopped");
+        QVERIFY2(bufferContains(qsl("BOUNDFIRES=%1#").arg(limit + 1)), qPrintable(qsl("Expected the chain to run to its own end, %1 fires").arg(limit + 1)));
+    }
+
     // The outer line's own mid-pass triggers were registered before the nested
     // pass began, so its abort must not take them.
     void test_nestedPassAbortLeavesTheOuterLineAlone()
