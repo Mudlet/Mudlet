@@ -131,74 +131,21 @@ security gain. The OSC 8 path applies its own allowlist before ever reaching it.
 
 ---
 
-## Draft replacement for the wiki's "Security & Limitations" section
+## Publishing to the wiki
 
-The wiki is edited by hand — this text needs a human to paste it in. It keeps the three
-existing subsections intact and adds a threat model ahead of them and a sanitization note
-after them.
+The wiki page is edited by hand, so the MediaWiki text is drafted separately and pasted in by
+a human rather than being kept here — two copies of the same prose drift, and the copy that
+gets stale is always the one nobody publishes from.
 
-```mediawiki
-====Security & Limitations====
+What this branch adds to that page, for whoever does the paste:
 
-=====Threat Model=====
+- a **Threat Model** subsection ahead of the existing Security & Limitations content
+- **Display Sanitization** and **Turning OSC 8 Off** subsections, both tagged 5.0
+- a **Hardening** subsection under *For Client Developers*, since other clients implement
+  these extensions from that page and the security properties are part of the protocol
+- notes on the plain-text tooltip and menu-title rendering, and on the `menu` plus
+  `selection` limitation
 
-Unlike a terminal emulator, where hyperlinks come from a program you chose to run, an OSC 8
-sequence in Mudlet comes from the game server — and often from another player, whose text
-the server relays. Mudlet therefore treats every OSC 8 sequence as untrusted input.
-
-Server authors carry one obligation that the client cannot discharge for them: '''strip the
-ESC character (0x1B) from player-supplied text''' before it is echoed to other players.
-Otherwise one player can author links that another player sees.
-
-=====Trusted URI Schemes=====
-
-Only these schemes are supported (others are rejected):
-* <code>send:</code>, <code>prompt:</code>
-* <code>http:</code>, <code>https:</code>, <code>ftp:</code>
-* <code>preset:</code> (for definitions only)
-
-Only allowlisted <code>http:</code>, <code>https:</code> and <code>ftp:</code> targets are
-passed to the operating system's URL handler via <code>openUrl(...)</code>. Custom schemes
-and <code>file:</code> targets are rejected and cannot be used to launch a local
-application.
-
-=====Limits=====
-
-* '''URL length:''' Maximum 4096 characters
-* '''Invalid JSON:''' Silently ignored (link still works without styling)
-* '''Multi-line visibility:''' Only single-line links support visibility management
-
-=====Display Sanitization=====
-
-{{MudletVersion|4.22}}
-
-Tooltips, menu labels, menu titles and the default hint that shows a link's target are
-sanitized before display. Invisible and direction-reordering characters — bidi overrides and
-isolates, zero-width characters, line and paragraph separators, the byte order mark, and
-C0/C1 control characters — are shown in a visible <code>\u{202E}</code> form rather than
-being rendered. This stops link text claiming one destination while the link carries
-another.
-
-Tooltip text is rendered as '''plain text'''. HTML in a <code>tooltip</code> value is
-displayed literally rather than interpreted.
-
-=====Turning OSC 8 Off=====
-
-{{MudletVersion|4.22}}
-
-Players can disable OSC 8 entirely with '''Settings → Special Options → Enable OSC 8
-hyperlinks from the server''' (on by default). When it is off, Mudlet ignores OSC 8
-sequences and advertises <code>0</code> for every <code>OSC_HYPERLINKS*</code> NEW-ENVIRON
-variable, so a well-behaved server should fall back to MXP or plain text.
-
-Changing the setting during a session sends an ad-hoc INFO (2) message covering every
-<code>OSC_HYPERLINKS*</code> variable the server previously requested, in one
-subnegotiation. Servers that track these capabilities should honour it without waiting for
-a reconnect:
-
- IAC SB NEW-ENVIRON (39) INFO (2) USERVAR (3) ''OSC_HYPERLINKS'' VAL (1) ''0'' USERVAR (3) ''OSC_HYPERLINKS_SEND'' VAL (1) ''0'' [ .. ] IAC SE
-
-===== Reserved Parameters =====
-
-(unchanged)
-```
+Correct the scheme claim while you are there: the current page says Mudlet never hands an
+OSC 8 target to the operating system's URL handler. It does, for `http:`, `https:` and
+`ftp:` — the accurate statement is that only those three ever reach it.
