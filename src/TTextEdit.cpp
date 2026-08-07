@@ -3546,7 +3546,11 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
     }
 
     const bool newSelected = mgr->isSelected(group, value);
-    uri = mgr->modifyUriForSelection(uri, group, value);
+    const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
+    const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
+    if (!rebuiltUri.isEmpty()) {
+        uri = rebuiltUri;
+    }
 
     mpBuffer->setLinkSelected(linkIndex, newSelected);
     mpBuffer->setLinkState(linkIndex, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);

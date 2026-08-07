@@ -3406,10 +3406,14 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
                 command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
                 hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
                 command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
                 hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand)};
             } else {
@@ -3417,6 +3421,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QString scheme = qurl.scheme().toLower();
 
                 if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
+                    mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
+                    mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
                     hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl)};
                 } else {

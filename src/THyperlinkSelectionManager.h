@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "THyperlinkStyling.h"
+
 #include <QHash>
 #include <QObject>
 #include <QSet>
@@ -51,7 +53,7 @@ public:
     bool isGroupExclusive(const QString& group) const;
 
     // Modifies hyperlink URI to include current selection state
-    QString modifyUriForSelection(const QString& baseUri, const QString& group, const QString& value) const;
+    QString modifyUriForSelection(Mudlet::HyperlinkStyling::ActionScheme scheme, const QString& baseCommand, const QString& group, const QString& value) const;
 
 signals:
     void selectionChanged(const QString& group, const QString& value, bool selected);
