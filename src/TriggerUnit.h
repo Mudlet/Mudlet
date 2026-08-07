@@ -89,13 +89,10 @@ public:
     // Windows, where the original crash hit before Lua's own 200-C-call guard):
     // a few times any legitimate nesting, comfortably below the native limit.
     inline static const int scmMaxProcessingDepth = 50;
-    // How many triggers created while one line is being processed may match that
-    // same line - see processDataStream(). A separate budget from the recursion
-    // depth above, which measures the C stack: this one measures how far a script
-    // can grow the list the pass is walking, and nothing recurses while it does.
-    // The behaviour it bounds (a room-capture script arming a catch-all trigger
-    // from the room title line) needs a handful; 100 leaves two orders of
-    // magnitude of headroom while keeping a runaway to a few milliseconds.
+    // How many triggers created while one line is processed may match that same
+    // line. Separate from the depth above, which measures the C stack: nothing
+    // recurses here, it is the list processDataStream() walks that grows. A
+    // room-capture script needs a handful, so 100 is ample.
     inline static const qsizetype scmMaxSameLineCreations = 100;
 
     QList<TTrigger*> uninstallList;
@@ -127,8 +124,6 @@ private:
     // pass can match the ones created during it against the line being
     // processed - see processDataStream(). Cleared once the outermost pass ends.
     QList<TTrigger*> mRootNodesAddedWhileProcessing;
-    // Throttles the same-line creation loop report: a runaway whose creator
-    // survives the line trips again on every matching line thereafter.
     QElapsedTimer mSameLineLoopReportTimer;
 };
 
