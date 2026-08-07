@@ -87,6 +87,7 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EventLoopPump.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
     FontManager.cpp
@@ -315,6 +316,7 @@ set(mudlet_HDRS
     EditorToggleActiveCommand.h
     EditorUndoStack.h
     enums.h
+    EventLoopPump.h
     exitstreewidget.h
     FileOpenHandler.h
     FontManager.h

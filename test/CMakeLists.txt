@@ -24,6 +24,7 @@ set(UNIT_TESTS
     TMxpEdgeCasesTest
     TMxpElementDefinitionHandlerTest
     TLuaInterfaceTest
+    EventLoopPumpTest
     TVariableEditorTest
     SecureStringUtilsTest
     CredentialManagerTest
@@ -49,6 +50,10 @@ foreach(test_name ${UNIT_TESTS})
         ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     )
 endforeach()
+
+# A regression in what EventLoopPumpTest covers hangs rather than fails, so cap
+# it well under ctest's default 25 minutes.
+set_tests_properties(EventLoopPumpTest PROPERTIES TIMEOUT 60)
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
 # server with no window manager never gives them, so a plain `xvfb-run ctest`
