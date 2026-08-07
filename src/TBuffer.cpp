@@ -627,12 +627,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
     const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
-    // The complete two byte escape sequences (DECSC, DECRC, DECKPAM, DECKPNM,
-    // RIS, IND, NEL, HTS, RI, SS2, SS3 and a stray ST) that Mudlet does not
-    // act on but does have to swallow. Deliberately a closed set: anything
-    // else after an ESC is treated as text, because a stray ESC from the game
-    // must not eat what follows it:
-    const QByteArray cShortEscape = QByteArrayLiteral("78=>cDEHMNO\\");
+    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
+    // ST) that games do send and that Mudlet has to swallow. Only these: any
+    // other byte after an ESC is text, and printing it is no worse than what
+    // Mudlet has always done, whereas eating it loses real output:
+    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to

@@ -169,8 +169,13 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
     it("should consume the two-byte escapes it recognises", function()
-      assert.is_true(feedTriggers("TWOBYTE1(\027" .. "7|\027M|\027c)TWOBYTE1\n"))
+      assert.is_true(feedTriggers("TWOBYTE1(\027" .. "7|\027" .. "8|\027c)TWOBYTE1\n"))
       assert.equals("TWOBYTE1(||)TWOBYTE1", findRecentLine("TWOBYTE1"))
+    end)
+
+    it("should keep the byte of a two-byte escape it does not recognise", function()
+      assert.is_true(feedTriggers("UNKNOWN1(\027M\027D\027>\027=)UNKNOWN1\n"))
+      assert.equals("UNKNOWN1(MD>=)UNKNOWN1", findRecentLine("UNKNOWN1"))
     end)
 
     it("should consume a character set designation", function()
@@ -242,7 +247,7 @@ describe("Tests TBuffer OSC sequence handling", function()
 
     it("should apply a trailing escape to the next packet", function()
       assert.is_true(feedTriggers("SPLITESC1(\027"))
-      assert.is_true(feedTriggers("M then ABC)SPLITESC1\n"))
+      assert.is_true(feedTriggers("7 then ABC)SPLITESC1\n"))
       assert.equals("SPLITESC1( then ABC)SPLITESC1", findRecentLine("SPLITESC1"))
     end)
 
