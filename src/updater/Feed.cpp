@@ -91,8 +91,17 @@ QList<Release> Feed::getReleases() const
 
 QList<Release> Feed::getUpdates(const Release& currentRelease) const
 {
+    return selectUpdates(mReleases, currentRelease);
+}
+
+QList<Release> Feed::selectUpdates(const QList<Release>& releases, const Release& currentRelease)
+{
     QList<Release> updates;
-    for (const auto& release : mReleases) {
+    for (const auto& release : releases) {
+        const QUrl downloadUrl = release.getDownloadUrl();
+        if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+            continue;
+        }
         if (currentRelease.getVersion().toLower() != release.getVersion().toLower() && currentRelease < release) {
             updates << release;
         }
