@@ -71,19 +71,29 @@ publishes the current branch to their fork if needed, then opens a PR against up
 6. **Publish the branch** to the user's fork if it has no upstream yet:
    `git push -u origin <branch-name>`.
 
-7. **Open the PR** against upstream, adding `--draft` if that is what the user chose:
+7. **Open the PR** against upstream, adding `--draft` if that is what the user chose.
+
+   Derive the head explicitly rather than letting `gh` infer it — a checkout commonly has several
+   remotes, including other people's forks, and an inferred head can point at the wrong one:
+
+   ```bash
+   FORK_OWNER=$(git remote get-url origin \
+     | sed -E 's#(git@github\.com:|https://github\.com/)([^/]+)/.*#\2#')
+   BRANCH=$(git branch --show-current)
+   ```
+
+   Show `$FORK_OWNER` to the user and confirm it is the fork they want the PR to come from before
+   continuing; `origin` is not guaranteed to be their fork. Then:
 
    ```bash
    gh pr create --repo Mudlet/Mudlet --base development \
+     --head "${FORK_OWNER}:${BRANCH}" \
      --title "Fix: <short non-technical title>" \
      --body "$(cat <<'EOF'
    <the body from step 4>
    EOF
    )"
    ```
-
-   If `gh` resolves the wrong head, pass `--head <fork-owner>:<branch-name>`, parsing
-   `<fork-owner>` from the `origin` remote URL.
 
    A draft can be marked ready later with `gh pr ready <number>`, so choosing draft is the
    reversible option.
