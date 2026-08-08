@@ -54,6 +54,7 @@ set(FUNCTIONAL_TEST_SOURCES
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
+    StarterUiTriggerCostTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
     WindowBackgroundTest.cpp
