@@ -4337,7 +4337,7 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 }
 #endif
 
-bool cTelnet::purgeMediaCache()
+std::pair<bool, QString> cTelnet::purgeMediaCache()
 {
     return mpHost->mpMedia->purgeMediaCache();
 }

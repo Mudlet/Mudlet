@@ -41,6 +41,7 @@
 #include <QApplication>
 #include <QColorDialog>
 #include <QDir>
+#include <QFileInfo>
 #include <QPointer>
 #include <QRandomGenerator>
 #include <QSettings>
@@ -78,11 +79,31 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
 // retrieve its password. Mirrors the pattern used there:
 const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
 
-// Whether an existing profile folder can be taken as-is instead of being put
-// through the stricter rules that apply to names typed into the dialog:
+// A lone "." is made entirely of permitted characters, yet every path built
+// from it addresses the profiles directory rather than a profile of its own -
+// as does "..", which scmUnusableProfileNameChars already covers:
 bool dlgConnectionProfiles::profileNameUsableAsIs(const QString& name)
 {
-    return !name.isEmpty() && !name.contains(scmUnusableProfileNameChars);
+    return !name.isEmpty() && name != qsl(".") && !name.contains(scmUnusableProfileNameChars);
+}
+
+// Resolved textually rather than with QDir::canonicalPath() so that the answer
+// does not depend on the folder existing - a predefined game has none until it
+// is saved - and so that a symlinked profile folder still resolves.
+QString dlgConnectionProfiles::profileFolderPath(const QString& profilesPath, const QString& profile)
+{
+    // Must precede the parent check below, which QDir::cleanPath() would
+    // otherwise satisfy by collapsing "../profiles/Foo" straight back in:
+    if (profile.isEmpty() || profile.contains(QLatin1Char('/')) || profile.contains(QLatin1Char('\\'))) {
+        return {};
+    }
+
+    const QString profilesDir = QDir::cleanPath(profilesPath);
+    const QString candidate = QDir::cleanPath(qsl("%1/%2").arg(profilesDir, profile));
+    if (candidate == profilesDir || QFileInfo(candidate).path() != profilesDir) {
+        return {};
+    }
+    return candidate;
 }
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
@@ -126,6 +147,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(listWidget_profiles, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
     mpTabBar = new QTabBar(this);
+    // QTabWidget gives this dialog a second QTabBar, so this one needs a name
+    mpTabBar->setObjectName(qsl("gamesTabBar"));
     //: Tab showing only the games the user already has profiles for
     mpTabBar->insertTab(scmMyGamesTab, tr("My games"));
     //: Tab showing every game Mudlet has a built-in profile for
@@ -998,29 +1021,40 @@ void dlgConnectionProfiles::slot_addProfile()
     connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
 }
 
-// enables the deletion button once the correct text (profile name) is entered
-void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
+void dlgConnectionProfiles::showRemovalProblem(const QString& message)
 {
-    const QString profile = listWidget_profiles->currentItem()->data(csmNameRole).toString();
-    if (profile != text) {
-        delete_button->setEnabled(false);
-    } else {
-        delete_button->setEnabled(true);
-        delete_button->setFocus();
-    }
-}
-
-// actually performs the deletion once the correct text has been entered
-void dlgConnectionProfiles::slot_reallyDeleteProfile()
-{
-    const QString profile = listWidget_profiles->currentItem()->data(csmNameRole).toString();
-    reallyDeleteProfile(profile);
+    notificationArea->show();
+    notificationAreaIconLabelWarning->show();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(message);
 }
 
 void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 {
-    QDir dir(mudlet::getMudletPath(enums::profileHomePath, profile));
-    dir.removeRecursively();
+    const QString profilesPath = mudlet::getMudletPath(enums::profilesPath);
+    const QString profileFolder = profileFolderPath(profilesPath, profile);
+    if (profileFolder.isEmpty()) {
+        qWarning().nospace() << "dlgConnectionProfiles::reallyDeleteProfile(\"" << profile << "\") ERROR - refusing to delete: that name does not address a folder inside \"" << profilesPath << "\".";
+        // rebuild the list first: it re-selects a profile, and that clears the
+        // notification area on its way through validateProfile()
+        fillout_form();
+        //: %1 is a profile name that does not name a folder of its own, so there is nothing that could be removed for it
+        showRemovalProblem(tr("'%1' has no profile folder of its own, so there is nothing to remove.").arg(profile));
+        return;
+    }
+
+    QDir dir(profileFolder);
+    if (!dir.removeRecursively()) {
+        // the profile is still on disk, so its password and its list entry stay:
+        // removing either would strand the data that is left
+        qWarning().nospace() << "dlgConnectionProfiles::reallyDeleteProfile(\"" << profile << "\") ERROR - could not completely remove \"" << profileFolder << "\".";
+        fillout_form();
+        //: %1 is a profile name. Shown when some of the profile's files could not be deleted, e.g. because another program has them open
+        showRemovalProblem(tr("Could not remove everything belonging to '%1'. Close it if it is open elsewhere, check that you may write to its folder, and try again.").arg(profile));
+        return;
+    }
 
     // Clean up keychain entries for the deleted profile
     // Note: CredentialManager only supports one operation at a time, so we must
@@ -1086,9 +1120,22 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    const QDir profileDirContents(mudlet::getMudletPath(enums::profileXmlFilesPath, profile));
-    if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
-        // shortcut - don't show profile deletion confirmation if there is no data to delete
+    // A profile that has never been played holds nothing but the connection
+    // details written out when it was selected. Listing what is expected rather
+    // than what to watch out for keeps an unrecognised file - a stored password,
+    // a personal dictionary - on the side of asking:
+    static const QStringList connectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
+    const QDir profileDir(mudlet::getMudletPath(enums::profileHomePath, profile));
+    bool nothingToLose = !profileDir.exists() || profileDir.entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty();
+    if (nothingToLose) {
+        for (const QString& fileName : profileDir.entryList(QDir::Files | QDir::Hidden)) {
+            if (!connectionDetailFiles.contains(fileName)) {
+                nothingToLose = false;
+                break;
+            }
+        }
+    }
+    if (nothingToLose) {
         reallyDeleteProfile(profile);
         return;
     }
@@ -1105,23 +1152,38 @@ void dlgConnectionProfiles::slot_deleteProfile()
     file.close();
 
     if (!delete_profile_dialog) {
+        qWarning() << "dlgConnectionProfiles::slot_deleteProfile() ERROR - the deletion confirmation did not load as a dialog.";
+        //: %1 is a profile name. Shown when the dialog asking the user to confirm a removal could not be built
+        showRemovalProblem(tr("Could not open the confirmation, so '%1' has not been removed.").arg(profile));
         return;
     }
 
-    delete_profile_lineedit = delete_profile_dialog->findChild<QLineEdit*>(qsl("delete_profile_lineedit"));
-    delete_button = delete_profile_dialog->findChild<QPushButton*>(qsl("delete_button"));
-    auto* cancel_button = delete_profile_dialog->findChild<QPushButton*>(qsl("cancel_button"));
+    auto* nameEntry = delete_profile_dialog->findChild<QLineEdit*>(qsl("delete_profile_lineedit"));
+    auto* deleteButton = delete_profile_dialog->findChild<QPushButton*>(qsl("delete_button"));
+    auto* cancelButton = delete_profile_dialog->findChild<QPushButton*>(qsl("cancel_button"));
 
-    if (!delete_profile_lineedit || !delete_button || !cancel_button) {
+    if (!nameEntry || !deleteButton || !cancelButton) {
+        qWarning() << "dlgConnectionProfiles::slot_deleteProfile() ERROR - the deletion confirmation is missing one of its widgets.";
+        showRemovalProblem(tr("Could not open the confirmation, so '%1' has not been removed.").arg(profile));
+        delete delete_profile_dialog;
         return;
     }
 
-    connect(delete_profile_lineedit, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_deleteProfileCheck);
-    connect(delete_profile_dialog, &QDialog::accepted, this, &dlgConnectionProfiles::slot_reallyDeleteProfile);
+    // The confirmation is not modal, so by the time it is answered the selection
+    // may have moved on, or a second confirmation may be open alongside it:
+    connect(nameEntry, &QLineEdit::textChanged, delete_profile_dialog, [deleteButton, profile](const QString& text) {
+        deleteButton->setEnabled(text == profile);
+        if (deleteButton->isEnabled()) {
+            deleteButton->setFocus();
+        }
+    });
+    connect(delete_profile_dialog, &QDialog::accepted, this, [this, profile]() {
+        reallyDeleteProfile(profile);
+    });
 
-    delete_profile_lineedit->setPlaceholderText(profile);
-    delete_profile_lineedit->setFocus();
-    delete_button->setEnabled(false);
+    nameEntry->setPlaceholderText(profile);
+    nameEntry->setFocus();
+    deleteButton->setEnabled(false);
     delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profile));
     delete_profile_dialog->setAttribute(Qt::WA_DeleteOnClose);
 
@@ -1672,10 +1734,37 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
     listWidget_profiles->addItem(pItem);
 }
 
+// fillout_form() destroys and rebuilds every item, so callers that have let the
+// event loop run cannot hold on to one.
+void dlgConnectionProfiles::setIconOfListedProfile(const QString& profileName, const QIcon& icon) const
+{
+    const auto pItems = findData(*listWidget_profiles, profileName, csmNameRole);
+    if (pItems.isEmpty()) {
+        return;
+    }
+    pItems.first()->setIcon(icon);
+}
+
+// Empty when nothing is selected. The context-menu actions re-check rather than
+// trust slot_profileContextMenu(): menu.exec() runs a nested event loop, and the
+// profile-copy completion handler calls fillout_form() from it, which can clear
+// the selection - or leave a different profile current, in which case the action
+// still mis-targets. Only the crash of acting on nothing is handled here.
+QString dlgConnectionProfiles::selectedProfileName() const
+{
+    const auto* pItem = listWidget_profiles->currentItem();
+    return pItem ? pItem->data(csmNameRole).toString() : QString();
+}
+
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
+    // "My games" on a fresh install lists nothing, so nothing is current
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
+
     const QPoint globalPos = listWidget_profiles->mapToGlobal(pos);
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
@@ -1699,7 +1788,10 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 
 void dlgConnectionProfiles::slot_setCustomIcon()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
 
     QSettings& settings = *mudlet::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
@@ -1718,11 +1810,15 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     }
 
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    listWidget_profiles->currentItem()->setIcon(icon);
+    // the file dialog ran a nested event loop, so the current item may have moved
+    setIconOfListedProfile(profileName, icon);
 }
 void dlgConnectionProfiles::slot_setCustomColor()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
@@ -1736,12 +1832,15 @@ void dlgConnectionProfiles::slot_setCustomColor()
         if (!file.commit()) {
             qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
         }
-        listWidget_profiles->currentItem()->setIcon(customIcon(profileName, {color}));
+        setIconOfListedProfile(profileName, customIcon(profileName, {color}));
     }
 }
 void dlgConnectionProfiles::slot_resetCustomIcon()
 {
-    auto profileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    const auto profileName = selectedProfileName();
+    if (profileName.isEmpty()) {
+        return;
+    }
 
     const bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
@@ -1788,10 +1887,31 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(enums::profileHomePath, oldname), mudlet::getMudletPath(enums::profileHomePath, profile_name));
-    auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
-        mProfileList << profile_name;
-        slot_itemClicked(pItem);
+    auto watcher = new QFutureWatcher<bool>(this);
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
+        if (!mProfileList.contains(profile_name)) {
+            mProfileList << profile_name;
+        }
+
+        // The dialog stays usable while the copy runs, and switching the games
+        // tab calls fillout_form(), which destroys every item - including the
+        // one made for this copy. Hence look it up by name rather than hold it.
+        auto pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
+        if (pCopiedItems.isEmpty()) {
+            // that rebuild scanned the profiles directory before the copy
+            // landed in it
+            fillout_form();
+            pCopiedItems = findData(*listWidget_profiles, profile_name, csmNameRole);
+        }
+        if (!pCopiedItems.isEmpty()) {
+            auto* pCopiedItem = pCopiedItems.first();
+            if (listWidget_profiles->currentItem() == pCopiedItem) {
+                slot_itemClicked(pCopiedItem);
+            } else {
+                // reaches slot_itemClicked() through currentItemChanged
+                listWidget_profiles->setCurrentItem(pCopiedItem);
+            }
+        }
 
         // restore the password, which won't be copied by the disk copy if stored in the credential manager
         // Temporarily block textChanged signal to avoid triggering save on programmatic setText
@@ -2156,8 +2276,12 @@ bool dlgConnectionProfiles::validateProfile()
         // whitespace too, as the entered name always arrives trimmed. Names
         // the rest of Mudlet cannot work with get no exemption: renaming them
         // is worse for the user than a profile whose password never saves.
+        // "." and ".." name something that exists without being a profile, so
+        // the exemption needs a folder that is genuinely the profile's own.
         const QString selectedName = pItem->data(csmNameRole).toString();
-        const bool nameUnchangedAndOnDisk = (name == selectedName.trimmed()) && profileNameUsableAsIs(name) && QDir(mudlet::getMudletPath(enums::profileHomePath, selectedName)).exists();
+        const QString selectedFolder = profileFolderPath(mudlet::getMudletPath(enums::profilesPath), selectedName);
+        const bool nameIsFolderOnDisk = (name == selectedName.trimmed()) && !selectedFolder.isEmpty() && QDir(selectedFolder).exists();
+        const bool nameUnchangedAndOnDisk = nameIsFolderOnDisk && profileNameUsableAsIs(name);
         const QChar invalidChar = nameUnchangedAndOnDisk ? QChar() : firstInvalidProfileNameChar(name);
         if (!invalidChar.isNull()) {
             notificationAreaIconLabelWarning->show();
@@ -2165,6 +2289,17 @@ bool dlgConnectionProfiles::validateProfile()
                     qsl("%1\n%2\n%3\n").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:").arg(invalidChar), scmAllowedProfileNameChars));
             name.remove(invalidChar);
             profile_name_entry->setText(name);
+            validName = false;
+            valid = false;
+        } else if (!nameIsFolderOnDisk && !name.isEmpty() && !profileNameUsableAsIs(name)) {
+            // Nothing to strip here, unlike the branch above: the characters
+            // are all permitted, it is the whole name that cannot be a folder
+            notificationAreaIconLabelWarning->show();
+            notificationAreaMessageBox->setText(
+                    qsl("%1\n%2\n")
+                            .arg(notificationAreaMessageBox->text(),
+                                 //: Shown when a profile name would not name a folder of its own. Keep the quoted dots as they are, they are literal characters the user typed
+                                 tr("A profile name cannot be \".\" or contain \"..\", as those refer to other folders on your computer. Please pick a different name.")));
             validName = false;
             valid = false;
         }

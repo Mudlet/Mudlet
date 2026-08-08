@@ -226,6 +226,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEchoingText(other.mEchoingText)
 , mpConsole(other.mpConsole)
 , mGotESC(other.mGotESC)
+, mGotEscCharset(other.mGotEscCharset)
 , mGotCSI(other.mGotCSI)
 , mGotOSC(other.mGotOSC)
 , mGotString(other.mGotString)
@@ -271,6 +272,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mWrapDetectSamples(other.mWrapDetectSamples)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
+, mLocalGotEscCharset(other.mLocalGotEscCharset)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
 , mLocalGotString(other.mLocalGotString)
@@ -321,6 +323,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEchoingText = other.mEchoingText;
         mpConsole = other.mpConsole;
         mGotESC = other.mGotESC;
+        mGotEscCharset = other.mGotEscCharset;
         mGotCSI = other.mGotCSI;
         mGotOSC = other.mGotOSC;
         mGotString = other.mGotString;
@@ -366,6 +369,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mWrapDetectSamples = other.mWrapDetectSamples;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
+        mLocalGotEscCharset = other.mLocalGotEscCharset;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
         mLocalGotString = other.mLocalGotString;
@@ -580,6 +584,7 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
 void TBuffer::swapParserSequenceState()
 {
     std::swap(mGotESC, mLocalGotESC);
+    std::swap(mGotEscCharset, mLocalGotEscCharset);
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
     std::swap(mGotString, mLocalGotString);
@@ -588,9 +593,8 @@ void TBuffer::swapParserSequenceState()
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
-    // mGotESC/mGotCSI/mGotOSC/mGotString and mIncompleteSequenceBytes persist
-    // between calls so that a sequence split across Game Server packets still
-    // parses.
+    // The mGot... latches and mIncompleteSequenceBytes persist between calls so
+    // that a sequence split across Game Server packets still parses.
     // Locally generated text (feedTriggers(), MMCP chat messages, MXP
     // insertions) runs through the same parser, so swap in a separate set of
     // that state for the duration of such a feed - otherwise local text
@@ -623,6 +627,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
     const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
+    // ST) that games do send and that Mudlet has to swallow. Only these: any
+    // other byte after an ESC is text, and printing it is no worse than what
+    // Mudlet has always done, whereas eating it loses real output:
+    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
@@ -749,9 +758,20 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 }
 
                 mGotESC = true;
+                mGotEscCharset = false;
                 ++localBufferPosition;
                 continue;
             }
+        }
+
+        if (mGotEscCharset) {
+            mGotEscCharset = false;
+            if (static_cast<unsigned char>(ch) >= 0x30 && static_cast<unsigned char>(ch) <= 0x7E) {
+                ++localBufferPosition;
+                continue;
+            }
+            // Only a final byte can name a character set, so this was a stray
+            // ESC after all and the byte is text.
         }
 
         if (mGotESC) {
@@ -771,16 +791,20 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 ++localBufferPosition;
                 continue;
             }
-            if (static_cast<unsigned char>(ch) >= 0x20) {
-                // The final byte of some other escape sequence (e.g. ESC 7
-                // or ESC M) that Mudlet does not handle - consume it silently
-                // as a real terminal would instead of showing it as text:
+            if (ch == '(' || ch == ')' || ch == '*' || ch == '+') {
+                // An ISO 2022 character set designation such as ESC ( B; the
+                // byte after this one names the set:
+                mGotEscCharset = true;
                 ++localBufferPosition;
                 continue;
             }
-            // A control character straight after the ESC means the escape
-            // sequence is malformed - abandon it (the latch was already
-            // cleared above) and process the character normally:
+            if (cShortEscape.indexOf(ch) >= 0) {
+                ++localBufferPosition;
+                continue;
+            }
+            // Any other byte is text: a stray ESC in the game's output must
+            // not swallow it, and consuming a multibyte character's lead byte
+            // would orphan its continuation bytes.
         }
 
         if (mGotCSI) {

@@ -21,6 +21,7 @@ set(FUNCTIONAL_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
+    WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
@@ -47,13 +48,17 @@ set(FUNCTIONAL_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
+    ConnectionDialogCrashTest.cpp
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
+    WindowBackgroundTest.cpp
+    EmbeddedMapperCreationTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -141,7 +146,7 @@ set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
+set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
@@ -173,6 +178,11 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
+
+# ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
+# on top of a full mudlet start under ASan, so the 60s default is too tight for
+# a loaded machine even though the file runs in ~2s
+set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)

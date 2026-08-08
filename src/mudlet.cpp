@@ -3494,6 +3494,13 @@ void mudlet::slot_showConnectionDialog()
     // Use a timer to ensure the main window is ready before showing the dialog
     // This is especially important at startup when the main window might not be fully initialized
     QTimer::singleShot(0ms, this, [this]() {
+        // closeEvent() closes this WA_DeleteOnClose dialog and clears the
+        // QPointer, so quitting before this runs leaves nothing to show - and
+        // show() below would undo closeEvent()'s hide() of the main window
+        if (!mpConnectionDialog) {
+            return;
+        }
+
         // Ensure the main window is visible and ready
         if (!isVisible()) {
             show();

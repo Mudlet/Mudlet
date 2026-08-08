@@ -32,6 +32,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <vector>
 
 /* We need an explicit constructor in this file as the Host class is forward
@@ -206,13 +207,6 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
     mTriggerRootNodeList.remove(pT);
-    // A node can be removed and deleted mid-pass without going through the
-    // deferred-cleanup paths (e.g. XMLimport discarding its placeholder trigger
-    // when installPackage() runs from a trigger script), so it must not linger
-    // in the same-line match list. Null the slot instead of compacting:
-    // processDataStream() may be walking that list by index right now, and
-    // shifting entries under it would skip a trigger's same-line match.
-    std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
 }
 
 TTrigger* TriggerUnit::getTrigger(int id)
@@ -244,8 +238,28 @@ bool TriggerUnit::registerTrigger(TTrigger* pT)
     addTriggerRootNode(pT);
     if (mProcessingDepth > 0) {
         mRootNodesAddedWhileProcessing.append(pT);
+        startOrExtendSameLineChain(pT);
     }
     return true;
+}
+
+// A trigger created by a trigger that was itself created while this line was
+// being processed joins that trigger's lineage, one generation further down;
+// anything created from a script that predates the line starts a lineage of its
+// own at generation one. So a script arming a batch produces a generation of
+// one-deep lineages however big the batch, while a trigger that re-creates
+// itself keeps adding generations to a single lineage.
+void TriggerUnit::startOrExtendSameLineChain(TTrigger* pT)
+{
+    int chainId = mCurrentSameLineChainId;
+    if (!chainId) {
+        if (mLastSameLineChainId == std::numeric_limits<int>::max()) {
+            mLastSameLineChainId = 0;
+        }
+        chainId = ++mLastSameLineChainId;
+        mSameLineChainStarters.insert(chainId, mpCurrentExecutingTriggerName ? *mpCurrentExecutingTriggerName : QString());
+    }
+    pT->setSameLineChain(chainId, mCurrentSameLineGeneration + 1);
 }
 
 void TriggerUnit::unregisterTrigger(TTrigger* pT)
@@ -253,6 +267,18 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     if (!pT) {
         return;
     }
+    // A node can be removed and deleted mid-pass without going through the
+    // deferred-cleanup paths (e.g. XMLimport discarding its placeholder trigger
+    // when installPackage() runs from a trigger script), so it must not linger in
+    // the same-line match list. Done here rather than in removeTriggerRootNode()
+    // because a trigger that was a root node when it was added to that list can
+    // have been reparented since, which routes it to removeTrigger() instead.
+    // Null the slot instead of compacting: processDataStream() may be walking the
+    // list by index right now, and shifting entries under it would skip a
+    // trigger's same-line match. Nulling it also takes the trigger out of reach
+    // of the end-of-pass reset, so drop its lineage here instead.
+    std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
+    pT->setSameLineChain(0, 0);
     if (pT->getParent()) {
         removeTrigger(pT);
         return;
@@ -308,26 +334,25 @@ int TriggerUnit::getNewID()
     return ++mMaxID;
 }
 
-// Stopping the pass is not enough: what the loop created is still live and still
-// matching, so the next line would start with a budget's worth of them and each
-// would spawn a budget's worth again, costing a multiple of the line before it.
-// Everything registered during the pass is disowned, not just the loop's
-// offspring: the list records no lineage, so an unrelated capture trigger armed
-// on the same line is caught too. Permanent triggers get deactivate() and
-// not setIsActive(false), which would clear the user-active state XMLexport saves
-// and leave them switched off after a restart.
-void TriggerUnit::stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPass)
+// Stopping the pass is not enough: what the lineage created is still live and
+// still matching, so the next line would start with a budget's worth of them and
+// each would spawn a budget's worth again, costing a multiple of the line before
+// it. Only the runaway lineage is disowned - a capture trigger an unrelated
+// script armed on the same line belongs to a lineage of its own and is left
+// alone. The whole list is scanned rather than the tail of this pass: a lineage
+// started in an outer pass can go on growing inside a nested feedTriggers() pass,
+// and when that nested pass is the one to trip, the earlier members sit below its
+// first-node index. Permanent triggers get deactivate() and not setIsActive(false),
+// which would clear the user-active state XMLexport saves and leave them switched
+// off after a restart.
+void TriggerUnit::stopSameLineCreationLoop(const int chainId)
 {
-    QString triggerName;
     int killedCount = 0;
     int deactivatedCount = 0;
-    for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
-        auto trigger = mRootNodesAddedWhileProcessing.at(i);
-        if (!trigger) {
+    for (auto trigger : std::as_const(mRootNodesAddedWhileProcessing)) {
+        if (!trigger || trigger->sameLineChainId() != chainId) {
             continue;
         }
-        // keeps the last: the newest link in the chain names the culprit
-        triggerName = trigger->getName();
         if (trigger->isTemporary()) {
             trigger->setIsActive(false);
             markCleanup(trigger);
@@ -337,10 +362,11 @@ void TriggerUnit::stopSameLineCreationLoop(const qsizetype firstNodeAddedThisPas
             ++deactivatedCount;
         }
     }
+    const QString triggerName = mSameLineChainStarters.value(chainId);
 
-    qWarning().nospace() << "TriggerUnit::processDataStream(...) aborting: triggers created while processing one line reached the limit of " << scmMaxSameLineCreations
-                         << " - probably a trigger that re-creates itself. Profile: " << (mpHost ? mpHost->getName() : QString()) << ", triggers removed: " << killedCount
-                         << ", deactivated: " << deactivatedCount << ", last one created: " << triggerName;
+    qWarning().nospace() << "TriggerUnit::processDataStream(...) aborting: one lineage of triggers created while processing a line reached " << scmMaxSameLineGenerations
+                         << " generations - probably a trigger that re-creates itself. Profile: " << (mpHost ? mpHost->getName() : QString()) << ", triggers removed: " << killedCount
+                         << ", deactivated: " << deactivatedCount << ", lineage started by: " << triggerName;
     if (!mpHost) {
         return;
     }
@@ -393,7 +419,15 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         if (mProcessingDepth == 0) {
             // Deletion is deferred while any pass runs, so these pointers stayed
             // valid; drop them before doCleanup() frees the underlying triggers.
+            // A trigger that outlives the line it was created on stops being part
+            // of a lineage, so its own creations start counting afresh.
+            for (auto trigger : std::as_const(mRootNodesAddedWhileProcessing)) {
+                if (trigger) {
+                    trigger->setSameLineChain(0, 0);
+                }
+            }
             mRootNodesAddedWhileProcessing.clear();
+            mSameLineChainStarters.clear();
             doCleanup();
         }
     });
@@ -422,15 +456,23 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // current line - so the list grows in front of the loop, and a trigger that
     // re-creates itself never lets the line finish. Nothing else catches that: no
     // C++ frame recurses, so mProcessingDepth stays put and the feedTriggers()
-    // depth guard never sees it.
-    const qsizetype sameLineCreationBudget = firstNodeAddedThisPass + scmMaxSameLineCreations;
+    // depth guard never sees it. Only the lineage that is extending itself gets
+    // stopped; every other lineage the line started carries on matching, which is
+    // the difference between a runaway and a script arming a batch of triggers.
     for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
-        if (i >= sameLineCreationBudget) {
-            stopSameLineCreationLoop(firstNodeAddedThisPass);
+        if (i - firstNodeAddedThisPass >= scmMaxSameLineCreationsPerLine) {
+            qWarning().nospace() << "TriggerUnit::processDataStream(...) stopping: more than " << scmMaxSameLineCreationsPerLine
+                                 << " triggers were created while processing one line, so the rest are not being offered it. Profile: " << (mpHost ? mpHost->getName() : QString());
             break;
         }
         auto trigger = mRootNodesAddedWhileProcessing.at(i);
         if (!trigger || !trigger->isActive()) {
+            continue;
+        }
+        // stopSameLineCreationLoop() deactivates the whole lineage, so the check
+        // above skips its remaining members and this loop reaches a lineage once
+        if (trigger->sameLineGeneration() > scmMaxSameLineGenerations) {
+            stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
         trigger->match(subject, data, line);

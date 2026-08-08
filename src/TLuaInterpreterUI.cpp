@@ -1257,7 +1257,7 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
 int TLuaInterpreter::getBorderColor(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    const QColor color = host.mpConsole->mpMainFrame->palette().color(QPalette::Window);
+    const QColor color = host.mpConsole->borderColor();
     lua_pushnumber(L, color.red());
     lua_pushnumber(L, color.green());
     lua_pushnumber(L, color.blue());
@@ -2702,6 +2702,10 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
 
     Host* host = &getHostFromLua(L);
     if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
+        if (fullWindow) {
+            // the console name is already validated above, so this is about the image
+            return warnArgumentValue(L, __func__, qsl("could not use '%1' as a full window background image").arg(imgPath));
+        }
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 
@@ -2800,11 +2804,7 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     const int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     const int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     const Host& host = getHostFromLua(L);
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(luaRed, luaGreen, luaBlue, 255));
-    host.mpConsole->mpMainFrame->setPalette(framePalette);
+    host.mpConsole->setBorderColor(QColor(luaRed, luaGreen, luaBlue));
     return 0;
 }
 

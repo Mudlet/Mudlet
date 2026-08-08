@@ -32,6 +32,7 @@
 #include "TMediaPlaylist.h"
 
 #include <memory>
+#include <utility>
 #include <QAudioOutput>
 #include <QMediaPlayer>
 #include <QUrl>
@@ -86,15 +87,22 @@ public:
             if (mMediaPlayer->playbackState() == QMediaPlayer::StoppedState && !mMediaPlayer->source().isEmpty()) {
                 releaseSource();
             }
+            mClaimingSource = true;
             mMediaPlayer->setSource(media);
+            mClaimingSource = false;
         }
     }
     void continuePlaying(const QUrl& media)
     {
         ++mContinuationGeneration;
-        mEndAnnounced = false;
         if (mMediaPlayer) {
             mMediaPlayer->setSource(media);
+            // Cleared after the source is installed, not before. On a backend that delivers
+            // EndOfMedia while the player is still playing this setSource() is a real
+            // playing-to-stopped transition, and its handler announces the pass that just ended.
+            // Clearing first leaves that announcement standing for the pass about to start, and
+            // the last pass has no continuation left to clear it again.
+            mEndAnnounced = false;
             mMediaPlayer->play();
         }
     }
@@ -118,6 +126,18 @@ public:
     // Cleared by the two ways this player is given something new to play, above.
     bool endAnnounced() const { return mEndAnnounced; }
     void noteEndAnnounced() { mEndAnnounced = true; }
+
+    // True only while claimSource() is installing a new source. A stop delivered during that is
+    // the previous track being displaced rather than this one ending, and whoever displaced it
+    // has already said so - with the metadata the player no longer holds.
+    bool claimingSource() const { return mClaimingSource; }
+
+    // A play() call owns the player it is setting up until it returns, because the events it
+    // raises run script handlers synchronously. A handler that starts media of its own must be
+    // given a different player: two play() calls sharing one overwrite each other's playlist and
+    // media data.
+    bool reservedForPlay() const { return mReservedForPlay; }
+    void setReservedForPlay(const bool reserved) { mReservedForPlay = reserved; }
 
     // Read-only uses and playback control are fine; do not setSource() on it, for the reason
     // given above claimSource().
@@ -179,6 +199,8 @@ private:
     quint64 mClaimGeneration = 0;
     quint64 mContinuationGeneration = 0;
     bool mEndAnnounced = false;
+    bool mClaimingSource = false;
+    bool mReservedForPlay = false;
 };
 
 class TMedia : public QObject
@@ -204,7 +226,7 @@ public:
     void pauseMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
-    bool purgeMediaCache();
+    std::pair<bool, QString> purgeMediaCache();
     void refreshAudioDevices();
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
@@ -268,6 +290,8 @@ private:
     // endedUrl and endedData are passed in rather than read off the player, so a caller that has
     // already released the source can still say what it was that ended.
     void raiseMediaFinishedEvent(const std::shared_ptr<TMediaPlayer>& player, const QUrl& endedUrl, const TMediaData& endedData);
+    void claimPlayerFor(const std::shared_ptr<TMediaPlayer>& player, TMediaData& mediaData, const QUrl& mediaSource);
+    void endDisplacedPlayback(const std::shared_ptr<TMediaPlayer>& player);
     void releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& endedData, const PlaybackEnd endedBy);
     void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const std::shared_ptr<TMediaPlayer>& player);
     bool setupVideo(const std::shared_ptr<TMediaPlayer>& player);

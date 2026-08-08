@@ -9706,11 +9706,6 @@ EditorViewType dlgTriggerEditor::determineViewFromVisibleTree()
     return EditorViewType::cmUnknownView;
 }
 
-bool dlgTriggerEditor::variablesViewActive() const
-{
-    return isVisible() && mCurrentView == EditorViewType::cmVarsView;
-}
-
 EditorViewType dlgTriggerEditor::resolveCurrentView()
 {
     if (mCurrentView != EditorViewType::cmUnknownView) {

@@ -1346,7 +1346,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -2100,9 +2100,11 @@ void dlgProfilePreferences::slot_purgeMediaCache()
         return;
     }
 
-    if (!pHost->mpMedia->purgeMediaCache()) {
-        //: Shown after the "Clear stored media" button in preferences fails to empty the profile's media directory.
-        pHost->postMessage(tr("[ WARN ]  - Could not clear all of the stored media; some files may still be in use."));
+    const auto [purged, message] = pHost->mpMedia->purgeMediaCache();
+
+    if (!purged) {
+        //: Shown after the "Clear stored media" button in preferences fails to empty the profile's media directory. %1 is the reason, which is not translated.
+        pHost->postMessage(tr("[ WARN ]  - Could not clear the stored media: %1.").arg(message));
         return;
     }
 
