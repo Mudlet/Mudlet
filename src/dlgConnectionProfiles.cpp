@@ -1105,6 +1105,15 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     listWidget_profiles->setFocus();
 }
 
+// A profile that has never been played holds nothing but the connection details
+// written out while it was being set up. Listing what is expected rather than
+// what to watch out for keeps an unrecognised file - a stored password, a
+// personal dictionary - on the side of asking. Anything else that comes to be
+// written before a profile is first played belongs here too, otherwise its
+// removal asks needlessly; ProfileDeletionSafetyTest pins this list to what the
+// dialog actually writes:
+const QStringList dlgConnectionProfiles::scmConnectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
+
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
 // if this profile has been used
 void dlgConnectionProfiles::slot_deleteProfile()
@@ -1120,16 +1129,11 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    // A profile that has never been played holds nothing but the connection
-    // details written out when it was selected. Listing what is expected rather
-    // than what to watch out for keeps an unrecognised file - a stored password,
-    // a personal dictionary - on the side of asking:
-    static const QStringList connectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
     const QDir profileDir(mudlet::getMudletPath(enums::profileHomePath, profile));
     bool nothingToLose = !profileDir.exists() || profileDir.entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty();
     if (nothingToLose) {
         for (const QString& fileName : profileDir.entryList(QDir::Files | QDir::Hidden)) {
-            if (!connectionDetailFiles.contains(fileName)) {
+            if (!scmConnectionDetailFiles.contains(fileName)) {
                 nothingToLose = false;
                 break;
             }

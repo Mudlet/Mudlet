@@ -256,6 +256,49 @@ private slots:
         closeDialog(dlg);
     }
 
+    // The shortcut above only holds while dlgConnectionProfiles::scmConnectionDetailFiles
+    // still covers everything the dialog writes for a new profile, so set one up
+    // the way the user does and hold what lands on disk against that list
+    void test_newProfileOnlyWritesListedConnectionDetails()
+    {
+        const QString unplayed = qsl("QA Just Set Up");
+        QVERIFY(!QDir(profilePath(unplayed)).exists());
+
+        auto* dlg = openDialog();
+        dlg->slot_addProfile();
+        dlg->profile_name_entry->setText(unplayed);
+        // what the name field emits once the user moves on to the next one;
+        // this is also what creates the profile's folder
+        dlg->slot_saveName();
+        QVERIFY2(QDir(profilePath(unplayed)).exists(), "naming a new profile did not create its folder");
+
+        // the rest of what a user fills in before ever playing
+        dlg->host_name_entry->setText(qsl("mudlet.org"));
+        dlg->port_entry->setText(qsl("23"));
+        dlg->port_ssl_tsl->setChecked(true);
+        dlg->autologin_checkBox->setChecked(true);
+        dlg->auto_reconnect->setChecked(true);
+        dlg->mud_description_textedit->setPlainText(qsl("a game to try later"));
+
+        // picking the profile out of the list writes as well, but only once
+        // there is a folder to write into, so it goes after the naming above
+        selectProfile(dlg, unplayed);
+
+        const QStringList written = QDir(profilePath(unplayed)).entryList(QDir::Files | QDir::Hidden);
+        QVERIFY2(!written.isEmpty(), "setting a profile up wrote nothing at all, so this test proves nothing");
+        for (const QString& fileName : written) {
+            QVERIFY2(dlgConnectionProfiles::scmConnectionDetailFiles.contains(fileName),
+                     qPrintable(qsl("setting a profile up wrote '%1', which dlgConnectionProfiles::scmConnectionDetailFiles does not list - add it there, or "
+                                    "reconsider removing such a profile without confirmation")
+                                        .arg(fileName)));
+        }
+
+        dlg->slot_deleteProfile();
+        QVERIFY2(!confirmation(dlg), "a profile that was only ever set up should not need confirming");
+        QVERIFY2(!QDir(profilePath(unplayed)).exists(), "the profile was not removed");
+        closeDialog(dlg);
+    }
+
     // A stored password sits loose in the folder rather than in a sub-directory
     void test_profileWithOnlyAStoredPasswordIsConfirmedBeforeRemoval()
     {
