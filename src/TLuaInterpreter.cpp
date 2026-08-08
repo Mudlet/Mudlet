@@ -3663,6 +3663,46 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
+// A single GMCP frame can run to tens of kilobytes, which would bury everything
+// around it in the debug console - past this much of one the remainder is left
+// to display():
+static constexpr qsizetype csmMaxInlinedProtocolPayload = 1000;
+
+// One debug console line for a protocol event: the event name first, then the
+// data that came with it so that reading it does not need a second command.
+static QString protocolEventLine(const QString& protocol, const QString& token, const QString& payload)
+{
+    // Collapsed to a single line: an event spread over several lines cannot be
+    // told apart from several events, and only the first would be marked with
+    // the profile it came from:
+    const QString oneLine = payload.simplified();
+    if (oneLine.isEmpty()) {
+        return qsl("%1 event <%2>\n").arg(protocol, token);
+    }
+    if (oneLine.size() <= csmMaxInlinedProtocolPayload) {
+        return qsl("%1 event <%2> %3\n").arg(protocol, token, oneLine);
+    }
+    return qsl("%1 event <%2> %3... (%4 more characters, display(%1) to see all)\n")
+            .arg(protocol, token, oneLine.left(csmMaxInlinedProtocolPayload), QString::number(oneLine.size() - csmMaxInlinedProtocolPayload));
+}
+
+// What signalMXPEvent() puts in the mxp table, in the same terms: the tag's
+// attributes, the actions it carried and its text.
+static QString mxpPayload(const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption)
+{
+    QStringList parts;
+    for (auto itr = attrs.cbegin(), end = attrs.cend(); itr != end; ++itr) {
+        parts << qsl("%1=\"%2\"").arg(itr.key().toLower(), itr.value());
+    }
+    if (!actions.isEmpty()) {
+        parts << qsl("actions=[%1]").arg(actions.join(qsl(", ")));
+    }
+    if (!caption.isEmpty()) {
+        parts << qsl("text=\"%1\"").arg(caption);
+    }
+    return parts.join(QChar::Space);
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption)
 {
@@ -3722,7 +3762,7 @@ void TLuaInterpreter::signalMXPEvent(const QString& type, const QMap<QString, QS
 
     Host& host = getHostFromLua(L);
     if (TDebug::wants(TDebug::Category::Protocol)) {
-        TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << qsl("%1 event <%2> display(%1) to see the full content\n").arg("mxp", token) >> &host;
+        TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(qsl("mxp"), token, mxpPayload(attrs, actions, caption)) >> &host;
     }
     host.raiseEvent(event);
 }
@@ -3902,7 +3942,11 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         event.mArgumentList.append(key);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         if (TDebug::wants(TDebug::Category::Protocol)) {
-            TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << qsl("%1 event <%2> display(%1) to see the full content\n").arg(protocol, token) >> &host;
+            // One event is raised per level of the key - gmcp.Char, then
+            // gmcp.Char.Vitals - all carrying the same frame, so only the event
+            // the data actually arrived for prints it:
+            const bool isDeepestToken = (k == total - 1);
+            TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, isDeepestToken ? string_data : QString()) >> &host;
         }
         host.raiseEvent(event);
     }
@@ -3998,7 +4042,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             event.mArgumentList.append(token);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             if (TDebug::wants(TDebug::Category::Protocol)) {
-                TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << qsl("%1 event <%2> display(%1) to see the full content\n").arg(protocol, token) >> &host;
+                TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, msspVAL) >> &host;
             }
             host.raiseEvent(event);
 

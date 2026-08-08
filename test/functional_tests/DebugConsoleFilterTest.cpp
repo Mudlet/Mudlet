@@ -23,6 +23,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TConsole.h"
 #include "TDebug.h"
+#include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -128,6 +129,60 @@ private slots:
 
         QVERIFY2(debugBufferContains(qsl("a Goblin appears")), "Case-sensitive text filter dropped an exact match");
         QVERIFY2(!debugBufferContains(qsl("a goblin appears")), "Case-sensitive text filter let a differently-cased message through");
+    }
+
+    // With a category of their own to hide behind, protocol events print the
+    // data they arrived with instead of asking for a display() call to see it.
+    void test_protocolEventPrintsItsPayload()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+
+        QString key = qsl("Char.Vitals");
+        host->getLuaInterpreter()->setGMCPTable(key, qsl("{\"hp\":\"100\",\"maxhp\":\"100\"}"));
+
+        const QString buffer = joinedDebugBuffer();
+        QVERIFY2(buffer.contains(qsl("gmcp event <gmcp.Char.Vitals> {\"hp\":\"100\",\"maxhp\":\"100\"}")), "The GMCP frame was not printed with the event it arrived on");
+        QVERIFY2(!buffer.contains(qsl("display(gmcp)")), "A payload that fitted was elided anyway");
+    }
+
+    // One event is raised per level of the key, all carrying the same frame -
+    // printing it on each would triple every message for a two-level key.
+    void test_protocolPayloadIsNotRepeatedForEveryKeyLevel()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+
+        QString key = qsl("Char.Vitals");
+        host->getLuaInterpreter()->setGMCPTable(key, qsl("{\"hp\":\"100\"}"));
+
+        const QString buffer = joinedDebugBuffer();
+        QVERIFY2(buffer.contains(qsl("gmcp event <gmcp.Char>")), "The event raised for the parent key was not printed");
+        QCOMPARE(buffer.count(qsl("\"hp\":\"100\"")), 1);
+    }
+
+    // A single frame can run to tens of kilobytes, which would bury everything
+    // around it - so past the cap the rest is left to display().
+    void test_longProtocolPayloadIsElided()
+    {
+        auto* host = startDebuggingProfile();
+
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        // Wide enough that what is printed lands on one buffer line, so this
+        // tests the eliding rather than the console's wrapping:
+        mudlet::smpDebugConsole->setWrapAt(4000);
+
+        // 1211 characters in total, of which the first 1000 are inlined:
+        const QString filler = QString(1200, QLatin1Char('x'));
+        QString key = qsl("Room.Info");
+        host->getLuaInterpreter()->setGMCPTable(key, qsl("{\"desc\":\"%1\"}").arg(filler));
+
+        const QString buffer = joinedDebugBuffer();
+        QVERIFY2(buffer.contains(qsl("gmcp event <gmcp.Room.Info> {\"desc\":\"xxx")), "The start of an over-long payload was not printed");
+        QVERIFY2(buffer.contains(qsl("... (211 more characters, display(gmcp) to see all)")), "An elided payload did not say how much of it was left out");
+        QVERIFY2(!buffer.contains(QString(1000, QLatin1Char('x'))), "The whole of an over-long payload reached the console");
     }
 
     // Several call sites emit a header and then a csmContinue fragment as two
