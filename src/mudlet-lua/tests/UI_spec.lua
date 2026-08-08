@@ -2009,8 +2009,8 @@ describe("Tests UI functions", function()
         "< chat | Ann: anyone around?",
       }
 
-      -- a tag the shapes capture but chatChannelNames turns away, so the line
-      -- stays out of chat AND stays available to the vitals layer
+      -- the last two are captured by a shape and then turned away by
+      -- chatChannelNames, so they stay available to the vitals layer
       local notChatLines = {
         "You are standing in a dark forest.",
         "The orc hits you for 14 damage!",
@@ -2034,7 +2034,6 @@ describe("Tests UI functions", function()
         for _, regex in ipairs(BaseUI.chatShapeRegexes()) do
           local matched = false
           for _, line in ipairs(chatLines) do
-            -- rex.find: rex.match returns false for an unset capture group
             if rex.find(line, regex) then
               matched = true
               break

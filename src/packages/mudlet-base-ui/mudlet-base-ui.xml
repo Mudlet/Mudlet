@@ -5,20 +5,19 @@
 		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 			<name>Mudlet base UI chat capture</name>
 			<script>-- A gate, then the shapes - the pattern to copy for triggers that have to
--- watch every line. Each gate is plain substring matching, no regex engine,
--- and Mudlet only offers a line to a trigger's children once the trigger
--- itself matched it. Most lines therefore cost substring scans only.
+-- watch every line. Each gate matches substrings, no regex engine, and Mudlet
+-- only offers a line to a trigger's children once its own pattern matched. A
+-- trigger with no pattern, like this folder, passes everything through.
 --
 -- Substring patterns are case-sensitive, so every literal a child's regex
 -- needs must appear in its gate's pattern list, spelled the same way. Miss
--- that and the child silently never sees a line. That is also why the gates
--- spell out "says", "asks", "You say" and so on rather than the shorter
--- stems they share: "say" would also let "essay" through to the regexes,
--- and "ask" every "task" and "asked".
+-- that and the child silently never sees a line.
 --
--- The channel gate cannot be narrowed the same way - a bare "[", "(" or "&lt;"
--- is all a tagged line has in common - so prompt lines like "&lt;500/600hp&gt;"
--- do reach its three regexes. They are anchored, so they fail at once.
+-- It is also why the gates spell out "says" and "You say" rather than the
+-- "say" they share: a gate hit costs a capture list and a script call before
+-- any child regex runs, and "say" would hand all that to every "essay".
+-- The channel gate cannot be narrowed like that, since a bare "[", "(" or
+-- "&lt;" is all a tagged line has in common.
 --
 -- These gates ship inactive: the "Mudlet base UI" script enables them on
 -- load, and disables them again when the game turns out to send its chat
@@ -584,9 +583,10 @@ BaseUI.chatChannelNames = {
 }
 
 -- The same shapes as the "Mudlet base UI chat capture" trigger tree, in the
--- same order, and they have to stay that way: the tree routes chat, this copy
--- tells the vitals layer which lines are conversation. tagged = true means the
--- shape captures a channel tag that must pass the list above.
+-- same order (StarterUiTriggerCostTest compares them index by index): the tree
+-- routes chat, this copy tells the vitals layer which lines are conversation.
+-- tagged = true means the shape captures a channel tag that must pass the
+-- list above.
 local chatPatterns = {
   { regex = [=[^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
   { regex = [=[^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])]=] },
@@ -609,8 +609,6 @@ local chatTabs = {
 }
 
 function BaseUI.routeChatLine(family)
-  -- gmcpChat means the trigger layer is retired: disabling a trigger does not
-  -- stop it firing on lines from the batch already being processed
   -- several shapes can match the same line - copy it only once
   if BaseUI.gmcpChat or BaseUI.dormant() or getLineNumber() == BaseUI.lastChatLine then
     return
@@ -655,14 +653,12 @@ function BaseUI.routeTaggedChatLine(tag)
   BaseUI.routeChatLine(family)
 end
 
--- the gate triggers of the "Mudlet base UI chat capture" tree, which ships in
--- this package. Renaming one there means renaming it here.
+-- renaming a gate in the trigger tree means renaming it here
 local chatGates = { "BaseUI chat: tells", "BaseUI chat: speech", "BaseUI chat: channel tags" }
 
--- the third argument matters: a line only reaches a gate through its parents,
--- so a gate whose folder someone switched off is not armed no matter what its
--- own flag says. enableTrigger() cannot answer this - it reports whether it
--- found the name, not whether the trigger came up - so ask afterwards
+-- a gate reached through a switched-off folder is not armed whatever its own
+-- flag says, and enableTrigger() only reports that it found the name - hence
+-- the ancestor check
 local function gateArmed(gate)
   return isActive(gate, "trigger", true) &gt; 0
 end
@@ -680,7 +676,8 @@ function BaseUI.armChatTriggers()
 end
 
 -- debugc alone would not do: it writes to the editor's error console, which is
--- hidden until the player goes looking for it. Once per session, because
+-- hidden until the player goes looking for it, and is dropped entirely if the
+-- editor was never opened. The player-facing line is once per session, because
 -- arming runs again on every reconnect.
 function BaseUI.reportDeadChatGate(gate)
   debugc("[ Mudlet UI ] chat capture gate \"" .. gate .. "\" did not come up, so those lines will not be captured")
@@ -974,8 +971,8 @@ function BaseUI.vitalsShapeCount()
   return #vitalsLinePatterns
 end
 
--- for the test suite: the chat shapes this script knows about, so a corpus can
--- be held to covering every one of them
+-- for the test suite: the shapes chatLikeLine() walks, so a corpus can be held
+-- to cover them all
 function BaseUI.chatShapeRegexes()
   local regexes = {}
   for _, pattern in ipairs(chatPatterns) do
@@ -1749,7 +1746,7 @@ function BaseUI.alias(input)
 end
 
 BaseUI.loadSettings()
--- the chat gates are live from the start (unless the UI is hidden) so the
+-- the chat gates are live from the start (unless the UI is dormant) so the
 -- interface can appear on the first chat line even on games without GMCP.
 -- Their tree is imported ahead of this script, and the vitals trigger is
 -- created after it, so a chat line is routed (and marked as chat) before the
