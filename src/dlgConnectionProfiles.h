@@ -57,8 +57,7 @@ public:
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
     static const QString scmAllowedProfileNameChars;
     static const QRegularExpression scmUnusableProfileNameChars;
-    // everything a profile that has never been played may hold; see the
-    // definition in dlgConnectionProfiles.cpp
+    // files whose presence alone does not warrant confirming a profile's removal
     static const QStringList scmConnectionDetailFiles;
 
     QString btn_connect_enabled_accessDesc;
