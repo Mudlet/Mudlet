@@ -305,8 +305,8 @@ private slots:
         initializeQRCResourcesForExperiencedPlayerGateTest();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
         QCOMPARE(mudlet::getMudletPath(enums::mainPath), configDir);
+        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
         QVERIFY(!QDir(mudlet::getMudletPath(enums::profilesPath)).exists());
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
 
