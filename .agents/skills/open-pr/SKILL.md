@@ -18,9 +18,14 @@ publishes the current branch to their fork if needed, then opens a PR against up
 
 ## Procedure
 
-1. **Gather context.** Run `git log upstream/development..HEAD --oneline` for the commit messages,
+1. **Gather context.** Run `git status --porcelain` first. If anything is uncommitted, stop: ask
+   the user to commit what belongs in the PR, or to confirm explicitly that it should be left out.
+   A pull request is built from commits, so uncommitted work is silently absent from it.
+
+   Then run `git log upstream/development..HEAD --oneline` for the commit messages,
    `git diff upstream/development...HEAD` to see what actually changed, and
-   `git branch --show-current` for the branch name.
+   `git branch --show-current` for the branch name. An empty commit list means there is nothing to
+   open a pull request for.
 
 2. **Choose the title prefix.** `docs/CONTRIBUTING.md` states the rule and Danger enforces it on
    every PR. Choosing between the four is the part that is not written down elsewhere:
@@ -68,8 +73,12 @@ publishes the current branch to their fork if needed, then opens a PR against up
    Draft suits work that is still moving, wants early CI feedback, or needs discussion before
    reviewers spend time on it; ready for review suits a change that is complete and tested.
 
-6. **Publish the branch** to the user's fork if it has no upstream yet:
-   `git push -u origin <branch-name>`.
+6. **Publish the branch** with `git push -u origin <branch-name>`. Do this every time, not only
+   when the branch lacks an upstream — a branch that already tracks `origin` can still hold local
+   commits that have not been pushed, and those would be missing from the pull request.
+
+   The push must succeed before continuing. If it fails, stop and report the error; do not open a
+   pull request against a branch whose commits are not on the fork.
 
 7. **Open the PR** against upstream, adding `--draft` if that is what the user chose.
 

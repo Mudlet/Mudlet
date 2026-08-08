@@ -16,7 +16,11 @@ per platform, and the wrong one is not merely slower — see Pitfalls.
 
 `CMakePresets.json` in the repository root encodes the generator, build type and sanitizer
 settings, so no platform-specific flags need to be remembered or typed. Run
-`cmake --list-presets` to see the ones available on the current machine:
+`cmake --list-presets` to see the ones available on the current machine.
+
+Presets need CMake 3.25.1 or newer, which is the same floor `CMakeLists.txt` already sets for
+building Mudlet at all. An older CMake reports an unknown argument or an unsupported preset
+version rather than anything informative, so check `cmake --version` if `--preset` is rejected.
 
 ```bash
 cmake --preset macos-debug            # configure
