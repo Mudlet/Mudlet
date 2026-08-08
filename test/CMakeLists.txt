@@ -102,6 +102,21 @@ set_tests_properties(UpdaterChecksumTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
+# Which releases the updater offers as an update. Built from the updater sources
+# rather than linked against the Mudlet library, because the library only
+# contains them when configured with USE_UPDATER.
+add_executable(UpdaterPlatformAssetTest
+    UpdaterPlatformAssetTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/updater/Feed.cpp
+    ${CMAKE_SOURCE_DIR}/src/updater/Release.cpp
+    ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
+)
+target_link_libraries(UpdaterPlatformAssetTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME UpdaterPlatformAssetTest COMMAND $<TARGET_FILE:UpdaterPlatformAssetTest>)
+set_tests_properties(UpdaterPlatformAssetTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
 # Checks the release-publishing scripts that keep SHA256SUMS.txt covering every
 # release binary - a binary without an entry is one the updater refuses to install
 if(NOT WIN32)
