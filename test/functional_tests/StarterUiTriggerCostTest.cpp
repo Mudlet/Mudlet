@@ -49,10 +49,10 @@ private:
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
 
-    // A full default-package profile measures 5: the starter UI's three chat
-    // groups and one vitals prefilter, plus one folder from another package.
+    // A full default-package profile measures 3: the starter UI's chat capture
+    // tree and its vitals prefilter, plus one folder from another package.
     // Raising this is a throughput change and wants measuring first.
-    static constexpr int kMaxRootTriggers = 8;
+    static constexpr int kMaxRootTriggers = 5;
 
 private slots:
     void initTestCase() { initializeQRCResources(); }
@@ -92,7 +92,7 @@ private slots:
                                     .arg(rootTriggers)));
 
         QVERIFY(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 1")));
-        QVERIFY(luaTrue(host, qsl("#BaseUI.chatTriggerIds == 3")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")), "the chat capture tree's gates did not come up armed");
     }
 
     // Miss a line here and that game's gauges silently never appear.
@@ -189,32 +189,87 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.vitalsData.hp.max == 3600")), "a tell was harvested for vitals");
     }
 
-    // Each chat group has to keep routing into the tab its shapes always did.
+    // Every chat shape needs a line of its own here. The tree's gates are
+    // case-sensitive substrings, so a shape whose literal is spelled differently
+    // in its gate silently never routes, and only a line exercising that shape
+    // notices.
     void test_chatCaptureStillSortsLinesIntoTheirTabs()
     {
         Host* host = startProfileWithStarterUi();
         QVERIFY(host);
 
-        feedLine(host, qsl("Bob tells you, 'hello there'"));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.chats ~= nil and BaseUI.unread ~= nil")), "a tell did not build the chat dock");
-        // routeChatLine() counts the active tab as read, so the tell lands in
-        // Tells' unread counter while All (the active tab) does not move.
-        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == 1")), "a tell was not routed into the Tells tab");
+        // second is the tab besides All the line has to reach, empty for the
+        // shapes that only ever reach All
+        const QList<QPair<QString, QString>> corpus = {
+                {qsl("Bob tells you, 'hello there'"), qsl("tells")},
+                {qsl("You tell Ann, 'on my way'"), qsl("tells")},
+                {qsl("You tell the formation you are ready."), qsl("tells")},
+                {qsl("Ann whispers to you, 'psst'"), qsl("tells")},
+                {qsl("Bob tells the group, 'incoming'"), qsl("tells")},
+                {qsl("Bob says, 'hello everyone'"), QString()},
+                {qsl("You say, 'hi there'"), QString()},
+                {qsl("Bob yells, 'help!'"), QString()},
+                {qsl("You shout, 'over here!'"), QString()},
+                {qsl("[newbie] Ann: how do I get out of here?"), qsl("channels")},
+                {qsl("(gossip) Ann: anyone around?"), qsl("channels")},
+                {qsl("< chat | Ann: anyone around?"), qsl("channels")},
+        };
 
-        // All three tagged branches: each writes its tag into a different
-        // capture group, and only the matching branch's is set.
-        feedLine(host, qsl("[newbie] Ann: how do I get out of here?"));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 1")),
-                 "a [tag] channel line was not routed into the Channels tab - the grouped tagged trigger is not "
-                 "finding its capture group");
-        feedLine(host, qsl("(gossip) Ann: anyone around?"));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 2")), "a (tag) channel line was not routed");
-        feedLine(host, qsl("< chat | Ann: anyone around?"));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 3")), "a < tag | channel line was not routed");
+        QHash<QString, int> expectedUnread;
+        for (const auto& [text, family] : corpus) {
+            feedLine(host, text);
+            // routeChatLine() records what it copied, and counts the active tab
+            // (All) as read, so this is what says the line reached the dock
+            QVERIFY2(luaTrue(host, qsl("BaseUI.recentCaptures[#BaseUI.recentCaptures] ~= nil and BaseUI.recentCaptures[#BaseUI.recentCaptures].text == %1").arg(luaLiteral(text))),
+                     qPrintable(qsl("the chat tree did not route: %1").arg(text)));
+            if (family.isEmpty()) {
+                continue;
+            }
+            expectedUnread[family] += 1;
+            QVERIFY2(luaTrue(host, qsl("BaseUI.unread.%1 == %2").arg(family, QString::number(expectedUnread.value(family)))), qPrintable(qsl("did not reach the %1 tab: %2").arg(family, text)));
+        }
 
         // BaseUI.chatChannelNames still has the last word on a captured tag.
         feedLine(host, qsl("[inventory] a rusty sword"));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == 3")), "an unknown tag was routed as a channel");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == %1").arg(QString::number(expectedUnread.value(qsl("channels"))))), "an unknown tag was routed as a channel");
+
+        // The shapes above are also what keeps chat out of the vitals layer, so
+        // the two lists have to stay in step with each other and with the tree.
+        QVERIFY(runLua(host, chatShapeCoverageScript(corpus)));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.uncoveredShapes == 0")),
+                 "a chat shape has no line in the corpus above, so nothing would notice if its gate stopped matching - "
+                 "the shapes are named in the error console");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.unroutedLines == 0")),
+                 "a corpus line routes through the trigger tree but no chatPatterns shape recognises it, so the vitals "
+                 "layer would harvest it - the lines are in the error console");
+    }
+
+    // The mirror of the vitals-retire test: a game that sends chat over GMCP
+    // does not need the gates, but the next connection might.
+    void test_theChatLayerRetiresOnceGmcpChatAppears()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        QVERIFY(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")));
+
+        QVERIFY(runLua(host,
+                       qsl("gmcp = gmcp or {}\n"
+                           "gmcp.Comm = { Channel = { Text = { channel = 'chat', text = 'hello there' } } }\n"
+                           "BaseUI.addChatMessage()")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gmcpChat")), "a GMCP chat message did not retire the trigger layer");
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.chatTriggersArmed()")), "the chat gates stayed armed after GMCP chat arrived, so lines would be captured twice");
+
+        // The next connection may be to a game with no GMCP chat at all.
+        QVERIFY(runLua(host, qsl("BaseUI.handleDisconnect()")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")), "the chat gates did not re-arm after a disconnect");
+
+        QVERIFY(runLua(host, qsl("BaseUI.hide()")));
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.chatTriggersArmed()")), "\"baseui hide\" left the chat gates armed");
+        QVERIFY(runLua(host, qsl("BaseUI.handleDisconnect()")));
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.chatTriggersArmed()")), "a disconnect re-armed the chat gates of a hidden UI");
+
+        QVERIFY(runLua(host, qsl("BaseUI.show()")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")), "\"baseui show\" did not bring the chat gates back");
     }
 
     void test_theVitalsLayerRetiresOnceAProtocolOwnsTheGauges()
@@ -236,6 +291,46 @@ private slots:
     }
 
 private:
+    // A Lua long-bracket string, so quotes and backslashes in a corpus line
+    // reach the Lua state exactly as they were fed to the trigger engine.
+    static QString luaLiteral(const QString& text) { return qsl("[==[%1]==]").arg(text); }
+
+    // Holds the corpus fed above against the shapes chatLikeLine() walks: every
+    // shape needs a line, and every line needs a shape.
+    static QString chatShapeCoverageScript(const QList<QPair<QString, QString>>& corpus)
+    {
+        QStringList entries;
+        for (const auto& entry : corpus) {
+            entries << luaLiteral(entry.first);
+        }
+        return qsl(R"LUA(
+local corpus = { %1 }
+__starterUi = { uncoveredShapes = 0, unroutedLines = 0 }
+
+for _, regex in ipairs(BaseUI.chatShapeRegexes()) do
+  local covered = false
+  for _, text in ipairs(corpus) do
+    if rex.find(text, regex) then
+      covered = true
+      break
+    end
+  end
+  if not covered then
+    __starterUi.uncoveredShapes = __starterUi.uncoveredShapes + 1
+    echo("\n[ chat shape with no corpus line ] " .. regex .. "\n")
+  end
+end
+
+for _, text in ipairs(corpus) do
+  if not BaseUI.chatLikeLine(text) then
+    __starterUi.unroutedLines = __starterUi.unroutedLines + 1
+    echo("\n[ corpus line no chat shape recognises ] " .. text .. "\n")
+  end
+end
+)LUA")
+                .arg(entries.join(qsl(", ")));
+    }
+
     // Runs inside the profile's Lua state, against the real
     // BaseUI.parseVitalsLine and BaseUI.vitalsPrefilter.
     static QString prefilterDifferentialScript()

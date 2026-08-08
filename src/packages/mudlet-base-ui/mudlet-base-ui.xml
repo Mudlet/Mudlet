@@ -1,7 +1,354 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
-	<TriggerPackage />
+	<TriggerPackage>
+		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Mudlet base UI chat capture</name>
+			<script>-- A gate, then the shapes - the pattern to copy for triggers that have to
+-- watch every line. Each gate below is plain substring matching, no regex
+-- engine, and Mudlet only offers a line to a trigger's children once the
+-- trigger itself matched it. An ordinary line therefore costs a dozen
+-- substring scans and no regex work at all.
+--
+-- Substring patterns are case-sensitive, so every literal a child's regex
+-- needs must appear in its gate's pattern list, spelled the same way. Miss
+-- that and the child silently never sees a line.
+--
+-- These gates ship inactive: the "Mudlet base UI" script enables them on
+-- load, and disables them again when the game turns out to send its chat
+-- over GMCP.</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList />
+			<regexCodePropertyList />
+			<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>BaseUI chat: tells</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>tells you</string>
+					<string>tells the</string>
+					<string>You tell</string>
+					<string>whispers to you</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+				</regexCodePropertyList>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone tells you</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you tell someone</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you tell the group</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You tell the (?:group|formation)\b</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone whispers to you</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone tells the group</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* tells the (?:group|formation)\b</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</Trigger>
+			<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>BaseUI chat: speech</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>say</string>
+					<string>ask</string>
+					<string>exclaim</string>
+					<string>yell</string>
+					<string>shout</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+				</regexCodePropertyList>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone says</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you say</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone yells</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you yell</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You (?:yell|shout)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</Trigger>
+			<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>BaseUI chat: channel tags</name>
+				<script></script>
+				<triggerType>2</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>[</string>
+					<string>(</string>
+					<string>&lt;</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>2</integer>
+					<integer>2</integer>
+					<integer>2</integer>
+				</regexCodePropertyList>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>[tag] channel line</name>
+					<script>BaseUI.routeTaggedChatLine(matches[2])</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\[([\w][\w -]{0,18})\]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>(tag) channel line</name>
+					<script>BaseUI.routeTaggedChatLine(matches[2])</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\(([\w -]{1,18})\)[:\s]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>&lt; tag | channel line</name>
+					<script>BaseUI.routeTaggedChatLine(matches[2])</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^&lt; ?([\w -]{1,18}) ?\|</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</Trigger>
+		</TriggerGroup>
+	</TriggerPackage>
 	<TimerPackage />
 	<AliasPackage>
 		<Alias isActive="yes" isFolder="no">
@@ -37,7 +384,6 @@
 BaseUI = BaseUI or {}
 BaseUI.gauges = BaseUI.gauges or {}
 BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots or 0
-BaseUI.chatTriggerIds = BaseUI.chatTriggerIds or {}
 BaseUI.recentCaptures = BaseUI.recentCaptures or {}
 BaseUI.vitalsTriggerIds = BaseUI.vitalsTriggerIds or {}
 BaseUI.shapeSightings = BaseUI.shapeSightings or {}
@@ -221,14 +567,16 @@ BaseUI.chatChannelNames = {
   yell = true, form = true, town = true,
 }
 
--- entries with tagged = true capture a channel tag that must pass the list
--- above; family routes a line into the Tells or Channels tab as well as All
+-- The same shapes as the "Mudlet base UI chat capture" trigger tree, in the
+-- same order, and they have to stay that way: the tree routes chat, this copy
+-- tells the vitals layer which lines are conversation. tagged = true means the
+-- shape captures a channel tag that must pass the list above.
 local chatPatterns = {
-  { regex = [=[^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])]=], family = "tells" },
-  { regex = [=[^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])]=], family = "tells" },
-  { regex = [=[^You tell the (?:group|formation)\b]=], family = "tells" },
-  { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=], family = "tells" },
-  { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=], family = "tells" },
+  { regex = [=[^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^You tell the (?:group|formation)\b]=] },
+  { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=] },
   { regex = [=[^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]]=] },
@@ -245,9 +593,9 @@ local chatTabs = {
 }
 
 function BaseUI.routeChatLine(family)
-  -- gmcpChat means the trigger layer is retired: killing a trigger does not
+  -- gmcpChat means the trigger layer is retired: disabling a trigger does not
   -- stop it firing on lines from the batch already being processed
-  -- several patterns can match the same line - copy it only once
+  -- several shapes can match the same line - copy it only once
   if BaseUI.gmcpChat or BaseUI.dormant() or getLineNumber() == BaseUI.lastChatLine then
     return
   end
@@ -278,15 +626,8 @@ function BaseUI.routeChatLine(family)
   end
 end
 
-function BaseUI.routeTaggedChatLine()
-  -- one trigger, three branches: only the matching branch's group is set
-  local tag
-  for i = 2, #matches do
-    tag = type(matches[i]) == "string" and matches[i]:match("(%S+)")
-    if tag then
-      break
-    end
-  end
+function BaseUI.routeTaggedChatLine(tag)
+  tag = type(tag) == "string" and tag:match("(%S+)")
   if not tag then
     return
   end
@@ -298,58 +639,34 @@ function BaseUI.routeTaggedChatLine()
   BaseUI.routeChatLine(family)
 end
 
--- a group is armed at the position of its FIRST shape, so reordering
--- chatPatterns across families changes which group wins a line both can match
-local function chatGroupOf(pattern)
-  if pattern.tagged then
-    return "tagged"
-  end
-  return pattern.family or "plain"
-end
+-- the gate triggers of the "Mudlet base UI chat capture" tree, which ships in
+-- this package. Renaming one there means renaming it here.
+local chatGates = { "BaseUI chat: tells", "BaseUI chat: speech", "BaseUI chat: channel tags" }
 
--- Folding shapes into one alternation is only cheap while every one of them is
--- ^-anchored: trigger regexes compile without PCRE2_MULTILINE, so PCRE tries
--- the union at offset 0 and gives up. An unanchored shape added here would be
--- retried at every offset in the line - give it its own trigger, or a prefilter
--- like the vitals shapes have.
-function BaseUI.chatTriggerPatterns()
-  local order, grouped = {}, {}
-  for _, pattern in ipairs(chatPatterns) do
-    local group = chatGroupOf(pattern)
-    if not grouped[group] then
-      grouped[group] = {}
-      order[#order + 1] = group
-    end
-    table.insert(grouped[group], "(?:" .. pattern.regex .. ")")
-  end
-  local patterns = {}
-  for _, group in ipairs(order) do
-    table.insert(patterns, { group = group, regex = table.concat(grouped[group], "|") })
-  end
-  return patterns
-end
-
-function BaseUI.createChatTriggers()
-  if BaseUI.dormant() or BaseUI.gmcpChat or next(BaseUI.chatTriggerIds) then
+function BaseUI.armChatTriggers()
+  if BaseUI.dormant() or BaseUI.gmcpChat then
     return
   end
-  for _, pattern in ipairs(BaseUI.chatTriggerPatterns()) do
-    local handler
-    if pattern.group == "tagged" then
-      handler = BaseUI.routeTaggedChatLine
-    else
-      local family = pattern.group ~= "plain" and pattern.group or nil
-      handler = function() BaseUI.routeChatLine(family) end
+  for _, gate in ipairs(chatGates) do
+    if not enableTrigger(gate) then
+      debugc("[ Mudlet UI ] chat capture gate \"" .. gate .. "\" is missing, so those lines will not be captured")
     end
-    table.insert(BaseUI.chatTriggerIds, tempRegexTrigger(pattern.regex, handler))
   end
 end
 
-function BaseUI.killChatTriggers()
-  for _, id in ipairs(BaseUI.chatTriggerIds) do
-    killTrigger(id)
+function BaseUI.disarmChatTriggers()
+  for _, gate in ipairs(chatGates) do
+    disableTrigger(gate)
   end
-  BaseUI.chatTriggerIds = {}
+end
+
+function BaseUI.chatTriggersArmed()
+  for _, gate in ipairs(chatGates) do
+    if isActive(gate, "trigger") == 0 then
+      return false
+    end
+  end
+  return true
 end
 
 -- vitals from plain text, for games that offer no protocol at all. Only
@@ -620,6 +937,16 @@ function BaseUI.vitalsShapeCount()
   return #vitalsLinePatterns
 end
 
+-- for the test suite: the chat shapes this script knows about, so a corpus can
+-- be held to covering every one of them
+function BaseUI.chatShapeRegexes()
+  local regexes = {}
+  for _, pattern in ipairs(chatPatterns) do
+    regexes[#regexes + 1] = pattern.regex
+  end
+  return regexes
+end
+
 -- for the test suite: the fallback above still works, so only an explicit check
 -- notices a shape that fell back to per-line compilation
 function BaseUI.shapesArePrecompiled()
@@ -834,7 +1161,7 @@ end
 function BaseUI.standAside(_, packageName)
   BaseUI.settings.standingAside = packageName or "the game's interface"
   BaseUI.saveSettings()
-  BaseUI.killChatTriggers()
+  BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
   if BaseUI.container then
     BaseUI.container:hide()
@@ -856,7 +1183,7 @@ function BaseUI.serverGuiRemoved(_, packageName)
     end
     BaseUI.settings.standingAside = nil
     BaseUI.saveSettings()
-    BaseUI.createChatTriggers()
+    BaseUI.armChatTriggers()
     BaseUI.createVitalsTriggers()
     BaseUI.renderVitals()
   end)
@@ -1247,7 +1574,7 @@ function BaseUI.handleDisconnect()
   -- first GMCP chat message will retire them again, and the recentCaptures
   -- ring already covers the echo race that comes with that)
   BaseUI.gmcpChat = false
-  BaseUI.createChatTriggers()
+  BaseUI.armChatTriggers()
   -- only re-arms because the lock was cleared above
   BaseUI.createVitalsTriggers()
 end
@@ -1260,7 +1587,7 @@ function BaseUI.addChatMessage()
   -- the game sends chat over GMCP and usually echoes it as plain text too -
   -- retire the generic triggers for this session so lines are not captured twice
   BaseUI.gmcpChat = true
-  BaseUI.killChatTriggers()
+  BaseUI.disarmChatTriggers()
   if BaseUI.dormant() then
     return
   end
@@ -1325,7 +1652,7 @@ end
 function BaseUI.hide()
   BaseUI.settings.hidden = true
   BaseUI.saveSettings()
-  BaseUI.killChatTriggers()
+  BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
   if BaseUI.container then
     BaseUI.container:hide()
@@ -1346,7 +1673,7 @@ function BaseUI.show()
   end
   BaseUI.updateVitals()
   BaseUI.updateMsdpVitals()
-  BaseUI.createChatTriggers()
+  BaseUI.armChatTriggers()
   BaseUI.createVitalsTriggers()
   BaseUI.renderVitals()
   if BaseUI.container then
@@ -1385,11 +1712,12 @@ function BaseUI.alias(input)
 end
 
 BaseUI.loadSettings()
--- the chat triggers exist from the start (unless the UI is hidden) so the
--- interface can appear on the first chat line even on games without GMCP;
--- the vitals triggers come second so a chat line is routed (and marked as
--- chat) before the vitals layer gets a look at it
-BaseUI.createChatTriggers()
+-- the chat gates are live from the start (unless the UI is hidden) so the
+-- interface can appear on the first chat line even on games without GMCP.
+-- Their tree is imported ahead of this script, and the vitals trigger is
+-- created after it, so a chat line is routed (and marked as chat) before the
+-- vitals layer gets a look at it
+BaseUI.armChatTriggers()
 BaseUI.createVitalsTriggers()
 -- negotiate MSDP up front: it costs nothing on servers without it and gives
 -- gauges to games that have it but lack GMCP
