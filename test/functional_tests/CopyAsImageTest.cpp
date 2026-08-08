@@ -39,8 +39,8 @@ extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResources();
 
-// Regression test for #9715: the console's "Copy as image" context menu entry
-// left nothing on the clipboard.
+// Regression tests for #9715: the console's "Copy as image" context menu entry
+// leaving nothing on the clipboard.
 class CopyAsImageTest : public QObject
 {
     Q_OBJECT
@@ -79,11 +79,14 @@ private:
     }
 
     // Boots a profile whose console is filled with text, and returns its upper
-    // pane with nothing selected yet.
+    // pane with nothing selected yet. The window is resized so the pane is large
+    // enough for the multi-line drags the tests make across it.
     TTextEdit* preparePane()
     {
         mpServer->setWelcomeMessage(fillerText());
-        startProfile(mpHostname, mpLocalhost, mpPort);
+        if (!startProfile(mpHostname, mpLocalhost, mpPort)) {
+            return nullptr;
+        }
         if (!waitForTextInBuffer(QString(100, QLatin1Char('X')))) {
             return nullptr;
         }
@@ -100,18 +103,22 @@ private:
         return pane;
     }
 
+    void dragSelection(TTextEdit* pane, const QPointF& dragOffset)
+    {
+        const QPointF startPos = QRectF(pane->rect()).center();
+        const QPointF endPos = startPos + dragOffset;
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, startPos);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, endPos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, endPos);
+    }
+
     TTextEdit* prepareSelectedPane(const QPointF& dragOffset)
     {
         TTextEdit* pane = preparePane();
         if (!pane) {
             return nullptr;
         }
-
-        const QPointF startPos = QRectF(pane->rect()).center();
-        const QPointF endPos = startPos + dragOffset;
-        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, startPos);
-        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, endPos);
-        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, endPos);
+        dragSelection(pane, dragOffset);
         return pane;
     }
 
@@ -121,33 +128,43 @@ private:
         pane->slot_copySelectionToClipboardImage();
     }
 
-    struct MenuEntry
-    {
-        bool enabled = false;
-        QString toolTip;
-    };
-
     // The context menu is assembled in mouseReleaseEvent() as a child QMenu of
-    // the pane. Its entries are read back by construction order rather than by
-    // their translated text: Copy, Copy HTML, Copy as image, Select all.
-    QList<MenuEntry> openContextMenuEntries(TTextEdit* pane)
+    // the pane, so it can be opened for real and read back from there. Entries
+    // are looked up by the object names the production code sets on them, since
+    // their visible text is translated.
+    QMenu* openContextMenu(TTextEdit* pane)
     {
         const QPointF pos = QRectF(pane->rect()).center();
         sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+        return pane->findChildren<QMenu*>().value(0);
+    }
 
-        QList<MenuEntry> entries;
-        QMenu* menu = pane->findChild<QMenu*>();
-        if (!menu) {
-            return entries;
-        }
-        for (const QAction* action : menu->actions()) {
-            if (!action->isSeparator()) {
-                entries.append({action->isEnabled(), action->toolTip()});
+    static QAction* menuEntry(QMenu* menu, const QString& objectName)
+    {
+        for (QAction* action : menu->actions()) {
+            if (action->objectName() == objectName) {
+                return action;
             }
         }
-        menu->close();
-        return entries;
+        return nullptr;
+    }
+
+    // The four entries that cannot do anything without a selection.
+    static QStringList selectionEntryNames() { return {QStringLiteral("consoleCopy"), QStringLiteral("consoleCopyHtml"), QStringLiteral("consoleCopyAsImage"), QStringLiteral("consoleSearchOnline")}; }
+
+    // Every pixel is the console background, i.e. no text was drawn.
+    static bool blankImage(const QImage& image, const QColor& backgroundColour)
+    {
+        const QRgb background = backgroundColour.rgb();
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if ((image.pixel(x, y) | 0xff000000) != (background | 0xff000000)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
 private slots:
@@ -166,25 +183,27 @@ private slots:
         deleteProfileDirectory(mpHostname);
     }
 
-    // #9715 as reported: right-clicking the console and picking "Copy as image"
-    // without selecting anything first. The entry used to be offered as usable
-    // and then quietly did nothing at all.
+    // #9715 as reported: right-click the console and pick "Copy as image"
+    // without selecting anything first.
     void test_contextMenuOffersNoCopyEntriesWithoutSelection()
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
         QVERIFY(pane->mSelectedRegion.isEmpty());
 
-        const QList<MenuEntry> entries = openContextMenuEntries(pane);
-        QVERIFY2(entries.size() >= 4, qPrintable(QStringLiteral("Expected at least 4 context menu entries, got %1").arg(entries.size())));
+        QMenu* menu = openContextMenu(pane);
+        QVERIFY2(menu, "Right-clicking the console opened no context menu");
 
-        // Copy, Copy HTML and Copy as image
-        for (int i = 0; i < 3; ++i) {
-            QVERIFY2(!entries.at(i).enabled, qPrintable(QStringLiteral("Context menu entry %1 was offered as usable with nothing selected (regression of #9715)").arg(i)));
-            QVERIFY2(!entries.at(i).toolTip.isEmpty(), qPrintable(QStringLiteral("Context menu entry %1 is disabled without saying why").arg(i)));
+        for (const QString& name : selectionEntryNames()) {
+            QAction* entry = menuEntry(menu, name);
+            QVERIFY2(entry, qPrintable(QStringLiteral("No \"%1\" entry in the console context menu").arg(name)));
+            QVERIFY2(!entry->isEnabled(), qPrintable(QStringLiteral("\"%1\" was offered as usable with nothing selected (regression of #9715)").arg(name)));
+            QVERIFY2(!entry->toolTip().isEmpty(), qPrintable(QStringLiteral("\"%1\" is disabled without saying why").arg(name)));
         }
-        // Select all does not need a selection, so it stays available
-        QVERIFY2(entries.at(3).enabled, "\"Select all\" should not need an existing selection");
+
+        QAction* selectAll = menuEntry(menu, QStringLiteral("consoleSelectAll"));
+        QVERIFY(selectAll);
+        QVERIFY2(selectAll->isEnabled(), "\"Select all\" should not need an existing selection");
     }
 
     void test_contextMenuOffersCopyEntriesWithSelection()
@@ -193,43 +212,52 @@ private slots:
         QVERIFY2(pane, "Could not prepare a console with a selection");
         QVERIFY(!pane->mSelectedRegion.isEmpty());
 
-        const QList<MenuEntry> entries = openContextMenuEntries(pane);
-        QVERIFY2(entries.size() >= 4, qPrintable(QStringLiteral("Expected at least 4 context menu entries, got %1").arg(entries.size())));
-        for (int i = 0; i < 4; ++i) {
-            QVERIFY2(entries.at(i).enabled, qPrintable(QStringLiteral("Context menu entry %1 was disabled even though text is selected").arg(i)));
+        QMenu* menu = openContextMenu(pane);
+        QVERIFY2(menu, "Right-clicking the console opened no context menu");
+
+        for (const QString& name : selectionEntryNames()) {
+            QAction* entry = menuEntry(menu, name);
+            QVERIFY2(entry, qPrintable(QStringLiteral("No \"%1\" entry in the console context menu").arg(name)));
+            QVERIFY2(entry->isEnabled(), qPrintable(QStringLiteral("\"%1\" was disabled even though text is selected").arg(name)));
         }
     }
 
-    // A single-line selection has to reach the clipboard as an image.
-    void test_singleLineSelectionCopiesAnImage()
+    // The whole user-facing path: pick the menu entry itself rather than calling
+    // the slot, so a mis-wired entry is caught too.
+    void test_menuEntryCopiesTheSelectionAsAnImage()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 0));
         QVERIFY2(pane, "Could not prepare a console with a selection");
-        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
 
-        copyAsImage(pane);
+        QMenu* menu = openContextMenu(pane);
+        QVERIFY2(menu, "Right-clicking the console opened no context menu");
+        QAction* copyAsImageEntry = menuEntry(menu, QStringLiteral("consoleCopyAsImage"));
+        QVERIFY2(copyAsImageEntry, "No \"Copy as image\" entry in the console context menu");
+
+        QApplication::clipboard()->clear();
+        copyAsImageEntry->trigger();
 
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard (regression of #9715)");
-        QVERIFY2(image.width() > 0 && image.height() > 0, qPrintable(QStringLiteral("Clipboard image is empty: %1x%2").arg(image.width()).arg(image.height())));
+        QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
 
-    // A multi-line selection has to reach the clipboard with a line for each
-    // selected line, rather than being truncated away to nothing.
+    // The height of a multi-line copy comes from the dragged distance, not from
+    // whatever the copy code recomputed.
     void test_multiLineSelectionCopiesEveryLine()
     {
-        TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
-        QVERIFY2(pane, "Could not prepare a console with a selection");
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        const int expectedLines = 4;
+        dragSelection(pane, QPointF(60, (expectedLines - 1) * pane->mFontHeight));
         QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
-
-        const int selectedLines = pane->mPB.y() - pane->mPA.y() + 1;
-        QVERIFY2(selectedLines > 1, qPrintable(QStringLiteral("Expected a multi-line selection, got %1 line(s)").arg(selectedLines)));
 
         copyAsImage(pane);
 
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard (regression of #9715)");
-        QCOMPARE(image.height(), selectedLines * pane->mFontHeight);
+        QCOMPARE(image.height(), expectedLines * pane->mFontHeight);
+        QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
 
     // Copying twice in a row has to work: the first copy must not destroy the
@@ -240,15 +268,20 @@ private slots:
         QVERIFY2(pane, "Could not prepare a console with a selection");
 
         copyAsImage(pane);
-        QVERIFY2(!QApplication::clipboard()->image().isNull(), "The first \"Copy as image\" put nothing on the clipboard");
+        const QImage first = QApplication::clipboard()->image();
+        QVERIFY2(!first.isNull(), "The first \"Copy as image\" put nothing on the clipboard");
 
         copyAsImage(pane);
-        QVERIFY2(!QApplication::clipboard()->image().isNull(), "A second \"Copy as image\" of the same selection put nothing on the clipboard");
+        const QImage second = QApplication::clipboard()->image();
+        QVERIFY2(!second.isNull(), "A second \"Copy as image\" of the same selection put nothing on the clipboard");
+        // the first copy deselects and reselects to keep inverted colours out of
+        // the image, so a mismatch here means it did not put the state back
+        QCOMPARE(second, first);
     }
 
-    // Selecting a lot of the buffer is the expected way to use this feature, so
-    // the copy is deliberately abandoned once it runs out of time. Whatever was
-    // drawn by then still has to reach the clipboard, at its original scale.
+    // Copying is abandoned once it runs out of time, since a user can select a
+    // whole buffer's worth of lines. Whatever was drawn by then still has to
+    // reach the clipboard, at its original scale.
     void test_abandonedCopyKeepsTheLinesItDrew()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
@@ -258,16 +291,19 @@ private slots:
         // 0s of budget stops the drawing after the very first line
         mudlet::self()->mCopyAsImageTimeout = 0;
         copyAsImage(pane);
-
-        const QImage image = QApplication::clipboard()->image();
-        QVERIFY2(!image.isNull(), "A copy that ran out of time left nothing at all on the clipboard");
-        QCOMPARE(image.height(), pane->mFontHeight);
-
-        // an unscaled crop of the drawn lines, not the whole selection squashed
-        // down to fit into the height of the lines that were drawn
+        const QImage abandoned = QApplication::clipboard()->image();
         mudlet::self()->mCopyAsImageTimeout = originalTimeout;
+
+        QVERIFY2(!abandoned.isNull(), "A copy that ran out of time left nothing at all on the clipboard");
+        QCOMPARE(abandoned.height(), pane->mFontHeight);
+
         copyAsImage(pane);
-        QCOMPARE(image.width(), QApplication::clipboard()->image().width());
+        const QImage complete = QApplication::clipboard()->image();
+        QVERIFY2(complete.height() > abandoned.height(), "The unrestricted copy is no taller, so the abandoned one was not actually cut short");
+        // scaling the abandoned copy to fit would have shrunk its width in
+        // proportion and resampled the one line it did draw
+        QCOMPARE(abandoned.width(), complete.width());
+        QCOMPARE(abandoned, complete.copy(QRect(0, 0, complete.width(), abandoned.height())));
     }
 
     // Blank lines are still lines the user asked for.
@@ -275,6 +311,9 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
+        // with timestamps on, a blank line is still 13 characters wide, which is
+        // not the zero width case this covers
+        QVERIFY(!mudlet::self()->getActiveHost()->mpConsole->showTimeStamps());
 
         const int blankLine = firstBlankLine();
         QVERIFY2(blankLine >= 0, "The console has no blank line to select");
@@ -290,6 +329,47 @@ private slots:
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "Copying a selection of blank lines left nothing on the clipboard");
         QCOMPARE(image.height(), pane->mFontHeight);
+        QCOMPARE(image.width(), pane->mFontWidth);
+        QVERIFY2(blankImage(image, pane->mBgColor), "A blank line copied as something other than background");
+    }
+
+    // Bailing out must not take the user's existing clipboard contents with it.
+    void test_copyWithoutSelectionLeavesTheClipboardAlone()
+    {
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        QVERIFY(pane->mSelectedRegion.isEmpty());
+
+        QApplication::clipboard()->setText(QStringLiteral("something the user copied earlier"));
+        pane->slot_copySelectionToClipboardImage();
+
+        QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("something the user copied earlier"));
+    }
+
+    // Clearing a console leaves a selection covering lines that no longer exist,
+    // which used to send the copy off the end of the buffer.
+    void test_copyAfterClearingTheConsole()
+    {
+        TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
+        QVERIFY2(pane, "Could not prepare a console with a selection");
+
+        mudlet::self()->getActiveHost()->mpConsole->TConsole::clear();
+        QVERIFY2(pane->mSelectedRegion.isEmpty(), "Clearing the console left a selection behind pointing at lines that are gone");
+
+        QMenu* menu = openContextMenu(pane);
+        QVERIFY2(menu, "Right-clicking the console opened no context menu");
+        QAction* copyAsImageEntry = menuEntry(menu, QStringLiteral("consoleCopyAsImage"));
+        QVERIFY(copyAsImageEntry);
+        QVERIFY2(!copyAsImageEntry->isEnabled(), "\"Copy as image\" was offered after the console was cleared");
+
+        // and the slot itself has to cope, since lines can also disappear off the
+        // front of a buffer that has grown past its limit
+        pane->mDragStart = QPoint(0, 60);
+        pane->mDragSelectionEnd = QPoint(6, 68);
+        pane->normaliseSelection();
+        pane->mSelectedRegion = QRegion(0, 0, 10, 10);
+        copyAsImage(pane);
+        QVERIFY2(!QApplication::clipboard()->image().isNull(), "Copying a selection that outlived its lines put nothing on the clipboard");
     }
 
     void cleanup()
@@ -298,8 +378,7 @@ private slots:
 
         // Tear down Mudlet (and with it the live cTelnet connection) before the
         // stub server it is talking to, so the socket is closed from the client
-        // side rather than being yanked out from under an active connection when
-        // the server is destroyed - the latter ordering can flake or crash.
+        // side rather than being yanked out from under an active connection.
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -307,7 +386,9 @@ private slots:
     }
 
 private:
-    void startProfile(const QString& hostname, const QString& address, const QString& port)
+    // Returns false rather than only aborting the current QTest slot, so the
+    // callers below never go on to dereference a host that never appeared.
+    bool startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             mudlet::self()->startAutoLogin({});
@@ -329,17 +410,21 @@ private:
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
         if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
+            qWarning() << "Profile took too long to load.";
+            return false;
         }
         auto host = mudlet::self()->getActiveHost();
-        if (!host) {
-            QFAIL("No active host available for the test.");
+        if (!host || !host->mpConsole) {
+            qWarning() << "No active host available for the test.";
+            return false;
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
         if (!spy2.wait(2000)) {
-            QFAIL("Could not connect with the host.");
+            qWarning() << "Could not connect with the host.";
+            return false;
         }
+        return true;
     }
 
     int firstBlankLine() const
