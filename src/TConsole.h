@@ -142,7 +142,6 @@ class QCloseEvent;
 class QHBoxLayout;
 class QLineEdit;
 class QScrollBar;
-class QToolBar;
 class QShortcut;
 class QSplitter;
 class QToolButton;
@@ -286,7 +285,6 @@ public:
     // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
     // until its right-click menu asks for it:
     void showSearchBar();
-    void populateFindBar(QToolBar*);
     void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
@@ -355,8 +353,9 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
-    // The Central Debug Console's find bar, owned by the debug window:
-    QPointer<QToolBar> mpFindBar;
+    // The Central Debug Console's find bar, floating over the bottom right of
+    // the console itself:
+    QPointer<QWidget> mpFindBar;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;
@@ -477,6 +476,8 @@ private slots:
     void hideSearchBar();
 
 private:
+    void createFindBar();
+    void positionFindBar();
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();

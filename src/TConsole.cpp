@@ -47,6 +47,7 @@
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
 #include <QFile>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -56,7 +57,6 @@
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
-#include <QToolBar>
 #include <QSplitter>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
@@ -547,9 +547,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     if (mType == CentralDebugConsole) {
         // The filters decide what arrives from now on; searching is how you get
-        // back to something that has already scrolled past. Its own find bar is
-        // built by mudlet::attachDebugArea() and floats at the bottom of the
-        // window, the way the notepad's does - see populateFindBar() below.
+        // back to something that has already scrolled past - so the find bar
+        // stays out of sight until Ctrl+F asks for it.
+        createFindBar();
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
@@ -810,6 +810,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 
     if (mType & CentralDebugConsole) {
+        positionFindBar();
         // Wrap to whatever the window is now, rather than the fixed 100 columns
         // it starts at - debug messages are long and a narrow wrap turns most of
         // them into continuation lines. Only new messages are affected, which is
@@ -2200,33 +2201,73 @@ void TConsole::slot_stopAllItems(bool b)
 }
 
 // Moves this console's search widgets into a find bar of its own. Used for the
-// Central Debug Console, whose bar floats at the bottom of the debug window and
-// stays out of the way until Ctrl+F asks for it - the filters are the everyday
-// controls, searching is the occasional one.
-void TConsole::populateFindBar(QToolBar* pBar)
+// Central Debug Console, whose bar floats over the bottom right of the console
+// the way the script editor's does - the filters are the everyday controls,
+// searching is the occasional one, so it only takes the room it needs and only
+// once Ctrl+F has asked for it.
+void TConsole::createFindBar()
 {
-    if (!pBar) {
-        return;
-    }
-    mpFindBar = pBar;
+    auto* pFindBar = new QFrame(this);
+    pFindBar->setObjectName(qsl("debugFindBar"));
+    pFindBar->setFrameShape(QFrame::StyledPanel);
+    pFindBar->setFrameShadow(QFrame::Raised);
+    // It sits on top of the console's own text rather than in a space of its
+    // own, so it has to paint a background instead of letting that show through:
+    pFindBar->setAutoFillBackground(true);
+    mpFindBar = pFindBar;
 
-    mpBufferSearchBox->setMaximumWidth(300);
-    pBar->addWidget(mpBufferSearchBox);
-    pBar->addWidget(mpBufferSearchUp);
-    pBar->addWidget(mpBufferSearchDown);
+    auto* pFindBarLayout = new QHBoxLayout(pFindBar);
+    pFindBarLayout->setContentsMargins(4, 2, 4, 2);
+    pFindBarLayout->setSpacing(2);
 
-    auto* pActionClose = pBar->addAction(pBar->style()->standardIcon(QStyle::SP_DialogCloseButton), tr("Close"));
+    // No longer the width of the window, so the search box gets a width that
+    // suits a search term rather than whatever room happens to be going:
+    mpBufferSearchBox->setMaximumWidth(200);
+    pFindBarLayout->addWidget(mpBufferSearchBox);
+    pFindBarLayout->addWidget(mpBufferSearchUp);
+    pFindBarLayout->addWidget(mpBufferSearchDown);
+
+    auto* pButton_closeFindBar = new QToolButton(pFindBar);
+    pButton_closeFindBar->setObjectName(qsl("debugFindBarClose"));
+    pButton_closeFindBar->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
+    pButton_closeFindBar->setMinimumSize(QSize(30, 30));
+    pButton_closeFindBar->setMaximumSize(QSize(30, 30));
+    pButton_closeFindBar->setFocusPolicy(Qt::NoFocus);
     //: Tooltip for the button that puts the Central Debug Console's find bar away
-    pActionClose->setToolTip(utils::richText(tr("Hide the find bar (Escape).")));
-    connect(pActionClose, &QAction::triggered, this, &TConsole::hideSearchBar);
+    pButton_closeFindBar->setToolTip(utils::richText(tr("Hide the find bar (Escape).")));
+    connect(pButton_closeFindBar, &QAbstractButton::clicked, this, &TConsole::hideSearchBar);
+    pFindBarLayout->addWidget(pButton_closeFindBar);
 
     // Escape only while the bar has the focus, so it stays available to
     // anything else in the window:
-    auto* pShortcut_hide = new QShortcut(QKeySequence(Qt::Key_Escape), pBar);
+    auto* pShortcut_hide = new QShortcut(QKeySequence(Qt::Key_Escape), pFindBar);
     pShortcut_hide->setContext(Qt::WidgetWithChildrenShortcut);
     connect(pShortcut_hide, &QShortcut::activated, this, &TConsole::hideSearchBar);
 
-    pBar->hide();
+    pFindBar->resize(pFindBar->sizeHint());
+    pFindBar->hide();
+}
+
+// Nothing lays the find bar out for us, so it has to be told where the corner
+// it hangs off has got to.
+void TConsole::positionFindBar()
+{
+    if (mpFindBar.isNull()) {
+        return;
+    }
+
+    const int margin = 6;
+    int x = width() - mpFindBar->width() - margin;
+    int y = height() - mpFindBar->height() - margin;
+    // Clear of the scroll bars, so it does not sit on the one thing being used
+    // to get to what is being searched for:
+    if (!mpScrollBar->isHidden()) {
+        x -= mpScrollBar->width();
+    }
+    if (!mpHScrollBar->isHidden()) {
+        y -= mpHScrollBar->height();
+    }
+    mpFindBar->move(qMax(0, x), qMax(0, y));
 }
 
 void TConsole::showSearchBar()
@@ -2234,7 +2275,10 @@ void TConsole::showSearchBar()
     if (mpFindBar.isNull()) {
         return;
     }
+    mpFindBar->resize(mpFindBar->sizeHint());
+    positionFindBar();
     mpFindBar->show();
+    mpFindBar->raise();
     mpBufferSearchBox->setFocus();
     mpBufferSearchBox->selectAll();
 }

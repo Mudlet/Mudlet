@@ -41,7 +41,8 @@ void initializeQRCResources();
 // screen alone and a filtered-out message costs nothing at all. These tests pin
 // down that contract: which messages get through, that continuation fragments
 // follow the message they belong to, and that pausing holds messages back
-// rather than losing them.
+// rather than losing them. The console's own controls are covered here too,
+// since bringing one up needs the same running profile.
 class DebugConsoleFilterTest : public QObject
 {
     Q_OBJECT
@@ -458,6 +459,49 @@ private slots:
 
         TDebug::setPaused(false);
         QVERIFY2(!debugBufferContains(qsl("about to be discarded")), "A discarded message was replayed on resume");
+    }
+
+    // The find bar floats over the console rather than sitting in a layout, so
+    // nothing but the console itself keeps it in the corner and inside the
+    // window.
+    void test_findBarFloatsInTheBottomRightCorner()
+    {
+        startDebuggingProfile();
+
+        auto* console = mudlet::smpDebugConsole.data();
+        console->resize(800, 600);
+        console->showSearchBar();
+
+        auto* findBar = console->mpFindBar.data();
+        QVERIFY2(findBar, "The Central Debug Console has no find bar");
+        QVERIFY2(!findBar->isHidden(), "Asking for the find bar left it hidden");
+        QVERIFY2(findBar->width() < console->width() / 2, "The find bar takes up the width of the console instead of only the room it needs");
+        QVERIFY2(console->rect().contains(findBar->geometry()), "The find bar hangs outside the console");
+        const QPoint middle = findBar->geometry().center();
+        QVERIFY2(middle.x() > console->width() / 2 && middle.y() > console->height() / 2, "The find bar is not in the bottom right corner");
+    }
+
+    void test_findBarKeepsItsCornerOnResize()
+    {
+        startDebuggingProfile();
+
+        auto* console = mudlet::smpDebugConsole.data();
+        console->resize(800, 600);
+        console->showSearchBar();
+
+        auto* findBar = console->mpFindBar.data();
+        const QRect wasAt = findBar->geometry();
+        const QSize wasSized = console->size();
+        console->resize(1000, 700);
+        // Nothing delivers a resize event to a console that is not on screen,
+        // so hand it the one the window system would have:
+        QResizeEvent resizeEvent(console->size(), wasSized);
+        QCoreApplication::sendEvent(console, &resizeEvent);
+
+        QVERIFY2(findBar->geometry() != wasAt, "The find bar stayed where it was when the console was resized around it");
+        QVERIFY2(console->rect().contains(findBar->geometry()), "Resizing the console left the find bar outside it");
+        const QPoint middle = findBar->geometry().center();
+        QVERIFY2(middle.x() > console->width() / 2 && middle.y() > console->height() / 2, "The find bar did not follow the corner it hangs off");
     }
 
     void cleanup()
