@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFontDatabase>
 #include <QPainter>
 #include <QtTest/QtTest>
 
@@ -83,6 +84,7 @@ private:
     static constexpr int kInkThreshold = 24;
     // How far past the bottom of a cell to look for ink that overflowed out of it
     static constexpr int kOverflowScanRows = 4;
+    static const inline QStringList kTestFamilies = {qsl("Bitstream Vera Sans Mono"), qsl("Ubuntu Mono")};
     static constexpr int kFirstSize = 9;
     static constexpr int kLastSize = 30;
 
@@ -92,7 +94,23 @@ private:
     }
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        initializeQRCResources();
+        // src/main.cpp extracts the bundled fonts into the config directory and
+        // FontManager picks them up from there, but QTEST_MAIN never runs
+        // main(), so on a machine that has not run Mudlet before there is
+        // nothing on disk to pick up and Qt quietly substitutes another family.
+        for (const QString& file : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"),
+                                    qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf"),
+                                    qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf"),
+                                    qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-B.ttf")}) {
+            QVERIFY2(QFontDatabase::addApplicationFont(file) != -1, qPrintable(qsl("Could not register the bundled font %1").arg(file)));
+        }
+        for (const QString& family : kTestFamilies) {
+            QVERIFY2(QFontDatabase::families().contains(family), qPrintable(qsl("'%1' is missing from the font database after registering the bundled files").arg(family)));
+        }
+    }
 
     void init()
     {
@@ -121,7 +139,7 @@ private slots:
         QVERIFY2(pane, "No upper pane available");
 
         int sizesWithOverflow = 0;
-        for (const QString& family : {qsl("Bitstream Vera Sans Mono"), qsl("Ubuntu Mono")}) {
+        for (const QString& family : kTestFamilies) {
             for (int size = kFirstSize; size <= kLastSize; ++size) {
                 applyFont(host, family, size);
                 QVERIFY2(pane->getColumnCount() > kBackgroundSampleColumn,
@@ -167,7 +185,7 @@ private slots:
 
         int checkedSizes = 0;
         for (int size = kFirstSize; size <= kLastSize; ++size) {
-            applyFont(host, qsl("Bitstream Vera Sans Mono"), size);
+            applyFont(host, kTestFamilies.first(), size);
             const int cellHeight = cellHeightOf(pane);
             const int cellWidth = cellWidthOf(pane);
             const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
@@ -211,7 +229,7 @@ private slots:
 
         int checkedSizes = 0;
         for (int size = kFirstSize; size <= kLastSize; ++size) {
-            applyFont(host, qsl("Bitstream Vera Sans Mono"), size);
+            applyFont(host, kTestFamilies.first(), size);
             const int cellHeight = cellHeightOf(pane);
             const int cellWidth = cellWidthOf(pane);
             const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
@@ -264,7 +282,7 @@ private slots:
 
         int checkedSizes = 0;
         for (int size = kFirstSize; size <= kLastSize; ++size) {
-            applyFont(host, qsl("Bitstream Vera Sans Mono"), size);
+            applyFont(host, kTestFamilies.first(), size);
             const int cellHeight = cellHeightOf(pane);
             const int cellWidth = cellWidthOf(pane);
             const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
@@ -330,8 +348,13 @@ private slots:
 
         int checkedSizes = 0;
         for (int size = kFirstSize; size <= kLastSize; ++size) {
+            runLua(host, qsl("setFont('overflowMini', '%1')").arg(kTestFamilies.first()));
             runLua(host, qsl("setMiniConsoleFontSize('overflowMini', %1)").arg(size));
             QApplication::processEvents();
+            // this one goes through the miniconsole API rather than applyFont(),
+            // so it needs its own check that the family was not substituted
+            QVERIFY2(QFontInfo(pane->font()).family() == kTestFamilies.first(),
+                     qPrintable(qsl("The miniconsole resolved to '%1' rather than '%2', so this would measure the wrong glyph").arg(QFontInfo(pane->font()).family(), kTestFamilies.first())));
             const int cellHeight = cellHeightOf(pane);
             const int cellWidth = cellWidthOf(pane);
             const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
@@ -482,16 +505,21 @@ private:
         return ink;
     }
 
-    // Where the glyph's ink starts and ends relative to the top of its cell when
-    // drawn the way TTextEdit::paintGraphemeForeground() draws it.
+    // Where the ink of a run of graphemes starts and ends relative to the top of
+    // its cell, drawn cell by cell the way TTextEdit::paintGraphemeForeground()
+    // draws it. The whole run is rendered rather than a single glyph because
+    // neighbouring cells' antialiasing overlaps at the cell boundaries, which
+    // moves the faintest row of the ink.
     static QPair<int, int> referenceInkExtent(const QFont& font, const QString& grapheme, int cellWidth, int cellHeight)
     {
-        QImage image(cellWidth, cellHeight * 3, QImage::Format_ARGB32_Premultiplied);
+        QImage image(kUnderscoreCount * cellWidth, cellHeight * 3, QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::black);
         QPainter painter(&image);
         painter.setFont(font);
         painter.setPen(Qt::white);
-        painter.drawText(QRect(0, cellHeight, cellWidth, cellHeight), Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+        for (int cell = 0; cell < kUnderscoreCount; ++cell) {
+            painter.drawText(QRect(cell * cellWidth, cellHeight, cellWidth, cellHeight), Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+        }
         painter.end();
 
         int top = -1;
