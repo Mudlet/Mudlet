@@ -118,7 +118,7 @@
     },
     {
       "name": "windows-debug",
-      "displayName": "Windows Debug (MSYS2 CLANG64, Ninja)",
+      "displayName": "Windows Debug (MSYS2, Ninja)",
       "inherits": "base",
       "condition": {
         "type": "equals",

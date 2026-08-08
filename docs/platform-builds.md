@@ -38,9 +38,14 @@ reached `Max cache size`, raise it with `ccache -M <n>G`.
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
 
-Builds run under the MSYS2 **CLANG64** environment — open a CLANG64 shell, not MINGW64.
-`CI/setup-windows-sdk.sh` and `CI/build-mudlet-for-windows.sh` both exit with an error on any other
-`MSYSTEM`. The `windows-debug` preset reads `MSYSTEM_PREFIX`, which MSYS2 sets in every such shell:
+Builds run under MSYS2, in the **CLANG64** environment — open a CLANG64 shell, not MINGW64, and
+check it is a real MSYS2 shell rather than Git for Windows' bash carrying an inherited `MSYSTEM`
+(`MSYSTEM_PREFIX` is empty in the latter). `CI/setup-windows-sdk.sh` and
+`CI/build-mudlet-for-windows.sh` exit with an error on any other `MSYSTEM`, including the
+`CLANGARM64` environment native to ARM64 hosts.
+
+The `windows-debug` preset reads `MSYSTEM_PREFIX`, which MSYS2 sets in each of its shells, so the
+preset follows whichever environment is provisioned:
 
 ```bash
 cmake --preset windows-debug

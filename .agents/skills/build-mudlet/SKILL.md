@@ -58,12 +58,17 @@ cmake --preset macos-debug -DCMAKE_PREFIX_PATH="$(brew --prefix qt6)"
 
 ### Windows
 
-Builds run under the MSYS2 **CLANG64** environment; `CI/setup-windows-sdk.sh` and
-`CI/build-mudlet-for-windows.sh` both refuse any other `MSYSTEM` outright. Open a CLANG64 shell,
-not MINGW64. `windows-debug` reads `MSYSTEM_PREFIX`, which MSYS2 sets in every such shell, so no
-setup step is needed for the preset itself — but the dependencies still have to be installed
-first, per <https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows>. Sanitizers are not
-enabled on Windows, so there is no `-nosan` variant.
+Builds run under MSYS2. Use the **CLANG64** environment: `CI/setup-windows-sdk.sh`, which installs
+the dependencies, accepts only that one and exits on any other `MSYSTEM`. Open a CLANG64 shell, not
+MINGW64, and make sure it is a real MSYS2 shell — Git for Windows' bash can carry an inherited
+`MSYSTEM` that makes it look like one, in which case `MSYSTEM_PREFIX` is empty.
+
+The preset itself is not tied to a particular environment: it reads `MSYSTEM_PREFIX`, which MSYS2
+sets in each of its shells, so it follows whichever one is provisioned. On an ARM64 host the native
+environment is `CLANGARM64`, which the setup script does not currently handle, so dependencies have
+to come from a CLANG64 shell.
+
+Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 
 ## Running the result
 
