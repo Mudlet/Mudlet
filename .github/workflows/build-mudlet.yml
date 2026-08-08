@@ -83,9 +83,6 @@ jobs:
       uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
-        # The build cache both speeds runs up and keeps CI green through
-        # lua.org outages - the action downloads only from lua.org, so a cold
-        # cache during an outage is the one case that still needs it up
         buildCache: true
 
     - name: (macOS) Install Luarocks via GitHub Actions
@@ -160,9 +157,6 @@ jobs:
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}
-        # The build cache both speeds runs up and keeps CI green through
-        # lua.org outages - the action downloads only from lua.org, so a cold
-        # cache during an outage is the one case that still needs it up
         buildCache: true
 
     - name: (Linux) Install Luarocks via GitHub Actions
