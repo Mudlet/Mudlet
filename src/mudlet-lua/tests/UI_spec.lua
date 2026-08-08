@@ -1989,7 +1989,7 @@ describe("Tests UI functions", function()
       end)
     end)
 
-    describe("the grouped chat triggers", function()
+    describe("the chat capture shapes", function()
       local chatLines = {
         "Bob tells you, 'hello there'",
         "You tell Bob, 'hi'",
@@ -1997,45 +1997,50 @@ describe("Tests UI functions", function()
         "Bob whispers to you, 'psst'",
         "Bob tells the group 'incoming'",
         "Bob says, 'hello'",
+        "Bob asks, 'where is the bank?'",
+        "Bob exclaims, 'at last!'",
         "You say, 'hello'",
+        "You ask, 'which way?'",
+        "You exclaim, 'finally!'",
         "Bob yells, 'help!'",
         "You shout, 'hello'",
         "[newbie] Ann: how do I get out of here?",
         "(gossip) Ann: anyone around?",
         "< chat | Ann: anyone around?",
+      }
+
+      -- a tag the shapes capture but chatChannelNames turns away, so the line
+      -- stays out of chat AND stays available to the vitals layer
+      local notChatLines = {
         "You are standing in a dark forest.",
         "The orc hits you for 14 damage!",
         "[combat] 100/120 hp",
         "(12) something that is not a channel",
       }
 
-      -- chatLikeLine additionally requires the tag to be a known channel name,
-      -- so the trigger fires on these and routeTaggedChatLine turns them away
-      local taggedButNotAChannel = {
-        ["[combat] 100/120 hp"] = true,
-        ["(12) something that is not a channel"] = true,
-      }
-
-      it("fires on the same lines the individual shapes did", function()
-        local grouped = BaseUI.chatTriggerPatterns()
-        assert.are.equal(3, #grouped)
+      it("recognises every shape of chat line", function()
         for _, line in ipairs(chatLines) do
-          local anyGroupMatches = false
-          for _, pattern in ipairs(grouped) do
+          assert.is_true(BaseUI.chatLikeLine(line), "not recognised as chat: " .. line)
+        end
+      end)
+
+      it("leaves ordinary game text to the vitals layer", function()
+        for _, line in ipairs(notChatLines) do
+          assert.is_false(BaseUI.chatLikeLine(line), "ordinary game text taken for chat: " .. line)
+        end
+      end)
+
+      it("has a shape for every line the trigger tree routes", function()
+        for _, regex in ipairs(BaseUI.chatShapeRegexes()) do
+          local matched = false
+          for _, line in ipairs(chatLines) do
             -- rex.find: rex.match returns false for an unset capture group
-            if rex.find(line, pattern.regex) then
-              anyGroupMatches = true
+            if rex.find(line, regex) then
+              matched = true
               break
             end
           end
-          -- chatLikeLine walks the shapes individually, so it is the reference
-          if BaseUI.chatLikeLine(line) then
-            assert.is_true(anyGroupMatches,
-              "grouped triggers miss a line the individual shapes captured: " .. line)
-          elseif not taggedButNotAChannel[line] then
-            assert.is_false(anyGroupMatches,
-              "grouped triggers capture a line the individual shapes did not: " .. line)
-          end
+          assert.is_true(matched, "no line above exercises the shape: " .. regex)
         end
       end)
     end)
@@ -2062,7 +2067,7 @@ describe("Tests UI functions", function()
     after_each(function()
       BaseUI.settings = savedSettings
       BaseUI.saveSettings()
-      BaseUI.createChatTriggers()
+      BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
     end)
 
@@ -2074,11 +2079,11 @@ describe("Tests UI functions", function()
 
     it("should retire its capture triggers while standing aside", function()
       BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
-      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
-      BaseUI.createChatTriggers()
+      BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
-      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
     end)
 

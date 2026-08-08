@@ -26,6 +26,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TTrigger.h"
 #include "TelnetServerStub.h"
 #include "TriggerUnit.h"
 #include "ctelnet.h"
@@ -51,8 +52,14 @@ private:
 
     // A full default-package profile measures 3: the starter UI's chat capture
     // tree and its vitals prefilter, plus one folder from another package.
-    // Raising this is a throughput change and wants measuring first.
+    // Nesting hides growth from this count now that the chat shapes live in a
+    // tree, so kMaxGatePatterns below is what actually tracks the per-line cost.
     static constexpr int kMaxRootTriggers = 5;
+
+    // What every line of game text really pays for: the substrings the chat
+    // gates scan for before any regex runs. Raising this is a throughput change
+    // and wants measuring first.
+    static constexpr int kMaxGatePatterns = 20;
 
 private slots:
     void initTestCase() { initializeQRCResources(); }
@@ -207,9 +214,16 @@ private slots:
                 {qsl("Ann whispers to you, 'psst'"), qsl("tells")},
                 {qsl("Bob tells the group, 'incoming'"), qsl("tells")},
                 {qsl("Bob says, 'hello everyone'"), QString()},
+                {qsl("Bob asks, 'where is the bank?'"), QString()},
+                {qsl("Bob exclaims, 'at last!'"), QString()},
                 {qsl("You say, 'hi there'"), QString()},
+                {qsl("You ask, 'which way?'"), QString()},
+                {qsl("You exclaim, 'finally!'"), QString()},
                 {qsl("Bob yells, 'help!'"), QString()},
+                {qsl("Bob shouts, 'to arms!'"), QString()},
+                {qsl("You yell, 'wait for me!'"), QString()},
                 {qsl("You shout, 'over here!'"), QString()},
+                {qsl("[tell] Ann: are you there?"), qsl("tells")},
                 {qsl("[newbie] Ann: how do I get out of here?"), qsl("channels")},
                 {qsl("(gossip) Ann: anyone around?"), qsl("channels")},
                 {qsl("< chat | Ann: anyone around?"), qsl("channels")},
@@ -229,9 +243,11 @@ private slots:
             QVERIFY2(luaTrue(host, qsl("BaseUI.unread.%1 == %2").arg(family, QString::number(expectedUnread.value(family)))), qPrintable(qsl("did not reach the %1 tab: %2").arg(family, text)));
         }
 
-        // BaseUI.chatChannelNames still has the last word on a captured tag.
+        // BaseUI.chatChannelNames has the last word on a captured tag, so this
+        // line reaches no tab at all rather than only missing Channels.
+        QVERIFY(runLua(host, qsl("__starterUiCaptures = #BaseUI.recentCaptures")));
         feedLine(host, qsl("[inventory] a rusty sword"));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.channels == %1").arg(QString::number(expectedUnread.value(qsl("channels"))))), "an unknown tag was routed as a channel");
+        QVERIFY2(luaTrue(host, qsl("#BaseUI.recentCaptures == __starterUiCaptures")), "an unknown tag was captured as chat");
 
         // The shapes above are also what keeps chat out of the vitals layer, so
         // the two lists have to stay in step with each other and with the tree.
@@ -242,6 +258,48 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("__starterUi.unroutedLines == 0")),
                  "a corpus line routes through the trigger tree but no chatPatterns shape recognises it, so the vitals "
                  "layer would harvest it - the lines are in the error console");
+
+        // The corpus is only an enforcer while it covers every gate literal: a
+        // gate matches case-sensitively, so a literal nothing exercises is a
+        // literal that can be misspelled without any test noticing.
+        assertCorpusCoversEveryGateLiteral(host, corpus);
+    }
+
+    // The gate layer is what every line pays for, so it has to stay substring
+    // matching, and the shapes hanging off it have to stay the ones the script
+    // knows about - chatLikeLine() reads that list to keep chat out of the
+    // vitals layer, and a shape only the tree has would be harvested for gauges.
+    void test_theChatTreeGatesOnSubstringsAndKeepsTheScriptsShapes()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+
+        TTrigger* tree = findTrigger(host, qsl("Mudlet base UI chat capture"));
+        QVERIFY2(tree, "the chat capture tree is not in the profile under the name the script arms");
+        QVERIFY2(tree->getPatternsList().isEmpty(), "the chat tree's root folder grew a pattern, so it is a chain now and no longer passes every line to its gates");
+
+        int gatePatterns = 0;
+        QStringList shapes;
+        for (auto gate : *tree->getChildrenList()) {
+            const QList<int> kinds = gate->getRegexCodePropertyList();
+            QVERIFY2(!kinds.isEmpty(), qPrintable(qsl("gate \"%1\" has no patterns, so it passes every line straight to its regexes").arg(gate->getName())));
+            for (const int kind : kinds) {
+                QVERIFY2(kind == REGEX_SUBSTRING || kind == REGEX_BEGIN_OF_LINE_SUBSTRING,
+                         qPrintable(qsl("gate \"%1\" has a pattern of kind %2 - a gate must be substring matching only, or every line pays for a regex").arg(gate->getName(), QString::number(kind))));
+            }
+            gatePatterns += static_cast<int>(kinds.size());
+            for (auto shape : *gate->getChildrenList()) {
+                shapes << shape->getPatternsList();
+            }
+        }
+
+        QVERIFY2(gatePatterns <= kMaxGatePatterns,
+                 qPrintable(qsl("the chat gates scan every line for %1 substrings, over the budget of %2").arg(QString::number(gatePatterns), QString::number(kMaxGatePatterns))));
+
+        QVERIFY(runLua(host, treeShapeComparisonScript(shapes)));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.shapeMismatch == nil")),
+                 "the tree's shapes and the script's chatPatterns have drifted apart - chatLikeLine() would stop recognising a "
+                 "line the tree routes, and the vitals layer would read it as a prompt. The first difference is in the error console");
     }
 
     // The mirror of the vitals-retire test: a game that sends chat over GMCP
@@ -294,6 +352,77 @@ private:
     // A Lua long-bracket string, so quotes and backslashes in a corpus line
     // reach the Lua state exactly as they were fed to the trigger engine.
     static QString luaLiteral(const QString& text) { return qsl("[==[%1]==]").arg(text); }
+
+    static TTrigger* findTrigger(Host* host, const QString& name)
+    {
+        for (auto root : host->getTriggerUnit()->getTriggerRootNodeList()) {
+            if (TTrigger* found = findTriggerIn(root, name)) {
+                return found;
+            }
+        }
+        return nullptr;
+    }
+
+    static TTrigger* findTriggerIn(TTrigger* trigger, const QString& name)
+    {
+        if (trigger->getName() == name) {
+            return trigger;
+        }
+        for (auto child : *trigger->getChildrenList()) {
+            if (TTrigger* found = findTriggerIn(child, name)) {
+                return found;
+            }
+        }
+        return nullptr;
+    }
+
+    void assertCorpusCoversEveryGateLiteral(Host* host, const QList<QPair<QString, QString>>& corpus)
+    {
+        TTrigger* tree = findTrigger(host, qsl("Mudlet base UI chat capture"));
+        QVERIFY(tree);
+        for (auto gate : *tree->getChildrenList()) {
+            const QStringList patterns = gate->getPatternsList();
+            const QList<int> kinds = gate->getRegexCodePropertyList();
+            for (int i = 0; i < patterns.size() && i < kinds.size(); ++i) {
+                const QString& literal = patterns.at(i);
+                bool exercised = false;
+                for (const auto& [text, family] : corpus) {
+                    // matching the engine: substrings are indexOf, the rest startsWith
+                    exercised = kinds.at(i) == REGEX_SUBSTRING ? text.contains(literal, Qt::CaseSensitive) : text.startsWith(literal, Qt::CaseSensitive);
+                    if (exercised) {
+                        break;
+                    }
+                }
+                QVERIFY2(exercised,
+                         qPrintable(qsl("no corpus line exercises \"%1\" in gate \"%2\", so that literal could be misspelled and "
+                                        "the chat it gates would silently stop appearing")
+                                            .arg(literal, gate->getName())));
+            }
+        }
+    }
+
+    static QString treeShapeComparisonScript(const QStringList& treeShapes)
+    {
+        QStringList entries;
+        for (const QString& shape : treeShapes) {
+            entries << luaLiteral(shape);
+        }
+        return qsl(R"LUA(
+local tree = { %1 }
+local script = BaseUI.chatShapeRegexes()
+__starterUi = __starterUi or {}
+__starterUi.shapeMismatch = nil
+for i = 1, math.max(#tree, #script) do
+  if tree[i] ~= script[i] then
+    __starterUi.shapeMismatch = string.format("shape %d: tree has %s, chatPatterns has %s",
+      i, tostring(tree[i]), tostring(script[i]))
+    echo("\n[ chat shape drift ] " .. __starterUi.shapeMismatch .. "\n")
+    break
+  end
+end
+)LUA")
+                .arg(entries.join(qsl(", ")));
+    }
 
     // Holds the corpus fed above against the shapes chatLikeLine() walks: every
     // shape needs a line, and every line needs a shape.

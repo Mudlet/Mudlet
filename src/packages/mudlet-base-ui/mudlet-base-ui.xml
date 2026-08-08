@@ -5,14 +5,20 @@
 		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 			<name>Mudlet base UI chat capture</name>
 			<script>-- A gate, then the shapes - the pattern to copy for triggers that have to
--- watch every line. Each gate below is plain substring matching, no regex
--- engine, and Mudlet only offers a line to a trigger's children once the
--- trigger itself matched it. An ordinary line therefore costs a dozen
--- substring scans and no regex work at all.
+-- watch every line. Each gate is plain substring matching, no regex engine,
+-- and Mudlet only offers a line to a trigger's children once the trigger
+-- itself matched it. Most lines therefore cost substring scans only.
 --
 -- Substring patterns are case-sensitive, so every literal a child's regex
 -- needs must appear in its gate's pattern list, spelled the same way. Miss
--- that and the child silently never sees a line.
+-- that and the child silently never sees a line. That is also why the gates
+-- spell out "says", "asks", "You say" and so on rather than the shorter
+-- stems they share: "say" would also let "essay" through to the regexes,
+-- and "ask" every "task" and "asked".
+--
+-- The channel gate cannot be narrowed the same way - a bare "[", "(" or "&lt;"
+-- is all a tagged line has in common - so prompt lines like "&lt;500/600hp&gt;"
+-- do reach its three regexes. They are anchored, so they fail at once.
 --
 -- These gates ship inactive: the "Mudlet base UI" script enables them on
 -- load, and disables them again when the game turns out to send its chat
@@ -169,13 +175,23 @@
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>say</string>
-					<string>ask</string>
-					<string>exclaim</string>
-					<string>yell</string>
-					<string>shout</string>
+					<string>says</string>
+					<string>asks</string>
+					<string>exclaims</string>
+					<string>yells</string>
+					<string>shouts</string>
+					<string>You say</string>
+					<string>You ask</string>
+					<string>You exclaim</string>
+					<string>You yell</string>
+					<string>You shout</string>
 				</regexCodeList>
 				<regexCodePropertyList>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
 					<integer>0</integer>
 					<integer>0</integer>
 					<integer>0</integer>
@@ -643,15 +659,36 @@ end
 -- this package. Renaming one there means renaming it here.
 local chatGates = { "BaseUI chat: tells", "BaseUI chat: speech", "BaseUI chat: channel tags" }
 
+-- the third argument matters: a line only reaches a gate through its parents,
+-- so a gate whose folder someone switched off is not armed no matter what its
+-- own flag says. enableTrigger() cannot answer this - it reports whether it
+-- found the name, not whether the trigger came up - so ask afterwards
+local function gateArmed(gate)
+  return isActive(gate, "trigger", true) &gt; 0
+end
+
 function BaseUI.armChatTriggers()
   if BaseUI.dormant() or BaseUI.gmcpChat then
     return
   end
   for _, gate in ipairs(chatGates) do
-    if not enableTrigger(gate) then
-      debugc("[ Mudlet UI ] chat capture gate \"" .. gate .. "\" is missing, so those lines will not be captured")
+    enableTrigger(gate)
+    if not gateArmed(gate) then
+      BaseUI.reportDeadChatGate(gate)
     end
   end
+end
+
+-- debugc alone would not do: it writes to the editor's error console, which is
+-- hidden until the player goes looking for it. Once per session, because
+-- arming runs again on every reconnect.
+function BaseUI.reportDeadChatGate(gate)
+  debugc("[ Mudlet UI ] chat capture gate \"" .. gate .. "\" did not come up, so those lines will not be captured")
+  if BaseUI.warnedDeadChatGate then
+    return
+  end
+  BaseUI.warnedDeadChatGate = true
+  cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Part of the chat capture is switched off, so some chat may not appear here - type &lt;yellow&gt;baseui&lt;dim_grey&gt; for options.&lt;reset&gt;\n")
 end
 
 function BaseUI.disarmChatTriggers()
@@ -662,7 +699,7 @@ end
 
 function BaseUI.chatTriggersArmed()
   for _, gate in ipairs(chatGates) do
-    if isActive(gate, "trigger") == 0 then
+    if not gateArmed(gate) then
       return false
     end
   end
