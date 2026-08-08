@@ -108,6 +108,15 @@ set(leakCheckExcludedTests
     UpdaterTeardownTest
 )
 
+# Apple's ASan runtime has no LeakSanitizer, and Windows builds have no
+# sanitizer at all, so detect_leaks is only meaningful where the address or
+# leak sanitizer is actually compiled in
+if(NOT APPLE AND NOT WIN32 AND "${USE_SANITIZER}" MATCHES "[Aa]ddress|[Ll]eak")
+    set(leakCheckAvailable TRUE)
+else()
+    set(leakCheckAvailable FALSE)
+endif()
+
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
@@ -115,12 +124,18 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
-    # Apple's ASan runtime has no LeakSanitizer
-    if(APPLE OR test_name IN_LIST leakCheckExcludedTests)
-        set(leakCheck "detect_leaks=0")
-    else()
+    if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         set(leakCheck "detect_leaks=1")
+        # Every leak-checked exit is another chance to hit LeakSanitizer's
+        # tracer crash, which fails the run without reporting anything, so the
+        # leak-checked tests go through a launcher that retries that one
+        # signature once. See test/lsan-tracer-retry.cmake.
+        add_test(NAME ${test_name} COMMAND ${CMAKE_COMMAND} -P
+            ${CMAKE_SOURCE_DIR}/test/lsan-tracer-retry.cmake --
+            $<TARGET_FILE:${test_name}>)
+    else()
+        set(leakCheck "detect_leaks=0")
+        add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     endif()
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=${leakCheck}"

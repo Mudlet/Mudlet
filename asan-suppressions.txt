@@ -61,19 +61,35 @@ leak:_dri.so
 #
 # A second un-suppressible flake lives on the same CI job: LeakSanitizer's
 # stop-the-world tracer - the helper process that ptrace-attaches at exit to
-# scan memory for live pointers - itself segfaults during exit-time teardown,
-# apparently racing driver/X cleanup. The job log then ends with
+# scan memory for live pointers - segfaults part way through that scan. The run
+# then ends with
 #   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
 #   ==NNNNN==LeakSanitizer has encountered a fatal error.
-# right after "mudlet::~mudlet() INFO - uninstalling translation...", with no
-# leak report at all, and the busted summary line goes missing too (LSan's
-# Die() skips the stdio flush - the Lua tests themselves passed). Since
-# exitcode=1 the job fails. Suppressions filter leak *reports*, and this
-# aborts before reporting begins, so nothing in this file can help; it is
-# also unrelated to the change under test (the same faulting instruction was
-# observed on development-branch runs 26705214438 and 28641460889 and on PR
-# run 30744002320, at a rate of roughly 1 in 250-500 leak-job runs). If a
-# leak job fails with this signature, just re-run it.
+# and no leak report at all. On the Lua leg the busted summary line goes missing
+# with it, because LSan's Die() skips the stdio flush - the tests themselves had
+# already passed.
+#
+# The faulting pc resolves, in Ubuntu 22.04's libasan6 (11.4.0-1ubuntu1~22.04.3),
+# to offset 0xe17e8, inside
+#   __lsan::ScanRangeForPointers(unsigned long, unsigned long, ...)
+#     e17e8:  4d 8b 37   mov (%r15),%r14
+# which is the word load at the top of the scan loop: the tracer is dereferencing
+# a range it was handed that is not mapped. The faulting addresses agree -
+# 0x03800010, 0x06800018, 0x29000010, 0x34800018, 0x3e800020 and 0x7a000020 are
+# range starts in low memory, nowhere near ASan's heap at 0x60x_xxxxxxxx, so the
+# range descriptor itself is junk rather than anything Mudlet allocated. It is a
+# sanitizer runtime bug, and since suppressions only filter leak *reports* -
+# which this aborts before ever producing - nothing in this file can reach it.
+#
+# So CI retries instead of suppressing: leak-checked tests and the Lua suite run
+# through test/lsan-tracer-retry.cmake, which reruns the command exactly once if
+# it died with this signature AND its own output shows nothing failed. A real
+# leak, a failing test, or a second tracer crash all still fail the job.
+#
+# The rate is roughly 1 in 250-500 leak-job runs (development-branch runs
+# 26705214438 and 28641460889, PR runs 30744002320 and 31223472887), and it
+# clusters by runner fleet rather than by code: run 31237179502 passed 89/89 on
+# the exact commit whose leak job had just failed five tests with it.
 
 # ==============================================================================
 # Fontconfig library leaks
