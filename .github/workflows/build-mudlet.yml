@@ -626,8 +626,8 @@ jobs:
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      # Longer than the other platforms': this leg also drives the real
-      # discord-rpc library, whose reconnects happen in wall-clock time.
+      # This leg drives the real discord-rpc library, whose reconnects
+      # happen in wall-clock time.
       timeout-minutes: 3
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
@@ -661,7 +661,8 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 1
+      # The suite alone can run past a minute on the slower Intel runners
+      timeout-minutes: 3
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
