@@ -79,14 +79,10 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
 // retrieve its password. Mirrors the pattern used there:
 const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
 
-// What the connection form writes out, and so all that a profile which has
-// never been played holds. slot_deleteProfile() removes such a profile without
-// asking, so listing what is expected rather than what to watch out for keeps
-// an unrecognised file - a stored password, a personal dictionary - on the side
-// of asking; text the user typed in themselves, such as a character name, is
-// their own and is deliberately absent for the same reason.
-// ProfileDeletionSafetyTest fails if the form comes to write anything this list
-// does not name:
+// Listing what is expected rather than what to watch out for keeps an
+// unrecognised file - a stored password, a character name the user typed - on
+// the side of asking. ProfileDeletionSafetyTest fails if the connection form
+// comes to write anything this does not name:
 const QStringList dlgConnectionProfiles::scmConnectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
 
 // A lone "." is made entirely of permitted characters, yet every path built
@@ -1213,10 +1209,9 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     return ret;
 }
 
-// Whether an item written here for a profile that has never been played lets
-// its removal skip the confirmation depends on scmConnectionDetailFiles above.
-// Unlike mudlet::writeProfileData() this does not create the profile's folder,
-// so a write before there is one is quietly dropped.
+// A new item here may need adding to scmConnectionDetailFiles above. Unlike
+// mudlet::writeProfileData() this does not create the profile's folder, so a
+// write before there is one is quietly dropped.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
     QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));

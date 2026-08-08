@@ -4702,9 +4702,6 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     return ret;
 }
 
-// Whether an item written for a profile that has never been played lets its
-// removal skip the confirmation depends on the list at the top of
-// dlgConnectionProfiles.cpp (scmConnectionDetailFiles).
 QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
     // Ensure the profile directory exists before attempting to write profile data
