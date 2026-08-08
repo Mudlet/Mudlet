@@ -78,48 +78,15 @@ jobs:
         cache: true
         modules: qt5compat qtmultimedia qtspeech
 
-    - name: Build Lua (lua.org with mirror fallback)
-      env:
-        HOMEBREW_NO_AUTO_UPDATE: "ON"
-        # sha256 of lua-5.1.5.tar.gz - update when LUA_VERSION changes
-        LUA_SHA256: '2640fc56a795f29d28ef15e13c34a47e223960b0240e8cb0a82d9b0738695333'
-      run: |
-        # Pre-build Lua into .lua/ so the gh-actions-lua steps below skip their
-        # own download - they only fetch from lua.org, which goes down at times
-        # and takes all of CI with it.
-        for url in \
-          "https://www.lua.org/ftp/lua-${LUA_VERSION}.tar.gz" \
-          "https://sources.buildroot.net/lua/lua-${LUA_VERSION}.tar.gz" \
-          "https://distfiles.macports.org/lua/lua-${LUA_VERSION}.tar.gz" \
-          "https://ftp.openbsd.org/pub/OpenBSD/distfiles/lua-${LUA_VERSION}.tar.gz"; do
-          echo "Downloading ${url}"
-          if curl -fsSL --connect-timeout 15 --max-time 120 -o lua.tar.gz "${url}" \
-             && echo "${LUA_SHA256}  lua.tar.gz" | shasum -a 256 -c -; then
-            break
-          fi
-          rm -f lua.tar.gz
-        done
-        if [ ! -f lua.tar.gz ]; then
-          echo "::error::could not download Lua ${LUA_VERSION} from any source"
-          exit 1
-        fi
-        tar xzf lua.tar.gz
-        if [ "${RUNNER_OS}" = "macOS" ]; then
-          brew install readline ncurses
-          make -C "lua-${LUA_VERSION}" -j macosx
-        else
-          sudo apt-get install -qy libreadline-dev libncurses-dev
-          make -C "lua-${LUA_VERSION}" -j linux
-        fi
-        make -C "lua-${LUA_VERSION}" INSTALL_TOP="${GITHUB_WORKSPACE}/.lua" install
-        rm -rf lua.tar.gz "lua-${LUA_VERSION}"
-
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
-        buildCache: false
+        # The build cache both speeds runs up and keeps CI green through
+        # lua.org outages - the action downloads only from lua.org, so a cold
+        # cache during an outage is the one case that still needs it up
+        buildCache: true
 
     - name: (macOS) Install Luarocks via GitHub Actions
       if: runner.os == 'macOS'
@@ -193,7 +160,10 @@ jobs:
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}
-        buildCache: false
+        # The build cache both speeds runs up and keeps CI green through
+        # lua.org outages - the action downloads only from lua.org, so a cold
+        # cache during an outage is the one case that still needs it up
+        buildCache: true
 
     - name: (Linux) Install Luarocks via GitHub Actions
       uses: leafo/gh-actions-luarocks@v6
