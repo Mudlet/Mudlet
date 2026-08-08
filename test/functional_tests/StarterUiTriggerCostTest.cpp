@@ -31,6 +31,8 @@
 #include "TriggerUnit.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgTriggerEditor.h"
+#include <QTreeWidget>
 #include "mudlet.h"
 
 extern void qInitResources_mudlet();
@@ -324,6 +326,51 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")), "\"baseui show\" did not bring the chat gates back");
     }
 
+    // Shipping the tree visible invites players to copy it, and the editor's
+    // paste keeps every name. enableTrigger()/disableTrigger() can only name a
+    // trigger, so a lifecycle built on a name a copy reproduces would reach
+    // into the player's triggers - and their active copy would answer for ours
+    // when we asked whether the layer was armed.
+    void test_copyingTheTreeLeavesThePlayersTriggersAlone()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        auto* tree = triggerTreeWidget(host);
+        QVERIFY2(tree, "could not reach the editor's trigger tree");
+
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.chatTreeShared()")), "a fresh profile already has more than one chat capture tree");
+        QVERIFY(runLua(host, qsl("BaseUI.disarmChatTriggers()")));
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.chatTriggersArmed()")), "the layer did not disarm on a profile with no copies");
+        QVERIFY(runLua(host, qsl("BaseUI.armChatTriggers()")));
+        QVERIFY(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")));
+
+        // the likely copy: one gate, to adapt for themselves
+        pasteCopyOf(tree, qsl("BaseUI chat: tells"));
+        QList<TTrigger*> gates;
+        collectByName(host, qsl("BaseUI chat: tells"), gates);
+        QCOMPARE(gates.size(), 2);
+        QVERIFY(runLua(host, qsl("BaseUI.disarmChatTriggers()")));
+        QVERIFY2(gates.at(1)->isActive(), "retiring the chat layer switched off the player's copy of a gate");
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.chatTriggersArmed()")), "the player's copy answered for ours when we asked whether the layer was armed");
+        QVERIFY(runLua(host, qsl("BaseUI.armChatTriggers()")));
+
+        // and the whole tree, name and all - now we cannot tell ours apart
+        pasteCopyOf(tree, qsl("Mudlet base UI chat capture"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTreeShared()")), "a second tree with our folder's name went unnoticed");
+        QList<TTrigger*> folders;
+        collectByName(host, qsl("Mudlet base UI chat capture"), folders);
+        QCOMPARE(folders.size(), 2);
+        QVERIFY(runLua(host, qsl("BaseUI.disarmChatTriggers()")));
+        QVERIFY2(folders.at(1)->isActive(), "retiring the chat layer switched off the player's copy of the whole tree");
+
+        // giving up the switch is only safe because routeChatLine() re-checks
+        QVERIFY(runLua(host, qsl("__starterUiCaptures = #BaseUI.recentCaptures\nBaseUI.gmcpChat = true")));
+        feedLine(host, qsl("Ann whispers to you, 'psst'"));
+        QVERIFY2(luaTrue(host, qsl("#BaseUI.recentCaptures == __starterUiCaptures")),
+                 "with the switch given up, a chat line was still captured after GMCP chat took over - the per-line guard is what "
+                 "keeps this correct and it did not hold");
+    }
+
     void test_theVitalsLayerRetiresOnceAProtocolOwnsTheGauges()
     {
         Host* host = startProfileWithStarterUi();
@@ -346,6 +393,73 @@ private:
     // Quotes and backslashes in a corpus line have to reach the Lua state
     // exactly as they were fed to the trigger engine.
     static QString luaLiteral(const QString& text) { return qsl("[==[%1]==]").arg(text); }
+
+    // Drives the editor the way a player does: its copy/paste goes through the
+    // same XML export/import as a package, so this covers both.
+    QTreeWidget* triggerTreeWidget(Host* host)
+    {
+        dlgTriggerEditor* editor = host->mpEditorDialog;
+        if (!editor) {
+            return nullptr;
+        }
+        QMetaObject::invokeMethod(editor, "slot_showTriggers");
+        QCoreApplication::processEvents();
+        auto* tree = editor->findChild<QTreeWidget*>(qsl("treeWidget_triggers"));
+        return (tree && tree->topLevelItemCount() > 0) ? tree : nullptr;
+    }
+
+    void pasteCopyOf(QTreeWidget* tree, const QString& name)
+    {
+        dlgTriggerEditor* editor = tree->window()->findChild<dlgTriggerEditor*>();
+        editor = editor ? editor : qobject_cast<dlgTriggerEditor*>(tree->window());
+        QVERIFY(editor);
+        // the editor rebuilds the tree after a paste, so nothing may be cached
+        QTreeWidgetItem* base = tree->topLevelItem(0);
+        QVERIFY(base);
+        QTreeWidgetItem* item = findItem(base, name);
+        QVERIFY2(item, qPrintable(qsl("no editor tree item called %1").arg(name)));
+        tree->setCurrentItem(item);
+        QCoreApplication::processEvents();
+        QMetaObject::invokeMethod(editor, "slot_copyXml");
+        QCoreApplication::processEvents();
+        tree->setCurrentItem(tree->topLevelItem(0));
+        QCoreApplication::processEvents();
+        QMetaObject::invokeMethod(editor, "slot_pasteXml");
+        QCoreApplication::processEvents();
+    }
+
+    static QTreeWidgetItem* findItem(QTreeWidgetItem* parent, const QString& name)
+    {
+        if (!parent) {
+            return nullptr;
+        }
+        if (parent->text(0) == name) {
+            return parent;
+        }
+        for (int i = 0; i < parent->childCount(); ++i) {
+            if (QTreeWidgetItem* found = findItem(parent->child(i), name)) {
+                return found;
+            }
+        }
+        return nullptr;
+    }
+
+    static void collectByName(Host* host, const QString& name, QList<TTrigger*>& found)
+    {
+        for (auto root : host->getTriggerUnit()->getTriggerRootNodeList()) {
+            collectByNameIn(root, name, found);
+        }
+    }
+
+    static void collectByNameIn(TTrigger* trigger, const QString& name, QList<TTrigger*>& found)
+    {
+        if (trigger->getName() == name) {
+            found << trigger;
+        }
+        for (auto child : *trigger->getChildrenList()) {
+            collectByNameIn(child, name, found);
+        }
+    }
 
     static TTrigger* findTrigger(Host* host, const QString& name)
     {

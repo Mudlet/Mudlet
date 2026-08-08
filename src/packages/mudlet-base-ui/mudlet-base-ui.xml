@@ -2,7 +2,7 @@
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
 	<TriggerPackage>
-		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+		<TriggerGroup isActive="no" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 			<name>Mudlet base UI chat capture</name>
 			<script>-- A gate, then the shapes - the pattern to copy for triggers that have to
 -- watch every line. Each gate matches substrings, no regex engine, and Mudlet
@@ -19,9 +19,10 @@
 -- The channel gate cannot be narrowed like that, since a bare "[", "(" or
 -- "&lt;" is all a tagged line has in common.
 --
--- These gates ship inactive: the "Mudlet base UI" script enables them on
--- load, and disables them again when the game turns out to send its chat
--- over GMCP.</script>
+-- This folder ships inactive and is the only thing the "Mudlet base UI"
+-- script switches: it enables the folder on load and disables it again when
+-- the game turns out to send its chat over GMCP. Nothing reaches a gate while
+-- the folder is off, so one switch retires the whole layer.</script>
 			<triggerType>0</triggerType>
 			<conditonLineDelta>0</conditonLineDelta>
 			<mStayOpen>0</mStayOpen>
@@ -34,7 +35,7 @@
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList />
 			<regexCodePropertyList />
-			<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>BaseUI chat: tells</name>
 				<script></script>
 				<triggerType>0</triggerType>
@@ -160,7 +161,7 @@
 					</regexCodePropertyList>
 				</Trigger>
 			</Trigger>
-			<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>BaseUI chat: speech</name>
 				<script></script>
 				<triggerType>0</triggerType>
@@ -278,7 +279,7 @@
 					</regexCodePropertyList>
 				</Trigger>
 			</Trigger>
-			<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>BaseUI chat: channel tags</name>
 				<script></script>
 				<triggerType>2</triggerType>
@@ -653,7 +654,8 @@ function BaseUI.routeTaggedChatLine(tag)
   BaseUI.routeChatLine(family)
 end
 
--- renaming a gate in the trigger tree means renaming it here
+-- renaming these in the trigger tree means renaming them here
+local chatTree = "Mudlet base UI chat capture"
 local chatGates = { "BaseUI chat: tells", "BaseUI chat: speech", "BaseUI chat: channel tags" }
 
 -- a gate reached through a switched-off folder is not armed whatever its own
@@ -663,16 +665,39 @@ local function gateArmed(gate)
   return isActive(gate, "trigger", true) &gt; 0
 end
 
+-- enableTrigger and disableTrigger can only name a trigger, and a name is not
+-- unique: copying this tree in the editor reproduces every name exactly, so
+-- switching ours would switch the player's copy too. Only the folder is ever
+-- named here, which keeps a copied gate out of it, and when the folder name
+-- itself is shared the layer stops switching altogether - routeChatLine()
+-- re-checks gmcpChat and dormant() on every line, so what is captured stays
+-- right either way. All that is lost is the scans disarming would have saved.
+function BaseUI.chatTreeShared()
+  return exists(chatTree, "trigger") ~= 1
+end
+
 function BaseUI.armChatTriggers()
   if BaseUI.dormant() or BaseUI.gmcpChat then
     return
   end
+  if BaseUI.chatTreeShared() then
+    BaseUI.reportSharedChatTree()
+    return
+  end
+  enableTrigger(chatTree)
   for _, gate in ipairs(chatGates) do
-    enableTrigger(gate)
     if not gateArmed(gate) then
       BaseUI.reportDeadChatGate(gate)
     end
   end
+end
+
+function BaseUI.reportSharedChatTree()
+  if BaseUI.warnedSharedChatTree then
+    return
+  end
+  BaseUI.warnedSharedChatTree = true
+  debugc("[ Mudlet UI ] more than one trigger is called \"" .. chatTree .. "\", so the chat capture is left switched on rather than risk switching yours")
 end
 
 -- debugc alone would not do: it writes to the editor's error console, which is
@@ -689,9 +714,11 @@ function BaseUI.reportDeadChatGate(gate)
 end
 
 function BaseUI.disarmChatTriggers()
-  for _, gate in ipairs(chatGates) do
-    disableTrigger(gate)
+  if BaseUI.chatTreeShared() then
+    BaseUI.reportSharedChatTree()
+    return
   end
+  disableTrigger(chatTree)
 end
 
 function BaseUI.chatTriggersArmed()
