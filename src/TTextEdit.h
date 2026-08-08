@@ -125,6 +125,7 @@ public:
     // long enough again.
     int mOldCaretColumn = 0;
 
+    friend class CopyAsImageTest;
     friend class TTextEditBlinkTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
 
@@ -189,6 +190,7 @@ private:
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
+    bool hasSelectedText() const;
     void expandSelectionToWords();
     void expandSelectionToLine(int);
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;

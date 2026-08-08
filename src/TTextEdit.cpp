@@ -39,6 +39,7 @@
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <QtEvents>
@@ -2099,20 +2100,24 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // matches slot_copySelectionToClipboard(), which also keeps the selection.
 }
 
+// Whether the selection-based context menu entries (Copy, Copy HTML, Copy as
+// image, Search online) have anything to act on. Shares the bail-out condition
+// of establishSelectedText() so that an offered menu entry always does
+// something and one that would not is shown disabled instead.
+bool TTextEdit::hasSelectedText() const
+{
+    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty();
+}
+
 bool TTextEdit::establishSelectedText()
 {
-    if (mpBuffer->lineBuffer.isEmpty()) {
-        // Prevent problems with trying to do a copy when TBuffer is empty:
+    if (!hasSelectedText()) {
         return false;
     }
 
     // if selection was made backwards swap
     // right to left
     if (mFontWidth <= 0 || mFontHeight <= 0) {
-        return false;
-    }
-
-    if (mSelectedRegion == QRegion(0, 0, 0, 0)) {
         return false;
     }
 
@@ -2182,7 +2187,10 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         largestLine = std::max(static_cast<int>(lineWidth), largestLine);
     }
 
-    auto widthpx = std::min(65500, largestLine);
+    // A selection of nothing but blank lines has no width of its own, yet the
+    // user did ask for a copy - so still hand them an image rather than
+    // silently leaving the clipboard untouched:
+    auto widthpx = std::max(mFontWidth, std::min(65500, largestLine));
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
     auto pixmap = QPixmap(widthpx, heightpx);
     auto solidColor = QColor(mBgColor);
@@ -2191,6 +2199,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     QPainter painter(&pixmap);
     if (!painter.isActive()) {
+        qWarning().nospace() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - cannot paint a " << widthpx << "x" << heightpx << " image, nothing was copied to the clipboard";
         return;
     }
 
@@ -2201,11 +2210,15 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
     highlightSelection();
+    // the pixmap has to be released by the painter before it can be converted
+    painter.end();
 
-    // if we cut didn't finish painting the complete picture, trim the bottom of the image
+    // if we didn't finish painting the complete picture, cut the undrawn part
+    // off the bottom of the image - scaling it to fit instead would squash the
+    // lines that did get drawn
     if (!result.first) {
-        const auto& smallerPixmap = pixmap.scaled(QSize(widthpx, result.second * mFontHeight), Qt::KeepAspectRatio);
-        QApplication::clipboard()->setImage(smallerPixmap.toImage());
+        const int drawnHeight = std::clamp(result.second * mFontHeight, mFontHeight, heightpx);
+        QApplication::clipboard()->setImage(pixmap.copy(QRect(0, 0, widthpx, drawnHeight)).toImage());
         return;
     }
 
@@ -2222,14 +2235,15 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
     int lineCount = rectangle.height() / mFontHeight;
     int linesDrawn = 0;
     auto timeout = mudlet::self()->mCopyAsImageTimeout;
-    for (int i = 0; i <= lineCount; i++, linesDrawn++) {
+    for (int i = 0; i <= lineCount; ++i) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
         drawLine(painter, i + lineOffset, i);
+        ++linesDrawn;
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
-            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
+            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << linesDrawn << " lines";
             return {false, linesDrawn};
         }
     }
@@ -2454,6 +2468,10 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->setAttribute(Qt::WA_DeleteOnClose);
         popup->setToolTipsVisible(true); // Not the default...
 
+        //: Tooltip shown on the console context menu's Copy, Copy HTML, Copy as image and Search entries while they are disabled because nothing is selected
+        const QString noSelectionHint = utils::richText(tr("Select some text in the console first."));
+        const bool selectionAvailable = hasSelectedText();
+
         QAction* action = new QAction(tr("Copy"), popup);
         // According to the Qt Documentation:
         // "This text is used for the tooltip."
@@ -2470,6 +2488,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
 
         auto* actionCopyImage = new QAction(tr("Copy as image"), popup);
+        actionCopyImage->setToolTip(QString());
         connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
 
         QAction* action3 = new QAction(tr("Select all"), popup);
@@ -2480,6 +2499,16 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), popup);
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
+
+        // These four all work on the selection and quietly do nothing without
+        // one, so say so rather than letting the user pick a dud entry (#9715):
+        for (QAction* selectionAction : {action, action2, actionCopyImage, action4}) {
+            selectionAction->setEnabled(selectionAvailable);
+            if (!selectionAvailable) {
+                selectionAction->setToolTip(noSelectionHint);
+            }
+        }
+
         if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
             action->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
             action3->setIcon(QIcon::fromTheme(qsl("edit-select-all"), QIcon(qsl(":/icons/edit-select-all.png"))));
