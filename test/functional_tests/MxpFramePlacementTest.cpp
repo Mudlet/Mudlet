@@ -243,6 +243,11 @@ private slots:
 
         QVERIFY2(mpHost->mpConsole->mpMainFrame->width() != widthBefore, "the window did not actually resize");
         QCOMPARE(frameGeometry(qsl("status")).x(), area().right() + 1 - 200);
+        // a container that moves without its text area following it would look
+        // to the player like the frame did not move at all
+        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(qsl("status"));
+        QVERIFY(frame && frame->console);
+        QCOMPARE(frame->console->size(), frame->widget->size());
     }
 
     void test_leftFrameStartsAfterAReservedLeftBorder()
