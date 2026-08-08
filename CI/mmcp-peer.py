@@ -93,6 +93,10 @@ class MMCPPeer:
         self.name = PEER_NAME
         self.version = PEER_VERSION
         self.accept_calls = True
+        # Raw bytes to answer the next call with instead of a YES:/NO: reply,
+        # armed by the "reply" command. The connection is then held open, so a
+        # spec can see whether Mudlet tidies up after a reply it cannot parse.
+        self.handshake_reply = None
 
         self.selector = selectors.DefaultSelector()
         self.connection = None
@@ -242,6 +246,15 @@ class MMCPPeer:
         }
         self.record({"type": "handshake", "caller": self.caller})
 
+        if self.handshake_reply is not None:
+            reply = self.handshake_reply
+            self.handshake_reply = None
+            # Neither accepting nor refusing: the socket stays open and nothing
+            # further is read from it, so whether it closes is Mudlet's doing.
+            self.state = "garbled"
+            self.send(reply)
+            return
+
         if not self.accept_calls:
             self.send(("NO:%s\n" % self.name).encode("latin-1"))
             self.close_connection("call refused")
@@ -325,6 +338,8 @@ class MMCPPeer:
             self.close_connection("closed on request")
         elif action == "accept":
             self.accept_calls = bool(command.get("accept", True))
+        elif action == "reply":
+            self.handshake_reply = bytes.fromhex(command.get("hex", ""))
         else:
             self.record({"type": "command_error", "error": "unknown action: %r" % (action,)})
             return

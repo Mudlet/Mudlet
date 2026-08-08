@@ -774,6 +774,20 @@ describe("MMCP chat commands report the absence of a session", function()
       assert.is_string(mmcp.chatName())
     end)
 
+    it("is never empty, so nothing goes out on the wire unnamed", function()
+      -- A profile that has never had a name typed into its preferences used to
+      -- carry an empty one, and it went out in the handshake and in front of
+      -- every chat message: " chats to everybody, 'hi'".
+      assert.is_true(#mmcp.chatName() > 0, mmcp.chatName())
+    end)
+
+    it("falls back to the default rather than taking an empty name", function()
+      local previous = mmcp.chatName()
+      assert.is_true(mmcp.chatName(""))
+      assert.is_true(#mmcp.chatName() > 0, mmcp.chatName())
+      mmcp.chatName(previous)
+    end)
+
     it("rejects names containing a tilde or comma", function()
       local ok, err = mmcp.chatName("bad~name")
       assert.is_nil(ok)
@@ -804,6 +818,10 @@ describe("MMCP effects against a scripted chat peer", function()
   local PEER_NAME = "BustedPeer"
   local PEER_VERSION = "Mudlet 0.0.0-busted-peer"
   local CHAT_NAME = "MudletBustedTester"
+  -- The MMCP port this profile would listen on. There is no Lua getter for it,
+  -- so this tracks csDefaultMMCPHostPort and holds only while the test profile
+  -- leaves the preference alone.
+  local OUR_MMCP_PORT = 4050
   local mmcpDir = os.getenv("MUDLET_TEST_MMCP_DIR")
   local peerRequired = os.getenv("MUDLET_TEST_REQUIRE_MMCP_PEER")
   local commandCounter = 0
@@ -930,10 +948,20 @@ describe("MMCP effects against a scripted chat peer", function()
 
   -- The command channel is JSON, so bytes that are not valid UTF-8 - the 0xff
   -- terminator above all - have to travel as hex.
-  local function peerSendsRaw(bytes)
-    tellPeer({action = "send_hex", hex = (bytes:gsub(".", function(char)
+  local function toHex(bytes)
+    return (bytes:gsub(".", function(char)
       return string.format("%02x", char:byte())
-    end))})
+    end))
+  end
+
+  local function peerSendsRaw(bytes)
+    tellPeer({action = "send_hex", hex = toHex(bytes)})
+  end
+
+  -- Arms the peer to answer the next call with these bytes in place of a
+  -- handshake reply, and to hold the connection open rather than hanging up.
+  local function peerRepliesWith(bytes)
+    tellPeer({action = "reply", hex = toHex(bytes)})
   end
 
   local function peerClient()
@@ -1032,7 +1060,12 @@ describe("MMCP effects against a scripted chat peer", function()
       -- "CHAT:<name>\n<address><port left aligned in 5 columns>", asserted
       -- whole: the port's padding is part of the format a MudMaster peer reads
       -- back, and only the exact string keeps it honest.
-      local port = tostring(peerPort())
+      --
+      -- The address and port are the caller's own - where the peer would call
+      -- back to - and not the ones just dialled, which the peer knows already.
+      -- So this is the profile's own MMCP port, left at its default here, and
+      -- deliberately not peerPort().
+      local port = tostring(OUR_MMCP_PORT)
       local padded = port .. string.rep(" ", math.max(0, 5 - #port))
       assert.equals("CHAT:" .. CHAT_NAME .. "\n127.0.0.1" .. padded, decoded.caller.raw)
     end)
@@ -1102,20 +1135,76 @@ describe("MMCP effects against a scripted chat peer", function()
       end, 1000)
 
       local mark = captureSeq()
-      assert.is_true(mmcp.call("127.0.0.1", peerPort()))
       -- The peer answers "NO:<name>" and hangs up, so the call never reaches
       -- the connected state and nothing is added to the client list.
-      assert.is_table(waitForPeerEvent(mark, function(event)
-        return event.type == "handshake"
-      end, 2000))
-      pump(300)
+      local updates = collectEvents("sysMMCPPeerUpdateEvent", function()
+        assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+        assert.is_table(waitForPeerEvent(mark, function(event)
+          return event.type == "handshake"
+        end, 2000))
+        pump(300)
+      end)
       assert.is_nil(mmcp.getClientList())
+      -- and a client that never joined the peer list does not change it by
+      -- going away either: the refusal used to raise an update naming nobody,
+      -- which scripts watching the peer list had to filter out themselves.
+      assert.equals(0, #updates)
 
       tellPeer({action = "accept", accept = true})
       waitUntil(function()
         local decoded = capture()
         return decoded ~= nil and decoded.accepting == true
       end, 1000)
+    end)
+
+    it("closes a connection answered with something that is not a handshake reply", function()
+      if peerUnavailable() then return end
+      if peerClient() then
+        mmcp.disconnect(PEER_NAME)
+        waitUntil(function() return peerClient() == nil end, 2000)
+      end
+      -- A greeting instead of "YES:"/"NO:", which is what dialling a plain
+      -- telnet server gets you. Mudlet reports the call refused, and closing
+      -- the socket is part of that: it used to report the refusal and then
+      -- leave the connection, and the client object behind it, alive for the
+      -- rest of the session.
+      peerRepliesWith("Hello, world\r\n")
+      local mark = captureSeq()
+      assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "handshake"
+      end, 2000))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "disconnect" and event.reason == "closed by Mudlet"
+      end, 2000))
+      assert.is_nil(mmcp.getClientList())
+    end)
+
+    it("waits for a handshake reply that arrives in two pieces", function()
+      if peerUnavailable() then return end
+      if peerClient() then
+        mmcp.disconnect(PEER_NAME)
+        waitUntil(function() return peerClient() == nil end, 2000)
+      end
+      -- TCP may split the reply anywhere, and "YES:" without its newline yet is
+      -- a partial read rather than a malformed one. Treating it as a refusal
+      -- would drop a call the peer had accepted.
+      peerRepliesWith("YES:")
+      local mark = captureSeq()
+      assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "handshake"
+      end, 2000))
+      pump(300)
+      -- Nothing was concluded from the first piece: the connection is still up.
+      assert.is_true(capture().connected)
+      peerSendsRaw(PEER_NAME .. "\n")
+      assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
+      -- The peer answered by hand rather than going through its own accept
+      -- path, so it is not tracking this connection as a normal one. Drop it
+      -- and let the next spec place a fresh call.
+      mmcp.disconnect(PEER_NAME)
+      waitUntil(function() return peerClient() == nil end, 2000)
     end)
   end)
 
@@ -1194,6 +1283,11 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_table(sent)
       -- MudMaster's group field is a fixed 15 characters wide
       assert.equals("testers        ", sent.text:sub(1, 15))
+      -- and the sender's name follows it immediately. A separator here - Mudlet
+      -- used to write a newline - is not part of the format, so a receiver
+      -- splitting the field off leaves it at the head of the message and
+      -- renders the group tag and the message on separate lines.
+      assert.equals(CHAT_NAME, sent.text:sub(16, 15 + #CHAT_NAME))
       assert.is_true(contains(sent.text, " chats to the group, 'group hello'"), sent.text)
     end)
 
@@ -1227,6 +1321,23 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_nil(ok)
       assert.is_true(contains(err, "nobody in group 'testers' now"))
       assert.is_nil(waitForCommand("TextGroup", mark, 500))
+    end)
+
+    it("cuts a group name too long for the fixed width field", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local longGroup = "a-very-long-group-name"
+      assert.is_true(mmcp.setGroup(PEER_NAME, longGroup))
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatGroup(longGroup, "long group hello"))
+      local sent = waitForCommand("TextGroup", mark)
+      assert.is_table(sent)
+      -- Padding a name to 15 without also cutting it there would push the
+      -- message past the boundary the receiver splits on, so the name is what
+      -- gives way rather than the field.
+      assert.equals(longGroup:sub(1, 15), sent.text:sub(1, 15))
+      assert.equals(CHAT_NAME, sent.text:sub(16, 15 + #CHAT_NAME))
+      assert.is_true(mmcp.setGroup(PEER_NAME, "none"))
     end)
   end)
 
@@ -1319,8 +1430,6 @@ describe("MMCP effects against a scripted chat peer", function()
       if peerUnavailable() then return end
       ensurePeer()
       -- MudMaster's format: a 15 character group field, then the message.
-      -- Mudlet's own sender adds a newline after that field, which the
-      -- round-trip spec above covers.
       peerSends(6, "testers        " .. PEER_NAME .. " chats to the group, 'group inbound'")
       local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
       assert.equals(PEER_NAME, from)
@@ -1456,7 +1565,7 @@ describe("MMCP effects against a scripted chat peer", function()
   end)
 
   describe("mmcp.snoop", function()
-    it("asks the peer for a snoop feed", function()
+    it("asks the peer for a snoop feed, and asks again to stop", function()
       if peerUnavailable() then return end
       ensurePeer()
       local mark = captureSeq()
@@ -1464,11 +1573,16 @@ describe("MMCP effects against a scripted chat peer", function()
       local sent = waitForCommand("Snoop", mark)
       assert.is_table(sent)
       assert.equals("", sent.text)
-      -- Asking a second time is what stops a snoop, since the command is a
-      -- toggle at the far end. That is not asserted here: the local "am I
-      -- snooping them" flag is never set (nothing calls setSnooped(true)), so
-      -- MMCPServer::snoop's stop branch cannot be reached and asserting either
-      -- way would freeze the defect in place.
+
+      -- Stopping is the same command again, because it is a toggle at the far
+      -- end. Mudlet's own record of whether it is snooping has to flip with
+      -- each one: were it to track the state without sending, the peer would
+      -- carry on feeding a snoop Mudlet believes it has stopped.
+      mark = captureSeq()
+      assert.is_true(mmcp.snoop(PEER_NAME))
+      local stopped = waitForCommand("Snoop", mark)
+      assert.is_table(stopped)
+      assert.equals("", stopped.text)
     end)
 
     it("refuses a snoop from a peer that has not been allowed one", function()
