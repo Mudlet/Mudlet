@@ -256,6 +256,57 @@ private slots:
         closeDialog(dlg);
     }
 
+    // test_profileWithOnlyConnectionDetailsIsRemovedWithoutConfirmation only
+    // holds while dlgConnectionProfiles::scmConnectionDetailFiles still covers
+    // what the connection form writes, so fill one in the way a user does and
+    // hold what lands on disk against that list
+    void test_newProfileOnlyWritesListedConnectionDetails()
+    {
+        const QString unplayed = qsl("QA Just Set Up");
+        QVERIFY(!QDir(profilePath(unplayed)).exists());
+
+        auto* dlg = openDialog();
+        dlg->slot_addProfile();
+        dlg->profile_name_entry->setText(unplayed);
+        // what leaving the name field does, and what creates the profile's
+        // folder - it only gets that far synchronously because initTestCase()
+        // turned secure password storage off, else it waits on the keychain
+        dlg->slot_saveName();
+        QVERIFY2(QDir(profilePath(unplayed)).exists(), "naming a new profile did not create its folder");
+
+        // the rest of the connection form. The character name and the password
+        // are left out on purpose: they are the user's own, so a profile
+        // holding either is still confirmed - see the two cases below
+        dlg->host_name_entry->setText(qsl("mudlet.org"));
+        dlg->port_entry->setText(qsl("23"));
+        dlg->port_ssl_tsl->setChecked(true);
+        dlg->autologin_checkBox->setChecked(true);
+        dlg->auto_reconnect->setChecked(true);
+        dlg->mud_description_textedit->setPlainText(qsl("a game to try later"));
+
+        // refilling the form by selecting the profile writes through the same
+        // field signals, so the selection path is covered as well
+        selectProfile(dlg, unplayed);
+
+        const QStringList written = QDir(profilePath(unplayed)).entryList(QDir::Files | QDir::Hidden);
+        // a field that stops saving would otherwise quietly shrink what the
+        // check below covers, while still passing it
+        for (const QString& expected : {qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("autologin"), qsl("autoreconnect"), qsl("description")}) {
+            QVERIFY2(written.contains(expected), qPrintable(qsl("filling the form in no longer writes '%1', so this case has stopped covering it").arg(expected)));
+        }
+        for (const QString& fileName : written) {
+            QVERIFY2(dlgConnectionProfiles::scmConnectionDetailFiles.contains(fileName),
+                     qPrintable(qsl("setting a profile up wrote '%1', which dlgConnectionProfiles::scmConnectionDetailFiles does not list - add it there, or "
+                                    "reconsider removing such a profile without confirmation")
+                                        .arg(fileName)));
+        }
+
+        dlg->slot_deleteProfile();
+        QVERIFY2(!confirmation(dlg), "a profile that was only ever set up should not need confirming");
+        QVERIFY2(!QDir(profilePath(unplayed)).exists(), "the profile was not removed");
+        closeDialog(dlg);
+    }
+
     // A stored password sits loose in the folder rather than in a sub-directory
     void test_profileWithOnlyAStoredPasswordIsConfirmedBeforeRemoval()
     {
@@ -270,6 +321,26 @@ private slots:
         dlg->slot_deleteProfile();
         QVERIFY2(confirmation(dlg), "a profile holding a stored password was removed without asking");
         QVERIFY2(QDir(profilePath(secretive)).exists(), "the profile was deleted before the user confirmed");
+
+        confirmation(dlg)->reject();
+        closeDialog(dlg);
+    }
+
+    // The character name typed into the login field is the user's own text
+    // rather than one of the connection details the shortcut waves through
+    void test_profileWithACharacterNameIsConfirmedBeforeRemoval()
+    {
+        const QString named = qsl("QA Named");
+        QVERIFY(QDir().mkpath(profilePath(named)));
+        mudlet::self()->writeProfileData(named, qsl("url"), qsl("mudlet.org"));
+        mudlet::self()->writeProfileData(named, qsl("login"), qsl("Aurelius"));
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, named);
+
+        dlg->slot_deleteProfile();
+        QVERIFY2(confirmation(dlg), "a profile holding a character name was removed without asking");
+        QVERIFY2(QDir(profilePath(named)).exists(), "the profile was deleted before the user confirmed");
 
         confirmation(dlg)->reject();
         closeDialog(dlg);
