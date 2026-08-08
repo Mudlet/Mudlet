@@ -23,6 +23,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TBuffer.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -154,18 +155,39 @@ private:
     // is not one of them: it falls back to the visible screen.
     static QStringList selectionEntryNames() { return {QStringLiteral("consoleCopy"), QStringLiteral("consoleCopyHtml"), QStringLiteral("consoleSearchOnline")}; }
 
-    // Every pixel is the console background, i.e. no text was drawn.
-    static bool blankImage(const QImage& image, const QColor& backgroundColour)
+    static int backgroundPixels(const QImage& image, const QColor& backgroundColour)
     {
-        const QRgb background = backgroundColour.rgb();
+        const QRgb background = backgroundColour.rgb() | 0xff000000;
+        int count = 0;
         for (int y = 0; y < image.height(); ++y) {
             for (int x = 0; x < image.width(); ++x) {
-                if ((image.pixel(x, y) | 0xff000000) != (background | 0xff000000)) {
-                    return false;
+                if ((image.pixel(x, y) | 0xff000000) == background) {
+                    ++count;
                 }
             }
         }
-        return true;
+        return count;
+    }
+
+    // Every pixel is the console background, i.e. no text was drawn.
+    static bool blankImage(const QImage& image, const QColor& backgroundColour) { return backgroundPixels(image, backgroundColour) == image.width() * image.height(); }
+
+    // Text drawn normally leaves most of the cell as background; a line drawn
+    // with its selection still on has the two swapped over.
+    static bool invertedImage(const QImage& image, const QColor& backgroundColour) { return backgroundPixels(image, backgroundColour) * 2 < image.width() * image.height(); }
+
+    // Mimics TBuffer::shrinkBuffer() dropping the oldest lines once the buffer
+    // reaches its size limit, which shifts every remaining line's index down.
+    void shrinkBuffer(TBuffer& buffer, int lines)
+    {
+        buffer.mBatchDeleteSize = lines;
+        for (int i = 0; i < lines; ++i) {
+            buffer.lineBuffer.pop_front();
+            buffer.promptBuffer.pop_front();
+            buffer.timeBuffer.pop_front();
+            buffer.buffer.pop_front();
+            buffer.mCursorY--;
+        }
     }
 
 private slots:
@@ -417,6 +439,35 @@ private slots:
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "Copying a cleared console put nothing on the clipboard");
         QVERIFY2(blankImage(image, pane->mBgColor), "A cleared console copied as something other than background");
+    }
+
+    // Lines dropped off the front of a full buffer shift every index down, so
+    // the selection has to be followed down with them - and the copy still has
+    // to come out with the selection's inverted colours taken off it.
+    void test_copyFollowsTheSelectionThroughABufferShrink()
+    {
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+
+        dragSelection(pane, QPointF(60, 3 * pane->mFontHeight));
+        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
+        const int selectedLines = pane->mPB.y() - pane->mPA.y() + 1;
+
+        // enough to push the selection past the end of the buffer, so that the
+        // shift is what has to bring it back rather than it happening to still fit
+        const int droppedLines = buffer.lineBuffer.size() - pane->mPB.y() + 2;
+        QVERIFY2(droppedLines > 0 && droppedLines <= pane->mPA.y(), "Could not size a buffer shrink that strands the selection");
+        shrinkBuffer(buffer, droppedLines);
+        QVERIFY2(pane->mPB.y() > buffer.getLastLineNumber(), "The selection still fits, so the shift is not being exercised");
+
+        copyAsImage(pane);
+
+        const QImage image = QApplication::clipboard()->image();
+        QVERIFY2(!image.isNull(), "Copying after a buffer shrink put nothing on the clipboard");
+        QCOMPARE(image.height(), selectedLines * pane->mFontHeight);
+        QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, the selection was not followed down");
+        QVERIFY2(!invertedImage(image, pane->mBgColor), "The copied image still has the selection's inverted colours on it");
     }
 
     // A selection outliving its lines must not be reinterpreted as whatever now

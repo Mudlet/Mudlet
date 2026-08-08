@@ -2141,12 +2141,17 @@ bool TTextEdit::establishSelectedText()
     return true;
 }
 
-// The buffer lines the pane is showing right now, as a [first, last] pair.
+// The buffer lines the pane is showing, as a [first, last] pair that the caller
+// still has to clamp to the buffer.
 std::pair<int, int> TTextEdit::visibleLines()
 {
-    const int rows = std::max(1, (mScreenHeight > 0) ? mScreenHeight : height() / mFontHeight);
+    if (mScreenHeight <= 0) {
+        // imageTopLine() works the top line out from mScreenHeight, so repair it
+        // first or the two disagree by a whole screen
+        mScreenHeight = std::max(1, height() / mFontHeight);
+    }
     const int firstLine = std::max(0, imageTopLine());
-    return {firstLine, firstLine + rows - 1};
+    return {firstLine, firstLine + mScreenHeight - 1};
 }
 
 // Technically this copies whole lines into the image even if the selection does
@@ -2172,28 +2177,31 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     // Unlike Copy and Copy HTML, "as image" has an obvious default when nothing
     // is selected: a picture of what the user is looking at (#9715).
     bool copyingSelection = establishSelectedText();
-    int firstLine{};
-    int lastLine{};
-    if (copyingSelection) {
-        firstLine = mPA.y();
-        lastLine = mPB.y();
-        if (lastLine > lastBufferLine) {
-            // Lines lost off the front of a buffer that reached its limit shift
-            // every remaining index down; getSelectedText() compensates the same way.
-            firstLine -= mpBuffer->mBatchDeleteSize;
-            lastLine -= mpBuffer->mBatchDeleteSize;
-        }
-        if (firstLine < 0 || lastLine > lastBufferLine || lastLine < firstLine) {
+    if (copyingSelection && mPB.y() > lastBufferLine) {
+        // Lines lost off the front of a buffer that reached its limit shift every
+        // remaining index down; getSelectedText() compensates the same way. mPA
+        // and mPB move rather than a copy of them, so that the deselect below
+        // still finds the characters that are about to be drawn.
+        const int shift = mpBuffer->mBatchDeleteSize;
+        if (mPA.y() - shift >= 0 && mPB.y() - shift <= lastBufferLine) {
+            mPA.ry() -= shift;
+            mPB.ry() -= shift;
+        } else {
             // The selected lines are gone for good, so copy the visible area
             // rather than whatever has since taken their place in the buffer.
             copyingSelection = false;
         }
     }
+
+    int firstLine = mPA.y();
+    int lastLine = mPB.y();
     if (!copyingSelection) {
-        std::tie(firstLine, lastLine) = visibleLines();
-        firstLine = std::clamp(firstLine, 0, lastBufferLine);
-        lastLine = std::clamp(lastLine, firstLine, lastBufferLine);
+        const auto [firstVisible, lastVisible] = visibleLines();
+        firstLine = firstVisible;
+        lastLine = lastVisible;
     }
+    firstLine = std::clamp(firstLine, 0, lastBufferLine);
+    lastLine = std::clamp(lastLine, firstLine, lastBufferLine);
 
     // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
     auto heightpx = std::min(65500, (lastLine - firstLine + 1) * mFontHeight);
@@ -2263,12 +2271,16 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     // QPixmap::copy() refuses to detach a pixmap that still has a live painter
     painter.end();
 
-    // Cut the undrawn part off the bottom of an abandoned copy. drawTextForClipboard()
-    // paints one row past the last one asked for to fill the last partial row of
-    // a height-capped image, so its count can exceed heightpx; scaling to fit
-    // would squash the lines that did get drawn rather than drop the rest.
+    // Cut the undrawn part off the bottom of an abandoned copy - scaling it to
+    // fit would squash the lines that did get drawn rather than drop the rest.
+    // drawTextForClipboard() always paints one row past the last one asked for,
+    // so its count can exceed the image.
     if (!result.first) {
-        const int drawnHeight = std::min(heightpx, std::max(mFontHeight, result.second * mFontHeight));
+        const int drawnHeight = std::min(heightpx, result.second * mFontHeight);
+        if (drawnHeight <= 0) {
+            qWarning() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - ran out of time before drawing a single line, nothing was copied to the clipboard";
+            return;
+        }
         QApplication::clipboard()->setImage(pixmap.copy(QRect(0, 0, widthpx, drawnHeight)).toImage());
         return;
     }
