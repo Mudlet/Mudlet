@@ -124,8 +124,8 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     qDebug() << "TMxpFrameManager::createFrame:" << name << "TITLE attr:" << attributes.value(qsl("TITLE")) << "title:" << frame->title << "floating:" << frame->floating;
 #endif
 
-    // Store the frame before laying it out: laying out pushes new borders, which
-    // resizes the console, which asks for a relayout of every known frame
+    // relayoutFrames() works off mFrameOrder, so nothing may lay a frame out
+    // before it is in there
     mFrames[name] = frame;
     mFrameOrder.append(frame);
 
@@ -361,11 +361,11 @@ QRect TMxpFrameManager::availableFrameArea() const
         return {};
     }
 
-    // getMainWindowSize() is the space frames are placed in: mpMainFrame's own
-    // geometry is briefly wrong during a resize, and this is also the size Lua
-    // scripts lay themselves out against. Taking the user borders off it keeps
-    // frames out of the space a package such as the base UI has reserved for
-    // itself with setBorderRight() and friends.
+    // getMainWindowSize() rather than mpMainFrame's own geometry, which
+    // TConsole::resizeEvent() sets to the full console size until the layout
+    // corrects it. It is also the size Lua scripts lay themselves out against,
+    // so taking the user borders off it keeps frames out of the space a package
+    // such as the base UI has reserved with setBorderRight() and friends.
     QRect area = QRect(QPoint(0, 0), mpHost->mpConsole->getMainWindowSize()).marginsRemoved(mpHost->userBorders());
     if (area.width() < 0) {
         area.setWidth(0);
@@ -376,9 +376,10 @@ QRect TMxpFrameManager::availableFrameArea() const
     return area;
 }
 
-// Works out where a frame goes, consuming the space it takes from mMxpBorders
-// when it is a top level frame. Callers are responsible for pushing the updated
-// borders to the Host.
+// Works out where a frame goes. An edge aligned top level frame consumes the
+// space it takes from mMxpBorders and a nested one advances its parent's
+// usedHeight; an absolutely positioned frame consumes neither. Callers are
+// responsible for pushing the updated borders to the Host.
 QRect TMxpFrameManager::calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* parentFrame)
 {
     // Determine the container for this frame
@@ -398,9 +399,12 @@ QRect TMxpFrameManager::calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* pare
         containerSize.setHeight(containerSize.height() - parentFrame->usedHeight);
     } else {
         // A parent with no widget of its own gives nothing to place against, so
-        // such a frame is treated as a top level one throughout
+        // such a frame is placed as a top level one for the rest of this
+        // calculation - frame->parentFrame still records the hierarchy
         parentFrame = nullptr;
-        // Top-level frame - use MXP-specific borders (not Host borders which are for Lua)
+        // MXP borders stack inwards from the area the user borders leave.
+        // userBorders() and not borders(), which already carries the MXP borders
+        // this function is in the middle of recomputing.
         area = availableFrameArea();
         containerX = area.x() + mMxpBorders.left();
         containerY = area.y() + mMxpBorders.top();
@@ -568,7 +572,8 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     const int frameWidth = geometry.width();
     const int frameHeight = geometry.height();
 
-    // A no-op for a nested frame, which leaves the borders alone
+    // A nested frame never touches mMxpBorders, so this hands Host the margins
+    // it already has and setBorders() drops it
     mpHost->setMxpBorders(mMxpBorders);
 
     const bool isCharacterHeight = frame->height.trimmed().endsWith('c', Qt::CaseInsensitive);
@@ -1055,7 +1060,9 @@ void TMxpFrameManager::scheduleRelayout()
 
     // Deferred so that the layout of the widgets frames are placed against has
     // settled, and so that pushing new borders from here cannot re-enter the
-    // resize handling that asked for the relayout
+    // resize handling that asked for the relayout. The push at the end of a
+    // relayout does schedule one more pass, which then finds the same borders
+    // and stops there because Host::setBorders() ignores an unchanged value.
     mRelayoutPending = true;
     QTimer::singleShot(0, mpHost, [this]() {
         mRelayoutPending = false;
@@ -1069,8 +1076,8 @@ void TMxpFrameManager::relayoutFrames()
         return;
     }
 
-    // Recalculating from scratch keeps the borders in step with where the
-    // frames actually ended up, whatever the available area has become
+    // calculateFrameGeometry() accumulates into these, so they have to start
+    // empty or every pass would count the same frames again
     mMxpBorders = QMargins();
 
     if (mpHost->mpConsole.isNull() || !mpHost->mpConsole->mpMainFrame) {
@@ -1080,14 +1087,18 @@ void TMxpFrameManager::relayoutFrames()
 
     const QWidget* mainFrame = mpHost->mpConsole->mpMainFrame;
 
+    // calculateFrameGeometry() also accumulates into a parent's usedHeight, so
+    // without this nested frames would march further down on every pass
     for (auto* frame : std::as_const(mFrameOrder)) {
         frame->usedHeight = 0;
     }
 
     for (auto* frame : std::as_const(mFrameOrder)) {
-        // Frames docked as a tab, and external ones in their own window, are
-        // placed by a layout or the window manager rather than by us
-        if (!frame->widget || frame->widget->parentWidget() != mainFrame) {
+        // Skip a frame whose layout never produced a widget, one docked as a tab
+        // (the QTabWidget places it), and one in a window of its own. An external
+        // frame keeps mpMainFrame as its parent even after Qt::Window is set on
+        // it, so isWindow() rather than the parent is what tells them apart.
+        if (!frame->widget || frame->widget->isWindow() || frame->widget->parentWidget() != mainFrame) {
             continue;
         }
 

@@ -113,7 +113,8 @@ public:
     bool frameExists(const QString& name) const { return mFrames.contains(name); }
     int frameCount() const { return mFrames.size(); }
 
-    // Reposition every frame once the space they are laid out in has changed
+    // Reposition every frame on the next event loop turn, once the space they
+    // are laid out in has changed. Does nothing while no frames are open.
     void scheduleRelayout();
 
     // Configuration
