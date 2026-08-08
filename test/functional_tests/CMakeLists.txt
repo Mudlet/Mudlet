@@ -26,6 +26,7 @@ set(FUNCTIONAL_TEST_SOURCES
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     ColorTriggerFilterChildTest.cpp
+    GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
     SetScriptCallbackTest.cpp
