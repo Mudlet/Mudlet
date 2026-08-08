@@ -84,13 +84,18 @@ publishes the current branch to their fork if needed, then opens a PR against up
 
    ```bash
    BRANCH=$(git branch --show-current)
-   FORK_OWNER=$(printf '%s' "$(git remote get-url origin)" \
-     | sed -E 's#\.git$##; s#^[a-zA-Z+]+://##; s#^[^@/]+@##; s#^[^/:]+[:/]##; s#/[^/]*$##')
+   FORK_OWNER=$(printf '%s' "$(git remote get-url --push origin)" \
+     | sed -E 's#\.git$##; s#^[a-zA-Z+]+://##; s#^[^@/]+@##;
+               s#^[^/:]+(:[0-9]+)?/##; s#^[^/:]+:##; s#/[^/]*$##')
    ```
 
-   This handles the `https://`, `ssh://` and `git@host:owner/repo` forms. Check the result before
-   using it: if `$FORK_OWNER` is empty or still contains `/`, `:` or `@`, the URL was not in a
-   form this understands — stop and report it rather than building a malformed `--head`.
+   Use `--push`: a remote can carry a separate `pushurl`, and it is the push URL the branch
+   actually lands on, so the head must be derived from the same URL `git push` will use.
+
+   This handles the `https://`, `ssh://` and `git@host:owner/repo` forms, with or without an
+   explicit port. Check the result before using it: if `$FORK_OWNER` is empty or still contains
+   `/`, `:` or `@`, the URL was not in a form this understands — stop and report it rather than
+   building a malformed `--head`.
 
    Show `$FORK_OWNER` to the user and confirm it is the fork the pull request should come from.
 
