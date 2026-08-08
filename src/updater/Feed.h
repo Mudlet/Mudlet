@@ -55,7 +55,15 @@ public:
     // not a checksum file".
     static QString findChecksum(const QString& checksumData, const QString& downloadFilename, int* entriesParsed = nullptr);
 
+    // The releases newer than currentRelease that this platform can install. A
+    // release with no asset for this platform - a build job that failed, or
+    // assets that are still uploading - or no SHA256SUMS.txt to verify the
+    // download against cannot be installed, so offering it only produces a
+    // download error the user can do nothing about. The changelog is built from
+    // getReleases() instead, and still covers them.
     QList<Release> getUpdates(const Release& currentRelease) const;
+    static QList<Release> selectUpdates(const QList<Release>& releases, const Release& currentRelease);
+
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;
     bool isReady() const;
