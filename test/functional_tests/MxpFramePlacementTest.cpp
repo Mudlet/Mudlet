@@ -283,6 +283,25 @@ private slots:
         QCOMPARE(frameGeometry(qsl("inner")).x(), reservedArea.right() + 1 - 100);
         QCOMPARE(mpHost->borders().right(), 300);
     }
+
+    // How the base UI reserves its space, so this is #9698 as reported. Declared
+    // last on purpose: an adjustable container leaves deferred timers of its own
+    // behind that resize the main window out from under whatever runs next.
+    void test_rightFrameKeepsClearOfAnAttachedAdjustableContainer()
+    {
+        runLua(qsl("panel = Adjustable.Container:new({name = 'mxpTestPanel', x = '-25%', y = 0, width = '25%', height = '100%', autoSave = false, autoLoad = false})\n"
+                   "panel:attachToBorder('right')"));
+        settle();
+        QVERIFY2(mpHost->userBorders().right() > 0, "the adjustable container did not reserve a border");
+        const QRect reservedArea = area();
+
+        QVERIFY(createFrame(qsl("status"), qsl("right"), qsl("200px"), qsl("100%")));
+
+        QCOMPARE(frameGeometry(qsl("status")).x(), reservedArea.right() + 1 - 200);
+
+        runLua(qsl("panel:detach() panel:hide()"));
+        settle();
+    }
 };
 
 void initializeQRCResourcesForMxpFramePlacementTest()
