@@ -175,7 +175,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
                         SUPPORTED_SYSTEMS "Linux"
                                           "Windows"
                                           "Darwin")
-
 include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
                         OPTION_VARIABLE USE_FONTS
                         READABLE_NAME "fonts")
@@ -193,8 +192,21 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
-
+# MacOS might also support compiling with libasan or other sanitizers but we do
+# not currently seem to use it there. MUDLET_SANITIZERS also needs to be set to
+# a (semi-colon separated, initial capital letter) list of sanitizers to include.
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SANITIZERS
+                        OPTION_VARIABLE USE_SANITIZERS
+                        READABLE_NAME "sanitizers"
+                        SUPPORTED_SYSTEMS "Linux"
+                                          "Windows"
+                                          "FreeBSD")
 find_package(Qt6 6.8.2 REQUIRED)
+
+if(WIN32 AND DEFINED ENV{MSYSTEM} AND NOT "$ENV{MSYSTEM}" STREQUAL "CLANG64" AND USE_SANITIZERS)
+  message(WARNING "Sanitizers are not available for the MSYS2 $ENV{MSYSTEM} environment in Windows, disabling them in build...")
+  unset(USE_SANITIZERS CACHE)
+endif()
 
 # Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it
 find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
@@ -208,12 +220,14 @@ option(BUILD_WITH_QT6 "" ON)
 include(InitGitSubmodule)
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
-  "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
+  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/edbee-lib"
+  READABLE_NAME "edbee-lib editor widget")
 
-  git_submodule_init(
-    CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
-    "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/qt-tags-widget"
+  READABLE_NAME "qt-tags-widget widget")
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with

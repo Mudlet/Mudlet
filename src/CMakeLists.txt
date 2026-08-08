@@ -517,10 +517,15 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
-if(NOT WIN32)
+if(USE_SANITIZERS)
   include(cmake/EnableSanitizers.cmake)
+  if (NOT SANITIZERS_AS_STRING)
+    message(STATUS "No sanitizers selected, if required add them to the environment variable MUDLET_SANITIZERS.")
+  else()
+    message(STATUS "Compiling with the following sanitizer(s) enabled: ${SANITIZERS_AS_STRING}")
+  endif()
 else()
-  message(STATUS "Sanitizers disabled on Windows")
+  message(STATUS "Sanitizers disabled for this build.")
 endif()
 
 find_package(Qt6 6.8.2 REQUIRED
@@ -679,6 +684,20 @@ set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
 
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
+endif()
+
+if(USE_SANITIZERS)
+  # This is ONLY used to include the Licence details for the Sanitizers - as
+  # such it only needs to/should be present for builds that "package" Mudlet
+  # i.e. installer builds (for MacOS and Windows) and AppImages (for Linux)
+  # all other builds will use "system-provided" sanitizer libraries and we do
+  # not then NEED to mention them in the "Third-party" libraries.
+  if(DEFINED ENV{CI} AND "$ENV{CI}" STREQUAL "true" )
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SANITIZERS)
+    message(STATUS "Including sanitizer licence details for a package build")
+  else()
+    message(STATUS "Not including sanitizer licence details as this seem to be a local build")
+  endif()
 endif()
 
 if(UNIX)

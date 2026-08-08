@@ -1,4 +1,4 @@
-if(NOT WIN32)
+if(USE_SANITIZERS)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 

@@ -51,6 +51,7 @@ jobs:
       BUILD_TASK: 'PR'
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
       SIGNPATH_POLICY_SLUG: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
+      WITH_SANITIZERS: 'NO'
     strategy:
       fail-fast: false
       matrix:

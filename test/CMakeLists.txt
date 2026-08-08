@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25.1)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-if(NOT WIN32)
+if(USE_SANITIZERS)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 

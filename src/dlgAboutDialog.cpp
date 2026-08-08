@@ -687,6 +687,32 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "the License.</p>"));
 #endif // defined(INCLUDE_UPDATER)
 
+// There is a %1 placeholder that contains: "Name of Development Group, Name of Institution"
+#if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
+    QString NCSA_Open_Source_Body(
+            qsl("<h4>The University of Illinois/NCSA Open Source License</h4"
+                           "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
+                           "of this software and associated documentation files (the \"Software\"), to deal "
+                           "with the Software without restriction, including without limitation the rights to "
+                           "use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of "
+                           "the Software, and to permit persons to whom the Software is furnished to do so, "
+                           "subject to the following conditions:</p>"
+                           "<ol><li>Redistributions of source code must retain the above copyright notice, "
+                           "this list of conditions and the following disclaimers.</li>"
+                           "<li>Redistributions in binary form must reproduce the above copyright notice, "
+                           "this list of conditions and the following disclaimers in the documentation and/or "
+                           "other materials provided with the distribution.</li>"
+                           "<li>Neither the names of %1, nor the names of its contributors may be used to "
+                           "endorse or promote products derived from this Software without specific prior "
+                           "written permission.</li></ol>"
+                           "<p>THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR "
+                           "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS "
+                           "FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS "
+                           "OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER "
+                           "IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION "
+                           "WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.</p>"));
+#endif
+
     QString MIT_Body(
             qsl("<h4>The MIT License</h4>"
                            "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
@@ -882,15 +908,14 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                     "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
 
     QString lrexlib_pcre2Header(tr("<h2><u>Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).</u></h2>"
-                                   "<h3>Copyright © Reuben Thomas 2000-2020<br>"
-                                   "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
+                                   "<h3>Copyright © 2000-2020 Reuben Thomas<br>"
+                                   "Copyright © 2004-2020 Shmuel Zeigerman</h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
                             "<h3>Author: Danilo Tuler<br>"
                             "Copyright © 2003-2007 Kepler Project</h3>"));
 #endif // defined(Q_OS_MACOS)
-
 
     QString edbeeHeader(tr("<h2><u>Edbee - multi-feature editor widget</u></h2>"
                            "<h3>Copyright © 2012-2014 by Reliable Bits Software by Blommers IT</h3>"));
@@ -959,6 +984,15 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "<h3>Copyright © 2019 Sentry (https://sentry.io) and individual contributors.<br>"
                             "All rights reserved.</h3>"));
 #endif
+
+    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
+                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
+                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
+                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+
+    QString sanitizersHeader(tr("<h2><u>libsanitizer libraries (libasan, liblsan, libtsan, libubsan)</u></h2>"
+                                "<h3>Copyright © 2009-2019 by the LLVM contributors.<br>"
+                                "All rights reserved.</h3>"));
 
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
@@ -1038,7 +1072,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(UbuntuFontText));                       // 33 - Ubuntu Font Text - not translatable
     license_3rdParty_texts.append(qsl("<hr>%34")
                                   .arg(SILOpenFontText));                      // 34 - SIL Open Font Text - not translatable
-
 #endif // defined(INCLUDE_FONTS)
 
     license_3rdParty_texts.append(qsl("<hr><center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
@@ -1061,18 +1094,21 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                        MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
 
 #if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%1%2")
-                                  .arg(SentryHeader,                           // Sentry header - translatable
-                                       MIT_Body));                             // Sentry body MIT - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%43%44")
+                                  .arg(SentryHeader,                           // 43 - Sentry header - translatable
+                                       MIT_Body));                             // 44 - Sentry body MIT - not translatable
 #endif
 
-    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
-                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
-                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
-                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+#if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
+    license_3rdParty_texts.append(qsl("<hr>%45%46")
+                                  .arg(sanitizersHeader,                       // 45 - Sanitizers header - translatable
+                                       NCSA_Open_Source_Body
+                                           .arg(QLatin1String("the LLVM Team, University of Illinois at Urbana Champaign"))));
+                                                                               // 46 - Sentry body MIT - not translatable
+#endif
 
-    license_3rdParty_texts.append(qsl("<hr>%43")
-                                  .arg(swordModelHeader));                      // 43 - sword model attribution - translatable
+    license_3rdParty_texts.append(qsl("<hr>%47")
+                                  .arg(swordModelHeader));                     // 47 - sword model attribution - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 
