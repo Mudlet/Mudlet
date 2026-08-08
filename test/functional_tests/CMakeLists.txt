@@ -48,6 +48,7 @@ set(FUNCTIONAL_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
     ActionSelfUninstallTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
     ConnectionDialogCrashTest.cpp
     EdbeeReinitTest.cpp

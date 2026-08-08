@@ -100,9 +100,9 @@ private slots:
 
     void test_deletedDefaultGameStaysInAllGames()
     {
-        // an on-disk profile dir makes the game appear under "My games"; no
-        // saved XMLs inside means slot_deleteProfile() deletes without raising
-        // the confirmation dialog
+        // an on-disk profile dir makes the game appear under "My games"; an
+        // empty one means slot_deleteProfile() deletes it without raising the
+        // confirmation dialog
         QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, mGame)));
 
         auto* dlg = new dlgConnectionProfiles();
@@ -115,9 +115,10 @@ private slots:
         dlg->fillout_form();
         QVERIFY2(gameListed(dlg, mGame), "game with an on-disk profile should show under 'My games'");
 
-        // no saved XMLs is what makes slot_deleteProfile() skip the
-        // confirmation dialog; assert it so a change there fails loudly
-        QVERIFY(!QDir(mudlet::getMudletPath(enums::profileXmlFilesPath, mGame)).exists());
+        // having no sub-directory of its own - nothing but the connection
+        // details the dialog wrote there - is what makes slot_deleteProfile()
+        // skip the confirmation dialog; assert it so a change there fails loudly
+        QVERIFY(QDir(mudlet::getMudletPath(enums::profileHomePath, mGame)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty());
         const auto items = dlg->findData(*dlg->listWidget_profiles, mGame, dlgConnectionProfiles::csmNameRole);
         dlg->listWidget_profiles->setCurrentItem(items.first());
         dlg->slot_deleteProfile();
