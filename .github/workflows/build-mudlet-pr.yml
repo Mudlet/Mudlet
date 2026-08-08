@@ -92,12 +92,22 @@ jobs:
         cache: true
         modules: qt5compat qtmultimedia qtspeech
 
+    - name: Cache Lua build
+      uses: actions/cache@v6
+      with:
+        path: .lua
+        # Not gh-actions-lua's own buildCache: that shares one key across
+        # runner images, and a .lua built on ubuntu-latest cannot run on
+        # ubuntu-22.04 (newer glibc). The action skips its lua.org download
+        # whenever .lua already exists.
+        key: lua-${{ env.LUA_VERSION }}-${{ matrix.os }}-${{ runner.arch }}
+
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
-        buildCache: true
+        buildCache: false
 
     - name: (macOS) Install Luarocks via GitHub Actions
       if: runner.os == 'macOS'
@@ -171,7 +181,7 @@ jobs:
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}
-        buildCache: true
+        buildCache: false
 
     - name: (Linux) Install Luarocks via GitHub Actions
       uses: leafo/gh-actions-luarocks@v6
