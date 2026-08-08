@@ -33,13 +33,16 @@
  * users got a red "no download available for your platform" error on the
  * console on every check, because the release was offered as an update and the
  * download then had nothing to fetch. A partly published release is valid and
- * will happen again, so it has to be passed over instead.
+ * will happen again, so it has to be passed over instead - as does one that
+ * published a binary but no SHA256SUMS.txt, since the download refuses to
+ * install what it cannot verify.
  */
 
 namespace {
-// Only windowsOnlyTag is a real release; the newer complete one and the
-// installed one are constructed around it
+// Only windowsOnlyTag is a real release; the complete, unverifiable and
+// installed ones are constructed around it
 const auto windowsOnlyTag = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-07-eaa991b9");
+const auto unverifiableTag = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-07-5e4d3c2b");
 const auto completeTag = QStringLiteral("Mudlet-4.22.0-ptb-2026-08-06-1a2b3c4d");
 const auto windowsOnlyVersion = QStringLiteral("4.22.0-ptb-2026-08-07-eaa991b9");
 const auto completeVersion = QStringLiteral("4.22.0-ptb-2026-08-06-1a2b3c4d");
@@ -84,6 +87,12 @@ QJsonObject windowsOnlyRelease()
     return releaseJson(windowsOnlyTag, QStringLiteral("2026-08-07T02:14:11Z"), {windowsSuffix});
 }
 
+// Published its Linux binary, but not the checksums that binary is verified against
+QJsonObject unverifiableRelease()
+{
+    return releaseJson(unverifiableTag, QStringLiteral("2026-08-07T04:22:09Z"), {linuxSuffix}, /*withChecksums=*/false);
+}
+
 QJsonObject completeRelease()
 {
     return releaseJson(completeTag, QStringLiteral("2026-08-06T02:11:47Z"), {windowsSuffix, linuxSuffix, intelMacSuffix, appleSiliconSuffix});
@@ -111,7 +120,8 @@ private slots:
     void intelMacIsNotOfferedTheReleaseWithoutADmg();
     void appleSiliconIsNotOfferedTheReleaseWithoutADmg();
     void aReleaseWithOnlyItsChecksumsFileIsNotOffered();
-    void aReleaseWithoutChecksumsIsStillOffered();
+    void aReleaseWithoutChecksumsIsNotOffered();
+    void theVerifiableReleaseIsOfferedInsteadOfTheNewerUnverifiableOne();
     void aPlatformWithNoAssetsAtAllIsOfferedNothing();
     void nothingIsOfferedOnceTheOnlyNewerReleaseIsIncomplete();
     void thePassedOverReleaseStaysReadableForTheChangelog();
@@ -162,18 +172,24 @@ void UpdaterPlatformAssetTest::aReleaseWithOnlyItsChecksumsFileIsNotOffered()
     QVERIFY(dblsqd::Feed::selectUpdates(releases, installedRelease()).isEmpty());
 }
 
-// Whether the update can be verified is the download's business: it refuses to
-// install without checksums and says so, which is a different answer from
-// pretending there is nothing to update to
-void UpdaterPlatformAssetTest::aReleaseWithoutChecksumsIsStillOffered()
+// The download refuses to install what it cannot verify, so a release whose
+// SHA256SUMS.txt is missing is as uninstallable as one missing its binary
+void UpdaterPlatformAssetTest::aReleaseWithoutChecksumsIsNotOffered()
 {
-    const QList<dblsqd::Release> releases{
-            dblsqd::Release(releaseJson(completeTag, QStringLiteral("2026-08-06T02:11:47Z"), {linuxSuffix}, /*withChecksums=*/false), QStringLiteral("linux"), QStringLiteral("x86_64"))};
+    const QList<dblsqd::Release> releases{dblsqd::Release(unverifiableRelease(), QStringLiteral("linux"), QStringLiteral("x86_64"))};
+
+    QVERIFY(dblsqd::Feed::selectUpdates(releases, installedRelease()).isEmpty());
+}
+
+void UpdaterPlatformAssetTest::theVerifiableReleaseIsOfferedInsteadOfTheNewerUnverifiableOne()
+{
+    const QList<dblsqd::Release> releases{dblsqd::Release(unverifiableRelease(), QStringLiteral("linux"), QStringLiteral("x86_64")),
+                                          dblsqd::Release(completeRelease(), QStringLiteral("linux"), QStringLiteral("x86_64"))};
 
     const auto updates = dblsqd::Feed::selectUpdates(releases, installedRelease());
 
     QCOMPARE(updates.size(), 1);
-    QVERIFY(updates.first().getChecksumsUrl().isEmpty());
+    QCOMPARE(updates.first().getVersion(), completeVersion);
 }
 
 // Mudlet publishes no binaries for the platforms it is packaged for by others,

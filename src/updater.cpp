@@ -265,7 +265,7 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
         }
         return false;
     }
-    feed->downloadRelease(release);
+    feed->downloadRelease(release, /*requireChecksums=*/true);
     return true;
 }
 
