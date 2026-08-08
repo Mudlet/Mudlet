@@ -150,8 +150,9 @@ private:
         return nullptr;
     }
 
-    // The four entries that cannot do anything without a selection.
-    static QStringList selectionEntryNames() { return {QStringLiteral("consoleCopy"), QStringLiteral("consoleCopyHtml"), QStringLiteral("consoleCopyAsImage"), QStringLiteral("consoleSearchOnline")}; }
+    // The entries that cannot do anything without a selection. "Copy as image"
+    // is not one of them: it falls back to the visible screen.
+    static QStringList selectionEntryNames() { return {QStringLiteral("consoleCopy"), QStringLiteral("consoleCopyHtml"), QStringLiteral("consoleSearchOnline")}; }
 
     // Every pixel is the console background, i.e. no text was drawn.
     static bool blankImage(const QImage& image, const QColor& backgroundColour)
@@ -183,9 +184,58 @@ private slots:
         deleteProfileDirectory(mpHostname);
     }
 
-    // #9715 as reported: right-click the console and pick "Copy as image"
-    // without selecting anything first.
-    void test_contextMenuOffersNoCopyEntriesWithoutSelection()
+    // #9715 as reported: right-click the console and pick "Copy as image" without
+    // selecting anything first, all the way through the menu so a mis-wired entry
+    // is caught too. The visible screen is what the user asked for a picture of.
+    void test_noSelectionCopiesTheVisibleScreen()
+    {
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        QVERIFY(pane->mSelectedRegion.isEmpty());
+
+        QMenu* menu = openContextMenu(pane);
+        QVERIFY2(menu, "Right-clicking the console opened no context menu");
+        QAction* copyAsImageEntry = menuEntry(menu, QStringLiteral("consoleCopyAsImage"));
+        QVERIFY2(copyAsImageEntry, "No \"Copy as image\" entry in the console context menu");
+        QVERIFY2(copyAsImageEntry->isEnabled(), "\"Copy as image\" was not offered with nothing selected (regression of #9715)");
+
+        QApplication::clipboard()->clear();
+        copyAsImageEntry->trigger();
+
+        const QImage image = QApplication::clipboard()->image();
+        QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard (regression of #9715)");
+        QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
+        // a screenful: whole lines, several of them, and no taller than the pane
+        QCOMPARE(image.height() % pane->mFontHeight, 0);
+        QVERIFY2(image.height() >= 10 * pane->mFontHeight, qPrintable(QStringLiteral("Only %1 lines copied, expected a screenful").arg(image.height() / pane->mFontHeight)));
+        QVERIFY2(image.height() <= pane->height(), qPrintable(QStringLiteral("Copied %1px, taller than the %2px pane").arg(image.height()).arg(pane->height())));
+    }
+
+    // What the user sees includes the timestamp gutter when it is switched on.
+    void test_visibleScreenCopyIncludesTimestamps()
+    {
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QVERIFY(!console->showTimeStamps());
+
+        copyAsImage(pane);
+        const int widthWithoutTimestamps = QApplication::clipboard()->image().width();
+        QVERIFY(widthWithoutTimestamps > 0);
+
+        console->slot_toggleTimeStamps(true);
+        QVERIFY(console->showTimeStamps());
+        QTest::qWait(100ms);
+
+        copyAsImage(pane);
+        const QImage image = QApplication::clipboard()->image();
+        QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard with timestamps showing");
+        QCOMPARE(image.width(), widthWithoutTimestamps + mudlet::smTimeStampFormat.size() * pane->mFontWidth);
+    }
+
+    // Copy, Copy HTML and Search have no sane default without a selection, so
+    // they are still offered as unusable rather than doing nothing quietly.
+    void test_contextMenuOffersNoSelectionOnlyEntriesWithoutSelection()
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
@@ -197,7 +247,7 @@ private slots:
         for (const QString& name : selectionEntryNames()) {
             QAction* entry = menuEntry(menu, name);
             QVERIFY2(entry, qPrintable(QStringLiteral("No \"%1\" entry in the console context menu").arg(name)));
-            QVERIFY2(!entry->isEnabled(), qPrintable(QStringLiteral("\"%1\" was offered as usable with nothing selected (regression of #9715)").arg(name)));
+            QVERIFY2(!entry->isEnabled(), qPrintable(QStringLiteral("\"%1\" was offered as usable with nothing selected").arg(name)));
             QVERIFY2(!entry->toolTip().isEmpty(), qPrintable(QStringLiteral("\"%1\" is disabled without saying why").arg(name)));
         }
 
@@ -215,30 +265,24 @@ private slots:
         QMenu* menu = openContextMenu(pane);
         QVERIFY2(menu, "Right-clicking the console opened no context menu");
 
-        for (const QString& name : selectionEntryNames()) {
+        for (const QString& name : selectionEntryNames() + QStringList{QStringLiteral("consoleCopyAsImage")}) {
             QAction* entry = menuEntry(menu, name);
             QVERIFY2(entry, qPrintable(QStringLiteral("No \"%1\" entry in the console context menu").arg(name)));
             QVERIFY2(entry->isEnabled(), qPrintable(QStringLiteral("\"%1\" was disabled even though text is selected").arg(name)));
         }
     }
 
-    // The whole user-facing path: pick the menu entry itself rather than calling
-    // the slot, so a mis-wired entry is caught too.
-    void test_menuEntryCopiesTheSelectionAsAnImage()
+    // A selection wins over the visible screen, and copies only its own lines.
+    void test_selectionCopiesOnlyTheSelectedLines()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 0));
         QVERIFY2(pane, "Could not prepare a console with a selection");
 
-        QMenu* menu = openContextMenu(pane);
-        QVERIFY2(menu, "Right-clicking the console opened no context menu");
-        QAction* copyAsImageEntry = menuEntry(menu, QStringLiteral("consoleCopyAsImage"));
-        QVERIFY2(copyAsImageEntry, "No \"Copy as image\" entry in the console context menu");
-
-        QApplication::clipboard()->clear();
-        copyAsImageEntry->trigger();
+        copyAsImage(pane);
 
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard (regression of #9715)");
+        QCOMPARE(image.height(), pane->mFontHeight);
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
 
@@ -333,16 +377,29 @@ private slots:
         QVERIFY2(blankImage(image, pane->mBgColor), "A blank line copied as something other than background");
     }
 
-    // Bailing out must not take the user's existing clipboard contents with it.
-    void test_copyWithoutSelectionLeavesTheClipboardAlone()
+    // A console with no lines at all has nothing to picture, so the entry is not
+    // offered and the slot leaves the user's clipboard alone rather than wiping it.
+    void test_emptyBufferCopiesNothingAndKeepsTheClipboard()
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        QVERIFY(pane->mSelectedRegion.isEmpty());
+        // back to a console that has never had a line committed to it
+        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        buffer.lineBuffer.clear();
+        buffer.timeBuffer.clear();
+        buffer.promptBuffer.clear();
+        buffer.buffer.clear();
+        buffer.mCursorY = 0;
+
+        QMenu* menu = openContextMenu(pane);
+        QVERIFY2(menu, "Right-clicking the console opened no context menu");
+        QAction* copyAsImageEntry = menuEntry(menu, QStringLiteral("consoleCopyAsImage"));
+        QVERIFY(copyAsImageEntry);
+        QVERIFY2(!copyAsImageEntry->isEnabled(), "\"Copy as image\" was offered for a console holding no text at all");
+        QVERIFY2(!copyAsImageEntry->toolTip().isEmpty(), "\"Copy as image\" is disabled without saying why");
 
         QApplication::clipboard()->setText(QStringLiteral("something the user copied earlier"));
         pane->slot_copySelectionToClipboardImage();
-
         QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("something the user copied earlier"));
     }
 
@@ -356,20 +413,34 @@ private slots:
         mudlet::self()->getActiveHost()->mpConsole->TConsole::clear();
         QVERIFY2(pane->mSelectedRegion.isEmpty(), "Clearing the console left a selection behind pointing at lines that are gone");
 
-        QMenu* menu = openContextMenu(pane);
-        QVERIFY2(menu, "Right-clicking the console opened no context menu");
-        QAction* copyAsImageEntry = menuEntry(menu, QStringLiteral("consoleCopyAsImage"));
-        QVERIFY(copyAsImageEntry);
-        QVERIFY2(!copyAsImageEntry->isEnabled(), "\"Copy as image\" was offered after the console was cleared");
+        copyAsImage(pane);
+        const QImage image = QApplication::clipboard()->image();
+        QVERIFY2(!image.isNull(), "Copying a cleared console put nothing on the clipboard");
+        QVERIFY2(blankImage(image, pane->mBgColor), "A cleared console copied as something other than background");
+    }
 
-        // and the slot itself has to cope, since lines can also disappear off the
-        // front of a buffer that has grown past its limit
-        pane->mDragStart = QPoint(0, 60);
-        pane->mDragSelectionEnd = QPoint(6, 68);
+    // A selection outliving its lines must not be reinterpreted as whatever now
+    // sits at those buffer indices.
+    void test_copyOfASelectionPastTheEndOfTheBuffer()
+    {
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        const int lastLine = console->buffer.getLastLineNumber();
+
+        // beyond the buffer and beyond any batch-delete adjustment, i.e. gone
+        pane->mDragStart = QPoint(0, lastLine + console->buffer.mBatchDeleteSize + 10);
+        pane->mDragSelectionEnd = QPoint(6, lastLine + console->buffer.mBatchDeleteSize + 12);
         pane->normaliseSelection();
         pane->mSelectedRegion = QRegion(0, 0, 10, 10);
+
         copyAsImage(pane);
-        QVERIFY2(!QApplication::clipboard()->image().isNull(), "Copying a selection that outlived its lines put nothing on the clipboard");
+
+        const QImage image = QApplication::clipboard()->image();
+        QVERIFY2(!image.isNull(), "Copying a selection that outlived its lines put nothing on the clipboard");
+        // fell back to the visible screen rather than to three arbitrary lines
+        QVERIFY2(image.height() >= 10 * pane->mFontHeight, qPrintable(QStringLiteral("Only %1 lines copied, expected the visible screen").arg(image.height() / pane->mFontHeight)));
+        QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
 
     void cleanup()

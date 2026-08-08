@@ -2141,6 +2141,14 @@ bool TTextEdit::establishSelectedText()
     return true;
 }
 
+// The buffer lines the pane is showing right now, as a [first, last] pair.
+std::pair<int, int> TTextEdit::visibleLines()
+{
+    const int rows = std::max(1, (mScreenHeight > 0) ? mScreenHeight : height() / mFontHeight);
+    const int firstLine = std::max(0, imageTopLine());
+    return {firstLine, firstLine + rows - 1};
+}
+
 // Technically this copies whole lines into the image even if the selection does
 // not start at the beginning of the first line or end at the last grapheme on
 // the last line.
@@ -2148,27 +2156,52 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 {
     mCopyImageStartTime = std::chrono::high_resolution_clock::now();
 
-    if (!establishSelectedText()) {
+    if (mFontWidth <= 0 || mFontHeight <= 0) {
+        qWarning().nospace() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - font is " << mFontWidth << "x" << mFontHeight << ", nothing was copied to the clipboard";
         return;
     }
 
-    // A selection can outlive the lines it covers: clearing a console or letting
-    // TBuffer::shrinkBuffer() trim lines off the front leaves mPA/mPB pointing
-    // past the end of the buffer, so work within what is actually still there:
-    const int lastLine = std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())) - 1;
-    if (lastLine < 0) {
+    // drawLine() reads both halves of the buffer, so neither may be indexed past
+    // its end:
+    const int lastBufferLine = std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())) - 1;
+    if (lastBufferLine < 0) {
+        qWarning() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - there is nothing in this console to copy";
         return;
     }
-    const int firstSelectedLine = std::clamp(mPA.y(), 0, lastLine);
-    const int lastSelectedLine = std::clamp(mPB.y(), firstSelectedLine, lastLine);
+
+    // Unlike Copy and Copy HTML, "as image" has an obvious default when nothing
+    // is selected: a picture of what the user is looking at (#9715).
+    bool copyingSelection = establishSelectedText();
+    int firstLine{};
+    int lastLine{};
+    if (copyingSelection) {
+        firstLine = mPA.y();
+        lastLine = mPB.y();
+        if (lastLine > lastBufferLine) {
+            // Lines lost off the front of a buffer that reached its limit shift
+            // every remaining index down; getSelectedText() compensates the same way.
+            firstLine -= mpBuffer->mBatchDeleteSize;
+            lastLine -= mpBuffer->mBatchDeleteSize;
+        }
+        if (firstLine < 0 || lastLine > lastBufferLine || lastLine < firstLine) {
+            // The selected lines are gone for good, so copy the visible area
+            // rather than whatever has since taken their place in the buffer.
+            copyingSelection = false;
+        }
+    }
+    if (!copyingSelection) {
+        std::tie(firstLine, lastLine) = visibleLines();
+        firstLine = std::clamp(firstLine, 0, lastBufferLine);
+        lastLine = std::clamp(lastLine, firstLine, lastBufferLine);
+    }
 
     // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
-    auto heightpx = std::min(65500, (lastSelectedLine - firstSelectedLine + 1) * mFontHeight);
-    auto lineOffset = firstSelectedLine;
+    auto heightpx = std::min(65500, (lastLine - firstLine + 1) * mFontHeight);
+    auto lineOffset = firstLine;
 
     // find the biggest width of text we need to work with
     int largestLine{};
-    for (int y = firstSelectedLine, total = lastSelectedLine + 1; y < total; ++y) {
+    for (int y = firstLine, total = lastLine + 1; y < total; ++y) {
         const QString lineText{mpBuffer->lineBuffer.at(y)};
         // Will accumulate the width in pixels of the current line:
         auto lineWidth{(mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0) * mFontWidth};
@@ -2201,10 +2234,10 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     // A zero width pixmap is null, so the painter below never activates and
     // nothing at all reaches the clipboard. Floor the width at one character so
-    // that a selection of only blank lines (with timestamps off, which is what
-    // makes largestLine zero) still copies as the blank image it should be:
+    // that a run of only blank lines (with timestamps off, which is what makes
+    // largestLine zero) still copies as the blank image it should be:
     auto widthpx = std::max(mFontWidth, std::min(65500, largestLine));
-    auto rect = QRect(mPA.x(), firstSelectedLine, widthpx, heightpx);
+    auto rect = QRect(0, 0, widthpx, heightpx);
     auto pixmap = QPixmap(widthpx, heightpx);
     auto solidColor = QColor(mBgColor);
     solidColor.setAlpha(255);
@@ -2216,19 +2249,23 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
-    // deselect to prevent inverted colours in image
-    unHighlight();
-    mSelectedRegion = QRegion(0, 0, 0, 0);
+    if (copyingSelection) {
+        // deselect to prevent inverted colours in image
+        unHighlight();
+        mSelectedRegion = QRegion(0, 0, 0, 0);
+    }
 
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
-    highlightSelection();
+    if (copyingSelection) {
+        highlightSelection();
+    }
     // QPixmap::copy() refuses to detach a pixmap that still has a live painter
     painter.end();
 
     // Cut the undrawn part off the bottom of an abandoned copy. drawTextForClipboard()
-    // paints one row past the selection to fill the last partial row of a
-    // height-capped image, so its count can exceed heightpx; scaling to fit
+    // paints one row past the last one asked for to fill the last partial row of
+    // a height-capped image, so its count can exceed heightpx; scaling to fit
     // would squash the lines that did get drawn rather than drop the rest.
     if (!result.first) {
         const int drawnHeight = std::min(heightpx, std::max(mFontHeight, result.second * mFontHeight));
@@ -2514,11 +2551,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
 
-        // These all work on the selection and quietly do nothing without one, so
-        // say so rather than letting the user pick a dud entry (#9715). The
-        // object names let tests find each entry without matching translated text:
-        const QVector<std::pair<QAction*, QString>> selectionActions{
-                {action, qsl("consoleCopy")}, {action2, qsl("consoleCopyHtml")}, {actionCopyImage, qsl("consoleCopyAsImage")}, {action4, qsl("consoleSearchOnline")}};
+        // "All the text" is no use to these, so without a selection they can only
+        // do nothing - say so rather than letting the user pick a dud entry.
+        // "Copy as image" is left out: it falls back to the visible area (#9715).
+        // The object names let tests find each entry without matching translated text:
+        const QVector<std::pair<QAction*, QString>> selectionActions{{action, qsl("consoleCopy")}, {action2, qsl("consoleCopyHtml")}, {action4, qsl("consoleSearchOnline")}};
         for (const auto& [selectionAction, objectName] : selectionActions) {
             selectionAction->setObjectName(objectName);
             selectionAction->setEnabled(selectionAvailable);
@@ -2527,6 +2564,13 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
             }
         }
         action3->setObjectName(qsl("consoleSelectAll"));
+
+        actionCopyImage->setObjectName(qsl("consoleCopyAsImage"));
+        if (mpBuffer->lineBuffer.isEmpty()) {
+            actionCopyImage->setEnabled(false);
+            //: Tooltip shown on the console context menu's "Copy as image" entry while it is disabled because the console holds no text at all
+            actionCopyImage->setToolTip(utils::richText(tr("This console is empty, there is nothing to copy.")));
+        }
 
         if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
             action->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));

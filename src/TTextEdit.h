@@ -191,6 +191,7 @@ private:
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
     bool hasSelectedText() const;
+    std::pair<int, int> visibleLines();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
