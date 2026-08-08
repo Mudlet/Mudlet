@@ -79,9 +79,6 @@ private:
         QApplication::sendEvent(w, &event);
     }
 
-    // Boots a profile whose console is filled with text, and returns its upper
-    // pane with nothing selected yet. The window is resized so the pane is large
-    // enough for the multi-line drags the tests make across it.
     TTextEdit* preparePane()
     {
         mpServer->setWelcomeMessage(fillerText());
@@ -92,6 +89,7 @@ private:
             return nullptr;
         }
 
+        // big enough for the multi-line drags the tests make across the pane
         mudlet::self()->resize(1200, 800);
         QTest::qWait(100ms);
 
@@ -129,10 +127,8 @@ private:
         pane->slot_copySelectionToClipboardImage();
     }
 
-    // The context menu is assembled in mouseReleaseEvent() as a child QMenu of
-    // the pane, so it can be opened for real and read back from there. Entries
-    // are looked up by the object names the production code sets on them, since
-    // their visible text is translated.
+    // mouseReleaseEvent() parents the menu to the pane, so it can be read back
+    // from there rather than having to be intercepted as it pops up.
     QMenu* openContextMenu(TTextEdit* pane)
     {
         const QPointF pos = QRectF(pane->rect()).center();
@@ -151,8 +147,8 @@ private:
         return nullptr;
     }
 
-    // The entries that cannot do anything without a selection. "Copy as image"
-    // is not one of them: it falls back to the visible screen.
+    // "Copy as image" is deliberately not one of these: it falls back to the
+    // visible screen instead of needing a selection.
     static QStringList selectionEntryNames() { return {QStringLiteral("consoleCopy"), QStringLiteral("consoleCopyHtml"), QStringLiteral("consoleSearchOnline")}; }
 
     static int backgroundPixels(const QImage& image, const QColor& backgroundColour)
@@ -169,7 +165,6 @@ private:
         return count;
     }
 
-    // Every pixel is the console background, i.e. no text was drawn.
     static bool blankImage(const QImage& image, const QColor& backgroundColour) { return backgroundPixels(image, backgroundColour) == image.width() * image.height(); }
 
     // Text drawn normally leaves most of the cell as background; a line drawn
@@ -206,9 +201,7 @@ private slots:
         deleteProfileDirectory(mpHostname);
     }
 
-    // #9715 as reported: right-click the console and pick "Copy as image" without
-    // selecting anything first, all the way through the menu so a mis-wired entry
-    // is caught too. The visible screen is what the user asked for a picture of.
+    // #9715 as reported, driven through the menu so a mis-wired entry is caught too.
     void test_noSelectionCopiesTheVisibleScreen()
     {
         TTextEdit* pane = preparePane();
@@ -227,13 +220,11 @@ private slots:
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard (regression of #9715)");
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
-        // a screenful: whole lines, several of them, and no taller than the pane
         QCOMPARE(image.height() % pane->mFontHeight, 0);
         QVERIFY2(image.height() >= 10 * pane->mFontHeight, qPrintable(QStringLiteral("Only %1 lines copied, expected a screenful").arg(image.height() / pane->mFontHeight)));
         QVERIFY2(image.height() <= pane->height(), qPrintable(QStringLiteral("Copied %1px, taller than the %2px pane").arg(image.height()).arg(pane->height())));
     }
 
-    // What the user sees includes the timestamp gutter when it is switched on.
     void test_visibleScreenCopyIncludesTimestamps()
     {
         TTextEdit* pane = preparePane();
@@ -255,8 +246,6 @@ private slots:
         QCOMPARE(image.width(), widthWithoutTimestamps + mudlet::smTimeStampFormat.size() * pane->mFontWidth);
     }
 
-    // Copy, Copy HTML and Search have no sane default without a selection, so
-    // they are still offered as unusable rather than doing nothing quietly.
     void test_contextMenuOffersNoSelectionOnlyEntriesWithoutSelection()
     {
         TTextEdit* pane = preparePane();
@@ -294,7 +283,6 @@ private slots:
         }
     }
 
-    // A selection wins over the visible screen, and copies only its own lines.
     void test_selectionCopiesOnlyTheSelectedLines()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 0));
@@ -308,8 +296,8 @@ private slots:
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
 
-    // The height of a multi-line copy comes from the dragged distance, not from
-    // whatever the copy code recomputed.
+    // The height must come from the dragged distance, not from a recomputed
+    // mScreenHeight.
     void test_multiLineSelectionCopiesEveryLine()
     {
         TTextEdit* pane = preparePane();
@@ -326,8 +314,6 @@ private slots:
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
 
-    // Copying twice in a row has to work: the first copy must not destroy the
-    // selection state the second one needs.
     void test_repeatedCopyKeepsWorking()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
@@ -345,9 +331,8 @@ private slots:
         QCOMPARE(second, first);
     }
 
-    // Copying is abandoned once it runs out of time, since a user can select a
-    // whole buffer's worth of lines. Whatever was drawn by then still has to
-    // reach the clipboard, at its original scale.
+    // A selection can be a whole buffer long, so the copy gives up on a timeout -
+    // whatever it drew by then still has to reach the clipboard at its own scale.
     void test_abandonedCopyKeepsTheLinesItDrew()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
@@ -372,7 +357,6 @@ private slots:
         QCOMPARE(abandoned, complete.copy(QRect(0, 0, complete.width(), abandoned.height())));
     }
 
-    // Blank lines are still lines the user asked for.
     void test_blankLineSelectionCopiesAnImage()
     {
         TTextEdit* pane = preparePane();
@@ -399,13 +383,11 @@ private slots:
         QVERIFY2(blankImage(image, pane->mBgColor), "A blank line copied as something other than background");
     }
 
-    // A console with no lines at all has nothing to picture, so the entry is not
-    // offered and the slot leaves the user's clipboard alone rather than wiping it.
     void test_emptyBufferCopiesNothingAndKeepsTheClipboard()
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        // back to a console that has never had a line committed to it
+        // TConsole::clear() leaves an empty line behind, so empty it by hand
         auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
         buffer.lineBuffer.clear();
         buffer.timeBuffer.clear();
@@ -425,8 +407,7 @@ private slots:
         QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("something the user copied earlier"));
     }
 
-    // Clearing a console leaves a selection covering lines that no longer exist,
-    // which used to send the copy off the end of the buffer.
+    // Clearing a console strands the selection on lines that no longer exist.
     void test_copyAfterClearingTheConsole()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
@@ -441,9 +422,8 @@ private slots:
         QVERIFY2(blankImage(image, pane->mBgColor), "A cleared console copied as something other than background");
     }
 
-    // Lines dropped off the front of a full buffer shift every index down, so
-    // the selection has to be followed down with them - and the copy still has
-    // to come out with the selection's inverted colours taken off it.
+    // Lines dropped off the front of a full buffer shift every remaining index
+    // down, so the selection has to be followed down with them.
     void test_copyFollowsTheSelectionThroughABufferShrink()
     {
         TTextEdit* pane = preparePane();
@@ -489,7 +469,6 @@ private slots:
 
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "Copying a selection that outlived its lines put nothing on the clipboard");
-        // fell back to the visible screen rather than to three arbitrary lines
         QVERIFY2(image.height() >= 10 * pane->mFontHeight, qPrintable(QStringLiteral("Only %1 lines copied, expected the visible screen").arg(image.height() / pane->mFontHeight)));
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
@@ -508,8 +487,8 @@ private slots:
     }
 
 private:
-    // Returns false rather than only aborting the current QTest slot, so the
-    // callers below never go on to dereference a host that never appeared.
+    // Returns false rather than QVERIFYing, which would only abort the caller's
+    // helper and let the test go on to dereference a host that never appeared.
     bool startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0ms, qApp, [hostname, address, port]() {

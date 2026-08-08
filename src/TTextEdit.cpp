@@ -2100,10 +2100,9 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // matches slot_copySelectionToClipboard(), which also keeps the selection.
 }
 
-// There is a buffer and a highlighted region to work with. This is the part of
-// establishSelectedText()'s bail-out that the context menu can cheaply check up
-// front; the remaining parts (font metrics, pane size) hold for any console the
-// user can right-click on.
+// The part of establishSelectedText()'s bail-out that is cheap enough to check
+// while building the context menu; its remaining checks (font metrics, pane
+// size) hold for any console the user can right-click on.
 bool TTextEdit::hasSelectedText() const
 {
     return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty();
@@ -2141,8 +2140,7 @@ bool TTextEdit::establishSelectedText()
     return true;
 }
 
-// The buffer lines the pane is showing, as a [first, last] pair that the caller
-// still has to clamp to the buffer.
+// [first, last] line numbers, not clamped to the buffer - the caller must do that.
 std::pair<int, int> TTextEdit::visibleLines()
 {
     if (mScreenHeight <= 0) {
@@ -2241,9 +2239,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     }
 
     // A zero width pixmap is null, so the painter below never activates and
-    // nothing at all reaches the clipboard. Floor the width at one character so
-    // that a run of only blank lines (with timestamps off, which is what makes
-    // largestLine zero) still copies as the blank image it should be:
+    // nothing at all reaches the clipboard. Floor the width at one character so a
+    // run of only blank lines (which is what makes largestLine zero) still copies:
     auto widthpx = std::max(mFontWidth, std::min(65500, largestLine));
     auto rect = QRect(0, 0, widthpx, heightpx);
     auto pixmap = QPixmap(widthpx, heightpx);
@@ -2271,10 +2268,9 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     // QPixmap::copy() refuses to detach a pixmap that still has a live painter
     painter.end();
 
-    // Cut the undrawn part off the bottom of an abandoned copy - scaling it to
-    // fit would squash the lines that did get drawn rather than drop the rest.
-    // drawTextForClipboard() always paints one row past the last one asked for,
-    // so its count can exceed the image.
+    // Crop rather than scale an abandoned copy: scaling to fit would squash the
+    // lines that did get drawn instead of dropping the rest. The std::min is
+    // because drawTextForClipboard() can paint one row past the last one asked for.
     if (!result.first) {
         const int drawnHeight = std::min(heightpx, result.second * mFontHeight);
         if (drawnHeight <= 0) {
@@ -2563,9 +2559,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
 
-        // "All the text" is no use to these, so without a selection they can only
-        // do nothing - say so rather than letting the user pick a dud entry.
-        // "Copy as image" is left out: it falls back to the visible area (#9715).
+        // These have no sensible whole-console fallback, so they are disabled with
+        // a reason rather than left as entries that quietly do nothing. "Copy as
+        // image" is not among them: it falls back to the visible area (#9715).
         // The object names let tests find each entry without matching translated text:
         const QVector<std::pair<QAction*, QString>> selectionActions{{action, qsl("consoleCopy")}, {action2, qsl("consoleCopyHtml")}, {action4, qsl("consoleSearchOnline")}};
         for (const auto& [selectionAction, objectName] : selectionActions) {
