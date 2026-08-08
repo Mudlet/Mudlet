@@ -59,35 +59,12 @@ class TTextEdit : public QWidget
     friend class TAccessibleTextEdit;
 
 public:
-    // The cell, or cells for a wide glyph, that one grapheme occupies.
-    struct GraphemeRun
-    {
-        QRect textRect;
-        QColor fgColor;
-        QColor bgColor;
-        QString grapheme;
-        // Borrowed from TBuffer::buffer (or from the caller's timestamp style).
-        // Only valid while the line is being painted, during which the buffer
-        // must not be modified. A null pointer marks a background-only run,
-        // such as the caret block on an empty line.
-        const TChar* style = nullptr;
-        bool paintBackground = false;
-    };
-    using LineLayout = std::vector<GraphemeRun>;
-
     Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
     ~TTextEdit();
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    // Laying a line out without painting it lets a caller put every line's
-    // backgrounds down before any glyphs, so that ink which overflows its cell
-    // cannot be erased by the background fill of the line below.
-    void layoutLine(int lineNumber, int rowOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset = nullptr) const;
-    void paintBackgrounds(QPainter&, const LineLayout&) const;
-    void paintForegrounds(QPainter&, const LineLayout&) const;
-    void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -216,14 +193,42 @@ private:
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QString&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QString&, int&) const;
     int offsetForPosition(int line, int column) const;
+    bool hasBufferLine(int lineNumber) const;
+    TChar timeStampCharStyle() const;
+
+    // One grapheme's painted cell (or cells, for a wide glyph): where it goes,
+    // the colours resolved for it, and the style they were resolved from.
+    struct GraphemeRun
+    {
+        QRect textRect;
+        QColor fgColor;
+        QColor bgColor;
+        QString grapheme;
+        // Borrowed from TBuffer::buffer, or from the caller's timestamp style.
+        // Only valid for the duration of one paint, during which the buffer must
+        // not be modified. A null pointer marks a background-only run, such as
+        // the caret block on an empty line.
+        const TChar* style = nullptr;
+        bool fillsBackground = false;
+    };
+    using LineLayout = std::vector<GraphemeRun>;
+
+    // Laying a line out without painting it lets the callers put line N's
+    // backgrounds down before line N-1's glyphs, so that ink overflowing out of
+    // the bottom of a cell cannot be erased by the line below it. Both callers
+    // depend on that order, which is why none of this is reachable from outside.
+    void layoutLine(int lineNumber, int lineOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset = nullptr) const;
+    void paintBackgrounds(QPainter&, const LineLayout&) const;
+    void paintForegrounds(QPainter&, const LineLayout&, const QRect& clip = QRect()) const;
+    void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
     int layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QString& grapheme, const int column, const int line, const TChar& charStyle) const;
     void paintGraphemeForeground(QPainter&, const GraphemeRun&) const;
+
     // Reused between paints to keep their capacity rather than reallocating a
     // line's worth of graphemes on every repaint.
     mutable LineLayout mPreviousLineLayout;
     mutable LineLayout mCurrentLineLayout;
     mutable LineLayout mOverflowLineLayout;
-
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate = false;

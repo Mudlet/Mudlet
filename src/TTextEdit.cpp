@@ -452,11 +452,21 @@ void TTextEdit::scrollDown(int lines)
     }
 }
 
+bool TTextEdit::hasBufferLine(int lineNumber) const
+{
+    return lineNumber >= 0 && lineNumber < static_cast<int>(mpBuffer->buffer.size());
+}
+
+TChar TTextEdit::timeStampCharStyle() const
+{
+    return TChar(QColor(200, 150, 0), mpConsole->getConsoleBgColor());
+}
+
 void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset) const
 {
     layout.clear();
     QPoint cursor(-mCursorX, lineOfScreen);
-    const QString& lineText = mpBuffer->lineBuffer.at(lineNumber);
+    const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
@@ -478,6 +488,11 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     int columnWithOutTimestamp = 0;
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
         const int nextBoundary = boundaryFinder.toNextBoundary();
+        if (Q_UNLIKELY(nextBoundary <= indexOfChar)) {
+            // toNextBoundary() reports -1 once it can no longer advance, which
+            // would send indexOfChar backwards and index the line out of bounds
+            break;
+        }
 
         const TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
         const int graphemeWidth = layoutGrapheme(layout, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, lineNumber, charStyle);
@@ -491,7 +506,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
         GraphemeRun caretRun;
         caretRun.textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         caretRun.bgColor = mCaretColor;
-        caretRun.paintBackground = true;
+        caretRun.fillsBackground = true;
         layout.push_back(std::move(caretRun));
     }
 }
@@ -499,18 +514,28 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
 void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout) const
 {
     for (const GraphemeRun& run : layout) {
-        if (run.paintBackground) {
+        if (run.fillsBackground) {
             painter.fillRect(run.textRect, run.bgColor);
         }
     }
 }
 
-void TTextEdit::paintForegrounds(QPainter& painter, const LineLayout& layout) const
+void TTextEdit::paintForegrounds(QPainter& painter, const LineLayout& layout, const QRect& clip) const
 {
+    if (layout.empty()) {
+        return;
+    }
+    if (!clip.isNull()) {
+        painter.save();
+        painter.setClipRect(clip);
+    }
     for (const GraphemeRun& run : layout) {
         if (run.style) {
             paintGraphemeForeground(painter, run);
         }
+    }
+    if (!clip.isNull()) {
+        painter.restore();
     }
 }
 
@@ -653,7 +678,7 @@ void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, const QS
         break; // DEL
     default:
         charWidth = getGraphemeWidth(unicode);
-        outGrapheme = (charWidth < 1) ? QChar() : grapheme;
+        outGrapheme = (charWidth < 1) ? QString() : grapheme;
     }
 }
 
@@ -796,7 +821,7 @@ void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, const QS
         break; // DEL - House
     default:
         charWidth = getGraphemeWidth(unicode);
-        outGrapheme = (charWidth < 1) ? QChar() : grapheme;
+        outGrapheme = (charWidth < 1) ? QString() : grapheme;
     }
 }
 
@@ -830,40 +855,41 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QS
         run.textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     }
     const bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    const bool swapColors = charStyle.isReversed() != (charStyle.isSelected() != caretIsHere);
     if (Q_UNLIKELY(charStyle.isFound())) {
-        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
+        if (Q_UNLIKELY(swapColors)) {
             run.fgColor = mSearchHighlightBgColor;
             run.bgColor = mSearchHighlightFgColor;
         } else {
             run.fgColor = mSearchHighlightFgColor;
             run.bgColor = mSearchHighlightBgColor;
         }
-    } else {
-        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            // When colors would be swapped (e.g., during selection)
-            // and foreground equals background (hidden text),
-            // only reverse one color to make the text readable
-            if (charStyle.foreground() == charStyle.background()) {
-                run.fgColor = charStyle.foreground();
-                // Invert background: use white for dark colors, black for light colors
-                run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
-            } else {
-                run.fgColor = charStyle.background();
-                run.bgColor = charStyle.foreground();
-            }
-        } else {
+    } else if (Q_UNLIKELY(swapColors)) {
+        // When colors would be swapped (e.g., during selection)
+        // and foreground equals background (hidden text),
+        // only reverse one color to make the text readable
+        if (charStyle.foreground() == charStyle.background()) {
             run.fgColor = charStyle.foreground();
-            run.bgColor = charStyle.background();
+            // Invert background: use white for dark colors, black for light colors
+            run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
+        } else {
+            run.fgColor = charStyle.background();
+            run.bgColor = charStyle.foreground();
         }
+    } else {
+        run.fgColor = charStyle.foreground();
+        run.bgColor = charStyle.background();
     }
     if (caretIsHere) {
         run.bgColor = mCaretColor;
     }
-    // The main console always paints its cells so that a background image or a
-    // partially transparent console background does not bleed through the text
-    // (#8885). Other console types leave cells that match the console
-    // background untouched, letting the widget underneath show through.
-    run.paintBackground = !run.textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole || run.bgColor != mpConsole->getConsoleBgColor());
+    // Main console cells are always filled: over a background image or a
+    // translucent console background the cell has to be opaque (#8885), and
+    // keeping it unconditional leaves the paint order in drawForeground() as the
+    // only thing protecting ink that overflows its cell (#9070, #9719). Other
+    // console types skip cells matching the console background so that the
+    // widget underneath shows through.
+    run.fillsBackground = !run.textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole || run.bgColor != mpConsole->getConsoleBgColor());
     layout.push_back(std::move(run));
     return charWidth;
 }
@@ -1160,7 +1186,6 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     int y_top = r.top() / mFontHeight;
     int y_bottom = r.bottom() / mFontHeight;
-    int x_right = std::min(r.right(), (mScreenWidth * mFontWidth)) / mFontWidth;
 
     int lineOffset = imageTopLine();
     int from = 0;
@@ -1193,8 +1218,8 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mScrollVector = 0;
         }
     }
-    if (!noScroll && !mForceUpdate && abs(mScrollVector) <= mScreenHeight) {
-        const int scrolledRows = abs(mScrollVector);
+    const int scrolledRows = qAbs(mScrollVector);
+    if (!noScroll && !mForceUpdate && scrolledRows <= mScreenHeight) {
         if (scrolledRows * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - scrolledRows) * mFontHeight > 0
             && (mScreenHeight - scrolledRows) * mFontHeight <= mScreenMap.height()) {
             p.drawPixmap(0, -mScrollVector * mFontHeight, mScreenMap);
@@ -1208,54 +1233,74 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         }
     }
 
+    const int lastRow = mScreenHeight - 1;
     const int drawFrom = qMax(0, from);
     // One row past the dirty region: the last dirty row's ink can spill into the
     // row below, which would otherwise be left showing the ink of whatever used
     // to be on that last row.
-    const int drawTo = qMin(y_bottom + 1, mScreenHeight - 1);
+    const int drawTo = qMin(y_bottom + 1, lastRow);
+    const bool bottomRowIsRepainted = drawTo == lastRow;
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
     int clearHeight = (drawTo + 1 - drawFrom) * mFontHeight;
-    if (drawTo == mScreenHeight - 1) {
-        // the bottom row is being repainted, so its spare row goes too
+    if (bottomRowIsRepainted) {
         clearHeight += mFontHeight;
     }
-    const QRect deleteRect(0, drawFrom * mFontHeight, x_right * mFontWidth, clearHeight);
+    const QRect deleteRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, clearHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(deleteRect, Qt::transparent);
+    // Scrolling shifts the cached screen by whole cells, which drops a complete
+    // line of text into the spare row. Nothing but the bottom line's overflow
+    // belongs there, so rebuild it from scratch whenever it is not already part
+    // of the band above.
+    QRect spareRowRect;
+    if (!bottomRowIsRepainted) {
+        spareRowRect = QRect(0, mScreenHeight * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
+        p.fillRect(spareRowRect, Qt::transparent);
+    }
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    const TChar timeStampStyle(QColor(200, 150, 0), mpConsole->getConsoleBgColor());
+    const TChar timeStampStyle = timeStampCharStyle();
 
     // The line above the cleared band keeps its cell but loses whatever it had
     // spilled into the band, so put its glyphs back clipped to the band. Drawing
     // the whole line again would paint it on top of itself and thicken its
     // antialiasing.
     mOverflowLineLayout.clear();
-    if (drawFrom > 0 && drawTo >= drawFrom && static_cast<int>(mpBuffer->buffer.size()) > drawFrom - 1 + lineOffset) {
+    if (drawFrom > 0 && hasBufferLine(drawFrom - 1 + lineOffset)) {
         layoutLine(drawFrom - 1 + lineOffset, drawFrom - 1, timeStampStyle, mOverflowLineLayout);
     }
 
     // Each line's backgrounds go down before the previous line's glyphs, so that
     // no background fill can wipe out ink which overflowed out of its cell.
     mPreviousLineLayout.clear();
+    bool lineAboveRestored = false;
     for (int i = drawFrom; i <= drawTo; ++i) {
-        if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
+        if (!hasBufferLine(i + lineOffset)) {
             break;
         }
         layoutLine(i + lineOffset, i, timeStampStyle, mCurrentLineLayout, &mScreenOffset);
         paintBackgrounds(p, mCurrentLineLayout);
-        if (i == drawFrom && !mOverflowLineLayout.empty()) {
-            p.save();
-            p.setClipRect(deleteRect);
-            paintForegrounds(p, mOverflowLineLayout);
-            p.restore();
+        if (!lineAboveRestored) {
+            paintForegrounds(p, mOverflowLineLayout, deleteRect);
+            lineAboveRestored = true;
         }
         paintForegrounds(p, mPreviousLineLayout);
         mPreviousLineLayout.swap(mCurrentLineLayout);
     }
-    paintForegrounds(p, mPreviousLineLayout);
+    if (!lineAboveRestored) {
+        paintForegrounds(p, mOverflowLineLayout, deleteRect);
+    }
+    // Anything below the band is cached content that already holds this line's
+    // overflow, so clip it away rather than compositing the same ink twice.
+    const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
+    paintForegrounds(p, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
+
+    if (!spareRowRect.isNull() && hasBufferLine(lastRow + lineOffset)) {
+        layoutLine(lastRow + lineOffset, lastRow, timeStampStyle, mOverflowLineLayout);
+        paintForegrounds(p, mOverflowLineLayout, spareRowRect);
+    }
     // The layouts borrow TChar pointers from the buffer, so do not keep them
     // past the paint they were built for.
     mPreviousLineLayout.clear();
@@ -2244,14 +2289,14 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
     int lineCount = rectangle.height() / mFontHeight;
     int linesDrawn = 0;
     auto timeout = mudlet::self()->mCopyAsImageTimeout;
-    const TChar timeStampStyle(QColor(200, 150, 0), mpConsole->getConsoleBgColor());
+    const TChar timeStampStyle = timeStampCharStyle();
     LineLayout previousLine;
     LineLayout currentLine;
     for (int i = 0; i <= lineCount; i++, linesDrawn++) {
-        if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
+        if (!hasBufferLine(i + lineOffset)) {
             break;
         }
-        // Same background-before-previous-foreground ordering as drawForeground()
+        // A line's backgrounds have to go down before the previous line's glyphs
         layoutLine(i + lineOffset, i, timeStampStyle, currentLine);
         paintBackgrounds(painter, currentLine);
         paintForegrounds(painter, previousLine);

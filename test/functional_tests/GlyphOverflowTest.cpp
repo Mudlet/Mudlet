@@ -39,8 +39,8 @@ void initializeQRCResources();
 
 // TTextEdit lays text out in cells of QFontMetrics::height(), which is a
 // typographic measure rather than the glyph ink box. At a good number of font
-// sizes the ink of "_gjpqy$@()" reaches a pixel past the bottom of its cell, so
-// those glyphs only render completely if nothing paints over that pixel
+// sizes the ink of a glyph such as "_" reaches a pixel past the bottom of its
+// cell, so it only renders completely if nothing paints over that pixel
 // afterwards. #9070 and #9719 are both reports of underscores vanishing because
 // something did.
 class GlyphOverflowTest : public QObject
@@ -50,11 +50,11 @@ class GlyphOverflowTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-GlyphOverflow";
-    QString mPort; // assigned the stub's actual loopback port in init()
+    QString mPort;
     const QString mLocalhost = "localhost";
 
-    // What the line below the underscores looks like. Each of these used to
-    // paint over the overflow pixel of the line above it.
+    // What the line below the underscores looks like. Each one takes a different
+    // branch of the background fill in layoutGrapheme().
     struct Underlay
     {
         QString name;
@@ -75,7 +75,8 @@ private:
     static constexpr int kUnderscoreCount = 40;
     static constexpr int kFillerCount = 60;
     // Column used to sample what a pixel row looks like where no glyph was
-    // drawn: past the underscores, still inside the filler line.
+    // drawn; whatever the line below paints there is the reference for its own
+    // pixel row.
     static constexpr int kBackgroundSampleColumn = 50;
     // How far a channel has to move from its row's background before the pixel
     // counts as glyph ink rather than antialiasing noise.
@@ -110,11 +111,12 @@ private slots:
     }
 
     // A line has to render all of its ink whatever the line below it looks like,
-    // and that ink has to match the glyph drawn on its own with the same font,
-    // cell geometry and painter flags.
+    // and that ink has to match the same glyph drawn on its own with the same
+    // font, cell geometry and painter flags.
     void test_lineBelowDoesNotEraseOverflowingInk()
     {
         Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
         TTextEdit* pane = host->mpConsole->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
@@ -122,9 +124,15 @@ private slots:
         for (const QString& family : {qsl("Bitstream Vera Sans Mono"), qsl("Ubuntu Mono")}) {
             for (int size = kFirstSize; size <= kLastSize; ++size) {
                 applyFont(host, family, size);
+                QVERIFY2(pane->getColumnCount() > kBackgroundSampleColumn,
+                         qPrintable(qsl("%1 %2pt narrowed the pane to %3 columns, too few for the background sample at column %4")
+                                            .arg(family)
+                                            .arg(size)
+                                            .arg(pane->getColumnCount())
+                                            .arg(kBackgroundSampleColumn)));
                 const int cellHeight = cellHeightOf(pane);
-                const int expectedBottom = referenceInkBottom(pane->font(), qsl("_"), cellWidthOf(pane), cellHeight);
-                if (expectedBottom >= cellHeight) {
+                const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidthOf(pane), cellHeight);
+                if (expected.second >= cellHeight) {
                     ++sizesWithOverflow;
                 }
 
@@ -133,25 +141,27 @@ private slots:
                     const QString where = qsl("%1 %2pt below %3").arg(family).arg(size).arg(underlay.name);
                     QVERIFY2(!ink.isEmpty(), qPrintable(qsl("%1: no underscore ink rendered at all").arg(where)));
 
-                    int actualBottom = ink.first().y();
-                    for (const QPoint& point : ink) {
-                        actualBottom = qMax(actualBottom, point.y());
-                    }
-                    QVERIFY2(actualBottom == expectedBottom,
-                             qPrintable(qsl("%1: underscore ink ends %2 rows below the cell top, expected %3 (cell is %4 tall)").arg(where).arg(actualBottom).arg(expectedBottom).arg(cellHeight)));
+                    const QPair<int, int> actual = inkExtent(ink);
+                    QVERIFY2(actual == expected,
+                             qPrintable(qsl("%1: underscore ink occupies %2 of its cell, expected %3 (cell is %4 tall)").arg(where, describeExtent(actual), describeExtent(expected)).arg(cellHeight)));
                 }
             }
         }
 
-        QVERIFY2(sizesWithOverflow > 0, "None of the tested font sizes overflow their cell, so this test proves nothing - pick different sizes");
+        if (sizesWithOverflow == 0) {
+            // The comparisons above all ran and passed, so this is a coverage
+            // warning rather than a skip
+            QWARN("None of the tested font sizes overflow their cell on this platform, so the overflow case went unexercised");
+        }
     }
 
     // The screen is rendered into a pixmap sized from the number of whole
-    // character cells that fit, so the bottom line's overflow used to be cut off
-    // by the edge of that pixmap regardless of what was painted afterwards.
+    // character cells that fit, so the bottom line's overflow only survives if
+    // that pixmap has somewhere to put it.
     void test_bottomLineOverflowSurvivesThePixmapEdge()
     {
         Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
         TTextEdit* pane = host->mpConsole->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
@@ -160,8 +170,8 @@ private slots:
             applyFont(host, qsl("Bitstream Vera Sans Mono"), size);
             const int cellHeight = cellHeightOf(pane);
             const int cellWidth = cellWidthOf(pane);
-            const int expectedBottom = referenceInkBottom(pane->font(), qsl("_"), cellWidth, cellHeight);
-            if (expectedBottom < cellHeight) {
+            const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
+            if (expected.second < cellHeight) {
                 continue; // this size keeps its ink inside the cell, nothing to check
             }
             // A pane whose height is an exact multiple of the cell height has no
@@ -179,12 +189,14 @@ private slots:
 
             const QImage rendered = renderPane(host);
             const int cellTop = (screenHeight - 1) * cellHeight;
-            const int actualBottom = inkBottom(collectInk(rendered, cellTop, cellHeight, cellWidth));
-            QVERIFY2(actualBottom == expectedBottom,
-                     qPrintable(qsl("%1pt: the bottom line's underscore ink ends %2 rows below the cell top, expected %3").arg(size).arg(actualBottom).arg(expectedBottom)));
+            const QPair<int, int> actual = inkExtent(collectInk(rendered, cellTop, cellHeight, cellWidth));
+            QVERIFY2(actual == expected,
+                     qPrintable(qsl("%1pt: the bottom line's underscore ink occupies %2 of its cell, expected %3").arg(QString::number(size), describeExtent(actual), describeExtent(expected))));
         }
 
-        QVERIFY2(checkedSizes > 0, "No font size produced an overflowing bottom line, so this test proves nothing");
+        if (checkedSizes == 0) {
+            QSKIP("No font size produced an overflowing bottom line on this platform, so nothing here is being proved");
+        }
     }
 
     // Repainting part of the pane clears whole character cells, which takes the
@@ -193,6 +205,7 @@ private slots:
     void test_partialRepaintKeepsTheLineAboveIntact()
     {
         Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
         TTextEdit* pane = host->mpConsole->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
@@ -201,22 +214,23 @@ private slots:
             applyFont(host, qsl("Bitstream Vera Sans Mono"), size);
             const int cellHeight = cellHeightOf(pane);
             const int cellWidth = cellWidthOf(pane);
-            const int expectedBottom = referenceInkBottom(pane->font(), qsl("_"), cellWidth, cellHeight);
-            if (expectedBottom < cellHeight) {
+            const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
+            if (expected.second < cellHeight) {
                 continue;
             }
             ++checkedSizes;
 
-            // More lines than fit, so the pane has scrolled and drawForeground()
-            // is on its cached-pixmap path.
+            // More lines than fit, so imageTopLine() is past zero - the
+            // precondition for the partial repaint below to reach
+            // drawForeground()'s cached-pixmap path.
             runLua(host, qsl("clearWindow()"));
             runLua(host, qsl("cecho('<white>' .. string.rep('%1\\n', %2))").arg(QString(kUnderscoreCount, QLatin1Char('_'))).arg(pane->getScreenHeight() * 2));
             pane->forceUpdate();
             QApplication::processEvents();
+            QVERIFY2(pane->imageTopLine() > 0, "The pane did not scroll, so the partial repaint would not reach the cached-pixmap path");
 
-            // What the user sees after a partial repaint: the previous frame,
-            // with the damaged band erased to the console background by Qt and
-            // then painted over by the widget.
+            // Simulate a partial repaint: the previous frame, the damaged band
+            // reset to the console background, then only that band re-rendered.
             QImage rendered = renderPane(host);
             const int row = pane->getScreenHeight() / 2;
             const QRect damaged(0, row * cellHeight, pane->width(), cellHeight * 2);
@@ -225,12 +239,125 @@ private slots:
             eraser.end();
             pane->render(&rendered, damaged.topLeft(), QRegion(damaged), QWidget::DrawChildren);
 
-            const int actualBottom = inkBottom(collectInk(rendered, (row - 1) * cellHeight, cellHeight, cellWidth));
-            QVERIFY2(actualBottom == expectedBottom,
-                     qPrintable(qsl("%1pt: after a partial repaint the line above the dirty region ends %2 rows below its cell top, expected %3").arg(size).arg(actualBottom).arg(expectedBottom)));
+            // Only the bottom of the ink can be pinned here: every line is
+            // underscores, so the top rows of the cell hold the overflow of the
+            // line above it rather than this line's own glyph.
+            const QPair<int, int> actual = inkExtent(collectInk(rendered, (row - 1) * cellHeight, cellHeight, cellWidth));
+            QVERIFY2(actual.second == expected.second,
+                     qPrintable(qsl("%1pt: after a partial repaint the line above the dirty region ends at row %2 of its cell, expected %3").arg(size).arg(actual.second).arg(expected.second)));
         }
 
-        QVERIFY2(checkedSizes > 0, "No font size produced an overflowing line, so this test proves nothing");
+        if (checkedSizes == 0) {
+            QSKIP("No font size produced an overflowing line on this platform, so nothing here is being proved");
+        }
+    }
+
+    // Scrolling reuses the cached screen by blitting it a whole number of cells
+    // up or down, which lands a complete line of text in the strip below the
+    // last one. Only the bottom line's own overflow belongs there.
+    void test_scrollingLeavesNoGhostLineBelowTheBottomOne()
+    {
+        Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(pane, "No upper pane available");
+
+        int checkedSizes = 0;
+        for (int size = kFirstSize; size <= kLastSize; ++size) {
+            applyFont(host, qsl("Bitstream Vera Sans Mono"), size);
+            const int cellHeight = cellHeightOf(pane);
+            const int cellWidth = cellWidthOf(pane);
+            const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
+            const int spareTop = pane->getScreenHeight() * cellHeight;
+            if (expected.second < cellHeight || pane->height() - spareTop <= kOverflowScanRows) {
+                continue;
+            }
+            ++checkedSizes;
+
+            // Underscores for the overflow, letters past them so that a whole
+            // ghost line would be unmistakable in the strip.
+            const QString line = QString(kUnderscoreCount, QLatin1Char('_')) + QString(20, QLatin1Char('M'));
+            runLua(host, qsl("clearWindow()"));
+            runLua(host, qsl("cecho('<white>' .. string.rep('%1\\n', %2))").arg(line).arg(pane->getScreenHeight() * 4));
+            pane->forceUpdate();
+            QApplication::processEvents();
+            // primes the cached screen the scroll below is blitted from
+            renderPane(host);
+
+            // drawForeground() ignores the cache entirely below ten scrolled-off
+            // lines, so there has to be more scrollback than that
+            const int topLineBeforeScroll = pane->imageTopLine();
+            QVERIFY2(topLineBeforeScroll >= 10, "Not enough scrollback for drawForeground() to take its scrolling path");
+
+            // Render straight after the scroll so the frame under test is the
+            // one drawForeground() builds from the shifted cache.
+            pane->scrollUp(3);
+            QVERIFY2(pane->imageTopLine() < topLineBeforeScroll, "The pane did not scroll back, so the frame below is not built from a shifted cache");
+            const QImage rendered = renderPane(host);
+
+            for (int y = spareTop + kOverflowScanRows; y < pane->height(); ++y) {
+                int litPixels = 0;
+                for (int x = 0; x < rendered.width(); ++x) {
+                    if (pixelIsInk(rendered.pixel(x, y), consoleBackground(host))) {
+                        ++litPixels;
+                    }
+                }
+                QVERIFY2(litPixels == 0, qPrintable(qsl("%1pt: %2 stray pixels %3 rows below the last character cell after scrolling back").arg(size).arg(litPixels).arg(y - spareTop)));
+            }
+
+            // As above, the top of the cell holds the previous line's overflow
+            const QPair<int, int> actual = inkExtent(collectInk(rendered, spareTop - cellHeight, cellHeight, cellWidth));
+            QVERIFY2(actual.second == expected.second,
+                     qPrintable(qsl("%1pt: after scrolling back the bottom line's underscore ink ends at row %2 of its cell, expected %3").arg(size).arg(actual.second).arg(expected.second)));
+        }
+
+        if (checkedSizes == 0) {
+            QSKIP("No font size produced an overflowing bottom line on this platform, so nothing here is being proved");
+        }
+    }
+
+    // Miniconsoles keep the fill rule the main console does not, so check the
+    // paint order protects their overflow too.
+    void test_miniConsoleKeepsOverflowingInk()
+    {
+        Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
+        runLua(host, qsl("createMiniConsole('overflowMini', 0, 0, 800, 400)"));
+        auto* mini = host->mpConsole->mSubConsoleMap.value(qsl("overflowMini"));
+        QVERIFY2(mini, "The miniconsole was not created");
+        TTextEdit* pane = mini->mUpperPane;
+        QVERIFY2(pane, "The miniconsole has no pane");
+
+        int checkedSizes = 0;
+        for (int size = kFirstSize; size <= kLastSize; ++size) {
+            runLua(host, qsl("setMiniConsoleFontSize('overflowMini', %1)").arg(size));
+            QApplication::processEvents();
+            const int cellHeight = cellHeightOf(pane);
+            const int cellWidth = cellWidthOf(pane);
+            const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
+            if (expected.second < cellHeight || pane->getColumnCount() <= kBackgroundSampleColumn) {
+                continue;
+            }
+            ++checkedSizes;
+
+            runLua(host, qsl("clearWindow('overflowMini')"));
+            runLua(host, qsl("cecho('overflowMini', '<white>%1\\n')").arg(QString(kUnderscoreCount, QLatin1Char('_'))));
+            runLua(host, qsl("cecho('overflowMini', '<white:blue>%1\\n')").arg(QString(kFillerCount, QLatin1Char(' '))));
+            pane->forceUpdate();
+            QApplication::processEvents();
+
+            QImage rendered(pane->size(), QImage::Format_ARGB32_Premultiplied);
+            rendered.fill(mini->getConsoleBgColor());
+            pane->render(&rendered, QPoint(), QRegion(), QWidget::DrawChildren);
+
+            const QPair<int, int> actual = inkExtent(collectInk(rendered, 0, cellHeight, cellWidth));
+            QVERIFY2(actual == expected,
+                     qPrintable(qsl("%1pt: a miniconsole's underscore ink occupies %2 of its cell, expected %3").arg(QString::number(size), describeExtent(actual), describeExtent(expected))));
+        }
+
+        if (checkedSizes == 0) {
+            QSKIP("No font size produced an overflowing line in a miniconsole on this platform, so nothing here is being proved");
+        }
     }
 
     void cleanup()
@@ -255,22 +382,35 @@ private:
         return image;
     }
 
+    static QRgb consoleBackground(Host* host) { return host->mpConsole->getConsoleBgColor().rgb(); }
+
     static int cellHeightOf(const TTextEdit* pane) { return QFontMetrics(pane->font()).height(); }
     static int cellWidthOf(const TTextEdit* pane) { return QFontMetrics(pane->font()).averageCharWidth(); }
 
-    static int inkBottom(const QVector<QPoint>& ink)
+    // First and last pixel row of a set of ink, as offsets from the cell top.
+    // Empty ink reports {-1, -1} so a completely erased glyph never matches a
+    // real reference extent.
+    static QPair<int, int> inkExtent(const QVector<QPoint>& ink)
     {
-        int bottom = -1;
+        if (ink.isEmpty()) {
+            return {-1, -1};
+        }
+        int top = ink.first().y();
+        int bottom = top;
         for (const QPoint& point : ink) {
+            top = qMin(top, point.y());
             bottom = qMax(bottom, point.y());
         }
-        return bottom;
+        return {top, bottom};
     }
+
+    static QString describeExtent(const QPair<int, int>& extent) { return qsl("rows %1..%2").arg(extent.first).arg(extent.second); }
 
     void applyFont(Host* host, const QString& family, int size)
     {
         QFont font(family, size);
         font.setFixedPitch(true);
+        QVERIFY2(QFontInfo(font).family() == family, qPrintable(qsl("Qt substituted '%1' for the requested '%2', so this would measure the wrong glyph").arg(QFontInfo(font).family(), family)));
         const auto result = host->setDisplayFont(font);
         QVERIFY2(result.first, qPrintable(qsl("Could not set the display font to %1 %2pt: %3").arg(family).arg(size).arg(result.second)));
         QApplication::processEvents();
@@ -290,6 +430,9 @@ private:
             return {};
         }
         if (underlay.selected) {
+            if (underscoreLine + 1 >= static_cast<int>(host->mpConsole->buffer.buffer.size())) {
+                return {};
+            }
             auto& below = host->mpConsole->buffer.buffer.at(underscoreLine + 1);
             for (TChar& character : below) {
                 character.select();
@@ -316,8 +459,9 @@ private:
 
     // Every pixel of the underscore run that differs from what its own pixel row
     // looks like away from the glyphs, as offsets from the cell's top left.
-    // Reaches a few rows past the bottom of the cell so overflow is included
-    // without picking up the glyphs of the line below.
+    // Reaches a few rows past the bottom of the cell so overflow is included.
+    // That only avoids picking up the line below because every caller leaves it
+    // blank or puts underscores on it, whose ink sits at the bottom of a cell.
     static QVector<QPoint> collectInk(const QImage& image, int cellTop, int cellHeight, int cellWidth)
     {
         QVector<QPoint> ink;
@@ -338,9 +482,9 @@ private:
         return ink;
     }
 
-    // Where the glyph's ink ends relative to the top of its cell when drawn the
-    // way TTextEdit::paintGraphemeForeground() draws it.
-    static int referenceInkBottom(const QFont& font, const QString& grapheme, int cellWidth, int cellHeight)
+    // Where the glyph's ink starts and ends relative to the top of its cell when
+    // drawn the way TTextEdit::paintGraphemeForeground() draws it.
+    static QPair<int, int> referenceInkExtent(const QFont& font, const QString& grapheme, int cellWidth, int cellHeight)
     {
         QImage image(cellWidth, cellHeight * 3, QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::black);
@@ -350,24 +494,31 @@ private:
         painter.drawText(QRect(0, cellHeight, cellWidth, cellHeight), Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
         painter.end();
 
+        int top = -1;
         int bottom = -1;
         for (int y = 0; y < image.height(); ++y) {
             for (int x = 0; x < image.width(); ++x) {
                 if (pixelIsInk(image.pixel(x, y), qRgb(0, 0, 0))) {
+                    if (top < 0) {
+                        top = y;
+                    }
                     bottom = y;
                     break;
                 }
             }
         }
-        return bottom - cellHeight;
+        return {top - cellHeight, bottom - cellHeight};
     }
 
-    void runLua(Host* host, const QString& script) { host->getLuaInterpreter()->compileAndExecuteScript(script); }
+    void runLua(Host* host, const QString& script) { QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(qsl("Lua script failed: %1").arg(script))); }
 
     Host* startOfflineProfile()
     {
         startProfile(mHostname, mLocalhost, mPort);
         auto* host = mudlet::self()->getActiveHost();
+        if (!host) {
+            return nullptr;
+        }
         host->mEchoLuaErrors = true;
 
         mudlet::self()->resize(1400, 900);
