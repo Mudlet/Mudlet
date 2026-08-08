@@ -27,6 +27,10 @@ publishes the current branch to their fork if needed, then opens a PR against up
    `git branch --show-current` for the branch name. An empty commit list means there is nothing to
    open a pull request for.
 
+   `git branch --show-current` prints nothing on a detached HEAD. If it is empty, stop and ask the
+   user to check out a named branch — every later step needs that name, and an empty one produces
+   a malformed push and an unusable `--head`.
+
 2. **Choose the title prefix.** `docs/CONTRIBUTING.md` states the rule and Danger enforces it on
    every PR. Choosing between the four is the part that is not written down elsewhere:
 
@@ -73,26 +77,31 @@ publishes the current branch to their fork if needed, then opens a PR against up
    Draft suits work that is still moving, wants early CI feedback, or needs discussion before
    reviewers spend time on it; ready for review suits a change that is complete and tested.
 
-6. **Publish the branch** with `git push -u origin <branch-name>`. Do this every time, not only
-   when the branch lacks an upstream — a branch that already tracks `origin` can still hold local
+6. **Confirm the fork before pushing anything.** `origin` is not guaranteed to be the user's fork,
+   and pushing to the wrong remote is awkward to undo, so establish this before the push rather
+   than after. Derive the head explicitly too — a checkout commonly has several remotes, including
+   other people's forks, and a head inferred by `gh` can point at the wrong one.
+
+   ```bash
+   BRANCH=$(git branch --show-current)
+   FORK_OWNER=$(printf '%s' "$(git remote get-url origin)" \
+     | sed -E 's#\.git$##; s#^[a-zA-Z+]+://##; s#^[^@/]+@##; s#^[^/:]+[:/]##; s#/[^/]*$##')
+   ```
+
+   This handles the `https://`, `ssh://` and `git@host:owner/repo` forms. Check the result before
+   using it: if `$FORK_OWNER` is empty or still contains `/`, `:` or `@`, the URL was not in a
+   form this understands — stop and report it rather than building a malformed `--head`.
+
+   Show `$FORK_OWNER` to the user and confirm it is the fork the pull request should come from.
+
+7. **Publish the branch** with `git push -u origin "$BRANCH"`. Do this every time, not only when
+   the branch lacks an upstream — a branch that already tracks `origin` can still hold local
    commits that have not been pushed, and those would be missing from the pull request.
 
    The push must succeed before continuing. If it fails, stop and report the error; do not open a
    pull request against a branch whose commits are not on the fork.
 
-7. **Open the PR** against upstream, adding `--draft` if that is what the user chose.
-
-   Derive the head explicitly rather than letting `gh` infer it — a checkout commonly has several
-   remotes, including other people's forks, and an inferred head can point at the wrong one:
-
-   ```bash
-   FORK_OWNER=$(git remote get-url origin \
-     | sed -E 's#(git@github\.com:|https://github\.com/)([^/]+)/.*#\2#')
-   BRANCH=$(git branch --show-current)
-   ```
-
-   Show `$FORK_OWNER` to the user and confirm it is the fork they want the PR to come from before
-   continuing; `origin` is not guaranteed to be their fork. Then:
+8. **Open the PR** against upstream, adding `--draft` if that is what the user chose:
 
    ```bash
    gh pr create --repo Mudlet/Mudlet --base development \
@@ -107,7 +116,7 @@ publishes the current branch to their fork if needed, then opens a PR against up
    A draft can be marked ready later with `gh pr ready <number>`, so choosing draft is the
    reversible option.
 
-8. **Report the result** — the PR URL on success, the error output on failure.
+9. **Report the result** — the PR URL on success, the error output on failure.
 
 ## Notes
 
