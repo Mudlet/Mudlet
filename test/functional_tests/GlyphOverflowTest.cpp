@@ -97,6 +97,9 @@ private slots:
     void initTestCase()
     {
         initializeQRCResources();
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the fonts whose metrics this measures are not available");
+#else
         // src/main.cpp extracts the bundled fonts into the config directory and
         // FontManager picks them up from there, but QTEST_MAIN never runs
         // main(), so on a machine that has not run Mudlet before there is
@@ -110,6 +113,7 @@ private slots:
         for (const QString& family : kTestFamilies) {
             QVERIFY2(QFontDatabase::families().contains(family), qPrintable(qsl("'%1' is missing from the font database after registering the bundled files").arg(family)));
         }
+#endif
     }
 
     void init()
