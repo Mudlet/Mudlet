@@ -171,6 +171,7 @@ private slots:
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
     void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_toggleEnableOSC8Hyperlinks(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
     void slot_deleteMap();

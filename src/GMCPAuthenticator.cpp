@@ -24,6 +24,7 @@
 #include "CredentialManager.h"
 #include "OAuthClientFlow.h"
 #include "SecureStringUtils.h"
+#include "UntrustedText.h"
 #include "ctelnet.h"
 #include "mudlet.h"
 #include <QAccessible>
@@ -468,14 +469,14 @@ void GMCPAuthenticator::offerOrOpenSignInUrl(const QUrl& url, const QString& pro
     }
 
     //: %1 is the sign-in web address the user should open in their browser to sign in.
-    mpHost->postMessage(tr("[ INFO ]  - To sign in, open this link in your browser: %1").arg(url.toString()));
+    mpHost->postMessage(tr("[ INFO ]  - To sign in, open this link in your browser: %1").arg(UntrustedText::forTarget(url.toString())));
 }
 
 bool GMCPAuthenticator::openSignInUrl(const QUrl& url, const QString& provider)
 {
     if (!QDesktopServices::openUrl(url)) {
         //: %1 is the sign-in web address the user should open manually in their browser.
-        mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(url.toString()));
+        mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(UntrustedText::forTarget(url.toString())));
         return false;
     }
     announceBrowserHandoff(provider);

@@ -99,6 +99,7 @@ set(mudlet_SRCS
     KeyUnit.cpp
     LabelInteractionHandler.cpp
     LuaInterface.cpp
+    LuaLiteral.cpp
     main.cpp
     mapInfoContributorManager.cpp
     MiddleMousePanHandler.cpp
@@ -212,6 +213,7 @@ set(mudlet_SRCS
     TTrigger.cpp
     TUiTour.cpp
     TVar.cpp
+    UntrustedText.cpp
     VarUnit.cpp
     WideComboBox.cpp
     XMLexport.cpp
@@ -328,6 +330,7 @@ set(mudlet_HDRS
     KeyUnit.h
     LabelInteractionHandler.h
     LuaInterface.h
+    LuaLiteral.h
     mapInfoContributorManager.h
     MiddleMousePanHandler.h
     MMCP.h
@@ -446,6 +449,7 @@ set(mudlet_HDRS
     TTrigger.h
     TUiTour.h
     TVar.h
+    UntrustedText.h
     utils.h
     VarUnit.h
     widechar_width.h
