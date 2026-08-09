@@ -46,7 +46,8 @@ QString convertToIPv4(QHostAddress addr)
 }
 
 MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
-: mpHost(pHost)
+: QObject(pServer)
+, mpHost(pHost)
 , mpMMCPServer(pServer)
 , mTcpSocket(this)
 , mLastColorBold(false)
@@ -83,6 +84,20 @@ void MMCPClient::tryConnect(const QString& host, quint16 port)
 void MMCPClient::disconnect()
 {
     mTcpSocket.disconnectFromHost();
+}
+
+
+/**
+ * Drop the connection without any of the signalling a normal disconnect does.
+ * For profile teardown, where the Host this client reports to is about to go
+ * away: everything the slots would touch is either dying or already gone.
+ */
+void MMCPClient::abortConnection()
+{
+    mPendingTimer.stop();
+    blockSignals(true);
+    mTcpSocket.blockSignals(true);
+    mTcpSocket.abort();
 }
 
 

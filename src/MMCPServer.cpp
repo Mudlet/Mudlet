@@ -42,6 +42,39 @@ MMCPServer::MMCPServer(Host* pHost)
 }
 
 /**
+ * Last line of defence: this runs from the Host's ~QObject, by which point the
+ * Host's own members are gone, so nothing here may touch mpHost. Silence the
+ * peers before ~QObject deletes them, so no socket event can reach a slot that
+ * would dereference the dead Host. Covers the paths that never reach
+ * Host::closeChildren(), which is where peers normally go.
+ */
+MMCPServer::~MMCPServer()
+{
+    for (auto* pClient : findChildren<MMCPClient*>(Qt::FindDirectChildrenOnly)) {
+        pClient->abortConnection();
+    }
+}
+
+/**
+ * Stop listening and drop every peer. For profile close, while the Host is
+ * still whole - not the same as stopServer(), which only stops answering new
+ * calls and deliberately leaves existing peers connected.
+ */
+void MMCPServer::disconnectAll()
+{
+    close();
+
+    // Not mPeersList: a client only lands there once it has handshaken, so
+    // the children are the ones still connecting or pending too.
+    for (auto* pClient : findChildren<MMCPClient*>(Qt::FindDirectChildrenOnly)) {
+        pClient->abortConnection();
+        pClient->deleteLater();
+    }
+
+    mPeersList.clear();
+}
+
+/**
  * Handle an incoming connection, create an MMCPClient and set its state
  * to ConnectingIn
  */
@@ -886,6 +919,11 @@ QPair<bool, QString> MMCPServer::disconnect(const QVariant& target)
 
 quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
 {
+    // Ids are positions in this list, so a QPointer left null by a client that
+    // was deleted without going through slot_clientDisconnected() would push
+    // every id after it up by one
+    mPeersList.removeAll(QPointer<MMCPClient>());
+
     if (!mPeersList.contains(pClient)) {
         mPeersList.append(pClient);
     }
@@ -909,6 +947,8 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
     // A client that never completed a handshake was never added to the list,
     // so its going away is not a peer list change
     const bool wasAPeer = mPeersList.removeOne(pClient);
+
+    mPeersList.removeAll(QPointer<MMCPClient>());
 
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {

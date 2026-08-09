@@ -58,6 +58,7 @@ public:
     bool isPending() { return mState == Pending; }
 
     void disconnect();
+    void abortConnection();
 
     void snoop();
 

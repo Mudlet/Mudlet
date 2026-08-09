@@ -534,6 +534,15 @@ void Host::closeChildren()
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     mTelnet.terminateConnection();
 
+    if (mMMCPServer) {
+        // The peers have to go while the Host is still whole, as their slots
+        // report through it. The server itself is left alone: it dies with the
+        // Host through the QObject parent chain, whereas deleting it here would
+        // let a Lua handler further down this function lazily make another one
+        // on a profile that is on its way out.
+        mMMCPServer->disconnectAll();
+    }
+
     stopAllTriggers();
 
     if (mpEditorDialog) {
