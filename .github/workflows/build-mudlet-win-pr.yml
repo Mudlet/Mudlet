@@ -132,8 +132,7 @@ jobs:
     - name: (Windows) Run QTest
       shell: msys2 {0}
       run: |
-        # Not via cygpath: it does not treat ';' as a list separator, so it rewrites only the
-        # leading entry (the per-user rock tree) into a POSIX path native Windows Lua cannot open.
+        # Not via cygpath: it does not split on ';', so only the first entry gets POSIX-ified.
         LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
         LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
@@ -159,8 +158,7 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
-        # Not via cygpath: it does not treat ';' as a list separator, so it rewrites only the
-        # leading entry (the per-user rock tree) into a POSIX path native Windows Lua cannot open.
+        # Not via cygpath: it does not split on ';', so only the first entry gets POSIX-ified.
         LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
         LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
