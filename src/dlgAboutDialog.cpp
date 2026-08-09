@@ -690,7 +690,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 // There is a %1 placeholder that contains: "Name of Development Group, Name of Institution"
 #if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
     QString NCSA_Open_Source_Body(
-            qsl("<h4>The University of Illinois/NCSA Open Source License</h4"
+            qsl("<h4>The University of Illinois/NCSA Open Source License</h4>"
                            "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
                            "of this software and associated documentation files (the \"Software\"), to deal "
                            "with the Software without restriction, including without limitation the rights to "
