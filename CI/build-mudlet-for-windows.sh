@@ -112,8 +112,6 @@ mkdir -p "build-${MSYSTEM}"
 cd "${GITHUB_WORKSPACE}"/build-"${MSYSTEM}" || exit 1
 
 #### Lua environment setup ####
-# The build runs generate-translation-stats.lua, which needs its rocks on the path.
-# Not via cygpath: it does not split on ';', so only the first entry gets POSIX-ified.
 LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
 export LUA_PATH
 LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
