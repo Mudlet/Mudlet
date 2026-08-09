@@ -112,10 +112,9 @@ mkdir -p "build-${MSYSTEM}"
 cd "${GITHUB_WORKSPACE}"/build-"${MSYSTEM}" || exit 1
 
 #### Lua environment setup ####
-# Set up Lua 5.1 paths for translation processing and runtime.
-# Keep luarocks' output as-is: Lua here is a native Windows binary and wants
-# Windows-form, ';'-separated paths. cygpath converts only the first entry of
-# such a list, leaving the per-user rock tree unreachable.
+# Set up Lua 5.1 paths so the build's translation-stats script finds its rocks.
+# Not via cygpath: it does not treat ';' as a list separator, so it rewrites only the
+# leading entry (the per-user rock tree) into a POSIX path native Windows Lua cannot open.
 LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
 export LUA_PATH
 LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
