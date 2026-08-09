@@ -884,16 +884,24 @@ describe("MMCP effects against a scripted chat peer", function()
     return predicate()
   end
 
+  -- The peer renames capture.json into place rather than writing over it, so a
+  -- reader gets the whole of one version or the whole of another - except on
+  -- Windows, where the destination briefly cannot be opened at all while the
+  -- rename is in flight. One unreadable attempt is therefore not yet an answer.
   local function capture()
-    local raw = readFile(mmcpDir .. "/capture.json")
-    if not raw or raw == "" then
-      return nil
+    for attempt = 1, 5 do
+      local raw = readFile(mmcpDir .. "/capture.json")
+      if raw and raw ~= "" then
+        local ok, decoded = pcall(yajl.to_value, raw)
+        if ok then
+          return decoded
+        end
+      end
+      if attempt < 5 then
+        pump(20)
+      end
     end
-    local ok, decoded = pcall(yajl.to_value, raw)
-    if not ok then
-      return nil
-    end
-    return decoded
+    return nil
   end
 
   -- How far the peer's history has got, so a spec can disregard what earlier
