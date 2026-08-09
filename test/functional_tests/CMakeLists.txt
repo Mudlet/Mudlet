@@ -2,9 +2,7 @@ if(NOT WIN32)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 
-# Keeps QTest's output readable under ctest on Windows, see the definition in the
-# parent test/CMakeLists.txt (#9747). Called again here because the TESTS
-# directory property it reads does not descend into subdirectories.
+# Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES

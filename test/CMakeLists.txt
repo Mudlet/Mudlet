@@ -9,17 +9,11 @@ endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Widgets)
 
-# QTest writes its assertions and totals to stdout, but on Windows it diverts them
-# to OutputDebugString unless Qt believes stderr has a console attached, and an
-# MSYS2 shell or a CI runner gives it none, so a failing test there reports an
-# exit code and nothing else (#9747). The CI workflows export
-# QT_FORCE_STDERR_LOGGING on their own ctest steps for this; a test property
-# covers every other way the suite gets run. On the other platforms the variable
-# only ever keeps Qt's logging on stderr, which is where ctest wants it anyway.
-# Deferred to the end of the directory so that a test registered further down the
-# file still gets it, and APPENDed so the per-test environments survive. TESTS
-# covers only the directory it is read in, hence the second call in
-# functional_tests.
+# On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
+# stderr has a console attached, which an MSYS2 shell or a CI runner does not give
+# it, so a failing test reports an exit code and nothing else (#9747). Deferred so
+# that tests registered further down the file are covered too; TESTS does not
+# descend into subdirectories, hence the second call in functional_tests.
 function(restore_windows_test_output)
     get_property(registeredTests DIRECTORY PROPERTY TESTS)
     foreach(testName ${registeredTests})
