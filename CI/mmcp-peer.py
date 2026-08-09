@@ -40,6 +40,7 @@ import os
 import selectors
 import socket
 import sys
+import time
 
 # Command bytes, from the MMCPChatCommand enum in src/MMCP.h. Commands not
 # listed here are still recorded, by their numeric code.
@@ -77,6 +78,26 @@ PEER_NAME = "BustedPeer"
 # file growing without bound over a whole suite run.
 MAX_EVENTS = 200
 POLL_SECONDS = 0.01
+
+
+def replace(source, destination):
+    """os.replace, but tolerating a reader that has the destination open.
+
+    POSIX rename swaps the name whatever is holding the old file, which is what
+    makes the write-then-rename above atomic for a reader. Windows only gets
+    there if the destination can be deleted, and a reader that opened it without
+    delete-sharing - Lua's io.open, in the specs - denies that for as long as it
+    has the file. That is a moment, so wait it out rather than dying and taking
+    every later spec with us.
+    """
+    for attempt in range(20):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(POLL_SECONDS)
 
 
 class MMCPPeer:
@@ -147,7 +168,7 @@ class MMCPPeer:
         tmp_path = self.capture_path + ".tmp"
         with open(tmp_path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle)
-        os.replace(tmp_path, self.capture_path)
+        replace(tmp_path, self.capture_path)
 
     # -- connection ---------------------------------------------------------
 
@@ -371,7 +392,7 @@ class MMCPPeer:
         tmp_path = self.port_path + ".tmp"
         with open(tmp_path, "w", encoding="utf-8") as handle:
             handle.write(str(self.port))
-        os.replace(tmp_path, self.port_path)
+        replace(tmp_path, self.port_path)
 
     def forget_port(self):
         # The specs read the port file to decide whether there is a peer worth
