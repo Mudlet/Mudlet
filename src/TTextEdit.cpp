@@ -2251,7 +2251,9 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     auto widthpx = std::min(65500, largestLine);
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
-    auto pixmap = QPixmap(widthpx, heightpx);
+    // The bottom line's ink can reach past its cell, so paint into a spare row
+    // and keep only as much of it as the glyphs actually used.
+    auto pixmap = QPixmap(widthpx, std::min(65500, heightpx + mFontHeight));
     auto solidColor = QColor(mBgColor);
     solidColor.setAlpha(255);
     pixmap.fill(solidColor);
@@ -2266,17 +2268,33 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     mSelectedRegion = QRegion(0, 0, 0, 0);
 
     auto result = drawTextForClipboard(painter, rect, lineOffset);
+    painter.end();
 
     highlightSelection();
 
-    // if we cut didn't finish painting the complete picture, trim the bottom of the image
+    const QImage image = pixmap.toImage();
+    int keepHeight = heightpx + overflowRowsUsed(image, heightpx, solidColor);
     if (!result.first) {
-        const auto& smallerPixmap = pixmap.scaled(QSize(widthpx, result.second * mFontHeight), Qt::KeepAspectRatio);
-        QApplication::clipboard()->setImage(smallerPixmap.toImage());
-        return;
+        // ran out of time, so cut back to the lines that did get painted
+        keepHeight = std::max(1, result.second * mFontHeight);
     }
+    QApplication::clipboard()->setImage(image.copy(0, 0, widthpx, std::min(image.height(), keepHeight)));
+}
 
-    QApplication::clipboard()->setImage(pixmap.toImage());
+// How many rows below fromRow the glyph ink actually reached into.
+int TTextEdit::overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background)
+{
+    const QRgb backgroundPixel = background.rgb();
+    int used = 0;
+    for (int y = std::max(0, fromRow); y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if ((image.pixel(x, y) | 0xff000000) != backgroundPixel) {
+                used = y - fromRow + 1;
+                break;
+            }
+        }
+    }
+    return used;
 }
 
 // a stateless version of drawForeground that doesn't do any caching
@@ -2292,7 +2310,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
     const TChar timeStampStyle = timeStampCharStyle();
     LineLayout previousLine;
     LineLayout currentLine;
-    for (int i = 0; i <= lineCount; i++, linesDrawn++) {
+    for (int i = 0; i < lineCount; i++, linesDrawn++) {
         if (!hasBufferLine(i + lineOffset)) {
             break;
         }

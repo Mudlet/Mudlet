@@ -32,6 +32,7 @@
 #include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
+#include <QImage>
 #include <QRect>
 #include <QTimer>
 #include <QWidget>
@@ -194,6 +195,7 @@ private:
     inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QString&, int&) const;
     int offsetForPosition(int line, int column) const;
     bool hasBufferLine(int lineNumber) const;
+    static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;
 
     // One grapheme's painted cell (or cells, for a wide glyph): where it goes,

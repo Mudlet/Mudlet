@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QClipboard>
 #include <QFontDatabase>
 #include <QPainter>
 #include <QtTest/QtTest>
@@ -387,6 +388,53 @@ private slots:
         }
     }
 
+    // Copy-as-image sizes its pixmap at exactly one cell per selected line, so
+    // the bottom line's overflow has nowhere to go unless the paint leaves room
+    // for it and the image is trimmed back afterwards.
+    void test_copyAsImageKeepsTheBottomLineOverflow()
+    {
+        Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(pane, "No upper pane available");
+
+        int checkedSizes = 0;
+        for (int size = kFirstSize; size <= kLastSize; ++size) {
+            applyFont(host, kTestFamilies.first(), size);
+            const int cellHeight = cellHeightOf(pane);
+            const int cellWidth = cellWidthOf(pane);
+            const QPair<int, int> expected = referenceInkExtent(pane->font(), qsl("_"), cellWidth, cellHeight);
+            if (expected.second < cellHeight) {
+                continue;
+            }
+            ++checkedSizes;
+
+            const int selectedLines = 5;
+            runLua(host, qsl("clearWindow()"));
+            runLua(host, qsl("cecho('<white>' .. string.rep('%1\\n', %2))").arg(QString(kUnderscoreCount, QLatin1Char('_'))).arg(selectedLines));
+            pane->forceUpdate();
+            QApplication::processEvents();
+
+            selectRows(pane, 0, selectedLines - 1, cellHeight, cellWidth);
+            QMetaObject::invokeMethod(pane, "slot_copySelectionToClipboardImage", Qt::DirectConnection);
+            QApplication::processEvents();
+
+            const QImage copied = QApplication::clipboard()->image();
+            QVERIFY2(!copied.isNull(), qPrintable(qsl("%1pt: copy as image produced nothing").arg(size)));
+            const QPair<int, int> actual = inkExtentOnFlat(copied, (selectedLines - 1) * cellHeight, cellHeight, consoleBackground(host));
+            QVERIFY2(actual.second == expected.second,
+                     qPrintable(qsl("%1pt: the copied image's bottom line ends at row %2 of its cell, expected %3").arg(size).arg(actual.second).arg(expected.second)));
+            // the spare row must not survive as blank padding, nor bring an
+            // extra line of text with it
+            QVERIFY2(copied.height() <= selectedLines * cellHeight + kOverflowScanRows,
+                     qPrintable(qsl("%1pt: the copied image is %2px tall for %3 lines of %4px").arg(size).arg(copied.height()).arg(selectedLines).arg(cellHeight)));
+        }
+
+        if (checkedSizes == 0) {
+            QSKIP("No font size produced an overflowing line on this platform, so nothing here is being proved");
+        }
+    }
+
     void cleanup()
     {
         const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
@@ -407,6 +455,26 @@ private:
         image.fill(host->mpConsole->getConsoleBgColor());
         pane->render(&image, QPoint(), QRegion(), QWidget::DrawChildren);
         return image;
+    }
+
+    // For images too narrow to carry a background sample column, such as the
+    // copy-as-image output, which is only as wide as the selected text.
+    static QPair<int, int> inkExtentOnFlat(const QImage& image, int cellTop, int cellHeight, QRgb background)
+    {
+        int top = -1;
+        int bottom = -1;
+        for (int y = qMax(0, cellTop); y < qMin(image.height(), cellTop + cellHeight + kOverflowScanRows); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (pixelIsInk(image.pixel(x, y), background)) {
+                    if (top < 0) {
+                        top = y;
+                    }
+                    bottom = y;
+                    break;
+                }
+            }
+        }
+        return {top - cellTop, bottom - cellTop};
     }
 
     static QRgb consoleBackground(Host* host) { return host->mpConsole->getConsoleBgColor().rgb(); }
@@ -602,6 +670,21 @@ private:
         if (!spy2.wait(2000)) {
             QFAIL("Could not connect with the host.");
         }
+    }
+
+    // Drag-selects whole rows, which is the only way in from outside the class.
+    static void selectRows(TTextEdit* pane, int firstRow, int lastRow, int cellHeight, int cellWidth)
+    {
+        auto send = [pane](QEvent::Type type, Qt::MouseButton button, Qt::MouseButtons buttons, const QPointF& pos) {
+            QMouseEvent event(type, pos, pane->mapToGlobal(pos.toPoint()), button, buttons, Qt::NoModifier);
+            QApplication::sendEvent(pane, &event);
+        };
+        const QPointF start(2, firstRow * cellHeight + 2);
+        const QPointF end(kUnderscoreCount * cellWidth - 2, lastRow * cellHeight + cellHeight / 2);
+        send(QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, start);
+        send(QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, end);
+        send(QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, end);
+        QApplication::processEvents();
     }
 
     void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
