@@ -36,9 +36,9 @@ set(FUNCTIONAL_TEST_SOURCES
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
-    PackageSelfUninstallTest.cpp
+    PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
-    PackageUninstallSaveTeardownTest.cpp
+    PackageRemovalSaveTeardownTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
@@ -47,7 +47,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UndoServerWrapTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
-    ActionSelfUninstallTest.cpp
+    ActionSelfRemovalTest.cpp
     ProfileFolderNameTest.cpp
     ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
@@ -65,7 +65,7 @@ set(FUNCTIONAL_TEST_SOURCES
 # The updater sources are only built with USE_UPDATER, and on macOS the
 # Updater wraps Sparkle instead of creating an UpdateDialog
 if(USE_UPDATER AND NOT APPLE)
-    list(APPEND FUNCTIONAL_TEST_SOURCES UpdaterTeardownTest.cpp)
+    list(APPEND FUNCTIONAL_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
 endif()
 
 set(FUNCTIONAL_TEST_UTILS
@@ -103,11 +103,11 @@ endif()
 # These still leak and stay unchecked until their defects are fixed:
 # - dlgTriggerEditorUndoRedoTest: never destroys its dlgTriggerEditor, leaving
 #   ~3.4MB of tree-item QIcon/QPixmap behind
-# - UpdaterTeardownTest: Qt's one-time system CA-certificate store load on
-#   first TLS use, cached for the process lifetime
+# - NewReleaseDialogTeardownTest: Qt's one-time system CA-certificate store load
+#   on first TLS use, cached for the process lifetime
 set(leakCheckExcludedTests
     dlgTriggerEditorUndoRedoTest
-    UpdaterTeardownTest
+    NewReleaseDialogTeardownTest
 )
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
