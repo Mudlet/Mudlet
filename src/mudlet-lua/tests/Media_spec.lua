@@ -171,6 +171,124 @@ describe("Media playback functions validate their parameters", function()
   end)
 end)
 
+describe("Media load functions validate their parameters", function()
+  -- loadMusicFile/loadSoundFile/loadVideoFile are the same preload request with
+  -- three different media types, and they share one pair of parsers with the
+  -- play family. Nothing here names a file that exists, so no preload gets as
+  -- far as the media engine.
+  it("each raises a Lua error when called with no arguments", function()
+    assertArgError(function() loadMusicFile() end, "loadMusicFile: need at least one argument")
+    assertArgError(function() loadSoundFile() end, "loadSoundFile: need at least one argument")
+    assertArgError(function() loadVideoFile() end, "loadVideoFile: need at least one argument")
+  end)
+
+  it("loadVideoFile raises a Lua error when its argument is not a table", function()
+    -- the video calls take the table form only
+    assertArgError(function() loadVideoFile("busted-media-absent.mkv") end, "loadVideoFile: needs to be a table")
+  end)
+
+  it("the ordered form returns nil when it is given no file name", function()
+    local ok, err = loadSoundFile(nil)
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "missing argument 1"), tostring(err))
+
+    ok, err = loadMusicFile("")
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "missing argument 1"), tostring(err))
+  end)
+
+  it("the table form raises a Lua error when it is given no name", function()
+    -- Only the tail of the message: all three loads report this one as
+    -- loadMusicFile, whichever was called, and pinning that here would hold
+    -- that in place.
+    assertArgError(function() loadSoundFile({}) end, "missing name")
+  end)
+
+  it("the ordered form raises a Lua error when the url is not a string", function()
+    assertArgError(function() loadSoundFile("busted-media-absent.wav", {}) end, "url as string expected, got table!")
+  end)
+
+  it("the table form raises a Lua error for a wrongly typed name or url", function()
+    assertArgError(function() loadMusicFile({name = {}}) end, "value for name as string expected, got table!")
+    assertArgError(function() loadMusicFile({name = "busted-media-absent.mp3", url = {}}) end, "value for url as string expected, got table!")
+  end)
+end)
+
+describe("Media query and stop functions validate their parameters", function()
+  -- The video calls, the pause calls and the paused-media queries take a table
+  -- and nothing else; the sound and music queries and stops take either form.
+  -- pauseSounds and pauseMusic have this same refusal checked above
+  local tableOnly = {
+    "getPlayingVideos", "getPausedSounds", "getPausedMusic", "getPausedVideos",
+    "pauseVideos", "stopVideos",
+  }
+
+  for _, fnName in ipairs(tableOnly) do
+    it(fnName .. " raises a Lua error when its argument is not a table", function()
+      assertArgError(function() _G[fnName](5) end, fnName .. ": needs to be a table")
+    end)
+  end
+
+  it("the ordered query forms raise a Lua error for a wrongly typed filter", function()
+    assertArgError(function() getPlayingSounds("busted-media-absent.wav", {}) end, "key as string expected, got table!")
+    assertArgError(function() getPlayingSounds("busted-media-absent.wav", "k", {}) end, "tag as string expected, got table!")
+    assertArgError(function() getPlayingSounds("busted-media-absent.wav", "k", "t", "loud") end, "priority as number expected, got string!")
+    assertArgError(function() getPlayingMusic("busted-media-absent.mp3", {}) end, "key as string expected, got table!")
+  end)
+
+  it("the table query forms raise a Lua error for a wrongly typed filter", function()
+    assertArgError(function() getPlayingMusic({name = {}}) end, "value for name as string expected, got table!")
+    assertArgError(function() getPausedSounds({key = {}}) end, "value for key as string expected, got table!")
+    assertArgError(function() getPausedMusic({tag = {}}) end, "value for tag as string expected, got table!")
+    assertArgError(function() getPausedVideos({name = {}}) end, "value for name as string expected, got table!")
+    assertArgError(function() getPlayingVideos({key = {}}) end, "value for key as string expected, got table!")
+  end)
+
+  it("the ordered stop forms raise a Lua error for a wrongly typed argument", function()
+    assertArgError(function() stopSounds("busted-media-absent.wav", "k", "t", "loud") end, "priority as number expected, got string!")
+    assertArgError(function() stopSounds("busted-media-absent.wav", "k", "t", 10, "yes") end, "fadeaway as boolean expected, got string!")
+    assertArgError(function() stopMusic("busted-media-absent.mp3", "k", "t", "yes") end, "fadeaway as boolean expected, got string!")
+    assertArgError(function() stopMusic("busted-media-absent.mp3", "k", "t", true, -1) end, "bad argument range for fadeout")
+  end)
+
+  it("the table pause and stop forms raise a Lua error for a wrongly typed filter", function()
+    assertArgError(function() pauseSounds({name = {}}) end, "value for name as string expected, got table!")
+    assertArgError(function() pauseMusic({key = {}}) end, "value for key as string expected, got table!")
+    assertArgError(function() pauseVideos({tag = {}}) end, "value for tag as string expected, got table!")
+    assertArgError(function() stopVideos({name = {}}) end, "value for name as string expected, got table!")
+  end)
+
+  it("the ordered play forms raise a Lua error for a wrongly typed argument", function()
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", {}) end, "volume as number expected, got table!")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, {}) end, "key as string expected, got table!")
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, 0, 0, 1, "k", {}) end, "tag as string expected, got table!")
+  end)
+
+  it("the ordered play forms refuse a negative fade", function()
+    -- Only the range refusal, not the whole message: the music parser's fade
+    -- messages name playSoundFile, and pinning that here would hold it in
+    -- place.
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "bad argument range for fadein")
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "bad argument range for fadeout")
+  end)
+
+  it("every query returns an empty table while nothing is playing", function()
+    -- with everything stopped, each of the six queries answers with a table
+    -- rather than with nil or a false-plus-message pair
+    assert.is_true(stopSounds())
+    assert.is_true(stopMusic())
+    assert.is_true(stopVideos())
+
+    for _, query in ipairs({getPlayingSounds, getPlayingMusic, getPlayingVideos, getPausedSounds, getPausedMusic, getPausedVideos}) do
+      local result = query()
+      assert.is_table(result)
+      assert.equals(0, #result)
+      -- and the same with a filter that matches nothing
+      assert.same({}, query({key = "busted-media-no-such-key"}))
+    end
+  end)
+end)
+
 describe("Media playback effects with a generated sound file", function()
   -- The API media functions play files out of the profile's own media
   -- directory, so instead of shipping a binary fixture these specs write a
@@ -317,9 +435,63 @@ describe("Media playback effects with a generated sound file", function()
     return true
   end
 
+  -- The fixture server of CI/http-fixture-server.py, when the harness started
+  -- one and handed its ephemeral port over. A preload's only observable effect
+  -- is the fetch it starts for a file the profile does not have, so the two
+  -- load specs below are the media ones that need a server to talk to.
+  local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
+  local requireFixture = os.getenv("MUDLET_TEST_REQUIRE_HTTP_FIXTURE")
+  -- the file CI/http-fixtures/ serves, and its contents
+  local fixtureFile = "fixture.txt"
+  local fixtureBody = "Mudlet self-test HTTP fixture.\n"
+
+  local function noFixtureServer()
+    if httpPort then
+      return false
+    end
+    if requireFixture then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_HTTP_FIXTURE is set but MUDLET_TEST_HTTP_PORT is not - the fixture server was not started")
+    end
+    pending("no local HTTP fixture server (set MUDLET_TEST_HTTP_PORT)")
+    return true
+  end
+
+  -- The url a media request is given is a directory: TMedia appends the file
+  -- name to it.
+  local function fixtureUrl()
+    return "http://127.0.0.1:" .. httpPort
+  end
+
+  local function readFile(path)
+    local handle = io.open(path, "rb")
+    if not handle then
+      return nil
+    end
+    local contents = handle:read("*a")
+    handle:close()
+    return contents
+  end
+
+  -- Video playback draws into a widget the request names with its key:
+  -- TMainConsole::setupVideoOutput() looks that key up among the profile's
+  -- labels and user windows, and refuses the request when it finds neither. The
+  -- label is left in place afterwards rather than deleted, because the player
+  -- that was handed its video widget outlives the spec.
+  local videoLabel = "busted-media-video-label"
+  local videoLabelReady
+
+  local function withVideoLabel()
+    if not videoLabelReady then
+      createLabel(videoLabel, 0, 0, 40, 40, 1)
+      assert.equals("label", windowType(videoLabel))
+      videoLabelReady = true
+    end
+  end
+
   after_each(function()
     stopSounds()
     stopMusic()
+    stopVideos()
   end)
 
   it("playSoundFile plays the file and reports it from start to finish", function()
@@ -713,6 +885,232 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #errors)
     assert.is_true(contains(errors[1].message, "http"), tostring(errors[1].message))
     assert.is_true(contains(errors[1].path, "busted-media-absent-scheme.wav"), tostring(errors[1].path))
+  end)
+
+  it("loadSoundFile fetches a file the media directory does not have and keeps it", function()
+    if noFixtureServer() then
+      return
+    end
+    local downloaded = mediaDirectory .. "/" .. fixtureFile
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    finally(function() os.remove(downloaded) end)
+
+    local done = {}
+    collect("sysDownloadDone", done)
+    assert.is_true(loadSoundFile({name = fixtureFile, url = fixtureUrl()}))
+    waitForCount("sysDownloadDone", done, 1)
+
+    assert.equals(1, #done)
+    assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("loadMusicFile fetches from the url given in the ordered argument form", function()
+    if noFixtureServer() then
+      return
+    end
+    -- name[,url]: the ordered form has a parser of its own
+    local downloaded = mediaDirectory .. "/" .. fixtureFile
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    finally(function() os.remove(downloaded) end)
+
+    local done = {}
+    collect("sysDownloadDone", done)
+    assert.is_true(loadMusicFile(fixtureFile, fixtureUrl()))
+    waitForCount("sysDownloadDone", done, 1)
+
+    assert.equals(1, #done)
+    assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("loadVideoFile reports a download error for a url it cannot fetch from", function()
+    -- The preload reaches the same fetch as a play would, so the refusal of a
+    -- url that is not http(s) is where a spec can see a load act on its url
+    -- without a server to answer it.
+    local errors = {}
+    collect("sysDownloadError", errors)
+
+    assert.is_true(loadVideoFile({name = "busted-media-absent-load.mkv", url = "ftp://example.invalid/videos"}))
+    waitForCount("sysDownloadError", errors, 1)
+    assert.equals(1, #errors)
+    assert.is_true(contains(errors[1].path, "busted-media-absent-load.mkv"), tostring(errors[1].path))
+  end)
+
+  it("playMusicFile starts a track given in the ordered argument form", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag]
+    assert.is_true(playMusicFile(longSoundFile, 70, 0, 0, 0, 1, "busted-music-ordered", "busted-music-ordered-tag"))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    local music = getPlayingMusic()
+    assert.equals(1, #music)
+    assert.equals(longSoundFile, music[1].name)
+    assert.equals(70, music[1].volume)
+    assert.equals("busted-music-ordered", music[1].key)
+    assert.equals("busted-music-ordered-tag", music[1].tag)
+  end)
+
+  it("getPlayingMusic filters by name in both argument forms", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-filter"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    -- name[,key][,tag] as ordered arguments
+    assert.equals(1, #getPlayingMusic(longSoundFile))
+    assert.equals(1, #getPlayingMusic(longSoundFile, "busted-music-filter"))
+    assert.equals(0, #getPlayingMusic(otherLongSoundFile))
+    -- and the same filters as a table
+    assert.equals(1, #getPlayingMusic({name = longSoundFile}))
+    assert.equals(0, #getPlayingMusic({key = "busted-music-elsewhere"}))
+  end)
+
+  it("getPlayingSounds filters by name, key and tag in the ordered argument form", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-ordered-key", tag = "busted-ordered-tag"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    -- name[,key][,tag][,priority]
+    assert.equals(1, #getPlayingSounds(longSoundFile))
+    assert.equals(1, #getPlayingSounds(longSoundFile, "busted-ordered-key", "busted-ordered-tag"))
+    assert.equals(0, #getPlayingSounds(longSoundFile, "busted-ordered-key", "busted-other-tag"))
+    assert.equals(0, #getPlayingSounds(otherLongSoundFile))
+  end)
+
+  it("stopSounds stops only the sound named in the ordered argument form", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-stop-named"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-stop-spared"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #getPlayingSounds())
+
+    -- name[,key][,tag][,priority][,fadeaway][,fadeout]
+    assert.is_true(stopSounds(longSoundFile))
+    local playing = getPlayingSounds()
+    assert.equals(1, #playing)
+    assert.equals(otherLongSoundFile, playing[1].name)
+  end)
+
+  it("stopMusic stops only the track named in the ordered argument form", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-stop-named"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-stop-spared"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #getPlayingMusic())
+
+    -- name[,key][,tag][,fadeaway][,fadeout]
+    assert.is_true(stopMusic(longSoundFile))
+    local music = getPlayingMusic()
+    assert.equals(1, #music)
+    assert.equals(otherLongSoundFile, music[1].name)
+  end)
+
+  it("pauseMusic and getPausedMusic take the same key filter", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-parked-key"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-playing-key"}))
+    waitForCount("sysMediaStarted", started, 2)
+
+    assert.is_true(pauseMusic({key = "busted-music-parked-key"}))
+    assert.equals(1, #getPlayingMusic())
+    local paused = getPausedMusic()
+    assert.equals(1, #paused)
+    assert.equals(longSoundFile, paused[1].name)
+    assert.equals(1, #getPausedMusic({key = "busted-music-parked-key"}))
+    assert.equals(0, #getPausedMusic({key = "busted-music-playing-key"}))
+  end)
+
+  it("getPausedSounds takes the same key filter as the sound that was paused", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-sound-parked-key"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(pauseSounds({key = "busted-sound-parked-key"}))
+
+    assert.equals(1, #getPausedSounds({key = "busted-sound-parked-key"}))
+    assert.equals(0, #getPausedSounds({key = "busted-sound-never-played"}))
+    assert.equals(0, #getPausedSounds({name = otherLongSoundFile}))
+  end)
+
+  it("playVideoFile plays into the label its key names and the video family reports it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- The file is the same silent WAV the sound specs use: what makes this a
+    -- video request is the type it is made as, which is what decides the widget
+    -- setup, the list it is tracked in and the media type its events carry. A
+    -- decodable picture would only change what the video widget draws.
+    withVideoLabel()
+    writeSoundFiles()
+    assert.equals(0, #getPlayingVideos())
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel, tag = "busted-video-tag"}))
+    local event, file, _, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event)
+    assert.equals(longSoundFile, file)
+    assert.equals("video", mediaType)
+    assert.equals(videoLabel, key)
+    assert.equals("busted-video-tag", tag)
+
+    local playing = getPlayingVideos()
+    assert.equals(1, #playing)
+    assert.equals(longSoundFile, playing[1].name)
+    assert.equals(videoLabel, playing[1].key)
+    -- videos are tracked apart from sounds and music
+    assert.equals(0, #getPlayingSounds())
+    assert.equals(0, #getPlayingMusic())
+    assert.equals(1, #getPlayingVideos({key = videoLabel}))
+    assert.equals(0, #getPlayingVideos({key = "busted-video-other-key"}))
+
+    assert.is_true(pauseVideos())
+    assert.equals(0, #getPlayingVideos())
+    local paused = getPausedVideos()
+    assert.equals(1, #paused)
+    assert.equals(longSoundFile, paused[1].name)
+    assert.equals(1, #getPausedVideos({name = longSoundFile}))
+
+    -- resumed by playing the same file again, like sounds and music are
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals(1, #getPlayingVideos())
+    assert.equals(0, #getPausedVideos())
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
   end)
 end)
 
