@@ -2,6 +2,9 @@ if(NOT WIN32)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 
+# Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
+cmake_language(DEFER CALL restore_windows_test_output)
+
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     TelnetTextDisplayedTest.cpp

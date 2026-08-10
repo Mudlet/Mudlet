@@ -9,6 +9,19 @@ endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Widgets)
 
+# On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
+# stderr has a console attached, which an MSYS2 shell or a CI runner does not give
+# it, so a failing test reports an exit code and nothing else (#9747). Deferred so
+# that tests registered further down the file are covered too; TESTS does not
+# descend into subdirectories, hence the second call in functional_tests.
+function(restore_windows_test_output)
+    get_property(registeredTests DIRECTORY PROPERTY TESTS)
+    foreach(testName ${registeredTests})
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "QT_ASSUME_STDERR_HAS_CONSOLE=1")
+    endforeach()
+endfunction()
+cmake_language(DEFER CALL restore_windows_test_output)
+
 set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
