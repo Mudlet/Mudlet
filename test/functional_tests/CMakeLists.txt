@@ -23,6 +23,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
+    MapAreaReassignmentTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     MxpFramePlacementTest.cpp
@@ -176,6 +177,10 @@ endif()
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest MapCloseDuringImportTest PROPERTIES TIMEOUT 300)
+
+# MapAreaReassignmentTest reports a cost curve built from thousands of rooms,
+# which takes minutes rather than milliseconds if the quadratic term returns
+set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)

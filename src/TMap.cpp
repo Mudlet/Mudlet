@@ -179,7 +179,7 @@ void TMap::logError(const QString& msg)
 //    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 //}
 
-bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
+bool TMap::setRoomArea(int id, int area)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
@@ -203,7 +203,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to retain the API for the lua subsystem...
     }
 
-    const bool result = pR->setArea(area, deferAreaRecalculations);
+    const bool result = pR->setArea(area);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
