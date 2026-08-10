@@ -5470,8 +5470,17 @@ describe("Toolbar buttons", function()
     return false
   end
 
+  -- Installing and uninstalling each start a profile save, and Lua cannot ask
+  -- whether one is running - but installPackage() gives it away: while a save is
+  -- in flight it postpones whatever it was asked to do and answers true, even
+  -- for the empty path it would otherwise refuse outright.
+  local function waitForProfileSaveToPass()
+    return waitUntil(function() return installPackage("") == nil end, 5000)
+  end
+
   setup(function()
     writeSpecFile(packageFile, packageXml())
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
     assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
     assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
   end)
@@ -5489,6 +5498,9 @@ describe("Toolbar buttons", function()
       assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),
         packageName .. " was still installed after being uninstalled")
     end
+    -- and let the save the uninstall queues run here rather than during
+    -- Mudlet's shutdown, which gives up waiting on it half way through
+    assert.is_true(waitForProfileSaveToPass(), "the profile save the uninstall queued never finished")
     os.remove(packageFile)
   end)
 
