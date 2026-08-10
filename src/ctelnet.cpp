@@ -4399,7 +4399,7 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 
     if (accepted) {
         // Read before disconnecting: a socket with nothing pending can emit disconnected() from
-        // inside disconnectFromHost(), and reset() forgets the advertised port.
+        // inside disconnectFromHost(), and forgetGameSuppliedHostState() drops the advertised port.
         const int securePort = mpHost->mMSSPTlsPort;
         disconnectIt();
         mHostPort = securePort;
