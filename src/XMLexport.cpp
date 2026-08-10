@@ -780,11 +780,13 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     LuaInterface saveTimeInterface(lI->getState());
     VarUnit* saveTimeUnit = saveTimeInterface.getVarUnit();
     // A fresh tree carries no per-variable saved/hidden flags, so isSaved() and
-    // isHidden() have to answer from these name-keyed sets.
+    // isHidden() have to answer from these name-keyed sets. savedVars has to be
+    // in place before the call below: it is what tells getSavedVars() which
+    // globals to read, so an empty one exports nothing.
     saveTimeUnit->savedVars = vu->savedVars;
     saveTimeUnit->hidden = vu->hidden;
     saveTimeUnit->hiddenByUser = vu->hiddenByUser;
-    saveTimeInterface.getVars(false);
+    saveTimeInterface.getSavedVars();
 
     if (TVar* base = saveTimeUnit->getBase()) {
         QListIterator<TVar*> itVariable(base->getChildren(false));
@@ -793,6 +795,14 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
         }
     }
     saveTimeInterface.releaseVariableReferences();
+
+    const QStringList truncatedTables = saveTimeInterface.truncatedSavedTables();
+    if (!truncatedTables.isEmpty()) {
+        //: %1 is how many levels of nested tables Mudlet reads, %2 is a comma separated list of Lua variable names
+        pHost->postMessage(tr("[ WARN ]  - These saved variables are nested more than %1 tables deep, so this save holds them as empty tables: %2. "
+                              "Store data that deep with table.save() and table.load() instead.")
+                                   .arg(QString::number(LuaInterface::scmMaxTableDepth), truncatedTables.join(qsl(", "))));
+    }
 }
 
 // A unit busy executing an item of a package being uninstalled can only
