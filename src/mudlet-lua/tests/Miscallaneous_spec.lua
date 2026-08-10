@@ -676,6 +676,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           writeFile(watchedFile, "first\n")
 
           assert.is_true(addFileWatch(watchedFile))
+          -- Windows works out that a file changed by comparing its modification
+          -- time against the one noted when the watch was added - the contents
+          -- and the size are not looked at - and that stamp only moves as fast
+          -- as the system clock ticks, about every 16ms. Rewriting the file in
+          -- the same tick would be invisible there, so leave the stamp room to
+          -- move before writing again.
+          pumpEvents(250)
           writeFile(watchedFile, "second\n")
           local event, path = waitForEvent("sysPathChanged", 5000)
           assert.equals("sysPathChanged", event)
