@@ -172,10 +172,11 @@ describe("Media playback functions validate their parameters", function()
 end)
 
 describe("Media load functions validate their parameters", function()
-  -- loadMusicFile/loadSoundFile/loadVideoFile are the same preload request with
-  -- three different media types, and they share one pair of parsers with the
-  -- play family. Nothing here names a file that exists, so no preload gets as
-  -- far as the media engine.
+  -- loadMusicFile/loadSoundFile/loadVideoFile are one preload request behind
+  -- three names: they share a pair of parsers which set no media type at all,
+  -- so what actually differs between them is the name in their error messages
+  -- and loadVideoFile taking the table form only. Nothing here names a file
+  -- that exists, so no preload gets as far as the media engine.
   it("each raises a Lua error when called with no arguments", function()
     assertArgError(function() loadMusicFile() end, "loadMusicFile: need at least one argument")
     assertArgError(function() loadSoundFile() end, "loadSoundFile: need at least one argument")
@@ -264,6 +265,17 @@ describe("Media query and stop functions validate their parameters", function()
     assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, 0, 0, 1, "k", {}) end, "tag as string expected, got table!")
   end)
 
+  it("a numeric key in a table argument does not stop the rest of it being read", function()
+    -- Reading a numeric key with lua_tostring() converts it in place, and the
+    -- step of the iteration that follows then refuses the key it is handed, so
+    -- every table parser reads its keys from a copy. Lua walks a table's array
+    -- part first, which puts the numeric key ahead of the named ones here.
+    assert.is_true(playSoundFile({[1] = "junk", name = "busted-media-absent.wav"}))
+    assert.is_true(stopSounds({[1] = "junk", key = "busted-media-no-such-key"}))
+    assert.is_table(getPlayingMusic({[1] = "junk", name = "busted-media-absent.mp3"}))
+    assert.is_table(getPausedVideos({[1] = "junk", key = "busted-media-no-such-key"}))
+  end)
+
   it("the ordered play forms refuse a negative fade", function()
     -- Only the range refusal, not the whole message: the music parser's fade
     -- messages name playSoundFile, and pinning that here would hold it in
@@ -347,6 +359,18 @@ describe("Media playback effects with a generated sound file", function()
     writeMediaFile(otherLongSoundFile, 10000)
   end
 
+  -- Cleanups to run at the end of the current spec. busted's finally() holds
+  -- one function rather than a list (busted/init.lua: `env.finally =
+  -- function(fn) finally = fn end`), so a spec that has two things to undo -
+  -- and several here do - would keep only the last of them. after_each drains
+  -- this instead, in reverse, and runs whatever a failed spec got as far as
+  -- registering.
+  local cleanups = {}
+
+  local function onCleanup(undo)
+    cleanups[#cleanups + 1] = undo
+  end
+
   -- purgeMediaCache() empties the whole media directory, not just the fixtures
   -- these specs wrote, and the self-test profile persists between runs on a
   -- developer's machine. Anything else already in there is moved aside for the
@@ -366,7 +390,7 @@ describe("Media playback effects with a generated sound file", function()
     for _, entry in ipairs(preserved) do
       os.rename(mediaDirectory .. "/" .. entry, stash .. "/" .. entry)
     end
-    finally(function()
+    onCleanup(function()
       lfs.mkdir(mediaDirectory)
       for _, entry in ipairs(preserved) do
         os.rename(stash .. "/" .. entry, mediaDirectory .. "/" .. entry)
@@ -383,7 +407,7 @@ describe("Media playback effects with a generated sound file", function()
     local handler = registerAnonymousEventHandler(eventName, function(_, file, path, mediaType, key, tag)
       into[#into + 1] = {file = file, path = path, mediaType = mediaType, key = key, tag = tag}
     end)
-    finally(function() killAnonymousEventHandler(handler) end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
   end
 
   -- Waits until collected holds count entries. A media event can be raised
@@ -475,8 +499,9 @@ describe("Media playback effects with a generated sound file", function()
   -- Video playback draws into a widget the request names with its key:
   -- TMainConsole::setupVideoOutput() looks that key up among the profile's
   -- labels and user windows, and refuses the request when it finds neither. The
-  -- label is left in place afterwards rather than deleted, because the player
-  -- that was handed its video widget outlives the spec.
+  -- label is not deleted afterwards, because the player that was handed its
+  -- video widget outlives the spec - it is only hidden again, so it does not
+  -- sit over the main console for every spec that runs later.
   local videoLabel = "busted-media-video-label"
   local videoLabelReady
 
@@ -486,9 +511,18 @@ describe("Media playback effects with a generated sound file", function()
       assert.equals("label", windowType(videoLabel))
       videoLabelReady = true
     end
+    onCleanup(function() hideWindow(videoLabel) end)
   end
 
   after_each(function()
+    -- before the stops below, not after: a spec's own event handlers have to
+    -- be gone before anything raises sysMediaFinished at them, or a handler
+    -- that starts a sound of its own leaves one playing into the next spec
+    for index = #cleanups, 1, -1 do
+      cleanups[index]()
+    end
+    cleanups = {}
+
     stopSounds()
     stopMusic()
     stopVideos()
@@ -736,7 +770,7 @@ describe("Media playback effects with a generated sound file", function()
       reentered = reentered + 1
       playSoundFile({name = otherLongSoundFile, key = "busted-handler-sound"})
     end)
-    finally(function() killAnonymousEventHandler(handler) end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
 
     assert.is_true(playSoundFile({name = longSoundFile, key = "busted-quiet", priority = 10}))
     -- stops the sound above while it is still loading, which raises
@@ -854,7 +888,7 @@ describe("Media playback effects with a generated sound file", function()
     handle:write("pinned")
     handle:close()
     os.execute("chmod 500 '" .. lockedDirectory .. "'")
-    finally(function()
+    onCleanup(function()
       os.execute("chmod 700 '" .. lockedDirectory .. "'")
       os.remove(pinnedFile)
       lfs.rmdir(lockedDirectory)
@@ -877,7 +911,7 @@ describe("Media playback effects with a generated sound file", function()
     local handler = registerAnonymousEventHandler("sysDownloadError", function(_, message, path)
       errors[#errors + 1] = {message = message, path = path}
     end)
-    finally(function() killAnonymousEventHandler(handler) end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
 
     -- a file the media directory does not have, so the url is the only way to get it
     assert.is_true(playSoundFile({name = "busted-media-absent-scheme.wav", url = "ftp://example.invalid/sounds"}))
@@ -894,7 +928,7 @@ describe("Media playback effects with a generated sound file", function()
     local downloaded = mediaDirectory .. "/" .. fixtureFile
     lfs.mkdir(mediaDirectory)
     os.remove(downloaded)
-    finally(function() os.remove(downloaded) end)
+    onCleanup(function() os.remove(downloaded) end)
 
     local done = {}
     collect("sysDownloadDone", done)
@@ -913,7 +947,7 @@ describe("Media playback effects with a generated sound file", function()
     local downloaded = mediaDirectory .. "/" .. fixtureFile
     lfs.mkdir(mediaDirectory)
     os.remove(downloaded)
-    finally(function() os.remove(downloaded) end)
+    onCleanup(function() os.remove(downloaded) end)
 
     local done = {}
     collect("sysDownloadDone", done)
@@ -929,12 +963,24 @@ describe("Media playback effects with a generated sound file", function()
     -- url that is not http(s) is where a spec can see a load act on its url
     -- without a server to answer it.
     local errors = {}
-    collect("sysDownloadError", errors)
+    local handler = registerAnonymousEventHandler("sysDownloadError", function(_, message, path)
+      errors[#errors + 1] = {message = message, path = path}
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
 
     assert.is_true(loadVideoFile({name = "busted-media-absent-load.mkv", url = "ftp://example.invalid/videos"}))
     waitForCount("sysDownloadError", errors, 1)
-    assert.equals(1, #errors)
-    assert.is_true(contains(errors[1].path, "busted-media-absent-load.mkv"), tostring(errors[1].path))
+
+    -- picked out by name rather than by position: the collector sees every
+    -- download error, not only this one's
+    local reported
+    for _, failure in ipairs(errors) do
+      if contains(failure.path, "busted-media-absent-load.mkv") then
+        reported = failure
+      end
+    end
+    assert.is_not_nil(reported, "no download error named the file the load asked for")
+    assert.is_true(contains(reported.message, "http"), tostring(reported.message))
   end)
 
   it("playMusicFile starts a track given in the ordered argument form", function()
@@ -965,6 +1011,7 @@ describe("Media playback effects with a generated sound file", function()
     -- name[,key][,tag] as ordered arguments
     assert.equals(1, #getPlayingMusic(longSoundFile))
     assert.equals(1, #getPlayingMusic(longSoundFile, "busted-music-filter"))
+    assert.equals(0, #getPlayingMusic(longSoundFile, "busted-music-elsewhere"))
     assert.equals(0, #getPlayingMusic(otherLongSoundFile))
     -- and the same filters as a table
     assert.equals(1, #getPlayingMusic({name = longSoundFile}))
@@ -1112,6 +1159,19 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(stopVideos())
     assert.equals(0, #getPlayingVideos())
   end)
+
+  it("playVideoFile starts nothing when its key names no widget to draw into", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    -- The request is understood, so it reports success; the widget lookup then
+    -- turns up nothing and the playback never starts. Nothing but the video
+    -- list says so, which is why this is worth holding to.
+    assert.is_true(playVideoFile({name = longSoundFile, key = "busted-media-no-such-widget"}))
+    assert.equals(0, #getPlayingVideos())
+    assert.equals(0, #getPausedVideos())
+  end)
 end)
 
 describe("receiveMSP reports MSP is not enabled while offline", function()
@@ -1181,6 +1241,15 @@ describe("Tests the text-to-speech Lua API", function()
         return true
       end
 
+      -- Undone at the end of the current spec, for the same reason the media
+      -- specs above keep a list: busted's finally() holds one function, not a
+      -- list, and these specs have several things to put back.
+      local cleanups = {}
+
+      local function onCleanup(undo)
+        cleanups[#cleanups + 1] = undo
+      end
+
       -- Collects every occurrence of an event for the duration of one spec.
       -- The mock engine changes state inside the ttsSpeak()/ttsSkip() call
       -- itself, so the matching event is raised before a waitForEvent() could
@@ -1189,7 +1258,7 @@ describe("Tests the text-to-speech Lua API", function()
         local handler = registerAnonymousEventHandler(eventName, function(_, first)
           into[#into + 1] = first == nil and true or first
         end)
-        finally(function() killAnonymousEventHandler(handler) end)
+        onCleanup(function() killAnonymousEventHandler(handler) end)
       end
 
       -- The mock engine speaks in real time at roughly a tenth of a second per
@@ -1201,6 +1270,10 @@ describe("Tests the text-to-speech Lua API", function()
           ttsClearQueue()
           ttsSkip()
         end
+        for index = #cleanups, 1, -1 do
+          cleanups[index]()
+        end
+        cleanups = {}
       end)
 
       it("ttsSpeak rejects whitespace-only text", function()
@@ -1490,7 +1563,7 @@ describe("Tests the text-to-speech Lua API", function()
         collect("ttsPitchChanged", pitches)
         collect("ttsVolumeChanged", volumes)
         local rate, pitch, volume = ttsGetRate(), ttsGetPitch(), ttsGetVolume()
-        finally(function()
+        onCleanup(function()
           ttsSetRate(rate)
           ttsSetPitch(pitch)
           ttsSetVolume(volume)
@@ -1530,7 +1603,7 @@ describe("Tests the text-to-speech Lua API", function()
         local changes = {}
         local originalVoice = ttsGetCurrentVoice()
         collect("ttsVoiceChanged", changes)
-        finally(function() ttsSetVoiceByName(originalVoice) end)
+        onCleanup(function() ttsSetVoiceByName(originalVoice) end)
 
         assert.is_true(ttsSetVoiceByName(voices[2]))
         assert.equals(voices[2], ttsGetCurrentVoice())
@@ -1637,7 +1710,7 @@ describe("Tests the text-to-speech Lua API", function()
         local changes = {}
         collect("ttsVoiceChanged", changes)
         local originalVoice = ttsGetCurrentVoice()
-        finally(function() ttsSetVoiceByName(originalVoice) end)
+        onCleanup(function() ttsSetVoiceByName(originalVoice) end)
 
         assert.is_true(ttsSetVoiceByName(voices[2]))
         assert.equals(voices[2], ttsGetCurrentVoice())

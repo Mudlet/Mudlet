@@ -1743,10 +1743,17 @@ describe("The IRC configuration functions round-trip through the profile", funct
   -- setters write to. So the round trip is testable with no IRC server and no
   -- connection anywhere in sight.
   --
-  -- Everything written here is put back afterwards, because the self-test
-  -- profile is reused between runs. The one thing the restore cannot put back
-  -- is the IRC password: setIrcServer() writes it on every call and blanks it
-  -- when none is passed, so any password the profile had is gone either way.
+  -- The profile's own IRC configuration is put back afterwards, because the
+  -- self-test profile is reused between runs. Two things the restore cannot
+  -- reach, both of which matter to a developer running the suite against a
+  -- config root that is not a throwaway one:
+  --
+  -- - the IRC password. setIrcServer() writes it on every call and blanks it
+  --   when none is passed, and no getter reads it back, so any password the
+  --   profile had is gone either way.
+  -- - the last-used nick, which setIrcNick() also writes to a file shared by
+  --   every profile (mudlet's data directory, not the profile's). Putting the
+  --   profile's nick back writes that file again rather than restoring it.
   local function restoreIrcConfiguration()
     local nick = getIrcNick()
     local hostName, port, secure = getIrcServer()
@@ -1907,6 +1914,9 @@ describe("The IRC configuration functions round-trip through the profile", funct
   end)
 
   describe("getIrcConnectedHost and restartIrc without a client", function()
+    -- Both of these read whether the profile has an IRC dialog, and nothing in
+    -- the suite creates one - see the openIRC spec below for why. Should
+    -- something start doing so, these are where it shows up first.
     it("getIrcConnectedHost returns false and says there is no client", function()
       local ok, err = getIrcConnectedHost()
       assert.is_false(ok)
@@ -1916,7 +1926,7 @@ describe("The IRC configuration functions round-trip through the profile", funct
     it("restartIrc returns false", function()
       -- there is no client to restart, and it says so by returning false
       -- rather than by opening one
-      assert.is_false(restartIrc())
+      assert.is_false(restartIrc(), "something in this run opened an IRC client")
     end)
   end)
 
@@ -1944,12 +1954,13 @@ describe("The IRC configuration functions round-trip through the profile", funct
 end)
 
 describe("getNetworkLatency", function()
-  it("reports the last measured latency as a number", function()
-    -- nothing has been timed on the self-test profile's socket, so what this
-    -- holds to is the type and that it is not negative; a meaningful value
-    -- needs a game server answering a command
+  it("reports zero on a profile whose game socket has never been timed", function()
+    -- The latency is measured between a command going out and the prompt that
+    -- answers it, and nothing in the suite connects the game socket - so the
+    -- untouched value is what this reads, which is also what pins it to the
+    -- right member. A meaningful reading needs a game server.
     local latency = getNetworkLatency()
     assert.is_number(latency)
-    assert.is_true(latency >= 0, tostring(latency))
+    assert.equals(0, latency)
   end)
 end)
