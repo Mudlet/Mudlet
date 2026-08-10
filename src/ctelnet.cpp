@@ -4401,6 +4401,14 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
         // Read before disconnecting: a socket with nothing pending can emit disconnected() from
         // inside disconnectFromHost(), and forgetGameSuppliedHostState() drops the advertised port.
         const int securePort = mpHost->mMSSPTlsPort;
+        // The socket test above passes for a connection made *after* the one that advertised, so
+        // it does not catch an answer that outlived its offer - but the port is forgotten with the
+        // connection, and moving the profile to a port this game never mentioned is worse than
+        // ignoring the click.
+        if (securePort <= 0) {
+            qWarning() << "cTelnet::slot_tlsUpgradeResponse() WARNING - the connection that advertised a secure port has been replaced, so there is no port to move to; discarding the user's answer.";
+            return;
+        }
         disconnectIt();
         mHostPort = securePort;
         mpHost->setPort(mHostPort);
