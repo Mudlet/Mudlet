@@ -5121,6 +5121,30 @@ describe("Main window size and saved layout", function()
   -- not, and then there is nothing here to measure or to put back
   local measurable = false
   local resizable = false
+  -- on a platform where resizing is known to work, a resize that stops working
+  -- is a regression rather than an environment quirk, so the CI legs that can
+  -- resize set this and turn the skips below into failures
+  local resizeRequired = os.getenv("MUDLET_TEST_REQUIRE_WINDOW_RESIZE") ~= nil
+
+  local function resizableWindowAvailable()
+    if not measurable then
+      -- a console that latches to a zero size is a defect of its own, and the
+      -- console metrics specs earlier in this file report it; the resize gate
+      -- is not about that, so it stays out of the way here
+      pending("the console reports no size to measure a resize against")
+      return false
+    end
+    if resizeRequired then
+      assert.is_true(resizable,
+        "MUDLET_TEST_REQUIRE_WINDOW_RESIZE is set, but this display did not honour a resize request")
+      return true
+    end
+    if not resizable then
+      pending("this display does not honour a resize request, so there is nothing to measure")
+      return false
+    end
+    return true
+  end
 
   -- setMainWindowSize sizes the whole application window while
   -- getMainWindowSize reports the console area inside it, and the chrome
@@ -5173,8 +5197,7 @@ describe("Main window size and saved layout", function()
   end)
 
   it("a bigger main window is reported as bigger", function()
-    if not resizable then
-      pending("the console reports no size, or this display does not honour a resize request, so there is nothing to measure")
+    if not resizableWindowAvailable() then
       return
     end
     finally(restoreMainWindowSize)
@@ -5196,8 +5219,7 @@ describe("Main window size and saved layout", function()
   end)
 
   it("the main window can be put back the size it was", function()
-    if not resizable then
-      pending("the console reports no size, or this display does not honour a resize request, so there is nothing to measure")
+    if not resizableWindowAvailable() then
       return
     end
     setMainWindowSize(640, 480)
@@ -5228,7 +5250,10 @@ describe("Main window size and saved layout", function()
       end
     end)
 
-    teardown(function()
+    -- after every spec rather than at the end of the block: these are the
+    -- shared files the next Mudlet start reads its layout from, so no more than
+    -- one spec's worth of writing to them is ever outstanding
+    after_each(function()
       for _, path in ipairs(layoutFiles) do
         if contentsBefore[path] then
           writeSpecFile(path, contentsBefore[path])
@@ -5380,7 +5405,6 @@ describe("Toolbar buttons", function()
   local pushDownButton = "buttonSpecPushDown" .. suffix
   local plainButton = "buttonSpecPlain" .. suffix
   local packageFile = ("%s/%s.xml"):format(os.getenv("TMPDIR") or "/tmp", packageName)
-  local installed = false
 
   local function actionXml(name, pushButton, isFolder)
     return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
@@ -5442,16 +5466,17 @@ describe("Toolbar buttons", function()
   setup(function()
     writeSpecFile(packageFile, packageXml())
     assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
-    installed = waitUntil(packageIsInstalled, 5000)
-    assert.is_true(installed, packageName .. " did not turn up in getPackages()")
+    assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
   end)
 
   teardown(function()
-    if installed then
+    -- asking whether the package is here rather than whether setup thought it
+    -- arrived: installPackage() postpones itself behind a running profile save,
+    -- so it can still land after setup gave up waiting, and then nothing else
+    -- would ever take it out of the reused profile again
+    if packageIsInstalled() then
       -- uninstalling is refused while the save the install started is still
-      -- draining, and that only finishes when the event loop runs. A package
-      -- left behind here would still be in the profile on the next run, so say
-      -- so rather than leave it to be found later
+      -- draining, and that only finishes when the event loop runs
       assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
         packageName .. " could not be uninstalled")
       assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),
