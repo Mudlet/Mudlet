@@ -1938,6 +1938,10 @@ describe("Tests saveMap and loadMap", function()
   assert(specDirectory, "Mapper_spec.lua has to be run from a file so that it can find its fixtures")
   local fixtureMap = specDirectory .. "/fixtures/maps/minimal-map.xml"
 
+  -- Scratch names inside the self-test profile that nothing else writes. A run
+  -- that died between the setup below and its teardown leaves them behind, and
+  -- the backup one would then be a map from a different run, so they are
+  -- cleared on the way in rather than trusted.
   local mapDirectory = getMudletHomeDir() .. "/map"
   local backupPath = mapDirectory .. "/mapper_spec_backup.dat"
   local savePath = mapDirectory .. "/mapper_spec_roundtrip.dat"
@@ -2016,6 +2020,9 @@ describe("Tests saveMap and loadMap", function()
   end
 
   setup(function()
+    os.remove(backupPath)
+    os.remove(savePath)
+    os.remove(brokenXmlPath)
     -- snapshot whatever map the rest of the suite left behind, so that the
     -- teardown can hand it back untouched
     assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
