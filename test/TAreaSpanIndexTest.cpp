@@ -195,6 +195,23 @@ private slots:
         QCOMPARE(index.zLevels(), QList<int>{0});
     }
 
+    // The overall counts are shared by every Z level, so a removal a level
+    // cannot honour must not spend another level's share of a coordinate.
+    void aRemovalFromTheWrongLevelLeavesTheOtherLevelsAlone()
+    {
+        TAreaSpanIndex index;
+        index.addRoom(3, 3, 0);
+        index.addRoom(50, 50, 1);
+
+        index.removeRoom(50, 50, 0);
+        const TAreaSpanIndex::Extremes overall = index.overallExtremes();
+        QCOMPARE(overall.maxX, 50);
+        QCOMPARE(overall.maxY, 50);
+        const TAreaSpanIndex::Extremes upstairs = index.extremesForZ(1);
+        QCOMPARE(upstairs.maxX, 50);
+        QCOMPARE(upstairs.maxY, 50);
+    }
+
     // The overall extremes are kept separately from the per-level ones, so a
     // level that comes and goes must not leave anything behind in them.
     void overallExtremesFollowLevelsThatComeAndGo()

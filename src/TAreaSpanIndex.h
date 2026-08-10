@@ -79,7 +79,8 @@ private:
 
     static Extremes extremesOf(const ZLevelCounts& zLevel);
     static void increment(QMap<int, int>& counts, int value);
-    static void decrement(QMap<int, int>& counts, int value);
+    // Answers whether there was anything to take away.
+    static bool decrement(QMap<int, int>& counts, int value);
 
     QMap<int, ZLevelCounts> mPerZ;
     QMap<int, int> mXCounts;

@@ -47,11 +47,15 @@ bool TAreaSpanIndex::removeRoom(int x, int y, int z)
         return false;
     }
 
-    decrement(mXCounts, x);
-    decrement(mYCounts, y);
+    // The overall counts only lose what the Z level's own counts lost, so that
+    // a coordinate this level never had cannot take another level's with it:
     const Extremes before = extremesOf(itZLevel.value());
-    decrement(itZLevel.value().xCounts, x);
-    decrement(itZLevel.value().yCounts, y);
+    if (decrement(itZLevel.value().xCounts, x)) {
+        decrement(mXCounts, x);
+    }
+    if (decrement(itZLevel.value().yCounts, y)) {
+        decrement(mYCounts, y);
+    }
     if (itZLevel.value().xCounts.isEmpty()) {
         mPerZ.erase(itZLevel);
         return true;
@@ -93,14 +97,15 @@ void TAreaSpanIndex::increment(QMap<int, int>& counts, int value)
     ++counts[value];
 }
 
-void TAreaSpanIndex::decrement(QMap<int, int>& counts, int value)
+bool TAreaSpanIndex::decrement(QMap<int, int>& counts, int value)
 {
     const auto it = counts.find(value);
     if (it == counts.end()) {
-        return;
+        return false;
     }
 
     if (--it.value() <= 0) {
         counts.erase(it);
     }
+    return true;
 }
