@@ -408,10 +408,12 @@ function Geyser.Container:delete()
   local wasDeferring = rawget(self, "defer_updates")
   self.defer_updates = true
   local ok, err = pcall(deleteChildren, self)
-  -- restored before the error is re-raised: a container whose cascade failed is
-  -- still in the tree, and one left deferring would never lay itself out again
   self.defer_updates = wasDeferring
   if not ok then
+    -- a container whose cascade failed stays in the tree, holding whatever
+    -- children the cascade did not reach - and they are still laid out for the
+    -- child count it started with, so it owes them the pass that was deferred
+    self:reposition()
     error(err, 0)
   end
 

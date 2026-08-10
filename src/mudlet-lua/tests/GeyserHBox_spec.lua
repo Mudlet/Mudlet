@@ -229,6 +229,28 @@ describe("Tests functionality of Geyser.HBox", function()
       track(Geyser.Label:new({name = "ghbShrinkAfterRaise"}, box))
       assert.is_true(organizes > 0)
     end)
+
+    -- the children the cascade did get through are gone, so the survivors are
+    -- left holding the widths worked out for the child count it started with
+    it("re-splits the row a half finished delete left behind", function()
+      local ownRemove = rawget(box, "remove")
+      -- restored so that after_each can still tear the box down
+      finally(function() box.remove = ownRemove end)
+      -- raising on the second unlink is what puts one child through and strands
+      -- the other, whichever order the cascade happens to walk them in
+      local removals = 0
+      local remove = box.remove
+      box.remove = function(...)
+        removals = removals + 1
+        if removals == 2 then
+          error("remove blew up")
+        end
+        return remove(...)
+      end
+      assert.has_error(function() box:delete() end)
+      assert.are.equal(1, #box.windows)
+      assert.are.same({x = 0, y = 0, width = 600, height = 50}, geometry(box.windows[1]))
+    end)
   end)
 
   describe("Geyser.HBox:reposition", function()
