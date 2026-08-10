@@ -314,9 +314,16 @@ QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
 void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
 { // TAB 2 - "License"
     // clang-format off
-    // Only the introductory text at the top is to be translated - the Licence
-    // itself MUST NOT be translated as only the English Language version is
-    // legally definitive - any translations are NOT so:
+    /* Only the introductory text at the top is to be translated - the Licence
+     * itself MUST NOT be translated as only the English Language version is
+     * legally definitive - any translations are NOT so:
+     */
+
+    /* IMPORTANT: The Lua-code-formatter has a GPL 3.0 ONLY LICENCE - THAT and some Apache 2.0
+     * third-party components means that the Mudlet application must also have a GPL 3.0 only
+     * (not lower and not higher) licence when all parts are packaged together in an installable
+     * form or a Linux AppImage.*/
+
     /*: For non-english language versions please append a translation of the following
  to explain why the GPL is NOT reproduced in the relevant language: 'As only
  the English form is considered the official version of the license, the
@@ -901,18 +908,105 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
                            "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
 
-#if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
+#if defined(INCLUDE_UPDATER) || defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
+    // This uses curly double quotes “ = &#8220; and ” = &#8221;
     QString APACHE2_Body(
             qsl("<h4>Apache Licence</h4>"
-                           "<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); "
-                           "you may not use this file except in compliance with the License. You may obtain "
-                           "a copy of the License at:</p>"
-                           "<p><a href=\"http://www.apache.org/licenses/LICENSE-2.0\">http://www.apache.org/licenses/LICENSE-2.0</a></p>"
-                           "<p>Unless required by applicable law or agreed to in writing, software "
-                           "distributed under the License is distributed on an &quot;AS IS&quot; BASIS, "
-                           "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the "
-                           "License for the specific language governing permissions and limitations under "
-                           "the License.</p>"));
+                "<h4 style='text-align: center;'>Version 2.0, January 2004<br>"
+                "<a href='https://www.apache.org/licenses/'>https://www.apache.org/licenses/</a></h4>"
+                "<p>TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION</p>"
+                "<h4>1. Definitions.</h4>"
+                "<p>“License” shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.</p>"
+                "<p>“Licensor” shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.</p>"
+                "<p>“Legal Entity” shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, “control” means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.</p>"
+                "<p>“You” (or “Your”) shall mean an individual or Legal Entity exercising permissions granted by this License.</p>"
+                "<p>“Source” form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.</p>"
+                "<p>“Object” form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.</p>"
+                "<p>“Work” shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).</p>"
+                "<p>“Derivative Works” shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.</p>"
+                "<p>“Contribution” shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, “submitted” means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as “Not a Contribution.”</p>"
+                "<p>“Contributor” shall mean Licensor and any individual or Legal Entity on "
+                "behalf of whom a Contribution has been received by Licensor and subsequently "
+                "incorporated within the Work.</p>"
+                "<h4>2. Grant of Copyright License.</h4>"
+                "<p>Subject to the terms and conditions of this License, each Contributor hereby "
+                "grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, "
+                "irrevocable copyright license to reproduce, prepare Derivative Works of, publicly "
+                "display, publicly perform, sublicense, and distribute the Work and such "
+                "Derivative Works in Source or Object form.</p>"
+                "<h4>3. Grant of Patent License.</h4>"
+                "<p>Subject to the terms and conditions of this License, each Contributor hereby "
+                "grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, "
+                "irrevocable (except as stated in this section) patent license to make, have made, "
+                "use, offer to sell, sell, import, and otherwise transfer the Work, where such "
+                "license applies only to those patent claims licensable by such Contributor that "
+                "are necessarily infringed by their Contribution(s) alone or by combination of "
+                "their Contribution(s) with the Work to which such Contribution(s) was submitted. "
+                "If You institute patent litigation against any entity (including a cross-claim or "
+                "counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated "
+                "within the Work constitutes direct or contributory patent infringement, then any "
+                "patent licenses granted to You under this License for that Work shall terminate "
+                "as of the date such litigation is filed.</p>"
+                "<h4>4. Redistribution.</h4>"
+                "<p>You may reproduce and distribute copies of the Work or Derivative Works thereof "
+                "in any medium, with or without modifications, and in Source or Object form, "
+                "provided that You meet the following conditions:</p>"
+                "<ol type='a'><li>You must give any other recipients of the Work or Derivative Works a "
+                "copy of this License; and</li>"
+                "<li>You must cause any modified files to carry prominent notices stating that You "
+                "changed the files; and</li>"
+                "<li>You must retain, in the Source form of any Derivative Works that You distribute, "
+                "all copyright, patent, trademark, and attribution notices from the Source form of "
+                "the Work, excluding those notices that do not pertain to any part of the "
+                "Derivative Works; and</li>"
+                "<li>If the Work includes a “NOTICE” text file as part of its "
+                "distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.</li></ol>"
+                "<p>You may add Your own copyright statement to Your modifications and may provide "
+                "additional or different license terms and conditions for use, reproduction, or "
+                "distribution of Your modifications, or for any such Derivative Works as a whole, "
+                "provided Your use, reproduction, and distribution of the Work otherwise complies "
+                "with the conditions stated in this License.</p>"
+                "<h4>5. Submission of Contributions.</h4>"
+                "<p>Unless You explicitly state otherwise, any Contribution intentionally submitted "
+                "for inclusion in the Work by You to the Licensor shall be under the terms and "
+                "conditions of this License, without any additional terms or conditions. "
+                "Notwithstanding the above, nothing herein shall supersede or modify the terms of "
+                "any separate license agreement you may have executed with Licensor regarding such "
+                "Contributions.</p>"
+                "<h4>6. Trademarks.</h4>"
+                "<p>This License does not grant permission to use the trade names, trademarks, "
+                "service marks, or product names of the Licensor, except as required for "
+                "reasonable and customary use in describing the origin of the Work and reproducing "
+                "the content of the NOTICE file.</p>"
+                "<h4>7. Disclaimer of Warranty.</h4>"
+                "<p>Unless required by applicable law or agreed to in writing, Licensor provides "
+                "the Work (and each Contributor provides its Contributions) on an “AS IS” BASIS, "
+                "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, "
+                "including, without limitation, any warranties or conditions of TITLE, "
+                "NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are "
+                "solely responsible for determining the appropriateness of using or redistributing "
+                "the Work and assume any risks associated with Your exercise of permissions under "
+                "this License.</p>"
+                "<h4>8. Limitation of Liability.</h4>"
+                "<p>In no event and under no legal theory, whether in tort (including negligence), "
+                "contract, or otherwise, unless required by applicable law (such as deliberate and "
+                "grossly negligent acts) or agreed to in writing, shall any Contributor be liable "
+                "to You for damages, including any direct, indirect, special, incidental, or "
+                "consequential damages of any character arising as a result of this License or out "
+                "of the use or inability to use the Work (including but not limited to damages for "
+                "loss of goodwill, work stoppage, computer failure or malfunction, or any and all "
+                "other commercial damages or losses), even if such Contributor has been advised of "
+                "the possibility of such damages.</p>"
+                "<h4>9. Accepting Warranty or Additional Liability.</h4>"
+                "<p>While redistributing the Work or Derivative Works thereof, You may choose to "
+                "offer, and charge a fee for, acceptance of support, warranty, indemnity, or other "
+                "liability obligations and/or rights consistent with this License. However, in "
+                "accepting such obligations, You may act only on Your own behalf and on Your sole "
+                "responsibility, not on behalf of any other Contributor, and only if You agree to "
+                "indemnify, defend, and hold each Contributor harmless for any liability incurred "
+                "by, or claims asserted against, such Contributor by reason of your accepting any "
+                "such warranty or additional liability.</p>"
+                "<p>END OF TERMS AND CONDITIONS</p>"));
 #endif // defined(INCLUDE_UPDATER)
 
     QString MIT_Body(
@@ -1111,7 +1205,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     QString lrexlib_pcre2Header(tr("<h2><u>Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).</u></h2>"
                                    "<h3>Copyright © Reuben Thomas 2000-2020<br>"
-                                   "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
+                                   "Copyright © Shmuel Zeigerman 2004-2020</h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
@@ -1119,35 +1213,19 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "Copyright © 2003-2007 Kepler Project</h3>"));
 #endif // defined(Q_OS_MACOS)
 
-
     QString edbeeHeader(tr("<h2><u>Edbee - multi-feature editor widget</u></h2>"
-                           "<h3>Copyright © 2012-2014 by Reliable Bits Software by Blommers IT</h3>"));
+                           "<h3>Copyright © 2012-2025 by Rick Blommers</h3>"));
 
-    QString edbeeSuppliment(tr("The <b>edbee-lib</b> widget itself incorporates other components with licences that must be noted as well, they are:"));
-
-    QString OnigmoHeader(tr("<h2><u>Onigmo (Oniguruma-mod) LICENSE</u></h2>"
-                            "<h3>Copyright © 2002-2009 K.Kosako &lt;sndgk393 AT ybb DOT ne DOT jp&gt;<br>"
-                            "Copyright © 2011-2014 K.Takata &lt;kentkt AT csc DOT jp&gt;<br>"
-                            "All rights reserved.</h3>"));
+    QString edbeeSuppliment(tr("The <b>edbee-lib</b> widget itself incorporates another component with a licence that must be noted as well, it is:"));
 
     QString OnigurumaHeader(tr("<h2><u>Oniguruma LICENSE</u></h2>"
-                               "<h3>Copyright © 2002-2009 K.Kosako &lt;sndgk393 AT ybb DOT ne DOT jp&gt;<br>"
+                               "<h3>Copyright © 2002-2021 K.Kosako &lt;kkosako0@gmail.com&gt;<br>"
                                "All rights reserved.</h3>"));
-
-    QString RubyHeader(tr("<h2><u>Ruby BSDL</u></h2>"
-                          "<h3>Copyright © 1993-2013 Yukihiro Matsumoto.<br>"
-                          "All rights reserved.</h3>"));
-
-    QString QsLogHeader(tr("<h2><u>Qt-Components, QsLog</u></h2>"
-                           "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></h3>"
-                           "<h3><small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
-                           "Copyright © 2013, Razvan Petru<br>"
-                           "All rights reserved.</h3>"));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     QString DblsqdHeader(tr("<h2><u>Dblsqd (derived work)</u></h2>"
                             "<h3>Copyright © 2017 Philipp Medien</h3>"));
-#if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
+#if defined(Q_OS_MACOS)
     QString SparkleHeader(tr("<h2><u>Sparkle - macOS updater</u></h2>"
                              "<h3>Copyright © 2006-2013 Andy Matuschak.<br>"
                              "Copyright © 2009-2013 Elgato Systems GmbH.<br>"
@@ -1188,6 +1266,17 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
+    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
+                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
+                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
+                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+
+#if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
+    QString openSSL3Header(tr("<h2><u>OpenSSL 3.x - Open Source Toolkit for Secure Transport Layer Security</u></h2>"
+                              "<h3>Copyright © 1995-2026 The OpenSSL Project Authors.<br>"
+                              "All Rights Reserved</h3>"));
+#endif
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
@@ -1221,28 +1310,13 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                           .arg(edbeeHeader,                    // 15 - edbee header - translatable
                                                MIT_Body));                     // 16 - edbee body MIT - not translatable
 
+    // Items 18, 19, 22, 23 & 24 have been removed
     license_3rdParty_texts.append(qsl("<hr width=\"50%\">%17"
-                                                 "%18%19<hr width=\"33%\">"
-                                                 "%20%21<hr width=\"33%\">"
-                                                 "%22%23<hr width=\"33%\">"
-                                                 "%24%25")
+                                                 "%20%21")
                                           .arg(edbeeSuppliment,                // 17 - edbee other components:
-                                               OnigmoHeader,                   // 18 - Onigmo (Oniguruma-mod) header - translatable
-                                               BSD2Clause_Body                 // 19 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(qsl("AUTHOR AND CONTRIBUTORS"),
-                                                            qsl("AUTHOR OR CONTRIBUTORS")),
                                                OnigurumaHeader,                // 20 - Oniguruma header - translatable
                                                BSD2Clause_Body                 // 21 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                                            qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
-                                               RubyHeader,                     // 21 - Ruby Header - translatable
-                                               BSD2Clause_Body                 // 22 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(qsl("AUTHOR AND CONTRIBUTORS"),
-                                                            qsl("AUTHOR OR CONTRIBUTORS")),
-                                               QsLogHeader,                    // 23 - QsLog header - translatable
-                                               BSD3Clause_Body                 // 24 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(qsl("The name of the contributors may not"),
-                                                            qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
                                                             qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
@@ -1289,18 +1363,19 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                        MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
 
 #if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%1%2")
-                                  .arg(SentryHeader,                           // Sentry header - translatable
-                                       MIT_Body));                             // Sentry body MIT - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%43%44")
+                                  .arg(SentryHeader,                           // 43 - Sentry header - translatable
+                                       MIT_Body));                             // 44 - Sentry body MIT - not translatable
 #endif
 
-    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
-                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
-                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
-                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+    license_3rdParty_texts.append(qsl("<hr>%45")
+                                  .arg(swordModelHeader));                     // 45 - sword model attribution - translatable
 
-    license_3rdParty_texts.append(qsl("<hr>%43")
-                                  .arg(swordModelHeader));                      // 43 - sword model attribution - translatable
+#if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
+    license_3rdParty_texts.append(qsl("<hr>%46%47")
+                                  .arg(openSSL3Header,                         // 46 - OpenSSL3 header - translatable
+                                       APACHE2_Body));                         // 47 - OpenSSL3 body APACHE2 - not translatable
+#endif
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 
