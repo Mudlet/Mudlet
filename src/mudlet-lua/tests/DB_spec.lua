@@ -2601,6 +2601,11 @@ describe("Tests db's internals against a real database", function()
       -- the file is what db:create reconnects to, so a live handle to a deleted
       -- file must not count as active
       os.remove(dbFile)
+      if io.exists(dbFile) then
+        -- Windows will not unlink a file sqlite still has open, so there is no
+        -- open-connection-without-a-file state to ask about there
+        pending("this platform keeps a database file that is still open")
+      end
       assert.is_falsy(db:_isActiveDBName(dbName))
     end)
   end)
