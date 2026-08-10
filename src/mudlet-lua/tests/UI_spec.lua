@@ -4740,6 +4740,14 @@ local function threeFrameGif()
   return logicalScreen .. globalColourTable .. frame:rep(3) .. string.char(0x3B)
 end
 
+-- The fixtures below are generated at run time rather than committed, and they
+-- go in the profile directory the way DB_spec's and Package_spec's do: it is
+-- writable on every platform, where /tmp does not exist on Windows at all.
+-- Every one of them is removed again in teardown.
+local function specFilePath(name)
+  return ("%s/%s"):format(getMudletHomeDir(), name)
+end
+
 -- binary mode: the GIF must not be newline-translated
 local function writeSpecFile(path, contents)
   local handle = io.open(path, "wb")
@@ -4749,11 +4757,10 @@ local function writeSpecFile(path, contents)
 end
 
 describe("Label movies", function()
-  local temporaryDirectory = os.getenv("TMPDIR") or "/tmp"
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
-  local giffile = ("%s/mudlet-spec-movie%s.gif"):format(temporaryDirectory, suffix)
-  local notAGifFile = ("%s/mudlet-spec-notamovie%s.gif"):format(temporaryDirectory, suffix)
-  local missingFile = ("%s/mudlet-spec-there-is-no-such%s.gif"):format(temporaryDirectory, suffix)
+  local giffile = specFilePath(("mudlet-spec-movie%s.gif"):format(suffix))
+  local notAGifFile = specFilePath(("mudlet-spec-notamovie%s.gif"):format(suffix))
+  local missingFile = specFilePath(("mudlet-spec-there-is-no-such%s.gif"):format(suffix))
 
   -- every movie function takes a label name first and rejects the same three
   -- ways, so the shared cases are driven over the whole family
@@ -5404,7 +5411,7 @@ describe("Toolbar buttons", function()
   local toolbar = "buttonSpecToolbar" .. suffix
   local pushDownButton = "buttonSpecPushDown" .. suffix
   local plainButton = "buttonSpecPlain" .. suffix
-  local packageFile = ("%s/%s.xml"):format(os.getenv("TMPDIR") or "/tmp", packageName)
+  local packageFile = specFilePath(packageName .. ".xml")
 
   local function actionXml(name, pushButton, isFolder)
     return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
