@@ -109,11 +109,13 @@ private slots:
         connect(mClient, &QTcpSocket::readyRead, this, &ProtocolOfferServer::onReadyRead);
         connect(mClient, &QTcpSocket::disconnected, mClient, &QObject::deleteLater);
 
-        writeBurst(mOffers);
+        writeBurst(mClient, mOffers);
         if (!mLateOffers.isEmpty()) {
+            // Addressed to this connection's socket, so a timer left over from a dropped connection
+            // cannot deliver its burst down the one that replaced it.
             QTimer::singleShot(mLateOfferDelay, this, [this, client = QPointer<QTcpSocket>(mClient)]() {
                 if (client) {
-                    writeBurst(mLateOffers);
+                    writeBurst(client, mLateOffers);
                 }
             });
         }
@@ -133,7 +135,7 @@ private slots:
 
 private:
     // One write, the way a game announces what it speaks.
-    void writeBurst(const QList<TelnetReply>& offers)
+    static void writeBurst(QTcpSocket* socket, const QList<TelnetReply>& offers)
     {
         QByteArray burst;
         for (const TelnetReply& offer : offers) {
@@ -141,8 +143,8 @@ private:
             burst.append(static_cast<char>(offer.command));
             burst.append(static_cast<char>(offer.option));
         }
-        mClient->write(burst);
-        mClient->flush();
+        socket->write(burst);
+        socket->flush();
     }
 
     int findSubnegotiationEnd(int from) const
