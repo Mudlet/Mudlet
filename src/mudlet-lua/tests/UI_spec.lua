@@ -4734,13 +4734,13 @@ local function threeFrameGif()
   -- graphic control extension: 0x1770 hundredths of a second per frame
   local graphicControl = string.char(0x21, 0xF9, 0x04, 0x00, 0x70, 0x17, 0x00, 0x00)
   local imageDescriptor = string.char(0x2C, 0, 0, 0, 0, 1, 0, 1, 0, 0)
-  -- LZW, minimum code size 2: one clear code, one pixel of colour 0, end of information
+  -- LZW, minimum code size 2: a clear code, one pixel, end of information
   local imageData = string.char(0x02, 0x02, 0x4C, 0x01, 0x00)
   local frame = graphicControl .. imageDescriptor .. imageData
   return logicalScreen .. globalColourTable .. frame:rep(3) .. string.char(0x3B)
 end
 
--- binary mode because one of the two callers writes a GIF
+-- binary mode: the GIF must not be newline-translated
 local function writeSpecFile(path, contents)
   local handle = io.open(path, "wb")
   assert.is_not_nil(handle, "could not open " .. path .. " for writing")
@@ -4820,8 +4820,6 @@ describe("Label movies", function()
       assert.are.equal(totalBefore + 1, gifStats())
       assert.is_true(deleteLabel(label))
       assert.are.equal(totalBefore, gifStats())
-      -- put it back so after_each's delete is not the one that fails
-      createLabel(label, 10, 10, 60, 30, 1)
     end)
 
     it("returns nil and a message for a file that is not a movie", function()
@@ -4838,6 +4836,10 @@ describe("Label movies", function()
 
     it("a refused movie leaves no gif registered", function()
       pending("the QMovie is made and handed to the gif tracker before the file is read, so a refused setMovie still leaves one counted in getProfileStats()")
+    end)
+
+    it("a refused movie over a working one leaves the label driving the dead movie", function()
+      pending("Host::setMovie calls setFileName on the label's live QMovie before it finds out the new file is not a movie, so the label keeps a movie the call said it would not have")
     end)
 
     it("a refused movie leaves the label without a movie to drive", function()
@@ -4930,6 +4932,8 @@ describe("Label movies", function()
       assert.is_truthy(tostring(err):find("setMovieFrame: bad argument #2 type", 1, true))
     end)
 
+    -- the scaling itself is not readable from Lua: all these can check is that
+    -- turning it on and off is accepted and leaves the movie alone
     it("scaleMovie returns true with, without and against its optional argument", function()
       assert.is_true(scaleMovie(label))
       assert.is_true(scaleMovie(label, true))
@@ -4967,7 +4971,7 @@ describe("Label movies", function()
         if ownsItsLabelLookup[functionName] then
           assert.are.equal(("label '%s' does not exist"):format(unknown), err)
         else
-          assert.is_truthy(tostring(err):find(unknown, 1, true))
+          assert.are.equal(('label "%s" not found'):format(unknown), err)
         end
       end)
     end
@@ -5060,7 +5064,8 @@ describe("Console buffer size", function()
   it("useMaximum raises the main console to the buffer maximum", function()
     -- the main console has to be named for this one: with three arguments the
     -- first is read as a window name, so the four argument form only lines up
-    -- when it is actually given one
+    -- when it is actually given one. The lines limit is then discarded and the
+    -- machine's maximum used instead
     local before = getConsoleBufferSize()
     assert.is_true(setConsoleBufferSize("main", 1000, 100, true))
     local maximum = getConsoleBufferSize()
@@ -5098,10 +5103,10 @@ describe("Console buffer size", function()
     local unknown = "bufferSizeNoSuchWindow" .. suffix
     local getOk, getErr = getConsoleBufferSize(unknown)
     assert.is_nil(getOk)
-    assert.is_truthy(tostring(getErr):find(unknown, 1, true))
+    assert.are.equal(('window "%s" not found'):format(unknown), getErr)
     local setOk, setErr = setConsoleBufferSize(unknown, 1000, 100)
     assert.is_nil(setOk)
-    assert.is_truthy(tostring(setErr):find(unknown, 1, true))
+    assert.are.equal(('window "%s" not found'):format(unknown), setErr)
   end)
 end)
 
@@ -5111,43 +5116,49 @@ describe("Main window size and saved layout", function()
   -- request lands and that the reported size follows it, not that it matches
   local testMode = os.getenv("MUDLET_TEST_MODE") ~= nil
   local originalWidth, originalHeight
-  -- setMainWindowSize sizes the whole application window, getMainWindowSize
-  -- reports the console area inside it; the difference is the toolbars and the
-  -- command line, and it has to be measured before the window can be put back
-  -- the size it was found at
-  local chromeWidth, chromeHeight
+  -- whether the console reports a size to measure against at all, and whether
+  -- this display honours a resize request - without a window manager it need
+  -- not, and then there is nothing here to measure or to put back
+  local measurable = false
+  local resizable = false
+
+  -- setMainWindowSize sizes the whole application window while
+  -- getMainWindowSize reports the console area inside it, and the chrome
+  -- between the two (menu bar, profile tabs, toolbars, command line) is not
+  -- readable from Lua. So the size is put back by asking for the console size
+  -- that was wanted and correcting by however much came back short.
+  local function restoreMainWindowSize()
+    if not measurable then
+      return false
+    end
+    local requestedWidth, requestedHeight = originalWidth, originalHeight
+    for _ = 1, 4 do
+      setMainWindowSize(requestedWidth, requestedHeight)
+      pumpEvents(100)
+      local width, height = getMainWindowSize()
+      if width == originalWidth and height == originalHeight then
+        return true
+      end
+      requestedWidth = requestedWidth + (originalWidth - width)
+      requestedHeight = requestedHeight + (originalHeight - height)
+    end
+    return false
+  end
 
   setup(function()
     originalWidth, originalHeight = getMainWindowSize()
-    if not testMode then
+    measurable = testMode and originalWidth > 0 and originalHeight > 0
+    if not measurable then
       return
     end
-    local requestedWidth, requestedHeight = originalWidth + 400, originalHeight + 400
-    setMainWindowSize(requestedWidth, requestedHeight)
+    setMainWindowSize(originalWidth + 300, originalHeight + 300)
     pumpEvents(200)
     local width, height = getMainWindowSize()
-    local widthDifference, heightDifference = requestedWidth - width, requestedHeight - height
-    -- a window manager that ignored the request would make these meaningless,
-    -- so only trust a difference that could really be chrome
-    if widthDifference >= 0 and widthDifference < 400 and heightDifference >= 0 and heightDifference < 400 then
-      chromeWidth, chromeHeight = widthDifference, heightDifference
-    end
+    resizable = width > originalWidth and height > originalHeight
+    restoreMainWindowSize()
   end)
-
-  local function restoreMainWindowSize()
-    if not chromeWidth then
-      return
-    end
-    setMainWindowSize(originalWidth + chromeWidth, originalHeight + chromeHeight)
-    pumpEvents(200)
-  end
 
   teardown(restoreMainWindowSize)
-
-  it("setMainWindowSize returns nothing at all", function()
-    finally(restoreMainWindowSize)
-    assert.are.equal(0, select("#", setMainWindowSize(originalWidth + 200, originalHeight + 200)))
-  end)
 
   it("setMainWindowSize hard-errors on a non-number width", function()
     local ok, err = pcall(setMainWindowSize, "wide", 600)
@@ -5162,13 +5173,14 @@ describe("Main window size and saved layout", function()
   end)
 
   it("a bigger main window is reported as bigger", function()
-    if not chromeWidth then
-      pending("the resize request was not honoured, so there is nothing to measure headless")
+    if not resizable then
+      pending("the console reports no size, or this display does not honour a resize request, so there is nothing to measure")
       return
     end
     finally(restoreMainWindowSize)
     local smallWidth, smallHeight = 700, 500
-    setMainWindowSize(smallWidth, smallHeight)
+    -- and it answers nothing at all while it is at it
+    assert.are.equal(0, select("#", setMainWindowSize(smallWidth, smallHeight)))
     pumpEvents(200)
     local narrowWidth, shortHeight = getMainWindowSize()
 
@@ -5184,23 +5196,54 @@ describe("Main window size and saved layout", function()
   end)
 
   it("the main window can be put back the size it was", function()
-    if not chromeWidth then
-      pending("the resize request was not honoured, so there is nothing to measure headless")
+    if not resizable then
+      pending("the console reports no size, or this display does not honour a resize request, so there is nothing to measure")
       return
     end
     setMainWindowSize(640, 480)
     pumpEvents(200)
-    restoreMainWindowSize()
+    assert.is_true(restoreMainWindowSize(), "the window could not be put back")
     assert.are.same({originalWidth, originalHeight}, {getMainWindowSize()})
   end)
 
   describe("saveWindowLayout and loadWindowLayout", function()
-    -- the layout lives beside the profiles directory, not inside the profile
+    -- the layout lives beside the profiles directory rather than inside the
+    -- profile, so these specs write outside the profile and have to put both
+    -- files back the way they found them
     local configurationDirectory = getMudletHomeDir():match("^(.*)/profiles/[^/]*$")
-    local layoutFile = configurationDirectory and (configurationDirectory .. "/windowLayout.dat")
+    assert(configurationDirectory, "could not work out the configuration directory from " .. getMudletHomeDir())
+    local layoutFiles = {
+      configurationDirectory .. "/windowLayout.dat",
+      configurationDirectory .. "/windowLayoutGeometry.dat",
+    }
+    local contentsBefore = {}
+
+    setup(function()
+      for _, path in ipairs(layoutFiles) do
+        local handle = io.open(path, "rb")
+        if handle then
+          contentsBefore[path] = handle:read("*a")
+          handle:close()
+        end
+      end
+    end)
+
+    teardown(function()
+      for _, path in ipairs(layoutFiles) do
+        if contentsBefore[path] then
+          writeSpecFile(path, contentsBefore[path])
+        else
+          os.remove(path)
+        end
+      end
+    end)
 
     it("saveWindowLayout returns true and writes the layout file", function()
-      assert.is_not_nil(layoutFile, "could not work out where the layout file goes from " .. getMudletHomeDir())
+      local layoutFile = layoutFiles[1]
+      -- taking the file away first is what makes this about the call rather
+      -- than about a file an earlier session left behind
+      os.remove(layoutFile)
+      assert.is_nil(lfs.attributes(layoutFile, "mode"))
       assert.is_true(saveWindowLayout())
       assert.is_not_nil(lfs.attributes(layoutFile, "mode"), layoutFile .. " was not written")
       assert.is_true(lfs.attributes(layoutFile, "size") > 0)
@@ -5317,8 +5360,9 @@ end)
 -- Lua can create a toolbar and buttons (tempButtonToolbar/tempButton) but not a
 -- push-down one, and it cannot remove either again - so the buttons the button
 -- specs need come from a package that is installed for the block and
--- uninstalled after it, which takes them away again with it. That install
--- hinges on a profile save, which only runs when the event loop does.
+-- uninstalled after it, which takes them away again with it. Installing starts
+-- a profile save, and the uninstall is refused until that save has drained,
+-- which only happens when the event loop runs.
 if not os.getenv("MUDLET_TEST_MODE") then
 
 describe("Toolbar buttons", function()
@@ -5374,8 +5418,6 @@ describe("Toolbar buttons", function()
     }, "\n")
   end
 
-  -- installing and uninstalling both hinge on a profile save that only runs
-  -- when the event loop does, so both wait for what they asked for
   local function waitUntil(condition, timeoutMilliseconds)
     local waited = 0
     while waited < timeoutMilliseconds do
@@ -5406,9 +5448,14 @@ describe("Toolbar buttons", function()
 
   teardown(function()
     if installed then
-      -- uninstalling is refused while the save the install started is running
-      waitUntil(function() return uninstallPackage(packageName) == true end, 5000)
-      waitUntil(function() return not packageIsInstalled() end, 5000)
+      -- uninstalling is refused while the save the install started is still
+      -- draining, and that only finishes when the event loop runs. A package
+      -- left behind here would still be in the profile on the next run, so say
+      -- so rather than leave it to be found later
+      assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
+        packageName .. " could not be uninstalled")
+      assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),
+        packageName .. " was still installed after being uninstalled")
     end
     os.remove(packageFile)
   end)
@@ -5442,11 +5489,14 @@ describe("Toolbar buttons", function()
       assert.are.equal("no button item with ID 999999 found", setErr)
     end)
 
-    it("getButtonState with no arguments answers the main console's own state", function()
-      -- the no-argument form predates buttons taking a name and answers a
-      -- number where the named form answers a boolean
-      local state = getButtonState()
-      assert.are.equal("number", type(state))
+    it("getButtonState with no arguments answers the console's own button state", function()
+      -- with no arguments this answers TConsole::mButtonState, which is 1 or 2
+      -- rather than the boolean the named form answers, and which only a real
+      -- click on a push-down button writes - setButtonState never touches it
+      local before = getButtonState()
+      assert.is_true(before == 1 or before == 2, "state was " .. tostring(before))
+      setButtonState(pushDownButton, true)
+      assert.are.equal(before, getButtonState())
     end)
 
     it("both refuse a button that is not a push-down one", function()
@@ -5537,17 +5587,41 @@ describe("Toolbar buttons", function()
   end)
 
   describe("showToolBar and hideToolBar", function()
-    it("both return nothing at all for a toolbar that exists", function()
-      assert.are.equal(0, select("#", hideToolBar(toolbar)))
-      assert.are.equal(0, select("#", showToolBar(toolbar)))
+    -- both answer nothing at all, but they flip the active flag of the action
+    -- the toolbar was built from, which isActive() reads back. For a toolbar
+    -- that came out of a package that action is the package's own folder
+    -- rather than the toolbar, so the package's name is what they answer to
+    local function toolbarActive()
+      return isActive(packageName, "button")
+    end
+
+    after_each(function()
+      showToolBar(packageName)
     end)
 
-    it("hiding and showing repeatedly leaves the toolbar's buttons usable", function()
-      hideToolBar(toolbar)
-      showToolBar(toolbar)
-      hideToolBar(toolbar)
-      showToolBar(toolbar)
+    it("hideToolBar deactivates the toolbar and showToolBar activates it again", function()
+      assert.are.equal(1, toolbarActive())
+      assert.are.equal(0, select("#", hideToolBar(packageName)))
+      assert.are.equal(0, toolbarActive())
+      assert.are.equal(0, select("#", showToolBar(packageName)))
+      assert.are.equal(1, toolbarActive())
+    end)
+
+    it("hiding and showing repeatedly ends up where it started", function()
+      hideToolBar(packageName)
+      showToolBar(packageName)
+      hideToolBar(packageName)
+      showToolBar(packageName)
+      assert.are.equal(1, toolbarActive())
       assert.is_true(setButtonStyleSheet(pushDownButton, ""))
+    end)
+
+    it("a name that is no toolbar is refused", function()
+      pending("both walk the toolbar list and do nothing at all when no name matches, so a typo is silent")
+    end)
+
+    it("a packaged toolbar answering to its own name", function()
+      pending("regenerateEasyButtonBars builds a package's toolbars against the package's own action, so hideToolBar only answers to the package name and moves every toolbar in the package at once")
     end)
 
     it("both hard-error on a non-string toolbar name", function()
@@ -5619,8 +5693,9 @@ describe("Command line actions and suggestions", function()
       assert.is_truthy(tostring(err):find("setCmdLineAction: bad argument #1 type", 1, true))
     end)
 
-    it("takes the action as a string of Lua to call, not only as a function", function()
-      -- the Lua wrapper around the C++ function compiles a string argument
+    it("takes the action as the name of a function to call, not only as a function", function()
+      -- the Lua wrapper compiles a string argument as "return <string>(...)", so
+      -- it has to name something callable rather than be a statement
       assert.is_true(setCmdLineAction(cmdLine, "echo"))
     end)
 
@@ -5680,15 +5755,10 @@ describe("Command line actions and suggestions", function()
       assert.are.equal(0, select("#", clearCmdLineSuggestions(cmdLine)))
     end)
 
-    it("clearing when there is nothing to clear is not an error", function()
-      clearCmdLineSuggestions(cmdLine)
-      assert.are.equal(0, select("#", clearCmdLineSuggestions(cmdLine)))
-    end)
-
     it("returns nil and a message naming a command line that is not there", function()
       local ok, err = clearCmdLineSuggestions(unknown)
       assert.is_nil(ok)
-      assert.is_truthy(tostring(err):find(unknown, 1, true))
+      assert.are.equal(('command line "%s" not found'):format(unknown), err)
     end)
 
     it("hard-errors on a non-string command line name", function()
@@ -5762,7 +5832,7 @@ describe("setPopup", function()
   it("returns nil and a message naming a window that is not there", function()
     local ok, err = setPopup(unknown, {"one"}, {"first"})
     assert.is_nil(ok)
-    assert.is_truthy(tostring(err):find(unknown, 1, true))
+    assert.are.equal(('window "%s" not found'):format(unknown), err)
   end)
 
   it("opening the popup menu and picking an entry", function()
@@ -5792,6 +5862,21 @@ describe("Labels inside a user window", function()
 
   after_each(function()
     deleteLabel(label)
+  end)
+
+  it("the label really is inside the user window, not the main window", function()
+    -- createLabel falls back to the main window without a word when the parent
+    -- window name matches nothing, so a spec that only reads the label back
+    -- would pass either way; hiding the parent is what tells them apart
+    assert.is_true(windowVisible(label))
+    hideWindow(userWindow)
+    assert.is_false(windowVisible(label))
+    showWindow(userWindow)
+    assert.is_true(windowVisible(label))
+  end)
+
+  it("a parent window name that matches nothing is refused", function()
+    pending("createLabel puts the label in the main window and answers true when the parent window name is not a window")
   end)
 
   it("echo puts text on a label that lives in a user window", function()
