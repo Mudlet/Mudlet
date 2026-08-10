@@ -505,6 +505,26 @@ describe("Media playback effects with a generated sound file", function()
   local videoLabel = "busted-media-video-label"
   local videoLabelReady
 
+  -- Handing a player that widget is the only thing this suite does that brings
+  -- a GL context up: Qt loads its XCB GL integration, and Mesa initialises and
+  -- then - at shutdown, with the context - unloads a driver. On the leak job's
+  -- Mesa that driver initialisation leaks around 240 bytes, and by the time
+  -- LeakSanitizer looks, the library holding the allocating frame is gone, so
+  -- no leak: line in asan-suppressions.txt can name it. That file asks for
+  -- exactly this: keep the context from being created test-side, which is also
+  -- why Other_spec leaves show3dMapView alone. The refusal spec below needs no
+  -- widget and no context, and every leg without leak checking - Windows CI and
+  -- a developer's own run - still plays the video.
+  local leakChecked = (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) ~= nil
+
+  local function videoWidgetUnavailable()
+    if leakChecked then
+      pending("a video widget's GL context leaks in this job's GL driver, where nothing is left to suppress by name")
+      return true
+    end
+    return false
+  end
+
   local function withVideoLabel()
     if not videoLabelReady then
       createLabel(videoLabel, 0, 0, 40, 40, 1)
@@ -1121,7 +1141,7 @@ describe("Media playback effects with a generated sound file", function()
   end)
 
   it("playVideoFile plays into the label its key names and the video family reports it", function()
-    if mediaPlaybackUnavailable() then
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
       return
     end
     -- The file is the same silent WAV the sound specs use: what makes this a
