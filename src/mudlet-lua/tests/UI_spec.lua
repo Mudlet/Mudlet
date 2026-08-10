@@ -5498,9 +5498,16 @@ describe("Toolbar buttons", function()
       assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),
         packageName .. " was still installed after being uninstalled")
     end
-    -- and let the save the uninstall queues run here rather than during
-    -- Mudlet's shutdown, which gives up waiting on it half way through
+    -- The save uninstallPackage() asks for is queued, not started there and
+    -- then, so it has to be given the event loop before anything can see it
+    -- running - ask too early and the wait below passes while the save is still
+    -- only pending. It has to finish here rather than during Mudlet's shutdown,
+    -- which gives up waiting after a thousand iterations and tears down around
+    -- the writer that is still going (a segfault on the quicker runners).
+    pumpEvents(300)
     assert.is_true(waitForProfileSaveToPass(), "the profile save the uninstall queued never finished")
+    pumpEvents(100)
+    assert.is_true(waitForProfileSaveToPass(), "another profile save was queued behind the first")
     os.remove(packageFile)
   end)
 
