@@ -50,6 +50,8 @@
 #include <QTimer>
 #include <QUrlQuery>
 
+#include <algorithm>
+#include <iterator>
 #include <utility>
 #include <chrono>
 
@@ -57,8 +59,26 @@ using namespace std::chrono_literals;
 
 namespace {
 
-// Maximum length for an OSC sequence before aborting (defense against malformed sequences)
+// How much of a string sequence (OSC, DCS, SOS, PM or APC) is held while
+// waiting for its terminator - beyond this the bytes are discarded as they
+// arrive rather than buffered, so a server that never terminates one cannot
+// grow mIncompleteSequenceBytes without bound
 constexpr size_t MAX_OSC_SEQUENCE_LENGTH = 4096;
+
+// How much of a discarded string sequence to quote in the warning about it
+constexpr size_t STRING_SEQUENCE_EXCERPT_LENGTH = 40;
+
+// Whether a byte ends the line a string sequence (OSC, DCS, SOS, PM or APC)
+// started on, and with it the sequence: everything CHAR_IS_COMMIT_CHAR() calls
+// the end of a line except the carriage return. cTelnet strips the game's own
+// carriage returns and injects one of its own once the game goes quiet, to
+// flush a line that is still arriving (cTelnet::slot_timerPosting()), so
+// treating that one as an ending would cut a payload short merely for being
+// bigger than one network packet timeout's worth of data
+bool endsStringSequence(const char byte)
+{
+    return byte != CHAR_CARRIAGE_RETURN && CHAR_IS_COMMIT_CHAR(byte);
+}
 
 // Maximum length for a CSI sequence's parameter string before aborting - a
 // valid one is only a handful of bytes, so this only trips on a malformed or
@@ -583,6 +603,39 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
       elements at the end can be omitted.
  */
 
+void TBuffer::resetSequenceParserState()
+{
+    mGotESC = false;
+    mGotEscCharset = false;
+    mGotCSI = false;
+    mGotOSC = false;
+    mGotString = false;
+    mIncompleteSequenceBytes.clear();
+    mLocalGotESC = false;
+    mLocalGotEscCharset = false;
+    mLocalGotCSI = false;
+    mLocalGotOSC = false;
+    mLocalGotString = false;
+    mLocalIncompleteSequenceBytes.clear();
+    mWarnedAboutStringSequence = false;
+}
+
+void TBuffer::warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd)
+{
+    // A game that gets this wrong usually gets it wrong on every line, and in
+    // a release build every warning also becomes a Sentry breadcrumb, so say
+    // it once per connection and quote enough of the payload to identify which
+    // of the game's features misbehaved:
+    if (mWarnedAboutStringSequence) {
+        return;
+    }
+    mWarnedAboutStringSequence = true;
+    const size_t excerptLength = std::min(spanEnd - spanStart, STRING_SEQUENCE_EXCERPT_LENGTH);
+    qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - " << (mGotString ? "a DCS/SOS/PM/APC" : "an OSC") << " sequence " << what
+                                   << ", discarding it to recover. It began \"" << QString::fromLatin1(localBuffer.data() + spanStart, static_cast<int>(excerptLength))
+                                   << "\". Further such sequences on this connection are not reported.";
+}
+
 void TBuffer::swapParserSequenceState()
 {
     std::swap(mGotESC, mLocalGotESC);
@@ -992,29 +1045,29 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         } // End of if (mGotCSI)
 
         if (mGotOSC) {
-            // Also reached - with mGotString set - for the DCS, SOS, PM and
-            // APC string sequences which are consumed identically but whose
-            // payload is not decoded.
-            // Lookahead and find end of sequence - valid terminators are:
+            // Also reached - with mGotString set - whenever the payload is to
+            // be consumed but not decoded: a DCS, SOS, PM or APC sequence, or
+            // an OSC already truncated by the length cap below.
+            // Lookahead and find the end of the sequence, which is whichever
+            // comes first of:
             // - ST (String Terminator): ESC followed by '\' (backslash)
             // - BEL (0x07): Common alternative used by xterm and many MUDs
+            // - the end of the line it started on. ECMA-48 does allow an <LF>
+            //   inside a "command string", but honouring that lets a single
+            //   unterminated sequence blacken the rest of the session
 
-            // Valid characters inside an OSC are: a "command string" or a
-            // "character string".
-            // A "command string" is a sequence of bit combinations in the range
-            // <BS><TAB><LF><VT><FF><CR> and ASCII printables from Space to '~'
             // A "character string" is a sequence of any character except Start
             // of String (SOS) or String Terminator (ST) and the latter is ESC
             // followed by '\\' (a single \ BTW) in the 7-bit code case (the
             // former is encoded as ESC followed by 'X'):
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
-            // It is safe to look at spanEnd-1 even at the starting position
-            // because we already know that the localBuffer extends backwards
-            // that far (it will be the ']' character - or 'P', 'X', '^' or
-            // '_' for a string sequence!)
-            // Loop until we find ST (ESC \), BEL, exceed length limit, or run out of data
-            while (spanEnd < localBufferLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07'
+            // Looking at spanEnd-1 at the starting position is safe: either
+            // the sequence started earlier in this buffer, so the byte behind
+            // is its introducer (or, after a trip round the length cap below,
+            // more of its payload), or spanStart is 0 and the spanEnd > 0
+            // guard keeps the read in bounds.
+            while (spanEnd < localBufferLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07' && !endsStringSequence(localBuffer[spanEnd])
                    && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
                 ++spanEnd;
             }
@@ -1022,6 +1075,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // Determine what terminated the loop
             const bool foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
             const bool foundST = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
+            const bool foundLineEnding = (spanEnd < localBufferLength && endsStringSequence(localBuffer[spanEnd]));
             const bool exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
 
             if (foundBEL) {
@@ -1033,7 +1087,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 mGotString = false;
                 localBufferPosition = spanEnd + 1; // Skip past BEL
                 continue;
-            } else if (foundST) { // NOLINT(readability-else-after-return)
+            }
+
+            if (foundST) {
                 // ST terminator (ESC \) - sequence content excludes the ESC before backslash
                 if (!mGotString) {
                     decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart - 1).c_str()));
@@ -1042,39 +1098,48 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 mGotString = false;
                 localBufferPosition = spanEnd + 1; // Skip past backslash
                 continue;
-            } else if (exceededLength) { // NOLINT(readability-else-after-return)
-                // Length limit exceeded - scan forward for a terminator to skip the malformed sequence
-                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - OSC sequence exceeded " << MAX_OSC_SEQUENCE_LENGTH
-                                               << " bytes without terminator, scanning for terminator to recover.";
-                // Continue scanning from where we left off to find a terminator
-                while (spanEnd < localBufferLength && localBuffer[spanEnd] != '\x07' && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
-                    ++spanEnd;
-                }
-                // Check if we found a terminator
-                if (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07') {
-                    // Found BEL - skip to after it
-                    mGotOSC = false;
-                    mGotString = false;
-                    localBufferPosition = spanEnd + 1;
-                    continue;
-                } else if (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\') { // NOLINT(readability-else-after-return)
-                    // Found ST - skip to after it
-                    mGotOSC = false;
-                    mGotString = false;
-                    localBufferPosition = spanEnd + 1;
-                    continue;
-                } else { // NOLINT(readability-else-after-return)
-                    // No terminator found yet - wait for more data
-                    // Store from current position to avoid re-scanning the entire sequence
-                    mIncompleteSequenceBytes = localBuffer.substr(spanEnd);
-                    return;
-                }
-            } else { // NOLINT(readability-else-after-return)
-                // Incomplete sequence - not enough data yet, wait for more
-                // (This is safe because we're under the length limit)
-                mIncompleteSequenceBytes = localBuffer.substr(spanStart);
-                return;
             }
+
+            if (foundLineEnding) {
+                // A stray introducer - a game that emits one would otherwise
+                // black out every line that followed it for the rest of the
+                // session, so give up on the sequence at the end of the line
+                // and leave the line ending itself to be processed as usual:
+                warnAboutDiscardedStringSequence(qsl("was not terminated before the end of its line"), localBuffer, spanStart, spanEnd);
+                mGotOSC = false;
+                mGotString = false;
+                localBufferPosition = spanEnd;
+                continue;
+            }
+
+            if (exceededLength) {
+                if (!mGotString) {
+                    // An OSC is the only one of these whose payload Mudlet
+                    // acts on, so it is the only one that loses anything by
+                    // being consumed rather than decoded. A DCS or APC over
+                    // the cap is ordinary - a Sixel image or a Kitty graphic
+                    // legitimately runs to many times it:
+                    warnAboutDiscardedStringSequence(qsl("passed %1 bytes, so its command will be ignored").arg(MAX_OSC_SEQUENCE_LENGTH), localBuffer, spanStart, spanEnd);
+                }
+                // Stay in the sequence and consume the rest as it arrives, but
+                // what is left is no longer the whole payload so it must not
+                // reach the OSC decoder when the terminator turns up:
+                mGotString = true;
+                // Hold on to a trailing ESC so that a String Terminator that
+                // straddles this boundary is still recognised:
+                localBufferPosition = (localBuffer[spanEnd - 1] == '\033') ? spanEnd - 1 : spanEnd;
+                continue;
+            }
+
+            // This is safe because we're under the length limit. The only
+            // carriage returns that reach here are the ones cTelnet injects to
+            // flush a line that is still arriving, and they are always the
+            // last byte of the chunk that carried them: drop them rather than
+            // keep them as payload, or one landing between the ESC and the
+            // backslash of a String Terminator would hide that terminator:
+            mIncompleteSequenceBytes.clear();
+            std::remove_copy(localBuffer.cbegin() + spanStart, localBuffer.cend(), std::back_inserter(mIncompleteSequenceBytes), CHAR_CARRIAGE_RETURN);
+            return;
         }
 
         // We are outside of a CSI or OSC sequence if we get to here:
