@@ -225,9 +225,15 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("returns this process's own id", function()
         local pid = getProcessID()
         assert.is_number(pid)
-        assert.is_true(pid > 0)
         assert.equals(math.floor(pid), pid)
         assert.equals(pid, getProcessID())
+        if getOS() == "linux" then
+          -- the number is only worth anything if the operating system agrees
+          -- that it is this process
+          assert.equals("directory", lfs.attributes("/proc/" .. pid, "mode"))
+        else
+          assert.is_true(pid > 0)
+        end
       end)
     end)
 
@@ -241,13 +247,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local seen = {}
         for _, encoding in ipairs(encodings) do
           assert.is_string(encoding)
-          -- the "M_" prefix marks Mudlet's own codecs and is an implementation
-          -- detail that setServerEncoding() does not accept
+          -- the "M_" prefix marks Mudlet's own codecs and is not part of the
+          -- name the rest of the API uses
           assert.is_nil(encoding:find("^M_"), encoding .. " leaked its internal prefix")
           assert.is_nil(seen[encoding], encoding .. " is listed twice")
           seen[encoding] = true
         end
         assert.is_true(seen[getServerEncoding()], "the encoding in use is not in the list")
+      end)
+
+      it("names every encoding in the form setServerEncoding accepts", function()
+        local original = getServerEncoding()
+        finally(function() setServerEncoding(original) end)
+
+        for _, encoding in ipairs(getServerEncodingsList()) do
+          assert.is_true(setServerEncoding(encoding), "the list offered " .. encoding .. " but setServerEncoding refused it")
+          assert.equals(encoding, getServerEncoding())
+        end
       end)
     end)
 
@@ -295,10 +311,18 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     describe("Tests the profile description accessors", function()
       -- The description is profile data on disk, so every spec here puts back
       -- what it found: the self-test profile is reused between runs.
+      local descriptionFile = getMudletHomeDir() .. "/description"
+
       local function restoreDescription()
         local original = getProfileInformation()
+        -- a profile that has never had a description has no file for one, and
+        -- writing the empty string back would leave one behind
+        local hadFile = fileExists(descriptionFile)
         return function()
           setProfileInformation(original)
+          if not hadFile then
+            os.remove(descriptionFile)
+          end
         end
       end
 
@@ -413,6 +437,21 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assertArgError(function() setSaveCommandHistory(5) end, "setSaveCommandHistory: bad argument #1 type")
         end)
 
+        it("turns saving on for the main command line when called with no arguments", function()
+          -- BUG: the implementation says an argument-less call is meant to set
+          -- the main command line, but with nothing on the stack it falls
+          -- through to the type check and raises instead. Left pending rather
+          -- than pinning the raise as the contract.
+          pending("setSaveCommandHistory() with no arguments raises instead of setting the main command line")
+          local original = getSaveCommandHistory()
+          finally(function() setSaveCommandHistory(original) end)
+          setSaveCommandHistory(false)
+
+          assert.is_true(setSaveCommandHistory())
+
+          assert.is_true((getSaveCommandHistory()))
+        end)
+
         it("round-trips through getSaveCommandHistory", function()
           local original = getSaveCommandHistory()
           finally(function() setSaveCommandHistory(original) end)
@@ -465,11 +504,15 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(startMessage, startPath), startMessage)
           assert.is_true(fileExists(startPath), "no log file was created")
 
+          echo("mudlet-spec-logged-line\n")
+
           local stopped, stopMessage, stopPath, stopState = startLogging(false)
           assert.is_true(stopped)
           assert.equals(startPath, stopPath)
           assert.equals(0, stopState)
           assert.is_true(contains(stopMessage, "stopped being logged"), stopMessage)
+          -- read once logging has stopped: the log stream is buffered
+          assert.is_true(contains(readFile(startPath), "mudlet-spec-logged-line"), "the console output did not reach the log")
         end)
 
         it("reports, rather than repeats, a state it is already in", function()
@@ -520,10 +563,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, "mudlet-spec-appended-line"), "the appended text is not in the log")
         end)
 
-        it("does nothing while logging is off", function()
-          assert.is_nil((startLogging(false)))
+        it("writes nothing while logging is off", function()
+          local logPath
+          finally(function()
+            startLogging(false)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          logPath = select(3, startLogging(true))
+          startLogging(false)
 
           assert.equals(0, select('#', appendLog("mudlet-spec-never-logged")))
+
+          assert.is_false(contains(readFile(logPath), "mudlet-spec-never-logged"), "the text was appended to a log that was closed")
         end)
       end)
     end)
@@ -544,6 +597,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       describe("Tests the functionality of removeFileWatch", function()
+        it("raises a Lua error when called with no arguments", function()
+          assertArgError(function() removeFileWatch() end, "removeFileWatch: bad argument #1 type")
+        end)
+
         it("returns false for a path nobody is watching", function()
           assert.is_false(removeFileWatch(getMudletHomeDir() .. "/mudlet-spec-no-such-path"))
         end)
@@ -926,13 +983,15 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("raises a Lua error naming the argument that is wrong", function()
-        assertArgError(function() setMergeTables("Char.Vitals", {}) end, "setMergeTables: bad argument #2 type")
+        assertArgError(function() setMergeTables("MudletSpec.NeverAModule", {}) end, "setMergeTables: bad argument #2 type")
       end)
 
       it("returns nothing for any number of modules, including none", function()
+        -- keys can be registered but never taken off again, so these are names
+        -- no game will ever send rather than the real Char.* ones
         assert.equals(0, select('#', setMergeTables()))
-        assert.equals(0, select('#', setMergeTables("Char.Vitals")))
-        assert.equals(0, select('#', setMergeTables("Char.Vitals", "Char.Stats")))
+        assert.equals(0, select('#', setMergeTables("MudletSpec.NeverAModule")))
+        assert.equals(0, select('#', setMergeTables("MudletSpec.NeverAModule", "MudletSpec.NeverAnother")))
       end)
 
       it("merges the keys it was given into an incoming GMCP table", function()
@@ -940,6 +999,30 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         -- self-test profile's socket is never in the unconnected state that
         -- feedTelnet() needs, so there is no way to deliver one from Lua.
         pending("delivering GMCP to the profile needs a server connection")
+      end)
+    end)
+
+    describe("Tests the functionality of send", function()
+      -- send() is registered from the C++ sendRaw(), which is the name its own
+      -- error messages use.
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() send() end, "sendRaw: bad argument #1 type")
+      end)
+
+      it("raises a Lua error when whether to show the command is not a boolean", function()
+        assertArgError(function() send("mudletSpecSend", "yes") end, "sendRaw: bad argument #2 type")
+      end)
+
+      it("shows the command on the main console, unless told not to", function()
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(send("mudletSpecShownCommand", true))
+
+        assert.is_true(contains(textFrom(mark), "mudletSpecShownCommand"), textFrom(mark))
+
+        mark = getLastLineNumber("main")
+        assert.is_true(send("mudletSpecHiddenCommand", false))
+        assert.is_false(contains(textFrom(mark), "mudletSpecHiddenCommand"), textFrom(mark))
       end)
     end)
 
@@ -1027,7 +1110,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         -- running these specs) already ships and puts its state back.
         local parentGroup = "Not Filter"
         local nested = findItems("Trigger", "trigger")
-        assert.is_true(#nested > 0, "the run-tests package's nested triggers are not installed")
+        -- both names have to be the harness's own, or this would be toggling
+        -- some other package's trigger and asking about an unrelated item
+        assert.equals(1, #nested, "expected exactly the run-tests package's nested 'Trigger'")
+        assert.equals(1, #findItems(parentGroup, "trigger"), "expected exactly the run-tests package's '" .. parentGroup .. "' group")
         local childId = nested[1]
         finally(function() enableTrigger(parentGroup) end)
 
@@ -1058,6 +1144,21 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end
 
         assert.is_nil(profiles["mudlet-spec-never-a-profile"])
+      end)
+
+      it("lists a profile that is not loaded", function()
+        local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
+        assert.is_string(profilesDirectory, "could not work out the profiles folder from " .. getMudletHomeDir())
+        local unloaded = profilesDirectory .. "/mudlet-spec-unloaded"
+        finally(function() lfs.rmdir(unloaded) end)
+        assert.is_true(lfs.mkdir(unloaded))
+
+        local entry = getProfiles()["mudlet-spec-unloaded"]
+        assert.is_table(entry, "a profile folder that is not open was not listed")
+        assert.is_false(entry.loaded)
+        -- only a loaded profile has a connection to report on
+        assert.is_nil(entry.connected)
+        assert.equals("", entry.description)
       end)
     end)
 
@@ -1146,6 +1247,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_false(fileExists(profileIcon))
 
           assert.is_true(resetProfileIcon())
+
+          assert.is_false(fileExists(profileIcon))
         end)
       end)
     end)
@@ -1166,6 +1269,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("does not deliver the event back to the profile that sent it", function()
+        -- Only the half that one profile can see: that the sender is left out.
+        -- Whether the other profiles receive it needs a second profile, so it
+        -- belongs to the functional tests rather than here.
         local received = 0
         local handler = registerAnonymousEventHandler("mudletSpecGlobalEvent", function() received = received + 1 end)
         finally(function() killAnonymousEventHandler(handler) end)
@@ -1175,15 +1281,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         if testMode then
           pumpEvents(200)
         end
-        -- the sender is deliberately left out; raiseEvent() is what a profile
-        -- uses to talk to itself
         assert.equals(0, received)
+        -- raiseEvent() is what a profile uses to talk to itself, and it proves
+        -- the handler the count above is being read from does work
         raiseEvent("mudletSpecGlobalEvent")
         assert.equals(1, received)
       end)
     end)
 
     describe("Tests the functionality of wait", function()
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() wait() end, "Wait: wrong number of arguments")
+      end)
+
+      it("raises a Lua error when the delay is not a number", function()
+        assertArgError(function() wait("soon") end, "Wait: bad argument #1 type")
+      end)
+
       it("returns nothing and blocks for at least as long as it was asked to", function()
         local before = getEpoch()
 
@@ -1192,6 +1306,84 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         -- getEpoch() is in seconds; wait() blocks the whole thread, which is
         -- why nothing here waits any longer than it has to
         assert.is_true(getEpoch() - before >= 0.009)
+      end)
+    end)
+
+    describe("Tests the functions whose effect needs a desktop or a person", function()
+      -- These reach a browser, the system tray, a modal dialog or the physical
+      -- keyboard, so only the refusals can be driven from here: every spec below
+      -- gets the call turned away before it can do anything. That the call is
+      -- reached at all is the point - it proves the function is registered and
+      -- validates what it was handed.
+
+      describe("Tests the functionality of openWebPage", function()
+        it("raises a Lua error, rather than opening anything, when given no URL", function()
+          assertArgError(function() openWebPage() end, "openWebPage: bad argument #1 type")
+        end)
+      end)
+
+      describe("Tests the functionality of showNotification", function()
+        it("raises a Lua error when called with no arguments", function()
+          assertArgError(function() showNotification() end, "showNotification: bad argument #1 type")
+        end)
+
+        it("raises a Lua error when the expiry time is not a number", function()
+          assertArgError(function() showNotification("title", "message", "soon") end, "showNotification: bad argument #3 type")
+        end)
+      end)
+
+      describe("Tests the functionality of invokeFileDialog", function()
+        it("raises a Lua error, rather than opening a dialog, when not told what to ask for", function()
+          assertArgError(function() invokeFileDialog() end, "invokeFileDialog: bad argument #1 type")
+        end)
+
+        it("raises a Lua error when given no title", function()
+          assertArgError(function() invokeFileDialog(true) end, "invokeFileDialog: bad argument #2 type")
+        end)
+      end)
+
+      describe("Tests the functionality of holdingModifiers", function()
+        it("raises a Lua error when the modifier is not a number", function()
+          -- what it answers depends on which keys are held down as the specs
+          -- run, so only the refusal can be asserted on
+          assertArgError(function() holdingModifiers("ctrl") end, "holdingModifiers: bad argument #1 type")
+        end)
+      end)
+
+      describe("Tests the functionality of showHandlerError", function()
+        it("raises a Lua error when called with no arguments", function()
+          assertArgError(function() showHandlerError() end, "showHandlerError: bad argument #1 type")
+        end)
+
+        it("raises a Lua error when given no error message", function()
+          -- where the message goes is the editor's error console and, only for a
+          -- profile that opted into echoing Lua errors, the main console;
+          -- neither can be turned on from Lua
+          assertArgError(function() showHandlerError("mudletSpecEvent") end, "showHandlerError: bad argument #2 type")
+        end)
+      end)
+
+      describe("Tests the functionality of clearCmdLineBlacklist", function()
+        it("returns nil+msg for a command line that does not exist", function()
+          local ok, err = clearCmdLineBlacklist("mudlet-spec-no-such-command-line")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "not found"), tostring(err))
+        end)
+
+        it("returns nothing for the main command line", function()
+          -- what it cleared cannot be read back: there is no getter for a
+          -- command line's blacklist
+          assert.equals(0, select('#', clearCmdLineBlacklist()))
+          assert.equals(0, select('#', clearCmdLineBlacklist("main")))
+        end)
+      end)
+
+      describe("Tests the functionality of showUnzipProgress", function()
+        it("says it does nothing, having been removed", function()
+          local ok, err = showUnzipProgress()
+          assert.is_nil(ok)
+          assert.equals("removed command, this function is now inactive and does nothing", err)
+        end)
       end)
     end)
 

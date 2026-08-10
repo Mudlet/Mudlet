@@ -118,6 +118,27 @@ local function fileExists(path)
   return lfs.attributes(path, "mode") ~= nil
 end
 
+-- Everything the main console gained since it was at line `mark`, joined up.
+-- The console wraps long lines and a wrap swallows the space it broke at, so
+-- the announcements below are matched with all whitespace removed.
+local function textFrom(mark)
+  return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+end
+
+local function containsWrapped(haystack, needle)
+  return contains((tostring(haystack):gsub("%s+", "")), (needle:gsub("%s+", "")))
+end
+
+-- A file: URL for a local path, in the three-slash form that keeps a Windows
+-- drive letter from being read as the host name.
+local function fileUrl(path)
+  local normalised = path:gsub("\\", "/")
+  if normalised:sub(1, 1) ~= "/" then
+    normalised = "/" .. normalised
+  end
+  return "file://" .. normalised
+end
+
 local function copyFile(from, to)
   local source = io.open(from, "rb")
   assert.is_not_nil(source, "could not read the fixture " .. from)
@@ -926,27 +947,6 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
   end)
 end)
 
--- Everything the main console gained since it was at line `mark`, joined up.
--- The console wraps long lines and a wrap swallows the space it broke at, so
--- the announcements below are matched with all whitespace removed.
-local function textFrom(mark)
-  return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
-end
-
-local function containsWrapped(haystack, needle)
-  return contains((tostring(haystack):gsub("%s+", "")), (needle:gsub("%s+", "")))
-end
-
--- A file: URL for a local path, in the three-slash form that keeps a Windows
--- drive letter from being read as the host name.
-local function fileUrl(path)
-  local normalised = path:gsub("\\", "/")
-  if normalised:sub(1, 1) ~= "/" then
-    normalised = "/" .. normalised
-  end
-  return "file://" .. normalised
-end
-
 describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
     defer(function() removeFixturePackage(minimalPackage) end)
@@ -1037,6 +1037,10 @@ describe("Tests the functionality of installPackageFromUrl", function()
     assert.is_true(packageInstalled(minimalPackage))
     local text = textFrom(mark)
     assert.is_true(containsWrapped(text, "Downloading package from " .. url), text)
+    -- BUG: the announcement is meant to name just the file, but the profile
+    -- folder it strips off is used as a Lua pattern, so a profile path holding
+    -- any magic character (a "-" in a home folder will do it) leaves the whole
+    -- path in the message. Only the outcome is checked until that is fixed.
     assert.is_true(containsWrapped(text, "installed successfully."), text)
     assert.is_false(fileExists(getMudletHomeDir() .. "/" .. downloadedName), "the downloaded copy was left in the profile")
   end)
@@ -1076,44 +1080,58 @@ describe("Tests the functionality of packageDrop", function()
   end)
 
   it("ignores a file whose type Mudlet does not install", function()
-    local packagesBefore = getPackages()
+    -- an install that arrives while a save is running is postponed and would
+    -- land after this spec rather than in it
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
 
     assert.equals(0, select('#', packageDrop("sysDropEvent", fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", "exe")))
 
     assert.is_false(packageInstalled(minimalPackage))
-    assert.same(packagesBefore, getPackages())
+    assert.equals("", textFrom(mark))
   end)
 end)
 
 describe("Tests the functionality of packageUrlDrop", function()
-  -- Both specs prove the drop went no further by watching for the download
-  -- events: a handler armed beforehand is the only way to see events raised
-  -- inside the call.
-  it("ignores a URL whose scheme it does not handle", function()
-    local downloads = collectEventsForSpec("sysDownloadDone")
-    local failures = collectEventsForSpec("sysDownloadError")
-    -- The scheme is a separate argument from the URL, so the refused scheme is
-    -- paired with a URL that would otherwise be downloaded: that is what makes
-    -- the refusal visible rather than the download merely failing later. The
-    -- host is one nothing listens on, so no download can leave the machine even
-    -- if the refusal regresses.
-    packageUrlDrop("sysDropUrlEvent", "http://127.0.0.1:1/mudlet-spec-not-dropped.mpackage", "ftp")
+  -- installPackageFromUrl() announces the download before it starts one, so
+  -- that line on the console is what separates a drop that was passed on from
+  -- one that was turned away - and it is written while the call is still on the
+  -- stack, so no waiting is involved. Nothing listens on the port below, so the
+  -- download a passed-on drop starts cannot leave the machine.
+  local droppedUrl = "http://127.0.0.1:1/mudlet-spec-dropped.mpackage"
 
-    pumpEvents(300)
-    assert.equals(0, #downloads)
-    assert.equals(0, #failures)
-    assert.is_false(packageInstalled("mudlet-spec-not-dropped"))
+  local function announcedADownload(mark)
+    return contains(textFrom(mark), "Downloading package from")
+  end
+
+  it("hands a dropped package URL to the downloader", function()
+    defer(function() os.remove(getMudletHomeDir() .. "/mudlet-spec-dropped.mpackage") end)
+    local mark = getLastLineNumber("main")
+
+    packageUrlDrop("sysDropUrlEvent", droppedUrl, "http")
+
+    assert.is_true(containsWrapped(textFrom(mark), "Downloading package from " .. droppedUrl), textFrom(mark))
+    -- let the refused connection be reported here rather than in a later spec
+    waitForEvent("sysDownloadError", 5000)
+    assert.is_false(packageInstalled("mudlet-spec-dropped"))
+  end)
+
+  it("ignores a URL whose scheme it does not handle", function()
+    -- the scheme is a separate argument from the URL, so the URL is one the
+    -- spec above proved would otherwise be downloaded
+    local mark = getLastLineNumber("main")
+
+    assert.equals(0, select('#', packageUrlDrop("sysDropUrlEvent", droppedUrl, "ftp")))
+
+    assert.is_false(announcedADownload(mark))
   end)
 
   it("does not download a URL that is not a package file", function()
-    local downloads = collectEventsForSpec("sysDownloadDone")
-    local failures = collectEventsForSpec("sysDownloadError")
+    local mark = getLastLineNumber("main")
 
     packageUrlDrop("sysDropUrlEvent", "http://127.0.0.1:1/mudlet-spec-not-a-package.txt", "http")
 
-    pumpEvents(300)
-    assert.equals(0, #downloads)
-    assert.equals(0, #failures)
+    assert.is_false(announcedADownload(mark))
   end)
 end)
 
