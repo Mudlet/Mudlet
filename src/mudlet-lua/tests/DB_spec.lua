@@ -2139,6 +2139,37 @@ describe("Tests DB.lua functions", function()
       assert.is_false(ok)
       assert.is_true(string.find(err, "_unique must be a string or a table", 1, true) ~= nil)
     end)
+
+    it("errors when _index is neither a string nor a table", function()
+      local ok, err = pcall(function()
+        db:create("badschematestingonly", {
+          sheet = { name = "", _index = 42 }
+        })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "_index must be a string or a table", 1, true) ~= nil)
+    end)
+
+    it("errors on a malformed _index", function()
+      local ok, err = pcall(function()
+        db:create("badschematestingonly", {
+          sheet = { name = "", _index = { 123 } }
+        })
+      end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "Members of _index must be a string or table", 1, true) ~= nil)
+    end)
+
+    it("takes a falsy _index as a sheet that wants no indexes", function()
+      -- "_index = wanted and {'city'}" is false rather than nil when the
+      -- condition does not hold, and that used to be, and stays, a valid schema
+      local ok = pcall(function()
+        db:create("badschematestingonly", {
+          sheet = { name = "", _index = false }
+        })
+      end)
+      assert.is_true(ok)
+    end)
   end)
 
 end)
@@ -2441,6 +2472,61 @@ describe("Tests db's internal SQL helpers", function()
       local valid, msg = db:_validate_unique_contraints({42, true})
       assert.is_false(valid)
       assert.are.equal(2, #string.split(msg, "\n"))
+    end)
+  end)
+
+  describe("Tests db:_validate_index", function()
+    it("accepts a bare column name", function()
+      local valid, msg = db:_validate_index("city")
+      assert.is_true(valid)
+      assert.are.equal("", msg)
+    end)
+
+    it("accepts a list of column names", function()
+      assert.is_true((db:_validate_index({"name", "city"})))
+    end)
+
+    it("accepts a compound index", function()
+      assert.is_true((db:_validate_index({{"name", "city"}})))
+    end)
+
+    it("accepts an empty list", function()
+      assert.is_true((db:_validate_index({})))
+    end)
+
+    it("rejects a compound index holding something other than a column name", function()
+      local valid, msg = db:_validate_index({{"name", 42}})
+      assert.is_false(valid)
+      assert.is_truthy(string.find(msg, "Multi-column definitions for _index must be a list of strings", 1, true))
+    end)
+
+    it("rejects a member that is neither a string nor a table", function()
+      local valid, msg = db:_validate_index({42})
+      assert.is_false(valid)
+      assert.are.equal("Members of _index must be a string or table. Received number.", msg)
+    end)
+
+    it("rejects an index that is neither a string nor a table", function()
+      local valid, msg = db:_validate_index(42)
+      assert.is_false(valid)
+      assert.are.equal("_index must be a string or a table.  Received number.", msg)
+    end)
+
+    it("reports every bad member rather than only the first", function()
+      local valid, msg = db:_validate_index({42, true})
+      assert.is_false(valid)
+      assert.are.equal(2, #string.split(msg, "\n"))
+    end)
+
+    it("answers the same shapes as its _unique counterpart", function()
+      -- the two options take the same shapes, so a schema that one accepts and
+      -- the other refuses is a bug in whichever refused it
+      for _, shape in ipairs({"city", {"city"}, {{"name", "city"}}, {}}) do
+        assert.are.equal((db:_validate_unique_contraints(shape)), (db:_validate_index(shape)))
+      end
+      for _, shape in ipairs({42, {42}, {{42}}}) do
+        assert.are.equal((db:_validate_unique_contraints(shape)), (db:_validate_index(shape)))
+      end
     end)
   end)
 
@@ -2887,6 +2973,144 @@ describe("Tests db's internals against a real database", function()
       db:_migrate_indexes(conn, "people", {columns = {}, options = {_index = {"city"}}}, columns)
       assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
     end)
+  end)
+end)
+
+-- _index takes a single column name as well as a list of them, exactly as
+-- _unique does. db:_index_name, db:_index_valid and db.Database:_drop each take
+-- either shape, but db:_drop_orphaned_indexes walks _index with ipairs, so what
+-- reaches db.__schema has to be the list.
+describe("Tests db:create with a single column name as _index", function()
+  local dbName = "indexstringtestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function indexNames(sheetName)
+    local conn = db.__conn[dbName]
+    local cursor = conn:execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '" .. sheetName .. "' AND sql IS NOT NULL"
+    )
+    local names = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      names[#names + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    table.sort(names)
+    return names
+  end
+
+  after_each(function()
+    -- a db:create that raises part way through - which is exactly what this
+    -- block guards against - leaves a cursor open, and closing then raises as
+    -- well. Forget just this database in that case, so a regression here costs
+    -- this block's specs rather than every db spec that runs after it.
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("creates the database instead of raising", function()
+    local mydb
+    local ok, err = pcall(function()
+      mydb = db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    end)
+    assert.is_true(ok, tostring(err))
+    assert.is_table(mydb)
+    db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"})
+    assert.are.equal(1, #db:fetch(mydb.people))
+  end)
+
+  it("creates the index the string named", function()
+    db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("means exactly what the one entry list means", function()
+    db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    local fromString = indexNames("people")
+    -- an empty list on both sides would compare equal without saying anything
+    assert.are.equal(1, #fromString)
+    db:close(dbName)
+    os.remove(dbFile)
+
+    db:create(dbName, {people = {name = "", city = "", _index = {"city"}}})
+    assert.are.same(fromString, indexNames("people"))
+  end)
+
+  it("stores the string as a list, which is the shape every reader handles", function()
+    db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    assert.are.same({"city"}, db.__schema[dbName].people.options._index)
+  end)
+
+  it("keeps the index when the database is opened again", function()
+    -- the second db:create runs the migration, and that is where an _index the
+    -- migration cannot read costs you the index rather than an error
+    db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    db:close()
+
+    db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("still drops an index the string no longer names", function()
+    db:create(dbName, {people = {name = "", city = "", _index = {"name", "city"}}})
+    assert.are.equal(2, #indexNames("people"))
+    db:close()
+
+    db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("keeps the rows that were already in the sheet", function()
+    local mydb = db:create(dbName, {people = {name = "", city = "", _index = {"city"}}})
+    db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"})
+    db:close()
+
+    mydb = db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Bob", rows[1].name)
+  end)
+
+  it("takes a single column name for _unique at the same time", function()
+    local mydb = db:create(dbName, {people = {name = "", city = "", _index = "city", _unique = "name"}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+    -- the index the string asked for, and only that one: the sqlite_autoindex
+    -- the UNIQUE constraint builds has no sql of its own, so it is not listed
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("rebuilds the index when the sheet's constraints force a new table", function()
+    -- a changed _violations makes db:_migrate drop and recreate the table,
+    -- which takes every index with it; they come back from options._index, so
+    -- this is the migration path that a string _index has to survive
+    local mydb = db:create(dbName, {
+      people = {name = "", city = "", _index = "city", _unique = "name", _violations = "FAIL"}
+    })
+    db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"})
+    db:close(dbName)
+
+    mydb = db:create(dbName, {
+      people = {name = "", city = "", _index = "city", _unique = "name", _violations = "REPLACE"}
+    })
+
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Bob", rows[1].name)
+  end)
+
+  it("makes no index at all for a column the sheet does not have", function()
+    -- db:_index_valid refuses the column quietly rather than raising, so a
+    -- typo in the string costs the index and the ones that were there before
+    db:create(dbName, {people = {name = "", city = "", _index = "city"}})
+    assert.are.equal(1, #indexNames("people"))
+    db:close(dbName)
+
+    db:create(dbName, {people = {name = "", city = "", _index = "citty"}})
+    assert.are.same({}, indexNames("people"))
   end)
 end)
 
