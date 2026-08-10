@@ -26,6 +26,7 @@ set(FUNCTIONAL_TEST_SOURCES
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     MxpFramePlacementTest.cpp
+    TelnetReconnectStateTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
@@ -148,6 +149,10 @@ set_tests_properties(TriggerSameLineMatchTest PROPERTIES
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
+
+# TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
+# times per method, so it needs a longer timeout
+set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
