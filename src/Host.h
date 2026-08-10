@@ -561,6 +561,10 @@ public:
     bool mEnableGMCP = true;
     bool mEnableMSSP = true;
     bool mEnableMSDP = false;
+    // Negotiate MSDP on games that offer it but not GMCP. Deliberately not saved with the profile:
+    // it belongs to whichever package asked for it this session and dies with the session, so it
+    // cannot outlive that package the way the player's own mEnableMSDP preference would.
+    bool mEnableMSDPFallback = false;
     bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;

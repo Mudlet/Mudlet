@@ -25,6 +25,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
+    MsdpFallbackTest.cpp
     MxpFramePlacementTest.cpp
     ColorTriggerFilterChildTest.cpp
     GMCPCharLoginTest.cpp
@@ -151,6 +152,10 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
+
+# MsdpFallbackTest creates a fresh profile per test method and several of them have to outlive
+# the grace period an unanswered MSDP offer gets, so it needs a longer timeout
+set_tests_properties(MsdpFallbackTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)

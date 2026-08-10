@@ -7892,6 +7892,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableMSDPFallback")) {
+        host.mEnableMSDPFallback = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("enableMSP")) {
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -8315,6 +8319,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("enableMSDP"),
              [&]() {
                  lua_pushboolean(L, host.mEnableMSDP);
+             }},
+            {qsl("enableMSDPFallback"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableMSDPFallback);
              }},
             {qsl("enableMSP"),
              [&]() {

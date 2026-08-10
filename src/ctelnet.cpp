@@ -73,6 +73,11 @@ constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
 constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 
+// How long cTelnet::holdMsdpOffer() waits to see whether GMCP turns up as well. Only has to
+// outlast a game's opening burst of options; too short merely negotiates both protocols, which
+// is harmless because everything that reads them prefers GMCP anyway.
+constexpr auto MSDP_OFFER_HOLD = 1500ms;
+
 // How long ECHO+SGA must survive a submitted input line before it counts as
 // character-at-a-time rather than a password mask - see
 // cTelnet::checkCharacterModePattern():
@@ -179,6 +184,12 @@ void cTelnet::reset()
 
     mNegotiationOrder.clear();
 
+    // Left standing from the last connection these would claim a protocol this game never offered,
+    // and the MSDP fallback reads enableGMCP to decide whether GMCP got there first.
+    enableGMCP = false;
+    enableMSDP = false;
+    forgetHeldMsdpOffer();
+
     // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
     // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
     mpHost->setUserSentInputThisConnection(false);
@@ -200,6 +211,7 @@ cTelnet::~cTelnet()
     if (mpPostingTimer) {
         mpPostingTimer->stop();
     }
+    forgetHeldMsdpOffer();
 
     // Release zlib resources if MCCP compression was still active
     if (mNeedDecompression) {
@@ -742,6 +754,9 @@ void cTelnet::slot_socketDisconnected()
 
     // Check if Host is closing down or null/invalid
     if (!mpHost || mpHost->isClosingDown()) {
+        // This path skips the reset() below, and a held offer settling later would raise a
+        // protocol event into scripts that are already being torn down.
+        forgetHeldMsdpOffer();
         qDebug() << "cTelnet::slot_socketDisconnected() - Aborting due to Host shutdown in progress or null Host";
         return;
     }
@@ -2728,55 +2743,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
 
         if (option == OPT_MSDP) {
-            //MSDP support
-            if (!mpHost->mEnableMSDP) {
-                sendTelnetOption(TN_DONT, OPT_MSDP);
-
-                if (enableMSDP) {
-                    raiseProtocolEvent("sysProtocolDisabled", "MSDP");
-                }
-
-                enableMSDP = false;
-                break;
+            if (mpHost->mEnableMSDP) {
+                acceptMsdp(MsdpOffer::GameWillSend);
+            } else if (mpHost->mEnableMSDPFallback && !enableGMCP) {
+                holdMsdpOffer(MsdpOffer::GameWillSend);
+            } else {
+                refuseMsdp(MsdpOffer::GameWillSend);
             }
-            std::string output;
-
-            enableMSDP = true;
-            sendTelnetOption(TN_DO, OPT_MSDP);
-            //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
-            //NOTE: MSDP does not need quotes for string/vals
-            output += TN_IAC;
-            output += TN_SB;
-            output += OPT_MSDP;
-            output += MSDP_VAR;
-            output += "LIST";
-            output += MSDP_VAL;
-            output += "COMMANDS";
-            output += TN_IAC;
-            output += TN_SE;
-            // This will be unaffected by Mud Server encoding:
-            socketOutRaw(output);
-
-            // send client configurable variables e.g.
-            // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
-            output = TN_IAC;
-            output += TN_SB;
-            output += OPT_MSDP;
-            output += MSDP_VAR;
-            output += "CLIENT_NAME";
-            output += MSDP_VAL;
-            output += "Mudlet";
-            output += MSDP_VAR;
-            output += "CLIENT_VERSION";
-            output += MSDP_VAL;
-            output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
-            output += TN_IAC;
-            output += TN_SE;
-            socketOutRaw(output);
-#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
-            qDebug() << "WE send telnet IAC DO MSDP";
-#endif
-            raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
         }
 
@@ -2858,6 +2831,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 sendDiscordGet();
             }
 
+            settleHeldMsdpOffers(false);
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
         }
@@ -3074,6 +3048,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
             if (option == OPT_MSDP) {
                 // MSDP got turned off
+                forgetHeldMsdpOffer();
                 enableMSDP = false;
                 raiseProtocolEvent("sysProtocolDisabled", "MSDP");
             }
@@ -3222,17 +3197,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MSDP) {
             if (mpHost->mEnableMSDP) {
-                enableMSDP = true;
-                sendTelnetOption(TN_WILL, OPT_MSDP);
-                raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+                acceptMsdp(MsdpOffer::GameAsksUsTo);
+            } else if (mpHost->mEnableMSDPFallback && !enableGMCP) {
+                holdMsdpOffer(MsdpOffer::GameAsksUsTo);
             } else {
-                sendTelnetOption(TN_WONT, OPT_MSDP);
-
-                if (enableMSDP) {
-                    raiseProtocolEvent("sysProtocolDisabled", "MSDP");
-                }
-
-                enableMSDP = false;
+                refuseMsdp(MsdpOffer::GameAsksUsTo);
             }
             break;
         }
@@ -3258,6 +3227,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (mpHost->mEnableGMCP) {
                 enableGMCP = true;
                 sendTelnetOption(TN_WILL, OPT_GMCP);
+                settleHeldMsdpOffers(false);
                 raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_GMCP);
@@ -3409,6 +3379,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MSDP) {
             // MSDP got turned off
+            forgetHeldMsdpOffer();
             enableMSDP = false;
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
         }
@@ -5371,6 +5342,130 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentList.append(protocol);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
+}
+
+void cTelnet::acceptMsdp(const MsdpOffer offer)
+{
+    // Answering a second request for the same protocol is not a fresh transition, so it must not
+    // announce one to scripts a second time.
+    const bool announce = !enableMSDP;
+    enableMSDP = true;
+    if (offer == MsdpOffer::GameAsksUsTo) {
+        // Bare handshake: a game that asked us to speak MSDP is not offering to answer the
+        // LIST COMMANDS query below, so it never gets sent on this side of the negotiation.
+        sendTelnetOption(TN_WILL, OPT_MSDP);
+        if (announce) {
+            raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+        }
+        return;
+    }
+
+    sendTelnetOption(TN_DO, OPT_MSDP);
+
+    //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+    //NOTE: MSDP does not need quotes for string/vals
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_MSDP;
+    output += MSDP_VAR;
+    output += "LIST";
+    output += MSDP_VAL;
+    output += "COMMANDS";
+    output += TN_IAC;
+    output += TN_SE;
+    // This will be unaffected by Mud Server encoding:
+    socketOutRaw(output);
+
+    // send client configurable variables e.g.
+    // IAC SB MSDP MSDP_VAR "CLIENT_NAME" MSDP_VAL "Mudlet" MSDP_VAR "CLIENT_VERSION" MSDP_VAL "4.19" IAC SE
+    output = TN_IAC;
+    output += TN_SB;
+    output += OPT_MSDP;
+    output += MSDP_VAR;
+    output += "CLIENT_NAME";
+    output += MSDP_VAL;
+    output += "Mudlet";
+    output += MSDP_VAR;
+    output += "CLIENT_VERSION";
+    output += MSDP_VAL;
+    output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
+    output += TN_IAC;
+    output += TN_SE;
+    socketOutRaw(output);
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
+    qDebug() << "WE send telnet IAC DO MSDP";
+#endif
+
+    if (announce) {
+        raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+    }
+}
+
+void cTelnet::refuseMsdp(const MsdpOffer offer)
+{
+    sendTelnetOption(offer == MsdpOffer::GameAsksUsTo ? TN_WONT : TN_DONT, OPT_MSDP);
+
+    if (enableMSDP) {
+        raiseProtocolEvent("sysProtocolDisabled", "MSDP");
+    }
+
+    enableMSDP = false;
+}
+
+// Sit on the game's MSDP offer instead of answering it. The offers in a game's opening burst
+// arrive in whatever order it chose, so waiting is the only way to find out whether GMCP is among
+// them and prefer it. Telnet sets no deadline on an option reply and the game hears an ordinary
+// answer either way, so the delay costs nothing but the wait.
+void cTelnet::holdMsdpOffer(const MsdpOffer offer)
+{
+    if (!mpMsdpOfferTimer) {
+        mpMsdpOfferTimer = new QTimer(this);
+        mpMsdpOfferTimer->setSingleShot(true);
+        connect(mpMsdpOfferTimer, &QTimer::timeout, this, [this]() {
+            settleHeldMsdpOffers(true);
+        });
+    }
+
+    // A game that repeats a request it has had no answer to must not push the deadline out again,
+    // or a persistent one could hold the wait open forever.
+    const bool waiting = mHeldMsdpOffers != MsdpOffers();
+    mHeldMsdpOffers |= offer;
+    if (!waiting) {
+        mpMsdpOfferTimer->start(MSDP_OFFER_HOLD);
+    }
+}
+
+void cTelnet::settleHeldMsdpOffers(const bool accept)
+{
+    const MsdpOffers offers = mHeldMsdpOffers;
+    if (offers == MsdpOffers()) {
+        return;
+    }
+
+    // Cleared first, so a script run by the events below cannot see, or settle, an offer that has
+    // already been answered.
+    forgetHeldMsdpOffer();
+    for (const MsdpOffer offer : {MsdpOffer::GameWillSend, MsdpOffer::GameAsksUsTo}) {
+        if (!offers.testFlag(offer)) {
+            continue;
+        }
+        if (accept) {
+            acceptMsdp(offer);
+        } else {
+            refuseMsdp(offer);
+        }
+    }
+}
+
+// Drops held offers without answering them, for when there is nothing left to answer: the game
+// withdrew MSDP, or the connection is gone.
+void cTelnet::forgetHeldMsdpOffer()
+{
+    mHeldMsdpOffers = MsdpOffers();
+    if (mpMsdpOfferTimer) {
+        mpMsdpOfferTimer->stop();
+    }
 }
 
 // credit: https://github.com/qflow/websockets

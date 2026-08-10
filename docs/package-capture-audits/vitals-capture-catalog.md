@@ -196,8 +196,9 @@ corpus shows two trigger points:
   **re-subscribes if `msdp.UPDATE_EPOCH` goes stale** (`CK/CK.xml:2667/2678`) - a nice
   self-healing idiom.
 
-Note Mudlet must have MSDP enabled (`setConfig('enableMSDP', true)`) for any of this; two packages
-force it on.
+Note Mudlet must have MSDP negotiated for any of this - either the profile's own `enableMSDP`
+preference, which two packages in the corpus force on, or `setConfig('enableMSDPFallback', true)`,
+which negotiates MSDP only on games that offer no GMCP and is not saved with the profile.
 
 ### 3.3 Could MSDP be a zero-config second layer for the starter UI? Honest assessment
 

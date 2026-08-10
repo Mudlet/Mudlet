@@ -404,6 +404,16 @@ private:
     void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    // Which way round the game put MSDP on the table, since that decides what an answer looks like:
+    // to an offer to send us MSDP we reply DO/DONT, to a request that we send it we reply WILL/WONT.
+    // A game may ask both ways, and each request owes its own answer.
+    enum class MsdpOffer { GameWillSend = 0x1, GameAsksUsTo = 0x2 };
+    Q_DECLARE_FLAGS(MsdpOffers, MsdpOffer)
+    void acceptMsdp(MsdpOffer offer);
+    void refuseMsdp(MsdpOffer offer);
+    void holdMsdpOffer(MsdpOffer offer);
+    void settleHeldMsdpOffers(bool accept);
+    void forgetHeldMsdpOffer();
     void setKeepAlive(int socketHandle);
     void processChunks();
 #if !defined(QT_NO_SSL)
@@ -510,6 +520,10 @@ private:
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
     QTimer* mTimerPasswordModeTimeout = nullptr;
+    // MSDP requests we have not answered yet because GMCP, which supersedes it, may still be
+    // coming - see holdMsdpOffer():
+    QTimer* mpMsdpOfferTimer = nullptr;
+    MsdpOffers mHeldMsdpOffers;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;

@@ -1214,6 +1214,14 @@ function BaseUI.dormant()
   return BaseUI.settings.hidden or BaseUI.settings.standingAside ~= nil
 end
 
+-- MSDP only feeds the gauges here and GMCP feeds them better, so ask Mudlet to negotiate MSDP
+-- only on games with no GMCP, rather than switching the profile's own MSDP preference on. This
+-- one is not saved with the profile, so hiding or removing the package leaves the player's
+-- settings as they found them. It is read during negotiation, so a change lands next connection.
+function BaseUI.askForMsdpFallback()
+  setConfig("enableMSDPFallback", not BaseUI.dormant())
+end
+
 -- a game that supplies its own interface wins: the moment Mudlet installs a
 -- Client.GUI package the starter UI stands aside - capture triggers retired,
 -- dock hidden - and stays aside in later sessions. Deliberately silent: the
@@ -1222,6 +1230,7 @@ end
 function BaseUI.standAside(_, packageName)
   BaseUI.settings.standingAside = packageName or "the game's interface"
   BaseUI.saveSettings()
+  BaseUI.askForMsdpFallback()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
   if BaseUI.container then
@@ -1234,6 +1243,12 @@ end
 -- straight away though: a version upgrade uninstalls only to reinstall a
 -- moment later, so look again once the dust has settled
 function BaseUI.serverGuiRemoved(_, packageName)
+  if packageName == "mudlet-base-ui" then
+    -- our own removal, and the only chance to hand the MSDP fallback back before this script
+    -- stops running
+    setConfig("enableMSDPFallback", false)
+    return
+  end
   if not BaseUI.settings.standingAside or packageName ~= BaseUI.settings.standingAside then
     return
   end
@@ -1244,6 +1259,7 @@ function BaseUI.serverGuiRemoved(_, packageName)
     end
     BaseUI.settings.standingAside = nil
     BaseUI.saveSettings()
+    BaseUI.askForMsdpFallback()
     BaseUI.armChatTriggers()
     BaseUI.createVitalsTriggers()
     BaseUI.renderVitals()
@@ -1713,6 +1729,7 @@ end
 function BaseUI.hide()
   BaseUI.settings.hidden = true
   BaseUI.saveSettings()
+  BaseUI.askForMsdpFallback()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
   if BaseUI.container then
@@ -1726,6 +1743,7 @@ function BaseUI.show()
   BaseUI.settings.hidden = false
   BaseUI.settings.standingAside = nil
   BaseUI.saveSettings()
+  BaseUI.askForMsdpFallback()
   if type(gmcp) == "table" and next(gmcp) then
     gmod.enableModule("BaseUI", "Comm.Channel")
   end
@@ -1780,9 +1798,7 @@ BaseUI.loadSettings()
 -- vitals layer gets a look at it
 BaseUI.armChatTriggers()
 BaseUI.createVitalsTriggers()
--- negotiate MSDP up front: it costs nothing on servers without it and gives
--- gauges to games that have it but lack GMCP
-setConfig("enableMSDP", true)
+BaseUI.askForMsdpFallback()
 
 registerAnonymousEventHandler("gmcp.Char.Vitals", "BaseUI.updateVitals")
 registerAnonymousEventHandler("gmcp.char.vitals", "BaseUI.updateVitals")
