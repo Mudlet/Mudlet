@@ -156,8 +156,8 @@ set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
 
-# ProfileLifecycleTest opens, switches and closes several profiles, each of
-# which is a full profile load and save, so it needs a longer timeout
+# ProfileLifecycleTest opens and closes several profiles, and every open is a
+# full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,

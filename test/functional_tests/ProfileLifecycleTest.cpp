@@ -23,8 +23,12 @@
  * raiseGlobalEvent() - is out of reach of the busted suite, which runs inside
  * one profile of an application it must leave standing. Each test here drives
  * the API from a profile's own Lua state and checks the application state that
- * follows, along with the refusal each function returns for a name that is
- * unknown, already loaded or not loaded.
+ * follows, plus the refusals the three name-taking functions return.
+ *
+ * Left uncovered on purpose: closeProfile() reports true as soon as it has
+ * asked for the close, so a close that Host::requestClose() then refuses still
+ * reads as a success. Reaching that needs the modal save prompt the fixture
+ * below is deliberately built to avoid.
  *
  * Run with: ctest -R ProfileLifecycleTest -V
  */
@@ -74,11 +78,19 @@ private:
     // or a false
     struct LuaOutcome
     {
-        QString error; // the chunk itself would not run
+        QString error; // non-null when the chunk failed, at compile or at run time
         QString firstType;
         bool first = false;
         QString message;
     };
+
+    // enough for a real connection to the local stub on a loaded machine
+    static constexpr int csmConnectBudgetMs = 15000;
+    // What an offline profile is given to prove it does not connect. Shorter
+    // than the budget above deliberately - the online test is what shows a
+    // connection is noticed well inside a wait of this size.
+    static constexpr int csmStayOfflineBudgetMs = 3000;
+    static constexpr int csmTeardownBudgetMs = 30000;
 
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
@@ -90,6 +102,7 @@ private:
     const QString mFirstProfile = qsl("ProfileLifecycle-First");
     const QString mSecondProfile = qsl("ProfileLifecycle-Second");
     const QString mThirdProfile = qsl("ProfileLifecycle-Third");
+    const QString mOnlineProfile = qsl("ProfileLifecycle-Online");
     const QString mUnloadedProfile = qsl("ProfileLifecycle-Unloaded");
     const QString mAbsentProfile = qsl("ProfileLifecycle-Absent");
 
@@ -104,14 +117,34 @@ private:
 
     bool profileHasATab(const QString& profileName) const { return mudlet::self()->mpTabBar->tabIndex(profileName) != -1; }
 
-    // What dlgConnectionProfiles leaves on disk for a profile that has been
-    // named and given connection details but never played: the folder plus the
-    // url/port files. That is enough for getCanonicalProfileName() to find it.
-    void provisionProfileOnDisk(const QString& profileName) const
+    // Compares against the pool itself rather than a name, since a Host that
+    // has been closed cannot be asked for one
+    bool stillInTheHostPool(Host* pHost) const
     {
-        QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)));
-        QVERIFY(mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first);
-        QVERIFY(mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first);
+        if (!pHost) {
+            return false;
+        }
+        for (auto pLoadedHost : mudlet::self()->getHostManager()) {
+            if (pLoadedHost == pHost) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static bool reachedTheGame(Host* pHost)
+    {
+        const auto [address, port, connected] = pHost->mTelnet.getConnectionInfo();
+        return connected;
+    }
+
+    // The folder is all getCanonicalProfileName() matches a name against; the
+    // url and port are what the load then needs to reach the stub, as the Host
+    // constructor reads both back out of the profile's data files.
+    bool provisionProfileOnDisk(const QString& profileName) const
+    {
+        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     // Returns the Lua error, or a null QString when the chunk ran
@@ -121,7 +154,11 @@ private:
         if (luaL_dostring(L, code.toUtf8().constData()) == 0) {
             return QString();
         }
-        const QString error = QString::fromUtf8(lua_tostring(L, -1));
+        // an error object that is neither a string nor a number gives back a
+        // nullptr here, and QString::fromUtf8(nullptr) is null - which every
+        // caller would read as "the chunk ran"
+        const char* message = lua_tostring(L, -1);
+        const QString error = message ? QString::fromUtf8(message) : qsl("(a Lua error that is not a string)");
         lua_pop(L, 1);
         return error;
     }
@@ -159,14 +196,25 @@ private:
         return value;
     }
 
-    // The handler is killed again by forgetEvent() so repeated tests do not
-    // stack up handlers that all write the same globals
+    int luaGlobalNumber(Host* pHost, const QString& globalName) const
+    {
+        lua_State* L = pHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, globalName.toUtf8().constData());
+        const int value = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    // _lifecycleHandler holds one handler at a time, so forgetEvent() has to
+    // run before the next rememberEvent() or the previous handler is orphaned
+    // and goes on writing the same globals
     QString rememberEvent(Host* pHost, const QString& eventName) const
     {
         return runLua(pHost,
-                      qsl("_lifecyclePayload, _lifecycleSender = nil, nil\n"
+                      qsl("_lifecyclePayload, _lifecycleSender, _lifecycleCalls = nil, nil, 0\n"
                           "_lifecycleHandler = registerAnonymousEventHandler('%1', function(_, payload, sender)\n"
                           "  _lifecyclePayload, _lifecycleSender = payload, sender\n"
+                          "  _lifecycleCalls = _lifecycleCalls + 1\n"
                           "end)")
                               .arg(eventName));
     }
@@ -197,19 +245,28 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        QVERIFY2(spy.wait(30000), "the first profile took too long to load");
+        QVERIFY2(spy.wait(csmConnectBudgetMs), "the first profile took too long to load");
         mpFirstHost = mudlet::self()->getActiveHost();
         QVERIFY2(mpFirstHost, "no active host after creating the first profile");
+        // otherwise closing a profile asks whether to save it, and the modal
+        // question would hang the test
+        QVERIFY2(mpFirstHost->mFORCE_SAVE_ON_EXIT, "profiles must save without asking, or a close puts up a modal question");
     }
 
-    // Every test that needs a second profile brings it up itself, so the file
-    // does not depend on the order QTest happens to run the tests in
+    // test_closeProfileNamedByAnotherProfileTearsItDown takes the second
+    // profile away again, and any one test can also be run on its own with
+    // -functions, so a test that needs another profile opens it itself. The
+    // declaration order still matters for the closeMudlet test, which has to
+    // stay last.
     Host* loadProfileThroughLua(const QString& profileName)
     {
         if (auto* pHost = hostFor(profileName)) {
             return pHost;
         }
-        provisionProfileOnDisk(profileName);
+        if (!provisionProfileOnDisk(profileName)) {
+            qWarning() << "loadProfileThroughLua: could not provision" << profileName;
+            return nullptr;
+        }
         const LuaOutcome outcome = callLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(profileName));
         if (!outcome.error.isNull()) {
             qWarning() << "loadProfileThroughLua:" << outcome.error;
@@ -222,19 +279,28 @@ private:
         return hostFor(profileName);
     }
 
-    // The close is finished off from a zero-timer, so nothing has gone until
-    // the event loop has run
-    bool waitForProfileToClose(const QString& profileName) const
+    bool waitFor(const std::function<bool()>& condition) const
     {
         QElapsedTimer timer;
         timer.start();
-        while (timer.elapsed() < 30000) {
-            if (!hostFor(profileName)) {
+        while (timer.elapsed() < csmTeardownBudgetMs) {
+            if (condition()) {
                 return true;
             }
             QTest::qWait(50ms);
         }
-        return false;
+        return condition();
+    }
+
+    // Removal from the host pool is finished off from a zero-timer, so the
+    // Host is still there until the event loop has run - even though the
+    // console has been closed and the profile saved by the time closeProfile()
+    // returns
+    bool waitForProfileToClose(const QString& profileName) const
+    {
+        return waitFor([this, profileName]() {
+            return !hostFor(profileName);
+        });
     }
 
 private slots:
@@ -254,8 +320,9 @@ private slots:
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
-        // a stub that failed to bind only warns, and the profile would then
-        // merely look slow to load
+        // TelnetServerStub::start() only logs a failed bind, so check the port
+        // here: otherwise every profile is pointed at port 0 and the run fails
+        // later on, nowhere near the stub
         QVERIFY2(mpServer->serverPort() != 0, "the telnet stub did not start listening");
         mPort = QString::number(mpServer->serverPort());
 
@@ -275,9 +342,9 @@ private slots:
         QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests");
 
         startFirstProfile();
-        // otherwise closing a profile asks whether to save it, and the modal
-        // question would hang the test
-        QVERIFY2(mpFirstHost->mFORCE_SAVE_ON_EXIT, "profiles must save without asking, or a close puts up a modal question");
+        // a failed assertion in there only returns from it, so stop the whole
+        // run here rather than let every test dereference a null host
+        QVERIFY(mpFirstHost);
     }
 
     void cleanupTestCase()
@@ -314,17 +381,20 @@ private slots:
     {
         const int loadedBefore = mudlet::self()->getHostManager().getHostCount();
 
-        const LuaOutcome outcome = callLua(mpFirstHost, qsl("loadProfile('%1')").arg(mFirstProfile));
+        // asked for in the wrong case, and the refusal names the profile as it
+        // is spelt on disk: the case-insensitive lookup all three of these
+        // functions share
+        const LuaOutcome outcome = callLua(mpFirstHost, qsl("loadProfile('%1')").arg(mFirstProfile.toLower()));
 
         QVERIFY2(outcome.error.isNull(), qPrintable(outcome.error));
         QCOMPARE(outcome.firstType, qsl("nil"));
-        QVERIFY2(outcome.message.contains(qsl("already loaded")), qPrintable(qsl("unexpected message: %1").arg(outcome.message)));
+        QVERIFY2(outcome.message.contains(qsl("'%1' is already loaded").arg(mFirstProfile)), qPrintable(qsl("unexpected message: %1").arg(outcome.message)));
         QCOMPARE(mudlet::self()->getHostManager().getHostCount(), loadedBefore);
     }
 
     void test_loadProfileOpensASecondProfile()
     {
-        provisionProfileOnDisk(mSecondProfile);
+        QVERIFY(provisionProfileOnDisk(mSecondProfile));
         QVERIFY2(!hostFor(mSecondProfile), "the second profile was already loaded");
         const int loadedBefore = mudlet::self()->getHostManager().getHostCount();
 
@@ -339,9 +409,42 @@ private slots:
         QVERIFY2(pSecondHost->mpConsole, "the loaded profile has no main console, so nothing of it is on screen");
         QVERIFY2(profileHasATab(mSecondProfile), "the loaded profile got no tab");
         QCOMPARE(mudlet::self()->getHostManager().getHostCount(), loadedBefore + 1);
-        // offline was asked for, so the profile must not have reached the stub
-        const auto [connectedAddress, connectedPort, connected] = pSecondHost->mTelnet.getConnectionInfo();
-        QVERIFY2(!connected, "loadProfile(name, true) connected the profile despite being asked for offline");
+
+        // An online load reaches the game some event loop turns later, so the
+        // socket is unconnected on the line after the call either way - only a
+        // wait that runs out says the offline flag was honoured.
+        // test_loadProfileConnectsWhenNotAskedForOffline is the control.
+        QSignalSpy connectionSpy(&pSecondHost->mTelnet, &cTelnet::signal_connected);
+        QVERIFY2(!connectionSpy.wait(csmStayOfflineBudgetMs) && !reachedTheGame(pSecondHost), "loadProfile(name, true) connected the profile despite being asked for offline");
+    }
+
+    // Connecting is what loadProfile() does when it is not told otherwise
+    void test_loadProfileConnectsWhenNotAskedForOffline()
+    {
+        QVERIFY(provisionProfileOnDisk(mOnlineProfile));
+        QVERIFY2(!hostFor(mOnlineProfile), "the profile this test opens was already loaded");
+
+        const LuaOutcome outcome = callLua(mpFirstHost, qsl("loadProfile('%1')").arg(mOnlineProfile));
+
+        QVERIFY2(outcome.error.isNull(), qPrintable(outcome.error));
+        QVERIFY2(outcome.first, qPrintable(qsl("loadProfile() refused: %1").arg(outcome.message)));
+        Host* pOnlineHost = hostFor(mOnlineProfile);
+        QVERIFY(pOnlineHost);
+        QSignalSpy connectionSpy(&pOnlineHost->mTelnet, &cTelnet::signal_connected);
+        QVERIFY2(reachedTheGame(pOnlineHost) || connectionSpy.wait(csmConnectBudgetMs), "loadProfile() with no offline argument did not connect the profile to the game");
+
+        QVERIFY(callLua(mpFirstHost, qsl("closeProfile('%1')").arg(mOnlineProfile)).first);
+        QVERIFY(waitForProfileToClose(mOnlineProfile));
+    }
+
+    void test_setActiveProfileRefusesAnEmptyName()
+    {
+        const LuaOutcome outcome = callLua(mpFirstHost, qsl("setActiveProfile('')"));
+
+        QVERIFY2(outcome.error.isNull(), qPrintable(outcome.error));
+        QCOMPARE(outcome.firstType, qsl("boolean"));
+        QVERIFY(!outcome.first);
+        QVERIFY2(outcome.message.contains(qsl("cannot be empty")), qPrintable(qsl("unexpected message: %1").arg(outcome.message)));
     }
 
     void test_setActiveProfileRefusesAProfileThatDoesNotExist()
@@ -357,7 +460,7 @@ private slots:
 
     void test_setActiveProfileRefusesAProfileThatIsNotLoaded()
     {
-        provisionProfileOnDisk(mUnloadedProfile);
+        QVERIFY(provisionProfileOnDisk(mUnloadedProfile));
         QVERIFY2(!hostFor(mUnloadedProfile), "the profile this test needs unloaded is loaded");
         Host* pActiveBefore = mudlet::self()->getActiveHost();
 
@@ -385,36 +488,85 @@ private slots:
         QCOMPARE(outcome.firstType, qsl("boolean"));
         QVERIFY2(outcome.first, qPrintable(qsl("setActiveProfile() refused: %1").arg(outcome.message)));
         QCOMPARE(mudlet::self()->getActiveHost(), pSecondHost);
+        QVERIFY(profileHasATab(mSecondProfile));
         QCOMPARE(mudlet::self()->mpTabBar->currentIndex(), mudlet::self()->mpTabBar->tabIndex(mSecondProfile));
 
         // leave the profile the rest of the tests drive from in charge
         QVERIFY(callLua(mpFirstHost, qsl("setActiveProfile('%1')").arg(mFirstProfile)).first);
     }
 
-    // A profile is told the name of the profile that raised the event, and
-    // never hears its own raiseGlobalEvent() come back
-    void test_raiseGlobalEventReachesTheOtherProfileOnly()
+    // Every other loaded profile is told the name of the profile that raised
+    // the event, and the one that raised it never hears it come back
+    void test_raiseGlobalEventReachesEveryOtherProfileOnly()
     {
         Host* pSecondHost = loadProfileThroughLua(mSecondProfile);
-        QVERIFY(pSecondHost);
+        Host* pThirdHost = loadProfileThroughLua(mThirdProfile);
+        QVERIFY(pSecondHost && pThirdHost);
         const QString eventName = qsl("ProfileLifecycleGlobalEvent");
         QVERIFY(rememberEvent(mpFirstHost, eventName).isNull());
         QVERIFY(rememberEvent(pSecondHost, eventName).isNull());
+        QVERIFY(rememberEvent(pThirdHost, eventName).isNull());
 
         QVERIFY(runLua(mpFirstHost, qsl("raiseGlobalEvent('%1', 'from the first')").arg(eventName)).isNull());
 
-        QCOMPARE(luaGlobalString(pSecondHost, qsl("_lifecyclePayload")), qsl("from the first"));
-        QCOMPARE(luaGlobalString(pSecondHost, qsl("_lifecycleSender")), mFirstProfile);
-        QVERIFY2(luaGlobalString(mpFirstHost, qsl("_lifecyclePayload")).isEmpty(), "the profile that raised the global event received it itself");
+        for (Host* pReceiver : {pSecondHost, pThirdHost}) {
+            QCOMPARE(luaGlobalString(pReceiver, qsl("_lifecyclePayload")), qsl("from the first"));
+            QCOMPARE(luaGlobalString(pReceiver, qsl("_lifecycleSender")), mFirstProfile);
+            QCOMPARE(luaGlobalNumber(pReceiver, qsl("_lifecycleCalls")), 1);
+        }
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_lifecycleCalls")), 0);
 
         QVERIFY(runLua(pSecondHost, qsl("raiseGlobalEvent('%1', 'from the second')").arg(eventName)).isNull());
 
         QCOMPARE(luaGlobalString(mpFirstHost, qsl("_lifecyclePayload")), qsl("from the second"));
         QCOMPARE(luaGlobalString(mpFirstHost, qsl("_lifecycleSender")), mSecondProfile);
-        QCOMPARE(luaGlobalString(pSecondHost, qsl("_lifecyclePayload")), qsl("from the first"));
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_lifecycleCalls")), 1);
+        QCOMPARE(luaGlobalNumber(pSecondHost, qsl("_lifecycleCalls")), 1);
 
         QVERIFY(forgetEvent(mpFirstHost).isNull());
         QVERIFY(forgetEvent(pSecondHost).isNull());
+        QVERIFY(forgetEvent(pThirdHost).isNull());
+    }
+
+    // Arguments cross the profile boundary as strings and are rebuilt on the
+    // other side, so their types have to survive the trip - and the sending
+    // profile's name is appended after all of them, however many there are
+    void test_raiseGlobalEventKeepsArgumentTypesAndPutsTheSenderLast()
+    {
+        Host* pSecondHost = loadProfileThroughLua(mSecondProfile);
+        QVERIFY(pSecondHost);
+        const QString eventName = qsl("ProfileLifecycleTypedEvent");
+        QVERIFY(runLua(pSecondHost,
+                       qsl("_lifecycleTypes, _lifecycleValues = nil, nil\n"
+                           "_lifecycleHandler = registerAnonymousEventHandler('%1', function(_, ...)\n"
+                           "  local given, types = {...}, {}\n"
+                           "  for i = 1, select('#', ...) do types[i] = type(given[i]) end\n"
+                           "  _lifecycleTypes = table.concat(types, ',')\n"
+                           "  _lifecycleValues = table.concat({tostring(given[1]), tostring(given[2]), tostring(given[4]), tostring(given[5])}, '|')\n"
+                           "end)")
+                               .arg(eventName))
+                        .isNull());
+
+        QVERIFY(runLua(mpFirstHost, qsl("raiseGlobalEvent('%1', 3.5, true, nil, 'text')").arg(eventName)).isNull());
+
+        QCOMPARE(luaGlobalString(pSecondHost, qsl("_lifecycleTypes")), qsl("number,boolean,nil,string,string"));
+        QCOMPARE(luaGlobalString(pSecondHost, qsl("_lifecycleValues")), qsl("3.5|true|text|%1").arg(mFirstProfile));
+
+        QVERIFY(forgetEvent(pSecondHost).isNull());
+    }
+
+    // Unlike raiseEvent(), which can hand a handler in the same profile a
+    // table through the Lua registry, nothing survives the trip to another
+    // profile that cannot be turned into a string
+    void test_raiseGlobalEventRefusesArgumentsItCannotCarry()
+    {
+        const QString tableError = runLua(mpFirstHost, qsl("raiseGlobalEvent('ProfileLifecycleRefusedEvent', {})"));
+        QVERIFY2(!tableError.isNull(), "raiseGlobalEvent() accepted a table");
+        QVERIFY2(tableError.contains(qsl("bad argument type #2")), qPrintable(tableError));
+
+        const QString noNameError = runLua(mpFirstHost, qsl("raiseGlobalEvent()"));
+        QVERIFY2(!noNameError.isNull(), "raiseGlobalEvent() accepted a call with no event name");
+        QVERIFY2(noNameError.contains(qsl("missing argument #1")), qPrintable(noNameError));
     }
 
     void test_closeProfileRefusesAProfileThatDoesNotExist()
@@ -428,7 +580,7 @@ private slots:
 
     void test_closeProfileRefusesAProfileThatIsNotLoaded()
     {
-        provisionProfileOnDisk(mUnloadedProfile);
+        QVERIFY(provisionProfileOnDisk(mUnloadedProfile));
         QVERIFY2(!hostFor(mUnloadedProfile), "the profile this test needs unloaded is loaded");
 
         const LuaOutcome outcome = callLua(mpFirstHost, qsl("closeProfile('%1')").arg(mUnloadedProfile));
@@ -453,15 +605,18 @@ private slots:
         QVERIFY(outcome.first);
         QVERIFY2(waitForProfileToClose(mSecondProfile), "the profile was still in the host pool long after closeProfile() said it was closing");
         QVERIFY2(pSecondHost.isNull(), "the closed profile's Host outlived its removal from the host pool");
-        QVERIFY2(pSecondConsole.isNull(), "the closed profile's main console was left behind");
+        // the console goes on a deferred delete of its own, so give it the
+        // same budget rather than assume it landed inside the wait above
+        QVERIFY2(waitFor([&pSecondConsole]() {
+                     return pSecondConsole.isNull();
+                 }),
+                 "the closed profile's main console was left behind");
         QVERIFY2(!profileHasATab(mSecondProfile), "the closed profile kept its tab");
         QCOMPARE(mudlet::self()->getHostManager().getHostCount(), loadedBefore - 1);
         QVERIFY2(hostFor(mFirstProfile), "closing one profile took the other one with it");
-        QCOMPARE(mudlet::self()->getActiveHost(), mpFirstHost);
+        QVERIFY2(stillInTheHostPool(mudlet::self()->getActiveHost()), "closing a profile left the active profile pointing at a Host that has been destroyed");
     }
 
-    // With no argument at all the profile whose Lua state is running closes
-    // itself, which is the form scripts actually use
     void test_closeProfileWithNoArgumentClosesTheCallingProfile()
     {
         QPointer<Host> pThirdHost = loadProfileThroughLua(mThirdProfile);
@@ -478,8 +633,9 @@ private slots:
         QVERIFY2(hostFor(mFirstProfile), "a profile closing itself took another profile with it");
     }
 
-    // Last on purpose: this takes the main window with it, so nothing can run
-    // after it
+    // Last on purpose: this takes the main window with it, so no test slot can
+    // run after it - only cleanupTestCase(), which is written for a Mudlet
+    // that has already gone
     void test_closeMudletShutsDownEveryProfileAndTheMainWindow()
     {
         QPointer<Host> pSecondHost = loadProfileThroughLua(mSecondProfile);
@@ -492,16 +648,12 @@ private slots:
 
         // the main window is WA_DeleteOnClose, so it goes on a deferred delete
         // once the close it arranges for has been accepted
-        QElapsedTimer timer;
-        timer.start();
-        while (!pMainWindow.isNull() && timer.elapsed() < 30000) {
-            QTest::qWait(50ms);
-        }
-
-        QVERIFY2(pMainWindow.isNull(), "closeMudlet() left the main window standing");
+        QVERIFY2(waitFor([&pMainWindow]() {
+                     return pMainWindow.isNull();
+                 }),
+                 "closeMudlet() left the main window standing");
         QVERIFY2(pFirstHost.isNull(), "closeMudlet() left a profile loaded");
         QVERIFY2(pSecondHost.isNull(), "closeMudlet() closed one profile but not the other");
-        QVERIFY2(!mudlet::self(), "the main window went but mudlet::self() still hands it out");
     }
 };
 
