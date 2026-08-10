@@ -55,13 +55,28 @@ local function writeFile(path, contents)
   handle:close()
 end
 
+-- Takes a copy of the encoding in use, to be put back once a spec has changed
+-- it. setServerEncoding() also writes the profile's "encoding" file, and a
+-- profile that never had one must not be left with one.
+local function restoreServerEncoding()
+  local encodingFile = getMudletHomeDir() .. "/encoding"
+  local hadFile = fileExists(encodingFile)
+  local original = getServerEncoding()
+  return function()
+    setServerEncoding(original)
+    if not hadFile then
+      os.remove(encodingFile)
+    end
+  end
+end
+
 local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
 assert(specDirectory, "Miscallaneous_spec.lua has to be run from a file so that it can find its fixtures")
 local fixtureDirectory = specDirectory .. "/fixtures/packages"
 
--- waitForEvent() and pumpEvents() are inert outside test mode, so the specs
--- that need an event to arrive say so instead of failing on a developer's
--- interactive run.
+-- waitForEvent() and pumpEvents() answer nil and a message outside test mode,
+-- so the specs that need an event to arrive say so instead of failing on a
+-- developer's interactive run.
 local testMode = os.getenv("MUDLET_TEST_MODE")
 
 describe("Tests C++ functions in the Miscallaneous category", function()
@@ -257,8 +272,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("names every encoding in the form setServerEncoding accepts", function()
-        local original = getServerEncoding()
-        finally(function() setServerEncoding(original) end)
+        finally(restoreServerEncoding())
 
         for _, encoding in ipairs(getServerEncodingsList()) do
           assert.is_true(setServerEncoding(encoding), "the list offered " .. encoding .. " but setServerEncoding refused it")
@@ -274,7 +288,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals(0, select('#', getMudletInfo()))
 
         local text = textFrom(mark)
-        assert.is_true(containsWrapped(text, "Current encoding: " .. getServerEncoding()), text)
+        -- a profile that has not been switched to a real encoding reports the
+        -- ASCII it falls back to in quotes
+        local encoding = getServerEncoding()
+        local reported = containsWrapped(text, "Current encoding: " .. encoding) or containsWrapped(text, 'Current encoding: "' .. encoding .. '"')
+        assert.is_true(reported, text)
         assert.is_true(containsWrapped(text, "Available encodings:"), text)
         for _, encoding in ipairs(getServerEncodingsList()) do
           assert.is_true(containsWrapped(text, encoding), encoding .. " was not reported")
@@ -382,9 +400,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         it("refuses a profile that does not exist", function()
           -- BUG: writeProfileData() creates the profile folder it is given, so
-          -- naming a profile that is not there makes one - an empty folder that
-          -- the connection dialog and getProfiles() then both list. Left pending
-          -- rather than pinning the phantom profile as correct.
+          -- naming a profile that is not there makes one, description file and
+          -- all - a phantom that the connection dialog and getProfiles() then
+          -- both list. Left pending rather than pinning it as correct.
           pending("setProfileInformation() creates a folder for a profile that does not exist")
           local ok, err = setProfileInformation("mudlet-spec-never-a-profile", "text")
           assert.is_false(ok)
@@ -395,6 +413,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       describe("Tests the functionality of clearProfileInformation", function()
         it("raises a Lua error when the profile name is not a string", function()
           assertArgError(function() clearProfileInformation({}) end, "clearProfileInformation: bad argument #1 type")
+        end)
+
+        it("refuses a profile that does not exist", function()
+          -- BUG: the same as setProfileInformation's - the write creates the
+          -- folder it was told to write into, so clearing the description of a
+          -- profile that is not there conjures one up.
+          pending("clearProfileInformation() creates a folder for a profile that does not exist")
+          local ok, err = clearProfileInformation("mudlet-spec-never-a-profile")
+          assert.is_false(ok)
+          assert.is_string(err)
         end)
 
         it("puts back the description a bundled game ships with", function()
@@ -421,14 +449,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(err, "not found"), tostring(err))
         end)
 
-        it("reports the state of the main command line and how much it keeps", function()
+        it("answers for the main command line when not told which one", function()
           local saving, message = getSaveCommandHistory()
           assert.is_boolean(saving)
           assert.is_string(message)
-          if saving then
-            assert.is_true(contains(message, tostring(getConfig("commandLineHistorySaveSize"))), message)
-          end
-          assert.equals(saving, (getSaveCommandHistory("main")))
+          -- the name it defaults to is what makes the two forms the same call,
+          -- so the state is set through the named form and read back through both
+          finally(function() setSaveCommandHistory("main", saving) end)
+          assert.is_true(setSaveCommandHistory("main", not saving))
+          assert.equals(not saving, (getSaveCommandHistory()))
+          assert.equals(not saving, (getSaveCommandHistory("main")))
         end)
       end)
 
@@ -437,18 +467,22 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assertArgError(function() setSaveCommandHistory(5) end, "setSaveCommandHistory: bad argument #1 type")
         end)
 
-        it("turns saving on for the main command line when called with no arguments", function()
-          -- BUG: the implementation says an argument-less call is meant to set
-          -- the main command line, but with nothing on the stack it falls
-          -- through to the type check and raises instead. Left pending rather
-          -- than pinning the raise as the contract.
-          pending("setSaveCommandHistory() with no arguments raises instead of setting the main command line")
+        it("turns saving on when told which command line, or none at all, but not whether to", function()
+          -- BUG: both forms are meant to default to turning saving on - the
+          -- implementation says so, and the branch that would read a second
+          -- argument after a name is unreachable without one. Both count their
+          -- arguments one too high, so they reach the type check and raise
+          -- instead. Left pending rather than pinning the raise as the contract.
+          pending("setSaveCommandHistory() and setSaveCommandHistory(name) raise instead of turning saving on")
           local original = getSaveCommandHistory()
           finally(function() setSaveCommandHistory(original) end)
           setSaveCommandHistory(false)
 
           assert.is_true(setSaveCommandHistory())
+          assert.is_true((getSaveCommandHistory()))
 
+          setSaveCommandHistory(false)
+          assert.is_true(setSaveCommandHistory("main"))
           assert.is_true((getSaveCommandHistory()))
         end)
 
@@ -461,7 +495,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals("disabled", (select(2, getSaveCommandHistory())))
 
           assert.is_true(setSaveCommandHistory("main", true))
-          assert.is_true((getSaveCommandHistory("main")))
+          local saving, message = getSaveCommandHistory("main")
+          assert.is_true(saving)
+          assert.equals("enabled (" .. getConfig("commandLineHistorySaveSize") .. " lines will be saved)", message)
         end)
 
         it("is refused, and the getter reports off, while the profile has history saving turned off", function()
@@ -511,7 +547,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals(startPath, stopPath)
           assert.equals(0, stopState)
           assert.is_true(contains(stopMessage, "stopped being logged"), stopMessage)
-          -- read once logging has stopped: the log stream is buffered
+          -- the line logged most recently is held back for duplicate detection
+          -- and only written out when logging stops, so read the file after
           assert.is_true(contains(readFile(startPath), "mudlet-spec-logged-line"), "the console output did not reach the log")
         end)
 
@@ -576,7 +613,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
           assert.equals(0, select('#', appendLog("mudlet-spec-never-logged")))
 
-          assert.is_false(contains(readFile(logPath), "mudlet-spec-never-logged"), "the text was appended to a log that was closed")
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the log file that was closed is not readable")
+          assert.is_false(contains(contents, "mudlet-spec-never-logged"), "the text was appended to a log that was closed")
         end)
       end)
     end)
@@ -607,6 +646,18 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       describe("Tests watching a file for changes", function()
+        it("watches a file that is there, and stops when told to", function()
+          -- adding and removing a watch needs no events, so unlike the spec
+          -- below this one runs outside test mode too
+          finally(function() os.remove(watchedFile) end)
+          writeFile(watchedFile, "first\n")
+
+          assert.is_true(addFileWatch(watchedFile))
+
+          assert.is_true(removeFileWatch(watchedFile))
+          assert.is_false(removeFileWatch(watchedFile), "the watch was removed twice")
+        end)
+
         it("raises sysPathChanged until the watch is removed", function()
           if not testMode then
             pending("waiting for sysPathChanged needs MUDLET_TEST_MODE")
@@ -739,12 +790,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             return
           end
           assert.is_boolean(known)
+          -- which words a system dictionary knows depends on the language it is
+          -- for, so the only answer worth asserting is for something no language
+          -- spells that way
+          assert.is_false(spellCheckWord("mudletspecqqzzxxvv"))
         end)
       end)
 
       describe("Tests the functionality of spellSuggestWord", function()
         it("raises a Lua error when called with no arguments", function()
           assertArgError(function() spellSuggestWord() end, "spellSuggestWord: bad argument #1 type")
+        end)
+
+        it("raises a Lua error when the dictionary choice is not a boolean", function()
+          assertArgError(function() spellSuggestWord("word", "user") end, "spellSuggestWord: bad argument #2 type")
         end)
 
         it("suggests a word the profile dictionary knows", function()
@@ -762,6 +821,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             return
           end
           assert.is_table(suggestions)
+          for index, suggestion in ipairs(suggestions) do
+            assert.is_string(suggestion, "suggestion " .. index .. " is not a word")
+            assert.is_true(#suggestion > 0, "suggestion " .. index .. " is empty")
+          end
         end)
       end)
     end)
@@ -872,8 +935,18 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(loadReplay(replay))
 
-        pumpEvents(500)
-        assert.is_true(contains(textFrom(mark), "mudlet-spec-replayed-line"), "the replay did not reach the console")
+        local arrived = false
+        for _ = 1, 40 do
+          pumpEvents(50)
+          arrived = contains(textFrom(mark), "mudlet-spec-replayed-line")
+          if arrived then
+            break
+          end
+        end
+        assert.is_true(arrived, "the replay did not reach the console")
+        -- whether a replay is running is application-wide, so let this one run
+        -- out before the next spec asks for one
+        pumpEvents(200)
       end)
     end)
 
@@ -975,6 +1048,21 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.equals("mudlet-spec-insertedmudlet-spec-insert-target", getCurrentLine())
       end)
+
+      it("renders the markup it is given", function()
+        -- BUG: insertHTML() hands the text straight to insertText(), so the
+        -- markup its name and the wiki both promise is put on the line as
+        -- literal characters. Left pending rather than pinning that as the
+        -- contract.
+        pending("insertHTML() does not interpret HTML, it is an alias for insertText")
+        finally(function() moveCursorEnd() end)
+        echo("mudlet-spec-html-target\n")
+        moveCursor(0, getLastLineNumber("main") - 1)
+
+        insertHTML("<b>mudlet-spec-bold</b>")
+
+        assert.equals("mudlet-spec-boldmudlet-spec-html-target", getCurrentLine())
+      end)
     end)
 
     describe("Tests the functionality of setMergeTables", function()
@@ -995,8 +1083,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("merges the keys it was given into an incoming GMCP table", function()
-        -- The merge only happens as GMCP arrives from a server, and the
-        -- self-test profile's socket is never in the unconnected state that
+        -- The merge only happens as GMCP or MSDP arrives from a server, and
+        -- the self-test profile's socket is never in the unconnected state that
         -- feedTelnet() needs, so there is no way to deliver one from Lua.
         pending("delivering GMCP to the profile needs a server connection")
       end)
@@ -1014,6 +1102,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("shows the command on the main console, unless told not to", function()
+        -- whether the argument is listened to at all is the profile's to decide:
+        -- the other two modes show every command, or none
+        local originalMode = getConfig("showSentText", true)
+        finally(function() setConfig("showSentText", originalMode) end)
+        assert.is_true(setConfig("showSentText", "script"))
         local mark = getLastLineNumber("main")
 
         assert.is_true(send("mudletSpecShownCommand", true))
@@ -1023,6 +1116,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         mark = getLastLineNumber("main")
         assert.is_true(send("mudletSpecHiddenCommand", false))
         assert.is_false(contains(textFrom(mark), "mudletSpecHiddenCommand"), textFrom(mark))
+
+        mark = getLastLineNumber("main")
+        assert.is_true(send("mudletSpecDefaultCommand"))
+        assert.is_true(contains(textFrom(mark), "mudletSpecDefaultCommand"), textFrom(mark))
       end)
     end)
 
@@ -1042,9 +1139,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         -- the warning Mudlet posts when a command cannot be encoded for the
         -- game: it is only reached once the send has been allowed. Switching
         -- the encoding first clears the once-per-encoding warning flag.
-        local originalEncoding = getServerEncoding()
-        local probeEncoding = (originalEncoding == "ISO 8859-1") and "ISO 8859-2" or "ISO 8859-1"
-        finally(function() setServerEncoding(originalEncoding) end)
+        local probeEncoding = (getServerEncoding() == "ISO 8859-1") and "ISO 8859-2" or "ISO 8859-1"
+        finally(restoreServerEncoding())
         assert.is_true(setServerEncoding(probeEncoding))
         -- U+4E00, which no ISO 8859 encoding can represent
         local unencodable = "\228\184\128"
@@ -1135,7 +1231,6 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local own = profiles[getProfileName()]
         assert.is_table(own, "the running profile is not in the list")
         assert.is_true(own.loaded)
-        -- only a loaded profile can be asked whether it is connected
         assert.is_boolean(own.connected)
         assert.equals(getProfileInformation(), own.description)
         if own.host then
@@ -1150,7 +1245,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
         assert.is_string(profilesDirectory, "could not work out the profiles folder from " .. getMudletHomeDir())
         local unloaded = profilesDirectory .. "/mudlet-spec-unloaded"
-        finally(function() lfs.rmdir(unloaded) end)
+        -- a folder left behind would be listed as a profile by every later run,
+        -- and by the connection dialog
+        finally(function() assert.is_true(lfs.rmdir(unloaded), "could not remove " .. unloaded) end)
         assert.is_true(lfs.mkdir(unloaded))
 
         local entry = getProfiles()["mudlet-spec-unloaded"]
@@ -1197,6 +1294,24 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       local iconSource = getMudletHomeDir() .. "/mudlet-spec-icon.png"
       local profileIcon = getMudletHomeDir() .. "/profileicon"
 
+      -- The icon a player chose is theirs, and the profile outlives the run, so
+      -- the specs below take a copy of it, work from a profile with no icon, and
+      -- put the copy back.
+      local function withNoProfileIcon()
+        local original = readFile(profileIcon)
+        finally(function()
+          os.remove(iconSource)
+          resetProfileIcon()
+          if original then
+            writeFile(profileIcon, original)
+          end
+        end)
+        if original then
+          assert.is_true(resetProfileIcon())
+        end
+        assert.is_false(fileExists(profileIcon), "the profile still has an icon")
+      end
+
       describe("Tests the functionality of setProfileIcon", function()
         it("raises a Lua error when called with no arguments", function()
           assertArgError(function() setProfileIcon() end, "setProfileIcon: bad argument #1 type")
@@ -1215,12 +1330,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("copies the icon into the profile", function()
-          finally(function()
-            os.remove(iconSource)
-            resetProfileIcon()
-          end)
+          withNoProfileIcon()
           writeFile(iconSource, "mudlet-spec-icon-bytes")
-          assert.is_false(fileExists(profileIcon), "the profile already had an icon before this spec")
 
           assert.is_true(setProfileIcon(iconSource))
 
@@ -1231,12 +1342,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
       describe("Tests the functionality of resetProfileIcon", function()
         it("takes the icon back out of the profile", function()
-          finally(function()
-            os.remove(iconSource)
-            resetProfileIcon()
-          end)
+          withNoProfileIcon()
           writeFile(iconSource, "mudlet-spec-icon-bytes")
           assert.is_true(setProfileIcon(iconSource))
+          assert.is_true(fileExists(profileIcon))
 
           assert.is_true(resetProfileIcon())
 
@@ -1244,7 +1353,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("is happy to be asked when there is no icon to remove", function()
-          assert.is_false(fileExists(profileIcon))
+          withNoProfileIcon()
 
           assert.is_true(resetProfileIcon())
 
@@ -1258,13 +1367,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assertArgError(function() raiseGlobalEvent() end, "raiseGlobalEvent: missing argument #1")
       end)
 
-      it("raises a Lua error for an argument it cannot carry", function()
+      it("raises a Lua error for a first argument it cannot carry", function()
+        -- safe to assert, unlike the spec below: nothing has been put into the
+        -- event yet, so the raise has nothing to strand
+        assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument type #1")
+      end)
+
+      it("raises a Lua error for a later argument it cannot carry", function()
         -- BUG: the refusal is right, but it is raised with lua_error() after the
         -- event has been built, and that longjmps past the destructor of the
-        -- TEvent holding the arguments read so far - 156 bytes that
-        -- LeakSanitizer reports and that would turn the leak-checking CI job
-        -- red. Left pending until the raise happens before the event is built.
-        pending("raiseGlobalEvent() leaks the event it was building when it refuses an argument")
+        -- TEvent holding the arguments read so far, which LeakSanitizer reports
+        -- and which would turn the leak-checking CI job red. Refusing the first
+        -- argument (above) is safe because nothing has been appended yet. Left
+        -- pending until the raise happens before the event is built.
+        pending("raiseGlobalEvent() leaks the event it was building when it refuses a later argument")
         assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument type #2")
       end)
 
@@ -1384,6 +1500,21 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_nil(ok)
           assert.equals("removed command, this function is now inactive and does nothing", err)
         end)
+      end)
+    end)
+
+    describe("The Miscallaneous specs clean up after themselves", function()
+      it("leaves no file or folder of its own behind", function()
+        -- the specs above write into the profile, and one of them into the
+        -- folder profiles live in, which no other spec file watches: anything
+        -- left there would be listed as a profile from the next run onwards
+        for entry in lfs.dir(getMudletHomeDir()) do
+          assert.is_nil(entry:find("mudlet%-spec%-"), "left " .. entry .. " in the profile")
+        end
+        local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
+        for entry in lfs.dir(profilesDirectory) do
+          assert.is_nil(entry:find("mudlet%-spec%-"), "left " .. entry .. " among the profiles")
+        end
       end)
     end)
 
