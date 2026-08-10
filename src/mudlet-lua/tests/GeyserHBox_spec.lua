@@ -177,6 +177,58 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.is_nil(getWindowGeometry("ghbShrinkB"))
       assert.is_nil(Geyser.windowList.ghbShrink)
     end)
+
+    -- one layout pass per child is what makes tearing a box down quadratic. The
+    -- fixed child is here because contains_fixed short circuits reposition()'s
+    -- check of the deferral, which could let the cost back in for boxes like it
+    it("does not lay the row out again for each child it deletes", function()
+      track(Geyser.Label:new({name = "ghbShrinkCostFixed", width = 100, h_policy = Geyser.Fixed}, box))
+      for i = 1, 3 do
+        track(Geyser.Label:new({name = "ghbShrinkCost" .. i}, box))
+      end
+      local organizes = 0
+      local organize = box.organize
+      box.organize = function(...)
+        organizes = organizes + 1
+        return organize(...)
+      end
+      box:delete()
+      assert.are.equal(0, organizes)
+      assert.is_nil(getWindowGeometry("ghbShrinkA"))
+      assert.is_nil(getWindowGeometry("ghbShrinkCost1"))
+    end)
+
+    -- the deferral belongs to the container being deleted, so a box losing a
+    -- whole subtree - one that defers itself on the way out - still re-splits
+    it("re-splits the row when a nested box of its own is deleted", function()
+      local nested = track(Geyser.VBox:new({name = "ghbShrinkNested"}, box))
+      track(Geyser.Label:new({name = "ghbShrinkNestedA"}, nested))
+      track(Geyser.Label:new({name = "ghbShrinkNestedB"}, nested))
+      nested:delete()
+      assert.are.same({"ghbShrinkA", "ghbShrinkB"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 300, height = 50}, geometry("ghbShrinkA"))
+      assert.are.same({x = 300, y = 0, width = 300, height = 50}, geometry("ghbShrinkB"))
+    end)
+
+    -- a cascade that raises leaves the box in the tree, so a box left holding
+    -- the cascade's deferral would silently never lay itself out again
+    it("stops deferring the row when a child's delete raises", function()
+      local doomed = box.windowList.ghbShrinkB
+      local ownDelete = rawget(doomed, "delete")
+      -- put the real delete back before after_each tries to clean the box up
+      finally(function() doomed.delete = ownDelete end)
+      doomed.delete = function() error("delete blew up") end
+      assert.has_error(function() box:delete() end)
+      assert.is_nil(rawget(box, "defer_updates"))
+      local organizes = 0
+      local organize = box.organize
+      box.organize = function(...)
+        organizes = organizes + 1
+        return organize(...)
+      end
+      track(Geyser.Label:new({name = "ghbShrinkAfterRaise"}, box))
+      assert.is_true(organizes > 0)
+    end)
   end)
 
   describe("Geyser.HBox:reposition", function()

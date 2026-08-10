@@ -10,7 +10,8 @@ Geyser.HBox = Geyser.Container:new({
 
 -- Internal function: lays the box out, or remembers that it still has to be laid
 -- out when updates are being deferred, so that the reposition end_update() runs
--- picks the work up again
+-- picks the work up again. A box being deleted defers as well and never gets
+-- that reposition, which is deliberate - it has no layout left worth doing.
 -- @param box the HBox to organize
 local function organizeOrDefer(box)
   if box.defer_updates then
