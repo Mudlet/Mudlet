@@ -230,9 +230,15 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("returns the same date in both forms", function()
+        -- each call reads the clock afresh, so a run that steps over midnight
+        -- between the two would see different dates: the table form is read
+        -- between two string forms and has to match one of them
+        local before = getTime(true, "yyyy-MM-dd")
         local asTable = getTime()
-        local asString = getTime(true, "yyyy-MM-dd")
-        assert.equals(string.format("%04d-%02d-%02d", asTable.year, asTable.month, asTable.day), asString)
+        local after = getTime(true, "yyyy-MM-dd")
+
+        local asDate = string.format("%04d-%02d-%02d", asTable.year, asTable.month, asTable.day)
+        assert.is_true(asDate == before or asDate == after, asDate .. " is neither " .. before .. " nor " .. after)
       end)
     end)
 
