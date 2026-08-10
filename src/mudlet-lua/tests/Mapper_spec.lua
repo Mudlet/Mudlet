@@ -1929,3 +1929,313 @@ describe("Tests deleteMap", function()
     assert.is_nil(next(getRooms()))
   end)
 end)
+
+-- saveMap/loadMap replace the whole map, so this block runs last, after
+-- deleteMap has already emptied it, and puts back whatever it found: the map is
+-- shared with everything that runs after this file.
+describe("Tests saveMap and loadMap", function()
+  local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+  assert(specDirectory, "Mapper_spec.lua has to be run from a file so that it can find its fixtures")
+  local fixtureMap = specDirectory .. "/fixtures/maps/minimal-map.xml"
+
+  local mapDirectory = getMudletHomeDir() .. "/map"
+  local backupPath = mapDirectory .. "/mapper_spec_backup.dat"
+  local savePath = mapDirectory .. "/mapper_spec_roundtrip.dat"
+  local brokenXmlPath = getMudletHomeDir() .. "/mapper_spec_broken.xml"
+
+  -- saveMap() with no arguments writes a timestamped file of its own choosing,
+  -- so the only way to clear up after it is to spot what appeared
+  local function mapFiles()
+    local files = {}
+    for entry in lfs.dir(mapDirectory) do
+      if entry:lower():match("%.dat$") then
+        files[entry] = true
+      end
+    end
+    return files
+  end
+
+  local function removeNewMapFiles(before)
+    for entry in pairs(mapFiles()) do
+      if not before[entry] then
+        os.remove(mapDirectory .. "/" .. entry)
+      end
+    end
+  end
+
+  -- three rooms in one area, carrying a value for every kind of room data the
+  -- binary format stores separately, so a round-trip that dropped one shows up
+  local roomA, roomB, roomC
+  local function buildMap()
+    deleteMap()
+    local area = addAreaName("MapperSpecSaveArea")
+    roomA, roomB, roomC = createRoomID(), nil, nil
+    addRoom(roomA)
+    roomB = createRoomID(); addRoom(roomB)
+    roomC = createRoomID(); addRoom(roomC)
+    for _, id in ipairs({roomA, roomB, roomC}) do
+      setRoomArea(id, area)
+    end
+    setRoomCoordinates(roomA, 0, 0, 0)
+    setRoomCoordinates(roomB, 3, -4, 5)
+    setRoomCoordinates(roomC, 1, 1, 1)
+    setRoomName(roomA, "Saved Room A")
+    setRoomName(roomB, "Saved Room B")
+    setRoomEnv(roomB, 42)
+    setRoomWeight(roomB, 7)
+    setExit(roomA, roomB, "east")
+    setExit(roomB, roomA, "west")
+    addSpecialExit(roomB, roomC, "squeeze through")
+    setDoor(roomA, "e", 2)
+    setRoomUserData(roomA, "spec key", "spec value")
+    setRoomIDbyHash(roomA, "mapperSpecSavedHash")
+    -- the room symbol is stored as a number below format version 19 and as a
+    -- string from 19 up, and the custom environment colours are their own
+    -- section, so both are here for the versioned round-trip below
+    setRoomChar(roomB, "X")
+    setCustomEnvColor(42, 10, 20, 30, 255)
+    return area
+  end
+
+  local function assertMapRestored()
+    assert.is_true(roomExists(roomA))
+    assert.is_true(roomExists(roomB))
+    assert.are.equal("Saved Room A", getRoomName(roomA))
+    assert.are.equal("Saved Room B", getRoomName(roomB))
+    assert.are.same({3, -4, 5}, {getRoomCoordinates(roomB)})
+    assert.are.equal(42, getRoomEnv(roomB))
+    assert.are.equal(7, getRoomWeight(roomB))
+    assert.are.equal(roomB, getRoomExits(roomA)["east"])
+    assert.are.equal(roomC, getSpecialExitsSwap(roomB)["squeeze through"])
+    assert.are.equal(2, getDoors(roomA)["e"])
+    assert.are.equal("spec value", getRoomUserData(roomA, "spec key"))
+    assert.are.equal(roomA, getRoomIDbyHash("mapperSpecSavedHash"))
+    assert.are.equal("MapperSpecSaveArea", getRoomAreaName(getRoomArea(roomA)))
+    assert.are.equal("X", getRoomChar(roomB))
+    assert.are.same({10, 20, 30, 255}, getCustomEnvColorTable()[42])
+  end
+
+  setup(function()
+    -- snapshot whatever map the rest of the suite left behind, so that the
+    -- teardown can hand it back untouched
+    assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
+  end)
+
+  teardown(function()
+    assert.is_true(loadMap(backupPath), "the map this block replaced could not be put back")
+    -- loadMap shows the mapper wherever it last was; the block above this one
+    -- guarantees an open, right-docked widget to everything that follows, so
+    -- put that back rather than leaving it wherever the loads left it
+    openMapWidget("r")
+    os.remove(backupPath)
+    os.remove(savePath)
+    os.remove(brokenXmlPath)
+  end)
+
+  describe("Tests the saveMap argument contract", function()
+    it("hard-errors on a save location that is not a string", function()
+      -- a table rather than a number: Lua coerces a number to a string, and
+      -- saveMap takes it, writing a map file named after the number
+      assert.has_error(function() saveMap({}) end)
+    end)
+
+    it("hard-errors on a format version that is not a number", function()
+      assert.has_error(function() saveMap(savePath, "twenty") end)
+    end)
+
+    it("reports failure rather than raising when the file cannot be written", function()
+      -- false means the save failed: saveMap answers with success, not with an
+      -- error flag, which is worth pinning because it reads the other way round
+      assert.is_false(saveMap("/nosuchdirectory/mapper_spec.dat"))
+    end)
+
+    it("refuses a format version this Mudlet cannot write", function()
+      finally(function()
+        -- a refused save leaves the map flagged as unsaved, which puts a
+        -- warning on the mapper for every spec that runs after this one
+        saveMap(savePath)
+        os.remove(savePath)
+      end)
+      assert.is_false(saveMap(savePath, 9999))
+    end)
+  end)
+
+  -- Careful with the order of anything added here: a load that fails still
+  -- empties the map first, both for a missing binary file (TMainConsole::loadMap
+  -- clears before it restores) and for an XML one (TMap::readXmlMapFile clears
+  -- before it parses), so none of these leave a map behind for the next spec.
+  describe("Tests the loadMap argument contract", function()
+    it("hard-errors on a path that is not a string", function()
+      assert.has_error(function() loadMap({}) end)
+    end)
+
+    it("returns false for a binary map file that is not there", function()
+      assert.is_false(loadMap(mapDirectory .. "/nosuchmapfile.dat"))
+    end)
+
+    it("returns nil and a message naming the missing XML file", function()
+      local ok, message = loadMap(mapDirectory .. "/nosuchmapfile.xml")
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find("was not found", 1, true))
+      assert.is_truthy(message:find("nosuchmapfile.xml", 1, true))
+    end)
+
+    it("returns nil and a message for an XML file it cannot parse", function()
+      local file = assert(io.open(brokenXmlPath, "w"))
+      file:write("<map><areas><area id=\"1\" name=\"unterminated\">")
+      file:close()
+
+      local ok, message = loadMap(brokenXmlPath)
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find("failure to import XML map file", 1, true))
+    end)
+  end)
+
+  describe("Tests the saveMap and loadMap round-trip", function()
+    it("puts every kind of room data back exactly as it was saved", function()
+      buildMap()
+      assert.is_true(saveMap(savePath))
+
+      -- wipe the lot, so that a loadMap which did nothing at all cannot pass
+      deleteMap()
+      assert.is_false(roomExists(roomA))
+
+      assert.is_true(loadMap(savePath))
+      assertMapRestored()
+    end)
+
+    it("replaces what is on the map rather than merging into it", function()
+      buildMap()
+      saveMap(savePath)
+
+      local strayArea = addAreaName("MapperSpecStrayArea")
+      local stray = createRoomID()
+      addRoom(stray)
+      setRoomArea(stray, strayArea)
+
+      assert.is_true(loadMap(savePath))
+      assert.is_false(roomExists(stray))
+      assert.is_nil(getAreaTable()["MapperSpecStrayArea"])
+      assertMapRestored()
+    end)
+
+    it("round-trips through the oldest format version Mudlet still writes", function()
+      buildMap()
+      assert.is_true(saveMap(savePath, 17))
+      deleteMap()
+
+      assert.is_true(loadMap(savePath))
+      -- everything, including the room symbol, which version 17 writes as a
+      -- number where 19 and up write a string: the older spelling has to come
+      -- back as the same character
+      assertMapRestored()
+    end)
+
+    it("saves into the profile's own map folder when given no path", function()
+      local before = mapFiles()
+      finally(function() removeNewMapFiles(before) end)
+
+      buildMap()
+      assert.is_true(saveMap())
+
+      local added = 0
+      for entry in pairs(mapFiles()) do
+        if not before[entry] then
+          added = added + 1
+        end
+      end
+      -- the name it picks is a timestamp to the second, so a second save
+      -- inside the same second would land on the same file rather than a new
+      -- one; what matters is that it wrote into the profile at all
+      assert.is_true(added >= 1, "saveMap() with no path should write a map file of its own")
+    end)
+
+    it("restores the profile's most recent map when given no path", function()
+      local before = mapFiles()
+      finally(function() removeNewMapFiles(before) end)
+
+      buildMap()
+      -- the other map files in this folder also hold a buildMap() map, so mark
+      -- this one: loadMap() picks the newest file and has to pick this one
+      setRoomName(roomC, "Only In The Newest Save")
+      assert.is_true(saveMap())
+      deleteMap()
+
+      assert.is_true(loadMap())
+      assertMapRestored()
+      assert.are.equal("Only In The Newest Save", getRoomName(roomC))
+    end)
+  end)
+
+  describe("Tests loadMap importing an XML map", function()
+    -- the fixture's own IDs, so that a load which quietly did nothing cannot
+    -- be mistaken for a successful import
+    local importedRoomA, importedRoomB = 4001, 4002
+
+    before_each(function()
+      deleteMap()
+      assert.is_true(loadMap(fixtureMap))
+    end)
+
+    it("creates the rooms the file describes", function()
+      assert.is_true(roomExists(importedRoomA))
+      assert.is_true(roomExists(importedRoomB))
+      assert.are.equal("Import Room One", getRoomName(importedRoomA))
+      assert.are.equal("Import Room Two", getRoomName(importedRoomB))
+    end)
+
+    it("puts the rooms in the area the file names", function()
+      assert.are.equal(4001, getAreaTable()["Mapper Spec Import Area"])
+      assert.are.equal(4001, getRoomArea(importedRoomA))
+      assert.are.equal(4001, getRoomArea(importedRoomB))
+    end)
+
+    it("reads the coordinates and the environment of each room", function()
+      assert.are.same({0, 0, 0}, {getRoomCoordinates(importedRoomA)})
+      assert.are.same({1, 2, 3}, {getRoomCoordinates(importedRoomB)})
+      assert.are.equal(169, getRoomEnv(importedRoomA))
+      assert.are.equal(170, getRoomEnv(importedRoomB))
+    end)
+
+    it("reads normal exits, doors and IRE-style special exits", function()
+      assert.are.equal(importedRoomB, getRoomExits(importedRoomA)["east"])
+      assert.are.equal(importedRoomA, getRoomExits(importedRoomB)["west"])
+      assert.are.equal(2, getDoors(importedRoomB)["w"])
+      -- an exit with no direction but a command is how IRE maps spell a
+      -- special exit, and it has to arrive as one
+      assert.are.equal(importedRoomB, getSpecialExitsSwap(importedRoomA)["enter gate"])
+    end)
+
+    it("turns a hidden exit into a locked door", function()
+      -- IRE maps mark an exit the player cannot see with hidden="1" rather than
+      -- with a door type, and it arrives as door type 3, a locked door
+      assert.are.equal(importedRoomA, getRoomExits(importedRoomB)["north"])
+      assert.are.equal(3, getDoors(importedRoomB)["n"])
+    end)
+
+    it("turns a room feature into room user data", function()
+      assert.are.equal("true", getRoomUserData(importedRoomA, "feature-shop"))
+    end)
+
+    -- the file's <environments> block fills TMap::mEnvColors, which maps an
+    -- environment id to a stock colour index. getCustomEnvColorTable() reads
+    -- mCustomEnvColors, a different map, so there is nothing to read this back
+    -- with from Lua
+    pending("the environment colours an XML map declares have no Lua getter")
+
+    it("throws away the map that was there before the import", function()
+      local stray = createRoomID()
+      addRoom(stray)
+      assert.is_true(loadMap(fixtureMap))
+      assert.is_false(roomExists(stray))
+    end)
+  end)
+
+  -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
+  -- mapper support, which the CI and release builds are not
+  pending("setMapPerspective needs a Mudlet built with the 3D mapper")
+
+  pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
+end)

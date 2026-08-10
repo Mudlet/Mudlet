@@ -2175,3 +2175,786 @@ describe("Tests db:echo_sql", function()
     assert.is_falsy(saved)
   end)
 end)
+
+-- The helpers below all begin with an underscore: they are db's internals, not
+-- its public API. They are specced directly because every public db function is
+-- built out of them, so a change to one of them moves behaviour everywhere at
+-- once, and because the SQL they produce is the only place the escaping and
+-- quoting rules are actually written down.
+describe("Tests db's internal SQL helpers", function()
+
+  describe("Tests db:_sql_type", function()
+    it("maps a number to REAL", function()
+      assert.are.equal("REAL", db:_sql_type(0))
+      assert.are.equal("REAL", db:_sql_type(-1.5))
+    end)
+
+    it("maps nil to NULL", function()
+      assert.are.equal("NULL", db:_sql_type(nil))
+    end)
+
+    it("maps a timestamp to INTEGER, including the empty one", function()
+      assert.are.equal("INTEGER", db:_sql_type(db:Timestamp(1234)))
+      assert.are.equal("INTEGER", db:_sql_type(db:Timestamp("CURRENT_TIMESTAMP")))
+      -- db:Timestamp(nil) stores false rather than nil, so it is still a
+      -- timestamp column and must not fall through to TEXT
+      assert.are.equal("INTEGER", db:_sql_type(db:Timestamp(nil)))
+    end)
+
+    it("maps db:Null to NULL", function()
+      assert.are.equal("NULL", db:_sql_type(db:Null()))
+    end)
+
+    it("maps everything else, including a plain table, to TEXT", function()
+      assert.are.equal("TEXT", db:_sql_type(""))
+      assert.are.equal("TEXT", db:_sql_type("some text"))
+      assert.are.equal("TEXT", db:_sql_type(true))
+      assert.are.equal("TEXT", db:_sql_type({}))
+    end)
+  end)
+
+  describe("Tests db:_sql_convert", function()
+    it("double quotes a string default and doubles up single quotes in it", function()
+      assert.are.equal('""', db:_sql_convert(""))
+      assert.are.equal('"plain"', db:_sql_convert("plain"))
+      assert.are.equal([["it''s"]], db:_sql_convert("it's"))
+    end)
+
+    it("renders nil and db:Null as the NULL keyword", function()
+      assert.are.equal("NULL", db:_sql_convert(nil))
+      assert.are.equal("NULL", db:_sql_convert(db:Null()))
+    end)
+
+    it("renders a timestamp as its raw epoch number", function()
+      assert.are.equal("1234", db:_sql_convert(db:Timestamp(1234)))
+    end)
+
+    it("renders the empty timestamp as NULL rather than as false", function()
+      assert.are.equal("NULL", db:_sql_convert(db:Timestamp(nil)))
+    end)
+
+    it("renders anything else with tostring, unquoted", function()
+      assert.are.equal("42", db:_sql_convert(42))
+      assert.are.equal("true", db:_sql_convert(true))
+    end)
+  end)
+
+  describe("Tests db:_index_name", function()
+    it("names a single column index after the sheet and the column", function()
+      assert.are.equal("idx_people_c_city", db:_index_name("people", "city"))
+    end)
+
+    it("joins every column of a compound index into one name", function()
+      assert.are.equal("idx_people_c_name_city", db:_index_name("people", {"name", "city"}))
+    end)
+
+    it("gives two different indexes on one sheet two different names", function()
+      -- the names have to differ or CREATE INDEX IF NOT EXISTS silently keeps
+      -- the first index and the second one is never made
+      assert.are_not.equal(db:_index_name("people", "city"), db:_index_name("people", "name"))
+      assert.are_not.equal(db:_index_name("people", {"name", "city"}), db:_index_name("people", {"city", "name"}))
+    end)
+
+    it("refuses anything that is not a string or a table", function()
+      local ok, err = pcall(function() return db:_index_name("people", 42) end)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "Indexes must be either a string or a table.", 1, true))
+    end)
+  end)
+
+  describe("Tests db:_index_valid", function()
+    local columns = {name = "TEXT", city = "TEXT"}
+
+    it("accepts a single column index that names a real column", function()
+      assert.is_true(db:_index_valid(columns, "city"))
+    end)
+
+    it("rejects a single column index that names a column the sheet lacks", function()
+      assert.is_false(db:_index_valid(columns, "nosuchcolumn"))
+    end)
+
+    it("accepts a compound index whose columns all exist", function()
+      assert.is_true(db:_index_valid(columns, {"name", "city"}))
+    end)
+
+    it("rejects a compound index as soon as one column is missing", function()
+      assert.is_false(db:_index_valid(columns, {"name", "nosuchcolumn"}))
+    end)
+
+    it("accepts an empty compound index", function()
+      assert.is_true(db:_index_valid(columns, {}))
+    end)
+  end)
+
+  describe("Tests db:_sql_columns", function()
+    it("lower cases and double quotes a single column name", function()
+      assert.are.equal('"city"', db:_sql_columns("City"))
+    end)
+
+    it("comma separates a list of column names", function()
+      assert.are.equal('"name","city"', db:_sql_columns({"name", "City"}))
+    end)
+
+    it("attaches a sort direction to the column before it instead of quoting it", function()
+      -- db:fetch appends "DESC" as its own list entry, so it must not come out
+      -- as a column name of its own
+      assert.are.equal('"name" DESC', db:_sql_columns({"name", "DESC"}))
+      assert.are.equal('"name" asc,"city" desc', db:_sql_columns({"name", "asc", "city", "desc"}))
+    end)
+
+    it("refuses anything that is not a string or a table", function()
+      local ok, err = pcall(function() return db:_sql_columns(42) end)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "Must specify either a table array or string for index, not number", 1, true))
+    end)
+  end)
+
+  describe("Tests db:_sql_fields", function()
+    it("wraps one quoted field name in parentheses", function()
+      assert.are.equal('("name")', db:_sql_fields({name = "Bob"}))
+    end)
+
+    it("keeps the case of the field name, unlike db:_sql_columns", function()
+      assert.are.equal('("Name")', db:_sql_fields({Name = "Bob"}))
+    end)
+
+    it("produces an empty list for an empty row", function()
+      assert.are.equal("()", db:_sql_fields({}))
+    end)
+  end)
+
+  describe("Tests db:_sql_values", function()
+    it("single quotes a string and doubles up single quotes in it", function()
+      assert.are.equal("('plain')", db:_sql_values({name = "plain"}))
+      assert.are.equal("('it''s')", db:_sql_values({name = "it's"}))
+    end)
+
+    it("leaves a number unquoted", function()
+      assert.are.equal("(42)", db:_sql_values({kills = 42}))
+    end)
+
+    it("turns CURRENT_TIMESTAMP into a call to sqlite's datetime", function()
+      assert.are.equal("(datetime('now'))", db:_sql_values({when_ = db:Timestamp("CURRENT_TIMESTAMP")}))
+    end)
+
+    it("turns an epoch timestamp into a unixepoch conversion", function()
+      assert.are.equal("(datetime('1234', 'unixepoch'))", db:_sql_values({when_ = db:Timestamp(1234)}))
+    end)
+
+    it("turns the empty timestamp and db:Null into NULL", function()
+      assert.are.equal("(NULL)", db:_sql_values({when_ = db:Timestamp(nil)}))
+      assert.are.equal("(NULL)", db:_sql_values({whatever = db:Null()}))
+    end)
+
+    it("produces an empty list for an empty row", function()
+      assert.are.equal("()", db:_sql_values({}))
+    end)
+  end)
+
+  describe("Tests db:_sql_fields and db:_sql_values together", function()
+    it("lists the fields and the values of one row in the same order", function()
+      -- this is the only thing that makes the pair usable: db:add writes
+      -- "INSERT INTO sheet <fields> VALUES <values>", and both walk the row
+      -- with pairs(), so the two walks have to agree or every column of every
+      -- insert lands in the wrong one
+      local row = {alpha = "a", bravo = "b", charlie = "c", delta = 4, echo = "e"}
+
+      local fields = db:_sql_fields(row):match("^%((.*)%)$")
+      local values = db:_sql_values(row):match("^%((.*)%)$")
+      local names, contents = string.split(fields, ","), string.split(values, ",")
+
+      assert.are.equal(5, #names)
+      assert.are.equal(#names, #contents)
+      for index, name in ipairs(names) do
+        local column = name:match('^"(.*)"$')
+        local expected = type(row[column]) == "string" and ("'" .. row[column] .. "'") or tostring(row[column])
+        assert.are.equal(expected, contents[index], "column " .. column .. " did not line up with its value")
+      end
+    end)
+  end)
+
+  describe("Tests db:_validate_validations", function()
+    it("accepts every documented conflict resolution", function()
+      for _, option in ipairs({"ABORT", "FAIL", "IGNORE", "REPLACE", "ROLLBACK"}) do
+        local valid, msg = db:_validate_validations(option)
+        assert.is_true(valid, option .. " should be a valid _violations option")
+        assert.are.equal("", msg)
+      end
+    end)
+
+    it("rejects an option it does not know and says what it wanted", function()
+      local valid, msg = db:_validate_validations("NONSENSE")
+      assert.is_false(valid)
+      assert.is_truthy(string.find(msg, "_validations must be one of", 1, true))
+      assert.is_truthy(string.find(msg, "NONSENSE", 1, true))
+    end)
+
+    it("rejects a non-string and names the type it got", function()
+      local valid, msg = db:_validate_validations(42)
+      assert.is_false(valid)
+      assert.are.equal("_validations must be a string. Received number", msg)
+    end)
+
+    it("is case sensitive", function()
+      assert.is_false((db:_validate_validations("fail")))
+    end)
+  end)
+
+  describe("Tests db:_validate_unique_contraints", function()
+    it("accepts a bare column name", function()
+      local valid, msg = db:_validate_unique_contraints("name")
+      assert.is_true(valid)
+      assert.are.equal("", msg)
+    end)
+
+    it("accepts a list of column names", function()
+      assert.is_true((db:_validate_unique_contraints({"name", "city"})))
+    end)
+
+    it("accepts a compound constraint", function()
+      assert.is_true((db:_validate_unique_contraints({{"name", "city"}})))
+    end)
+
+    it("accepts an empty list", function()
+      assert.is_true((db:_validate_unique_contraints({})))
+    end)
+
+    it("rejects a compound constraint holding something other than a column name", function()
+      local valid, msg = db:_validate_unique_contraints({{"name", 42}})
+      assert.is_false(valid)
+      assert.is_truthy(string.find(msg, "Multi-column definitions for _unique must be a list of strings", 1, true))
+    end)
+
+    it("rejects a member that is neither a string nor a table", function()
+      local valid, msg = db:_validate_unique_contraints({42})
+      assert.is_false(valid)
+      assert.are.equal("Members of _unique must be a string or table. Received number.", msg)
+    end)
+
+    it("rejects a constraint that is neither a string nor a table", function()
+      local valid, msg = db:_validate_unique_contraints(42)
+      assert.is_false(valid)
+      assert.are.equal("_unique must be a string or a table.  Received number.", msg)
+    end)
+
+    it("reports every bad member rather than only the first", function()
+      local valid, msg = db:_validate_unique_contraints({42, true})
+      assert.is_false(valid)
+      assert.are.equal(2, #string.split(msg, "\n"))
+    end)
+  end)
+
+  describe("Tests db:_extract_table_constraints", function()
+    it("returns nothing for no SQL at all", function()
+      assert.are.equal("", db:_extract_table_constraints(nil))
+      assert.are.equal("", db:_extract_table_constraints(""))
+    end)
+
+    it("returns nothing for SQL that is not a CREATE TABLE", function()
+      assert.are.equal("", db:_extract_table_constraints("SELECT * FROM people"))
+    end)
+
+    it("returns nothing for a table with no unique constraints", function()
+      assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("name" TEXT NULL DEFAULT "")'))
+    end)
+
+    it("extracts a column level unique constraint", function()
+      assert.are.equal("unique on conflict replace",
+        db:_extract_table_constraints('CREATE TABLE people ("name" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE)'))
+    end)
+
+    it("extracts a table level unique constraint with its columns", function()
+      assert.are.equal('unique("name", "city") on conflict fail',
+        db:_extract_table_constraints('CREATE TABLE people ("name" TEXT NULL, "city" TEXT NULL, UNIQUE("name", "city") ON CONFLICT FAIL)'))
+    end)
+
+    it("ignores case, newlines and repeated whitespace", function()
+      local oneLine = 'CREATE TABLE people ("name" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE)'
+      local sprawling = 'create   table   people\n(\n  "name"   text   null   default ""\n  unique   on   conflict   replace\n)'
+      assert.are.equal(db:_extract_table_constraints(oneLine), db:_extract_table_constraints(sprawling))
+    end)
+
+    it("orders the constraints so that the same table always compares equal", function()
+      -- db:_migrate compares this string against the one it built to decide
+      -- whether to rebuild the table, so two spellings of one schema must match
+      local first = 'CREATE TABLE people ("a" TEXT UNIQUE ON CONFLICT FAIL, UNIQUE("b", "c") ON CONFLICT IGNORE)'
+      local second = 'CREATE TABLE people (UNIQUE("b", "c") ON CONFLICT IGNORE, "a" TEXT UNIQUE ON CONFLICT FAIL)'
+      assert.are.equal(db:_extract_table_constraints(first), db:_extract_table_constraints(second))
+      assert.are.equal('unique on conflict fail|unique("b", "c") on conflict ignore', db:_extract_table_constraints(first))
+    end)
+
+    it("separates a change of conflict resolution from an unchanged one", function()
+      local fail = 'CREATE TABLE people ("name" TEXT UNIQUE ON CONFLICT FAIL)'
+      local replace = 'CREATE TABLE people ("name" TEXT UNIQUE ON CONFLICT REPLACE)'
+      assert.are_not.equal(db:_extract_table_constraints(fail), db:_extract_table_constraints(replace))
+    end)
+
+    it("ignores a column that was added or removed", function()
+      -- the whole point of comparing constraints instead of the whole statement
+      local before = 'CREATE TABLE people ("name" TEXT UNIQUE ON CONFLICT FAIL)'
+      local after = 'CREATE TABLE people ("name" TEXT UNIQUE ON CONFLICT FAIL, "city" TEXT NULL DEFAULT "")'
+      assert.are.equal(db:_extract_table_constraints(before), db:_extract_table_constraints(after))
+    end)
+  end)
+
+  describe("Tests db:_build_create_table_sql", function()
+    it("always gives the sheet an autoincrementing _row_id", function()
+      local sql = db:_build_create_table_sql({columns = {name = ""}, options = {}}, "people")
+      assert.are.equal('CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT NULL DEFAULT "")', sql)
+    end)
+
+    it("types a column from its default value", function()
+      local sql = db:_build_create_table_sql({columns = {kills = 0}, options = {}}, "people")
+      assert.is_truthy(string.find(sql, '"kills" REAL NULL DEFAULT 0', 1, true))
+    end)
+
+    it("adds a column level unique constraint for a single unique column", function()
+      local sql = db:_build_create_table_sql({columns = {name = ""}, options = {_unique = "name"}}, "people")
+      assert.is_truthy(string.find(sql, '"name" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT FAIL', 1, true))
+    end)
+
+    it("accepts the unique column as a one entry list too", function()
+      local sql = db:_build_create_table_sql({columns = {name = ""}, options = {_unique = {"name"}}}, "people")
+      assert.is_truthy(string.find(sql, 'UNIQUE ON CONFLICT FAIL', 1, true))
+    end)
+
+    it("adds a table level unique constraint for a compound one", function()
+      local sql = db:_build_create_table_sql({columns = {name = ""}, options = {_unique = {{"name", "city"}}}}, "people")
+      assert.is_truthy(string.find(sql, 'UNIQUE("name", "city") ON CONFLICT FAIL', 1, true))
+    end)
+
+    it("uses the sheet's conflict resolution rather than the default", function()
+      local sql = db:_build_create_table_sql({columns = {name = ""}, options = {_unique = "name", _violations = "REPLACE"}}, "people")
+      assert.is_truthy(string.find(sql, "ON CONFLICT REPLACE", 1, true))
+      assert.is_nil(string.find(sql, "ON CONFLICT FAIL", 1, true))
+    end)
+
+    it("leaves a column that is not unique alone", function()
+      local sql = db:_build_create_table_sql({columns = {city = ""}, options = {_unique = "name"}}, "people")
+      assert.is_nil(string.find(sql, "UNIQUE", 1, true))
+    end)
+  end)
+end)
+
+-- These four run against a real sqlite database rather than against strings:
+-- they are the parts of db:create that touch the file on disk.
+describe("Tests db's internals against a real database", function()
+  local dbName = "dbinternalstestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+  local mydb
+
+  local function indexNames(sheetName)
+    local conn = db.__conn[dbName]
+    local cursor = conn:execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '" .. sheetName .. "' AND sql IS NOT NULL"
+    )
+    local names = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      names[#names + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    table.sort(names)
+    return names
+  end
+
+  before_each(function()
+    mydb = db:create(dbName, {
+      people = {
+        name = "",
+        city = "",
+        kills = 0,
+        seen = db:Timestamp("CURRENT_TIMESTAMP"),
+        _index = {"city"}
+      }
+    })
+  end)
+
+  after_each(function()
+    db:close()
+    os.remove(dbFile)
+    mydb = nil
+  end)
+
+  describe("Tests db:_isActiveDBName", function()
+    it("reports an open database whose file is on disk as active", function()
+      assert.is_truthy(db:_isActiveDBName(dbName))
+    end)
+
+    it("sanitises the name it is given first", function()
+      -- db:create sanitises too, so a caller passing the unsanitised name has
+      -- to reach the same connection or db:create opens a second one
+      assert.is_truthy(db:_isActiveDBName("DB Internals Testing Only"))
+    end)
+
+    it("reports a database that was never created as inactive", function()
+      assert.is_falsy(db:_isActiveDBName("nosuchdatabaseatall"))
+    end)
+
+    it("reports a closed database as inactive", function()
+      assert.is_true((db:close(dbName)))
+      assert.is_falsy(db:_isActiveDBName(dbName))
+    end)
+
+    it("reports an open connection whose file has gone as inactive", function()
+      -- the file is what db:create reconnects to, so a live handle to a deleted
+      -- file must not count as active
+      os.remove(dbFile)
+      assert.is_falsy(db:_isActiveDBName(dbName))
+    end)
+  end)
+
+  describe("Tests db:get_database", function()
+    it("hands back a reference to a database that db:create already made", function()
+      local reference = db:get_database(dbName)
+      assert.is_table(reference)
+      assert.are.equal("people", reference.people._sht_name)
+      assert.are.equal("name", reference.people.name.name)
+    end)
+
+    it("sanitises the name it is given", function()
+      assert.are.equal(dbName, db:get_database("DB Internals Testing Only")._db_name)
+    end)
+
+    it("hands back a reference that reads the same rows as db:create's", function()
+      db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"})
+      local rows = db:fetch(db:get_database(dbName).people)
+      assert.are.equal(1, #rows)
+      assert.are.equal("Bob", rows[1].name)
+    end)
+
+    it("refuses a database that does not exist", function()
+      local ok, err = pcall(function() return db:get_database("nosuchdatabaseatall") end)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "Attempt to access database that does not exist.", 1, true))
+    end)
+
+    it("refuses a sheet the database does not have", function()
+      local ok, err = pcall(function() return db:get_database(dbName).nosuchsheet end)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "does not exist", 1, true))
+    end)
+  end)
+
+  describe("Tests db:fetch_sql", function()
+    before_each(function()
+      db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork", kills = 3})
+      db:add(mydb.people, {name = "Carrot", city = "Ankh-Morpork", kills = 7})
+    end)
+
+    it("returns one coerced row per result", function()
+      local rows = db:fetch_sql(mydb.people, "SELECT * FROM people ORDER BY name")
+      assert.are.equal(2, #rows)
+      assert.are.equal("Bob", rows[1].name)
+      assert.are.equal("Carrot", rows[2].name)
+    end)
+
+    it("coerces the values it read to the types the sheet declares", function()
+      local rows = db:fetch_sql(mydb.people, "SELECT * FROM people WHERE name = 'Bob'")
+      assert.are.equal(3, rows[1].kills)
+      assert.is_number(rows[1]._row_id)
+      assert.is_number(rows[1].seen:as_number())
+    end)
+
+    it("returns an empty list rather than nil when nothing matched", function()
+      local rows = db:fetch_sql(mydb.people, "SELECT * FROM people WHERE name = 'Nobody'")
+      assert.are.same({}, rows)
+    end)
+
+    it("honours the SQL it is handed rather than fetching the whole sheet", function()
+      local rows = db:fetch_sql(mydb.people, "SELECT * FROM people WHERE kills > 5")
+      assert.are.equal(1, #rows)
+      assert.are.equal("Carrot", rows[1].name)
+    end)
+
+    it("returns nil for SQL sqlite could not run", function()
+      assert.is_nil(db:fetch_sql(mydb.people, "SELECT * FROM"))
+      assert.is_nil(db:fetch_sql(mydb.people, "SELECT * FROM nosuchsheet"))
+    end)
+  end)
+
+  describe("Tests db:_coerce", function()
+    it("passes a raw expression through untouched", function()
+      assert.are.equal("upper(name)", db:_coerce(mydb.people.name, db:exp("upper(name)")))
+    end)
+
+    it("renders db:Null as the NULL keyword", function()
+      assert.are.equal("NULL", db:_coerce(mydb.people.name, db:Null()))
+    end)
+
+    it("leaves a number field's value as a number", function()
+      assert.are.equal(7, db:_coerce(mydb.people.kills, 7))
+      assert.are.equal(7, db:_coerce(mydb.people.kills, "7"))
+    end)
+
+    it("quotes a value a number field cannot hold", function()
+      assert.are.equal("'lots'", db:_coerce(mydb.people.kills, "lots"))
+    end)
+
+    it("renders a datetime field's value through sqlite's datetime", function()
+      assert.are.equal("datetime('now')", db:_coerce(mydb.people.seen, db:Timestamp("CURRENT_TIMESTAMP")))
+      assert.are.equal("datetime('1234', 'unixepoch')", db:_coerce(mydb.people.seen, db:Timestamp(1234)))
+      assert.are.equal("NULL", db:_coerce(mydb.people.seen, db:Timestamp(nil)))
+    end)
+
+    it("single quotes a text field's value and doubles up single quotes in it", function()
+      assert.are.equal("'Bob'", db:_coerce(mydb.people.name, "Bob"))
+      assert.are.equal("'it''s'", db:_coerce(mydb.people.name, "it's"))
+    end)
+  end)
+
+  describe("Tests db:_coerce_sheet", function()
+    it("returns nothing at all when there is no row", function()
+      assert.is_nil(db:_coerce_sheet(mydb.people, nil))
+    end)
+
+    it("turns the sqlite text a row arrives as into the sheet's types", function()
+      local row = db:_coerce_sheet(mydb.people, {_row_id = "4", name = "Bob", kills = "3", seen = "2020-01-02 03:04:05"})
+      assert.are.equal(4, row._row_id)
+      assert.are.equal(3, row.kills)
+      assert.are.equal("Bob", row.name)
+      assert.is_number(row.seen:as_number())
+    end)
+
+    it("leaves a number column that does not hold a number alone", function()
+      local row = db:_coerce_sheet(mydb.people, {_row_id = "1", kills = "lots"})
+      assert.are.equal("lots", row.kills)
+    end)
+
+    it("gives an empty datetime column an empty timestamp", function()
+      local row = db:_coerce_sheet(mydb.people, {_row_id = "1", seen = nil}, {"seen"})
+      assert.is_false(row.seen._timestamp)
+      assert.is_nil((row.seen:as_number()))
+    end)
+
+    it("only converts the columns it is told about", function()
+      local row = db:_coerce_sheet(mydb.people, {_row_id = "1", kills = "3", name = "Bob"}, {"name"})
+      assert.are.equal("3", row.kills)
+      assert.are.equal("Bob", row.name)
+    end)
+  end)
+
+  describe("Tests db:_migrate", function()
+    it("creates a sheet that the schema has but the file does not", function()
+      db.__schema[dbName].pets = {columns = {name = "", legs = 0}, options = {}}
+      db:_migrate(dbName, "pets")
+
+      local pets = db:get_database(dbName).pets
+      db:add(pets, {name = "Gaspode", legs = 4})
+      local rows = db:fetch(pets)
+      assert.are.equal(1, #rows)
+      assert.are.equal(4, rows[1].legs)
+    end)
+
+    it("adds a column that the schema gained without losing the rows", function()
+      db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"})
+      db.__schema[dbName].people.columns.rank = ""
+      db:_migrate(dbName, "people")
+
+      local rows = db:fetch(db:get_database(dbName).people)
+      assert.are.equal(1, #rows)
+      assert.are.equal("Bob", rows[1].name)
+      assert.are.equal("", rows[1].rank)
+    end)
+
+    it("runs again over an unchanged sheet without disturbing it", function()
+      db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork", kills = 3})
+      db:_migrate(dbName, "people")
+      db:_migrate(dbName, "people")
+
+      local rows = db:fetch(mydb.people)
+      assert.are.equal(1, #rows)
+      assert.are.equal(3, rows[1].kills)
+    end)
+
+    it("refuses to drop a column that still holds data unless forced", function()
+      db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"})
+      db.__schema[dbName].people.columns.city = nil
+
+      local ok, err = pcall(function() db:_migrate(dbName, "people") end)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "data present in undefined columns", 1, true))
+    end)
+
+    it("drops that column when it is forced to", function()
+      db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"})
+      db.__schema[dbName].people.columns.city = nil
+      db:_migrate(dbName, "people", true)
+
+      local rows = db:fetch(db:get_database(dbName).people)
+      assert.are.equal(1, #rows)
+      assert.are.equal("Bob", rows[1].name)
+      assert.is_nil(rows[1].city)
+    end)
+
+    it("creates the indexes the schema asks for", function()
+      local conn = db.__conn[dbName]
+      conn:execute("DROP INDEX IF EXISTS " .. db:_index_name("people", "city"))
+      assert.are.same({}, indexNames("people"))
+
+      db:_migrate(dbName, "people")
+
+      assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    end)
+  end)
+
+  describe("Tests db:_drop_orphaned_indexes", function()
+    it("keeps an index the schema still asks for", function()
+      local schema = db.__schema[dbName].people
+      local ok, err = db:_drop_orphaned_indexes(db.__conn[dbName], "people", schema)
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    end)
+
+    it("drops every index once the schema asks for none", function()
+      local schema = db.__schema[dbName].people
+      schema.options._index = nil
+      assert.is_true((db:_drop_orphaned_indexes(db.__conn[dbName], "people", schema)))
+      assert.are.same({}, indexNames("people"))
+    end)
+
+    it("drops an index whose columns are no longer in the schema's index list", function()
+      local schema = db.__schema[dbName].people
+      schema.options._index = {"name"}
+      assert.is_true((db:_drop_orphaned_indexes(db.__conn[dbName], "people", schema)))
+      -- the city index is gone and the name one is not made here, only dropped
+      assert.are.same({}, indexNames("people"))
+    end)
+
+    it("matches a compound index by its columns rather than by its name", function()
+      local conn = db.__conn[dbName]
+      conn:execute('CREATE INDEX IF NOT EXISTS idx_people_c_handmade ON people ("city", "name")')
+      local schema = db.__schema[dbName].people
+      schema.options._index = {{"name", "city"}}
+      assert.is_true((db:_drop_orphaned_indexes(conn, "people", schema)))
+      -- the column order differs and the name is nothing db would have picked,
+      -- but the index covers what the schema asked for, so it stays
+      assert.are.same({"idx_people_c_handmade"}, indexNames("people"))
+    end)
+
+    it("drops a unique index, which db does not make any more", function()
+      local conn = db.__conn[dbName]
+      conn:execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_people_c_name ON people ("name")')
+      local schema = db.__schema[dbName].people
+      schema.options._index = {"name", "city"}
+      assert.is_true((db:_drop_orphaned_indexes(conn, "people", schema)))
+      assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    end)
+
+    it("has nothing to do for a sheet that is not in the file", function()
+      -- it asks sqlite_master which indexes the sheet has rather than the sheet
+      -- itself, so an unknown sheet is an empty answer and not an error
+      local ok, err = db:_drop_orphaned_indexes(db.__conn[dbName], "nosuchsheet", db.__schema[dbName].people)
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    end)
+  end)
+
+  describe("Tests db:_migrate_indexes", function()
+    local columns = {name = "TEXT", city = "TEXT", kills = "REAL"}
+
+    it("creates an index the sheet does not have yet", function()
+      local conn = db.__conn[dbName]
+      db:_migrate_indexes(conn, "people", {columns = {}, options = {_index = {"name"}}}, columns)
+      assert.are.same({db:_index_name("people", "city"), db:_index_name("people", "name")}, indexNames("people"))
+    end)
+
+    it("creates a compound index under its compound name", function()
+      local conn = db.__conn[dbName]
+      db:_migrate_indexes(conn, "people", {columns = {}, options = {_index = {{"name", "city"}}}}, columns)
+      assert.is_truthy(table.contains(indexNames("people"), db:_index_name("people", {"name", "city"})))
+    end)
+
+    it("skips an index that names a column the sheet does not have", function()
+      -- silently, on purpose: db:create would otherwise be unable to run at all
+      -- against a schema that lost a column
+      local conn = db.__conn[dbName]
+      db:_migrate_indexes(conn, "people", {columns = {}, options = {_index = {"nosuchcolumn"}}}, columns)
+      assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    end)
+
+    it("does nothing at all for a sheet with no indexes", function()
+      local conn = db.__conn[dbName]
+      db:_migrate_indexes(conn, "people", {columns = {}, options = {}}, columns)
+      assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    end)
+
+    it("runs again over an index that already exists without complaining", function()
+      local conn = db.__conn[dbName]
+      db:_migrate_indexes(conn, "people", {columns = {}, options = {_index = {"city"}}}, columns)
+      assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+    end)
+  end)
+end)
+
+-- db:_closeAll is what db:close() with no name does and what the profile calls
+-- on shutdown, so the rest of this file already leans on it. These specs pin
+-- the two things it reports and the state it leaves behind.
+describe("Tests db:_closeAll", function()
+  local first = "closealltestingonlyone"
+  local second = "closealltestingonlytwo"
+
+  local function makeDatabases()
+    db:create(first, {sheet = {name = ""}})
+    db:create(second, {sheet = {name = ""}})
+  end
+
+  after_each(function()
+    -- the specs below leave the environment closed about half the time, and
+    -- closing a closed one is an error rather than a no-op
+    if db.__env then
+      db:_closeAll()
+    end
+    os.remove(getMudletHomeDir() .. "/Database_" .. first .. ".db")
+    os.remove(getMudletHomeDir() .. "/Database_" .. second .. ".db")
+  end)
+
+  it("closes every open database at once and says so", function()
+    makeDatabases()
+    local ok, msg = db:_closeAll()
+    assert.is_true(ok)
+    assert.are.equal("", msg)
+    assert.are.same({}, db.__conn)
+    assert.is_nil(db.__env)
+  end)
+
+  it("leaves the databases reopenable, with their rows intact", function()
+    makeDatabases()
+    local mydb = db:get_database(first)
+    db:add(mydb.sheet, {name = "survivor"})
+    db:_closeAll()
+
+    local reopened = db:create(first, {sheet = {name = ""}})
+    local rows = db:fetch(reopened.sheet)
+    assert.are.equal(1, #rows)
+    assert.are.equal("survivor", rows[1].name)
+  end)
+
+  it("refuses when there is no database environment to close", function()
+    makeDatabases()
+    db:_closeAll()
+    local ok, msg = db:_closeAll()
+    assert.is_false(ok)
+    assert.are.equal("database environment is nil, did you forget to call db:create?", msg)
+  end)
+
+  it("names the database that was already closed behind its back", function()
+    makeDatabases()
+    db.__conn[first]:close()
+    local ok, msg = db:_closeAll()
+    assert.is_false(ok)
+    assert.are.equal("database object for " .. first .. " is already closed.", msg)
+    -- the rest still closed, and the environment is still gone
+    assert.are.same({}, db.__conn)
+    assert.is_nil(db.__env)
+  end)
+
+  it("is what db:close() with no name does", function()
+    makeDatabases()
+    assert.is_true((db:close()))
+    assert.is_nil(db.__env)
+  end)
+end)
