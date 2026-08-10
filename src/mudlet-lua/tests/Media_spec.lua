@@ -927,6 +927,9 @@ describe("Media playback effects with a generated sound file", function()
     end
     local downloaded = mediaDirectory .. "/" .. fixtureFile
     lfs.mkdir(mediaDirectory)
+    -- the download has to be the only file of that name, and a reused profile
+    -- may well have one of its own already
+    preserveMediaDirectory()
     os.remove(downloaded)
     onCleanup(function() os.remove(downloaded) end)
 
@@ -946,6 +949,9 @@ describe("Media playback effects with a generated sound file", function()
     -- name[,url]: the ordered form has a parser of its own
     local downloaded = mediaDirectory .. "/" .. fixtureFile
     lfs.mkdir(mediaDirectory)
+    -- the download has to be the only file of that name, and a reused profile
+    -- may well have one of its own already
+    preserveMediaDirectory()
     os.remove(downloaded)
     onCleanup(function() os.remove(downloaded) end)
 
