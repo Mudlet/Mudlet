@@ -27,6 +27,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UnitDeferredDeleteTest.cpp
     MxpFramePlacementTest.cpp
     ColorTriggerFilterChildTest.cpp
+    GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
     SetScriptCallbackTest.cpp
@@ -148,6 +149,10 @@ set_tests_properties(TriggerSameLineMatchTest PROPERTIES
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
+
+# GlyphOverflowTest creates a fresh profile per test method and sweeps two font
+# families across 22 sizes, so it needs a longer timeout
+set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
