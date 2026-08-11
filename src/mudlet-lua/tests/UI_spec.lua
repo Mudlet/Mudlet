@@ -5256,11 +5256,11 @@ describe("Main window size and saved layout", function()
     local width, height = getMainWindowSize()
     resizable = width > firstWidth and height > firstHeight
 
-    -- A dock another spec file opened and left open - the map widget is the one
-    -- that does this - only takes its width out of the console at the next
-    -- re-layout, which is the resize just above. So the size to put the window
-    -- back to is read after asking for the original one again rather than
-    -- before: a size the window has actually been is a size it can reach.
+    -- A dock another spec file left open - the map widget is the one that does
+    -- this - only takes its width out of the console at the next re-layout,
+    -- which is the resize just above. So the size to put the window back to is
+    -- read after asking for the first one again rather than before: a size the
+    -- window has actually been is a size it can be put back to.
     setMainWindowSize(firstWidth, firstHeight)
     pumpEvents(200)
     originalWidth, originalHeight = getMainWindowSize()
