@@ -27,7 +27,7 @@ end
 local function assertArgError(fn, needle)
   local ok, err = pcall(fn)
   assert.is_false(ok)
-  assert.is_true(contains(err, needle))
+  assert.is_true(contains(err, needle), tostring(err))
 end
 
 describe("Networking send functions honour their disconnected/offline contracts", function()
@@ -1750,8 +1750,8 @@ describe("The IRC configuration functions round-trip through the profile", funct
   -- writes to a file shared by every profile (mudlet's data directory, not the
   -- profile's). Putting the profile's nick back writes that file again rather
   -- than restoring it. The password is left alone by every call below that does
-  -- not pass one, and the spec that does pass one puts the profile's own back
-  -- byte for byte.
+  -- not pass one, and the specs that do pass one put the profile's own back
+  -- through setConfig().
   local function restoreIrcConfiguration()
     local nick = getIrcNick()
     local hostName, port, secure = getIrcServer()
@@ -1763,32 +1763,20 @@ describe("The IRC configuration functions round-trip through the profile", funct
     end)
   end
 
-  -- The password is the one setting with no getter, so the spec for it works on
-  -- the profile's own file: read and written as bytes, never parsed.
-  local function readBinaryFile(path)
-    local handle = io.open(path, "rb")
-    if not handle then
-      return nil
-    end
-    local contents = handle:read("*a")
-    handle:close()
-    return contents
-  end
-
-  local function writeBinaryFile(path, contents)
-    local handle = io.open(path, "wb")
-    assert.is_not_nil(handle, "could not write " .. path)
-    handle:write(contents)
-    handle:close()
-  end
-
-  -- How a QDataStream carries the characters of an ASCII QString
-  local function utf16be(text)
-    local encoded = {}
-    for index = 1, #text do
-      encoded[#encoded + 1] = "\0" .. text:sub(index, index)
-    end
-    return table.concat(encoded)
+  -- setIrcServer takes a password but no getter of its own reads one back, so
+  -- the specs for it go through the configuration option the same file is
+  -- behind: getConfig("ircPassword") and setConfig("ircPassword", ...).
+  local function restoreIrcConfigurationWithPassword()
+    local nick = getIrcNick()
+    local hostName, port, secure = getIrcServer()
+    local channels = getIrcChannels()
+    local password = getConfig("ircPassword")
+    finally(function()
+      setIrcNick(nick)
+      setIrcServer(hostName, port, secure)
+      setIrcChannels(channels)
+      setConfig("ircPassword", password)
+    end)
   end
 
   describe("getIrcNick, getIrcServer and getIrcChannels", function()
@@ -1894,40 +1882,27 @@ describe("The IRC configuration functions round-trip through the profile", funct
     end)
 
     it("leaves the stored password alone when it is not passed", function()
-      -- #9786: every call rewrote the password, so changing the host or the
-      -- port blanked it - and with no getter for it, no script could put it
-      -- back. The file the profile keeps it in is where a spec can see it: a
-      -- QDataStream-serialised QString, compared as bytes rather than read.
-      local passwordFile = getMudletHomeDir() .. "/irc_password"
-      local nick = getIrcNick()
-      local hostName, port, secure = getIrcServer()
-      local channels = getIrcChannels()
-      local ownPassword = readBinaryFile(passwordFile)
-      finally(function()
-        setIrcNick(nick)
-        setIrcServer(hostName, port, secure)
-        setIrcChannels(channels)
-        if ownPassword then
-          writeBinaryFile(passwordFile, ownPassword)
-        else
-          os.remove(passwordFile)
-        end
-      end)
+      -- #9786: every call rewrote the password, so a script that changed the
+      -- host or the port destroyed a credential it was never given.
+      restoreIrcConfigurationWithPassword()
 
       assert.is_true(setIrcServer("irc.busted-password.invalid", 6667, false, "BustedSecret"))
-      local stored = readBinaryFile(passwordFile)
-      assert.is_not_nil(stored, "setIrcServer stored no password file at all")
-      -- QDataStream writes a QString as a length and then UTF-16, big endian
-      assert.is_true(contains(stored, utf16be("BustedSecret")), "the password given was not the one stored")
+      assert.equals("BustedSecret", getConfig("ircPassword"))
 
       -- the same server on another port, with the password argument left off
       assert.is_true(setIrcServer("irc.busted-password.invalid", 6668))
       assert.equals(6668, select(2, getIrcServer()))
-      assert.equals(stored, readBinaryFile(passwordFile))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
 
-      -- and an empty string is how a script asks for the password to go
-      assert.is_true(setIrcServer("irc.busted-password.invalid", 6668, false, ""))
-      assert.is_false(contains(readBinaryFile(passwordFile), utf16be("BustedSecret")))
+      -- and it is kept across a change of server too, because an argument that
+      -- was not passed says nothing about the credential
+      assert.is_true(setIrcServer("irc.busted-other.invalid", 6667))
+      assert.equals("irc.busted-other.invalid", (getIrcServer()))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
+
+      -- an empty string is how a script asks for the password to go
+      assert.is_true(setIrcServer("irc.busted-other.invalid", 6667, false, ""))
+      assert.equals("", getConfig("ircPassword"))
     end)
 
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
@@ -1944,25 +1919,10 @@ describe("The IRC configuration functions round-trip through the profile", funct
     it("takes an explicit nil for any optional argument, as leaving it off does", function()
       -- #9787: a script forwarding optional variables passes nil for the ones
       -- it has no value for, and only the port accepted that
-      local passwordFile = getMudletHomeDir() .. "/irc_password"
-      local nick = getIrcNick()
-      local hostName, port, secure = getIrcServer()
-      local channels = getIrcChannels()
-      local ownPassword = readBinaryFile(passwordFile)
-      finally(function()
-        setIrcNick(nick)
-        setIrcServer(hostName, port, secure)
-        setIrcChannels(channels)
-        if ownPassword then
-          writeBinaryFile(passwordFile, ownPassword)
-        else
-          os.remove(passwordFile)
-        end
-      end)
+      restoreIrcConfigurationWithPassword()
 
       assert.is_true(setIrcServer("irc.busted-nil.invalid", 6697, true, "BustedNilSecret"))
-      local stored = readBinaryFile(passwordFile)
-      assert.is_true(contains(stored, utf16be("BustedNilSecret")))
+      assert.equals("BustedNilSecret", getConfig("ircPassword"))
 
       assert.is_true(setIrcServer("irc.busted-nil.invalid", nil, nil, nil))
       local storedHost, storedPort, storedSecure = getIrcServer()
@@ -1970,8 +1930,8 @@ describe("The IRC configuration functions round-trip through the profile", funct
       -- a nil optional is the default, the same as leaving it off
       assert.equals(6667, storedPort)
       assert.is_false(storedSecure)
-      -- except for the password, which an omitted argument keeps as it is
-      assert.equals(stored, readBinaryFile(passwordFile))
+      -- except for the password, which a nil argument keeps as it is
+      assert.equals("BustedNilSecret", getConfig("ircPassword"))
     end)
   end)
 
@@ -2018,7 +1978,7 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.is_true(setIrcChannels({"#busted-spaced one", "#busted-plain"}))
       assert.same({"#busted-plain"}, getIrcChannels())
 
-      assert.is_true(setIrcChannels({"#busted-a,#busted-b", "#busted-plain-two"}))
+      assert.is_true(setIrcChannels({"#busted-a,#busted-b", "#busted-tabbed\tname", "#busted-plain-two"}))
       assert.same({"#busted-plain-two"}, getIrcChannels())
 
       local ok, err = setIrcChannels({"#busted only spaced"})
@@ -2034,9 +1994,9 @@ describe("The IRC configuration functions round-trip through the profile", funct
     -- something start doing so, these are where it shows up first.
     --
     -- Which is also why only the failure half of getIrcConnectedHost's pair is
-    -- checked here: the other half needs a connection to an IRC server that has
-    -- sent its welcome. #9788 was in that half - it pushed true and the host
-    -- name but returned only one of them.
+    -- checked here, arity included: the other half needs a client connected far
+    -- enough for the server's RPL_YOURHOST, which is where #9788 was - it pushed
+    -- true and the host name but returned only one of them.
     it("getIrcConnectedHost returns false and says there is no client", function()
       local ok, err = getIrcConnectedHost()
       assert.is_false(ok)

@@ -547,7 +547,8 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 // An IRC channel name holds neither of the two characters its list is taken apart
 // on: the stored list is space-joined (dlgIRC::writeIrcChannels) and the JOIN
 // command is comma-joined, so a name carrying either would come back as two
-// channels.
+// channels. Every kind of whitespace is refused rather than only the space it is
+// joined on, because an IRC channel name may hold none of it.
 static bool ircChannelNameHasSeparator(const QString& channel)
 {
     return std::any_of(channel.cbegin(), channel.cend(), [](const QChar character) {
@@ -630,9 +631,9 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
 
     // An omitted password - and a nil one, which every optional argument here
-    // treats the same way - leaves the stored password alone: there is no getter
-    // for it, so a script changing the host or the port could not put it back.
-    // Clearing one is asking for it, by passing an empty string.
+    // treats the same way - leaves the stored password alone: a call that only
+    // changes the host or the port must not drop a credential it was never
+    // given. Clearing one is asking for it, by passing an empty string.
     const bool passwordGiven = !lua_isnoneornil(L, 4);
     if (passwordGiven && !checkStringArg(L, __func__, 4, "server password", true)) {
         return lua_error(L);
