@@ -55,6 +55,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <algorithm>
 #include <limits>
 #include <math.h>
 
@@ -543,6 +544,17 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     return 1;
 }
 
+// An IRC channel name holds neither of the two characters its list is taken apart
+// on: the stored list is space-joined (dlgIRC::writeIrcChannels) and the JOIN
+// command is comma-joined, so a name carrying either would come back as two
+// channels.
+static bool ircChannelNameHasSeparator(const QString& channel)
+{
+    return std::any_of(channel.cbegin(), channel.cend(), [](const QChar character) {
+        return character.isSpace() || character == QLatin1Char(',');
+    });
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcChannels
 int TLuaInterpreter::setIrcChannels(lua_State* L)
 {
@@ -556,7 +568,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
         // key at index -2 and value at index -1
         if (lua_type(L, -1) == LUA_TSTRING) {
             const QString c = lua_tostring(L, -1);
-            if (!c.isEmpty() && (c.startsWith(QLatin1String("#")) || c.startsWith(QLatin1String("&")) || c.startsWith(QLatin1String("+")))) {
+            if (!c.isEmpty() && (c.startsWith(QLatin1String("#")) || c.startsWith(QLatin1String("&")) || c.startsWith(QLatin1String("+"))) && !ircChannelNameHasSeparator(c)) {
                 newchannels << c;
             }
         }

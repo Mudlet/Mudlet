@@ -2007,6 +2007,25 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.is_true(setIrcChannels({"#busted-good", "busted-bad", "&busted-also-good"}))
       assert.same({"#busted-good", "&busted-also-good"}, getIrcChannels())
     end)
+
+    it("drops a channel name carrying a space or a comma rather than storing two", function()
+      -- #9789: the stored list is space-joined and the JOIN command is
+      -- comma-joined, so a name holding either came back as two channels. An
+      -- IRC channel name can hold neither, which puts them with the other
+      -- unusable names above: dropped, and refused outright when nothing is
+      -- left.
+      restoreIrcConfiguration()
+      assert.is_true(setIrcChannels({"#busted-spaced one", "#busted-plain"}))
+      assert.same({"#busted-plain"}, getIrcChannels())
+
+      assert.is_true(setIrcChannels({"#busted-a,#busted-b", "#busted-plain-two"}))
+      assert.same({"#busted-plain-two"}, getIrcChannels())
+
+      local ok, err = setIrcChannels({"#busted only spaced"})
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
+      assert.same({"#busted-plain-two"}, getIrcChannels())
+    end)
   end)
 
   describe("getIrcConnectedHost and restartIrc without a client", function()
