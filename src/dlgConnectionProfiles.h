@@ -25,6 +25,7 @@
 
 #include "ui_connection_profiles.h"
 #include <optional>
+#include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
 
@@ -51,6 +52,13 @@ public:
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
     QList<int> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
+    static QChar firstInvalidProfileNameChar(const QString& name);
+    static bool profileNameUsableAsIs(const QString& name);
+    static QString profileFolderPath(const QString& profilesPath, const QString& profile);
+    static const QString scmAllowedProfileNameChars;
+    static const QRegularExpression scmUnusableProfileNameChars;
+    // files whose presence alone does not warrant confirming a profile's removal
+    static const QStringList scmConnectionDetailFiles;
 
     QString btn_connect_enabled_accessDesc;
     QString btn_load_enabled_accessDesc;
@@ -70,13 +78,11 @@ public slots:
     void slot_updateLogin(const QString&);
     void slot_updatePassword(const QString&);
     // Not used:    void slot_updateWebsite(const QString&);
-    void slot_deleteProfileCheck(const QString&);
     void slot_updateDescription();
 
     void slot_itemClicked(QListWidgetItem*);
     void slot_addProfile();
     void slot_deleteProfile();
-    void slot_reallyDeleteProfile();
 
     void slot_updateAutoConnect(int state);
     void slot_updateAutoReconnect(int state);
@@ -121,6 +127,8 @@ private:
     void loadCustomProfile(const QString&) const;
     void generateCustomProfile(const QString&) const;
     void setCustomIcon(const QString&, QListWidgetItem*) const;
+    void setIconOfListedProfile(const QString& profileName, const QIcon& icon) const;
+    QString selectedProfileName() const;
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
@@ -128,6 +136,7 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    void showRemovalProblem(const QString& message);
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
@@ -157,8 +166,6 @@ private:
     QTabBar* mpTabBar = nullptr;
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
-    QLineEdit* delete_profile_lineedit = nullptr;
-    QPushButton* delete_button = nullptr;
     QString mDiscordApplicationId;
     QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;

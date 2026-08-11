@@ -173,6 +173,20 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
     return false;
 }
 
+bool TCommandLine::keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent* keyEvent) const
+{
+    if (!mpKeyUnit || (mpHost && mpHost->isClosingDown())) {
+        return false;
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet || !pMudlet->profileSwitchShortcutMatches(keyEvent)) {
+        return false;
+    }
+
+    return mpKeyUnit->wouldMatch(static_cast<Qt::Key>(keyEvent->key()), keyEvent->modifiers());
+}
+
 // This function overrides the QWidget::event() and should return true if the
 // event was recognized, otherwise it should return false. If the recognized
 // event was accepted (see QEvent::accepted), any further processing such as
@@ -193,6 +207,15 @@ bool TCommandLine::event(QEvent* event)
         // keys - so claim it here to make it arrive as a KeyPress for the
         // caret-toggling code below:
         if (mpHost->caretShortcutMatches(ke)) {
+            ke->accept();
+            return true;
+        }
+
+        // QShortcutMap consumes a key matching one of the profile switching
+        // shortcuts before the KeyPress ever reaches here, so a user binding on
+        // one has to be spotted now - and only spotted, since the binding runs
+        // off the KeyPress this claim lets through:
+        if (keybindingWouldMatchProfileSwitchShortcut(ke)) {
             ke->accept();
             return true;
         }

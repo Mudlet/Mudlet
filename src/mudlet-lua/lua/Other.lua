@@ -575,9 +575,9 @@ function _comp(a, b)
     local a_size = 0
     for k, v in pairs(a) do
       a_size = a_size + 1
-      if not b[k] then
-        return false
-      end
+      -- A key missing from b is already caught by the _comp call below, whose
+      -- first check is a type comparison and so fails against nil. Testing
+      -- `not b[k]` here as well rejected a legitimate `false` value.
       if not _comp(v, b[k]) then
         return false
       end

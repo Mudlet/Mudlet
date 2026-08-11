@@ -24,6 +24,7 @@
 #include "TBuffer.h"
 
 #include "Host.h"
+#include "LuaLiteral.h"
 #include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -32,6 +33,7 @@
 #include "THyperlinkSelectionManager.h"
 #include "TStringUtils.h"
 #include "TTextEdit.h"
+#include "UntrustedText.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
@@ -226,6 +228,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEchoingText(other.mEchoingText)
 , mpConsole(other.mpConsole)
 , mGotESC(other.mGotESC)
+, mGotEscCharset(other.mGotEscCharset)
 , mGotCSI(other.mGotCSI)
 , mGotOSC(other.mGotOSC)
 , mGotString(other.mGotString)
@@ -271,6 +274,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mWrapDetectSamples(other.mWrapDetectSamples)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
+, mLocalGotEscCharset(other.mLocalGotEscCharset)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
 , mLocalGotString(other.mLocalGotString)
@@ -321,6 +325,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEchoingText = other.mEchoingText;
         mpConsole = other.mpConsole;
         mGotESC = other.mGotESC;
+        mGotEscCharset = other.mGotEscCharset;
         mGotCSI = other.mGotCSI;
         mGotOSC = other.mGotOSC;
         mGotString = other.mGotString;
@@ -366,6 +371,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mWrapDetectSamples = other.mWrapDetectSamples;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
+        mLocalGotEscCharset = other.mLocalGotEscCharset;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
         mLocalGotString = other.mLocalGotString;
@@ -580,6 +586,7 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
 void TBuffer::swapParserSequenceState()
 {
     std::swap(mGotESC, mLocalGotESC);
+    std::swap(mGotEscCharset, mLocalGotEscCharset);
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
     std::swap(mGotString, mLocalGotString);
@@ -588,9 +595,8 @@ void TBuffer::swapParserSequenceState()
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
-    // mGotESC/mGotCSI/mGotOSC/mGotString and mIncompleteSequenceBytes persist
-    // between calls so that a sequence split across Game Server packets still
-    // parses.
+    // The mGot... latches and mIncompleteSequenceBytes persist between calls so
+    // that a sequence split across Game Server packets still parses.
     // Locally generated text (feedTriggers(), MMCP chat messages, MXP
     // insertions) runs through the same parser, so swap in a separate set of
     // that state for the duration of such a feed - otherwise local text
@@ -623,6 +629,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
     const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
+    // ST) that games do send and that Mudlet has to swallow. Only these: any
+    // other byte after an ESC is text, and printing it is no worse than what
+    // Mudlet has always done, whereas eating it loses real output:
+    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
@@ -749,9 +760,20 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 }
 
                 mGotESC = true;
+                mGotEscCharset = false;
                 ++localBufferPosition;
                 continue;
             }
+        }
+
+        if (mGotEscCharset) {
+            mGotEscCharset = false;
+            if (static_cast<unsigned char>(ch) >= 0x30 && static_cast<unsigned char>(ch) <= 0x7E) {
+                ++localBufferPosition;
+                continue;
+            }
+            // Only a final byte can name a character set, so this was a stray
+            // ESC after all and the byte is text.
         }
 
         if (mGotESC) {
@@ -771,16 +793,20 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 ++localBufferPosition;
                 continue;
             }
-            if (static_cast<unsigned char>(ch) >= 0x20) {
-                // The final byte of some other escape sequence (e.g. ESC 7
-                // or ESC M) that Mudlet does not handle - consume it silently
-                // as a real terminal would instead of showing it as text:
+            if (ch == '(' || ch == ')' || ch == '*' || ch == '+') {
+                // An ISO 2022 character set designation such as ESC ( B; the
+                // byte after this one names the set:
+                mGotEscCharset = true;
                 ++localBufferPosition;
                 continue;
             }
-            // A control character straight after the ESC means the escape
-            // sequence is malformed - abandon it (the latch was already
-            // cleared above) and process the character normally:
+            if (cShortEscape.indexOf(ch) >= 0) {
+                ++localBufferPosition;
+                continue;
+            }
+            // Any other byte is text: a stray ESC in the game's output must
+            // not swallow it, and consuming a multibyte character's lead byte
+            // would orphan its continuation bytes.
         }
 
         if (mGotCSI) {
@@ -3263,8 +3289,16 @@ void TBuffer::decodeOSC(const QString& sequence)
             break;
         }
 
+        // Deliberately below the terminator branch above: the close is the only
+        // thing that clears mHyperlinkActive, so refusing it would leave a link
+        // open forever and mark the rest of the session clickable. Turning the
+        // preference off mid-link must still let that link finish.
+        if (!mpHost->mEnableOSC8Hyperlinks) {
+            return;
+        }
+
         if (!rawUrl.isEmpty()) {
-            if (rawUrl.length() > 8192) {
+            if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
             }
@@ -3349,7 +3383,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             QString customTooltip;
 
             if (queryParams.contains(qsl("tooltip"))) {
-                customTooltip = queryParams.value(qsl("tooltip"));
+                customTooltip = UntrustedText::forAuthoredText(queryParams.value(qsl("tooltip")));
             }
 
             // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
@@ -3405,19 +3439,25 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                command = {qsl("send([[%1]], false)").arg(innerCommand)};
-                hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
+                command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
+                hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forTarget(innerCommand))};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
-                command = {qsl("sendCmdLine([[%1]])").arg(innerCommand)};
-                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand)};
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
+                command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
+                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
                 if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
-                    command = {qsl("openUrl([[%1]])").arg(baseUrl)};
-                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl)};
+                    mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
+                    mCurrentHyperlinkStyling.baseCommand = baseUrl;
+                    command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
+                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), UntrustedText::forTarget(baseUrl))};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -3451,20 +3491,20 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send([[%1]], false)").arg(innerCommand));
-                        menuHints.append(menuLabel);
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
-                        menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
-                        menuHints.append(menuLabel);
+                        menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
                     } else {
                         // Treat as direct command
-                        menuCommands.append(qsl("send([[%1]], false)").arg(menuCommand));
-                        menuHints.append(menuLabel);
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     }
                 }
 
@@ -3860,14 +3900,14 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     if (root.contains(qsl("title"))) {
         QJsonValue titleValue = root[qsl("title")];
         if (titleValue.isString()) {
-            styling.menuTitle = titleValue.toString();
+            styling.menuTitle = UntrustedText::forAuthoredText(titleValue.toString());
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Title parameter added:" << titleValue.toString();
 #endif
         } else if (titleValue.isObject()) {
             QJsonObject titleObj = titleValue.toObject();
             if (titleObj.contains(qsl("text")) && titleObj[qsl("text")].isString()) {
-                styling.menuTitle = titleObj[qsl("text")].toString();
+                styling.menuTitle = UntrustedText::forAuthoredText(titleObj[qsl("text")].toString());
             }
             if (titleObj.contains(qsl("style")) && titleObj[qsl("style")].isObject()) {
                 parseJsonStateStyle(titleObj[qsl("style")].toObject(), styling.menuTitleStyle);
@@ -4987,7 +5027,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             xPos = 0;
             continue;
         }
-        int nextBoundary = boundaryFinder.toNextBoundary();
+        const int nextBoundary = boundaryFinder.toNextBoundary();
         const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
         const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
         // Safety check: during destruction, mpHost might be null
@@ -5005,13 +5045,21 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             const int firstNonIndentChar = firstChar + (needsIndent ? 0 : indentationHere);
             if (c == QChar::Space or lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstNonIndentChar) {
                 boundaryFinder.setPosition(indexOfChar);
-                output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             } else {
                 indexOfChar = lineBreakFinder.position();
-                nextBoundary = lineBreakFinder.position();
-                boundaryFinder.setPosition(nextBoundary);
-                output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
+                boundaryFinder.setPosition(indexOfChar);
             }
+            if (indexOfChar <= firstChar) {
+                // no room for even one grapheme - either the wrap width is too
+                // narrow (or zero) or the indentation eats all of it. Breaking
+                // here would produce an empty segment and leave indexOfChar
+                // where it was, looping forever, so keep one grapheme on the
+                // line to guarantee the scan moves on
+                indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
+                boundaryFinder.setPosition(indexOfChar);
+                totalWidth += charWidth;
+            }
+            output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             isNewline = false;
             needsIndent = true;
             xPos = 0;
@@ -5797,7 +5845,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // Use the console's background so the timestamp blends in with the
-        // rest of the text, as done in TTextEdit::drawLine(...).
+        // rest of the text, as done in TTextEdit::layoutLine(...).
         const QColor timeStampBgColor{mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)};
         s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(mudlet::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it

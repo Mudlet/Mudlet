@@ -100,6 +100,24 @@ describe("waitForEvent test helper", function()
         assert.has_error(function() waitForEvent() end)
       end)
 
+    it("observes an event raised from inside another timer's callback", function()
+        -- The #9670 shape: the wait itself is armed from inside a timer callback.
+        tempTimer(0, function()
+            tempTimer(0.05, function() raiseEvent("mudletTestNestedTimer", "deep") end)
+            _G.mudletTestNestedTimerResult = {waitForEvent("mudletTestNestedTimer", 2000)}
+          end)
+        local waited = 0
+        while not _G.mudletTestNestedTimerResult and waited < 5000 do
+          pumpEvents(50)
+          waited = waited + 50
+        end
+        local result = _G.mudletTestNestedTimerResult
+        _G.mudletTestNestedTimerResult = nil
+        assert.is_table(result, "the wait inside the timer callback never returned")
+        assert.equals("mudletTestNestedTimer", result[1])
+        assert.equals("deep", result[2])
+      end)
+
     it("supports a nested waitForEvent while one is already blocked", function()
         local innerName
         tempTimer(0, function()
@@ -112,5 +130,42 @@ describe("waitForEvent test helper", function()
         assert.equals("mudletTestNested", outerName)
         assert.equals("payload", outerValue)
         assert.equals("mudletTestNested", innerName)
+      end)
+  end)
+
+describe("pumpEvents test helper", function()
+    it("returns true once the time is up", function()
+        assert.is_true(pumpEvents(20))
+      end)
+
+    it("accepts no argument and clamps a negative duration", function()
+        assert.is_true(pumpEvents())
+        assert.is_true(pumpEvents(-50))
+      end)
+
+    it("runs a timer that falls due while it is pumping", function()
+        local fired = false
+        tempTimer(0.05, function() fired = true end)
+        pumpEvents(300)
+        assert.is_true(fired, "a timer that came due during the pump did not fire")
+      end)
+
+    it("keeps running timers when pumping from inside a timer's callback", function()
+        -- The #9670 shape: on macOS this position stops Qt timers entirely, so
+        -- a regression hangs the spec rather than failing it.
+        local result = {}
+        tempTimer(0, function()
+            tempTimer(0.05, function() result.innerFired = true end)
+            pumpEvents(300)
+            result.firedDuringPump = result.innerFired == true
+            result.done = true
+          end)
+        local waited = 0
+        while not result.done and waited < 5000 do
+          pumpEvents(50)
+          waited = waited + 50
+        end
+        assert.is_true(result.done, "the pump inside the timer callback never returned")
+        assert.is_true(result.firedDuringPump, "a timer did not fire while pumping from inside a timer callback")
       end)
   end)

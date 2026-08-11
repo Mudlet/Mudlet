@@ -58,12 +58,14 @@ public:
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
     bool shouldShowChangelog();
+    bool ready() const;
 
 private:
     std::unique_ptr<dblsqd::Feed> feed;
-    // Non-owning: Qt parent-child system or explicit deletion in ~Updater handles lifetime.
-    // QPointer<T> is used so that if Qt deletes the dialog (e.g. on last window closed),
-    // the pointer automatically becomes null and ~Updater's delete becomes a no-op.
+    // Owned, but deleted on QCoreApplication::aboutToQuit rather than in
+    // ~Updater: the Updater is parented to the application object, so its
+    // destructor runs during application teardown - too late to destroy a
+    // QWidget (#9122). QPointer nulls itself once the dialog is destroyed.
     QPointer<dblsqd::UpdateDialog> updateDialog;
 #if !defined(Q_OS_MACOS)
     QPushButton* mpInstallOrRestart;
@@ -100,7 +102,9 @@ private:
 #elif defined(Q_OS_WINDOWS)
     QString mDownloadedInstallerPath;
 #elif defined(Q_OS_MACOS)
-    SparkleUpdater* msparkleUpdater;
+    // Only exists once checkUpdatesOnStart() has run - every use must cope with
+    // it still being null, see ready()
+    SparkleUpdater* msparkleUpdater = nullptr;
 #endif
 
 

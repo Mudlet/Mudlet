@@ -390,7 +390,6 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
                 return HANDLER_INSERT_ENTITY_LIT;
             }
         }
-        // ask for the next char
         return HANDLER_NEXT_CHAR;
     }
 

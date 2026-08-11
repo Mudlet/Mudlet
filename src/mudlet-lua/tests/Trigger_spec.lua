@@ -365,7 +365,6 @@ describe("Trigger processing", function()
             _G.TrigSpec = {count = 0}
             local id = tempExactMatchTrigger("exact_line_only", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
             assert.is_number(id)
-            -- superset line must NOT match an exact trigger
             feedTriggers("\nexact_line_only and more\n")
             assert.is_equal(0, _G.TrigSpec.count, "an exact-match trigger must not fire on a superset line")
             feedTriggers("\nexact_line_only\n")
@@ -474,6 +473,25 @@ describe("Trigger processing", function()
             -- if it somehow survived, make sure it is gone
             if type(id) == "number" and id > 0 then killTrigger(id) end
             assert.is_equal(2, count, "a trigger set to expire after 2 fires should fire exactly twice")
+        end)
+
+        -- Regression: the C++ helpers that run trigger/alias/script code used to
+        -- read the script's return value from an absolute stack slot and then
+        -- wipe the whole shared Lua stack. Running inside feedTriggers() those
+        -- slots hold feedTriggers' own arguments, so the Utf8Encoded boolean
+        -- below was mistaken for "the script returned true" and kept renewing
+        -- the expiry count, and the wipe took the caller's arguments with it.
+        it("expires on schedule when fed by a call that has arguments on the Lua stack", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_me_utf8", [[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]], 1)
+            assert.is_number(id)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            local count = _G.TrigSpecExpire.count
+            _G.TrigSpecExpire = nil
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_equal(1, count, "a trigger set to expire after 1 fire must not be renewed by the caller's stack")
         end)
 
     end)
@@ -713,6 +731,77 @@ describe("Trigger processing", function()
             assert.is_false(killTrigger("no_such_trigger_name"))
         end)
 
+        it("killTrigger returns false the second time, as the trigger is already dead", function()
+            local id = tempRegexTrigger("^double_kill_probe$", [[]])
+            assert.is_true(killTrigger(id), "killing a live temporary trigger should report success")
+            -- the trigger is still present here: only the deferred cleanup frees it,
+            -- so the second kill really is being told about a corpse it can find
+            assert.is_equal(1, exists(id, "trigger"), "the killed trigger is still present until cleanup runs")
+            assert.is_equal(0, isActive(id, "trigger"), "a killed trigger is no longer active")
+            assert.is_false(killTrigger(id),
+                "killing an already killed trigger achieves nothing and has to say so")
+            -- a fed line runs that cleanup, and the answer has to be the same after it
+            feedTriggers("\ndouble_kill_flush\n")
+            assert.is_equal(0, exists(id, "trigger"), "the trigger should be gone after kill and cleanup")
+            assert.is_false(killTrigger(id), "a freed trigger cannot be killed either")
+        end)
+
+        it("a trigger killed earlier in a line's pass does not fire on that line", function()
+            _G.TrigSpec = {count = 0, witness = 0}
+            -- the killer is created first, so the trigger unit reaches it first and
+            -- its victim is still in the list this pass is walking; only the cleanup
+            -- at the end of the line frees the victim. The witness is created last so
+            -- that it proves the pass really did carry on past the killer
+            local victimId
+            local killerId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.killed = killTrigger(victimId)
+            end)
+            victimId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.count = _G.TrigSpec.count + 1
+            end)
+            local witnessId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.witness = _G.TrigSpec.witness + 1
+            end)
+            feedTriggers("\nkill_stops_firing\n")
+            killTrigger(killerId)
+            killTrigger(witnessId)
+            assert.is_true(_G.TrigSpec.killed, "the first trigger should have killed the second")
+            assert.is_equal(1, _G.TrigSpec.witness, "the line should still reach triggers behind the killer")
+            assert.is_equal(0, _G.TrigSpec.count,
+                "a killed trigger must no more fire on the rest of the line than a disabled one does")
+        end)
+
+        it("killTrigger returns false for a trigger that has used up its last firing", function()
+            -- an expiring trigger queues itself for the same deferred cleanup a killed
+            -- one does, so it is just as dead - as killTimer reports for a one-shot
+            -- timer that has already fired
+            _G.TrigSpec = {}
+            local expiringId = tempRegexTrigger("^expiry_kill_probe$", [[]], 1)
+            local killerId = tempRegexTrigger("^expiry_kill_probe$", function()
+                _G.TrigSpec.killedExpired = killTrigger(expiringId)
+            end)
+            feedTriggers("\nexpiry_kill_probe\n")
+            killTrigger(killerId)
+            assert.is_not_nil(_G.TrigSpec.killedExpired, "the killing trigger should have fired")
+            assert.is_false(_G.TrigSpec.killedExpired,
+                "a trigger that just used up its last firing cannot be killed again")
+        end)
+
+        it("killTrigger returns false the second time inside the trigger's own script", function()
+            _G.TrigSpec = {}
+            local id
+            id = tempRegexTrigger("^self_kill_probe$", function()
+                _G.TrigSpec.killed = killTrigger(id)
+                _G.TrigSpec.killedAgain = killTrigger(id)
+            end)
+            feedTriggers("\nself_kill_probe\n")
+            assert.is_not_nil(_G.TrigSpec.killed, "the trigger should have fired")
+            assert.is_true(_G.TrigSpec.killed,
+                "killTrigger should report success from inside the trigger's own script")
+            assert.is_false(_G.TrigSpec.killedAgain,
+                "killing the same trigger twice from its own script must fail the second time")
+        end)
+
         it("exists rejects an invalid item type", function()
             local ok, err = exists(1, "notarealtype")
             assert.is_nil(ok)
@@ -841,6 +930,108 @@ describe("Trigger processing", function()
             assert.is_nil(id)
             assert.is_string(err)
             assert.is_truthy(err:find("greater than zero", 1, true), "got: " .. tostring(err))
+        end)
+
+    end)
+
+    -- The delete of an expired or killed trigger is deferred until the outermost
+    -- processDataStream() pass ends, so everything between the queueing and the
+    -- free has to behave as if the trigger were already gone.
+    describe("deferred deletion", function()
+
+        it("does not let an expired trigger fire again from a nested feed", function()
+            local fires = 0
+            -- expireAfter = 1, so this must fire exactly once no matter how many
+            -- lines reach it
+            tempRegexTrigger("^expiry_reentry$", function() fires = fires + 1 end, 1)
+
+            local nestedFed = false
+            local reentrantId = tempRegexTrigger("^expiry_reentry$", function()
+                if not nestedFed then
+                    nestedFed = true
+                    -- re-enters trigger processing while the expired trigger is
+                    -- still queued for deletion
+                    feedTriggers("\nexpiry_reentry\n")
+                end
+            end)
+            finally(function() killTrigger(reentrantId) end)
+
+            feedTriggers("\nexpiry_reentry\n")
+
+            assert.is_true(nestedFed, "the re-entrant trigger should have fed a nested line")
+            assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
+        end)
+
+        it("does not let an expiring trigger fire again from its own nested feed", function()
+            -- A separate defect from the one above, found while fixing it: the
+            -- expiry count is decremented at the end of match(), after execute()
+            -- has run, so a trigger whose own script re-feeds the matching line is
+            -- still at its old count and still active when the nested pass reaches
+            -- it. Fixing that means moving the expiry accounting ahead of
+            -- execute(), which also has to keep the "return true to extend the
+            -- expiry" contract working - out of scope for the deactivate() fix.
+            pending("expiry is accounted after execute(), so a self-refeeding trigger overshoots expireAfter")
+            local fires = 0
+            local nestedFed = false
+            tempRegexTrigger("^self_expiry_reentry$", function()
+                fires = fires + 1
+                if not nestedFed then
+                    nestedFed = true
+                    feedTriggers("\nself_expiry_reentry\n")
+                end
+            end, 1)
+
+            feedTriggers("\nself_expiry_reentry\n")
+
+            assert.is_true(nestedFed)
+            assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
+        end)
+
+        it("does not let enableTrigger revive a trigger that is waiting to be freed", function()
+            -- a killed trigger stays findable by name until the deferred delete
+            -- runs, so enabling it again would resurrect it
+            local name = "Spec Enable Resurrection"
+            _G.EnableResurrectionSpec = 0
+            finally(function() _G.EnableResurrectionSpec = nil end)
+
+            tempComplexRegexTrigger(name, "^enable_resurrection$",
+                [[_G.EnableResurrectionSpec = _G.EnableResurrectionSpec + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.is_true(killTrigger(name))
+            assert.is_false(enableTrigger(name), "a killed trigger must not be re-enabled before it is freed")
+
+            feedTriggers("\nenable_resurrection\n")
+
+            assert.are.equal(0, _G.EnableResurrectionSpec, "a killed trigger must not fire, whatever enableTrigger was told")
+        end)
+
+        it("keeps a same-named permanent trigger in the lookup table", function()
+            local name = "Spec Name Eviction"
+            _G.NameEvictionSpec = 0
+            finally(function()
+                disableTrigger(name)
+                _G.NameEvictionSpec = nil
+            end)
+
+            -- permanent triggers cannot be deleted from Lua, so earlier local runs
+            -- leave same-named ones behind: work from a relative baseline
+            assert.is_true(permRegexTrigger(name, "", {"^name_eviction_perm$"}, [[_G.NameEvictionSpec = (_G.NameEvictionSpec or 0) + 1]]) > 0)
+            local permanents = exists(name, "trigger")
+            assert.is_true(permanents >= 1)
+
+            -- tempComplexRegexTrigger is the one temporary-trigger API that takes a
+            -- user-supplied name, so sharing one with a permanent trigger is easy.
+            -- Note it copies the pattern list of the trigger it finds under that
+            -- name, so this temporary also carries ^name_eviction_perm$ - harmless
+            -- here, since it is killed before anything is fed
+            tempComplexRegexTrigger(name, "^name_eviction_temp$", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.are.equal(permanents + 1, exists(name, "trigger"))
+
+            killTrigger(name) -- only the temporary one can be killed
+            feedTriggers("\nname_eviction_perm\n") -- the pass ends, flushing the deferred delete
+
+            assert.are.equal(permanents, exists(name, "trigger"), "only the temporary trigger should leave the lookup table")
+            assert.is_true(_G.NameEvictionSpec >= 1, "the permanent trigger should still fire")
+            assert.is_true(disableTrigger(name), "the permanent trigger must still be reachable by name")
         end)
 
     end)

@@ -146,7 +146,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                         TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
                         TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
                     }
-                    setError(qsl("<b><font color='blue'>%1</font></b>")
+                    setError(qsl("<b>%1</b>")
                                      .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
                                                   .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
                     state = false;
@@ -168,7 +168,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 const QString code = qsl("function %1() %2\nend").arg(funcName.c_str(), patterns[i]);
                 QString error;
                 if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
-                    setError(qsl("<b><font color='blue'>%1</font></b>")
+                    setError(qsl("<b>%1</b>")
                                      .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped(), QString(error))));
                     state = false;
                     if (mudlet::smDebugMode) {
@@ -187,7 +187,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 TTrigger::decodeColorPatternText(patterns.at(i), textAnsiFg, textAnsiBg);
 
                 if (textAnsiBg == scmIgnored && textAnsiFg == scmIgnored) {
-                    setError(qsl("<b><font color='blue'>%1</font></b>")
+                    setError(qsl("<b>%1</b>")
                                      .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
                                                   .arg(QString::number(i + 1))));
                     state = false;
@@ -1098,6 +1098,12 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             mExpiryCount--;
 
             if (mExpiryCount == 0) {
+                // The delete is deferred to the end of the outermost pass, so an
+                // expired trigger left active would fire again from any pass that
+                // re-enters meanwhile. What stops enableTrigger() resurrecting it
+                // in that window is the markCleanup() below, not the deactivation:
+                // enableTrigger() skips anything in mCleanupSet.
+                setIsActive(false);
                 mpHost->getTriggerUnit()->markCleanup(this);
 
                 if (mudlet::smDebugMode) {
@@ -1291,31 +1297,51 @@ bool TTrigger::compileScript()
 }
 
 namespace {
-// Tracks the innermost trigger running its script so feedTriggers() can name the
-// culprit when aborting an endless loop; RAII restores the prior value on exit.
-class ExecutingTriggerNameGuard
+// Tracks the innermost trigger running its script, so feedTriggers() can name the
+// culprit when aborting an endless loop, and the same-line creation lineage of
+// that trigger's root, so anything the script creates joins it; RAII restores the
+// prior values on exit.
+class ExecutingTriggerGuard
 {
 public:
-    ExecutingTriggerNameGuard(TriggerUnit* pUnit, const QString* pName)
+    ExecutingTriggerGuard(TriggerUnit* pUnit, const QString* pName, const int chainId, const int generation)
     : mpUnit(pUnit)
-    , mpPrevious(pUnit->currentExecutingTriggerName())
+    , mpPreviousName(pUnit->currentExecutingTriggerName())
+    , mPreviousChainId(pUnit->currentSameLineChainId())
+    , mPreviousGeneration(pUnit->currentSameLineGeneration())
     {
         mpUnit->setCurrentExecutingTriggerName(pName);
+        mpUnit->setCurrentSameLineChain(chainId, generation);
     }
-    ~ExecutingTriggerNameGuard() { mpUnit->setCurrentExecutingTriggerName(mpPrevious); }
+    ~ExecutingTriggerGuard()
+    {
+        mpUnit->setCurrentExecutingTriggerName(mpPreviousName);
+        mpUnit->setCurrentSameLineChain(mPreviousChainId, mPreviousGeneration);
+    }
 
-    ExecutingTriggerNameGuard(const ExecutingTriggerNameGuard&) = delete;
-    ExecutingTriggerNameGuard& operator=(const ExecutingTriggerNameGuard&) = delete;
+    ExecutingTriggerGuard(const ExecutingTriggerGuard&) = delete;
+    ExecutingTriggerGuard& operator=(const ExecutingTriggerGuard&) = delete;
 
 private:
     TriggerUnit* mpUnit;
-    const QString* mpPrevious;
+    const QString* mpPreviousName;
+    int mPreviousChainId;
+    int mPreviousGeneration;
 };
 } // namespace
 
 void TTrigger::execute()
 {
-    const ExecutingTriggerNameGuard executingTriggerNameGuard(mpHost->getTriggerUnit(), &mName);
+    // Only root triggers carry a lineage, so a trigger nested in a folder or a
+    // filter chain reads the one on the root its subtree hangs from. Creations
+    // that go under a parent rather than to the root list are outside this
+    // accounting altogether, as they are outside the list processDataStream()
+    // walks.
+    const TTrigger* pRoot = this;
+    while (pRoot->getParent()) {
+        pRoot = pRoot->getParent();
+    }
+    const ExecutingTriggerGuard executingTriggerGuard(mpHost->getTriggerUnit(), &mName, pRoot->sameLineChainId(), pRoot->sameLineGeneration());
 
     if (mSoundTrigger) { /* eventually something should be added to the gui to change sound volumes. 100=full volume */
         QString mediaFileName = mSoundFile;
