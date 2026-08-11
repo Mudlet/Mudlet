@@ -363,6 +363,7 @@ private:
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
+    void endStreamDecompressor();
     void endMCCP4Compression();
     void cleanupMCCP4();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
@@ -479,6 +480,10 @@ private:
     std::vector<char> mZstdOutBuffer;
 
     bool mNeedDecompression = false;
+    // mZstream outlives mNeedDecompression: the end of a compressed run clears
+    // that flag but immediately re-initialises the stream to listen for the
+    // next one, so only this says whether zlib still holds state to release.
+    bool mStreamDecompressorInitialised = false;
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;

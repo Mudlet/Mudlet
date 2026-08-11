@@ -206,10 +206,7 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Release zlib resources if MCCP compression was still active
-    if (mNeedDecompression) {
-        inflateEnd(&mZstream);
-    }
+    endStreamDecompressor();
 
     // Aggressively disconnect the sockets to prevent signals during destruction
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
@@ -778,9 +775,7 @@ void cTelnet::slot_socketDisconnected()
  the rules of the "QDateTime::toString(...)" function and may need
  modification for some locales, e.g. France, Spain.*/
                                              .toString(tr("hh:mm:ss.zzz")));
-    if (mNeedDecompression) {
-        inflateEnd(&mZstream);
-    }
+    endStreamDecompressor();
     mNeedDecompression = false;
     reset();
 
@@ -4904,6 +4899,8 @@ void cTelnet::postData()
 
 void cTelnet::initStreamDecompressor()
 {
+    endStreamDecompressor();
+
     mZstream.zalloc = Z_NULL;
     mZstream.zfree = Z_NULL;
     mZstream.opaque = Z_NULL;
@@ -4911,6 +4908,17 @@ void cTelnet::initStreamDecompressor()
     mZstream.next_in = Z_NULL;
 
     inflateInit(&mZstream);
+    mStreamDecompressorInitialised = true;
+}
+
+void cTelnet::endStreamDecompressor()
+{
+    if (!mStreamDecompressorInitialised) {
+        return;
+    }
+
+    inflateEnd(&mZstream);
+    mStreamDecompressorInitialised = false;
 }
 
 // Ends the current compression run and nothing more. The option stays
@@ -4932,7 +4940,7 @@ void cTelnet::endMCCP4Compression()
         mZstdDstream = nullptr;
     }
     if (mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
-        inflateEnd(&mZstream);
+        endStreamDecompressor();
     }
     mZstdOutBuffer.clear();
     mMCCP4_encoding = MCCP4_ENCODING_NONE;
@@ -4986,7 +4994,7 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
             cleanupMCCP4();
         } else {
             sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
-            inflateEnd(&mZstream);
+            endStreamDecompressor();
             mNeedDecompression = false;
             hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
             hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
@@ -4996,7 +5004,7 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     }
 
     if (zval == Z_STREAM_END) {
-        inflateEnd(&mZstream);
+        endStreamDecompressor();
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
 
@@ -5005,14 +5013,10 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 
         // End the compression run if deflate was being used via MCCP4, but
         // leave the option negotiated so the server can restart it.
-        // Reset encoding first so endMCCP4Compression() won't call inflateEnd()
-        // again (it was already called above).
         if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_DEFLATE) {
-            mMCCP4_encoding = MCCP4_ENCODING_NONE;
             endMCCP4Compression();
         }
 
-        // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
         initStreamDecompressor();
         qDebug() << "Listening for new compression sequences";
 
