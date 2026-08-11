@@ -32,6 +32,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
     ColorTriggerFilterChildTest.cpp
+    CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
@@ -57,6 +58,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileFolderNameTest.cpp
     ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
+    HostChildTeardownTest.cpp
     ConnectionDialogCrashTest.cpp
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
@@ -201,6 +203,9 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
+
+# CopyAsImageTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(CopyAsImageTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's
