@@ -1,4 +1,16 @@
 -- https://wiki.mudlet.org/w/Manual:UI_Functions
+
+-- How many things Mudlet is holding on to in the Lua registry. A function
+-- handed to one of the popup calls is anchored there, and the count is the only
+-- way from Lua to tell whether a refused call let go of it again.
+local function registryEntryCount()
+  local count = 0
+  for _ in pairs(debug.getregistry()) do
+    count = count + 1
+  end
+  return count
+end
+
 describe("Tests UI functions", function()
 
   describe("Test the functionality of copy2decho", function()
@@ -2334,6 +2346,20 @@ describe("Tests UI functions", function()
       assert.is_nil(ok)
       assert.is_string(err)
       assert.is_truthy(err:find("do not match up", 1, true))
+    end)
+
+    it("a rejected echoPopup or insertPopup lets go of the functions it read", function()
+      -- each function in a commands table is anchored in the Lua registry as
+      -- the call reads it, so a call that then refuses has to let those go
+      local before = registryEntryCount()
+      for _ = 1, 20 do
+        echoPopup(win, "menu", {function() end, function() end}, {"one"})
+        insertPopup(win, "menu", {function() end, function() end}, {"one"})
+      end
+      -- the registry keeps its own free list, which is the one entry that may
+      -- turn up along the way
+      local grewBy = registryEntryCount() - before
+      assert.is_true(grewBy <= 1, ("the registry grew by %d over 40 refused calls"):format(grewBy))
     end)
 
     it("echoLink hard-errors when required arguments are missing", function()
@@ -5910,6 +5936,26 @@ describe("setPopup", function()
     local ok, err = setPopup(unknown, {"one"}, {"first"})
     assert.is_nil(ok)
     assert.are.equal(('window "%s" not found'):format(unknown), err)
+  end)
+
+  it("a refused call lets go of the functions it read", function()
+    -- each function in a commands table is anchored in the Lua registry as the
+    -- call reads it, so a call that then refuses has to let those go. The
+    -- registry keeps its own free list, which is the one entry that may turn up
+    -- along the way
+    local beforeMismatch = registryEntryCount()
+    for _ = 1, 20 do
+      setPopup(console, {function() end, function() end}, {"only one hint"})
+    end
+    local mismatchGrowth = registryEntryCount() - beforeMismatch
+    assert.is_true(mismatchGrowth <= 1, ("the registry grew by %d over 20 size-mismatched calls"):format(mismatchGrowth))
+
+    local beforeUnknown = registryEntryCount()
+    for _ = 1, 20 do
+      setPopup(unknown, {function() end}, {"first"})
+    end
+    local unknownGrowth = registryEntryCount() - beforeUnknown
+    assert.is_true(unknownGrowth <= 1, ("the registry grew by %d over 20 calls naming no window"):format(unknownGrowth))
   end)
 
   it("opening the popup menu and picking an entry", function()
