@@ -4600,6 +4600,14 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
+    // The file is read through a movie of its own first: handing the path to
+    // the label's live QMovie is what would leave the label driving a movie
+    // that turns out not to be one, and registering a QMovie before the read
+    // is what would count a refused call in the profile's gif total
+    if (const QMovie candidate(moviePath); !candidate.isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+
     auto myMovie = pL->mpMovie;
     if (!myMovie) {
         myMovie = new QMovie();
@@ -4610,11 +4618,6 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     }
 
     myMovie->setFileName(moviePath);
-
-    if (!myMovie->isValid()) {
-        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
-    }
-
     myMovie->stop();
     pL->setMovie(myMovie);
     myMovie->start();

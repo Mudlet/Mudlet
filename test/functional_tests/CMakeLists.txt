@@ -48,6 +48,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
+    LabelMovieRefusalTest.cpp
     TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
     NarrowWindowWrapTest.cpp
