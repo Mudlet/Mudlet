@@ -110,7 +110,7 @@ dblsqd::Release installedRelease()
 }
 } // namespace
 
-class UpdaterPlatformAssetTest : public QObject
+class ReleasePlatformAssetTest : public QObject
 {
     Q_OBJECT
 
@@ -128,7 +128,7 @@ private slots:
 };
 
 // The regression: this is the update that produced a red console error twice a day
-void UpdaterPlatformAssetTest::linuxIsNotOfferedTheReleaseWithoutALinuxAsset()
+void ReleasePlatformAssetTest::linuxIsNotOfferedTheReleaseWithoutALinuxAsset()
 {
     const auto updates = dblsqd::Feed::selectUpdates(feedReleases(QStringLiteral("linux"), QStringLiteral("x86_64")), installedRelease());
 
@@ -137,7 +137,7 @@ void UpdaterPlatformAssetTest::linuxIsNotOfferedTheReleaseWithoutALinuxAsset()
     QVERIFY(updates.first().getDownloadUrl().fileName().endsWith(linuxSuffix));
 }
 
-void UpdaterPlatformAssetTest::windowsIsStillOfferedIt()
+void ReleasePlatformAssetTest::windowsIsStillOfferedIt()
 {
     const auto updates = dblsqd::Feed::selectUpdates(feedReleases(QStringLiteral("win"), QStringLiteral("x86_64")), installedRelease());
 
@@ -146,7 +146,7 @@ void UpdaterPlatformAssetTest::windowsIsStillOfferedIt()
     QCOMPARE(updates.last().getVersion(), completeVersion);
 }
 
-void UpdaterPlatformAssetTest::intelMacIsNotOfferedTheReleaseWithoutADmg()
+void ReleasePlatformAssetTest::intelMacIsNotOfferedTheReleaseWithoutADmg()
 {
     const auto updates = dblsqd::Feed::selectUpdates(feedReleases(QStringLiteral("mac"), QStringLiteral("x86_64")), installedRelease());
 
@@ -155,7 +155,7 @@ void UpdaterPlatformAssetTest::intelMacIsNotOfferedTheReleaseWithoutADmg()
     QVERIFY(updates.first().getDownloadUrl().fileName().endsWith(intelMacSuffix));
 }
 
-void UpdaterPlatformAssetTest::appleSiliconIsNotOfferedTheReleaseWithoutADmg()
+void ReleasePlatformAssetTest::appleSiliconIsNotOfferedTheReleaseWithoutADmg()
 {
     const auto updates = dblsqd::Feed::selectUpdates(feedReleases(QStringLiteral("mac"), QStringLiteral("arm64")), installedRelease());
 
@@ -165,7 +165,7 @@ void UpdaterPlatformAssetTest::appleSiliconIsNotOfferedTheReleaseWithoutADmg()
 }
 
 // A release whose binaries are still uploading looks the same as one that lost a build job
-void UpdaterPlatformAssetTest::aReleaseWithOnlyItsChecksumsFileIsNotOffered()
+void ReleasePlatformAssetTest::aReleaseWithOnlyItsChecksumsFileIsNotOffered()
 {
     const QList<dblsqd::Release> releases{dblsqd::Release(releaseJson(windowsOnlyTag, QStringLiteral("2026-08-07T02:14:11Z"), {}), QStringLiteral("linux"), QStringLiteral("x86_64"))};
 
@@ -174,14 +174,14 @@ void UpdaterPlatformAssetTest::aReleaseWithOnlyItsChecksumsFileIsNotOffered()
 
 // The download refuses to install what it cannot verify, so a release whose
 // SHA256SUMS.txt is missing is as uninstallable as one missing its binary
-void UpdaterPlatformAssetTest::aReleaseWithoutChecksumsIsNotOffered()
+void ReleasePlatformAssetTest::aReleaseWithoutChecksumsIsNotOffered()
 {
     const QList<dblsqd::Release> releases{dblsqd::Release(unverifiableRelease(), QStringLiteral("linux"), QStringLiteral("x86_64"))};
 
     QVERIFY(dblsqd::Feed::selectUpdates(releases, installedRelease()).isEmpty());
 }
 
-void UpdaterPlatformAssetTest::theVerifiableReleaseIsOfferedInsteadOfTheNewerUnverifiableOne()
+void ReleasePlatformAssetTest::theVerifiableReleaseIsOfferedInsteadOfTheNewerUnverifiableOne()
 {
     const QList<dblsqd::Release> releases{dblsqd::Release(unverifiableRelease(), QStringLiteral("linux"), QStringLiteral("x86_64")),
                                           dblsqd::Release(completeRelease(), QStringLiteral("linux"), QStringLiteral("x86_64"))};
@@ -195,13 +195,13 @@ void UpdaterPlatformAssetTest::theVerifiableReleaseIsOfferedInsteadOfTheNewerUnv
 // Mudlet publishes no binaries for the platforms it is packaged for by others,
 // so those builds are told there is no update rather than shown a failure they
 // can do nothing about, twice a day, forever
-void UpdaterPlatformAssetTest::aPlatformWithNoAssetsAtAllIsOfferedNothing()
+void ReleasePlatformAssetTest::aPlatformWithNoAssetsAtAllIsOfferedNothing()
 {
     QVERIFY(dblsqd::Feed::selectUpdates(feedReleases(QStringLiteral("freebsd"), QStringLiteral("x86_64")), installedRelease()).isEmpty());
 }
 
 // What a Linux user on the previous PTB sees: no update, rather than an error
-void UpdaterPlatformAssetTest::nothingIsOfferedOnceTheOnlyNewerReleaseIsIncomplete()
+void ReleasePlatformAssetTest::nothingIsOfferedOnceTheOnlyNewerReleaseIsIncomplete()
 {
     const QList<dblsqd::Release> releases{dblsqd::Release(windowsOnlyRelease(), QStringLiteral("linux"), QStringLiteral("x86_64"))};
     const dblsqd::Release installed(completeVersion, QDateTime::fromString(QStringLiteral("2026-08-06T02:11:47Z"), Qt::ISODate));
@@ -212,7 +212,7 @@ void UpdaterPlatformAssetTest::nothingIsOfferedOnceTheOnlyNewerReleaseIsIncomple
 // A release passed over here still has to carry its version and notes: the
 // changelog dialogs render the unfiltered release list
 // (UpdateDialog::generateChangelogDocument)
-void UpdaterPlatformAssetTest::thePassedOverReleaseStaysReadableForTheChangelog()
+void ReleasePlatformAssetTest::thePassedOverReleaseStaysReadableForTheChangelog()
 {
     const dblsqd::Release release(windowsOnlyRelease(), QStringLiteral("linux"), QStringLiteral("x86_64"));
 
@@ -221,5 +221,5 @@ void UpdaterPlatformAssetTest::thePassedOverReleaseStaysReadableForTheChangelog(
     QCOMPARE(release.getChangelog(), QStringLiteral("- fixed a thing\n"));
 }
 
-#include "UpdaterPlatformAssetTest.moc"
-QTEST_MAIN(UpdaterPlatformAssetTest)
+#include "ReleasePlatformAssetTest.moc"
+QTEST_MAIN(ReleasePlatformAssetTest)

@@ -1251,7 +1251,6 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         }
     });
 
-    // Error connection
     disconnect(player->mediaPlayer(), &QMediaPlayer::errorOccurred, nullptr, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::errorOccurred, this, [this, weakPlayer](QMediaPlayer::Error error, const QString& errorString) {
         const auto lockedPlayer = weakPlayer.lock();

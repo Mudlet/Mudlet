@@ -182,7 +182,6 @@ private slots:
         QCOMPARE(brightChar->foreground(), mpHost->mLightRed);
     }
 
-    // Regression guard: bold of an explicit color still brightens it.
     void boldColorStillBrightens()
     {
         injectData(QByteArrayLiteral("\x1b[31;1mbright"));
