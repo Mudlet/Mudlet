@@ -92,41 +92,15 @@ jobs:
         cache: true
         modules: qt5compat qtmultimedia qtspeech
 
-    - name: Build Lua (lua.org with mirror fallback)
-      env:
-        HOMEBREW_NO_AUTO_UPDATE: "ON"
-        # sha256 of lua-5.1.5.tar.gz - update when LUA_VERSION changes
-        LUA_SHA256: '2640fc56a795f29d28ef15e13c34a47e223960b0240e8cb0a82d9b0738695333'
-      run: |
-        # Pre-build Lua into .lua/ so the gh-actions-lua steps below skip their
-        # own download - they only fetch from lua.org, which goes down at times
-        # and takes all of CI with it.
-        for url in \
-          "https://www.lua.org/ftp/lua-${LUA_VERSION}.tar.gz" \
-          "https://sources.buildroot.net/lua/lua-${LUA_VERSION}.tar.gz" \
-          "https://distfiles.macports.org/lua/lua-${LUA_VERSION}.tar.gz" \
-          "https://ftp.openbsd.org/pub/OpenBSD/distfiles/lua-${LUA_VERSION}.tar.gz"; do
-          echo "Downloading ${url}"
-          if curl -fsSL --connect-timeout 15 --max-time 120 -o lua.tar.gz "${url}" \
-             && echo "${LUA_SHA256}  lua.tar.gz" | shasum -a 256 -c -; then
-            break
-          fi
-          rm -f lua.tar.gz
-        done
-        if [ ! -f lua.tar.gz ]; then
-          echo "::error::could not download Lua ${LUA_VERSION} from any source"
-          exit 1
-        fi
-        tar xzf lua.tar.gz
-        if [ "${RUNNER_OS}" = "macOS" ]; then
-          brew install readline ncurses
-          make -C "lua-${LUA_VERSION}" -j macosx
-        else
-          sudo apt-get install -qy libreadline-dev libncurses-dev
-          make -C "lua-${LUA_VERSION}" -j linux
-        fi
-        make -C "lua-${LUA_VERSION}" INSTALL_TOP="${GITHUB_WORKSPACE}/.lua" install
-        rm -rf lua.tar.gz "lua-${LUA_VERSION}"
+    - name: Cache Lua build
+      uses: actions/cache@v6
+      with:
+        path: .lua
+        # Not gh-actions-lua's own buildCache: that shares one key across
+        # runner images, and a .lua built on ubuntu-latest cannot run on
+        # ubuntu-22.04 (newer glibc). The action skips its lua.org download
+        # whenever .lua already exists.
+        key: lua-${{ env.LUA_VERSION }}-${{ matrix.os }}-${{ runner.arch }}
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -443,7 +417,6 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
-        QT_FORCE_STDERR_LOGGING: 1
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
         # demonstrate every media behaviour rather than skip any of them. Without a floor
         # somewhere, a lost codec or a changed default backend would turn the whole file
@@ -454,15 +427,11 @@ jobs:
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')

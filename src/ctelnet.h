@@ -188,6 +188,8 @@ public:
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
+    void sendInfoNewEnvironValues(const QStringList&);
+    void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);

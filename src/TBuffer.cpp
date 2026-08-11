@@ -24,6 +24,7 @@
 #include "TBuffer.h"
 
 #include "Host.h"
+#include "LuaLiteral.h"
 #include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -32,6 +33,7 @@
 #include "THyperlinkSelectionManager.h"
 #include "TStringUtils.h"
 #include "TTextEdit.h"
+#include "UntrustedText.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
@@ -3287,8 +3289,16 @@ void TBuffer::decodeOSC(const QString& sequence)
             break;
         }
 
+        // Deliberately below the terminator branch above: the close is the only
+        // thing that clears mHyperlinkActive, so refusing it would leave a link
+        // open forever and mark the rest of the session clickable. Turning the
+        // preference off mid-link must still let that link finish.
+        if (!mpHost->mEnableOSC8Hyperlinks) {
+            return;
+        }
+
         if (!rawUrl.isEmpty()) {
-            if (rawUrl.length() > 8192) {
+            if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
             }
@@ -3373,7 +3383,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             QString customTooltip;
 
             if (queryParams.contains(qsl("tooltip"))) {
-                customTooltip = queryParams.value(qsl("tooltip"));
+                customTooltip = UntrustedText::forAuthoredText(queryParams.value(qsl("tooltip")));
             }
 
             // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
@@ -3429,19 +3439,25 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             if (baseUrl.startsWith(qsl("send:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                command = {qsl("send([[%1]], false)").arg(innerCommand)};
-                hint = {qsl("%1: %2").arg(QObject::tr("Send"), innerCommand)};
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
+                command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
+                hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forTarget(innerCommand))};
             } else if (baseUrl.startsWith(qsl("prompt:"))) {
                 QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
-                command = {qsl("sendCmdLine([[%1]])").arg(innerCommand)};
-                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), innerCommand)};
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
+                command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
+                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
                 if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
-                    command = {qsl("openUrl([[%1]])").arg(baseUrl)};
-                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), baseUrl)};
+                    mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
+                    mCurrentHyperlinkStyling.baseCommand = baseUrl;
+                    command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
+                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), UntrustedText::forTarget(baseUrl))};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -3475,20 +3491,20 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // Determine command type based on prefix
                     if (menuCommand.startsWith(qsl("send:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send([[%1]], false)").arg(innerCommand));
-                        menuHints.append(menuLabel);
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
-                        menuCommands.append(qsl("sendCmdLine([[%1]])").arg(innerCommand));
-                        menuHints.append(menuLabel);
+                        menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
                     } else {
                         // Treat as direct command
-                        menuCommands.append(qsl("send([[%1]], false)").arg(menuCommand));
-                        menuHints.append(menuLabel);
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     }
                 }
 
@@ -3884,14 +3900,14 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     if (root.contains(qsl("title"))) {
         QJsonValue titleValue = root[qsl("title")];
         if (titleValue.isString()) {
-            styling.menuTitle = titleValue.toString();
+            styling.menuTitle = UntrustedText::forAuthoredText(titleValue.toString());
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Title parameter added:" << titleValue.toString();
 #endif
         } else if (titleValue.isObject()) {
             QJsonObject titleObj = titleValue.toObject();
             if (titleObj.contains(qsl("text")) && titleObj[qsl("text")].isString()) {
-                styling.menuTitle = titleObj[qsl("text")].toString();
+                styling.menuTitle = UntrustedText::forAuthoredText(titleObj[qsl("text")].toString());
             }
             if (titleObj.contains(qsl("style")) && titleObj[qsl("style")].isObject()) {
                 parseJsonStateStyle(titleObj[qsl("style")].toObject(), styling.menuTitleStyle);
@@ -5829,7 +5845,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // Use the console's background so the timestamp blends in with the
-        // rest of the text, as done in TTextEdit::drawLine(...).
+        // rest of the text, as done in TTextEdit::layoutLine(...).
         const QColor timeStampBgColor{mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)};
         s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(mudlet::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
