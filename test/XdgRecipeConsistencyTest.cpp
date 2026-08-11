@@ -34,6 +34,12 @@
  * it says so with an "xdg-recipe-guard: allow" comment on the call or the line
  * above it.
  *
+ * What that catches is the recipe copied from another test, which is how both of
+ * those two got it: the path has to be spelled in the call. A file that builds
+ * the config root through a helper or a local first is out of range, and
+ * ConfigDirOverrideTest - which creates every shape of config root deliberately,
+ * because the resolution rules are its subject - is the only one that does.
+ *
  * The test directory is provided at configure time via MUDLET_TEST_DIR. Like
  * CMakeListsConsistencyTest this pulls in no Mudlet headers, hence QStringLiteral
  * rather than utils.h's qsl().
@@ -98,6 +104,26 @@ class XdgRecipeConsistencyTest : public QObject
                     stripped.append(QStringLiteral("  "));
                     ++i;
                     continue;
+                }
+                if (current == u'R' && next == u'"') {
+                    // A raw string carries unbalanced quotes as ordinary text, so
+                    // one read as a normal string desynchronises everything after
+                    // it. Blanked whole rather than parsed: no path is spelled
+                    // this way, and a missed one is only a missed report.
+                    const qsizetype open = source.indexOf(u'(', i + 2);
+                    const QString terminator = open < 0 ? QString() : QStringLiteral(")%1\"").arg(source.mid(i + 2, open - i - 2));
+                    const qsizetype close = open < 0 ? -1 : source.indexOf(terminator, open);
+                    if (close >= 0) {
+                        for (const qsizetype end = close + terminator.size(); i < end; ++i) {
+                            const QChar skipped = source.at(i);
+                            stripped.append(skipped == u'\n' ? skipped : QChar(u' '));
+                            if (skipped == u'\n') {
+                                ++line;
+                            }
+                        }
+                        --i;
+                        continue;
+                    }
                 }
                 if (current == u'"') {
                     state = State::string;
@@ -193,17 +219,22 @@ class XdgRecipeConsistencyTest : public QObject
         return creations;
     }
 
-    static bool seedsConfigRoot(const QString& argument)
+    static bool mentionsConfigRoot(const QString& argument)
     {
         static const QRegularExpression configRoot(QStringLiteral("\"(?:[^\"]*/)?mudlet\""));
         return argument.contains(configRoot);
     }
 
-    static bool seedsOptIn(const QString& argument)
+    // The opt-in either spelled in one literal or assembled from two, so that
+    // filePath("profiles") off a config root counts as much as "%1/mudlet/profiles"
+    static bool createsOptIn(const QString& argument)
     {
-        static const QRegularExpression optIn(QStringLiteral("\"[^\"]*/mudlet/profiles(?:/[^\"]*)?\""));
-        return argument.contains(optIn);
+        static const QRegularExpression optIn(QStringLiteral("\"(?:[^\"]*/)?mudlet/profiles(?:/[^\"]*)?\""));
+        static const QRegularExpression profiles(QStringLiteral("\"(?:[^\"]*/)?profiles(?:/[^\"]*)?\""));
+        return argument.contains(optIn) || (mentionsConfigRoot(argument) && argument.contains(profiles));
     }
+
+    static bool createsConfigRootOnly(const QString& argument) { return mentionsConfigRoot(argument) && !createsOptIn(argument); }
 
     static QStringList staleRecipes(const QString& source)
     {
@@ -213,7 +244,7 @@ class XdgRecipeConsistencyTest : public QObject
 
         bool optedIn = false;
         for (const DirectoryCreation& creation : creations) {
-            if (seedsOptIn(creation.argument)) {
+            if (createsOptIn(creation.argument)) {
                 optedIn = true;
                 break;
             }
@@ -224,7 +255,7 @@ class XdgRecipeConsistencyTest : public QObject
 
         QStringList problems;
         for (const DirectoryCreation& creation : creations) {
-            if (!seedsConfigRoot(creation.argument) || allowedLines.contains(creation.line) || allowedLines.contains(creation.line - 1)) {
+            if (!createsConfigRootOnly(creation.argument) || allowedLines.contains(creation.line) || allowedLines.contains(creation.line - 1)) {
                 continue;
             }
             problems.append(QStringLiteral("line %1 creates the config root itself (%2) - create its profiles/ subdirectory instead, that is the opt-in")
@@ -244,22 +275,35 @@ private slots:
 
     void test_theCurrentRecipeIsAccepted()
     {
-        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles\").arg(mConfigDir.path())));\n");
+        const QString recipe = QStringLiteral("qsl(\"%1/mudlet/profiles\").arg(mConfigDir.path())");
+        QVERIFY(createsOptIn(recipe));
+        QVERIFY(!createsConfigRootOnly(recipe));
+        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(%1));\n").arg(recipe);
         QVERIFY2(staleRecipes(source).isEmpty(), qPrintable(staleRecipes(source).join(QChar(u'\n'))));
     }
 
     void test_aProfileUnderTheOptInIsAccepted()
     {
-        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles/%2\").arg(dir, name)));\n");
+        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(qsl(\"%1/mudlet\").arg(dir)));\nQVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles/%2\").arg(dir, name)));\n");
         QVERIFY2(staleRecipes(source).isEmpty(), qPrintable(staleRecipes(source).join(QChar(u'\n'))));
     }
 
-    // The fix for #9810 left ProfileDeletionSafetyTest comparing the resolved
-    // config root against a "%1/mudlet" literal, which is not a seeding call
+    // The opt-in reached by naming its parts separately, which is as much an
+    // opt-in as spelling the whole path in one literal
+    void test_theOptInAssembledFromTwoLiteralsCounts()
+    {
+        const QString relative = QStringLiteral("QVERIFY(QDir(root).mkdir(qsl(\"mudlet\")));\nQVERIFY(QDir(root).mkpath(qsl(\"mudlet/profiles\")));\n");
+        QVERIFY2(staleRecipes(relative).isEmpty(), qPrintable(staleRecipes(relative).join(QChar(u'\n'))));
+
+        const QString inOneCall = QStringLiteral("QVERIFY(QDir().mkpath(QDir(qsl(\"%1/mudlet\").arg(dir)).filePath(qsl(\"profiles\"))));\n");
+        QVERIFY2(staleRecipes(inOneCall).isEmpty(), qPrintable(staleRecipes(inOneCall).join(QChar(u'\n'))));
+    }
+
+    // ProfileDeletionSafetyTest compares the resolved config root against a
+    // "%1/mudlet" literal, which creates nothing
     void test_anAssertionOnTheConfigRootIsNotSeeding()
     {
-        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles\").arg(mConfigDir.path())));\n"
-                                              "QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl(\"%1/mudlet\").arg(mConfigDir.path()));\n");
+        const QString source = QStringLiteral("QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl(\"%1/mudlet\").arg(mConfigDir.path()));\n");
         QVERIFY2(staleRecipes(source).isEmpty(), qPrintable(staleRecipes(source).join(QChar(u'\n'))));
     }
 
@@ -267,6 +311,16 @@ private slots:
     {
         const QString source = QStringLiteral("// never QDir().mkpath(qsl(\"%1/mudlet\").arg(dir))\n/* nor QDir().mkdir(qsl(\"%1/mudlet\")) */\n");
         QVERIFY2(staleRecipes(source).isEmpty(), qPrintable(staleRecipes(source).join(QChar(u'\n'))));
+    }
+
+    void test_aRawStringCannotDesynchroniseTheScan()
+    {
+        const QString source = QStringLiteral("const auto text = R\"(he said \"hi)\";\n"
+                                              "// QDir().mkpath(qsl(\"%1/mudlet\").arg(dir))\n"
+                                              "QVERIFY(QDir().mkpath(qsl(\"%1/mudlet\").arg(dir)));\n");
+        const QStringList problems = staleRecipes(source);
+        QCOMPARE(problems.size(), 1);
+        QVERIFY2(problems.first().startsWith(QStringLiteral("line 3 ")), qPrintable(problems.first()));
     }
 
     void test_theOptInElsewhereInTheFileForgivesTheSeed()
