@@ -189,6 +189,38 @@ describe("Tests functionality of Geyser.VBox", function()
       assert.is_nil(getWindowGeometry("gvbShrinkB"))
       assert.is_nil(Geyser.windowList.gvbShrink)
     end)
+
+    -- one layout pass per child is what makes tearing a box down quadratic. The
+    -- fixed child is here because contains_fixed short circuits reposition()'s
+    -- check of the deferral, which could let the cost back in for boxes like it
+    it("does not stack the column again for each child it deletes", function()
+      track(Geyser.Label:new({name = "gvbShrinkCostFixed", height = 100, v_policy = Geyser.Fixed}, box))
+      for i = 1, 3 do
+        track(Geyser.Label:new({name = "gvbShrinkCost" .. i}, box))
+      end
+      local organizes = 0
+      local organize = box.organize
+      box.organize = function(...)
+        organizes = organizes + 1
+        return organize(...)
+      end
+      box:delete()
+      assert.are.equal(0, organizes)
+      assert.is_nil(getWindowGeometry("gvbShrinkA"))
+      assert.is_nil(getWindowGeometry("gvbShrinkCost1"))
+    end)
+
+    -- the deferral belongs to the container being deleted, so a box losing a
+    -- whole subtree - one that defers itself on the way out - still re-stacks
+    it("re-stacks the column when a nested box of its own is deleted", function()
+      local nested = track(Geyser.HBox:new({name = "gvbShrinkNested"}, box))
+      track(Geyser.Label:new({name = "gvbShrinkNestedA"}, nested))
+      track(Geyser.Label:new({name = "gvbShrinkNestedB"}, nested))
+      nested:delete()
+      assert.are.same({"gvbShrinkA", "gvbShrinkB"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 50, height = 300}, geometry("gvbShrinkA"))
+      assert.are.same({x = 0, y = 300, width = 50, height = 300}, geometry("gvbShrinkB"))
+    end)
   end)
 
   describe("Geyser.VBox:reposition", function()

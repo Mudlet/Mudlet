@@ -1091,7 +1091,6 @@ describe("Tests the timer API", function()
         "a delay rounding up to a whole day wraps to a zero interval and must be rejected")
       assert.is_truthy(tostring(err):find("bad argument #1", 1, true),
         "the delay should be reported as the offending argument, got: " .. tostring(err))
-      -- while a delay still under the day once rounded stays acceptable
       local id = trackTemp(tempTimer(86399.4, [[]]))
       assert.is_true(id > 0, "a delay under the day once rounded should still be accepted")
       assert.is_true(killTimer(id))

@@ -404,21 +404,16 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')

@@ -418,7 +418,6 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
-        QT_FORCE_STDERR_LOGGING: 1
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
         # demonstrate every media behaviour rather than skip any of them. Without a floor
         # somewhere, a lost codec or a changed default backend would turn the whole file
@@ -429,15 +428,11 @@ jobs:
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
@@ -605,6 +600,11 @@ jobs:
         # environment quirk. macOS runners start no player at all, so the gate
         # stays off there.
         MUDLET_TEST_REQUIRE_MEDIA: 1
+        # Xvfb has no window manager to overrule a resize request, so the main
+        # window here follows setMainWindowSize exactly and one that stops
+        # following it is a regression rather than an environment quirk. The
+        # macOS runners are not gated: their window server can refuse a resize.
+        MUDLET_TEST_REQUIRE_WINDOW_RESIZE: 1
         # The fake Discord IPC server's socket lives in this runtime directory,
         # and the bundled discord-rpc library is only reachable through this
         # library path - without both the Discord specs have nothing to talk to.
