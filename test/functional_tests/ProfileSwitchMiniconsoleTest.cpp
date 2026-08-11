@@ -32,12 +32,13 @@
  *
  * What this does NOT hold, measured rather than assumed: taking the deferred
  * refreshSubconsoles() call back out of mudlet::setActiveProfile() does not
- * make this fail. Under Xvfb the show and the layout that follows it are
- * finished by the time the switch returns, so the miniconsole's own resize
- * event has already recalculated everything the refresh would have. #8273
- * needs a window manager laying out asynchronously, which no test here has.
- * So this pins the invariant against a future regression; it is not evidence
- * that the deferred refresh is load-bearing.
+ * make this fail - five runs each way under bare Xvfb, and five each way under
+ * Xvfb with openbox laying out asynchronously, all passed. A miniconsole is
+ * resized along with the console it sits in even while its profile is behind
+ * another, so its own resize event has recalculated everything the refresh
+ * would have by the time anything can look. So this pins the invariant against
+ * a future regression; it is not evidence that the deferred refresh is
+ * load-bearing, and #8273 itself is not reproduced here.
  *
  * Run with: ctest -R ProfileSwitchMiniconsoleTest -V
  */
