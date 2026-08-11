@@ -442,8 +442,6 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -807,8 +805,6 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -980,8 +976,6 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key{lua_tostring(L, -1)};
             lua_pop(L, 1);
@@ -1255,8 +1249,6 @@ int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1421,8 +1413,6 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* f
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1518,8 +1508,6 @@ int TLuaInterpreter::getPlayingVideosAsTableArgument(lua_State* L, const char* f
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1651,8 +1639,6 @@ int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1734,8 +1720,6 @@ int TLuaInterpreter::getPausedMusicAsTableArgument(lua_State* L, const char* fun
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1817,8 +1801,6 @@ int TLuaInterpreter::getPausedVideosAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1996,8 +1978,6 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2216,8 +2196,6 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2341,8 +2319,6 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2452,8 +2428,6 @@ int TLuaInterpreter::pauseSoundsAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2541,8 +2515,6 @@ int TLuaInterpreter::pauseMusicAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2630,8 +2602,6 @@ int TLuaInterpreter::pauseVideosAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);

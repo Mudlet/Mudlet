@@ -42,7 +42,7 @@
  * is outstanding is still registered, and must not be written back into the
  * profile by a save taken before the unit goes idle.
  *
- * Run with: ctest -R PackageSelfUninstallTest -V
+ * Run with: ctest -R PackageSelfRemovalTest -V
  */
 
 #include <QtTest/QtTest>
@@ -85,7 +85,7 @@ extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForPackageSelfUninstallTest();
+void initializeQRCResourcesForPackageSelfRemovalTest();
 
 // TriggerUnit only holds its depth inside processDataStream(), so a save at
 // depth has to come from a trigger's own script. Stands in for the Lua
@@ -119,12 +119,12 @@ static int exportProfileMidPass(lua_State* L)
     return 0;
 }
 
-class PackageSelfUninstallTest : public QObject
+class PackageSelfRemovalTest : public QObject
 {
     Q_OBJECT
 
 private:
-    const QString mProfileName = qsl("PackageSelfUninstall-Test");
+    const QString mProfileName = qsl("PackageSelfRemoval-Test");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
@@ -132,7 +132,7 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForPackageSelfUninstallTest();
+        initializeQRCResourcesForPackageSelfRemovalTest();
 
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
@@ -655,7 +655,7 @@ private:
     }
 };
 
-void initializeQRCResourcesForPackageSelfUninstallTest()
+void initializeQRCResourcesForPackageSelfRemovalTest()
 {
 #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
     qInitResources_additional_splash_screens();
@@ -670,5 +670,5 @@ void initializeQRCResourcesForPackageSelfUninstallTest()
     qInitResources_qm();
 }
 
-#include "PackageSelfUninstallTest.moc"
-QTEST_MAIN(PackageSelfUninstallTest)
+#include "PackageSelfRemovalTest.moc"
+QTEST_MAIN(PackageSelfRemovalTest)
