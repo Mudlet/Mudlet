@@ -5929,9 +5929,8 @@ describe("Labels inside a user window", function()
   end)
 
   it("the label really is inside the user window, not the main window", function()
-    -- createLabel falls back to the main window without a word when the parent
-    -- window name matches nothing, so a spec that only reads the label back
-    -- would pass either way; hiding the parent is what tells them apart
+    -- reading the label back would pass wherever it ended up; hiding the parent
+    -- is what says which window it is in
     assert.is_true(windowVisible(label))
     hideWindow(userWindow)
     assert.is_false(windowVisible(label))
@@ -5940,7 +5939,21 @@ describe("Labels inside a user window", function()
   end)
 
   it("a parent window name that matches nothing is refused", function()
-    pending("createLabel puts the label in the main window and answers true when the parent window name is not a window")
+    local absentParent = "labelNoSuchParent" .. suffix
+    local orphan = "labelWithNoParent" .. suffix
+    local ok, err = createLabel(absentParent, orphan, 0, 0, 20, 10, 1)
+    assert.is_false(ok)
+    assert.are.equal(("window '%s' not found"):format(absentParent), err)
+    -- and no label was put in the main window instead
+    local deleteOk, deleteErr = deleteLabel(orphan)
+    assert.is_false(deleteOk)
+    assert.are.equal(("label name '%s' not found"):format(orphan), deleteErr)
+  end)
+
+  it("the main window is still a parent name it takes", function()
+    local mainLabel = "labelBackInTheMainWindow" .. suffix
+    finally(function() deleteLabel(mainLabel) end)
+    assert.is_true(createLabel("main", mainLabel, 0, 0, 20, 10, 1))
   end)
 
   it("echo puts text on a label that lives in a user window", function()

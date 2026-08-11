@@ -3878,6 +3878,14 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
         return {false, QString()};
     }
 
+    // the parent window has to be one: TMainConsole::createLabel puts a label
+    // whose parent it cannot find into the main window instead, which is not
+    // anywhere the caller asked for
+    const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
+    if (!wantsMainWindow && !mpConsole->mDockWidgetMap.contains(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
     if (!pL && !pC) {
