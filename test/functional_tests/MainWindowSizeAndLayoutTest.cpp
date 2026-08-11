@@ -18,11 +18,12 @@
  ***************************************************************************/
 
 /*
- * Two things about the main window that the busted suite cannot pin down.
+ * Two things about the main window.
  *
- * getMainWindowSize() has to follow the window below half the width it had. The
- * busted spec for it pends when the display will not make the window that much
- * narrower; here the same case is a hard skip, so it is never quietly green.
+ * getMainWindowSize() has to follow the console below half the width it had.
+ * The busted spec for it can only ask the display to resize the window the
+ * suite is running in, and pends where the display will not; here the console
+ * is resized directly, so the case is always exercised.
  *
  * saveWindowLayout() from Lua must not stand in for the layout save Mudlet
  * makes on the way out. That save is guarded by mudlet::mHasSavedLayout, which
@@ -182,33 +183,27 @@ private slots:
         }
     }
 
-    void test_getMainWindowSizeFollowsTheWindowDownPastHalfItsWidth()
+    void test_getMainWindowSizeFollowsTheConsoleDownPastHalfItsWidth()
     {
         TMainConsole* console = mpHost->mpConsole;
         QVERIFY(console);
 
-        mudlet::self()->resize(1600, 700);
-        QTest::qWait(200ms);
-        QCoreApplication::processEvents();
+        // the console is resized directly rather than through the window: what
+        // a display will do with a resize request is its own business, and the
+        // size getMainWindowSize() reports has to follow the console either way
+        console->resize(1600, 700);
         const QSize wide = console->getMainWindowSize();
-        const int wideConsoleWidth = console->width();
+        QVERIFY2(wide.width() > 0, "the console reported no width at all to start from");
 
-        mudlet::self()->resize(500, 700);
-        QTest::qWait(200ms);
-        QCoreApplication::processEvents();
-        const int narrowConsoleWidth = console->width();
+        console->resize(600, 700);
         const QSize narrow = console->getMainWindowSize();
 
-        // the window has a minimum width of its own and the display may refuse
-        // the resize outright, so how narrow it really became is measured
-        // rather than assumed
-        if (narrowConsoleWidth * 2 >= wideConsoleWidth) {
-            QSKIP(qPrintable(qsl("this display only took the console from %1 to %2 pixels wide, which is not the more than half this needs")
-                                     .arg(QString::number(wideConsoleWidth), QString::number(narrowConsoleWidth))));
-        }
-        QVERIFY2(narrow.width() < wide.width(),
-                 qPrintable(qsl("getMainWindowSize() still reported %1 while the console went from %2 to %3 pixels wide")
-                                    .arg(QString::number(narrow.width()), QString::number(wideConsoleWidth), QString::number(narrowConsoleWidth))));
+        // the width getMainWindowSize() subtracts the toolbars from is the one
+        // the console was just given, so anything above it is a size the
+        // console no longer has
+        QVERIFY2(narrow.width() <= 600,
+                 qPrintable(qsl("getMainWindowSize() reported %1 for a console 600 pixels wide, after reporting %2 for one 1600 wide")
+                                    .arg(QString::number(narrow.width()), QString::number(wide.width()))));
     }
 
     void test_aScriptedSaveLeavesTheShutdownSaveToRun()

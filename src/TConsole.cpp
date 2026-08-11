@@ -2327,7 +2327,7 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
-    if (isHidden()) {
+    if (isHidden() && mLastMeasuredSize.isValid()) {
         return mLastMeasuredSize;
     }
     const QSize consoleSize = size();
@@ -2337,11 +2337,13 @@ QSize TConsole::getMainWindowSize() const
     const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
     // A console that is still being laid out, as one is while a profile switch
-    // is in flight, measures as next to nothing, and the last size it really
-    // had is a better answer than that.
+    // is in flight, measures as next to nothing - or as less than nothing, once
+    // the command line and the toolbar come off its height - and the last size
+    // it really had is a better answer than that.
     const int minValidWidth = 50;
-    if (mainWindowSize.width() < minValidWidth && mLastMeasuredSize.width() >= minValidWidth) {
-        return mLastMeasuredSize;
+    const bool measurable = mainWindowSize.width() >= minValidWidth && mainWindowSize.height() > 0;
+    if (!measurable) {
+        return mLastMeasuredSize.isValid() ? mLastMeasuredSize : mainWindowSize;
     }
 
     mLastMeasuredSize = mainWindowSize;
