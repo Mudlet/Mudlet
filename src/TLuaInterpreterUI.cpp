@@ -1841,8 +1841,8 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-    if (!host.getActionUnit()->hideToolBar(windowName)) {
-        return warnArgumentValue(L, __func__, qsl("toolbar '%1' not found").arg(windowName));
+    if (auto [moved, message] = host.getActionUnit()->hideToolBar(windowName); !moved) {
+        return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -3873,8 +3873,8 @@ int TLuaInterpreter::showToolBar(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-    if (!host.getActionUnit()->showToolBar(windowName)) {
-        return warnArgumentValue(L, __func__, qsl("toolbar '%1' not found").arg(windowName));
+    if (auto [moved, message] = host.getActionUnit()->showToolBar(windowName); !moved) {
+        return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
     return 1;

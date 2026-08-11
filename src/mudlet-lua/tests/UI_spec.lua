@@ -5515,9 +5515,13 @@ describe("Toolbar buttons", function()
   local toolbar = "buttonSpecToolbar" .. suffix
   local pushDownButton = "buttonSpecPushDown" .. suffix
   local plainButton = "buttonSpecPlain" .. suffix
+  local floatingToolbar = "buttonSpecFloating" .. suffix
+  local floatingButton = "buttonSpecFloatingButton" .. suffix
   local packageFile = specFilePath(packageName .. ".xml")
 
-  local function actionXml(name, pushButton, isFolder)
+  -- location 0 is a button bar across the top of the profile's window and
+  -- location 4 a floating toolbar of the application's own
+  local function actionXml(name, pushButton, isFolder, location)
     return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
       <name>%s</name>
       <script></script>
@@ -5535,7 +5539,7 @@ describe("Toolbar buttons", function()
       <buttonFillerOffset>0</buttonFillerOffset>
       <posX>0</posX>
       <posY>0</posY>
-    ]]):format(isFolder, pushButton, name)
+    ]]):format(isFolder, pushButton, name, location or 0)
   end
 
   local function packageXml()
@@ -5547,6 +5551,9 @@ describe("Toolbar buttons", function()
       actionXml(toolbar, "no", "yes"),
       actionXml(pushDownButton, "yes", "no"), "</Action>",
       actionXml(plainButton, "no", "no"), "</Action>",
+      "</Action>",
+      actionXml(floatingToolbar, "no", "yes", 4),
+      actionXml(floatingButton, "no", "no"), "</Action>",
       "</Action>",
       [[</ActionPackage>]],
       [[</MudletPackage>]],
@@ -5777,6 +5784,14 @@ describe("Toolbar buttons", function()
       local showOk, showErr = showToolBar(absent)
       assert.is_nil(showOk)
       assert.are.equal(("toolbar '%s' not found"):format(absent), showErr)
+    end)
+
+    it("a floating toolbar is refused by name rather than reported missing", function()
+      local hideOk, hideErr = hideToolBar(floatingToolbar)
+      assert.is_nil(hideOk)
+      assert.are.equal(("toolbar '%s' is a floating toolbar, which cannot be shown or hidden from Lua"):format(floatingToolbar), hideErr)
+      -- and it is left as it was
+      assert.are.equal(1, isActive(floatingToolbar, "button"))
     end)
 
     it("a packaged toolbar answers to its own name, leaving the package alone", function()
