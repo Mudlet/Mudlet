@@ -1736,3 +1736,231 @@ describe("Discord Lua API availability contract", function()
     end)
   end)
 end)
+
+describe("The IRC configuration functions round-trip through the profile", function()
+  -- While a profile has no IRC dialog - none of these specs opens one - the
+  -- getters read the profile's own configuration off disk, which is what the
+  -- setters write to. So the round trip is testable with no IRC server and no
+  -- connection anywhere in sight.
+  --
+  -- The profile's own IRC configuration is put back afterwards, because the
+  -- self-test profile is reused between runs. Two things the restore cannot
+  -- reach, both of which matter to a developer running the suite against a
+  -- config root that is not a throwaway one:
+  --
+  -- - the IRC password. setIrcServer() writes it on every call and blanks it
+  --   when none is passed, and no getter reads it back, so any password the
+  --   profile had is gone either way.
+  -- - the last-used nick, which setIrcNick() also writes to a file shared by
+  --   every profile (mudlet's data directory, not the profile's). Putting the
+  --   profile's nick back writes that file again rather than restoring it.
+  local function restoreIrcConfiguration()
+    local nick = getIrcNick()
+    local hostName, port, secure = getIrcServer()
+    local channels = getIrcChannels()
+    finally(function()
+      setIrcNick(nick)
+      setIrcServer(hostName, port, secure)
+      setIrcChannels(channels)
+    end)
+  end
+
+  describe("getIrcNick, getIrcServer and getIrcChannels", function()
+    it("report a nick, a server and a channel list without an IRC client", function()
+      -- with nothing configured each getter falls back to a built-in default
+      -- rather than to nil, which is what makes them safe to read before
+      -- anything has been set
+      local nick = getIrcNick()
+      assert.is_string(nick)
+      assert.is_true(#nick > 0)
+
+      local hostName, port, secure = getIrcServer()
+      assert.is_string(hostName)
+      assert.is_true(#hostName > 0)
+      assert.is_number(port)
+      assert.is_true(port >= 1 and port <= 65535, tostring(port))
+      assert.is_boolean(secure)
+
+      local channels = getIrcChannels()
+      assert.is_table(channels)
+      assert.is_true(#channels > 0)
+      for _, channel in ipairs(channels) do
+        assert.is_string(channel)
+      end
+    end)
+  end)
+
+  describe("setIrcNick", function()
+    it("raises a Lua error when the nick is missing or not a string", function()
+      assertArgError(function() setIrcNick() end, "setIrcNick: bad argument #1 type (nick as string expected")
+      assertArgError(function() setIrcNick({}) end, "setIrcNick: bad argument #1 type (nick as string expected, got table!)")
+    end)
+
+    it("returns nil and a message for an empty nick, leaving the stored one alone", function()
+      restoreIrcConfiguration()
+      assert.is_true(setIrcNick("BustedKeptNick"))
+
+      local ok, err = setIrcNick("")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "nick must not be empty"), tostring(err))
+      assert.equals("BustedKeptNick", getIrcNick())
+    end)
+
+    it("stores the nick where getIrcNick reads it back", function()
+      restoreIrcConfiguration()
+      assert.is_true(setIrcNick("BustedNickOne"))
+      assert.equals("BustedNickOne", getIrcNick())
+
+      assert.is_true(setIrcNick("BustedNickTwo"))
+      assert.equals("BustedNickTwo", getIrcNick())
+    end)
+  end)
+
+  describe("setIrcServer", function()
+    it("raises a Lua error when the hostname or an optional argument is wrongly typed", function()
+      assertArgError(function() setIrcServer() end, "setIrcServer: bad argument #1 type (hostname as string expected")
+      assertArgError(function() setIrcServer({}) end, "setIrcServer: bad argument #1 type (hostname as string expected, got table!)")
+      assertArgError(function() setIrcServer("irc.busted.invalid", {}) end, "port number")
+      assertArgError(function() setIrcServer("irc.busted.invalid", 6667, "yes") end, "secure")
+      assertArgError(function() setIrcServer("irc.busted.invalid", 6667, false, {}) end, "server password")
+    end)
+
+    it("returns nil and a message for an empty hostname or an out-of-range port", function()
+      restoreIrcConfiguration()
+      assert.is_true(setIrcServer("irc.busted-kept.invalid", 6690))
+
+      local ok, err = setIrcServer("")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "hostname must not be empty"), tostring(err))
+
+      ok, err = setIrcServer("irc.busted.invalid", 70000)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "invalid port number 70000"), tostring(err))
+
+      ok, err = setIrcServer("irc.busted.invalid", 0)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "invalid port number 0"), tostring(err))
+
+      -- a refused call stored nothing
+      local hostName, port = getIrcServer()
+      assert.equals("irc.busted-kept.invalid", hostName)
+      assert.equals(6690, port)
+    end)
+
+    it("stores the hostname, port and secure flag where getIrcServer reads them back", function()
+      restoreIrcConfiguration()
+      -- it reports success as true plus a nil second value
+      local ok, extra = setIrcServer("irc.busted-one.invalid", 6697, true)
+      assert.is_true(ok)
+      assert.is_nil(extra)
+
+      local hostName, port, secure = getIrcServer()
+      assert.equals("irc.busted-one.invalid", hostName)
+      assert.equals(6697, port)
+      assert.is_true(secure)
+
+      -- the secure flag is stored, not merely defaulted: turn it back off
+      assert.is_true(setIrcServer("irc.busted-two.invalid", 6668, false))
+      hostName, port, secure = getIrcServer()
+      assert.equals("irc.busted-two.invalid", hostName)
+      assert.equals(6668, port)
+      assert.is_false(secure)
+    end)
+
+    it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
+      restoreIrcConfiguration()
+      assert.is_true(setIrcServer("irc.busted-secure.invalid", 6697, true))
+
+      assert.is_true(setIrcServer("irc.busted-default.invalid"))
+      local hostName, port, secure = getIrcServer()
+      assert.equals("irc.busted-default.invalid", hostName)
+      assert.equals(6667, port)
+      assert.is_false(secure)
+    end)
+  end)
+
+  describe("setIrcChannels", function()
+    it("raises a Lua error when the channels are not a table", function()
+      assertArgError(function() setIrcChannels("#mudlet") end, "setIrcChannels: bad argument #1 type (channels as table expected, got string!)")
+      assertArgError(function() setIrcChannels() end, "setIrcChannels: bad argument #1 type (channels as table expected, got no value!)")
+    end)
+
+    it("returns nil and a message when no entry is a usable channel name", function()
+      restoreIrcConfiguration()
+      assert.is_true(setIrcChannels({"#busted-kept"}))
+
+      local ok, err = setIrcChannels({})
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
+
+      -- a channel name has to start with #, & or +, and only strings are read
+      ok, err = setIrcChannels({"mudlet", 42, ""})
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
+      assert.same({"#busted-kept"}, getIrcChannels())
+    end)
+
+    it("stores the channel list where getIrcChannels reads it back", function()
+      restoreIrcConfiguration()
+      assert.is_true(setIrcChannels({"#busted-one", "&busted-two", "+busted-three"}))
+      assert.same({"#busted-one", "&busted-two", "+busted-three"}, getIrcChannels())
+    end)
+
+    it("keeps the usable channel names out of a mixed list and drops the rest", function()
+      restoreIrcConfiguration()
+      assert.is_true(setIrcChannels({"#busted-good", "busted-bad", "&busted-also-good"}))
+      assert.same({"#busted-good", "&busted-also-good"}, getIrcChannels())
+    end)
+  end)
+
+  describe("getIrcConnectedHost and restartIrc without a client", function()
+    -- Both of these read whether the profile has an IRC dialog, and nothing in
+    -- the suite creates one - see the openIRC spec below for why. Should
+    -- something start doing so, these are where it shows up first.
+    it("getIrcConnectedHost returns false and says there is no client", function()
+      local ok, err = getIrcConnectedHost()
+      assert.is_false(ok)
+      assert.equals("no client active", err)
+    end)
+
+    it("restartIrc returns false", function()
+      -- there is no client to restart, and it says so by returning false
+      -- rather than by opening one
+      assert.is_false(restartIrc(), "something in this run opened an IRC client")
+    end)
+  end)
+
+  describe("sendIrc", function()
+    -- Both arguments are checked before the IRC dialog would be created, so
+    -- these calls open no client. A well-formed sendIrc() does create one,
+    -- which is why there is no spec here for the delivery path.
+    it("raises a Lua error when the target or the message is missing or wrongly typed", function()
+      assertArgError(function() sendIrc() end, "sendIrc: bad argument #1 type (target as string expected")
+      assertArgError(function() sendIrc("#mudlet") end, "sendIrc: bad argument #2 type (message as string expected")
+      assertArgError(function() sendIrc({}, "hello") end, "sendIrc: bad argument #1 type (target as string expected, got table!)")
+      assertArgError(function() sendIrc("#mudlet", {}) end, "sendIrc: bad argument #2 type (message as string expected, got table!)")
+    end)
+  end)
+
+  describe("openIRC", function()
+    it("opens the IRC client window", function()
+      pending("openIRC creates the profile's IRC dialog and nothing in the Lua API closes it again. "
+        .. "From then on the getters answer out of the copy the dialog read when it was constructed - "
+        .. "a setIrcNick() while it is open is not seen by getIrcNick() until restartIrc() - so the "
+        .. "round trips above would stop working for the rest of the run, and the dialog dials the "
+        .. "configured server and raises a window over the specs that follow")
+    end)
+  end)
+end)
+
+describe("getNetworkLatency", function()
+  it("reports zero on a profile whose game socket has never been timed", function()
+    -- The latency is measured between a command going out and the prompt that
+    -- answers it, and nothing in the suite connects the game socket - so the
+    -- untouched value is what this reads, which is also what pins it to the
+    -- right member. A meaningful reading needs a game server.
+    local latency = getNetworkLatency()
+    assert.is_number(latency)
+    assert.equals(0, latency)
+  end)
+end)
