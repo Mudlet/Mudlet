@@ -5,6 +5,11 @@ Serves the sibling ``http-fixtures/`` directory over localhost so the Lua test
 suite can exercise getHTTP/downloadFile against a real, local endpoint instead
 of the public internet.
 
+Requests below ``/media`` are answered with a generated WAV rather than from
+disk: the media specs need a file long enough that playback is still running
+when they look, and generating silence keeps an 80KB binary out of the
+repository.
+
 Requests below ``/echo`` are answered by an echo endpoint instead of from disk:
 it accepts GET and every verb this handler has no method of its own for
 (postHTTP/putHTTP/deleteHTTP/customHTTP all need one) and reports the method,
@@ -22,10 +27,29 @@ forward it to Mudlet as ``MUDLET_TEST_HTTP_PORT``.
 import http.server
 import os
 import socketserver
+import struct
 
 FIXTURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "http-fixtures")
 
 ECHO_PATH = "/echo"
+
+MEDIA_PATH = "/media/"
+
+# Long enough that a spec which starts playback still has it running when it
+# asks what is playing, and that one which expects no playback would have seen
+# it by then.
+MEDIA_SECONDS = 10
+
+
+def silent_wav(seconds):
+    """A WAV of the given length: 8 bit, 8kHz mono silence, which any decoder takes."""
+    sample_rate = 8000
+    # 128 is silence for unsigned 8 bit samples
+    samples = b"\x80" * (sample_rate * seconds)
+    header = b"fmt " + struct.pack("<IHHIIHH", 16, 1, 1, sample_rate, sample_rate, 1, 8)
+    data = b"data" + struct.pack("<I", len(samples)) + samples
+    body = b"WAVE" + header + data
+    return b"RIFF" + struct.pack("<I", len(body)) + body
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -48,7 +72,21 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         if self.echo_requested():
             self.echo()
             return
+        if self.media_requested():
+            self.serve_media()
+            return
         super().do_GET()
+
+    def media_requested(self):
+        return self.path.startswith(MEDIA_PATH) and self.path.endswith(".wav")
+
+    def serve_media(self):
+        payload = silent_wav(MEDIA_SECONDS)
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/wav")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def __getattr__(self, name):
         # BaseHTTPRequestHandler dispatches "VERB /path" to a do_VERB method and

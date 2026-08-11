@@ -463,9 +463,10 @@ describe("Media playback effects with a generated sound file", function()
   end
 
   -- The fixture server of CI/http-fixture-server.py, when the harness started
-  -- one and handed its ephemeral port over. A preload's only observable effect
-  -- is the fetch it starts for a file the profile does not have, so the two
-  -- load specs below are the media ones that need a server to talk to.
+  -- one and handed its ephemeral port over. A preload's observable effect is
+  -- the fetch it starts for a file the profile does not have, so the load specs
+  -- below are the media ones that need a server to talk to. Anything asked of
+  -- it below /media is answered with generated silence rather than from disk.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
   local requireFixture = os.getenv("MUDLET_TEST_REQUIRE_HTTP_FIXTURE")
   -- the file CI/http-fixtures/ serves, and its contents
@@ -985,6 +986,40 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.equals(1, #done)
     assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("a preload from a url keeps the file without playing it", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- #9783: the download's completion played what it had just written. The
+    -- fixture server generates ten seconds of silence for this path, so a
+    -- playback that started would still be running when this looks.
+    local downloadName = "busted-media-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+
+    local done = {}
+    collect("sysDownloadDone", done)
+    assert.is_true(loadSoundFile({name = downloadName, url = fixtureUrl() .. "/media"}))
+    waitForCount("sysDownloadDone", done, 1)
+    assert.equals(1, #done)
+
+    -- the playback this must not start would begin after the event above, and a
+    -- preloaded one raises no sysMediaStarted to wait for, so give the player
+    -- the turns it would need to reach the playing state
+    pumpEvents(1000)
+    assert.equals(0, #getPlayingSounds())
+    assert.equals(0, #getPlayingMusic())
+    assert.equals(0, #getPlayingVideos())
+
+    -- and the file is in the media directory, which is what the preload was for
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the preload did not keep the file it downloaded")
   end)
 
   it("a sound preload leaves paused music of the same name paused", function()
