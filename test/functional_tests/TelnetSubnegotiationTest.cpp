@@ -88,10 +88,6 @@ private slots:
         data.append(TN_IAC);
         data.append(TN_SE);
         data.append("SUBNEG_RECOVERED\r\n");
-        // processSocketData() writes a NUL at in_buffer[size + 1], so give the
-        // backing buffer a little slack before handing it its data pointer.
-        data.reserve(data.size() + 16);
-
         host->mTelnet.loopbackTest(data);
 
         QVERIFY2(waitForBufferToContain("SUBNEG_RECOVERED"), "Ordinary text after an oversized subnegotiation was not displayed - recovery failed.");

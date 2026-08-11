@@ -1872,6 +1872,177 @@ describe("Tests UI functions", function()
       -- absurd magnitudes are ids or timestamps, never vitals
       assert.are.same({}, BaseUI.parseVitalsLine("Health: 1234567890123/9999999999999"))
     end)
+
+    -- The readable sample. The exhaustive version - every label spelling
+    -- crossed with every layout - is in StarterUiTriggerCostTest.cpp, which
+    -- installs the package itself and so always runs.
+    describe("the vitals trigger prefilter", function()
+      local readableLines = {
+        -- prompt shapes, labels after and before the numbers
+        "<523/600hp 210/250m 80/100mv>",
+        "HP: 523/600 MP: 210/250",
+        "523/600hp",
+        "100hp",
+        "hp100/120",
+        "<87%hp 80%m>",
+        "hp: 87%",
+        "<523hp 210m 80mv>",
+        "1200/1500 tnl",
+        "End: 40/60",
+        "Stamina 40/60",
+        -- score screens
+        "Health : 523/600",
+        "Mana   : 210/250",
+        "Moves  : 80/100",
+        "Experience: 1000/5000",
+        "Spell Points: 90/95",
+        "Hit Points: 12,345/23,456",
+        "Hitpoints: 90    of    90",
+        "PRACT: 005   Hitpoints: 90    of    90",
+        "Hit    : [  168/168  ]",
+        "| Level: 201  Hit Points: 500/500  Moves: 1000/1000 |",
+        "| Race: Undead Atavian | Health: 4252/4252 |",
+        "Health:   3600/3600     Mana:     3400/3400",
+        "Hp: 2331(2331)  Gp: 433(459)  Xp: 1143225  Burden: 21%",
+        "Hp: 143 (167) Gp: 240 (240) Xp: 267000",
+        "Level: 5              HitPoints:  100/  100      Pager    ( )",
+        "Race : Human           Mana     :  1000/ 1000      Autoexit (X)",
+        -- score sentences
+        "You have 100/120 hit points left.",
+        "You have 100(100) hit, 90(90) mana, and 100(100) movement points.",
+        "You have 123 experience points, 45 gold coins, 50 hit points(50).",
+        "You have 1110 (1110) hit points, 167 (167) guild points, 2 (684) quest points.",
+      }
+
+      for _, line in ipairs(readableLines) do
+        it("lets through: " .. line, function()
+          assert.is_true(#BaseUI.parseVitalsLine(line) > 0,
+            "sample line no longer produces any reading - fix the sample, not the prefilter")
+          -- rex.find: rex.match returns false for an unset capture group
+          assert.is_not_nil(rex.find(line, BaseUI.vitalsPrefilter),
+            "prefilter drops a line the vitals shapes read: the gauges would never appear")
+        end)
+      end
+
+      local ordinaryOutput = {
+        "You are standing in a dark forest. The trees tower above you.",
+        "A gentle breeze carries the scent of pine and distant woodsmoke.",
+        "You are carrying: a rusty sword, a silver ring, and 12 gold coins.",
+        "The Village Square",
+        "A glowing ember drifts past the Ancient Tower.",
+        "Gandalf tells you 'meet me at the tower'",
+      }
+
+      for _, line in ipairs(ordinaryOutput) do
+        it("keeps out: " .. line, function()
+          -- extra parens: rex.find's second return value would land in
+          -- luassert's message slot
+          assert.is_nil((rex.find(line, BaseUI.vitalsPrefilter)))
+        end)
+      end
+
+      it("is precompiled rather than recompiled per line", function()
+        assert.is_true(BaseUI.shapesArePrecompiled())
+      end)
+
+      -- restore whatever the assertions do: a raised vitalsLock left behind
+      -- makes createVitalsTriggers a silent no-op for every later test
+      local savedIds, savedLock
+
+      local function borrowVitalsTriggerState(lock)
+        savedIds, savedLock = BaseUI.vitalsTriggerIds, BaseUI.vitalsLock
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = {}, lock
+      end
+
+      local function returnVitalsTriggerState()
+        BaseUI.killVitalsTriggers()
+        BaseUI.vitalsTriggerIds, BaseUI.vitalsLock = savedIds, savedLock
+      end
+
+      it("arms exactly one trigger, not one per shape", function()
+        if BaseUI.dormant() then
+          pending("the starter UI is dormant in this profile")
+          return
+        end
+        borrowVitalsTriggerState(0)
+        local ok, err = pcall(function()
+          BaseUI.createVitalsTriggers()
+          assert.are.equal(1, #BaseUI.vitalsTriggerIds)
+        end)
+        returnVitalsTriggerState()
+        assert.is_true(ok, tostring(err))
+      end)
+
+      it("stays retired while a protocol owns the gauges", function()
+        if BaseUI.dormant() then
+          pending("the starter UI is dormant in this profile")
+          return
+        end
+        borrowVitalsTriggerState(3)
+        local ok, err = pcall(function()
+          assert.is_true(BaseUI.structuredVitalsOwnGauges())
+          BaseUI.createVitalsTriggers()
+          assert.are.same({}, BaseUI.vitalsTriggerIds)
+        end)
+        returnVitalsTriggerState()
+        assert.is_true(ok, tostring(err))
+      end)
+    end)
+
+    describe("the chat capture shapes", function()
+      local chatLines = {
+        "Bob tells you, 'hello there'",
+        "You tell Bob, 'hi'",
+        "You tell the group 'incoming'",
+        "Bob whispers to you, 'psst'",
+        "Bob tells the group 'incoming'",
+        "Bob says, 'hello'",
+        "Bob asks, 'where is the bank?'",
+        "Bob exclaims, 'at last!'",
+        "You say, 'hello'",
+        "You ask, 'which way?'",
+        "You exclaim, 'finally!'",
+        "Bob yells, 'help!'",
+        "You shout, 'hello'",
+        "[newbie] Ann: how do I get out of here?",
+        "(gossip) Ann: anyone around?",
+        "< chat | Ann: anyone around?",
+      }
+
+      -- the last two are captured by a shape and then turned away by
+      -- chatChannelNames, so they stay available to the vitals layer
+      local notChatLines = {
+        "You are standing in a dark forest.",
+        "The orc hits you for 14 damage!",
+        "[combat] 100/120 hp",
+        "(12) something that is not a channel",
+      }
+
+      it("recognises every shape of chat line", function()
+        for _, line in ipairs(chatLines) do
+          assert.is_true(BaseUI.chatLikeLine(line), "not recognised as chat: " .. line)
+        end
+      end)
+
+      it("leaves ordinary game text to the vitals layer", function()
+        for _, line in ipairs(notChatLines) do
+          assert.is_false(BaseUI.chatLikeLine(line), "ordinary game text taken for chat: " .. line)
+        end
+      end)
+
+      it("has a shape for every line the trigger tree routes", function()
+        for _, regex in ipairs(BaseUI.chatShapeRegexes()) do
+          local matched = false
+          for _, line in ipairs(chatLines) do
+            if rex.find(line, regex) then
+              matched = true
+              break
+            end
+          end
+          assert.is_true(matched, "no line above exercises the shape: " .. regex)
+        end
+      end)
+    end)
   end)
 
   -- when a game installs its own interface (a Client.GUI package), the
@@ -1895,7 +2066,7 @@ describe("Tests UI functions", function()
     after_each(function()
       BaseUI.settings = savedSettings
       BaseUI.saveSettings()
-      BaseUI.createChatTriggers()
+      BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
     end)
 
@@ -1907,11 +2078,11 @@ describe("Tests UI functions", function()
 
     it("should retire its capture triggers while standing aside", function()
       BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
-      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
-      BaseUI.createChatTriggers()
+      BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
-      assert.is_nil(next(BaseUI.chatTriggerIds))
+      assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
     end)
 
@@ -2666,11 +2837,15 @@ describe("Window state getters", function()
       assert.is_truthy(err:find("wdgNoSuchWindow", 1, true))
     end)
 
-    it("returns nil and a message for the main window", function()
-      -- mirrors moveWindow/resizeWindow, which likewise do not act on "main"
-      local result, err = getWindowGeometry("main")
-      assert.is_nil(result)
-      assert.are.equal("string", type(err))
+    it("returns the main window's geometry under both of its names", function()
+      local width, height = getMainWindowSize()
+      for _, name in ipairs({"main", ""}) do
+        local x, y, w, h = getWindowGeometry(name)
+        assert.are.equal(0, x)
+        assert.are.equal(0, y)
+        assert.are.equal(width, w)
+        assert.are.equal(height, h)
+      end
     end)
 
     it("errors when called without a window name", function()
@@ -2737,10 +2912,9 @@ describe("Window state getters", function()
       assert.is_truthy(err:find("wdgNoSuchWindow", 1, true))
     end)
 
-    it("returns nil and a message for the main window", function()
-      local result, err = windowVisible("main")
-      assert.is_nil(result)
-      assert.are.equal("string", type(err))
+    it("reports the main window as visible under both of its names", function()
+      assert.is_true(windowVisible("main"))
+      assert.is_true(windowVisible(""))
     end)
 
     it("errors when called without a window name", function()
@@ -4389,8 +4563,7 @@ describe("Widget state getters", function()
   end)
 
   -- The "no map widget" error path for these two is covered in Mapper_spec,
-  -- which runs first and whose opening spec is the only point in the session
-  -- where the widget does not exist yet.
+  -- which runs first and reaches it by closing the widget.
   describe("map widget getters", function()
     setup(function()
       assert.is_true(openMapWidget())
@@ -4451,5 +4624,1363 @@ describe("Widget state getters", function()
     it("getMapWidgetGeometry returns exactly four values", function()
       assert.are.equal(4, select("#", getMapWidgetGeometry()))
     end)
+  end)
+end)
+
+-- https://wiki.mudlet.org/w/Manual:UI_Functions
+describe("Command line argument handling", function()
+  local cmdLine = "cmdArgHandlingLine"
+
+  setup(function()
+    createCommandLine(cmdLine, 10, 10, 150, 30)
+  end)
+
+  teardown(function()
+    deleteCommandLine(cmdLine)
+    clearCmdLine()
+  end)
+
+  -- These seven take an optional leading window name and used to locate their
+  -- mandatory string at lua_gettop(L). Called with no arguments at all that is
+  -- index 0, which Lua 5.1 resolves to the first free stack slot instead of
+  -- rejecting - so the type check ran against whatever an earlier call had left
+  -- there, and a leftover string made the call quietly succeed on it.
+  local zeroArgumentFunctions = {
+    "addCmdLineSuggestion",
+    "appendCmdLine",
+    "removeCmdLineSuggestion",
+    "printCmdLine",
+    "setCmdLineStyleSheet",
+    "addCmdLineBlacklist",
+    "removeCmdLineBlacklist",
+  }
+
+  -- leaves its argument in the stack slot the next call in the same function
+  -- body starts from, which is exactly the slot index 0 used to resolve to
+  local function leaveOnStack() end
+
+  for _, functionName in ipairs(zeroArgumentFunctions) do
+    it(functionName .. " reports its missing argument as #1", function()
+      local ok, err = pcall(function()
+        leaveOnStack("cmdArgHandlingLeftover")
+        _G[functionName]()
+      end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("bad argument #1", 1, true))
+    end)
+  end
+
+  it("printCmdLine with no arguments does not print unrelated stack data", function()
+    local functionName = "printCmdLine"
+    printCmdLine("kept text")
+    pcall(function()
+      leaveOnStack("cmdArgHandlingLeftover")
+      _G[functionName]()
+    end)
+    assert.are.equal("kept text", getCmdLine())
+  end)
+
+  it("appendCmdLine with no arguments does not append unrelated stack data", function()
+    local functionName = "appendCmdLine"
+    printCmdLine("kept text")
+    pcall(function()
+      leaveOnStack("cmdArgHandlingLeftover")
+      _G[functionName]()
+    end)
+    assert.are.equal("kept text", getCmdLine())
+  end)
+
+  it("setCmdLineStyleSheet with no arguments does not apply unrelated stack data", function()
+    local functionName = "setCmdLineStyleSheet"
+    setCmdLineStyleSheet("color: rgb(12,34,56);")
+    pcall(function()
+      leaveOnStack("cmdArgHandlingLeftover")
+      _G[functionName]()
+    end)
+    assert.are.equal("color: rgb(12,34,56);", getCmdLineStyleSheet())
+    setCmdLineStyleSheet("")
+  end)
+
+  describe("selectCmdLineText", function()
+    it("returns true for the main command line", function()
+      printCmdLine("select me")
+      assert.is_true(selectCmdLineText())
+      -- selecting must not disturb what is typed
+      assert.are.equal("select me", getCmdLine())
+    end)
+
+    it("returns true for a named command line", function()
+      printCmdLine(cmdLine, "select me too")
+      assert.is_true(selectCmdLineText(cmdLine))
+      assert.are.equal("select me too", getCmdLine(cmdLine))
+    end)
+
+    it("returns nil and a message naming an unknown command line", function()
+      local ok, err = selectCmdLineText("cmdArgHandlingNoSuchLine")
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("cmdArgHandlingNoSuchLine", 1, true))
+    end)
+  end)
+end)
+
+-- The movie API needs a real animated GIF to work on. Rather than commit a
+-- binary fixture, one is assembled here: three frames so setMovieFrame() has
+-- somewhere to jump to, and a 60 second frame delay so the animation never
+-- advances on its own while a spec is reading the movie back.
+local function threeFrameGif()
+  -- 1x1 logical screen, global colour table of four entries
+  local logicalScreen = "GIF89a" .. string.char(1, 0, 1, 0, 0x91, 0, 0)
+  local globalColourTable = string.char(255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0)
+  -- graphic control extension: 0x1770 hundredths of a second per frame
+  local graphicControl = string.char(0x21, 0xF9, 0x04, 0x00, 0x70, 0x17, 0x00, 0x00)
+  local imageDescriptor = string.char(0x2C, 0, 0, 0, 0, 1, 0, 1, 0, 0)
+  -- LZW, minimum code size 2: a clear code, one pixel, end of information
+  local imageData = string.char(0x02, 0x02, 0x4C, 0x01, 0x00)
+  local frame = graphicControl .. imageDescriptor .. imageData
+  return logicalScreen .. globalColourTable .. frame:rep(3) .. string.char(0x3B)
+end
+
+-- The fixtures below are generated at run time rather than committed, and they
+-- go in the profile directory the way DB_spec's and Package_spec's do: it is
+-- writable on every platform, where /tmp does not exist on Windows at all.
+-- Every one of them is removed again in teardown.
+local function specFilePath(name)
+  return ("%s/%s"):format(getMudletHomeDir(), name)
+end
+
+-- binary mode: the GIF must not be newline-translated
+local function writeSpecFile(path, contents)
+  local handle = io.open(path, "wb")
+  assert.is_not_nil(handle, "could not open " .. path .. " for writing")
+  assert.is_not_nil(handle:write(contents), "could not write " .. path)
+  handle:close()
+end
+
+describe("Label movies", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local giffile = specFilePath(("mudlet-spec-movie%s.gif"):format(suffix))
+  local notAGifFile = specFilePath(("mudlet-spec-notamovie%s.gif"):format(suffix))
+  local missingFile = specFilePath(("mudlet-spec-there-is-no-such%s.gif"):format(suffix))
+
+  -- every movie function takes a label name first and rejects the same three
+  -- ways, so the shared cases are driven over the whole family
+  -- an array rather than a keyed table so the specs are always generated in
+  -- the same order
+  local movieFunctions = {
+    {"setMovie", function(labelName) return setMovie(labelName, giffile) end},
+    {"startMovie", startMovie},
+    {"pauseMovie", pauseMovie},
+    {"scaleMovie", scaleMovie},
+    {"setMovieSpeed", function(labelName) return setMovieSpeed(labelName, 100) end},
+    {"setMovieFrame", function(labelName) return setMovieFrame(labelName, 0) end},
+  }
+  -- setMovie reports a missing label itself, the rest go through the shared
+  -- label lookup, so the two say it differently
+  local ownsItsLabelLookup = {setMovie = true}
+
+  local function gifStats()
+    local gifs = getProfileStats().gifs
+    return gifs.total, gifs.active
+  end
+
+  setup(function()
+    writeSpecFile(giffile, threeFrameGif())
+    writeSpecFile(notAGifFile, "this is not a GIF at all")
+  end)
+
+  teardown(function()
+    os.remove(giffile)
+    os.remove(notAGifFile)
+  end)
+
+  describe("setMovie", function()
+    local label = "movieSetLabel" .. suffix
+
+    before_each(function()
+      createLabel(label, 10, 10, 60, 30, 1)
+    end)
+
+    after_each(function()
+      deleteLabel(label)
+    end)
+
+    it("returns true and registers the gif with the profile", function()
+      local totalBefore, activeBefore = gifStats()
+      assert.is_true(setMovie(label, giffile))
+      local totalAfter, activeAfter = gifStats()
+      assert.are.equal(totalBefore + 1, totalAfter)
+      -- setMovie starts the movie as well as loading it
+      assert.are.equal(activeBefore + 1, activeAfter)
+    end)
+
+    it("reuses the same movie when called twice on one label", function()
+      assert.is_true(setMovie(label, giffile))
+      local totalAfterFirst = gifStats()
+      assert.is_true(setMovie(label, giffile))
+      local totalAfterSecond = gifStats()
+      assert.are.equal(totalAfterFirst, totalAfterSecond)
+    end)
+
+    it("deleting the label unregisters its gif again", function()
+      local totalBefore = gifStats()
+      assert.is_true(setMovie(label, giffile))
+      assert.are.equal(totalBefore + 1, gifStats())
+      assert.is_true(deleteLabel(label))
+      assert.are.equal(totalBefore, gifStats())
+    end)
+
+    it("returns nil and a message for a file that is not a movie", function()
+      local ok, err = setMovie(label, notAGifFile)
+      assert.is_nil(ok)
+      assert.are.equal(("no valid movie found at '%s'"):format(notAGifFile), err)
+    end)
+
+    it("returns nil and a message for a file that is not there", function()
+      local ok, err = setMovie(label, missingFile)
+      assert.is_nil(ok)
+      assert.are.equal(("no valid movie found at '%s'"):format(missingFile), err)
+    end)
+
+    it("a refused movie leaves no gif registered", function()
+      pending("the QMovie is made and handed to the gif tracker before the file is read, so a refused setMovie still leaves one counted in getProfileStats()")
+    end)
+
+    it("a refused movie over a working one leaves the label driving the dead movie", function()
+      pending("Host::setMovie calls setFileName on the label's live QMovie before it finds out the new file is not a movie, so the label keeps a movie the call said it would not have")
+    end)
+
+    it("a refused movie leaves the label without a movie to drive", function()
+      assert.is_nil(setMovie(label, notAGifFile))
+      local ok, err = startMovie(label)
+      assert.is_nil(ok)
+      assert.are.equal(("no movie found at label '%s'"):format(label), err)
+    end)
+
+    it("hard-errors when the movie path is missing", function()
+      local ok, err = pcall(setMovie, label)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setMovie: bad argument #2 type", 1, true))
+    end)
+
+    it("hard-errors on a non-string movie path", function()
+      local ok, err = pcall(setMovie, label, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setMovie: bad argument #2 type", 1, true))
+    end)
+  end)
+
+  describe("start, pause and the other movie functions", function()
+    local label = "movieRunLabel" .. suffix
+    local labelWithoutMovie = "movieBareLabel" .. suffix
+
+    setup(function()
+      createLabel(labelWithoutMovie, 10, 50, 60, 30, 1)
+    end)
+
+    teardown(function()
+      deleteLabel(labelWithoutMovie)
+    end)
+
+    before_each(function()
+      createLabel(label, 10, 10, 60, 30, 1)
+      assert.is_true(setMovie(label, giffile))
+    end)
+
+    after_each(function()
+      deleteLabel(label)
+    end)
+
+    it("pauseMovie stops the gif counting as active", function()
+      local _, activeWhileRunning = gifStats()
+      assert.is_true(pauseMovie(label))
+      local _, activeWhilePaused = gifStats()
+      assert.are.equal(activeWhileRunning - 1, activeWhilePaused)
+    end)
+
+    it("startMovie makes a paused gif count as active again", function()
+      assert.is_true(pauseMovie(label))
+      local _, activeWhilePaused = gifStats()
+      assert.is_true(startMovie(label))
+      local _, activeAfterStart = gifStats()
+      assert.are.equal(activeWhilePaused + 1, activeAfterStart)
+    end)
+
+    it("startMovie on an already running movie leaves it active", function()
+      local _, activeWhileRunning = gifStats()
+      assert.is_true(startMovie(label))
+      local _, activeAfterStart = gifStats()
+      assert.are.equal(activeWhileRunning, activeAfterStart)
+    end)
+
+    it("setMovieSpeed returns true and does not stop the movie", function()
+      local _, activeBefore = gifStats()
+      assert.is_true(setMovieSpeed(label, 50))
+      local _, activeAfter = gifStats()
+      assert.are.equal(activeBefore, activeAfter)
+      assert.is_true(setMovieSpeed(label, 100))
+    end)
+
+    it("setMovieSpeed hard-errors on a non-number speed", function()
+      local ok, err = pcall(setMovieSpeed, label, "fast")
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setMovieSpeed: bad argument #2 type", 1, true))
+    end)
+
+    it("setMovieFrame answers whether the frame could be jumped to", function()
+      assert.is_true(setMovieFrame(label, 1))
+      -- the fixture only has three frames
+      assert.is_false(setMovieFrame(label, 99))
+      assert.is_false(setMovieFrame(label, -1))
+    end)
+
+    it("setMovieFrame hard-errors on a non-number frame", function()
+      local ok, err = pcall(setMovieFrame, label, "second")
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setMovieFrame: bad argument #2 type", 1, true))
+    end)
+
+    -- the scaling itself is not readable from Lua: all these can check is that
+    -- turning it on and off is accepted and leaves the movie alone
+    it("scaleMovie returns true with, without and against its optional argument", function()
+      assert.is_true(scaleMovie(label))
+      assert.is_true(scaleMovie(label, true))
+      assert.is_true(scaleMovie(label, false))
+      -- turning scaling off and on again must leave the movie usable
+      assert.is_true(scaleMovie(label, true))
+      assert.is_true(startMovie(label))
+    end)
+
+    it("scaleMovie hard-errors on a non-boolean second argument", function()
+      local ok, err = pcall(scaleMovie, label, "yes")
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("scaleMovie: bad argument #2 type", 1, true))
+    end)
+
+    for _, movieFunction in ipairs(movieFunctions) do
+      local functionName, call = movieFunction[1], movieFunction[2]
+
+      it(functionName .. " hard-errors on a label name that is no string", function()
+        local ok, err = pcall(call, {})
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find(functionName .. ": bad argument #1 type", 1, true))
+      end)
+
+      it(functionName .. " returns nil and a message for an empty label name", function()
+        local ok, err = call("")
+        assert.is_nil(ok)
+        assert.are.equal("label name cannot be an empty string", err)
+      end)
+
+      it(functionName .. " returns nil and a message naming an unknown label", function()
+        local unknown = "movieNoSuchLabel" .. suffix
+        local ok, err = call(unknown)
+        assert.is_nil(ok)
+        if ownsItsLabelLookup[functionName] then
+          assert.are.equal(("label '%s' does not exist"):format(unknown), err)
+        else
+          assert.are.equal(('label "%s" not found'):format(unknown), err)
+        end
+      end)
+    end
+
+    for _, movieFunction in ipairs(movieFunctions) do
+      local functionName, call = movieFunction[1], movieFunction[2]
+      if functionName ~= "setMovie" then
+        it(functionName .. " returns nil and a message for a label with no movie", function()
+          local ok, err = call(labelWithoutMovie)
+          assert.is_nil(ok)
+          assert.are.equal(("no movie found at label '%s'"):format(labelWithoutMovie), err)
+        end)
+      end
+    end
+  end)
+end)
+
+describe("Console buffer size", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "bufferSizeConsole" .. suffix
+  local mainLinesLimit, mainBatchSize
+
+  setup(function()
+    createMiniConsole(console, 0, 0, 400, 200)
+    mainLinesLimit, mainBatchSize = getConsoleBufferSize()
+  end)
+
+  teardown(function()
+    deleteMiniConsole(console)
+    setConsoleBufferSize(mainLinesLimit, mainBatchSize)
+  end)
+
+  it("getConsoleBufferSize reports two numbers for the main console", function()
+    local linesLimit, batchSize = getConsoleBufferSize()
+    assert.are.equal("number", type(linesLimit))
+    assert.are.equal("number", type(batchSize))
+    assert.is_true(linesLimit >= 100)
+    assert.is_true(batchSize > 0)
+  end)
+
+  it("setConsoleBufferSize round-trips through getConsoleBufferSize", function()
+    assert.is_true(setConsoleBufferSize(console, 5000, 500))
+    assert.are.same({5000, 500}, {getConsoleBufferSize(console)})
+    assert.is_true(setConsoleBufferSize(console, 1000, 100))
+    assert.are.same({1000, 100}, {getConsoleBufferSize(console)})
+  end)
+
+  it("setConsoleBufferSize round-trips on the main console too", function()
+    assert.is_true(setConsoleBufferSize(2500, 250))
+    assert.are.same({2500, 250}, {getConsoleBufferSize()})
+    assert.is_true(setConsoleBufferSize(mainLinesLimit, mainBatchSize))
+    assert.are.same({mainLinesLimit, mainBatchSize}, {getConsoleBufferSize()})
+  end)
+
+  it("a lines limit under the hundred line floor is raised to it", function()
+    assert.is_true(setConsoleBufferSize(console, 10, 5))
+    local linesLimit = getConsoleBufferSize(console)
+    assert.are.equal(100, linesLimit)
+  end)
+
+  it("a batch deletion size that is not smaller than the limit is cut to a tenth", function()
+    assert.is_true(setConsoleBufferSize(console, 1000, 1000))
+    assert.are.same({1000, 100}, {getConsoleBufferSize(console)})
+  end)
+
+  it("the buffer actually stops growing past the limit that was set", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 10))
+    for lineNumber = 1, 400 do
+      echo(console, ("buffer line %d\n"):format(lineNumber))
+    end
+    local lineCount = getLineCount(console)
+    -- the buffer is trimmed a batch at a time once it is over the limit, so it
+    -- settles within one batch of the limit rather than exactly on it
+    assert.is_true(lineCount <= 110, "line count was " .. lineCount)
+    assert.is_true(lineCount >= 90, "line count was " .. lineCount)
+  end)
+
+  it("a bigger limit lets the same buffer hold more", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 300, 10))
+    for lineNumber = 1, 400 do
+      echo(console, ("buffer line %d\n"):format(lineNumber))
+    end
+    local lineCount = getLineCount(console)
+    assert.is_true(lineCount >= 290, "line count was " .. lineCount)
+    assert.is_true(lineCount <= 310, "line count was " .. lineCount)
+  end)
+
+  it("useMaximum raises the main console to the buffer maximum", function()
+    -- the main console has to be named for this one: with three arguments the
+    -- first is read as a window name, so the four argument form only lines up
+    -- when it is actually given one. The lines limit is then discarded and the
+    -- machine's maximum used instead
+    local before = getConsoleBufferSize()
+    assert.is_true(setConsoleBufferSize("main", 1000, 100, true))
+    local maximum = getConsoleBufferSize()
+    assert.is_true(maximum > 1000, "maximum was " .. maximum)
+    assert.is_true(setConsoleBufferSize(before, mainBatchSize))
+    assert.are.equal(before, getConsoleBufferSize())
+  end)
+
+  it("the useMaximum flag needs the window to be named", function()
+    -- without a name the flag lands in the batch deletion size's place
+    local ok, err = pcall(setConsoleBufferSize, 1000, 100, true)
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("setConsoleBufferSize: bad argument #3 type", 1, true))
+  end)
+
+  it("useMaximum is refused for anything but the main console", function()
+    local ok, err = setConsoleBufferSize(console, 1000, 100, true)
+    assert.is_nil(ok)
+    assert.are.equal("useMaximum parameter is only supported for the main console", err)
+  end)
+
+  it("setConsoleBufferSize hard-errors on a non-number lines limit", function()
+    local ok, err = pcall(setConsoleBufferSize, console, "lots", 100)
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("setConsoleBufferSize: bad argument #2 type", 1, true))
+  end)
+
+  it("setConsoleBufferSize hard-errors on a non-number batch deletion size", function()
+    local ok, err = pcall(setConsoleBufferSize, console, 1000, "some")
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("setConsoleBufferSize: bad argument #3 type", 1, true))
+  end)
+
+  it("both functions return nil and a message naming an unknown window", function()
+    local unknown = "bufferSizeNoSuchWindow" .. suffix
+    local getOk, getErr = getConsoleBufferSize(unknown)
+    assert.is_nil(getOk)
+    assert.are.equal(('window "%s" not found'):format(unknown), getErr)
+    local setOk, setErr = setConsoleBufferSize(unknown, 1000, 100)
+    assert.is_nil(setOk)
+    assert.are.equal(('window "%s" not found'):format(unknown), setErr)
+  end)
+end)
+
+describe("Main window size and saved layout", function()
+  -- resizing is a window manager request, so the size that comes back is only
+  -- ever an approximation of what was asked for; these specs check that the
+  -- request lands and that the reported size follows it, not that it matches
+  local testMode = os.getenv("MUDLET_TEST_MODE") ~= nil
+  local originalWidth, originalHeight
+  -- whether the console reports a size to measure against at all, and whether
+  -- this display honours a resize request - without a window manager it need
+  -- not, and then there is nothing here to measure or to put back
+  local measurable = false
+  local resizable = false
+  -- on a platform where resizing is known to work, a resize that stops working
+  -- is a regression rather than an environment quirk, so the CI legs that can
+  -- resize set this and turn the skips below into failures
+  local resizeRequired = os.getenv("MUDLET_TEST_REQUIRE_WINDOW_RESIZE") ~= nil
+
+  local function resizableWindowAvailable()
+    if not measurable then
+      -- a console that latches to a zero size is a defect of its own, and the
+      -- console metrics specs earlier in this file report it; the resize gate
+      -- is not about that, so it stays out of the way here
+      pending("the console reports no size to measure a resize against")
+      return false
+    end
+    if resizeRequired then
+      assert.is_true(resizable,
+        "MUDLET_TEST_REQUIRE_WINDOW_RESIZE is set, but this display did not honour a resize request")
+      return true
+    end
+    if not resizable then
+      pending("this display does not honour a resize request, so there is nothing to measure")
+      return false
+    end
+    return true
+  end
+
+  -- setMainWindowSize sizes the whole application window while
+  -- getMainWindowSize reports the console area inside it, and the chrome
+  -- between the two (menu bar, profile tabs, toolbars, command line) is not
+  -- readable from Lua. So the size is put back by asking for the console size
+  -- that was wanted and correcting by however much came back short.
+  local function restoreMainWindowSize()
+    if not measurable then
+      return false
+    end
+    local requestedWidth, requestedHeight = originalWidth, originalHeight
+    for _ = 1, 4 do
+      setMainWindowSize(requestedWidth, requestedHeight)
+      pumpEvents(100)
+      local width, height = getMainWindowSize()
+      if width == originalWidth and height == originalHeight then
+        return true
+      end
+      requestedWidth = requestedWidth + (originalWidth - width)
+      requestedHeight = requestedHeight + (originalHeight - height)
+    end
+    return false
+  end
+
+  setup(function()
+    originalWidth, originalHeight = getMainWindowSize()
+    measurable = testMode and originalWidth > 0 and originalHeight > 0
+    if not measurable then
+      return
+    end
+    setMainWindowSize(originalWidth + 300, originalHeight + 300)
+    pumpEvents(200)
+    local width, height = getMainWindowSize()
+    resizable = width > originalWidth and height > originalHeight
+    restoreMainWindowSize()
+  end)
+
+  teardown(restoreMainWindowSize)
+
+  it("setMainWindowSize hard-errors on a non-number width", function()
+    local ok, err = pcall(setMainWindowSize, "wide", 600)
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #1 type", 1, true))
+  end)
+
+  it("setMainWindowSize hard-errors on a non-number height", function()
+    local ok, err = pcall(setMainWindowSize, 800, "tall")
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #2 type", 1, true))
+  end)
+
+  it("a bigger main window is reported as bigger", function()
+    if not resizableWindowAvailable() then
+      return
+    end
+    finally(restoreMainWindowSize)
+    local smallWidth, smallHeight = 700, 500
+    -- and it answers nothing at all while it is at it
+    assert.are.equal(0, select("#", setMainWindowSize(smallWidth, smallHeight)))
+    pumpEvents(200)
+    local narrowWidth, shortHeight = getMainWindowSize()
+
+    setMainWindowSize(smallWidth + 300, smallHeight + 300)
+    pumpEvents(200)
+    local wideWidth, tallHeight = getMainWindowSize()
+
+    assert.is_true(wideWidth > narrowWidth, ("%d was not wider than %d"):format(wideWidth, narrowWidth))
+    assert.is_true(tallHeight > shortHeight, ("%d was not taller than %d"):format(tallHeight, shortHeight))
+    -- the console never claims more room than the window it sits in
+    assert.is_true(wideWidth <= smallWidth + 300)
+    assert.is_true(tallHeight <= smallHeight + 300)
+  end)
+
+  it("the main window can be put back the size it was", function()
+    if not resizableWindowAvailable() then
+      return
+    end
+    setMainWindowSize(640, 480)
+    pumpEvents(200)
+    assert.is_true(restoreMainWindowSize(), "the window could not be put back")
+    assert.are.same({originalWidth, originalHeight}, {getMainWindowSize()})
+  end)
+
+  describe("saveWindowLayout and loadWindowLayout", function()
+    -- the layout lives beside the profiles directory rather than inside the
+    -- profile, so these specs write outside the profile and have to put both
+    -- files back the way they found them
+    local configurationDirectory = getMudletHomeDir():match("^(.*)/profiles/[^/]*$")
+    assert(configurationDirectory, "could not work out the configuration directory from " .. getMudletHomeDir())
+    local layoutFiles = {
+      configurationDirectory .. "/windowLayout.dat",
+      configurationDirectory .. "/windowLayoutGeometry.dat",
+    }
+    local contentsBefore = {}
+
+    setup(function()
+      for _, path in ipairs(layoutFiles) do
+        local handle = io.open(path, "rb")
+        if handle then
+          contentsBefore[path] = handle:read("*a")
+          handle:close()
+        end
+      end
+    end)
+
+    -- after every spec rather than at the end of the block: these are the
+    -- shared files the next Mudlet start reads its layout from, so no more than
+    -- one spec's worth of writing to them is ever outstanding
+    after_each(function()
+      for _, path in ipairs(layoutFiles) do
+        if contentsBefore[path] then
+          writeSpecFile(path, contentsBefore[path])
+        else
+          os.remove(path)
+        end
+      end
+    end)
+
+    it("saveWindowLayout returns true and writes the layout file", function()
+      local layoutFile = layoutFiles[1]
+      -- taking the file away first is what makes this about the call rather
+      -- than about a file an earlier session left behind
+      os.remove(layoutFile)
+      assert.is_nil(lfs.attributes(layoutFile, "mode"))
+      assert.is_true(saveWindowLayout())
+      assert.is_not_nil(lfs.attributes(layoutFile, "mode"), layoutFile .. " was not written")
+      assert.is_true(lfs.attributes(layoutFile, "size") > 0)
+    end)
+
+    it("saving twice in a row keeps returning true", function()
+      -- the underlying save refuses a second time in a row, but the Lua
+      -- function clears that flag before every call
+      assert.is_true(saveWindowLayout())
+      assert.is_true(saveWindowLayout())
+    end)
+
+    it("loadWindowLayout reads back a layout that was saved", function()
+      assert.is_true(saveWindowLayout())
+      assert.is_true(loadWindowLayout())
+      -- loading twice is not refused the way saving twice would be
+      assert.is_true(loadWindowLayout())
+    end)
+
+    it("verifying the restored dock geometry", function()
+      pending("dock widget geometry is not readable from Lua - needs a functional test")
+    end)
+  end)
+end)
+
+describe("Application and profile style sheets", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+
+  teardown(function()
+    -- leave no styling behind for the rest of the suite
+    setAppStyleSheet("")
+    setProfileStyleSheet("")
+  end)
+
+  -- sysAppStyleSheetChange is raised from inside setAppStyleSheet(), before a
+  -- waitForEvent() could be armed, so the handler has to be there first
+  local function collectStyleSheetEvents()
+    local events = {}
+    local handler = registerAnonymousEventHandler("sysAppStyleSheetChange", function(_, ...)
+      events[#events + 1] = {...}
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+    return events
+  end
+
+  describe("setAppStyleSheet", function()
+    it("returns true and raises sysAppStyleSheetChange with the tag and profile", function()
+      local events = collectStyleSheetEvents()
+      local tag = "appStyleTag" .. suffix
+      assert.is_true(setAppStyleSheet("QLabel { color: rgb(1,2,3); }", tag))
+      assert.are.equal(1, #events)
+      assert.are.equal(tag, events[1][1])
+      assert.are.equal(getProfileName(), events[1][2])
+    end)
+
+    it("raises the event with an empty tag when none is given", function()
+      local events = collectStyleSheetEvents()
+      assert.is_true(setAppStyleSheet("QLabel { color: rgb(4,5,6); }"))
+      assert.are.equal(1, #events)
+      assert.are.equal("", events[1][1])
+      assert.are.equal(getProfileName(), events[1][2])
+    end)
+
+    it("accepts an empty style sheet and still announces the change", function()
+      local events = collectStyleSheetEvents()
+      assert.is_true(setAppStyleSheet(""))
+      assert.are.equal(1, #events)
+    end)
+
+    it("hard-errors on a non-string style sheet", function()
+      local ok, err = pcall(setAppStyleSheet, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setAppStyleSheet: bad argument #1 type", 1, true))
+    end)
+
+    it("hard-errors on a non-string tag", function()
+      local ok, err = pcall(setAppStyleSheet, "", {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setAppStyleSheet: bad argument #2 type", 1, true))
+    end)
+
+    it("a rejected call raises no event", function()
+      local events = collectStyleSheetEvents()
+      pcall(setAppStyleSheet, {})
+      assert.are.equal(0, #events)
+    end)
+  end)
+
+  describe("setProfileStyleSheet", function()
+    it("returns true for a style sheet and for an empty one", function()
+      assert.is_true(setProfileStyleSheet("QWidget { color: rgb(7,8,9); }"))
+      assert.is_true(setProfileStyleSheet(""))
+    end)
+
+    it("raises no sysAppStyleSheetChange - it is per profile, not per application", function()
+      local events = collectStyleSheetEvents()
+      assert.is_true(setProfileStyleSheet("QWidget { color: rgb(9,8,7); }"))
+      assert.are.equal(0, #events)
+      setProfileStyleSheet("")
+    end)
+
+    it("hard-errors on a non-string style sheet", function()
+      local ok, err = pcall(setProfileStyleSheet, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setProfileStyleSheet: bad argument #1 type", 1, true))
+    end)
+
+    it("verifying what the profile style sheet actually paints", function()
+      pending("there is no getProfileStyleSheet, and the effect is only visible in a screenshot")
+    end)
+  end)
+end)
+
+-- Lua can create a toolbar and buttons (tempButtonToolbar/tempButton) but not a
+-- push-down one, and it cannot remove either again - so the buttons the button
+-- specs need come from a package that is installed for the block and
+-- uninstalled after it, which takes them away again with it. Installing starts
+-- a profile save, and the uninstall is refused until that save has drained,
+-- which only happens when the event loop runs.
+if not os.getenv("MUDLET_TEST_MODE") then
+
+describe("Toolbar buttons", function()
+  it("needs test mode", function()
+    pending("the button specs install a package for a push-down button, which needs pumpEvents()")
+  end)
+end)
+
+else
+
+describe("Toolbar buttons", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local packageName = "mudlet-spec-buttons" .. suffix
+  local toolbar = "buttonSpecToolbar" .. suffix
+  local pushDownButton = "buttonSpecPushDown" .. suffix
+  local plainButton = "buttonSpecPlain" .. suffix
+  local packageFile = specFilePath(packageName .. ".xml")
+
+  local function actionXml(name, pushButton, isFolder)
+    return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
+      <name>%s</name>
+      <script></script>
+      <css></css>
+      <commandButtonUp></commandButtonUp>
+      <commandButtonDown></commandButtonDown>
+      <icon></icon>
+      <orientation>0</orientation>
+      <location>0</location>
+      <buttonRotation>0</buttonRotation>
+      <sizeX>0</sizeX>
+      <sizeY>0</sizeY>
+      <mButtonState>1</mButtonState>
+      <buttonColumn>1</buttonColumn>
+      <buttonFillerOffset>0</buttonFillerOffset>
+      <posX>0</posX>
+      <posY>0</posY>
+    ]]):format(isFolder, pushButton, name)
+  end
+
+  local function packageXml()
+    return table.concat({
+      [[<?xml version="1.0" encoding="UTF-8"?>]],
+      [[<!DOCTYPE MudletPackage>]],
+      [[<MudletPackage version="1.001">]],
+      [[<ActionPackage>]],
+      actionXml(toolbar, "no", "yes"),
+      actionXml(pushDownButton, "yes", "no"), "</Action>",
+      actionXml(plainButton, "no", "no"), "</Action>",
+      "</Action>",
+      [[</ActionPackage>]],
+      [[</MudletPackage>]],
+    }, "\n")
+  end
+
+  local function waitUntil(condition, timeoutMilliseconds)
+    local waited = 0
+    while waited < timeoutMilliseconds do
+      if condition() then
+        return true
+      end
+      pumpEvents(50)
+      waited = waited + 50
+    end
+    return condition() and true or false
+  end
+
+  local function packageIsInstalled()
+    for _, name in ipairs(getPackages()) do
+      if name == packageName then
+        return true
+      end
+    end
+    return false
+  end
+
+  -- Installing and uninstalling each start a profile save, and Lua cannot ask
+  -- whether one is running - but installPackage() gives it away: while a save is
+  -- in flight it postpones whatever it was asked to do and answers true, even
+  -- for the empty path it would otherwise refuse outright.
+  local function waitForProfileSaveToPass()
+    return waitUntil(function() return installPackage("") == nil end, 5000)
+  end
+
+  setup(function()
+    writeSpecFile(packageFile, packageXml())
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
+    assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
+    assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
+  end)
+
+  teardown(function()
+    -- asking whether the package is here rather than whether setup thought it
+    -- arrived: installPackage() postpones itself behind a running profile save,
+    -- so it can still land after setup gave up waiting, and then nothing else
+    -- would ever take it out of the reused profile again
+    if packageIsInstalled() then
+      -- uninstalling is refused while the save the install started is still
+      -- draining, and that only finishes when the event loop runs
+      assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
+        packageName .. " could not be uninstalled")
+      assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),
+        packageName .. " was still installed after being uninstalled")
+    end
+    -- The save uninstallPackage() asks for is queued, not started there and
+    -- then, so it has to be given the event loop before anything can see it
+    -- running - ask too early and the wait below passes while the save is still
+    -- only pending. It has to finish here rather than during Mudlet's shutdown,
+    -- which gives up waiting after a thousand iterations and tears down around
+    -- the writer that is still going (a segfault on the quicker runners).
+    pumpEvents(300)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save the uninstall queued never finished")
+    pumpEvents(100)
+    assert.is_true(waitForProfileSaveToPass(), "another profile save was queued behind the first")
+    os.remove(packageFile)
+  end)
+
+  describe("setButtonState and getButtonState", function()
+    after_each(function()
+      setButtonState(pushDownButton, false)
+    end)
+
+    it("round-trips a button state by name", function()
+      assert.is_false(getButtonState(pushDownButton))
+      assert.is_true(setButtonState(pushDownButton, true))
+      assert.is_true(getButtonState(pushDownButton))
+      assert.is_true(setButtonState(pushDownButton, false))
+      assert.is_false(getButtonState(pushDownButton))
+    end)
+
+    it("setButtonState answers false when the state was already what was asked for", function()
+      assert.is_true(setButtonState(pushDownButton, true))
+      assert.is_false(setButtonState(pushDownButton, true))
+      -- and the state it reported no change to is still the one that was asked for
+      assert.is_true(getButtonState(pushDownButton))
+    end)
+
+    it("both refuse an item ID that is no button", function()
+      local getOk, getErr = getButtonState(999999)
+      assert.is_nil(getOk)
+      assert.are.equal("no button item with ID 999999 found", getErr)
+      local setOk, setErr = setButtonState(999999, true)
+      assert.is_nil(setOk)
+      assert.are.equal("no button item with ID 999999 found", setErr)
+    end)
+
+    it("getButtonState with no arguments answers the console's own button state", function()
+      -- with no arguments this answers TConsole::mButtonState, which is 1 or 2
+      -- rather than the boolean the named form answers, and which only a real
+      -- click on a push-down button writes - setButtonState never touches it
+      local before = getButtonState()
+      assert.is_true(before == 1 or before == 2, "state was " .. tostring(before))
+      setButtonState(pushDownButton, true)
+      assert.are.equal(before, getButtonState())
+    end)
+
+    it("both refuse a button that is not a push-down one", function()
+      local getOk, getErr = getButtonState(plainButton)
+      assert.is_nil(getOk)
+      assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), getErr)
+      local setOk, setErr = setButtonState(plainButton, true)
+      assert.is_nil(setOk)
+      assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), setErr)
+    end)
+
+    it("both refuse a name that is no button at all", function()
+      local unknown = "buttonSpecNoSuchButton" .. suffix
+      local getOk, getErr = getButtonState(unknown)
+      assert.is_nil(getOk)
+      assert.are.equal(("no button item with name '%s' found"):format(unknown), getErr)
+      local setOk, setErr = setButtonState(unknown, true)
+      assert.is_nil(setOk)
+      assert.are.equal(("no button item with name '%s' found"):format(unknown), setErr)
+    end)
+
+    it("both refuse an empty button name", function()
+      local getOk, getErr = getButtonState("")
+      assert.is_nil(getOk)
+      assert.are.equal("item name must not be an empty string", getErr)
+      local setOk, setErr = setButtonState("", true)
+      assert.is_nil(setOk)
+      assert.are.equal("item name must not be an empty string", setErr)
+    end)
+
+    it("both refuse a negative item ID", function()
+      local getOk, getErr = getButtonState(-1)
+      assert.is_nil(getOk)
+      assert.is_truthy(tostring(getErr):find("must be equal or greater than zero", 1, true))
+      local setOk, setErr = setButtonState(-1, true)
+      assert.is_nil(setOk)
+      assert.is_truthy(tostring(setErr):find("must be equal or greater than zero", 1, true))
+    end)
+
+    it("setButtonState hard-errors when the state is not a boolean", function()
+      local ok, err = pcall(setButtonState, pushDownButton, "down")
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setButtonState: bad argument #2 type", 1, true))
+    end)
+
+    it("both hard-error when the button is given as neither a name nor an ID", function()
+      local getOk, getErr = pcall(getButtonState, {})
+      assert.is_false(getOk)
+      assert.is_truthy(tostring(getErr):find("getButtonState: bad argument #1 type", 1, true))
+      local setOk, setErr = pcall(setButtonState, {}, true)
+      assert.is_false(setOk)
+      assert.is_truthy(tostring(setErr):find("setButtonState: bad argument #1 type", 1, true))
+    end)
+  end)
+
+  describe("setButtonStyleSheet", function()
+    it("returns true for an existing button", function()
+      assert.is_true(setButtonStyleSheet(pushDownButton, "QPushButton { color: rgb(3,2,1); }"))
+      assert.is_true(setButtonStyleSheet(plainButton, ""))
+    end)
+
+    it("styles a button that is not a push-down one too", function()
+      assert.is_true(setButtonStyleSheet(plainButton, "QPushButton { color: rgb(9,9,9); }"))
+    end)
+
+    it("returns nil and a message naming a button that is not there", function()
+      local unknown = "buttonSpecNoSuchButton" .. suffix
+      local ok, err = setButtonStyleSheet(unknown, "")
+      assert.is_nil(ok)
+      assert.are.equal(("no button named '%s' found"):format(unknown), err)
+    end)
+
+    it("hard-errors on a non-string name", function()
+      local ok, err = pcall(setButtonStyleSheet, {}, "")
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setButtonStyleSheet: bad argument #1 type", 1, true))
+    end)
+
+    it("hard-errors on a non-string style sheet", function()
+      local ok, err = pcall(setButtonStyleSheet, pushDownButton, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setButtonStyleSheet: bad argument #2 type", 1, true))
+    end)
+
+    it("verifying what the button style sheet actually paints", function()
+      pending("there is no getButtonStyleSheet, and the effect is only visible in a screenshot")
+    end)
+  end)
+
+  describe("showToolBar and hideToolBar", function()
+    -- both answer nothing at all, but they flip the active flag of the action
+    -- the toolbar was built from, which isActive() reads back. For a toolbar
+    -- that came out of a package that action is the package's own folder
+    -- rather than the toolbar, so the package's name is what they answer to
+    local function toolbarActive()
+      return isActive(packageName, "button")
+    end
+
+    after_each(function()
+      showToolBar(packageName)
+    end)
+
+    it("hideToolBar deactivates the toolbar and showToolBar activates it again", function()
+      assert.are.equal(1, toolbarActive())
+      assert.are.equal(0, select("#", hideToolBar(packageName)))
+      assert.are.equal(0, toolbarActive())
+      assert.are.equal(0, select("#", showToolBar(packageName)))
+      assert.are.equal(1, toolbarActive())
+    end)
+
+    it("hiding and showing repeatedly ends up where it started", function()
+      hideToolBar(packageName)
+      showToolBar(packageName)
+      hideToolBar(packageName)
+      showToolBar(packageName)
+      assert.are.equal(1, toolbarActive())
+      assert.is_true(setButtonStyleSheet(pushDownButton, ""))
+    end)
+
+    it("a name that is no toolbar is refused", function()
+      pending("both walk the toolbar list and do nothing at all when no name matches, so a typo is silent")
+    end)
+
+    it("a packaged toolbar answering to its own name", function()
+      pending("regenerateEasyButtonBars builds a package's toolbars against the package's own action, so hideToolBar only answers to the package name and moves every toolbar in the package at once")
+    end)
+
+    it("both hard-error on a non-string toolbar name", function()
+      local hideOk, hideErr = pcall(hideToolBar, {})
+      assert.is_false(hideOk)
+      assert.is_truthy(tostring(hideErr):find("bad argument #1", 1, true))
+      local showOk, showErr = pcall(showToolBar, {})
+      assert.is_false(showOk)
+      assert.is_truthy(tostring(showErr):find("bad argument #1", 1, true))
+    end)
+
+    it("verifying that the toolbar is really on screen", function()
+      pending("toolbar visibility is not readable from Lua - needs a functional test")
+    end)
+  end)
+end)
+
+end
+
+describe("Command line actions and suggestions", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local cmdLine = "cmdActionLine" .. suffix
+  local unknown = "cmdActionNoSuchLine" .. suffix
+
+  setup(function()
+    createCommandLine(cmdLine, 10, 10, 150, 30)
+  end)
+
+  teardown(function()
+    deleteCommandLine(cmdLine)
+  end)
+
+  describe("setCmdLineAction", function()
+    after_each(function()
+      resetCmdLineAction(cmdLine)
+    end)
+
+    it("returns true for a command line that exists", function()
+      assert.is_true(setCmdLineAction(cmdLine, function() end))
+    end)
+
+    it("replacing an action returns true again", function()
+      assert.is_true(setCmdLineAction(cmdLine, function() end))
+      assert.is_true(setCmdLineAction(cmdLine, function() end))
+    end)
+
+    it("returns nil and a message naming a command line that is not there", function()
+      local ok, err = setCmdLineAction(unknown, function() end)
+      assert.is_nil(ok)
+      assert.are.equal(("command line name '%s' not found"):format(unknown), err)
+    end)
+
+    it("refuses the main command line, which takes no action", function()
+      -- only command lines made with createCommandLine can carry an action
+      local ok, err = setCmdLineAction("main", function() end)
+      assert.is_nil(ok)
+      assert.are.equal("command line name 'main' not found", err)
+    end)
+
+    it("returns nil and a message for an empty command line name", function()
+      local ok, err = setCmdLineAction("", function() end)
+      assert.is_nil(ok)
+      assert.are.equal("command line name cannot be an empty string", err)
+    end)
+
+    it("hard-errors on a non-string command line name", function()
+      local ok, err = pcall(setCmdLineAction, {}, function() end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setCmdLineAction: bad argument #1 type", 1, true))
+    end)
+
+    it("takes the action as the name of a function to call, not only as a function", function()
+      -- the Lua wrapper compiles a string argument as "return <string>(...)", so
+      -- it has to name something callable rather than be a statement
+      assert.is_true(setCmdLineAction(cmdLine, "echo"))
+    end)
+
+    it("hard-errors when the action is neither a function nor a string", function()
+      local ok, err = pcall(setCmdLineAction, cmdLine, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setCmdLineAction: bad argument #2 type (function expected, got table!)", 1, true))
+    end)
+
+    it("hard-errors when no action is given at all", function()
+      local ok, err = pcall(setCmdLineAction, cmdLine)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setCmdLineAction: bad argument #2 type (function expected, got nil!)", 1, true))
+    end)
+
+    it("the action actually running on a typed command", function()
+      pending("the callback only fires on a typed Enter - needs a functional test")
+    end)
+  end)
+
+  describe("resetCmdLineAction", function()
+    it("returns true after an action was set", function()
+      assert.is_true(setCmdLineAction(cmdLine, function() end))
+      assert.is_true(resetCmdLineAction(cmdLine))
+    end)
+
+    it("returns true even when no action was ever set", function()
+      assert.is_true(resetCmdLineAction(cmdLine))
+    end)
+
+    it("returns nil and a message naming a command line that is not there", function()
+      local ok, err = resetCmdLineAction(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("command line name '%s' not found"):format(unknown), err)
+    end)
+
+    it("returns nil and a message for an empty command line name", function()
+      local ok, err = resetCmdLineAction("")
+      assert.is_nil(ok)
+      assert.are.equal("command line name cannot be an empty string", err)
+    end)
+
+    it("hard-errors on a non-string command line name", function()
+      local ok, err = pcall(resetCmdLineAction, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("resetCmdLineAction: bad argument #1 type", 1, true))
+    end)
+  end)
+
+  describe("clearCmdLineSuggestions", function()
+    it("returns nothing at all for the main command line", function()
+      assert.are.equal(0, select("#", clearCmdLineSuggestions()))
+    end)
+
+    it("returns nothing at all for a named command line", function()
+      addCmdLineSuggestion(cmdLine, "suggested")
+      assert.are.equal(0, select("#", clearCmdLineSuggestions(cmdLine)))
+    end)
+
+    it("returns nil and a message naming a command line that is not there", function()
+      local ok, err = clearCmdLineSuggestions(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(('command line "%s" not found'):format(unknown), err)
+    end)
+
+    it("hard-errors on a non-string command line name", function()
+      local ok, err = pcall(clearCmdLineSuggestions, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("bad argument #1", 1, true))
+    end)
+
+    it("checking that the suggestion list is really empty", function()
+      pending("there is no getCmdLineSuggestions to read the list back with")
+    end)
+  end)
+end)
+
+describe("setPopup", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "popupConsole" .. suffix
+  local unknown = "popupNoSuchWindow" .. suffix
+
+  setup(function()
+    createMiniConsole(console, 0, 0, 400, 200)
+  end)
+
+  teardown(function()
+    deleteMiniConsole(console)
+  end)
+
+  before_each(function()
+    clearWindow(console)
+    echo(console, "popup me\n")
+    moveCursor(console, 0, 0)
+    selectString(console, "popup me", 1)
+  end)
+
+  it("returns true for matching command and hint tables", function()
+    assert.is_true(setPopup(console, {"one", "two"}, {"first", "second"}))
+  end)
+
+  it("accepts one extra hint for the popup's own title", function()
+    assert.is_true(setPopup(console, {"one", "two"}, {"title", "first", "second"}))
+  end)
+
+  it("accepts functions in place of command strings", function()
+    assert.is_true(setPopup(console, {function() end, function() end}, {"first", "second"}))
+  end)
+
+  it("returns nil and a message when there are too few hints", function()
+    local ok, err = setPopup(console, {"one", "two"}, {"only one"})
+    assert.is_nil(ok)
+    assert.is_truthy(tostring(err):find("command table and hint table sizes do not match up", 1, true))
+  end)
+
+  it("returns nil and a message when there are too many hints", function()
+    local ok, err = setPopup(console, {"one"}, {"first", "second", "third"})
+    assert.is_nil(ok)
+    assert.is_truthy(tostring(err):find("command table and hint table sizes do not match up", 1, true))
+  end)
+
+  it("hard-errors when the commands are not a table", function()
+    local ok, err = pcall(setPopup, console, "one", {"first"})
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("setPopup: bad argument", 1, true))
+  end)
+
+  it("hard-errors when the hints are not a table", function()
+    local ok, err = pcall(setPopup, console, {"one"}, "first")
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("setPopup: bad argument", 1, true))
+  end)
+
+  it("returns nil and a message naming a window that is not there", function()
+    local ok, err = setPopup(unknown, {"one"}, {"first"})
+    assert.is_nil(ok)
+    assert.are.equal(('window "%s" not found'):format(unknown), err)
+  end)
+
+  it("opening the popup menu and picking an entry", function()
+    pending("the menu only opens on a real right-click - needs a functional test")
+  end)
+end)
+
+describe("Labels inside a user window", function()
+  -- user windows cannot be deleted from Lua, only hidden, so the name is
+  -- unique per run
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local userWindow = "labelUserWindow" .. suffix
+  local label = "labelInUserWindow" .. suffix
+
+  setup(function()
+    -- loadLayout is off so a saved layout cannot move the window under us
+    openUserWindow(userWindow, false)
+  end)
+
+  teardown(function()
+    hideWindow(userWindow)
+  end)
+
+  before_each(function()
+    createLabel(userWindow, label, 5, 6, 120, 40, 1)
+  end)
+
+  after_each(function()
+    deleteLabel(label)
+  end)
+
+  it("the label really is inside the user window, not the main window", function()
+    -- createLabel falls back to the main window without a word when the parent
+    -- window name matches nothing, so a spec that only reads the label back
+    -- would pass either way; hiding the parent is what tells them apart
+    assert.is_true(windowVisible(label))
+    hideWindow(userWindow)
+    assert.is_false(windowVisible(label))
+    showWindow(userWindow)
+    assert.is_true(windowVisible(label))
+  end)
+
+  it("a parent window name that matches nothing is refused", function()
+    pending("createLabel puts the label in the main window and answers true when the parent window name is not a window")
+  end)
+
+  it("echo puts text on a label that lives in a user window", function()
+    echo(label, "in the user window")
+    assert.is_truthy(getLabelText(label):find("in the user window", 1, true))
+  end)
+
+  it("resizeWindow and moveWindow work on it just as in the main window", function()
+    resizeWindow(label, 200, 60)
+    moveWindow(label, 15, 25)
+    assert.are.same({15, 25, 200, 60}, {getWindowGeometry(label)})
+  end)
+
+  it("hideWindow and showWindow work on it", function()
+    -- hideWindow answers nothing at all where showWindow answers a boolean
+    assert.are.equal(0, select("#", hideWindow(label)))
+    assert.is_false(windowVisible(label))
+    assert.is_true(showWindow(label))
+    assert.is_true(windowVisible(label))
+  end)
+
+  it("takes the fill background flag as a number as well as a boolean", function()
+    local numberFlag = "labelNumberFlag" .. suffix
+    local booleanFlag = "labelBooleanFlag" .. suffix
+    finally(function()
+      deleteLabel(numberFlag)
+      deleteLabel(booleanFlag)
+    end)
+    assert.is_true(createLabel(userWindow, numberFlag, 0, 0, 20, 10, 1))
+    assert.is_true(createLabel(userWindow, booleanFlag, 0, 15, 20, 10, true))
+  end)
+
+  it("takes the optional clickthrough flag", function()
+    local clickthrough = "labelClickthrough" .. suffix
+    finally(function() deleteLabel(clickthrough) end)
+    assert.is_true(createLabel(userWindow, clickthrough, 0, 30, 20, 10, 1, 1))
+  end)
+
+  it("hard-errors on a non-boolean, non-number fill background flag", function()
+    local ok, err = pcall(createLabel, userWindow, "labelBadFill" .. suffix, 0, 0, 20, 10, "fill")
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("createLabel: bad argument #7 type", 1, true))
+  end)
+
+  it("hard-errors on a non-boolean, non-number clickthrough flag", function()
+    local ok, err = pcall(createLabel, userWindow, "labelBadClick" .. suffix, 0, 0, 20, 10, 1, "through")
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("createLabel: bad argument #8 type", 1, true))
+  end)
+
+  it("hard-errors on a non-number label width", function()
+    local ok, err = pcall(createLabel, userWindow, "labelBadWidth" .. suffix, 0, 0, "wide", 10, 1)
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("createLabel: bad argument #5 type (label width", 1, true))
   end)
 end)

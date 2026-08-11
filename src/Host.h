@@ -57,6 +57,11 @@
 #include "TMxpProcessor.h"
 #include "TMxpFrameManager.h"
 
+namespace pugi {
+class xml_document;
+}
+
+class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
 
@@ -195,9 +200,11 @@ public:
     void setPass(const QString& password) { mPass = password; }
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
     // True once the user has sent any command to the game on the current connection. It gates whether
-    // an unsolicited GMCP Char.Login.URL may auto-open the browser: a URL that arrives only after the
+    // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
     // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
     // input, whereas one at an untouched connection is not and must not silently launch a browser.
+    // GMCPAuthenticator clears it again when it auto-opens, so one player action can launch at most
+    // one browser hand-off however many sign-in addresses the game pushes.
     bool userSentInputThisConnection() const { return mUserSentInputThisConnection; }
     void setUserSentInputThisConnection(const bool b) { mUserSentInputThisConnection = b; }
     int getRetries() { return mRetries; }
@@ -361,6 +368,9 @@ public:
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether a package install or uninstall still owes the profile a save - see
+    // mDeferredSaveTimer.
+    bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
     void waitForProfileSave();
     void clearDiscordData();
@@ -406,6 +416,7 @@ public:
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
+    QDockWidget* mapWidget() const;
 
     // Multiple map views support
     std::pair<int, QString> createMapView(int areaId = 0);
@@ -863,6 +874,12 @@ public:
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
 
+    // Turning this off both ignores incoming OSC 8 sequences and advertises 0
+    // for them, so a server can fall back to MXP or plain text rather than
+    // sending links Mudlet will not render. It is checked as sequences are
+    // decoded, so links already drawn in the buffer stay clickable.
+    bool mEnableOSC8Hyperlinks = true;
+
     enum class BlankLineBehaviour { Show, Hide, ReplaceWithSpace };
     Q_ENUM(BlankLineBehaviour)
     BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
@@ -905,6 +922,7 @@ signals:
 
 private slots:
     void slot_purgeTemps();
+    void slot_saveProfileAfterPackageChange();
 
 private:
     void setBorders(const QMargins);
@@ -919,33 +937,37 @@ private:
     void createMapper(const bool);
     void removePackageInfo(const QString& packageName, const bool);
     static void createModuleBackup(const QString& filename, const QString& saveName);
-    // A single module queued to be written out during a profile save. Its XML
-    // document is built on the main thread (writer->writeModuleXML()); serializing
-    // it to disk is deferred to a background task so that no shared save-bookkeeping
-    // is touched off the main thread. `writer` is a non-owning pointer: the owning
-    // std::shared_ptr lives only in `writers` (removed on the main thread), so the
-    // XMLexport - a QObject with main-thread affinity - is always destroyed there.
+    // A single module queued to be written out during a profile save. Its XML document
+    // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
+    // is deferred to a background task. The job is a complete, self-contained order:
+    // its own copy of the document plus every path the write needs, so it holds nothing
+    // whose lifetime the Host controls. It has to: a close that answers "No" to "Save
+    // profile?", and one that finds the main console already gone, wait for nothing, so
+    // the Host can be destroyed while the write is still queued.
     struct ModuleWriteJob
     {
-        XMLexport* writer = nullptr;
+        std::shared_ptr<pugi::xml_document> document;
         QString moduleName;
         QString filename;
         QString xmlFilename;
-        bool backup = false;
+        // Empty when this save is not to be backed up first.
+        QString backupName;
     };
-    // Main thread only: builds every to-be-synced module's XML document and registers
-    // its writer in `writers`, returning the jobs a background task should serialize.
+    // Main thread only: builds every to-be-synced module's XML document, registers its
+    // writer in `writers`, resolves every path and creates the directories the write
+    // needs, returning the jobs a background task should serialize.
     QList<ModuleWriteJob> prepareModuleSaves(bool backup);
-    // Background thread: writes the prepared module documents (and updates their zips)
-    // to disk. Touches no shared save-bookkeeping (not `writers`, `modulesToWrite` nor
-    // `mModulesToSync`).
-    void writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    // Writes the prepared module documents (and updates their zips) to disk. Static on
+    // purpose: it must keep working after the Host that ordered it has been destroyed,
+    // so it may not reach for any member. Usually a thread pool task, but a waiter in
+    // waitForProfileSave() can steal it onto the main thread, so it must suit either.
+    static void writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    static void updateModuleZip(const ModuleWriteJob& job);
     // Main thread only: snapshot of the still-pending profile-save futures, so a
     // background task never reads `writers`/`saveFutures` while the main thread mutates
     // them (that concurrent access is a heap-corrupting data race).
     QList<QFuture<bool>> pendingXmlSaveFutures() const;
     void waitForAsyncXmlSave();
-    void updateModuleZips(const QString& zipName, const QString& moduleName);
     void reloadModules();
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
@@ -971,8 +993,15 @@ private:
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
     GifTracker mGifTracker;
-    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
-    std::optional<bool> mSaveTimer;
+    // The profile save that a package/module install or uninstall owes is put off
+    // to the next event loop pass, so that the asynchronous save mechanism is not
+    // asked to write out something that was just taken out of memory. Restarting
+    // this timer also folds a batch of installs/uninstalls into a single save.
+    // It has to be a member timer rather than a QTimer::singleShot(): a call
+    // queued on the Host is still delivered after the Host has been destroyed,
+    // and the save then reads freed members - closeChildren() and ~Host() stop
+    // this one instead (#9653).
+    QTimer mDeferredSaveTimer;
 
     QFile mErrorLogFile;
 

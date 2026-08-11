@@ -265,7 +265,7 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
         }
         return false;
     }
-    feed->downloadRelease(release);
+    feed->downloadRelease(release, /*requireChecksums=*/true);
     return true;
 }
 
@@ -319,8 +319,16 @@ void Updater::setupPlatformUpdater()
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+        // Only a check the user started reaches the console. An automatic one
+        // runs twice a day whether or not anybody is interested, so its failures
+        // would just repeat in red; once the update dialog is listening it
+        // reports them itself.
+        if (mManualCheckInProgress) {
+            qWarning() << "Manual update download failed:" << error;
+            emit signal_updateCheckFailed(error);
+            return;
+        }
         qWarning() << "Automatic update download failed:" << error;
-        emit signal_updateCheckFailed(error);
     });
 }
 #endif // !Q_OS_MACOS

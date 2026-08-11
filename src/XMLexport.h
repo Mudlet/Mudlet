@@ -67,7 +67,8 @@ public:
     void writeKey(TKey*, pugi::xml_node xmlParent);
     void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false);
     void writeModuleXML(const QString& moduleName);
-    bool saveModuleXml(const QString& fileName);
+    std::shared_ptr<pugi::xml_document> takeExportDocument();
+    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
 
     bool exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true, bool ignoreVariables = false);
@@ -111,7 +112,6 @@ private:
     static inline void replaceAll(std::string& source, const std::string& from, const std::string& to);
     bool saveXmlFile(QSaveFile& file);
     bool saveXml(const QString&);
-    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
     pugi::xml_node writeXmlHeader();
     static void sanitizeForQxml(std::string& output);
     void runAsyncSave(const QString& fileName, const QString& xmlSavedKey);

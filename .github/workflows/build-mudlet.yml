@@ -78,8 +78,15 @@ jobs:
         cache: true
         modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
 
-    - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.4.0
+    - name: Cache Lua build
+      uses: actions/cache@v6
+      with:
+        path: .lua
+        # Not gh-actions-lua's own buildCache: that shares one key across
+        # runner images, and a .lua built on ubuntu-latest cannot run on
+        # ubuntu-22.04 (newer glibc). The action skips its lua.org download
+        # whenever .lua already exists.
+        key: lua-${{ env.LUA_VERSION }}-${{ matrix.os }}-${{ runner.arch }}
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
@@ -396,21 +403,16 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
@@ -593,8 +595,8 @@ jobs:
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      # Longer than the other platforms': this leg also drives the real
-      # discord-rpc library, whose reconnects happen in wall-clock time.
+      # This leg drives the real discord-rpc library, whose reconnects
+      # happen in wall-clock time.
       timeout-minutes: 3
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
@@ -628,7 +630,8 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 1
+      # The suite alone can run past a minute on the slower Intel runners
+      timeout-minutes: 3
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'

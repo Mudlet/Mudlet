@@ -87,6 +87,21 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
+    // There is one window in which a command line's destroyed() handler is unsafe:
+    // after this console's members - mSubCommandLineMap among them - have been
+    // destroyed, but before ~QObject severs incoming connections. The only command
+    // lines that can be destroyed inside it are the ones QWidget::~QWidget deletes,
+    // i.e. this console's own children, so sweeping those is enough. Command lines
+    // created into a user window belong to a TDockWidget reparented onto the main
+    // window instead, and can only die after ~QObject has already dropped the
+    // connection. Children rather than map entries, because deleteCommandLine() and
+    // resetMainConsole() drop the entry while the widget lives on until its
+    // deferred delete is delivered.
+    for (auto commandLine : findChildren<TCommandLine*>()) {
+        disconnect(commandLine, &QObject::destroyed, this, nullptr);
+    }
+    mSubCommandLineMap.clear();
+
     // Neither is a child of this console: the map dock is reparented onto the main
     // window by addDockWidget(), and the unpacking dialog is parentless. So neither
     // dies with the console automatically.
@@ -520,11 +535,10 @@ void TMainConsole::resetMainConsole()
         itDockWidget.remove();
     }
 
-    QMutableMapIterator<QString, TCommandLine*> itCommandLine(mSubCommandLineMap);
-    while (itCommandLine.hasNext()) {
-        itCommandLine.next();
-        itCommandLine.value()->deleteLater();
-        itCommandLine.remove();
+    const QList<TCommandLine*> commandLines = mSubCommandLineMap.values();
+    for (auto commandLine : commandLines) {
+        deregisterSubCommandLine(commandLine);
+        commandLine->deleteLater();
     }
 
     // Remaining SubConsole/Buffer entries (UserWindow ones were already removed above)
@@ -739,8 +753,12 @@ std::pair<bool, QString> TMainConsole::deleteCommandLine(const QString& name)
         return {false, QLatin1String("a command line cannot have an empty string as its name")};
     }
 
-    auto pCmdLine = mSubCommandLineMap.take(name);
+    auto pCmdLine = mSubCommandLineMap.value(name);
     if (pCmdLine) {
+        // Deregister rather than just take() the entry: the widget outlives this
+        // call until its deferred delete is delivered, and its destroyed() handler
+        // must not be left armed for a console that may be gone by then.
+        deregisterSubCommandLine(pCmdLine);
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -914,12 +932,15 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             }
 
             mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
-
-            TEvent mapOpenEvent{};
-            mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-            mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mpHost->raiseEvent(mapOpenEvent);
+        } else {
+            mpMapper->updateAreaComboBox();
+            mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
+
+        TEvent mapOpenEvent{};
+        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mapOpenEvent);
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -960,13 +981,44 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         } else {
             pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
         }
-        mSubCommandLineMap[name] = pN;
+        registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
         pN->show();
         return {true, QString()};
     }
     return {false, QLatin1String("couldn't create commandLine")};
+}
+
+void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCommandLine)
+{
+    if (auto pDisplaced = mSubCommandLineMap.value(name); pDisplaced && pDisplaced != pCommandLine) {
+        // Would otherwise be left connected but unreachable by name
+        deregisterSubCommandLine(pDisplaced);
+    }
+    mSubCommandLineMap[name] = pCommandLine;
+
+    // A TCommandLine is always a child widget of something else - the miniconsole
+    // it is embedded in, or the user window / scroll box it was created into - so
+    // it can be destroyed without deleteCommandLine() ever being called, and this
+    // map does not hold QPointers. Without this the entry outlives the widget and
+    // every later lookup of the name reads freed memory; TConsole::setFont() walks
+    // the whole map, so even changing the display font in Preferences hits it.
+    connect(pCommandLine, &QObject::destroyed, this, [this, pCommandLine]() {
+        deregisterSubCommandLine(pCommandLine);
+    });
+}
+
+void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
+{
+    // This is the only destroyed() connection made from a command line to this
+    // console, so severing all of them is severing just that one.
+    disconnect(pCommandLine, &QObject::destroyed, this, nullptr);
+    // Erase by value rather than by name: a replacement command line may have been
+    // registered under the same name in the meantime and must be left in place.
+    mSubCommandLineMap.removeIf([pCommandLine](const auto& it) {
+        return it.value() == pCommandLine;
+    });
 }
 
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
@@ -1085,32 +1137,32 @@ bool TMainConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pL) {
         pL->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pS) {
         pS->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pN) {
         pN->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pT) {
         pT->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     return false;

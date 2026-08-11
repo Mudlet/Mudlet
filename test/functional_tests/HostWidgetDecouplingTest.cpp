@@ -35,6 +35,8 @@
 #include <QLabel>
 #include <QTemporaryDir>
 
+#include <zip.h>
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -218,8 +220,9 @@ private slots:
 
         QTemporaryDir packageDir;
         QVERIFY2(packageDir.isValid(), "Could not create a temporary directory for the test package.");
-        const QString packagePath = packageDir.filePath(qsl("HostWidgetDecouplingPackage.zip"));
-        QVERIFY2(writeEmptyZipArchive(packagePath), "Could not write the test package archive.");
+        const QString packageName = qsl("HostWidgetDecouplingPackage");
+        const QString packagePath = packageDir.filePath(qsl("%1.zip").arg(packageName));
+        QVERIFY2(writePackageArchive(packagePath, packageName), "Could not write the test package archive.");
 
         // installPackage() postpones the whole install (and so emits nothing) if a
         // profile save is still in flight from loading the profile.
@@ -323,20 +326,32 @@ private slots:
         }
     }
 
-    // Utility function producing the smallest valid zip archive there is: a lone
-    // end-of-central-directory record holding no entries. installPackage() only
-    // has to find a real archive to unpack for the dialog wiring to be exercised;
-    // what is inside it is beside the point here.
-    bool writeEmptyZipArchive(const QString& path)
+    // Utility function producing the smallest package archive that installs: a
+    // zip holding one Mudlet package XML with nothing in it. An archive with no
+    // package XML at all is refused (it would install nowhere and could never be
+    // uninstalled), so the dialog wiring this test is about needs a real one.
+    bool writePackageArchive(const QString& path, const QString& packageName)
     {
-        static const char endOfCentralDirectoryRecord[22] = {'P', 'K', '\x05', '\x06'};
-        QFile archive(path);
-        if (!archive.open(QIODevice::WriteOnly)) {
+        static const char packageXml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                         "<!DOCTYPE MudletPackage>\n"
+                                         "<MudletPackage version=\"1.001\">\n"
+                                         "<TriggerPackage /><TimerPackage /><AliasPackage /><ActionPackage />\n"
+                                         "<ScriptPackage /><KeyPackage /><VariablePackage><HiddenVariables /></VariablePackage>\n"
+                                         "</MudletPackage>\n";
+
+        int errorCode = 0;
+        zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+        if (!archive) {
             return false;
         }
-        const bool written = archive.write(endOfCentralDirectoryRecord, sizeof(endOfCentralDirectoryRecord)) == static_cast<qint64>(sizeof(endOfCentralDirectoryRecord));
-        archive.close();
-        return written;
+        // sizeof - 1 to leave the terminating null out of the archived file
+        zip_source* source = zip_source_buffer(archive, packageXml, sizeof(packageXml) - 1, 0);
+        if (!source || zip_file_add(archive, qsl("%1.xml").arg(packageName).toUtf8().constData(), source, ZIP_FL_ENC_UTF_8) < 0) {
+            zip_source_free(source);
+            zip_discard(archive);
+            return false;
+        }
+        return zip_close(archive) == 0;
     }
 
     // Utility function

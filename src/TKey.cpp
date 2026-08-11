@@ -103,6 +103,27 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
 }
 
 
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    // Also covers the dereference below - isActive() is false once mpMyChildrenList is gone
+    if (!isActive()) {
+        return false;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return true;
+    }
+
+    for (auto childKey : *mpMyChildrenList) {
+        if (childKey->wouldMatch(key, modifier)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 bool TKey::registerKey()
 {
     if (!mpHost) {

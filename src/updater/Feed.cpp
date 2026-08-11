@@ -91,11 +91,29 @@ QList<Release> Feed::getReleases() const
 
 QList<Release> Feed::getUpdates(const Release& currentRelease) const
 {
+    return selectUpdates(mReleases, currentRelease);
+}
+
+QList<Release> Feed::selectUpdates(const QList<Release>& releases, const Release& currentRelease)
+{
     QList<Release> updates;
-    for (const auto& release : mReleases) {
-        if (currentRelease.getVersion().toLower() != release.getVersion().toLower() && currentRelease < release) {
-            updates << release;
+    for (const auto& release : releases) {
+        if (currentRelease.getVersion().toLower() == release.getVersion().toLower() || !(currentRelease < release)) {
+            continue;
         }
+        const QUrl downloadUrl = release.getDownloadUrl();
+        if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+            continue;
+        }
+        // Release warns about the missing binary itself; nothing else notices a
+        // release that has one but cannot be verified, and the user is only
+        // told they are up to date
+        const QUrl checksumsUrl = release.getChecksumsUrl();
+        if (!checksumsUrl.isValid() || checksumsUrl.isEmpty()) {
+            qWarning() << "Release" << release.getVersion() << "publishes no checksums to verify its download against - passing it over";
+            continue;
+        }
+        updates << release;
     }
     return updates;
 }

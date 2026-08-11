@@ -78,8 +78,55 @@ METRIC text_mb_per_sec 0.41
 METRIC trigger_lines_per_sec 3323.25
 METRIC trigger_overhead_ms 1683.64
 METRIC peak_rss_kb 1402384
+METRIC defaults_root_triggers ...
+METRIC defaults_text_lines_per_sec ...
+METRIC defaults_text_best_pass_ms ...
+METRIC defaults_peak_rss_kb ...
 ...
 ```
+
+### Two profile configurations, and why the split matters
+
+The benchmark feeds the corpus under two profile configurations (one slot per
+phase, so four profiles are created in all):
+
+- **`text_*`, `trigger_*`, `peak_rss_kb`** come from a profile with the default
+  packages suppressed. They describe the pipeline itself, which is what the
+  libmudlet gate is about.
+- **`defaults_*`** comes from a profile carrying the shipped default packages,
+  the way a new user's profile does. `defaults_root_triggers` records how many
+  root triggers those packages left armed.
+
+Keeping them separate means a package regression moves `defaults_*` while the
+pipeline numbers stay flat, instead of the two being indistinguishable.
+
+`defaults_peak_rss_kb` is read after `peak_rss_kb`, and VmHWM is process-wide
+and monotonic, so the two are not independent: read `defaults_peak_rss_kb` as
+the whole-run high-water mark and its **excess** over `peak_rss_kb` as what the
+default packages cost.
+
+**Run the benchmark under a fresh `HOME` and `XDG_CONFIG_HOME`.** Part of what a
+new profile gets - the starter UI - is gated on
+`mudlet::experiencedMudletPlayer()`, which answers from the machine's own Mudlet
+history, so on a developer machine the `defaults_*` profile would quietly not
+get it and `defaults_text_lines_per_sec` would become a second copy of
+`text_lines_per_sec`. `benchDefaultPackages` checks the starter UI is installed
+and fails the run rather than report that, and `defaults_root_triggers` records
+how many root triggers the packages between them armed:
+
+```bash
+scratch=$(mktemp -d)
+HOME=$scratch XDG_CONFIG_HOME=$scratch/.config QT_QPA_PLATFORM=offscreen \
+  ./test/functional_tests/PipelineBenchmark
+```
+
+Comparing a build from before this split against one from after it will abort
+with "gated metric defaults_text_lines_per_sec is missing from the before run".
+That is the script working as intended - the two harnesses are not comparable.
+Pass `--gate text_lines_per_sec,trigger_lines_per_sec` to compare across the
+change, bearing in mind the older run's `text_lines_per_sec` includes whichever
+default packages that machine's `experiencedMudletPlayer()` allowed it - the
+older harness had no guard - while the newer one includes none.
 
 ## The before/after workflow (the 10% gate)
 
@@ -115,8 +162,9 @@ on different hardware, or from an ASan build against a release build - only ever
    test/compare-perf-baseline.py before.txt after.txt
    ```
 
-`compare-perf-baseline.py` gates on `text_lines_per_sec` and
-`trigger_lines_per_sec` by default (the two throughput numbers); every other
+`compare-perf-baseline.py` gates on `text_lines_per_sec`,
+`trigger_lines_per_sec` and `defaults_text_lines_per_sec` by default (pipeline
+throughput, plus the shipped default packages on the same corpus); every other
 metric is reported for context. It exits non-zero if any gated metric regressed
 by more than the threshold, so it drops straight into a script or CI step. Tune
 it with `--threshold 0.10` and `--gate metric,metric,...`. A `--threshold` of 1
@@ -175,6 +223,11 @@ The table below is **an example of one run on one machine, kept only to show the
 shape and rough ratios of the output**. Do not treat any figure here as a target
 or a committed baseline - capture your own "before" on the machine you are
 testing on and compare against that.
+
+It predates the two-profile split above, so its `text_lines_per_sec` includes
+the default packages and there are no `defaults_*` rows. Read the ratios between
+the `text_*` and `trigger_*` rows; do not compare any figure here against a
+current run.
 
 | Metric | Example value |
 | --- | --- |

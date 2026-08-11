@@ -51,6 +51,13 @@ function Geyser.ScrollBox:new (cons, container)
     
     createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
 
+    -- add2 asks a new widget to hide itself from inside Geyser.Container:new,
+    -- which runs before there is a widget to hide, so the hide has to be made
+    -- good here - as every other Geyser widget constructor does
+    if me.hidden or me.auto_hidden then
+        hideWindow(me.name)
+    end
+
     --ScrollBox needs a special windowname handling as it by itself is a "window"
     --the given windowname will be saved to the parentWindowName variable
     me.parentWindowName = me.windowname

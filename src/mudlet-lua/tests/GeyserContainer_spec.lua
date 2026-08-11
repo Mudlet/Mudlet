@@ -766,3 +766,20 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 end)
+
+-- GeyserTests.lua is Geyser's own hand-driven demo set, not a test suite. Every
+-- one of these builds a screenful of widgets under a fixed global name and
+-- leaves them there for a person to look at and click, so running them here
+-- would leak a hundred labels and two globals into every spec file that follows
+-- and still assert nothing. They are recorded rather than covered.
+describe("Tests Geyser's built-in demos", function()
+  pending("Geyser.testLabels builds 101 labels for a person to look at - leaves labelTestContainer behind")
+
+  pending("Geyser.testGauges builds 100 gauges for a person to look at - leaves gaugeTestContainer behind")
+
+  pending("Geyser.demo1 builds a demo UI for a person to resize and click - leaves geyserDemoContainer behind")
+
+  pending("demoCallback1 only runs from Geyser.demo1's label, off that demo's own gauges and consoles")
+
+  pending("demoCallback2 only runs from Geyser.demo1's label, and moves that demo's own container")
+end)
