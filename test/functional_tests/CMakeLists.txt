@@ -44,6 +44,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileLoadTempFileTest.cpp
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
+    ProfileSwitchMiniconsoleTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
