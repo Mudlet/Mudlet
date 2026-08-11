@@ -35,6 +35,7 @@ set(FUNCTIONAL_TEST_SOURCES
     InsertTextCapTest.cpp
     SetScriptCallbackTest.cpp
     ClearWindowLogTest.cpp
+    ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
