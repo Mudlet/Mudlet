@@ -880,6 +880,9 @@ void TConsole::refresh()
 void TConsole::clear()
 {
     mUpperPane->resetHScrollbar();
+    // before the buffer goes, or the selection is left pointing at lines that
+    // no longer exist and the copy actions work on out of range indices
+    clearSelection();
     buffer.clear();
     clearSplit();
     mUpperPane->update();
