@@ -939,6 +939,11 @@ int TLuaInterpreter::echoLink(lua_State* L)
         return lua_error(L);
     }
 
+    // CONSOLE() returns straight out of the function, so the window is resolved
+    // before parseCommandOrFunction() anchors a function in the Lua registry
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    auto console = CONSOLE(L, windowName);
+
     QString command;
     int luaReference = 0;
     parseCommandOrFunction(L, __func__, commandPos, command, luaReference);
@@ -995,9 +1000,9 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return lua_error(L);
     }
 
-    // the window is resolved before the commands table is parsed: an unknown
-    // one returns from here, and by then the parse has taken a registry
-    // reference for every function in the table
+    // CONSOLE() returns straight out of the function, so the window is resolved
+    // before parseCommandsOrFunctionsTable() anchors any of the table's
+    // functions in the Lua registry
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     auto console = CONSOLE(L, windowName);
 
@@ -1885,6 +1890,11 @@ int TLuaInterpreter::insertLink(lua_State* L)
         return lua_error(L);
     }
 
+    // CONSOLE() returns straight out of the function, so the window is resolved
+    // before parseCommandOrFunction() anchors a function in the Lua registry
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    auto console = CONSOLE(L, windowName);
+
     QString command;
     int luaReference = 0;
     parseCommandOrFunction(L, __func__, commandPos, command, luaReference);
@@ -1931,9 +1941,9 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return lua_error(L);
     }
 
-    // the window is resolved before the commands table is parsed: an unknown
-    // one returns from here, and by then the parse has taken a registry
-    // reference for every function in the table
+    // CONSOLE() returns straight out of the function, so the window is resolved
+    // before parseCommandsOrFunctionsTable() anchors any of the table's
+    // functions in the Lua registry
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     auto console = CONSOLE(L, windowName);
 
@@ -3330,11 +3340,15 @@ int TLuaInterpreter::setLink(lua_State* L)
         return lua_error(L);
     }
 
+    // CONSOLE() returns straight out of the function, so the window is resolved
+    // before parseCommandOrFunction() anchors a function in the Lua registry
+    const Host& host = getHostFromLua(L);
+    auto console = CONSOLE(L, QString{windowName});
+
     QString command;
     int luaReference = 0;
     parseCommandOrFunction(L, __func__, commandPos, command, luaReference);
 
-    const Host& host = getHostFromLua(L);
     QStringList commandList;
     QStringList hintList;
     QVector<int> luaReferences;
@@ -3457,9 +3471,9 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return lua_error(L);
     }
 
-    // the window is resolved before the commands table is parsed: an unknown
-    // one returns from here, and by then the parse has taken a registry
-    // reference for every function in the table
+    // CONSOLE() returns straight out of the function, so the window is resolved
+    // before parseCommandsOrFunctionsTable() anchors any of the table's
+    // functions in the Lua registry
     const Host& host = getHostFromLua(L);
     auto console = CONSOLE(L, QString{windowName});
 
