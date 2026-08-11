@@ -3263,6 +3263,8 @@ describe("Tests db:create with a sheet given as a list of column names", functio
   it("takes _unique and _violations from the list form as well", function()
     local mydb = db:create(dbName, {people = {"name", "city", _unique = "name", _violations = "IGNORE"}})
     assert.are.equal("IGNORE", db.__schema[dbName].people.options._violations)
+    -- and no column named after an option's value
+    assert.are.same({city = "", name = ""}, db.__schema[dbName].people.columns)
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
     -- IGNORE rather than the default FAIL, so the second one is dropped quietly
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
