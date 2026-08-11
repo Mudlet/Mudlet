@@ -7278,18 +7278,23 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
     if (params == 1) {
         text = lua_tostring(L, 1);
     } else {
-        profileName = lua_tostring(L, 1);
+        const QString requestedName = lua_tostring(L, 1);
+        // writeProfileData() creates the folder it is told to write into, so
+        // without this a name that is not a profile conjures one up
+        profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        if (profileName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
+        }
         text = lua_tostring(L, 2);
     }
 
-    QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
-    int returnCode = 1;
+    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
     lua_pushboolean(L, result.first);
     if (!result.second.isEmpty()) {
-        lua_pushfstring(L, "setProfileInformation: %s does not exist", profileName.toUtf8().constData());
-        returnCode = 2;
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
     }
-    return returnCode;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#clearProfileInformation
@@ -7300,7 +7305,16 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         return lua_error(L);
     }
 
-    QString profileName = (params > 0) ? QString{lua_tostring(L, 1)} : getHostFromLua(L).getName();
+    QString profileName = getHostFromLua(L).getName();
+    if (params > 0) {
+        const QString requestedName = lua_tostring(L, 1);
+        // writeProfileData() creates the folder it is told to write into, so
+        // without this a name that is not a profile conjures one up
+        profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        if (profileName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
+        }
+    }
     QString desc = "";
 
     // if this is a default game, return to the orginal text
@@ -7311,14 +7325,13 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
-    int returnCode = 1;
+    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
     lua_pushboolean(L, result.first);
     if (!result.second.isEmpty()) {
-        lua_pushstring(L, "Profile not found");
-        returnCode = 2;
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
     }
-    return returnCode;
+    return 1;
 }
 
 // Internal function - helper for updateColorTable().

@@ -405,14 +405,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("refuses a profile that does not exist", function()
-          -- BUG: writeProfileData() creates the profile folder it is given, so
-          -- naming a profile that is not there makes one, description file and
-          -- all - a phantom that the connection dialog and getProfiles() then
-          -- both list. Left pending rather than pinning it as correct.
-          pending("setProfileInformation() creates a folder for a profile that does not exist")
           local ok, err = setProfileInformation("mudlet-spec-never-a-profile", "text")
-          assert.is_false(ok)
-          assert.is_string(err)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "does not exist"), tostring(err))
+          -- refusing is not enough on its own: the write goes through
+          -- writeProfileData(), which creates whatever folder it is handed, and
+          -- a folder here is a profile to getProfiles() and the connection dialog
+          assert.is_nil(getProfiles()["mudlet-spec-never-a-profile"])
         end)
       end)
 
@@ -422,13 +421,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("refuses a profile that does not exist", function()
-          -- BUG: the same as setProfileInformation's - the write creates the
-          -- folder it was told to write into, so clearing the description of a
-          -- profile that is not there conjures one up.
-          pending("clearProfileInformation() creates a folder for a profile that does not exist")
           local ok, err = clearProfileInformation("mudlet-spec-never-a-profile")
-          assert.is_false(ok)
-          assert.is_string(err)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "does not exist"), tostring(err))
+          assert.is_nil(getProfiles()["mudlet-spec-never-a-profile"])
         end)
 
         it("puts back the description a bundled game ships with", function()
