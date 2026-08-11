@@ -277,6 +277,72 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       console:enableCommandLine()
       assert.are.equal("still here", console:getCmdLine())
     end)
+
+    -- An action only runs when the user presses return in the command line,
+    -- which nothing in Lua can make happen, so what is pinned here is the
+    -- registration: which function and arguments reached the widget, and what
+    -- the console remembers about them
+    pending("a command line action running on a real return keypress needs GUI automation")
+
+    it("setCmdAction registers the function with the console's command line", function()
+      local action = spy.on(_G, "setCmdLineAction")
+      finally(function() action:revert() end)
+      local handler = function() end
+
+      console:setCmdAction(handler, "first", 2)
+
+      assert.spy(action).was.called_with("gmcCmd", handler, "first", 2)
+      assert.are.equal(handler, console.actionFunc)
+      assert.are.same({"first", 2}, console.actionArgs)
+    end)
+
+    it("setCmdAction replaces the action rather than adding a second one", function()
+      local action = spy.on(_G, "setCmdLineAction")
+      finally(function() action:revert() end)
+      local first = function() end
+      local second = function() end
+
+      console:setCmdAction(first, "one")
+      console:setCmdAction(second)
+
+      -- the widget holds one action, so the second registration has to reach it
+      -- and the console has to forget the first one's arguments
+      assert.spy(action).was.called(2)
+      assert.spy(action).was.called_with("gmcCmd", second)
+      assert.are.equal(second, console.actionFunc)
+      assert.are.same({}, console.actionArgs)
+    end)
+
+    it("setCmdAction takes the name of a function as a string too", function()
+      -- setCmdLineAction is wrapped in Lua, and that wrapper compiles a string
+      -- into a call of the function it names
+      assert.has_no.errors(function() console:setCmdAction("echo") end)
+      assert.are.equal("echo", console.actionFunc)
+    end)
+
+    it("setCmdAction hard-errors on anything it cannot call", function()
+      assert.has_error(function() console:setCmdAction({}) end)
+      -- unlike the label callbacks, a command line action cannot be cleared by
+      -- registering nil: resetCmdAction is the way to put it back
+      assert.has_error(function() console:setCmdAction(nil) end)
+    end)
+
+    it("resetCmdAction puts the command line back to sending to the game", function()
+      local reset = spy.on(_G, "resetCmdLineAction")
+      finally(function() reset:revert() end)
+      console:setCmdAction(function() end, "first")
+
+      console:resetCmdAction()
+
+      assert.spy(reset).was.called_with("gmcCmd")
+      assert.is_nil(console.actionFunc)
+      assert.is_nil(console.actionArgs)
+    end)
+
+    it("resetCmdAction is safe on a command line that never had an action", function()
+      assert.has_no.errors(function() console:resetCmdAction() end)
+      assert.is_nil(console.actionFunc)
+    end)
   end)
 
   describe("Geyser.MiniConsole:setBufferSize", function()
