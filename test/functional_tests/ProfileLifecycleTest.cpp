@@ -312,9 +312,9 @@ private slots:
         initializeQRCResourcesForProfileLifecycleTest();
 
         QVERIFY(mConfigDir.isValid());
-        // an existing $XDG_CONFIG_HOME/mudlet makes setupConfig() adopt it, so
-        // the profiles these tests enumerate are only ever their own
-        QVERIFY(QDir().mkpath(qsl("%1/mudlet").arg(mConfigDir.path())));
+        // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in that makes setupConfig()
+        // adopt it, so the profiles these tests enumerate are only ever their own
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdgConfigHome = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
