@@ -45,13 +45,13 @@ void initializeQRCResources();
 // free the very TAction that TAction::execute() was running on, which then read
 // this->mpHost after the Lua call returned (heap-use-after-free). ActionUnit now
 // defers that delete until execute() has unwound.
-class ActionSelfUninstallTest : public QObject
+class ActionSelfRemovalTest : public QObject
 {
     Q_OBJECT
 
 private:
     TelnetServerStub* mpServer = nullptr;
-    const QString mpHostname = "Test-ActionSelfUninstall";
+    const QString mpHostname = "Test-ActionSelfRemoval";
     const QString mpPort = "4009";
     const QString mpLocalhost = "localhost";
 
@@ -259,5 +259,5 @@ void initializeQRCResources()
     qInitResources_qm();
 }
 
-#include "ActionSelfUninstallTest.moc"
-QTEST_MAIN(ActionSelfUninstallTest)
+#include "ActionSelfRemovalTest.moc"
+QTEST_MAIN(ActionSelfRemovalTest)

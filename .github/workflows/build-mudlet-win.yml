@@ -115,8 +115,6 @@ jobs:
         export LUA_CPATH
 
         ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
       timeout-minutes: 2
