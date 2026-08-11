@@ -468,10 +468,16 @@ function db:create(db_name, sheets, force)
           local index_columns = type(index_entry) == "table" and index_entry or {index_entry}
           for _, column_name in ipairs(index_columns) do
             if type(column_name) == "string" and columns[column_name] == nil then
+              local lowered = column_name:lower()
               is_valid = false
               if column_name == "_row_id" then
                 table.insert(msgs, "db:create - "..sheet_name.." - _index names \"_row_id\", which is the "..
                   "key every sheet is given rather than one of its own columns.")
+              elseif lowered == "asc" or lowered == "desc" then
+                -- db:_sql_columns would build the ordering term, but
+                -- db:_index_valid refuses it, so the index was never made
+                table.insert(msgs, "db:create - "..sheet_name.." - _index names \""..column_name..
+                  "\", and an index takes column names only, not a sort direction.")
               else
                 table.insert(msgs, "db:create - "..sheet_name.." - _index names \""..column_name..
                   "\", which is not one of the sheet's columns.")

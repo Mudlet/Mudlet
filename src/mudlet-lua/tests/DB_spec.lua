@@ -3204,6 +3204,21 @@ describe("Tests db:create with a single column name as _index", function()
     assert.is_truthy(string.find(err, '_index names "citty"', 1, true))
   end)
 
+  it("refuses a sort direction where a column name belongs", function()
+    -- db:_sql_columns would render "name" desc, but db:_index_valid refuses the
+    -- entry, so an index with a sort direction has never been created: saying so
+    -- beats leaving the sheet with no index and no complaint
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {name = "", city = "", _index = {{"name", "desc"}}}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "an index takes column names only, not a sort direction", 1, true))
+
+    -- a sheet that really has a column of that name is not refused; what
+    -- db:_sql_columns then makes of it is that function's business
+    assert.is_table(db:create(dbName, {people = {name = "", desc = "", _index = {{"name", "desc"}}}}))
+  end)
+
   it("refuses the _row_id no sheet definition names either", function()
     -- the sheet is given one, but no definition declares it: it is not there to
     -- index on the db:create that makes the sheet, and db:_drop_orphaned_indexes
