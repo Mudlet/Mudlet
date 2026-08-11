@@ -130,6 +130,16 @@ set_tests_properties(ReleasePlatformAssetTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
+# The $XDG_CONFIG_HOME opt-in recipe the tests isolate themselves with. Reads the
+# test sources at runtime, so like CMakeListsConsistencyTest it links nothing.
+add_executable(XdgRecipeConsistencyTest XdgRecipeConsistencyTest.cpp)
+target_link_libraries(XdgRecipeConsistencyTest PRIVATE Qt6::Test)
+target_compile_definitions(XdgRecipeConsistencyTest PRIVATE MUDLET_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME XdgRecipeConsistencyTest COMMAND $<TARGET_FILE:XdgRecipeConsistencyTest>)
+set_tests_properties(XdgRecipeConsistencyTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
 # Checks the release-publishing scripts that keep SHA256SUMS.txt covering every
 # release binary - a binary without an entry is one the updater refuses to install
 if(NOT WIN32)
