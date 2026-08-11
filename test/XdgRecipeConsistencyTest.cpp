@@ -19,26 +19,27 @@
 
 /*
  * A test that drives setupConfig() has to point XDG_CONFIG_HOME at a temporary
- * directory and opt that directory in, or it runs against the developer's real
- * ~/.config/mudlet. Since #9712 the opt-in marker is
+ * directory and opt that directory in. Since #9712 the opt-in marker is
  * $XDG_CONFIG_HOME/mudlet/profiles - the mudlet directory on its own no longer
- * counts, because other tooling creates that by accident.
+ * counts, because other tooling creates that by accident - so a test that
+ * creates only that directory gets the developer's own ~/.config/mudlet instead
+ * whenever theirs holds profiles or a Mudlet.ini. Where there is no config
+ * directory to lose the stale recipe still resolves to the temporary one, so
+ * the mistake hides on exactly the machines it cannot hurt.
  *
- * Two tests kept seeding the old recipe (#9810). That was caught only because
- * both happened to assert their config root afterwards; a test that seeds the
- * stale recipe and asserts nothing quietly reads and writes the user's own
- * profiles, and one of those two is a test that deletes profiles.
+ * Nothing about it fails: the test reads and writes the user's own profiles,
+ * and some of these tests delete profiles.
  *
  * So creating a directory whose path ends in /mudlet is an error here, unless
- * the same file also creates the profiles/ opt-in beneath it. A test that means
- * it says so with an "xdg-recipe-guard: allow" comment on the call or the line
- * above it.
+ * the same file creates the profiles/ opt-in somewhere. That is deliberately
+ * coarse - a file isolating two config roots is trusted once it gets one of
+ * them right. A test that means it says so with an "xdg-recipe-guard: allow"
+ * comment on the line its call starts on, or the line above.
  *
- * What that catches is the recipe copied from another test, which is how both of
- * those two got it: the path has to be spelled in the call. A file that builds
- * the config root through a helper or a local first is out of range, and
- * ConfigDirOverrideTest - which creates every shape of config root deliberately,
- * because the resolution rules are its subject - is the only one that does.
+ * The path has to be spelled out in the call. A file that builds the config
+ * root through a helper or a local first is out of range; ConfigDirOverrideTest
+ * does that, and creates every shape of config root deliberately, the
+ * resolution rules being its subject.
  *
  * The test directory is provided at configure time via MUDLET_TEST_DIR. Like
  * CMakeListsConsistencyTest this pulls in no Mudlet headers, hence QStringLiteral
@@ -288,9 +289,7 @@ private slots:
         QVERIFY2(staleRecipes(source).isEmpty(), qPrintable(staleRecipes(source).join(QChar(u'\n'))));
     }
 
-    // The opt-in reached by naming its parts separately, which is as much an
-    // opt-in as spelling the whole path in one literal
-    void test_theOptInAssembledFromTwoLiteralsCounts()
+    void test_theOptInSpelledRelativelyOrAssembledCounts()
     {
         const QString relative = QStringLiteral("QVERIFY(QDir(root).mkdir(qsl(\"mudlet\")));\nQVERIFY(QDir(root).mkpath(qsl(\"mudlet/profiles\")));\n");
         QVERIFY2(staleRecipes(relative).isEmpty(), qPrintable(staleRecipes(relative).join(QChar(u'\n'))));
@@ -299,8 +298,8 @@ private slots:
         QVERIFY2(staleRecipes(inOneCall).isEmpty(), qPrintable(staleRecipes(inOneCall).join(QChar(u'\n'))));
     }
 
-    // ProfileDeletionSafetyTest compares the resolved config root against a
-    // "%1/mudlet" literal, which creates nothing
+    // Several tests compare the resolved config root against a "%1/mudlet"
+    // literal, which creates nothing
     void test_anAssertionOnTheConfigRootIsNotSeeding()
     {
         const QString source = QStringLiteral("QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl(\"%1/mudlet\").arg(mConfigDir.path()));\n");
@@ -373,7 +372,7 @@ private slots:
             }
         }
         QVERIFY2(scanned > 50, qPrintable(QStringLiteral("only %1 sources scanned, so this test would pass whatever they hold").arg(scanned)));
-        QVERIFY2(problems.isEmpty(), qPrintable(QStringLiteral("tests seeding the pre-#9712 XDG opt-in, which resolves to the real ~/.config/mudlet:\n%1").arg(problems.join(QChar(u'\n')))));
+        QVERIFY2(problems.isEmpty(), qPrintable(QStringLiteral("tests seeding the pre-#9712 XDG opt-in, which can resolve to the real ~/.config/mudlet:\n%1").arg(problems.join(QChar(u'\n')))));
     }
 };
 
