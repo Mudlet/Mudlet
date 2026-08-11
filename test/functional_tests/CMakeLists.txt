@@ -56,6 +56,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileFolderNameTest.cpp
     ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
+    HostChildTeardownTest.cpp
     ConnectionDialogCrashTest.cpp
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
