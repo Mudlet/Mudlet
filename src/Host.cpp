@@ -465,17 +465,7 @@ Host::~Host()
         delete pEditor;
     }
 
-    // The notepad and the IRC client are parentless top-level windows, so they
-    // outlive a Host that closeChildren() never got to. Null each QPointer
-    // before deleting - it only clears itself once ~QObject is reached - and
-    // note closeChildren() nulls them too, so this cannot double-delete:
     if (auto* pNotePad = mpNotePad.data()) {
-        // Notes and window state only reach the disk through closeEvent(), which
-        // a delete does not deliver; close() merely hides it, WA_DeleteOnClose
-        // being closeChildren()'s doing rather than the notepad's own. Skipped
-        // with no main window left, as getMudletPath() needs one: ~mudlet clears
-        // mudlet::self() before destroying the host pool. Only a bare delete of
-        // the main window lands there, never a quit via mudlet::closeEvent().
         if (mudlet::self()) {
             pNotePad->save();
             pNotePad->close();
@@ -489,11 +479,6 @@ Host::~Host()
         delete pDlgIRC;
     }
 
-    // The toolbars are parented to the main window, so they stay on screen
-    // holding this Host's TActions until the application closes. Deleted
-    // outright rather than deferred the way closeChildren() does it, since a
-    // deleteLater() would run after the actions have gone; taking one that
-    // closeChildren() already queued is safe, as ~QObject unposts its events:
     for (const auto& pToolBar : mActionUnit.getToolBarList()) {
         delete pToolBar.data();
     }
