@@ -5864,6 +5864,21 @@ describe("Command line actions and suggestions", function()
       assert.are.equal(('command line "%s" not found'):format(unknown), err)
     end)
 
+    it("still reads the command line name when something trails it", function()
+      -- the add and remove siblings take their window name from the first
+      -- argument however many follow it, and clearing has to agree with them:
+      -- reading it only when it is the sole argument would have this clear the
+      -- main command line instead
+      local ok, err = clearCmdLineSuggestions(unknown, "trailing")
+      assert.is_nil(ok)
+      assert.are.equal(('command line "%s" not found'):format(unknown), err)
+    end)
+
+    it("clears a named command line that is given a trailing argument too", function()
+      addCmdLineSuggestion(cmdLine, "suggested")
+      assert.are.equal(0, select("#", clearCmdLineSuggestions(cmdLine, "trailing")))
+    end)
+
     it("hard-errors on a non-string command line name", function()
       local ok, err = pcall(clearCmdLineSuggestions, {})
       assert.is_false(ok)
