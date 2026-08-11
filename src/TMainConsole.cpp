@@ -1593,8 +1593,15 @@ void TMainConsole::finalize()
 // to the TMap class...?
 bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
-    const QString filename_map =
-            location.isEmpty() ? mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))) : location;
+    QString filename_map = location;
+    if (filename_map.isEmpty()) {
+        filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
+        // Resolve the name relative to the profile home directory the way
+        // TMainConsole::importMap does, rather than against whatever directory
+        // Mudlet happens to have been started in:
+        filename_map = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+    }
 
     const QDir dir_map(mudlet::getMudletPath(enums::profileMapsPath, mProfileName));
     if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
