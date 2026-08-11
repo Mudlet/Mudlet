@@ -536,10 +536,11 @@ function db:_extract_table_constraints(sql)
     end
     position = stop + 1
 
-    -- a column called "unique_id" or a default value spelt unique is not one
+    -- the keyword stands on its own: a column called unique_id is not one, and
+    -- neither is a quoted column name or default value that reads unique
     local before = start > 1 and content:sub(start - 1, start - 1) or " "
     local after = content:sub(stop + 1, stop + 1)
-    if not before:match("[%w_]") and not after:match("[%w_]") then
+    if not before:match("[%w_\"']") and not after:match("[%w_\"']") then
       local constraint = "unique"
 
       local columns_start, columns_stop = content:find("^%s*%([^)]+%)", position)

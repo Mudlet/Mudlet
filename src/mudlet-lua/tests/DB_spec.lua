@@ -2615,6 +2615,8 @@ describe("Tests db's internal SQL helpers", function()
     it("does not mistake a column named after the keyword for a constraint", function()
       assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("unique_id" TEXT NULL DEFAULT "")'))
       assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("uniqueness" TEXT NULL DEFAULT "")'))
+      assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("unique" TEXT NULL DEFAULT "")'))
+      assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("kind" TEXT NULL DEFAULT "unique")'))
     end)
   end)
 
