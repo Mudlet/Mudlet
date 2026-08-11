@@ -617,12 +617,17 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     if (args > 2) {
         secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
     }
-    if (args > 3 && !checkStringArg(L, __func__, 4, "server password", true)) {
+
+    // An omitted password leaves the stored one alone: there is no getter for
+    // it, so a script changing the host or the port could not put it back.
+    // Clearing one is asking for it, by passing an empty string.
+    const bool passwordGiven = args > 3;
+    if (passwordGiven && !checkStringArg(L, __func__, 4, "server password", true)) {
         return lua_error(L);
     }
 
     QString password;
-    if (args > 3) {
+    if (passwordGiven) {
         password = lua_tostring(L, 4);
     }
 
@@ -642,9 +647,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("unable to save secure, reason: %1").arg(result.second));
     }
 
-    result = dlgIRC::writeIrcPassword(pHost, password);
-    if (!result.first) {
-        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
+    if (passwordGiven) {
+        result = dlgIRC::writeIrcPassword(pHost, password);
+        if (!result.first) {
+            return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
+        }
     }
 
     lua_pushboolean(L, true);

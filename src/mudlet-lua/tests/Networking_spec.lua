@@ -1744,16 +1744,14 @@ describe("The IRC configuration functions round-trip through the profile", funct
   -- connection anywhere in sight.
   --
   -- The profile's own IRC configuration is put back afterwards, because the
-  -- self-test profile is reused between runs. Two things the restore cannot
-  -- reach, both of which matter to a developer running the suite against a
-  -- config root that is not a throwaway one:
-  --
-  -- - the IRC password. setIrcServer() writes it on every call and blanks it
-  --   when none is passed, and no getter reads it back, so any password the
-  --   profile had is gone either way.
-  -- - the last-used nick, which setIrcNick() also writes to a file shared by
-  --   every profile (mudlet's data directory, not the profile's). Putting the
-  --   profile's nick back writes that file again rather than restoring it.
+  -- self-test profile is reused between runs. One thing the restore cannot
+  -- reach, which matters to a developer running the suite against a config root
+  -- that is not a throwaway one: the last-used nick, which setIrcNick() also
+  -- writes to a file shared by every profile (mudlet's data directory, not the
+  -- profile's). Putting the profile's nick back writes that file again rather
+  -- than restoring it. The password is left alone by every call below that does
+  -- not pass one, and the spec that does pass one puts the profile's own back
+  -- byte for byte.
   local function restoreIrcConfiguration()
     local nick = getIrcNick()
     local hostName, port, secure = getIrcServer()
@@ -1763,6 +1761,34 @@ describe("The IRC configuration functions round-trip through the profile", funct
       setIrcServer(hostName, port, secure)
       setIrcChannels(channels)
     end)
+  end
+
+  -- The password is the one setting with no getter, so the spec for it works on
+  -- the profile's own file: read and written as bytes, never parsed.
+  local function readBinaryFile(path)
+    local handle = io.open(path, "rb")
+    if not handle then
+      return nil
+    end
+    local contents = handle:read("*a")
+    handle:close()
+    return contents
+  end
+
+  local function writeBinaryFile(path, contents)
+    local handle = io.open(path, "wb")
+    assert.is_not_nil(handle, "could not write " .. path)
+    handle:write(contents)
+    handle:close()
+  end
+
+  -- How a QDataStream carries the characters of an ASCII QString
+  local function utf16be(text)
+    local encoded = {}
+    for index = 1, #text do
+      encoded[#encoded + 1] = "\0" .. text:sub(index, index)
+    end
+    return table.concat(encoded)
   end
 
   describe("getIrcNick, getIrcServer and getIrcChannels", function()
@@ -1865,6 +1891,43 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("irc.busted-two.invalid", hostName)
       assert.equals(6668, port)
       assert.is_false(secure)
+    end)
+
+    it("leaves the stored password alone when it is not passed", function()
+      -- #9786: every call rewrote the password, so changing the host or the
+      -- port blanked it - and with no getter for it, no script could put it
+      -- back. The file the profile keeps it in is where a spec can see it: a
+      -- QDataStream-serialised QString, compared as bytes rather than read.
+      local passwordFile = getMudletHomeDir() .. "/irc_password"
+      local nick = getIrcNick()
+      local hostName, port, secure = getIrcServer()
+      local channels = getIrcChannels()
+      local ownPassword = readBinaryFile(passwordFile)
+      finally(function()
+        setIrcNick(nick)
+        setIrcServer(hostName, port, secure)
+        setIrcChannels(channels)
+        if ownPassword then
+          writeBinaryFile(passwordFile, ownPassword)
+        else
+          os.remove(passwordFile)
+        end
+      end)
+
+      assert.is_true(setIrcServer("irc.busted-password.invalid", 6667, false, "BustedSecret"))
+      local stored = readBinaryFile(passwordFile)
+      assert.is_not_nil(stored, "setIrcServer stored no password file at all")
+      -- QDataStream writes a QString as a length and then UTF-16, big endian
+      assert.is_true(contains(stored, utf16be("BustedSecret")), "the password given was not the one stored")
+
+      -- the same server on another port, with the password argument left off
+      assert.is_true(setIrcServer("irc.busted-password.invalid", 6668))
+      assert.equals(6668, select(2, getIrcServer()))
+      assert.equals(stored, readBinaryFile(passwordFile))
+
+      -- and an empty string is how a script asks for the password to go
+      assert.is_true(setIrcServer("irc.busted-password.invalid", 6668, false, ""))
+      assert.is_false(contains(readBinaryFile(passwordFile), utf16be("BustedSecret")))
     end)
 
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
