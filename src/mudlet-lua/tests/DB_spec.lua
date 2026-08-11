@@ -3182,6 +3182,76 @@ describe("Tests db:create with a single column name as _index", function()
   end)
 end)
 
+-- A sheet may be given as a list of its column names instead of a table of
+-- names and defaults. The two forms take the same sheet options, which are keys
+-- rather than list members in both.
+describe("Tests db:create with a sheet given as a list of column names", function()
+  local dbName = "indexarrayformtestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function indexNames(sheetName)
+    local conn = db.__conn[dbName]
+    local cursor = conn:execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '" .. sheetName .. "' AND sql IS NOT NULL"
+    )
+    local names = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      names[#names + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    table.sort(names)
+    return names
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("takes the listed names as the columns, with no options among them", function()
+    local mydb = db:create(dbName, {people = {"name", "city", _index = "city"}})
+    assert.are.same({city = "", name = ""}, db.__schema[dbName].people.columns)
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+    assert.are.equal("Bob", db:fetch(mydb.people)[1].name)
+  end)
+
+  it("creates the index the list form asked for", function()
+    db:create(dbName, {people = {"name", "city", _index = "city"}})
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("takes a list of index columns rather than raising", function()
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {"name", "city", _index = {"city"}}})
+    end)
+    assert.is_true(ok, tostring(err))
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("takes _unique and _violations from the list form as well", function()
+    local mydb = db:create(dbName, {people = {"name", "city", _unique = "name", _violations = "IGNORE"}})
+    assert.are.equal("IGNORE", db.__schema[dbName].people.options._violations)
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+    -- IGNORE rather than the default FAIL, so the second one is dropped quietly
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+    assert.are.equal(1, #db:fetch(mydb.people))
+  end)
+
+  it("refuses a key that is neither a column name nor a sheet option", function()
+    -- half a list and half a table: the keyed half used to become a column
+    -- named after its default value
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {"name", city = ""}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "city is neither one of the sheet's column names nor a sheet option", 1, true))
+  end)
+end)
+
 -- db:_closeAll is what db:close() with no name does and what the profile calls
 -- on shutdown, so the rest of this file already leans on it. These specs pin
 -- the two things it reports and the state it leaves behind.

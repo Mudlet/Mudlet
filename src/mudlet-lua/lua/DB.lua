@@ -361,6 +361,9 @@ end
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
 ---   A single column may be given on its own instead of in a list, so _index = "city"
 ---   and _unique = "name" mean the same as the two lines above.
+---   A sheet may also be given as a plain list of its column names, which then all
+---   hold text and default to "". The sheet options are keys rather than list members,
+---   so they work there too: enemies = {"name", "city", _index = "city"}
 function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
@@ -382,9 +385,21 @@ function db:create(db_name, sheets, force)
 
     -- the sheet was provided in {"column1", "column2"} format
     if sheet[1] ~= nil then
-      -- assume field types are text, and should default to ""
-      for _, col_name in pairs(sheet) do
-        columns[col_name] = ""
+      -- The list holds the column names, and field types are assumed to be text
+      -- defaulting to "". Anything keyed rather than listed is a sheet option,
+      -- which this format is as entitled to as the other one: sweeping those in
+      -- with the column names would turn an index definition into a column.
+      local column_count = #sheet
+      for key, value in pairs(sheet) do
+        if type(key) == "number" and key % 1 == 0 and key >= 1 and key <= column_count then
+          columns[value] = ""
+        elseif type(key) == "string" and string.starts(key, "_") then
+          options[key] = value
+        else
+          is_valid = false
+          table.insert(msgs, "db:create - "..sheet_name.." - "..tostring(key)..
+            " is neither one of the sheet's column names nor a sheet option: a sheet is either a list of column names or a table of column names and their default values.")
+        end
       end
 
     -- sheet provided in {"column1" = default} format
