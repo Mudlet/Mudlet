@@ -57,6 +57,7 @@
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QAbstractButton>
 #include <QColorDialog>
@@ -1214,6 +1215,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpActionsMainArea->lineEdit_action_button_command_up, &QLineEdit::editingFinished, this, &dlgTriggerEditor::slot_saveProperty_ActionCommandUp);
     connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::toggled, this, &dlgTriggerEditor::slot_saveProperty_ActionIsPushDown);
     connect(mpActionsMainArea->spinBox_action_bar_columns, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionBarColumns);
+    connect(mpActionsMainArea->spinBox_action_bar_offsetToFirstButton, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionBarFillerOffset);
     connect(mpActionsMainArea->comboBox_action_bar_orientation, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionBarOrientation);
     connect(mpActionsMainArea->comboBox_action_bar_location, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionBarLocation);
     connect(mpActionsMainArea->comboBox_action_button_rotation, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_saveProperty_ActionButtonRotation);
@@ -1410,6 +1412,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showIDLabels(mpHost->showIdsInEditor());
     if (mAutosaveInterval > 0) {
         startTimer(mAutosaveInterval * 1min);
+    }
+}
+
+dlgTriggerEditor::~dlgTriggerEditor()
+{
+    // ~QWidget closes the editor once this destructor is done, and whichever
+    // of the item fields has the keyboard focus then emits editingFinished()
+    // into one of the slot_saveProperty_...() slots when this object is no
+    // longer a valid receiver (#9574)
+    utils::disconnectChildSignals(this);
+    // The undo stacks are not in this widget's child tree - the edbee one hangs
+    // off a parentless CharTextDocument - so disconnect them by hand:
+    if (mpTextUndoStack) {
+        disconnect(mpTextUndoStack, nullptr, this, nullptr);
+    }
+    if (mpUndoStack) {
+        disconnect(mpUndoStack, nullptr, this, nullptr);
     }
 }
 
@@ -1870,17 +1889,6 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
-    // Only disconnect signals and clear undo stack if the dialog is being destroyed (WA_DeleteOnClose set)
-    // This happens when the profile closes (Host::closeChildren), not when the user just closes the editor window
-    if (testAttribute(Qt::WA_DeleteOnClose)) {
-        if (mpTextUndoStack) {
-            disconnect(mpTextUndoStack, nullptr, this, nullptr);
-        }
-        if (mpUndoStack) {
-            disconnect(mpUndoStack, nullptr, this, nullptr);
-        }
-    }
-
     emit editorClosing();
     writeSettings();
     event->accept();
@@ -3047,6 +3055,7 @@ void dlgTriggerEditor::delete_alias()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3069,6 +3078,7 @@ void dlgTriggerEditor::delete_alias()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmAliasView, itemId);
             delete pT;
@@ -3080,6 +3090,12 @@ void dlgTriggerEditor::delete_alias()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    // Detaching an item nulls treeWidget() on its whole subtree, which is how a
+    // newSelection that sat inside another removed subtree is caught here:
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpAliasBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentAliasItem = newSelection;
@@ -3089,6 +3105,10 @@ void dlgTriggerEditor::delete_alias()
         mpCurrentAliasItem = nullptr;
         clearAliasForm();
     }
+
+    // Has to stay after the selection handling: the slots it fires still read
+    // the detached items.
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_action()
@@ -3190,6 +3210,7 @@ void dlgTriggerEditor::delete_action()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3217,6 +3238,7 @@ void dlgTriggerEditor::delete_action()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmActionView, itemId);
             delete pT;
@@ -3228,6 +3250,10 @@ void dlgTriggerEditor::delete_action()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpActionBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentActionItem = newSelection;
@@ -3237,6 +3263,8 @@ void dlgTriggerEditor::delete_action()
         mpCurrentActionItem = nullptr;
         clearActionForm();
     }
+
+    qDeleteAll(removedItems);
 
     mpHost->getActionUnit()->updateAllToolbars();
 }
@@ -3276,6 +3304,7 @@ void dlgTriggerEditor::delete_variable()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TVar* var = vu->getWVar(pItem);
@@ -3293,9 +3322,26 @@ void dlgTriggerEditor::delete_variable()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
+                // Deleting the TVar below frees its descendants too and nothing
+                // unregisters those, so drop the whole detached subtree from the
+                // lookup maps now: a later pass over a selected descendant would
+                // otherwise resolve a freed TVar, as would a recycled item address:
+                QList<QTreeWidgetItem*> pendingPurge{pItem};
+                while (!pendingPurge.isEmpty()) {
+                    QTreeWidgetItem* pEntry = pendingPurge.takeLast();
+                    vu->removeTreeItem(pEntry);
+                    for (int i = 0; i < pEntry->childCount(); ++i) {
+                        pendingPurge.append(pEntry->child(i));
+                    }
+                }
             }
             delete var;
         }
+    }
+
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpVarBaseItem;
     }
 
     // Set new selection
@@ -3307,6 +3353,8 @@ void dlgTriggerEditor::delete_variable()
         mpCurrentVarItem = nullptr;
         clearVarForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_script()
@@ -3399,6 +3447,7 @@ void dlgTriggerEditor::delete_script()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3421,6 +3470,7 @@ void dlgTriggerEditor::delete_script()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmScriptView, itemId);
             delete pT;
@@ -3432,6 +3482,10 @@ void dlgTriggerEditor::delete_script()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpScriptsBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentScriptItem = newSelection;
@@ -3441,6 +3495,8 @@ void dlgTriggerEditor::delete_script()
         mpCurrentScriptItem = nullptr;
         clearScriptForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_key()
@@ -3533,6 +3589,7 @@ void dlgTriggerEditor::delete_key()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3555,6 +3612,7 @@ void dlgTriggerEditor::delete_key()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmKeysView, itemId);
             delete pT;
@@ -3566,6 +3624,10 @@ void dlgTriggerEditor::delete_key()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpKeyBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentKeyItem = newSelection;
@@ -3575,6 +3637,8 @@ void dlgTriggerEditor::delete_key()
         mpCurrentKeyItem = nullptr;
         clearKeyForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_trigger()
@@ -3672,6 +3736,7 @@ void dlgTriggerEditor::delete_trigger()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3694,6 +3759,7 @@ void dlgTriggerEditor::delete_trigger()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmTriggerView, itemId);
             delete pT;
@@ -3705,6 +3771,10 @@ void dlgTriggerEditor::delete_trigger()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpTriggerBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentTriggerItem = newSelection;
@@ -3714,6 +3784,8 @@ void dlgTriggerEditor::delete_trigger()
         mpCurrentTriggerItem = nullptr;
         clearTriggerForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_timer()
@@ -3806,6 +3878,7 @@ void dlgTriggerEditor::delete_timer()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3828,6 +3901,7 @@ void dlgTriggerEditor::delete_timer()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmTimerView, itemId);
             delete pT;
@@ -3839,6 +3913,10 @@ void dlgTriggerEditor::delete_timer()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpTimerBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentTimerItem = newSelection;
@@ -3848,6 +3926,8 @@ void dlgTriggerEditor::delete_timer()
         mpCurrentTimerItem = nullptr;
         clearTimerForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 
@@ -5369,9 +5449,6 @@ void dlgTriggerEditor::addAction(bool isFolder)
 
     QString name = isFolder ? tr("New menu") : tr("New button");
     QStringList nameList = {name};
-    const QString cmdButtonUp = "";
-    const QString cmdButtonDown = "";
-    const QString script = "";
 
     QTreeWidgetItem* pParentItem = treeWidget_actions->currentItem();
     QTreeWidgetItem* pNewItem = nullptr;
@@ -5395,10 +5472,11 @@ void dlgTriggerEditor::addAction(bool isFolder)
         }
     }
     // Otherwise: insert a new root item
+    // CHECKME: doesn't this HAVE to be a toolbar - surely buttons MUST be in a container?
     if (!pNewAction) {
         name = isFolder ? tr("New toolbar") : tr("New button");
         pNewAction = new TAction(name, mpHost);
-        pNewAction->setCommandButtonUp(cmdButtonUp);
+        pNewAction->setCommandButtonUp(QString());
         QStringList nl;
         nl << name;
         pNewItem = new QTreeWidgetItem(mpActionBaseItem, nl);
@@ -5407,12 +5485,12 @@ void dlgTriggerEditor::addAction(bool isFolder)
 
     // Initialize logic object properties
     pNewAction->setName(name);
-    pNewAction->setCommandButtonUp(cmdButtonUp);
-    pNewAction->setCommandButtonDown(cmdButtonDown);
+    pNewAction->setCommandButtonUp(QString());
+    pNewAction->setCommandButtonDown(QString());
     pNewAction->setIsPushDownButton(false);
     pNewAction->mLocation = 1;
     pNewAction->mOrientation = 1;
-    pNewAction->setScript(script);
+    pNewAction->setScript(QString());
     pNewAction->setIsFolder(isFolder);
     pNewAction->setIsActive(false);
     pNewAction->registerAction();
@@ -6389,13 +6467,15 @@ void dlgTriggerEditor::saveAction()
     const QString script = mpSourceEditorEdbeeDocument->text();
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
     const int rotation = qMax(0, mpActionsMainArea->comboBox_action_button_rotation->currentIndex());
-    const int columns = mpActionsMainArea->spinBox_action_bar_columns->text().toInt();
+    const int columns = mpActionsMainArea->spinBox_action_bar_columns->value();
+    const int offset = mpActionsMainArea->spinBox_action_bar_offsetToFirstButton->value();
     const bool isChecked = mpActionsMainArea->checkBox_action_button_isPushDown->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
     int location = qMax(0, mpActionsMainArea->comboBox_action_bar_location->currentIndex());
     if (location > 0) {
-        location++;
+        // The comboBox has indexes of 0 to 4 but we don't use 1 so jump over it:
+        ++location;
     }
 
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
@@ -6429,6 +6509,7 @@ void dlgTriggerEditor::saveAction()
             pA->setIsActive(pA->shouldBeActive());
             pA->setButtonRotation(rotation);
             pA->setButtonColumns(columns);
+            pA->setButtonFillerOffset(offset);
             pA->mUseCustomLayout = false;
             pA->css = mpActionsMainArea->plainTextEdit_action_css->toPlainText();
         }
@@ -6722,6 +6803,13 @@ void dlgTriggerEditor::saveScript()
             mpTextUndoStack->clear();
         }
     }
+
+    // If pT's own body uninstalled its package during the compile above, the delete
+    // was deferred (see TScript::compileScript / ScriptUnit::uninstall). We are now
+    // done with pT, so flush it before returning to the event loop - otherwise the
+    // 0ms save uninstallPackage() queued would serialize the "uninstalled" script
+    // back into the profile:
+    mpHost->getScriptUnit()->doCleanup();
 }
 
 void dlgTriggerEditor::clearEditorNotification()
@@ -8239,6 +8327,9 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
     mpActionsMainArea->comboBox_action_bar_orientation->setCurrentIndex(0);
     mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(0);
     mpActionsMainArea->spinBox_action_bar_columns->setValue(1);
+    mpActionsMainArea->spinBox_action_bar_offsetToFirstButton->setMaximum(0);
+    mpActionsMainArea->spinBox_action_bar_offsetToFirstButton->setEnabled(false);
+    mpActionsMainArea->spinBox_action_bar_offsetToFirstButton->setValue(0);
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     // ID will be 0 for the root of the treewidget and it is not appropriate
@@ -8257,6 +8348,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         mpActionsMainArea->lineEdit_action_icon->setText(pT->getIcon());
         mpActionsMainArea->lineEdit_action_button_command_down->setText(pT->getCommandButtonDown());
         mpActionsMainArea->lineEdit_action_button_command_up->setText(pT->getCommandButtonUp());
+        mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(pT->getButtonRotation());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
         restoreEditorState(EditorViewType::cmActionView, ID);
@@ -8270,6 +8362,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         mpActionsMainArea->comboBox_action_bar_orientation->setCurrentIndex(pT->mOrientation);
         mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(pT->getButtonRotation());
         mpActionsMainArea->spinBox_action_bar_columns->setValue(pT->getButtonColumns());
+        mpActionsMainArea->spinBox_action_bar_offsetToFirstButton->setValue(pT->getButtonFillerOffset());
         mpActionsMainArea->plainTextEdit_action_css->setPlainText(pT->css);
         if (pT->isFolder()) {
             if (!pT->mPackageName.isEmpty()) {
@@ -9773,10 +9866,20 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     }
     mCurrentView = view;
 
-    if (mpBannerUndoTimer && mpBannerUndoTimer->isActive()) {
-        mpBannerUndoTimer->stop();
-        mpBannerUndoTimer->deleteLater();
-        mpBannerUndoTimer = nullptr;
+    const bool bannerUndoToastShowing = mpBannerUndoTimer && mpBannerUndoTimer->isActive();
+    cancelBannerUndoTimer();
+
+    // A banner (or the dismissal undo toast) belongs to the view it was shown
+    // in, so hide it on a view change - otherwise it lingers over the new view
+    // when that view's own banner is suppressed. showIntro() will put up the
+    // right banner for the new view if one is allowed. Errors and warnings
+    // (which clear mCurrentBannerKey) are not hidden by this block, though the
+    // pre-existing permanently-hidden check below still can hide them. Using
+    // clearEditorNotification() rather than hideSystemMessageArea() as the
+    // latter would also discard the current script's unacknowledged loading
+    // error.
+    if (bannerUndoToastShowing || !mCurrentBannerKey.isEmpty()) {
+        clearEditorNotification();
     }
 
     if (bannerPermanentlyHidden(mCurrentView)) {
@@ -9872,13 +9975,13 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     case EditorViewType::cmActionView:
         mAddItem->setText(tr("Add Button"));
         mAddItem->setStatusTip(tr("Add new button"));
-        mAddGroup->setText(tr("Add Button Group"));
-        mAddGroup->setStatusTip(tr("Add new group of buttons"));
-        mDeleteItem->setText(tr("Delete Button"));
-        mDeleteItem->setStatusTip(tr("Delete the selected button"));
-        mSaveItem->setText(tr("Save Button"));
+        mAddGroup->setText(tr("Add Toolbar or Menu"));
+        mAddGroup->setStatusTip(tr("Add a Toolbar (top level) or Menu (lower levels) to contain menus or buttons"));
+        mDeleteItem->setText(tr("Delete Button, Menu or Toolbar"));
+        mDeleteItem->setStatusTip(tr("Delete the selected button, menu or toolbar"));
+        mSaveItem->setText(tr("Save item"));
         //: Status tip for saving button changes
-        mSaveItem->setStatusTip(tr("Apply button changes (does not save to disk)."));
+        mSaveItem->setStatusTip(tr("Apply button/menu/toolbar changes (does not save to disk)."));
         break;
     case EditorViewType::cmKeysView:
         mAddItem->setText(tr("Add Key"));
@@ -10105,6 +10208,9 @@ void dlgTriggerEditor::slot_showAliases()
 
 void dlgTriggerEditor::showError(const QString& text)
 {
+    // A still-running undo-toast expiry timer would hide this message when it
+    // fires, so cancel it - the toast's content is gone from the screen anyway
+    cancelBannerUndoTimer();
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->show();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
@@ -10123,6 +10229,9 @@ void dlgTriggerEditor::showError(const QString& text)
 
 void dlgTriggerEditor::showWarning(const QString& text, bool announce)
 {
+    // A still-running undo-toast expiry timer would hide this message when it
+    // fires, so cancel it - the toast's content is gone from the screen anyway
+    cancelBannerUndoTimer();
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
@@ -12347,6 +12456,14 @@ void dlgTriggerEditor::doCleanReset()
 
 void dlgTriggerEditor::runScheduledCleanReset()
 {
+    if (!mpHost) {
+        // The profile went away between doCleanReset() scheduling this and the timer firing,
+        // which is the order a teardown destroys them in. There is nothing left to repopulate
+        // from, and clearing the tree widgets below would re-enter the editor through
+        // selectionChanged to read the theme and font off the Host that has just gone.
+        return;
+    }
+
     // Clear all current item pointers BEFORE attempting to save or clear tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
     mpCurrentTriggerItem = nullptr;
@@ -14299,6 +14416,16 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
 
 void dlgTriggerEditor::handleBannerDismiss()
 {
+    // With no banner on display the close button was pressed on the "Banner
+    // hidden" undo toast itself - just close it instead of treating it as
+    // another banner dismissal (which would suppress the whole view's banners
+    // and stash the toast text as restorable banner content)
+    if (mCurrentBannerKey.isEmpty()) {
+        cancelBannerUndoTimer();
+        hideSystemMessageArea();
+        return;
+    }
+
     mLastDismissedBannerView = mCurrentView;
     mLastDismissedBannerContent = mpSystemMessageArea->notificationAreaMessageBox->text();
     mLastDismissedBannerKey = mCurrentBannerKey;
@@ -14313,12 +14440,18 @@ void dlgTriggerEditor::handleBannerDismiss()
     showBannerUndoToast();
 }
 
-void dlgTriggerEditor::showBannerUndoToast()
+void dlgTriggerEditor::cancelBannerUndoTimer()
 {
     if (mpBannerUndoTimer) {
         mpBannerUndoTimer->stop();
         mpBannerUndoTimer->deleteLater();
+        mpBannerUndoTimer = nullptr;
     }
+}
+
+void dlgTriggerEditor::showBannerUndoToast()
+{
+    cancelBannerUndoTimer();
 
     mCurrentBannerKey.clear();
 
@@ -14380,11 +14513,7 @@ void dlgTriggerEditor::slot_refreshBannerLinkColors()
 
 void dlgTriggerEditor::undoBannerDismiss()
 {
-    if (mpBannerUndoTimer) {
-        mpBannerUndoTimer->stop();
-        mpBannerUndoTimer->deleteLater();
-        mpBannerUndoTimer = nullptr;
-    }
+    cancelBannerUndoTimer();
 
     const QString settingsKey = bannerSettingsKey(mLastDismissedBannerView, mLastDismissedBannerKey);
     if (!settingsKey.isEmpty()) {
@@ -14483,7 +14612,7 @@ pushTriggerPropertyCommand(EditorUndoStack* undoStack, Host* host, int triggerID
     }
 
     auto* cmd = new EditorModifyPropertyCommand(EditorViewType::cmTriggerView, triggerID, triggerName, oldStateXML, newStateXML, host);
-    cmd->setPropertyId(qsl("trigger:%1:%2").arg(triggerID).arg(propertyName));
+    cmd->setPropertyId(qsl("trigger:%1:%2").arg(QString::number(triggerID), propertyName));
     undoStack->pushCommand(cmd);
 }
 
@@ -14768,7 +14897,7 @@ static void pushAliasPropertyCommand(EditorUndoStack* undoStack, Host* host, int
     }
 
     auto* cmd = new EditorModifyPropertyCommand(EditorViewType::cmAliasView, aliasID, aliasName, oldStateXML, newStateXML, host);
-    cmd->setPropertyId(qsl("alias:%1:%2").arg(aliasID).arg(propertyName));
+    cmd->setPropertyId(qsl("alias:%1:%2").arg(QString::number(aliasID), propertyName));
     undoStack->pushCommand(cmd);
 }
 
@@ -14883,7 +15012,7 @@ static void pushTimerPropertyCommand(EditorUndoStack* undoStack, Host* host, int
     }
 
     auto* cmd = new EditorModifyPropertyCommand(EditorViewType::cmTimerView, timerID, timerName, oldStateXML, newStateXML, host);
-    cmd->setPropertyId(qsl("timer:%1:%2").arg(timerID).arg(propertyName));
+    cmd->setPropertyId(qsl("timer:%1:%2").arg(QString::number(timerID), propertyName));
     undoStack->pushCommand(cmd);
 }
 
@@ -14980,7 +15109,7 @@ pushScriptPropertyCommand(EditorUndoStack* undoStack, Host* host, int scriptID, 
     }
 
     auto* cmd = new EditorModifyPropertyCommand(EditorViewType::cmScriptView, scriptID, scriptName, oldStateXML, newStateXML, host);
-    cmd->setPropertyId(qsl("script:%1:%2").arg(scriptID).arg(propertyName));
+    cmd->setPropertyId(qsl("script:%1:%2").arg(QString::number(scriptID), propertyName));
     undoStack->pushCommand(cmd);
 }
 
@@ -15052,7 +15181,7 @@ static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int k
     }
 
     auto* cmd = new EditorModifyPropertyCommand(EditorViewType::cmKeysView, keyID, keyName, oldStateXML, newStateXML, host);
-    cmd->setPropertyId(qsl("key:%1:%2").arg(keyID).arg(propertyName));
+    cmd->setPropertyId(qsl("key:%1:%2").arg(QString::number(keyID), propertyName));
     undoStack->pushCommand(cmd);
 }
 
@@ -15121,7 +15250,7 @@ pushActionPropertyCommand(EditorUndoStack* undoStack, Host* host, int actionID, 
     }
 
     auto* cmd = new EditorModifyPropertyCommand(EditorViewType::cmActionView, actionID, actionName, oldStateXML, newStateXML, host);
-    cmd->setPropertyId(qsl("action:%1:%2").arg(actionID).arg(propertyName));
+    cmd->setPropertyId(qsl("action:%1:%2").arg(QString::number(actionID), propertyName));
     undoStack->pushCommand(cmd);
 }
 
@@ -15249,7 +15378,32 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarColumns()
     pT->setButtonColumns(newValue);
     QString newStateXML = exportActionToXML(pT);
 
-    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barColumns"), oldStateXML, newStateXML);
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonColumn"), oldStateXML, newStateXML);
+}
+
+void dlgTriggerEditor::slot_saveProperty_ActionBarFillerOffset()
+{
+    if (mBlockPropertySave || !mpCurrentActionItem) {
+        return;
+    }
+
+    const int actionID = mpCurrentActionItem->data(0, Qt::UserRole).toInt();
+    TAction* pT = mpHost->getActionUnit()->getAction(actionID);
+    if (!pT) {
+        return;
+    }
+
+    const int newValue = mpActionsMainArea->spinBox_action_bar_offsetToFirstButton->value();
+
+    if (pT->getButtonFillerOffset() == newValue) {
+        return;
+    }
+
+    QString oldStateXML = exportActionToXML(pT);
+    pT->setButtonFillerOffset(newValue);
+    QString newStateXML = exportActionToXML(pT);
+
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonFillerOffset"), oldStateXML, newStateXML);
 }
 
 void dlgTriggerEditor::slot_saveProperty_ActionBarOrientation()
@@ -15264,6 +15418,7 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarOrientation()
         return;
     }
 
+    // 0 = horizontal, 1 = vertical
     const int newValue = mpActionsMainArea->comboBox_action_bar_orientation->currentIndex();
 
     if (pT->mOrientation == newValue) {
@@ -15274,7 +15429,7 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarOrientation()
     pT->mOrientation = newValue;
     QString newStateXML = exportActionToXML(pT);
 
-    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barOrientation"), oldStateXML, newStateXML);
+    pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("orientation"), oldStateXML, newStateXML);
 }
 
 void dlgTriggerEditor::slot_saveProperty_ActionBarLocation()
@@ -15289,6 +15444,7 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarLocation()
         return;
     }
 
+    // CHECKME: This may need the increment if it isn't zero!
     const int newValue = mpActionsMainArea->comboBox_action_bar_location->currentIndex();
 
     if (pT->mLocation == newValue) {

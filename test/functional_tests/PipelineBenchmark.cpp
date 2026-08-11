@@ -28,6 +28,9 @@
  * corpus through the production cTelnet::loopbackTest() path and prints one
  * `METRIC <name> <value>` line per measurement.
  *
+ * `text_*`, `trigger_*` and `peak_rss_kb` come from a profile with the default
+ * packages suppressed; `defaults_*` from one carrying them.
+ *
  * Built with the functional tests but deliberately NOT registered with ctest by
  * default (report-only and slow); run it directly, or configure with
  * -DREGISTER_PERF_BENCHMARK=ON to also get it under ctest:
@@ -271,8 +274,6 @@ private:
         return n;
     }
 
-    // loopbackTest() writes NUL bytes up to two past the data end, so the corpus
-    // is over-reserved in initTestCase().
     double feedCorpusBestPass(Host* host, int passes)
     {
         double best = std::numeric_limits<double>::max();
@@ -333,9 +334,6 @@ private slots:
         initializeQRCResources();
         mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
-        // loopbackTest() writes NUL bytes past the data end; reserve slack so that
-        // stays within the allocation.
-        mCorpus.reserve(mCorpus.size() + 16);
         // An invariant, emitted here so it is present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison.
         emitMetric("build_asan", static_cast<qint64>(BENCH_BUILD_ASAN));
@@ -369,6 +367,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         mTextBestPassSeconds = seconds;
@@ -388,11 +387,17 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
 
         bool triggersOk = true;
         const int triggerCount = installTriggerSet(host, triggersOk);
         QVERIFY2(triggerCount > 0, "no triggers were installed");
         QVERIFY2(triggersOk, "a trigger failed to compile, register or take its script");
+        // trigger_overhead_ms subtracts the text pass, so the count reported has
+        // to be the count actually running.
+        const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
+        QVERIFY2(rootTriggers == triggerCount,
+                 qPrintable(qsl("installed %1 root triggers but %2 are running - something else registered triggers on this profile").arg(triggerCount).arg(rootTriggers)));
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
@@ -408,7 +413,6 @@ private slots:
         QVERIFY(sentinel->setScript(qsl("benchSentinelFired = true")));
         QVERIFY(sentinel->state());
         QByteArray probe{"__bench_sentinel__\r\n"};
-        probe.reserve(probe.size() + 16);
         host->mTelnet.loopbackTest(probe);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(benchSentinelFired)")), "sentinel trigger did not fire - the trigger engine is not seeing pipeline data");
 
@@ -430,6 +434,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
         // Feed one pass so the peak still reflects pipeline work when this slot
         // runs on its own.
         feedCorpusBestPass(host, 1);
@@ -442,10 +447,59 @@ private slots:
         }
     }
 
-private:
-    // Mirrors the profile-creation helper the other functional tests use.
-    Host* startProfile()
+    // Must run after benchPeakMemory: VmHWM is process-wide and monotonic, so
+    // the bare peak_rss_kb has to be read before any packaged profile exists.
+    // defaults_peak_rss_kb is then the high-water mark including this pass, and
+    // its excess over peak_rss_kb is what the packages cost.
+    void benchDefaultPackages()
     {
+        Host* host = startProfile(DefaultPackages::Install);
+        QVERIFY(host);
+        const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
+        // Needs a fresh HOME/XDG_CONFIG_HOME: the starter UI is gated on
+        // mudlet::experiencedMudletPlayer(), which answers from the machine's
+        // own Mudlet history, and without it this slot silently measures the
+        // same thing as benchTextPipeline. A trigger count would not catch that
+        // - the other default packages register root folders of their own.
+        QVERIFY2(host->mInstalledPackages.contains(qsl("mudlet-base-ui")),
+                 "the starter UI is not installed, so this profile is not the one a new user gets and defaults_* "
+                 "would describe something else entirely. Re-run under a fresh HOME and XDG_CONFIG_HOME.");
+
+        const double seconds = feedCorpusBestPass(host, kFeedPasses);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        emitMetric("defaults_root_triggers", static_cast<qint64>(rootTriggers));
+        emitMetric("defaults_text_lines_per_sec", mCorpusLines / seconds);
+        emitMetric("defaults_text_best_pass_ms", seconds * 1000.0);
+        const qint64 peakRssKb = readPeakRssKb();
+        if (peakRssKb >= 0) {
+            emitMetric("defaults_peak_rss_kb", peakRssKb);
+        }
+    }
+
+private:
+    enum class DefaultPackages { Skip, Install };
+
+    // Called before the benchmark installs any of its own, so anything running
+    // came from elsewhere and would be timed as pipeline cost.
+    bool noTriggersAreRunningYet(Host* host)
+    {
+        const size_t rootTriggers = host->getTriggerUnit()->getTriggerRootNodeList().size();
+        if (rootTriggers == 0) {
+            return true;
+        }
+        qWarning("%s",
+                 qPrintable(qsl("%1 root triggers are running on a profile that should have none - a package or a "
+                                "leftover profile is being measured as pipeline cost")
+                                    .arg(rootTriggers)));
+        return false;
+    }
+
+    // Mirrors the profile-creation helper the other functional tests use.
+    Host* startProfile(DefaultPackages defaultPackages = DefaultPackages::Skip)
+    {
+        mudlet::self()->mSkipDefaultPackageInstall = (defaultPackages == DefaultPackages::Skip);
         const QString port = QString::number(mPort);
         QTimer::singleShot(0, qApp, [this, port]() {
             mudlet::self()->startAutoLogin({});

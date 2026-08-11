@@ -22,6 +22,7 @@
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QMessageBox>
 #include <QPushButton>
@@ -89,18 +90,23 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     feed.reset(new dblsqd::Feed(this));
     feed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion);
     mPeriodicCheck = std::make_unique<QTimer>();
-}
 
-Updater::~Updater()
-{
 #if !defined(Q_OS_MACOS)
-    // QPointer::data() returns null if Qt already deleted the dialog; only
-    // delete if it hasn't been cleaned up yet.
-    if (updateDialog) {
-        delete updateDialog;
-    }
+    // The update dialog must not be deleted in ~Updater: this Updater is
+    // parented to the application object (so it can offer an update after the
+    // last window closes, #9388), which means ~Updater only runs inside the
+    // application's own destructor - after ~QApplication has torn down all
+    // widget infrastructure. Deleting a QWidget that late corrupts the heap on
+    // Windows (#9122). aboutToQuit fires as the event loop exits, after the
+    // dialog's last-window-closed flow has finished but while the application
+    // is still fully alive, so destroy it there instead.
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this]() {
+        delete updateDialog.data();
+    });
 #endif
 }
+
+Updater::~Updater() = default;
 
 void Updater::checkUpdatesOnStart()
 {
@@ -138,9 +144,25 @@ void Updater::checkUpdatesOnStart()
     mPeriodicCheck->start();
 }
 
+// Whether the platform updater is set up and can answer for itself. On macOS
+// that only happens in checkUpdatesOnStart(), so anything reaching the Updater
+// before then - the preferences dialog above all - has to ask first. Elsewhere
+// the automatic-update flag lives in QSettings and is readable straight away.
+bool Updater::ready() const
+{
+#if defined(Q_OS_MACOS)
+    return msparkleUpdater != nullptr;
+#else
+    return true;
+#endif
+}
+
 void Updater::setAutomaticUpdates(const bool state)
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
 #else
     dblsqd::UpdateDialog::enableAutoDownload(state, mSettings);
@@ -153,6 +175,9 @@ void Updater::setAutomaticUpdates(const bool state)
 bool Updater::updateAutomatically() const
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return false;
+    }
     return msparkleUpdater->automaticallyDownloadsUpdates();
 #else
     return dblsqd::UpdateDialog::autoDownloadEnabled(true, mSettings);
@@ -162,6 +187,9 @@ bool Updater::updateAutomatically() const
 void Updater::manuallyCheckUpdates()
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->checkForUpdates();
 #else
     if (mManualCheckInProgress) {
@@ -237,7 +265,7 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
         }
         return false;
     }
-    feed->downloadRelease(release);
+    feed->downloadRelease(release, /*requireChecksums=*/true);
     return true;
 }
 
@@ -291,8 +319,16 @@ void Updater::setupPlatformUpdater()
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+        // Only a check the user started reaches the console. An automatic one
+        // runs twice a day whether or not anybody is interested, so its failures
+        // would just repeat in red; once the update dialog is listening it
+        // reports them itself.
+        if (mManualCheckInProgress) {
+            qWarning() << "Manual update download failed:" << error;
+            emit signal_updateCheckFailed(error);
+            return;
+        }
         qWarning() << "Automatic update download failed:" << error;
-        emit signal_updateCheckFailed(error);
     });
 }
 #endif // !Q_OS_MACOS

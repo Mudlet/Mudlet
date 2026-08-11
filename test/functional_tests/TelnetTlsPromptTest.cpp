@@ -29,7 +29,11 @@
 #include "mudlet.h"
 #include "utils.h"
 
+#include <QHostAddress>
+#include <QNetworkReply>
+#include <QPointer>
 #include <QProgressDialog>
+#include <QTcpServer>
 #include <QRegularExpression>
 
 extern void qInitResources_mudlet();
@@ -108,10 +112,6 @@ private slots:
         data.append(tlsPort);
         data.append(TN_IAC);
         data.append(TN_SE);
-        // processSocketData() writes a NUL at in_buffer[size + 1], so give the
-        // backing buffer a little slack before handing it its data pointer.
-        data.reserve(data.size() + 16);
-
         host->mTelnet.loopbackTest(data);
 
         // The signal is emitted synchronously inside loopbackTest(), so it has
@@ -156,7 +156,6 @@ private slots:
         // Advertise a secure port so mMSSPTlsPort is populated (the handler is
         // detached, so nothing pops up).
         QByteArray advertise = msspTlsPayload("48000");
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
 
         // The user answers No; the reconnect that follows must complete.
@@ -172,7 +171,6 @@ private slots:
         // the user has declined (don't-ask-again is sticky for the session).
         QSignalSpy promptSpy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
         QByteArray advertiseAgain = msspTlsPayload("48000");
-        advertiseAgain.reserve(advertiseAgain.size() + 16);
         host->mTelnet.loopbackTest(advertiseAgain);
         QCOMPARE(promptSpy.count(), 0);
 #endif
@@ -200,7 +198,6 @@ private slots:
 
         // Advertise the second stub's port as the secure port.
         QByteArray advertise = msspTlsPayload(QByteArray::number(securePort));
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
         QCOMPARE(host->mMSSPTlsPort, static_cast<int>(securePort));
 
@@ -239,7 +236,6 @@ private slots:
         QVERIFY(spy.isValid());
 
         QByteArray advertise = msspTlsPayload("48000");
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
         if (spy.isEmpty()) {
             QVERIFY2(spy.wait(2s), "cTelnet did not emit signal_promptTlsAvailable for the first advertisement.");
@@ -249,7 +245,6 @@ private slots:
         // Nobody has answered, so the prompt is still in flight: a repeated
         // advertisement (as a hostile server could spam) must be swallowed.
         QByteArray advertiseAgain = msspTlsPayload("48000");
-        advertiseAgain.reserve(advertiseAgain.size() + 16);
         host->mTelnet.loopbackTest(advertiseAgain);
         QCOMPARE(spy.count(), 1);
 #endif
@@ -273,7 +268,6 @@ private slots:
         // Advertise so the port is recorded and the latch is set, mirroring a
         // real pending prompt.
         QByteArray advertise = msspTlsPayload("48000");
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
 
         const int originalPort = host->getPort();
@@ -310,12 +304,10 @@ private slots:
         QSignalSpy bellSpy(&host->mTelnet, &cTelnet::signal_bell);
 
         QByteArray oneBell("\a");
-        oneBell.reserve(oneBell.size() + 16);
         host->mTelnet.loopbackTest(oneBell);
         QCOMPARE(bellSpy.count(), 1);
 
         QByteArray twoBells("\a\a");
-        twoBells.reserve(twoBells.size() + 16);
         host->mTelnet.loopbackTest(twoBells);
         QCOMPARE(bellSpy.count(), 3);
     }
@@ -341,6 +333,51 @@ private slots:
         // Cancelling when no download is in flight must be a harmless no-op.
         host->mTelnet.slot_cancelPackageDownload();
         QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+    }
+
+    // When a second server-initiated GUI download supersedes one still in
+    // flight (a reconnect re-sends Client.GUI), swapping the progress dialog
+    // must not cancel the freshly started download. The superseded dialog's
+    // close() emits canceled(), which used to abort the just-assigned new reply.
+    // The test above missed this because it swapped dialogs with no reply live.
+    void test_replacingDownloadDialogKeepsNewDownloadAlive()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        auto console = host->mpConsole;
+
+        // A TCP server that accepts connections but never answers keeps the
+        // package-download reply in flight (Running, NoError) for the whole
+        // test, so an unwanted abort() is the only thing that can finish it.
+        QTcpServer hangingServer;
+        QVERIFY2(hangingServer.listen(QHostAddress::LocalHost, 0), "Could not start the stand-in download server.");
+        const QString url = qsl("http://localhost:%1/game-ui.mpackage").arg(hangingServer.serverPort());
+
+        // First server-initiated download: starts reply #1 and progress dialog #1.
+        host->mTelnet.downloadAndInstallGUIPackage(qsl("game-ui"), qsl("game-ui.mpackage"), url);
+        QVERIFY2(host->mTelnet.mpPackageDownloadReply, "The first GUI download did not start a network reply.");
+        QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+
+        // Second download supersedes the first; reply #2 must take over and stay
+        // live rather than being cancelled the instant its dialog replaces #1.
+        host->mTelnet.downloadAndInstallGUIPackage(qsl("game-ui"), qsl("game-ui.mpackage"), url);
+
+        QPointer<QNetworkReply> newReply = host->mTelnet.mpPackageDownloadReply;
+        QVERIFY2(newReply, "The superseding GUI download left no active network reply.");
+        QVERIFY2(!newReply->isFinished(), "The superseding GUI download was cancelled at birth by the dialog swap.");
+        QCOMPARE(newReply->error(), QNetworkReply::NoError);
+
+        // Let dialog #1's WA_DeleteOnClose deleteLater() run: exactly one dialog
+        // survives the swap, and the new download is still alive.
+        QTest::qWait(50ms);
+        QCOMPARE(console->findChildren<QProgressDialog*>().count(), 1);
+        QVERIFY2(newReply && newReply->error() == QNetworkReply::NoError, "The superseding GUI download did not survive the dialog swap.");
+
+        // The user's Cancel must still abort the live download.
+        host->mTelnet.slot_cancelPackageDownload();
+        QTest::qWait(50ms);
     }
 
     // Builds an MSSP subnegotiation advertising a secure TLS port:

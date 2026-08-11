@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "THyperlinkStyling.h"
+
 #include <QHash>
 #include <QObject>
 #include <QSet>
@@ -50,8 +52,11 @@ public:
     void setGroupExclusive(const QString& group, bool exclusive);
     bool isGroupExclusive(const QString& group) const;
 
-    // Modifies hyperlink URI to include current selection state
-    QString modifyUriForSelection(const QString& baseUri, const QString& group, const QString& value) const;
+    // Builds the Lua call for a link whose selection state just changed, with
+    // the group's current state appended to the command as &selected=. Returns
+    // an empty string for schemes that have no selection-aware form (openUrl,
+    // and links with no parsed action) - callers keep the command they have.
+    QString modifyUriForSelection(Mudlet::HyperlinkStyling::ActionScheme scheme, const QString& baseCommand, const QString& group, const QString& value) const;
 
 signals:
     void selectionChanged(const QString& group, const QString& value, bool selected);

@@ -186,6 +186,24 @@ describe("Tests keybind-related functions", function()
       assert.is_false(killKey("no_such_key_name"), "killing a missing key should return false")
     end)
 
+    it("killKey returns false the second time, as the key is already dead", function()
+      local id = tempKey(mudlet.key.F11, [[echo("x")]])
+      assert.is_true(killKey(id), "killing a live temporary key should report success")
+      -- the key is still present here: only the deferred cleanup frees it, so the
+      -- second kill really is being told about a corpse it can find
+      assert.are.equal(1, exists(id, "keybind"), "the killed key is still present until cleanup runs")
+      assert.are.equal(0, isActive(id, "keybind"), "a killed key is no longer active")
+      assert.is_false(killKey(id),
+        "killing an already killed key achieves nothing and has to say so")
+      -- an incoming line runs every unit's deferred cleanup, which is what finally
+      -- frees the key; the answer has to be the same after it. A key press cannot be
+      -- synthesised headlessly, so there is no in-callback double kill to pin here -
+      -- KeyUnit's depth and cleanup machinery matches AliasUnit's, whose spec has one
+      feedTriggers("\nspec_key_kill_flush\n")
+      assert.are.equal(0, exists(id, "keybind"), "the key should be gone after kill and cleanup")
+      assert.is_false(killKey(id), "a freed key cannot be killed either")
+    end)
+
     it("killKey returns false for a permanent key (they cannot be killed)", function()
       local id = permKey("SpecPermKeyKill", "", mudlet.key.F12, [[echo("x")]])
       assert.is_true(id > 0)
@@ -232,6 +250,43 @@ describe("Tests keybind-related functions", function()
       assert.are.equal(0, isActive("SpecDupKeys", "keybind"), "disabling by name must leave zero of the duplicates active")
       enableKey("SpecDupKeys")
       assert.are.equal(exists("SpecDupKeys", "keybind"), isActive("SpecDupKeys", "keybind"), "enabling by name must reactivate every duplicate")
+    end)
+
+    it("freeing a temporary key leaves a same-named permanent one reachable", function()
+      -- tempKey names its key after its id, so a permanent key called after that
+      -- number shares the name - and the name lookup table holds several keys per
+      -- name
+      local tempId = tempKey(mudlet.key.F11, [[echo("x")]])
+      local sharedName = tostring(tempId)
+      -- permanent keys cannot be deleted from Lua, so earlier local runs can leave
+      -- same-named ones behind: work from a relative baseline
+      local before = exists(sharedName, "keybind")
+      assert.is_true(permKey(sharedName, "", mudlet.key.F12, [[echo("x")]]) > 0)
+      finally(function() disableKey(sharedName) end)
+      assert.are.equal(before + 1, exists(sharedName, "keybind"))
+
+      assert.is_true(killKey(tempId), "the temporary key is the one that can be killed")
+      -- an incoming line runs every unit's deferred cleanup, which frees it
+      feedTriggers("\nspec_key_eviction_flush\n")
+
+      assert.are.equal(before, exists(sharedName, "keybind"), "only the temporary key should leave the lookup table")
+      assert.is_true(enableKey(sharedName), "the permanent key must still be reachable by name")
+    end)
+
+    it("killKey finds a temporary key behind a same-named permanent one", function()
+      -- killKey walks the root node list in creation order, so a permanent key
+      -- restored from the profile sits in front of this session's temporaries: it
+      -- must be scanned past, not reported as a failure
+      local seed = tempKey(mudlet.key.F9, [[echo("x")]])
+      killKey(seed)
+      -- permKey itself takes seed + 1, so the next temporary takes seed + 2
+      local sharedName = tostring(seed + 2)
+      assert.is_true(permKey(sharedName, "", mudlet.key.F10, [[echo("x")]]) > 0)
+      finally(function() disableKey(sharedName) end)
+
+      local tempId = tempKey(mudlet.key.F11, [[echo("x")]])
+      assert.are.equal(seed + 2, tempId, "ids should still be handed out in sequence")
+      assert.is_true(killKey(tempId), "killKey must scan past the permanent key")
     end)
 
   end)

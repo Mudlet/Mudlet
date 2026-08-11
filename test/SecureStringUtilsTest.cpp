@@ -143,22 +143,17 @@ void SecureStringUtilsTest::testSecureMemoryClearing()
     QString testString = "sensitive_data";
     QString originalContent = testString;
     
-    // Clear the string
     SecureStringUtils::secureStringClear(testString);
-    
-    // String should be empty after clearing
     QVERIFY(testString.isEmpty());
     QVERIFY(testString != originalContent);
-    
-    // Test QByteArray clearing
+
     QByteArray testArray = "sensitive_bytes";
     QByteArray originalArray = testArray;
-    
+
     SecureStringUtils::secureByteArrayClear(testArray);
     QVERIFY(testArray.isEmpty());
     QVERIFY(testArray != originalArray);
 
-    // Test std::string clearing
     std::string testStdString = "sensitive_std_data";
     std::string originalStdString = testStdString;
 
