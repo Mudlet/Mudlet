@@ -50,9 +50,10 @@ end
 ---
 --- @see display
 function printTable( map )
+  assert(type(map) == 'table', 'printTable: bad argument #1 type (table expected, got '..type(map)..'!)')
   echo("-------------------------------------------------------\n");
   for k, v in pairs( map ) do
-    echo( "key=" .. k .. " value=" .. v .. "\n" )
+    echo( "key=" .. tostring(k) .. " value=" .. tostring(v) .. "\n" )
   end
   echo("-------------------------------------------------------\n");
 end
@@ -60,7 +61,9 @@ end
 
 
 -- NOT LUADOC
--- This is supporting function for printTable().
+-- Prints a single key/value pair into the main console at the cursor. Named as
+-- a helper for printTable(), but printTable() has never called it and formats
+-- its own lines; kept because it is reachable from scripts.
 function __printTable( k, v )
   insertText("\nkey = " .. tostring(k) .. " value = " .. tostring( v )  )
 end
@@ -135,9 +138,10 @@ end
 --- @see display
 --- @see printTable
 function listPrint( map )
+  assert(type(map) == 'table', 'listPrint: bad argument #1 type (table expected, got '..type(map)..'!)')
   echo("-------------------------------------------------------\n");
   for k, v in ipairs( map ) do
-    echo( k .. ". ) " .. v .. "\n" );
+    echo( k .. ". ) " .. tostring(v) .. "\n" );
   end
   echo("-------------------------------------------------------\n");
 end

@@ -36,6 +36,7 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -52,6 +53,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <utility>
 #include <vector>
 
 #if defined(Q_OS_WINDOWS)
@@ -195,12 +197,14 @@ public:
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
+    void sendInfoNewEnvironValues(const QStringList&);
+    void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
-    bool purgeMediaCache();
+    std::pair<bool, QString> purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void checkNAWS();
@@ -251,14 +255,23 @@ public:
     void loopbackTest(QByteArray& data)
     {
         ++mLoopbackProcessingDepth;
+        const auto loopbackGuard = qScopeGuard([this] {
+            --mLoopbackProcessingDepth;
+        });
         processSocketData(data.data(), data.size(), true);
-        --mLoopbackProcessingDepth;
     }
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
     // Each nested processSocketData() puts ~100KB of buffers on the stack, so a
     // self-feeding feedTelnet() loop overflows a 1MB (Windows) stack in only ~8
     // levels - hence a much lower cap than TriggerUnit::scmMaxProcessingDepth.
     inline static const int scmMaxLoopbackProcessingDepth = 5;
+    // How many times processSocketData() may re-enter itself to drain data left
+    // over after a decompression pass (compressed input that did not fit in one
+    // output buffer, or plain data following the compressed stream). Each level
+    // puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
+    // output at ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read,
+    // which bounds a decompression bomb.
+    inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     void terminateConnection();
     bool currentlySecure() const
@@ -335,7 +348,9 @@ private:
     friend class TelnetTlsPromptTest;
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
-    // the public loopbackTest() cannot express - see issue #1065.
+    // the public loopbackTest() cannot express - see issue #1065 - and to seed
+    // mDecompressionRecursionDepth so the over-limit refusal can be reached
+    // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
 #if defined(QT_NO_SSL)

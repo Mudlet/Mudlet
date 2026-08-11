@@ -24,6 +24,7 @@
 #include "CredentialManager.h"
 #include "OAuthClientFlow.h"
 #include "SecureStringUtils.h"
+#include "UntrustedText.h"
 #include "ctelnet.h"
 #include "mudlet.h"
 #include <QAccessible>
@@ -70,6 +71,25 @@ GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 : mpHost(pHost)
 {
     resetPerConnectionState();
+    // mTelnet is declared before this authenticator in Host, so it is already constructed here.
+    QObject::connect(&pHost->mTelnet, &cTelnet::signal_connected, pHost, [this]() {
+        resetForNewConnection();
+    });
+    QObject::connect(&pHost->mTelnet, &cTelnet::signal_disconnected, pHost, [this]() {
+        resetForNewConnection();
+    });
+}
+
+void GMCPAuthenticator::resetForNewConnection()
+{
+    // Anything still in flight belongs to the connection that started it: a deferred attempt would
+    // cancel the new connection's login timers and sign in with capabilities the new server never
+    // advertised, and a credential read landing there would replay a token nobody asked for.
+    ++mSignInScheduleGeneration;
+    ++mAuthAttemptGeneration;
+    mSignInAttemptPending = false;
+    mLastSignInAttempt.invalidate();
+    mUnpromptedBrowserOpenAvailable = true;
 }
 
 void GMCPAuthenticator::resetPerConnectionState()
@@ -224,8 +244,19 @@ void GMCPAuthenticator::sendCredentials(bool interactiveHandoff)
 #endif
 }
 
-void GMCPAuthenticator::sendReconnect(const QString& account, QString token)
+bool GMCPAuthenticator::sendReconnect(const QString& account, QString token)
 {
+    // The token signs in to the account without the player's password, and is replayed on whatever
+    // transport is live now rather than the one it was earned on: in the clear that hands the account
+    // to anyone on the path.
+    if (!mpHost->mTelnet.currentlySecure()) {
+        SecureStringUtils::secureStringClear(token);
+        qWarning().noquote() << "GMCP Char.Login.Reconnect - refusing to replay the saved sign-in token over an unencrypted connection.";
+        //: Shown when a saved password-less sign-in cannot be reused because this connection to the game is not encrypted.
+        mpHost->postMessage(tr("[ WARN ]  - Not using your saved sign-in because this connection is not encrypted; please sign in again."));
+        return false;
+    }
+
     QJsonObject payload;
     payload[qsl("account")] = account;
     payload[qsl("token")] = token;
@@ -263,6 +294,7 @@ void GMCPAuthenticator::sendReconnect(const QString& account, QString token)
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP reconnect for account:" << account;
 #endif
+    return true;
 }
 
 void GMCPAuthenticator::storeReconnectToken(const QString& account, QString token)
@@ -421,26 +453,34 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
         return;
     }
 
-    // This message can arrive unsolicited, so only auto-open the browser when the player has sent input
-    // this connection (evidence they acted on the game's sign-in screen); otherwise offer the link to
-    // open deliberately, so a misbehaving server cannot pop a browser at an idle player.
-    if (mpHost->userSentInputThisConnection()) {
-        openSignInUrl(parsedUrl, provider);
+    // Char.Login.URL can arrive at any moment in a session, so it only auto-opens against user input.
+    offerOrOpenSignInUrl(parsedUrl, provider, false);
+}
+
+void GMCPAuthenticator::offerOrOpenSignInUrl(const QUrl& url, const QString& provider, bool answersTheGamesSignInOffer)
+{
+    const bool mayOpen = mpHost->userSentInputThisConnection() || (answersTheGamesSignInOffer && mUnpromptedBrowserOpenAvailable);
+    if (mayOpen) {
+        if (openSignInUrl(url, provider)) {
+            mUnpromptedBrowserOpenAvailable = false;
+            mpHost->setUserSentInputThisConnection(false);
+        }
         return;
     }
 
     //: %1 is the sign-in web address the user should open in their browser to sign in.
-    mpHost->postMessage(tr("[ INFO ]  - To sign in, open this link in your browser: %1").arg(url));
+    mpHost->postMessage(tr("[ INFO ]  - To sign in, open this link in your browser: %1").arg(UntrustedText::forTarget(url.toString())));
 }
 
-void GMCPAuthenticator::openSignInUrl(const QUrl& url, const QString& provider)
+bool GMCPAuthenticator::openSignInUrl(const QUrl& url, const QString& provider)
 {
     if (!QDesktopServices::openUrl(url)) {
         //: %1 is the sign-in web address the user should open manually in their browser.
-        mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(url.toString()));
-        return;
+        mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(UntrustedText::forTarget(url.toString())));
+        return false;
     }
     announceBrowserHandoff(provider);
+    return true;
 }
 
 void GMCPAuthenticator::announceBrowserHandoff(const QString& provider)
@@ -465,15 +505,12 @@ void GMCPAuthenticator::startClientDrivenOAuth()
 
     // Parented to the Host so the flow (and its loopback listener) cannot outlive the profile.
     mpOAuthFlow = new OAuthClientFlow(mpHost);
-    QObject::connect(mpOAuthFlow, &OAuthClientFlow::authorizationCaptured, mpHost, [this](const QString& code, const QString& codeVerifier, const QString& redirectUri) {
-        sendAuthCode(code, codeVerifier, redirectUri);
+    QObject::connect(mpOAuthFlow, &OAuthClientFlow::authorizationCaptured, mpHost, [this](const QString& code, const QString& codeVerifier, const QString& redirectUri, const QString& nonce) {
+        sendAuthCode(code, codeVerifier, redirectUri, nonce);
     });
-    QObject::connect(mpOAuthFlow, &OAuthClientFlow::browserOpened, mpHost, [this]() {
-        announceBrowserHandoff(QString());
-    });
-    QObject::connect(mpOAuthFlow, &OAuthClientFlow::browserOpenFailed, mpHost, [this](const QString& url) {
-        //: %1 is the sign-in web address the user should open manually in their browser.
-        mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(url));
+    // This flow only starts from the game's own sign-in offer, so connecting is itself the request.
+    QObject::connect(mpOAuthFlow, &OAuthClientFlow::authorizationUrlReady, mpHost, [this](const QUrl& authorizationUrl) {
+        offerOrOpenSignInUrl(authorizationUrl, QString(), true);
     });
     QObject::connect(mpOAuthFlow, &OAuthClientFlow::flowFailed, mpHost, [this](const QString& logDetail) {
         qWarning().noquote() << "GMCP Char.Login client-driven OAuth failed:" << logDetail;
@@ -494,7 +531,7 @@ void GMCPAuthenticator::cancelClientDrivenOAuth()
     }
 }
 
-void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const QString& redirectUri)
+void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const QString& redirectUri, QString nonce)
 {
     // The spec forbids Char.Login.AuthCode on a cleartext connection: the authorization code and PKCE
     // verifier together would let an eavesdropper redeem the code at the provider. The flow only starts
@@ -502,6 +539,7 @@ void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const Q
     if (!mpHost->mTelnet.currentlySecure()) {
         SecureStringUtils::secureStringClear(code);
         SecureStringUtils::secureStringClear(codeVerifier);
+        SecureStringUtils::secureStringClear(nonce);
         qWarning().noquote() << "GMCP Char.Login.AuthCode - refusing to send the authorization code over an unencrypted connection.";
         mpHost->mTelnet.setDontReconnect(true);
         // Tear down the in-flight flow and its loopback listener immediately: the sign-in is doomed, so
@@ -516,6 +554,13 @@ void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const Q
     payload[qsl("code")] = code;
     payload[qsl("code_verifier")] = codeVerifier;
     payload[qsl("redirect_uri")] = redirectUri;
+    // The server, not this client, receives and validates the ID token, so it is the only party that
+    // can check the nonce claim - and only against the value chosen here.
+    if (!nonce.isEmpty()) {
+        payload[qsl("nonce")] = nonce;
+    } else if (mOAuthNonceRequired) {
+        qWarning().noquote() << "GMCP Char.Login.AuthCode - the server asked for a nonce but none was generated, so it cannot verify the ID token's nonce claim.";
+    }
     payload[qsl("version")] = mNegotiatedVersion;
     QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
     QString gmcpMessage = QString::fromUtf8(json);
@@ -543,6 +588,7 @@ void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const Q
     // payloads, and the assembled telnet frame.
     SecureStringUtils::secureStringClear(code);
     SecureStringUtils::secureStringClear(codeVerifier);
+    SecureStringUtils::secureStringClear(nonce);
     SecureStringUtils::secureStringClear(gmcpMessage);
     SecureStringUtils::secureStdStringClear(plaintext);
     SecureStringUtils::secureStdStringClear(encoded);
@@ -687,16 +733,21 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
 #if defined(DEBUG_GMCP_AUTHENTICATION)
                                 qDebug() << "GMCP reconnect token was rotated by another instance; replaying the fresh token";
 #endif
-                                mConn.retriedRotatedToken = true;
-                                mConn.sentReconnectTokenHash = storedHash;
-                                mConn.reconnectingWithToken = true;
-                                mConn.awaitingReconnectResult = true;
-                                mConn.reconnectAccount = account;
-                                // This attempt is replaying a live token rather than recovering from a dead
-                                // one, so release the latch: the next Char.Login.Default is an ordinary
-                                // sign-in again and may use a stored token.
-                                mReconnectRejected = false;
-                                sendReconnect(account, std::move(token));
+                                if (sendReconnect(account, std::move(token))) {
+                                    mConn.retriedRotatedToken = true;
+                                    mConn.sentReconnectTokenHash = storedHash;
+                                    mConn.reconnectingWithToken = true;
+                                    mConn.awaitingReconnectResult = true;
+                                    mConn.reconnectAccount = account;
+                                    // This attempt is replaying a live token rather than recovering from a dead
+                                    // one, so release the latch: the next Char.Login.Default is an ordinary
+                                    // sign-in again and may use a stored token.
+                                    mReconnectRejected = false;
+                                    return;
+                                }
+                                // The other instance's token is live, so leave the stored entry alone. The
+                                // rejection latch stays armed: this connection cannot use a token at all.
+                                selectAuthMethod();
                                 return;
                             }
                             // Both branches above return, so reaching here means the stored token is not a
@@ -775,7 +826,7 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
         // deciding how to authenticate.
         resetPerConnectionState();
 
-        attemptReconnect();
+        scheduleSignInAttempt();
         return;
     }
 
@@ -847,6 +898,34 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Stored GMCP reconnect token for account:" << account;
 #endif
+}
+
+void GMCPAuthenticator::scheduleSignInAttempt()
+{
+    if (mSignInAttemptPending) {
+#if defined(DEBUG_GMCP_AUTHENTICATION)
+        qDebug() << "GMCP Char.Login.Default arrived while a sign-in attempt was already scheduled; folding it into that attempt";
+#endif
+        return;
+    }
+    if (!mLastSignInAttempt.isValid() || mLastSignInAttempt.durationElapsed() >= scmSignInAttemptInterval) {
+        mLastSignInAttempt.start();
+        attemptReconnect();
+        return;
+    }
+
+    // Inside the throttle window: serve the whole burst with one attempt when it closes, using the
+    // capabilities the last frame left behind, and drop it if that connection has gone by then.
+    mSignInAttemptPending = true;
+    const auto scheduleGeneration = mSignInScheduleGeneration;
+    QTimer::singleShot(scmSignInAttemptInterval - mLastSignInAttempt.durationElapsed(), mpHost, [this, scheduleGeneration]() {
+        if (scheduleGeneration != mSignInScheduleGeneration) {
+            return;
+        }
+        mSignInAttemptPending = false;
+        mLastSignInAttempt.start();
+        attemptReconnect();
+    });
 }
 
 void GMCPAuthenticator::attemptReconnect()
@@ -927,20 +1006,23 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                             mConn.accountProvider = provider;
                         }
                         if (allowToken && !account.isEmpty() && !token.isEmpty()) {
-                            // This connection is logging in by replaying a saved token, so a Char.Login.Token
-                            // that comes back is a silent rotation rather than a first-time save to announce.
-                            mConn.reconnectingWithToken = true;
-                            mConn.awaitingReconnectResult = true;
-                            mConn.reconnectAccount = account;
                             // Remember only a hash of what we send: if the reconnect is rejected, comparing it
                             // against a fresh read tells a dead token apart from one another running instance
                             // (sharing this profile's keychain) rotated while ours was in flight.
                             QByteArray tokenBytes = token.toUtf8();
-                            mConn.sentReconnectTokenHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
+                            const QByteArray sentHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
                             SecureStringUtils::secureByteArrayClear(tokenBytes);
-                            // Move the token in so sendReconnect owns the sole copy and can scrub it after sending.
-                            sendReconnect(account, std::move(token));
-                            return;
+                            // Move the token in so sendReconnect owns the sole copy and can scrub it either way.
+                            if (sendReconnect(account, std::move(token))) {
+                                // This connection is logging in by replaying a saved token, so a Char.Login.Token
+                                // that comes back is a silent rotation rather than a first-time save to announce.
+                                mConn.reconnectingWithToken = true;
+                                mConn.awaitingReconnectResult = true;
+                                mConn.reconnectAccount = account;
+                                mConn.sentReconnectTokenHash = sentHash;
+                                return;
+                            }
+                            // Not sent, so nothing awaits a result on it; fall through to resume or hand-off.
                         }
                         if (!account.isEmpty() && !provider.isEmpty()) {
                             // No usable token, but we remember how this account signs in: ask the game to

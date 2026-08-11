@@ -61,6 +61,7 @@
 #include <QNetworkProxy>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSslError>
@@ -88,13 +89,6 @@ constexpr size_t BUFFER_SIZE = 100000L;
 // accumulation buffer without bound across reads.
 constexpr size_t MAX_TELNET_SUBNEGOTIATION_LENGTH = 5_MB;
 
-// How many times processSocketData() may re-enter itself to drain data left
-// over after a decompression pass (compressed input that did not fit in one
-// output buffer, or plain data following the compressed stream). Each level
-// puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
-// output at ~MAX_DECOMPRESSION_RECURSION * BUFFER_SIZE per socket read, which
-// bounds a decompression bomb.
-constexpr int MAX_DECOMPRESSION_RECURSION = 8;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
@@ -1984,67 +1978,67 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironOSCHyperlinks()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSend()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyleBasic()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyleStates()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksTooltip()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksMenu()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksCompact()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPresets()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksVisibility()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSelection()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSpoiler()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 bool cTelnet::oscHyperlinkConfigFeatureEnabled()
@@ -2142,22 +2136,36 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
 // SEND INFO per https://www.rfc-editor.org/rfc/rfc1572
 void cTelnet::sendInfoNewEnvironValue(const QString& var)
 {
+    sendInfoNewEnvironValues(QStringList{var});
+}
+
+// RFC 1572 gives INFO the same syntax as IS, so one subnegotiation may carry
+// several variables. Preferred when a single preference changes a group of
+// them, because the server then sees one consistent change rather than a run of
+// partial ones.
+void cTelnet::sendInfoNewEnvironValues(const QStringList& vars)
+{
     if (!enableNewEnviron || !mpHost->mEnableNEWENVIRON) {
-        return;
-    }
-
-    if (mpHost->mEnableMNES && !isMNESVariable(var)) {
-        return;
-    }
-
-    if (!newEnvironVariablesSent.contains(var)) {
-        qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
         return;
     }
 
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
-    if (newEnvironDataMap.contains(var)) {
+    std::string payload;
+    for (const auto& var : vars) {
+        if (mpHost->mEnableMNES && !isMNESVariable(var)) {
+            continue;
+        }
+
+        if (!newEnvironVariablesSent.contains(var)) {
+            qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
+            continue;
+        }
+
+        if (!newEnvironDataMap.contains(var)) {
+            continue;
+        }
+
         qDebug() << "We updated NEW_ENVIRON" << var;
 
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
@@ -2165,24 +2173,15 @@ void cTelnet::sendInfoNewEnvironValue(const QString& var)
         const bool isUserVar = !mpHost->mEnableMNES && newEnvironData.first;
         const QString val = newEnvironData.second;
 
-        std::string output;
-        output += TN_IAC;
-        output += TN_SB;
-        output += OPT_NEW_ENVIRON;
-        output += NEW_ENVIRON_INFO;
-        output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += prepareNewEnvironData(var).toStdString();
-        output += NEW_ENVIRON_VAL;
+        payload += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
+        payload += prepareNewEnvironData(var).toStdString();
+        payload += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += prepareNewEnvironData(val).toStdString();
+            payload += prepareNewEnvironData(val).toStdString();
         }
-
-        output += TN_IAC;
-        output += TN_SE;
-        socketOutRaw(output);
 
         if (mpHost->mEnableMNES) {
             if (!val.isEmpty()) {
@@ -2202,6 +2201,39 @@ void cTelnet::sendInfoNewEnvironValue(const QString& var)
             qDebug() << "WE inform NEW_ENVIRON USERVAR" << var << "as an empty VAL";
         }
     }
+
+    // Every candidate was filtered out, so send nothing rather than an empty
+    // INFO subnegotiation.
+    if (payload.empty()) {
+        return;
+    }
+
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_NEW_ENVIRON;
+    output += NEW_ENVIRON_INFO;
+    output += payload;
+    output += TN_IAC;
+    output += TN_SE;
+    socketOutRaw(output);
+}
+
+void cTelnet::sendInfoNewEnvironOSCHyperlinks()
+{
+    // Derived from the advertised set rather than a second hand-kept list, so a
+    // capability added later is announced without touching this - as long as it
+    // keeps the OSC_HYPERLINKS prefix.
+    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+
+    QStringList vars;
+    for (auto it = newEnvironDataMap.cbegin(); it != newEnvironDataMap.cend(); ++it) {
+        if (it.key().startsWith(qsl("OSC_HYPERLINKS"))) {
+            vars.append(it.key());
+        }
+    }
+
+    sendInfoNewEnvironValues(vars);
 }
 
 void cTelnet::appendAllNewEnvironValues(std::string& output, const bool isUserVar, const QMap<QString, QPair<bool, QString>>& newEnvironDataMap)
@@ -4475,7 +4507,7 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 }
 #endif
 
-bool cTelnet::purgeMediaCache()
+std::pair<bool, QString> cTelnet::purgeMediaCache()
 {
     return mpHost->mpMedia->purgeMediaCache();
 }
@@ -5317,11 +5349,21 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // each level allocates ~100 KB on the stack for out_buffer. Per-connection
     // (a member, not thread-wide) so one profile's drain - or a re-entrant
     // feedTelnet() - cannot spend another connection's budget.
-    if (++mDecompressionRecursionDepth > MAX_DECOMPRESSION_RECURSION) {
+    // Being a member, a level leaked by an early return would be permanent:
+    // scmMaxDecompressionRecursion of them and the connection refuses all further
+    // data, so the count comes off in a guard rather than at each return.
+    ++mDecompressionRecursionDepth;
+    const auto recursionGuard = qScopeGuard([this] {
+        --mDecompressionRecursionDepth;
+        // A second decrement reinstated on any of the exits below would drive
+        // the count negative and quietly disable the cap altogether:
+        Q_ASSERT(mDecompressionRecursionDepth >= 0);
+    });
+
+    if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
         //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
-        --mDecompressionRecursionDepth;
         return;
     }
 
@@ -5333,7 +5375,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // same rather than testing for -1 exactly. Terminating before this point is
     // what wrote a NUL outside the caller's buffer - see issue #1065.
     if (amount <= 0) {
-        --mDecompressionRecursionDepth;
         return;
     }
     // Restates the input contract for decompressBuffer() below, which may swap
@@ -5617,7 +5658,6 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // compressed stream). finalize() runs only at the deepest level.
     if (remainingData && remainingAmount > 0) {
         processSocketData(remainingData, remainingAmount, loopbackTesting);
-        --mDecompressionRecursionDepth;
         return;
     }
 
@@ -5626,7 +5666,6 @@ Some data loss is likely - please mention this problem to the game admins.)",
     }
 
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
-    --mDecompressionRecursionDepth;
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
