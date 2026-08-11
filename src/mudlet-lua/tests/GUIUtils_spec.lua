@@ -1067,9 +1067,1296 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(3, funcCalls)
     end)
   end)
-end)
 
---[[
-  TODO:
-    replaceLine and variants
---]]
+  describe("Tests the functionality of PadHexNum", function()
+    it("Should zero-pad a single hex digit below ten", function()
+      assert.equals("00", PadHexNum("0"))
+      assert.equals("05", PadHexNum("5"))
+      assert.equals("09", PadHexNum("9"))
+    end)
+
+    it("Should leave an already two digit number alone", function()
+      assert.equals("FF", PadHexNum("FF"))
+      assert.equals("0A", PadHexNum("0A"))
+      assert.equals("10", PadHexNum("10"))
+      -- "00" is worth its own assertion: its value is below sixteen, so a pad
+      -- driven by value rather than by width grows it to three digits
+      assert.equals("00", PadHexNum("00"))
+    end)
+
+    it("Should error when not given a string", function()
+      assert.has_error(function() PadHexNum(15) end)
+    end)
+
+    it("Should error when the string is not a hex number", function()
+      -- the message matters: the old code reached the same outcome by accident,
+      -- comparing a nil tonumber() result against a number
+      assert.has_error(function() PadHexNum("zz") end,
+        'PadHexNum: bad argument #1 value (hex number as string expected, got "zz"!)')
+      assert.has_error(function() PadHexNum("") end,
+        'PadHexNum: bad argument #1 value (hex number as string expected, got ""!)')
+    end)
+
+    it("Should zero-pad single hex digits above nine as well", function()
+      assert.equals("0A", PadHexNum("A"))
+      assert.equals("0B", PadHexNum("B"))
+      assert.equals("0F", PadHexNum("F"))
+    end)
+
+    it("Should pad every single digit to the same width", function()
+      for value = 0, 15 do
+        local padded = PadHexNum(string.format("%X", value))
+        assert.equals(2, #padded)
+        assert.equals(value, tonumber(padded, 16))
+      end
+    end)
+  end)
+
+  describe("Tests the functionality of RGB2Hex", function()
+    it("Should convert an r, g, b triple to a six digit hex string", function()
+      assert.equals("FFFFFF", RGB2Hex(255, 255, 255))
+      assert.equals("000000", RGB2Hex(0, 0, 0))
+      assert.equals("80C020", RGB2Hex(128, 192, 32))
+    end)
+
+    it("Should accept a colour name in place of the triple", function()
+      assert.equals("FFFFFF", RGB2Hex("white"))
+      assert.equals("000000", RGB2Hex("black"))
+      assert.equals(RGB2Hex(getRGB("blue")), RGB2Hex("blue"))
+    end)
+
+    it("Should error when given no arguments at all", function()
+      assert.has_error(function() RGB2Hex() end)
+    end)
+
+    it("Should produce six hex digits for every component below sixteen", function()
+      assert.equals("0A0B0C", RGB2Hex(10, 11, 12))
+      assert.equals("0A0A0A", RGB2Hex(10, 10, 10))
+    end)
+
+    it("Should encode a small component as its own value, not a shifted one", function()
+      -- the damaging case: a well formed six digit string that names the wrong
+      -- colour, so nothing downstream can notice. 11 must not become 0xB0 (176)
+      assert.equals("C80B0C", RGB2Hex(200, 11, 12))
+      assert.equals("FF0000", RGB2Hex(255, 0, 0))
+    end)
+
+    -- in 0-255 only: RGB2Hex range-checks nothing, so an out of range component
+    -- still produces a longer string. That is a separate defect from the padding
+    it("Should return six hex digits for every component value in 0-255", function()
+      for _, component in ipairs({0, 1, 9, 10, 15, 16, 17, 128, 255}) do
+        local hex = RGB2Hex(component, component, component)
+        assert.equals(6, #hex)
+        for position = 1, 5, 2 do
+          assert.equals(component, tonumber(hex:sub(position, position + 1), 16))
+        end
+      end
+    end)
+  end)
+
+  describe("Tests the functionality of getRGB", function()
+    it("Should return the three components of a named colour", function()
+      local r, g, b = getRGB("red")
+      assert.are.same({255, 0, 0}, {r, g, b})
+      assert.are.same(color_table["green"], {getRGB("green")})
+    end)
+
+    it("Should honour a colour the user has redefined", function()
+      local original = color_table["ansi_000"]
+      color_table["ansi_000"] = {1, 2, 3}
+      local r, g, b = getRGB("ansi_000")
+      color_table["ansi_000"] = original
+      assert.are.same({1, 2, 3}, {r, g, b})
+    end)
+
+    it("Should error when not given a string", function()
+      assert.has_error(function() getRGB(42) end)
+    end)
+
+    it("Should error for a colour name that does not exist", function()
+      assert.has_error(function() getRGB("definitelyNotAColour") end)
+    end)
+  end)
+
+  describe("Tests the functionality of unpack_w_nil", function()
+    it("Should return every value up to n, including embedded nils", function()
+      local packed = {1, nil, 3, n = 3}
+      local a, b, c = unpack_w_nil(packed)
+      assert.are.same({1, nil, 3}, {a, b, c})
+      assert.is_nil(b)
+    end)
+
+    it("Should start at the counter it is given", function()
+      local packed = {"a", "b", "c", n = 3}
+      assert.are.same({"b", "c"}, {unpack_w_nil(packed, 2)})
+    end)
+
+    it("Should return a trailing nil rather than stopping short of n", function()
+      local packed = {"only", nil, n = 2}
+      -- a plain assignment cannot tell "returned nil" from "returned nothing",
+      -- so count the results
+      assert.equals(2, select("#", unpack_w_nil(packed)))
+      local first, second = unpack_w_nil(packed)
+      assert.equals("only", first)
+      assert.is_nil(second)
+    end)
+  end)
+
+  describe("Tests the functionality of the custom gauge family", function()
+    local gaugeName = "guiUtilsTestGauge"
+
+    local function geometry(name)
+      local x, y, width, height = getWindowGeometry(name)
+      return {x = x, y = y, width = width, height = height}
+    end
+
+    before_each(function()
+      createGauge("main", gaugeName, 300, 20, 30, 300, "start", 0, 255, 0, "horizontal")
+    end)
+
+    after_each(function()
+      for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+        pcall(deleteLabel, gaugeName .. suffixName)
+      end
+      gaugesTable[gaugeName] = nil
+    end)
+
+    describe("Tests the functionality of createGauge", function()
+      it("Should create the back, front and text labels at the requested geometry", function()
+        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+          assert.equals("label", windowType(gaugeName .. suffixName))
+        end
+        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_back"))
+        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_text"))
+        -- a fresh gauge is full, so the front label covers the whole back one
+        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_front"))
+      end)
+
+      it("Should record the gauge in gaugesTable and show it", function()
+        local info = gaugesTable[gaugeName]
+        assert.equals(300, info.width)
+        assert.equals(20, info.height)
+        assert.equals(30, info.x)
+        assert.equals(300, info.y)
+        assert.equals("horizontal", info.orientation)
+        assert.equals(1, info.value)
+        assert.is_true(windowVisible(gaugeName .. "_back"))
+        assert.is_true(windowVisible(gaugeName .. "_front"))
+      end)
+
+      it("Should accept a colour name in place of the r, g, b triple", function()
+        finally(function()
+          for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+            pcall(deleteLabel, "colourNameGauge" .. suffixName)
+          end
+          gaugesTable.colourNameGauge = nil
+        end)
+        createGauge("colourNameGauge", 100, 10, 0, 0, nil, "green")
+        assert.are.same({0, 255, 0}, {gaugesTable.colourNameGauge.r, gaugesTable.colourNameGauge.g, gaugesTable.colourNameGauge.b})
+        assert.equals("horizontal", gaugesTable.colourNameGauge.orientation)
+      end)
+
+      it("Should reject an unknown orientation", function()
+        assert.has_error(function()
+          createGauge("main", "badOrientationGauge", 10, 10, 0, 0, "", 0, 0, 0, "sideways")
+        end)
+      end)
+    end)
+
+    describe("Tests the functionality of setGauge", function()
+      it("Should shrink the front label to the fraction given, horizontally", function()
+        setGauge(gaugeName, 50, 100)
+        assert.equals(0.5, gaugesTable[gaugeName].value)
+        assert.are.same({x = 30, y = 300, width = 150, height = 20}, geometry(gaugeName .. "_front"))
+        -- the backdrop keeps its full size
+        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_back"))
+      end)
+
+      it("Should grow a vertical gauge upwards from its bottom edge", function()
+        gaugesTable[gaugeName].orientation = "vertical"
+        setGauge(gaugeName, 1, 4)
+        assert.are.same({x = 30, y = 315, width = 300, height = 5}, geometry(gaugeName .. "_front"))
+      end)
+
+      it("Should shrink a goofy gauge towards its right edge", function()
+        gaugesTable[gaugeName].orientation = "goofy"
+        setGauge(gaugeName, 1, 4)
+        assert.are.same({x = 255, y = 300, width = 75, height = 20}, geometry(gaugeName .. "_front"))
+      end)
+
+      it("Should shrink a batty gauge downwards from its top edge", function()
+        gaugesTable[gaugeName].orientation = "batty"
+        setGauge(gaugeName, 1, 2)
+        assert.are.same({x = 30, y = 300, width = 300, height = 10}, geometry(gaugeName .. "_front"))
+      end)
+
+      it("Should update the caption when one is passed", function()
+        setGauge(gaugeName, 1, 2, "half")
+        assert.is_truthy(getLabelText(gaugeName .. "_text"):find("half", 1, true))
+      end)
+
+      it("Should let the fill run past the backdrop when the value exceeds the maximum", function()
+        setGauge(gaugeName, 3, 2)
+        assert.equals(1.5, gaugesTable[gaugeName].value)
+        assert.equals(450, select(3, getWindowGeometry(gaugeName .. "_front")))
+      end)
+
+      it("Should error for an unknown gauge or a non numeric value", function()
+        assert.has_error(function() setGauge("noSuchGauge", 1, 1) end)
+        assert.has_error(function() setGauge(gaugeName, "lots", 1) end)
+        assert.has_error(function() setGauge(gaugeName, 1, "lots") end)
+      end)
+    end)
+
+    describe("Tests the functionality of moveGauge", function()
+      it("Should move every label of the gauge and remember the new position", function()
+        moveGauge(gaugeName, 11, 22)
+        assert.are.same({x = 11, y = 22, width = 300, height = 20}, geometry(gaugeName .. "_back"))
+        assert.are.same({x = 11, y = 22, width = 300, height = 20}, geometry(gaugeName .. "_text"))
+        assert.are.same({x = 11, y = 22, width = 300, height = 20}, geometry(gaugeName .. "_front"))
+        assert.equals(11, gaugesTable[gaugeName].x)
+        assert.equals(22, gaugesTable[gaugeName].y)
+      end)
+
+      it("Should keep the current fill when it moves", function()
+        setGauge(gaugeName, 1, 4)
+        moveGauge(gaugeName, 5, 6)
+        assert.are.same({x = 5, y = 6, width = 75, height = 20}, geometry(gaugeName .. "_front"))
+      end)
+
+      it("Should error for an unknown gauge or non numeric coordinates", function()
+        assert.has_error(function() moveGauge("noSuchGauge", 1, 1) end)
+        assert.has_error(function() moveGauge(gaugeName, "1", 1) end)
+        assert.has_error(function() moveGauge(gaugeName, 1, "1") end)
+      end)
+    end)
+
+    describe("Tests the functionality of resizeGauge", function()
+      it("Should resize every label of the gauge and remember the new size", function()
+        resizeGauge(gaugeName, 120, 40)
+        assert.are.same({x = 30, y = 300, width = 120, height = 40}, geometry(gaugeName .. "_back"))
+        assert.are.same({x = 30, y = 300, width = 120, height = 40}, geometry(gaugeName .. "_text"))
+        assert.are.same({x = 30, y = 300, width = 120, height = 40}, geometry(gaugeName .. "_front"))
+        assert.equals(120, gaugesTable[gaugeName].width)
+        assert.equals(40, gaugesTable[gaugeName].height)
+      end)
+
+      it("Should rescale the fill to the new width", function()
+        setGauge(gaugeName, 1, 2)
+        resizeGauge(gaugeName, 200, 20)
+        assert.equals(100, select(3, getWindowGeometry(gaugeName .. "_front")))
+      end)
+
+      it("Should error for an unknown gauge or non numeric sizes", function()
+        assert.has_error(function() resizeGauge("noSuchGauge", 1, 1) end)
+        assert.has_error(function() resizeGauge(gaugeName, "1", 1) end)
+        assert.has_error(function() resizeGauge(gaugeName, 1, "1") end)
+      end)
+    end)
+
+    describe("Tests the functionality of hideGauge and showGauge", function()
+      it("Should hide and show all three labels", function()
+        hideGauge(gaugeName)
+        assert.is_false(windowVisible(gaugeName .. "_back"))
+        assert.is_false(windowVisible(gaugeName .. "_front"))
+        assert.is_false(windowVisible(gaugeName .. "_text"))
+        showGauge(gaugeName)
+        assert.is_true(windowVisible(gaugeName .. "_back"))
+        assert.is_true(windowVisible(gaugeName .. "_front"))
+        assert.is_true(windowVisible(gaugeName .. "_text"))
+      end)
+
+      it("Should error for an unknown gauge", function()
+        assert.has_error(function() hideGauge("noSuchGauge") end)
+        assert.has_error(function() showGauge("noSuchGauge") end)
+      end)
+    end)
+
+    describe("Tests the functionality of setGaugeText", function()
+      it("Should wrap the text in a font tag coloured black by default", function()
+        setGaugeText(gaugeName, "HP: 100%")
+        assert.equals([[<font color="#000000">HP: 100%</font>]], gaugesTable[gaugeName].text)
+        assert.is_truthy(getLabelText(gaugeName .. "_text"):find("HP: 100%", 1, true))
+      end)
+
+      it("Should accept a colour name", function()
+        setGaugeText(gaugeName, "hurt", "red")
+        assert.equals([[<font color="#FF0000">hurt</font>]], gaugesTable[gaugeName].text)
+      end)
+
+      it("Should accept an r, g, b triple", function()
+        setGaugeText(gaugeName, "hurt", 0, 128, 255)
+        assert.equals([[<font color="#0080FF">hurt</font>]], gaugesTable[gaugeName].text)
+      end)
+
+      it("Should emit a six digit colour for components below sixteen", function()
+        setGaugeText(gaugeName, "dim", 10, 11, 12)
+        assert.equals([[<font color="#0A0B0C">dim</font>]], gaugesTable[gaugeName].text)
+      end)
+
+      it("Should clear the caption when no text is given", function()
+        setGaugeText(gaugeName, "something")
+        setGaugeText(gaugeName)
+        assert.equals([[<font color="#000000"></font>]], gaugesTable[gaugeName].text)
+      end)
+
+      it("Should error for an unknown gauge", function()
+        assert.has_error(function() setGaugeText("noSuchGauge", "x") end)
+      end)
+    end)
+
+    describe("Tests the functionality of setGaugeStyleSheet", function()
+      it("Should apply the stylesheet to the front label and default the others", function()
+        setGaugeStyleSheet(gaugeName, "background-color: blue;")
+        assert.equals("background-color: blue;", getLabelStyleSheet(gaugeName .. "_front"))
+        assert.equals("background-color: blue;", getLabelStyleSheet(gaugeName .. "_back"))
+        assert.equals("", getLabelStyleSheet(gaugeName .. "_text"))
+      end)
+
+      it("Should use the separate back and text stylesheets when given", function()
+        setGaugeStyleSheet(gaugeName, "border: 1px;", "background-color: grey;", "color: white;")
+        assert.equals("border: 1px;", getLabelStyleSheet(gaugeName .. "_front"))
+        assert.equals("background-color: grey;", getLabelStyleSheet(gaugeName .. "_back"))
+        assert.equals("color: white;", getLabelStyleSheet(gaugeName .. "_text"))
+      end)
+
+      it("Should error for an unknown gauge or a non string stylesheet", function()
+        assert.has_error(function() setGaugeStyleSheet("noSuchGauge", "a") end)
+        assert.has_error(function() setGaugeStyleSheet(gaugeName, 5) end)
+      end)
+    end)
+
+    describe("Tests the functionality of the gauge tooltip and clickthrough helpers", function()
+      -- neither a label tooltip nor the clickthrough flag has a getter, so the
+      -- observable part is which of the gauge's three labels each helper
+      -- reaches; spy.on keeps the real function underneath
+      it("Should put the tooltip on the text label and clear it again", function()
+        local toolTip = spy.on(_G, "setLabelToolTip")
+        finally(function() toolTip:revert() end)
+        setGaugeToolTip(gaugeName, "some hint", 3)
+        assert.spy(toolTip).was.called_with(gaugeName .. "_text", "some hint", 3)
+        resetGaugeToolTip(gaugeName)
+        assert.spy(toolTip).was.called_with(gaugeName .. "_text", "")
+      end)
+
+      it("Should enable and disable clickthrough on all three labels", function()
+        local enable = spy.on(_G, "enableClickthrough")
+        finally(function() enable:revert() end)
+        enableGaugeClickthrough(gaugeName)
+        assert.spy(enable).was.called(3)
+        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+          assert.spy(enable).was.called_with(gaugeName .. suffixName)
+        end
+
+        local disable = spy.on(_G, "disableClickthrough")
+        finally(function() disable:revert() end)
+        disableGaugeClickthrough(gaugeName)
+        assert.spy(disable).was.called(3)
+        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+          assert.spy(disable).was.called_with(gaugeName .. suffixName)
+        end
+      end)
+
+      it("Should error for an unknown gauge", function()
+        assert.has_error(function() setGaugeToolTip("noSuchGauge", "hint") end)
+        assert.has_error(function() resetGaugeToolTip("noSuchGauge") end)
+        assert.has_error(function() enableGaugeClickthrough("noSuchGauge") end)
+        assert.has_error(function() disableGaugeClickthrough("noSuchGauge") end)
+      end)
+    end)
+
+    describe("Tests the functionality of setGaugeWindow", function()
+      local userWindow = "guiUtilsGaugeUserWindow"
+
+      setup(function()
+        openUserWindow(userWindow)
+      end)
+
+      teardown(function()
+        closeUserWindow(userWindow)
+      end)
+
+      it("Should reparent every label of the gauge and record the new position", function()
+        -- getWindowGeometry is parent relative, so it cannot tell a reparent
+        -- from a plain move; setWindow is where the reparenting happens
+        local setWindowSpy = spy.on(_G, "setWindow")
+        finally(function() setWindowSpy:revert() end)
+        setGaugeWindow(userWindow, gaugeName, 7, 8)
+        assert.spy(setWindowSpy).was.called(3)
+        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+          assert.spy(setWindowSpy).was.called_with(userWindow, gaugeName .. suffixName, 7, 8, true)
+        end
+        assert.equals(7, gaugesTable[gaugeName].x)
+        assert.equals(8, gaugesTable[gaugeName].y)
+        assert.are.same({x = 7, y = 8, width = 300, height = 20}, geometry(gaugeName .. "_back"))
+        assert.are.same({x = 7, y = 8, width = 300, height = 20}, geometry(gaugeName .. "_front"))
+      end)
+
+      it("Should error for an unknown gauge", function()
+        assert.has_error(function() setGaugeWindow(userWindow, "noSuchGauge") end)
+      end)
+
+      it("Should keep the gauge hidden when show is passed as false", function()
+        setGaugeWindow(userWindow, gaugeName, 0, 0, false)
+        assert.is_false(windowVisible(gaugeName .. "_back"))
+        assert.is_false(windowVisible(gaugeName .. "_front"))
+        assert.is_false(windowVisible(gaugeName .. "_text"))
+      end)
+
+      it("Should still show the gauge when show is left out", function()
+        hideGauge(gaugeName)
+        setGaugeWindow(userWindow, gaugeName, 0, 0)
+        assert.is_true(windowVisible(gaugeName .. "_back"))
+      end)
+    end)
+  end)
+
+  describe("Tests the functionality of createConsole", function()
+    local consoleName = "guiUtilsTestConsole"
+
+    after_each(function()
+      deleteMiniConsole(consoleName)
+    end)
+
+    it("Should create a miniconsole wrapped to the requested number of characters", function()
+      createConsole("main", consoleName, 8, 40, 10, 200, 400)
+      assert.equals("miniconsole", windowType(consoleName))
+      assert.equals(40, getWindowWrap(consoleName))
+      assert.equals(8, getFontSize(consoleName))
+    end)
+
+    it("Should size the console from the font metrics and place it where asked", function()
+      createConsole("main", consoleName, 8, 40, 10, 200, 400)
+      local charWidth, charHeight = calcFontSize(8)
+      local x, y, width, height = getWindowGeometry(consoleName)
+      assert.are.same({200, 400}, {x, y})
+      assert.are.same({charWidth * 40, charHeight * 10}, {width, height})
+    end)
+
+    it("Should start out with a white foreground on a transparent background", function()
+      createConsole("main", consoleName, 8, 40, 10, 0, 0)
+      echo(consoleName, "default colours\n")
+      selectString(consoleName, "default colours", 1)
+      assert.are.same({255, 255, 255}, {getFgColor(consoleName)})
+    end)
+
+    it("Should default the window name to main when it is left out", function()
+      createConsole(consoleName, 8, 40, 10, 5, 6)
+      assert.equals("miniconsole", windowType(consoleName))
+      local x, y = getWindowGeometry(consoleName)
+      assert.are.same({5, 6}, {x, y})
+    end)
+
+    it("Should error when a size argument is not a number", function()
+      assert.has_error(function() createConsole("main", consoleName, "8", 40, 10, 0, 0) end)
+      assert.has_error(function() createConsole("main", consoleName, 8, 40, 10, 0, "0") end)
+    end)
+  end)
+
+  describe("Tests the functionality of bg and fg", function()
+    local windowName = "guiUtilsColourBuffer"
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      createBuffer(windowName)
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      resetFormat(windowName)
+    end)
+
+    -- getBgColor/getFgColor report the colour of the character the selection
+    -- starts on, so the colour has to be laid down on real text to read it back
+    it("Should set the background colour of a named window from a colour name", function()
+      bg(windowName, "blue")
+      echo(windowName, "coloured\n")
+      selectString(windowName, "coloured", 1)
+      assert.are.same(color_table["blue"], {getBgColor(windowName)})
+    end)
+
+    it("Should set the foreground colour of a named window from a colour name", function()
+      fg(windowName, "red")
+      echo(windowName, "coloured\n")
+      selectString(windowName, "coloured", 1)
+      assert.are.same(color_table["red"], {getFgColor(windowName)})
+    end)
+
+    it("Should colour the main console when given only a colour name", function()
+      finally(function() resetFormat() end)
+      clearWindow()
+      bg("green")
+      fg("yellow")
+      echo("mainColouredSample\n")
+      selectString("mainColouredSample", 1)
+      assert.are.same(color_table["green"], {getBgColor("main")})
+      assert.are.same(color_table["yellow"], {getFgColor("main")})
+    end)
+
+    it("Should error for a colour that does not exist", function()
+      assert.error_matches(function() bg("notAColour") end, "doesn't exist")
+      assert.error_matches(function() fg("notAColour") end, "doesn't exist")
+    end)
+
+    it("Should error when given nothing at all", function()
+      assert.has_error(function() bg() end)
+      assert.has_error(function() fg() end)
+    end)
+  end)
+
+  describe("Tests the functionality of gagLine", function()
+    it("Should delete the line the cursor is on", function()
+      -- gagLine is deprecated and forwards to deleteLine with no arguments, so
+      -- it always acts on the main console: prove the forwarding, then that a
+      -- gagged line really leaves the buffer
+      local deleteLineSpy = spy.on(_G, "deleteLine")
+      finally(function() deleteLineSpy:revert() end)
+      clearWindow()
+      echo("keep me\ngag me\n")
+      moveCursor(0, 1)
+      gagLine()
+      assert.spy(deleteLineSpy).was.called(1)
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      assert.is_falsy(text:find("gag me", 1, true))
+      assert.is_truthy(text:find("keep me", 1, true))
+    end)
+  end)
+
+  describe("Tests the functionality of replaceLine", function()
+    local windowName = "guiUtilsReplaceLineBuffer"
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      createBuffer(windowName)
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+    end)
+
+    it("Should replace the whole current line of a named window", function()
+      echo(windowName, "the original line\n")
+      moveCursor(windowName, 0, 0)
+      replaceLine(windowName, "a brand new line")
+      moveCursor(windowName, 0, 0)
+      selectCurrentLine(windowName)
+      assert.equals("a brand new line", getSelection(windowName))
+    end)
+
+    it("Should replace the current line of the main console when given only text", function()
+      clearWindow()
+      echo("the original main line\n")
+      moveCursor(0, 0)
+      replaceLine("a brand new main line")
+      moveCursor(0, 0)
+      selectCurrentLine()
+      assert.equals("a brand new main line", getSelection())
+    end)
+
+    it("Should error when the window name is not a string", function()
+      assert.has_error(function() replaceLine(5, "x") end)
+    end)
+  end)
+
+  describe("Tests the functionality of handleWindowResizeEvent", function()
+    it("Should exist as a do nothing default users can override", function()
+      assert.equals("function", type(handleWindowResizeEvent))
+      assert.are.same({}, {handleWindowResizeEvent()})
+    end)
+  end)
+
+  describe("Tests the functionality of replaceWildcard", function()
+    local fired
+
+    before_each(function()
+      fired = nil
+    end)
+
+    it("Should replace the text a capture group matched", function()
+      local id = tempRegexTrigger("^You wave (goodbye)\\.$", function()
+        replaceWildcard(2, "hello")
+        selectCurrentLine()
+        fired = getSelection()
+      end)
+      feedTriggers("You wave goodbye.\n")
+      killTrigger(id)
+      assert.equals("You wave hello.", fired)
+    end)
+
+    it("Should do nothing when either argument is missing", function()
+      local id = tempRegexTrigger("^You nod (once)\\.$", function()
+        replaceWildcard(2)
+        replaceWildcard(nil, "hello")
+        selectCurrentLine()
+        fired = getSelection()
+      end)
+      feedTriggers("You nod once.\n")
+      killTrigger(id)
+      assert.equals("You nod once.", fired)
+    end)
+  end)
+
+  describe("Tests the functionality of showColors", function()
+    -- showColors writes a clickable swatch per colour to the main console; the
+    -- text of those swatches is what can be read back
+    local function mainConsoleText()
+      return getLines("main", 0, getLastLineNumber("main") + 1)
+    end
+
+    before_each(function()
+      clearWindow()
+    end)
+
+    it("Should list only the colours matching the search string", function()
+      showColors(1, "cornflower")
+      local text = table.concat(mainConsoleText(), "\n")
+      assert.is_truthy(text:find("cornflower_blue", 1, true))
+      assert.is_truthy(text:find("CornflowerBlue", 1, true))
+      assert.is_falsy(text:find("firebrick", 1, true))
+    end)
+
+    it("Should never list the ansi_### colours", function()
+      showColors(1, "ansi_128")
+      local text = table.concat(mainConsoleText(), "\n")
+      assert.is_falsy(text:find("ansi_128", 1, true))
+    end)
+
+    it("Should honour the requested number of columns", function()
+      local function lineHolding(needle)
+        for index, line in ipairs(mainConsoleText()) do
+          if line:find(needle, 1, true) then
+            return index
+          end
+        end
+      end
+
+      showColors(2, "cornflower")
+      local shared = lineHolding("cornflower_blue")
+      assert.is_truthy(shared, "showColors should have listed the matching colours")
+      assert.are.equal(shared, lineHolding("CornflowerBlue"), "two colours should share a line when asked for 2 columns")
+
+      clearWindow()
+      showColors(1, "cornflower")
+      local first = lineHolding("cornflower_blue")
+      assert.is_truthy(first)
+      assert.are_not.equal(first, lineHolding("CornflowerBlue"), "one column per line means one colour per line")
+    end)
+  end)
+
+  describe("Tests the functionality of showAnsiColors", function()
+    it("Should list the ansi_### colours and nothing else", function()
+      clearWindow()
+      showAnsiColors(1)
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      assert.is_truthy(text:find("ansi_000", 1, true))
+      assert.is_truthy(text:find("ansi_255", 1, true))
+      assert.is_falsy(text:find("cornflower_blue", 1, true))
+    end)
+  end)
+
+  describe("Tests the functionality of hinsertText and dinsertText", function()
+    local windowName = "guiUtilsInsertConsole"
+
+    setup(function()
+      createMiniConsole(windowName, 0, 0, 400, 200)
+      setWindowWrap(windowName, 60)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      clearWindow(windowName)
+    end)
+
+    local function firstLine()
+      moveCursor(windowName, 0, 0)
+      selectCurrentLine(windowName)
+      return getSelection(windowName)
+    end
+
+    it("Should insert hecho formatted text at the cursor", function()
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      hinsertText(windowName, "#ff0000X")
+      assert.equals("AXB", firstLine())
+    end)
+
+    it("Should insert decho formatted text at the cursor", function()
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      dinsertText(windowName, "<255,0,0>X")
+      assert.equals("AXB", firstLine())
+    end)
+
+    it("Should apply the colour it was given to the inserted text", function()
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      dinsertText(windowName, "<0,255,0>X")
+      selectSection(windowName, 1, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(windowName).foreground)
+    end)
+  end)
+
+  describe("Tests the functionality of the coloured link and popup echoes", function()
+    local windowName = "guiUtilsLinkConsole"
+
+    setup(function()
+      createMiniConsole(windowName, 0, 0, 400, 200)
+      setWindowWrap(windowName, 60)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+    end)
+
+    local function currentLine()
+      selectCurrentLine(windowName)
+      return getSelection(windowName)
+    end
+
+    local function firstLine()
+      moveCursor(windowName, 0, 0)
+      selectCurrentLine(windowName)
+      return getSelection(windowName)
+    end
+
+    -- there is no getter for a link's command or hint, so these cover the text
+    -- and colour each variant lays down plus the fact that the call succeeds
+    it("Should echo links with each of the three colour syntaxes", function()
+      cechoLink(windowName, "<red>click me", "send('x')", "a hint", true)
+      assert.equals("click me", currentLine())
+      selectSection(windowName, 0, 5)
+      assert.are.same(color_table["red"], getTextFormat(windowName).foreground)
+
+      clearWindow(windowName)
+      dechoLink(windowName, "<0,255,0>green link", "send('x')", "a hint", true)
+      assert.equals("green link", currentLine())
+
+      clearWindow(windowName)
+      hechoLink(windowName, "#0000ffblue link", "send('x')", "a hint", true)
+      assert.equals("blue link", currentLine())
+    end)
+
+    it("Should insert links with each of the three colour syntaxes", function()
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      cinsertLink(windowName, "<red>C", "send('x')", "a hint", true)
+      assert.equals("ACB", firstLine())
+
+      clearWindow(windowName)
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      dinsertLink(windowName, "<0,255,0>D", "send('x')", "a hint", true)
+      assert.equals("ADB", firstLine())
+
+      clearWindow(windowName)
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      hinsertLink(windowName, "#0000ffE", "send('x')", "a hint", true)
+      assert.equals("AEB", firstLine())
+    end)
+
+    it("Should echo popups with each of the three colour syntaxes", function()
+      local commands = {"send('one')", "send('two')"}
+      local hints = {"first", "second"}
+      cechoPopup(windowName, "<red>menu", commands, hints, true)
+      assert.equals("menu", currentLine())
+
+      clearWindow(windowName)
+      dechoPopup(windowName, "<0,255,0>dmenu", commands, hints, true)
+      assert.equals("dmenu", currentLine())
+
+      clearWindow(windowName)
+      hechoPopup(windowName, "#0000ffhmenu", commands, hints, true)
+      assert.equals("hmenu", currentLine())
+    end)
+
+    it("Should insert popups with each of the three colour syntaxes", function()
+      local commands = {"send('one')", "send('two')"}
+      local hints = {"first", "second"}
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      cinsertPopup(windowName, "<red>C", commands, hints, true)
+      assert.equals("ACB", firstLine())
+
+      clearWindow(windowName)
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      dinsertPopup(windowName, "<0,255,0>D", commands, hints, true)
+      assert.equals("ADB", firstLine())
+
+      clearWindow(windowName)
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      hinsertPopup(windowName, "#0000ffE", commands, hints, true)
+      assert.equals("AEB", firstLine())
+    end)
+  end)
+
+  describe("Tests the functionality of cfeedTriggers, dfeedTriggers and hfeedTriggers", function()
+    local seen
+
+    before_each(function()
+      seen = {}
+    end)
+
+    -- each variant has to strip its own colour syntax before feeding, so the
+    -- line the trigger sees must be the bare marker and must carry the colour
+    local function feedAndInspect(feeder, text, marker)
+      local result = {}
+      local id = tempTrigger(marker, function()
+        selectCurrentLine()
+        result.line = getSelection()
+        selectString(marker, 1)
+        result.foreground = getTextFormat().foreground
+        seen[#seen + 1] = marker
+      end)
+      feeder(text)
+      killTrigger(id)
+      return result
+    end
+
+    it("Should feed cecho coloured text through the trigger engine", function()
+      local result = feedAndInspect(cfeedTriggers, "<red>cfeedMarker", "cfeedMarker")
+      assert.equals(1, #seen)
+      assert.equals("cfeedMarker", result.line)
+      -- the text goes out as ANSI, so a cecho colour name arrives as its ANSI
+      -- equivalent: "red" is ANSI 1, not the brighter color_table["red"]
+      assert.are.same(color_table["ansi_001"], result.foreground)
+    end)
+
+    it("Should feed decho coloured text through the trigger engine", function()
+      local result = feedAndInspect(dfeedTriggers, "<0,255,0>dfeedMarker", "dfeedMarker")
+      assert.equals(1, #seen)
+      assert.equals("dfeedMarker", result.line)
+      assert.are.same({0, 255, 0}, result.foreground)
+    end)
+
+    it("Should feed hecho coloured text through the trigger engine", function()
+      local result = feedAndInspect(hfeedTriggers, "#0000ffhfeedMarker", "hfeedMarker")
+      assert.equals(1, #seen)
+      assert.equals("hfeedMarker", result.line)
+      assert.are.same({0, 0, 255}, result.foreground)
+    end)
+
+    it("Should error when not given a string", function()
+      assert.has_error(function() cfeedTriggers(5) end)
+      assert.has_error(function() dfeedTriggers(5) end)
+      assert.has_error(function() hfeedTriggers(5) end)
+    end)
+  end)
+
+  describe("Tests the functionality of prefix and suffix", function()
+    local windowName = "guiUtilsAffixBuffer"
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      createBuffer(windowName)
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "middle")
+      moveCursor(windowName, 0, 0)
+    end)
+
+    local function currentLine()
+      selectCurrentLine(windowName)
+      return getSelection(windowName)
+    end
+
+    it("Should put text at the start of the line", function()
+      prefix("[", nil, nil, nil, windowName)
+      assert.equals("[middle", currentLine())
+    end)
+
+    it("Should put text at the end of the line", function()
+      suffix("]", nil, nil, nil, windowName)
+      assert.equals("middle]", currentLine())
+    end)
+
+    it("Should colour what it adds", function()
+      prefix("[", nil, "red", nil, windowName)
+      assert.equals("[middle", currentLine())
+      selectSection(windowName, 0, 1)
+      assert.are.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
+
+    it("Should accept a colour aware echo function to add the text with", function()
+      prefix("<red>[", cecho, nil, nil, windowName)
+      assert.equals("[middle", currentLine())
+      selectSection(windowName, 0, 1)
+      assert.are.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
+
+    it("Should error when the text is not a string", function()
+      assert.has_error(function() prefix(5) end)
+      assert.has_error(function() suffix(5) end)
+    end)
+
+    -- A line that has been finished off with a newline is the ordinary trigger
+    -- case, and the only one where landing a column short is visible: on the
+    -- unfinished line the block above uses, an insert past the last character
+    -- is appended either way.
+    local function completedLine()
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "PROBE has a TARGET word\n")
+      moveCursor(windowName, 0, 0)
+    end
+
+    it("Should put text after the last character of a completed line", function()
+      completedLine()
+      suffix(" SUF", nil, nil, nil, windowName)
+      assert.equals("PROBE has a TARGET word SUF", currentLine())
+    end)
+
+    it("Should put text after the last character of a completed line when colouring it", function()
+      completedLine()
+      suffix(" SUF", nil, "red", nil, windowName)
+      assert.equals("PROBE has a TARGET word SUF", currentLine())
+    end)
+
+    it("Should not recolour the current selection when prefixing", function()
+      selectSection(windowName, 0, 6)
+      prefix("[", nil, "red", nil, windowName)
+      -- "middle" now starts one column along, and must have kept its colour
+      selectSection(windowName, 1, 6)
+      assert.are_not.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
+
+    it("Should not recolour the current selection when suffixing", function()
+      selectSection(windowName, 0, 6)
+      suffix("]", nil, "red", nil, windowName)
+      selectSection(windowName, 0, 6)
+      assert.are_not.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
+
+    it("Should not repaint the background of the current selection either", function()
+      selectSection(windowName, 0, 6)
+      prefix("[", nil, nil, "blue", windowName)
+      selectSection(windowName, 1, 6)
+      assert.are_not.same(color_table["blue"], getTextFormat(windowName).background)
+    end)
+
+    it("Should suffix onto an empty line", function()
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "\n")
+      moveCursor(windowName, 0, 0)
+      suffix("added", nil, nil, nil, windowName)
+      assert.equals("added", currentLine())
+    end)
+
+    it("Should still colour what it adds when something is selected", function()
+      selectSection(windowName, 0, 6)
+      prefix("[", nil, "red", nil, windowName)
+      selectSection(windowName, 0, 1)
+      assert.are.same(color_table["red"], getTextFormat(windowName).foreground)
+    end)
+  end)
+
+  describe("Tests the functionality of moveCursorDown", function()
+    local windowName = "guiUtilsCursorBuffer"
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      createBuffer(windowName)
+      clearWindow(windowName)
+      echo(windowName, "one\ntwo\nthree\nfour\n")
+      moveCursor(windowName, 0, 0)
+    end)
+
+    it("Should move the cursor down one line by default", function()
+      moveCursorDown(windowName)
+      assert.equals(1, getLineNumber(windowName))
+    end)
+
+    it("Should move the cursor down the number of lines given", function()
+      moveCursorDown(windowName, 2)
+      assert.equals(2, getLineNumber(windowName))
+    end)
+
+    it("Should stop at the last line of the buffer", function()
+      moveCursorDown(windowName, 500)
+      assert.equals(getLastLineNumber(windowName), getLineNumber(windowName))
+    end)
+
+    it("Should reset the column unless asked to keep it", function()
+      moveCursor(windowName, 2, 0)
+      moveCursorDown(windowName, 1)
+      assert.equals(0, getColumnNumber(windowName))
+      moveCursor(windowName, 2, 0)
+      moveCursorDown(windowName, 1, true)
+      assert.equals(2, getColumnNumber(windowName))
+    end)
+
+    it("Should report an unknown window rather than raising", function()
+      local ok, err = moveCursorDown("guiUtilsNoSuchWindow", 1)
+      assert.is_nil(ok)
+      assert.equals("window does not exist", err)
+    end)
+
+    it("Should treat a non-boolean keep_horizontal as false", function()
+      moveCursor(windowName, 2, 0)
+      moveCursorDown(windowName, 1, "yes")
+      assert.equals(0, getColumnNumber(windowName))
+      moveCursor(windowName, 2, 1)
+      moveCursorUp(windowName, 1, "yes")
+      assert.equals(0, getColumnNumber(windowName))
+    end)
+
+    -- pairs with the assertion above: without this, "coerced to false" and
+    -- "keep_horizontal ignored entirely" would look the same for moveCursorUp
+    it("Should let moveCursorUp keep the column when asked with a boolean", function()
+      moveCursor(windowName, 2, 1)
+      moveCursorUp(windowName, 1, true)
+      assert.equals(2, getColumnNumber(windowName))
+    end)
+  end)
+
+  describe("Tests the functionality of creplace, dreplace and hreplace", function()
+    local windowName = "guiUtilsColourReplaceBuffer"
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      createBuffer(windowName)
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "hello world")
+      moveCursor(windowName, 0, 0)
+    end)
+
+    local function currentLine()
+      selectCurrentLine(windowName)
+      return getSelection(windowName)
+    end
+
+    it("Should replace the selection with cecho formatted text", function()
+      selectString(windowName, "world", 1)
+      creplace(windowName, "<red>earth")
+      assert.equals("hello earth", currentLine())
+    end)
+
+    it("Should replace the selection with decho formatted text", function()
+      selectString(windowName, "world", 1)
+      dreplace(windowName, "<0,255,0>earth")
+      assert.equals("hello earth", currentLine())
+    end)
+
+    it("Should replace the selection with hecho formatted text", function()
+      selectString(windowName, "world", 1)
+      hreplace(windowName, "#0000ffearth")
+      assert.equals("hello earth", currentLine())
+    end)
+
+    it("Should colour what it puts down", function()
+      selectString(windowName, "world", 1)
+      dreplace(windowName, "<0,255,0>earth")
+      selectString(windowName, "earth", 1)
+      assert.are.same({0, 255, 0}, getTextFormat(windowName).foreground)
+    end)
+
+    it("Should replace a whole line with dreplaceLine and hreplaceLine", function()
+      dreplaceLine(windowName, "<0,255,0>brand new")
+      assert.equals("brand new", currentLine())
+      hreplaceLine(windowName, "#0000ffnewer still")
+      assert.equals("newer still", currentLine())
+    end)
+
+    it("Should error when the window name is not a string", function()
+      assert.has_error(function() creplace(5, "x") end)
+      assert.has_error(function() dreplace(5, "x") end)
+      assert.has_error(function() hreplace(5, "x") end)
+      assert.has_error(function() dreplaceLine(5, "x") end)
+      assert.has_error(function() hreplaceLine(5, "x") end)
+    end)
+  end)
+
+  describe("Tests the functionality of scrollUp and scrollDown", function()
+    local windowName = "guiUtilsScrollConsole"
+
+    -- The scroll position getScroll reports is copied out of the buffer while
+    -- the pane repaints, and the very first scroll of a console is deferred to
+    -- the next event loop turn so its split screen lower pane can appear. Both
+    -- need one turn of the event loop before the new position can be read.
+    local function pumpEventLoop()
+      tempTimer(0, function() raiseEvent("guiUtilsScrollPump") end)
+      waitForEvent("guiUtilsScrollPump", 2000)
+    end
+
+    -- the repaint that publishes the new position is only posted, so poll for
+    -- it rather than trusting a single turn of the event loop
+    local function scrollSettlesAt(expected)
+      for _ = 1, 20 do
+        if getScroll(windowName) == expected then
+          return getScroll(windowName)
+        end
+        pumpEventLoop()
+      end
+      return getScroll(windowName)
+    end
+
+    -- BUG: scrollTo does not move to the line it is given, it subtracts a
+    -- delta from the cursor the pane last copied out of the buffer while
+    -- painting, and the first scroll out of tail mode is deferred a turn and
+    -- padded by the lower pane's row count. So the first scrollTo of a console
+    -- lands short by a font-metric-dependent amount, and a second one issued
+    -- before the pane has repainted lands short again. Re-issue it until it
+    -- sticks: once the pane's copy has caught up the delta is exact.
+    local function parkAt(line)
+      for _ = 1, 10 do
+        scrollTo(windowName, line)
+        if scrollSettlesAt(line) == line then
+          return line
+        end
+      end
+      return getScroll(windowName)
+    end
+
+    setup(function()
+      createMiniConsole(windowName, 0, 0, 200, 100)
+      enableScrolling(windowName)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      clearWindow(windowName)
+      for i = 1, 200 do
+        echo(windowName, "scroll line " .. i .. "\n")
+      end
+      assert.equals(150, parkAt(150), "the console should be parked mid buffer before each scroll test")
+    end)
+
+    it("Should move the view up by the number of lines given", function()
+      scrollUp(windowName, 5)
+      assert.equals(145, scrollSettlesAt(145))
+    end)
+
+    it("Should move the view back down again", function()
+      scrollDown(windowName, 4)
+      assert.equals(154, scrollSettlesAt(154))
+    end)
+
+    it("Should never scroll above the first line", function()
+      scrollUp(windowName, 10000)
+      assert.equals(0, scrollSettlesAt(0))
+    end)
+
+    it("Should never scroll past the last line", function()
+      scrollDown(windowName, 10000)
+      local lastLine = getLastLineNumber(windowName)
+      assert.equals(lastLine, scrollSettlesAt(lastLine))
+    end)
+
+    it("Should default to a single line when no count is given", function()
+      scrollUp(windowName)
+      assert.equals(149, scrollSettlesAt(149))
+    end)
+
+    it("Should report an unknown window rather than raising", function()
+      local ok, err = scrollUp("guiUtilsNoSuchWindow", 1)
+      assert.is_nil(ok)
+      assert.equals("window does not exist", err)
+      ok, err = scrollDown("guiUtilsNoSuchWindow", 1)
+      assert.is_nil(ok)
+      assert.equals("window does not exist", err)
+    end)
+  end)
+
+  describe("Tests the functionality of setLabelCursor and resetLabelCursor", function()
+    local labelName = "guiUtilsCursorLabel"
+
+    before_each(function()
+      createLabel(labelName, 0, 0, 50, 50, 1)
+      hideWindow(labelName)
+    end)
+
+    after_each(function()
+      pcall(deleteLabel, labelName)
+    end)
+
+    it("Should map a cursor name to the id the C++ layer wants", function()
+      -- the name to id mapping is the Lua half of this function; the C++ half
+      -- only accepts a number, so a name that is not in mudlet.cursor has to
+      -- reach it as nil and be refused
+      assert.is_true(setLabelCursor(labelName, "OpenHand"))
+      assert.is_true(setLabelCursor(labelName, mudlet.cursor.OpenHand))
+      assert.is_nil(mudlet.cursor.definitelyNotACursor)
+      assert.has_error(function() setLabelCursor(labelName, "definitelyNotACursor") end)
+    end)
+
+    it("Should reset the cursor by asking for shape -1", function()
+      setLabelCursor(labelName, "OpenHand")
+      assert.is_true(resetLabelCursor(labelName))
+    end)
+
+    it("Should report an unknown label", function()
+      local ok, err = setLabelCursor("guiUtilsNoSuchLabel", "OpenHand")
+      assert.is_nil(ok)
+      assert.is_string(err)
+    end)
+
+    it("Should error when resetLabelCursor is not given a string", function()
+      assert.has_error(function() resetLabelCursor(5) end)
+    end)
+  end)
+
+  describe("Tests the functionality of setBackgroundImage", function()
+    local consoleName = "guiUtilsBackgroundConsole"
+    -- a Qt resource that ships with every Mudlet, so no fixture file is needed
+    local imagePath = ":/icons/mudlet.png"
+
+    before_each(function()
+      createMiniConsole(consoleName, 0, 0, 100, 100)
+    end)
+
+    after_each(function()
+      deleteMiniConsole(consoleName)
+    end)
+
+    it("Should accept each mode name a console supports", function()
+      for _, name in ipairs({"border", "center", "tile", "style"}) do
+        assert.is_true(setBackgroundImage(consoleName, imagePath, name), "mode " .. name .. " should be accepted")
+      end
+    end)
+
+    it("Should accept the numeric mode the names map onto", function()
+      assert.is_true(setBackgroundImage(consoleName, imagePath, mudlet.BgImageMode.center))
+      assert.equals(2, mudlet.BgImageMode.center)
+    end)
+
+    it("Should map the cover mode name, which only the full window accepts", function()
+      assert.equals(5, mudlet.BgImageMode.cover)
+      assert.is_true(setBackgroundImage("main", imagePath, "cover", true))
+      -- the same name on a console reaches the C++ check for mode 5
+      local ok, err = setBackgroundImage(consoleName, imagePath, "cover")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("cover", 1, true))
+      resetBackgroundImage("main")
+    end)
+
+    it("Should pass an unknown mode name through so the C++ side rejects it", function()
+      assert.has_error(function() setBackgroundImage(consoleName, imagePath, "notAMode") end)
+    end)
+  end)
+end)

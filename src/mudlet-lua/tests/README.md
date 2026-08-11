@@ -76,15 +76,17 @@ run is not cleaned up. To give a run its own pristine, isolated config root:
 
 - `XDG_CONFIG_HOME` - Mudlet uses `$XDG_CONFIG_HOME/mudlet` as its config root
   (profiles, sqlite databases, settings, and password storage). Because an
-  existing `~/.config/mudlet` otherwise wins (so a system-wide `XDG_CONFIG_HOME`
-  export never strands real profiles), a test harness must **pre-create**
-  `$XDG_CONFIG_HOME/mudlet` to opt in.
+  existing `~/.config/mudlet` holding profiles otherwise wins (so a system-wide
+  `XDG_CONFIG_HOME` export never strands real profiles), a test harness must
+  **pre-create** `$XDG_CONFIG_HOME/mudlet/profiles` to opt in. The `mudlet`
+  directory on its own is not enough - other tooling creates that by accident,
+  and treating it as an opt-in would hide the user's real profiles.
 - `MUDLET_TEST_FAILURE_MARKER` - absolute path for the failure marker, so it is
   not shared either.
 
 ```sh
 CONFIG_DIR=$(mktemp -d)
-mkdir -p "$CONFIG_DIR/mudlet"   # pre-create to opt into the isolated config root
+mkdir -p "$CONFIG_DIR/mudlet/profiles"   # pre-create to opt into the isolated config root
 AUTORUN_BUSTED_TESTS=true \
 MUDLET_TEST_MODE=1 \
 QUIT_MUDLET_AFTER_TESTS=true \

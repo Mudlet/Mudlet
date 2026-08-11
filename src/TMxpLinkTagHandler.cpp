@@ -19,7 +19,9 @@
  ***************************************************************************/
 
 #include "TMxpLinkTagHandler.h"
+#include "LuaLiteral.h"
 #include "TMxpClient.h"
+#include "UntrustedText.h"
 
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
@@ -37,9 +39,12 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         return MXP_TAG_NOT_HANDLED;
     }
 
-    const QString hint = tag->hasAttribute(qsl("hint")) ? tag->getAttributeValue(qsl("hint")) : href;
+    // Server-supplied, and lands in the same tooltip as an OSC 8 hint. An
+    // explicit hint is prose written to be read; falling back to the href makes
+    // this a link target the user is being asked to trust.
+    const QString hint = tag->hasAttribute(qsl("hint")) ? UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint"))) : UntrustedText::forTarget(href);
 
-    href = qsl("openUrl([[%1]])").arg(href);
+    href = qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
 
     // Use the version of setLink that supports expire names
     if (!expireName.isEmpty()) {

@@ -1,0 +1,39 @@
+# Mudlet installs the .mpackage archives, not the loose sources next to them,
+# so an edit that isn't re-zipped silently does nothing. See CI/check-mpackage-sync.lua.
+name: Check mpackages
+
+on:
+  pull_request:
+    paths:
+      - 'src/packages/**'
+      - 'CI/check-mpackage-sync.lua'
+      - '.github/workflows/check-mpackages.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{github.workflow}}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-mpackage-sync:
+    # Skip release PRs (base main): a package that changed during the cycle was
+    # already version-checked when it landed on development.
+    if: github.event.pull_request.base.ref != 'main'
+    name: Check archives match their sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Lua 5.1.5
+        uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: "5.1.5"
+
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin ${{ github.base_ref }}
+
+      - name: Check mpackage archives
+        run: lua CI/check-mpackage-sync.lua ${{ github.event_name == 'pull_request' && format('--base-ref origin/{0}', github.base_ref) || '' }}

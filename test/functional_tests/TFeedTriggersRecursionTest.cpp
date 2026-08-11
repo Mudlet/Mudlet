@@ -76,6 +76,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("loopCount = 0\n"
@@ -96,7 +97,6 @@ private slots:
         lua_pop(L, 1);
         QVERIFY2(bufferContains(qsl("trigger '%1'").arg(loopTriggerId)), "Expected the abort message to name the offending trigger by its id");
 
-        // The trigger should have fired exactly up to the limit and no further.
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('LOOPCOUNT='..loopCount..'\\n')"));
         QVERIFY2(bufferContains(qsl("LOOPCOUNT=%1").arg(TriggerUnit::scmMaxProcessingDepth)), qPrintable(qsl("Expected the trigger to fire exactly %1 times").arg(TriggerUnit::scmMaxProcessingDepth)));
     }
@@ -107,6 +107,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("normalCount = 0\n"
@@ -126,6 +127,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         // feedTelnet() refuses to work unless the profile is offline
@@ -164,6 +166,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->mTelnet.disconnectIt();

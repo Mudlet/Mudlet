@@ -688,55 +688,55 @@ DiscordRichPresence localDiscordPresence::convert() const
 void localDiscordPresence::setDetailText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setStateText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setJoinSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setMatchSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSpectateSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
 }
 
 bool Discord::usingMudletsDiscordID(Host* pHost) const
