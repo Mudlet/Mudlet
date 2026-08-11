@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Smallest map that reaches the Lua-observable parts of XMLimport::readMap():
+     an area, two rooms with coordinates and a bidirectional exit, a special
+     exit in the IRE spelling (an exit with no direction but a command), a door,
+     a hidden exit (which arrives as a locked door), a room feature (which
+     arrives as room user data) and an environment colour. Used by Mapper_spec's
+     loadMap(".xml") specs. -->
+<map>
+  <areas>
+    <area id="4001" name="Mapper Spec Import Area"/>
+  </areas>
+  <rooms>
+    <room id="4001" area="4001" title="Import Room One" environment="169">
+      <coord x="0" y="0" z="0"/>
+      <exit direction="east" target="4002"/>
+      <exit special="1" command="enter gate" target="4002"/>
+      <features>
+        <feature type="shop"/>
+      </features>
+    </room>
+    <room id="4002" area="4001" title="Import Room Two" environment="170">
+      <coord x="1" y="2" z="3"/>
+      <exit direction="west" target="4001" door="2"/>
+      <exit direction="north" target="4001" hidden="1"/>
+    </room>
+  </rooms>
+  <environments>
+    <environment id="169" color="8"/>
+  </environments>
+</map>

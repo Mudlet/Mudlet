@@ -1418,6 +1418,14 @@ dlgTriggerEditor::~dlgTriggerEditor()
     // into one of the slot_saveProperty_...() slots when this object is no
     // longer a valid receiver (#9574)
     utils::disconnectChildSignals(this);
+    // The undo stacks are not in this widget's child tree - the edbee one hangs
+    // off a parentless CharTextDocument - so disconnect them by hand:
+    if (mpTextUndoStack) {
+        disconnect(mpTextUndoStack, nullptr, this, nullptr);
+    }
+    if (mpUndoStack) {
+        disconnect(mpUndoStack, nullptr, this, nullptr);
+    }
 }
 
 void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
@@ -1883,17 +1891,6 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 {
-    // Only disconnect signals and clear undo stack if the dialog is being destroyed (WA_DeleteOnClose set)
-    // This happens when the profile closes (Host::closeChildren), not when the user just closes the editor window
-    if (testAttribute(Qt::WA_DeleteOnClose)) {
-        if (mpTextUndoStack) {
-            disconnect(mpTextUndoStack, nullptr, this, nullptr);
-        }
-        if (mpUndoStack) {
-            disconnect(mpUndoStack, nullptr, this, nullptr);
-        }
-    }
-
     emit editorClosing();
     writeSettings();
     event->accept();
@@ -3060,6 +3057,7 @@ void dlgTriggerEditor::delete_alias()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3082,6 +3080,7 @@ void dlgTriggerEditor::delete_alias()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmAliasView, itemId);
             delete pT;
@@ -3093,6 +3092,12 @@ void dlgTriggerEditor::delete_alias()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    // Detaching an item nulls treeWidget() on its whole subtree, which is how a
+    // newSelection that sat inside another removed subtree is caught here:
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpAliasBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentAliasItem = newSelection;
@@ -3102,6 +3107,10 @@ void dlgTriggerEditor::delete_alias()
         mpCurrentAliasItem = nullptr;
         clearAliasForm();
     }
+
+    // Has to stay after the selection handling: the slots it fires still read
+    // the detached items.
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_action()
@@ -3203,6 +3212,7 @@ void dlgTriggerEditor::delete_action()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3230,6 +3240,7 @@ void dlgTriggerEditor::delete_action()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmActionView, itemId);
             delete pT;
@@ -3241,6 +3252,10 @@ void dlgTriggerEditor::delete_action()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpActionBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentActionItem = newSelection;
@@ -3250,6 +3265,8 @@ void dlgTriggerEditor::delete_action()
         mpCurrentActionItem = nullptr;
         clearActionForm();
     }
+
+    qDeleteAll(removedItems);
 
     mpHost->getActionUnit()->updateAllToolbars();
 }
@@ -3289,6 +3306,7 @@ void dlgTriggerEditor::delete_variable()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TVar* var = vu->getWVar(pItem);
@@ -3306,9 +3324,26 @@ void dlgTriggerEditor::delete_variable()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
+                // Deleting the TVar below frees its descendants too and nothing
+                // unregisters those, so drop the whole detached subtree from the
+                // lookup maps now: a later pass over a selected descendant would
+                // otherwise resolve a freed TVar, as would a recycled item address:
+                QList<QTreeWidgetItem*> pendingPurge{pItem};
+                while (!pendingPurge.isEmpty()) {
+                    QTreeWidgetItem* pEntry = pendingPurge.takeLast();
+                    vu->removeTreeItem(pEntry);
+                    for (int i = 0; i < pEntry->childCount(); ++i) {
+                        pendingPurge.append(pEntry->child(i));
+                    }
+                }
             }
             delete var;
         }
+    }
+
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpVarBaseItem;
     }
 
     // Set new selection
@@ -3320,6 +3355,8 @@ void dlgTriggerEditor::delete_variable()
         mpCurrentVarItem = nullptr;
         clearVarForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_script()
@@ -3412,6 +3449,7 @@ void dlgTriggerEditor::delete_script()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3434,6 +3472,7 @@ void dlgTriggerEditor::delete_script()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmScriptView, itemId);
             delete pT;
@@ -3445,6 +3484,10 @@ void dlgTriggerEditor::delete_script()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpScriptsBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentScriptItem = newSelection;
@@ -3454,6 +3497,8 @@ void dlgTriggerEditor::delete_script()
         mpCurrentScriptItem = nullptr;
         clearScriptForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_key()
@@ -3546,6 +3591,7 @@ void dlgTriggerEditor::delete_key()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3568,6 +3614,7 @@ void dlgTriggerEditor::delete_key()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmKeysView, itemId);
             delete pT;
@@ -3579,6 +3626,10 @@ void dlgTriggerEditor::delete_key()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpKeyBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentKeyItem = newSelection;
@@ -3588,6 +3639,8 @@ void dlgTriggerEditor::delete_key()
         mpCurrentKeyItem = nullptr;
         clearKeyForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_trigger()
@@ -3685,6 +3738,7 @@ void dlgTriggerEditor::delete_trigger()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3707,6 +3761,7 @@ void dlgTriggerEditor::delete_trigger()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmTriggerView, itemId);
             delete pT;
@@ -3718,6 +3773,10 @@ void dlgTriggerEditor::delete_trigger()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpTriggerBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentTriggerItem = newSelection;
@@ -3727,6 +3786,8 @@ void dlgTriggerEditor::delete_trigger()
         mpCurrentTriggerItem = nullptr;
         clearTriggerForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 void dlgTriggerEditor::delete_timer()
@@ -3819,6 +3880,7 @@ void dlgTriggerEditor::delete_timer()
     std::reverse(selectedItems.begin(), selectedItems.end());
 
     QTreeWidgetItem* newSelection = nullptr;
+    QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3841,6 +3903,7 @@ void dlgTriggerEditor::delete_timer()
             }
             if (pParentItem) {
                 pParentItem->removeChild(pItem);
+                removedItems.append(pItem);
             }
             clearEditorState(EditorViewType::cmTimerView, itemId);
             delete pT;
@@ -3852,6 +3915,10 @@ void dlgTriggerEditor::delete_timer()
         mpUndoStack->pushCommand(qtCmd);
     }
 
+    if (newSelection && !newSelection->treeWidget()) {
+        newSelection = mpTimerBaseItem;
+    }
+
     // Set new selection
     if (newSelection) {
         mpCurrentTimerItem = newSelection;
@@ -3861,6 +3928,8 @@ void dlgTriggerEditor::delete_timer()
         mpCurrentTimerItem = nullptr;
         clearTimerForm();
     }
+
+    qDeleteAll(removedItems);
 }
 
 
@@ -9637,11 +9706,6 @@ EditorViewType dlgTriggerEditor::determineViewFromVisibleTree()
         return EditorViewType::cmVarsView;
     }
     return EditorViewType::cmUnknownView;
-}
-
-bool dlgTriggerEditor::variablesViewActive() const
-{
-    return isVisible() && mCurrentView == EditorViewType::cmVarsView;
 }
 
 EditorViewType dlgTriggerEditor::resolveCurrentView()
