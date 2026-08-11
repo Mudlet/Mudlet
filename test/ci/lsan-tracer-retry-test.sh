@@ -127,8 +127,19 @@ EOF
   echo 0 > "${ATTEMPTS}"
 }
 
+# Piped into the log rather than redirected onto it: where both cmake and ctest
+# are snaps, the inner cmake's writes to a file the outer one handed it are
+# dropped, and every assertion below about output then fails for a reason that
+# has nothing to do with the launcher
+capture() {
+  local status
+  "$@" 2>&1 | tee "${OUT}" > /dev/null
+  status="${PIPESTATUS[0]}"
+  return "${status}"
+}
+
 run_launcher() {
-  cmake -P "${LAUNCHER}" -- "$@" "${STUB}" > "${OUT}" 2>&1
+  capture cmake -P "${LAUNCHER}" -- "$@" "${STUB}"
   echo $?
 }
 
@@ -244,7 +255,7 @@ kill -SEGV $$
 EOF
 chmod +x "${STUB}"
 echo 0 > "${ATTEMPTS}"
-cmake -P "${LAUNCHER}" -- "${STUB}" > "${OUT}" 2>&1
+capture cmake -P "${LAUNCHER}" -- "${STUB}"
 assert_status 1 $?
 assert_contains "Segmentation fault"
 
@@ -294,13 +305,13 @@ cat > "${STUB}" <<EOF
 printf '[%s]\n' "\$@"
 EOF
 chmod +x "${STUB}"
-cmake -P "${LAUNCHER}" -- "${STUB}" --profile "Mudlet self-test" --mirror > "${OUT}" 2>&1
+capture cmake -P "${LAUNCHER}" -- "${STUB}" --profile "Mudlet self-test" --mirror
 assert_status 0 $?
 assert_contains "[Mudlet self-test]"
 assert_contains "[--mirror]"
 
 start_test "a launcher given no command fails rather than reporting success"
-if cmake -P "${LAUNCHER}" -- > "${OUT}" 2>&1; then
+if capture cmake -P "${LAUNCHER}" --; then
   fail "expected the launcher to reject an empty command line"
 fi
 

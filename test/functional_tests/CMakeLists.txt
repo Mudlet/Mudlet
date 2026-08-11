@@ -5,6 +5,21 @@ endif()
 # Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
 cmake_language(DEFER CALL restore_windows_test_output)
 
+# A retried test is still one test command to ctest, so its TIMEOUT has to cover
+# both runs. Deferred and applied to the whole set, so the per-test budgets set
+# further down this file are covered too rather than leaving the rerun no room.
+function(widen_timeouts_of_retried_tests)
+    get_property(retriedTests DIRECTORY PROPERTY MUDLET_LSAN_RETRIED_TESTS)
+    foreach(testName ${retriedTests})
+        get_test_property(${testName} TIMEOUT testTimeout)
+        if(testTimeout)
+            math(EXPR testTimeout "${testTimeout} * 2")
+            set_tests_properties(${testName} PROPERTIES TIMEOUT ${testTimeout})
+        endif()
+    endforeach()
+endfunction()
+cmake_language(DEFER CALL widen_timeouts_of_retried_tests)
+
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     TelnetTextDisplayedTest.cpp
@@ -139,6 +154,7 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
         add_test(NAME ${test_name} COMMAND ${CMAKE_COMMAND} -P
             ${CMAKE_SOURCE_DIR}/test/lsan-tracer-retry.cmake --
             $<TARGET_FILE:${test_name}>)
+        set_property(DIRECTORY APPEND PROPERTY MUDLET_LSAN_RETRIED_TESTS ${test_name})
     else()
         set(leakCheck "detect_leaks=0")
         add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
