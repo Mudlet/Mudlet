@@ -409,6 +409,14 @@ end
 function Adjustable.Container:attachToBorder(border)
     if self.attached then self:detach() end
     Adjustable.Container.Attached[border] = Adjustable.Container.Attached[border] or {}
+    -- the registry is keyed by name, so a still live container of the same name
+    -- has to be taken off the border properly instead of being dropped from it:
+    -- it would otherwise go on believing it is attached while nothing reserves
+    -- a border for it, and its own detach() would then delete our entry
+    local superseded = Adjustable.Container.Attached[border][self.name]
+    if superseded and superseded ~= self then
+        superseded:detach()
+    end
     Adjustable.Container.Attached[border][self.name] = self
     self.attached = border
     self:adjustBorder()
@@ -419,8 +427,11 @@ end
 --- detaches the given container
 -- this means the mudlet main window border will be reset
 function Adjustable.Container:detach()
-    if Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached] then
-        Adjustable.Container.Attached[self.attached][self.name] = nil
+    -- a container of the same name may have taken over the registration, so
+    -- only unregister while it is still ours - the same guard type_delete uses
+    local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached]
+    if attachedTo and attachedTo[self.name] == self then
+        attachedTo[self.name] = nil
     end
     self.borderSize = nil
     self:resetBorder(self.attached)

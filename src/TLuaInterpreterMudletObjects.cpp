@@ -31,6 +31,7 @@
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
+#include "EventLoopPump.h"
 #include "Host.h"
 #include "TAlias.h"
 #include "TArea.h"
@@ -60,6 +61,8 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <QScopeGuard>
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -85,9 +88,7 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QEventLoop>
 #include <QFileDialog>
-#include <QTimer>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -203,11 +204,15 @@ static bool timerDelayFits(const double time)
 int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // The mandatory text is last, but with no arguments at all that would be
+    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "suggestion text");
+    const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     auto pN = COMMANDLINE(L, QString{name});
     pN->addSuggestion(text);
     return 0;
@@ -242,12 +247,14 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
 int TLuaInterpreter::appendCmdLine(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineSuggestion() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
 
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "text to set on command line");
+    const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
     auto pN = COMMANDLINE(L, QString{name});
 
     const QString curText = pN->toPlainText();
@@ -357,11 +364,13 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
 int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineSuggestion() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "suggestion text");
+    const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     auto pN = COMMANDLINE(L, QString{name});
     pN->removeSuggestion(text);
     return 0;
@@ -1576,11 +1585,13 @@ int TLuaInterpreter::permKey(lua_State* L)
 int TLuaInterpreter::printCmdLine(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineSuggestion() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    const QString text = getVerifiedString(L, __func__, n, "text to set on command line");
+    const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
 
     auto pN = COMMANDLINE(L, QString{name});
     pN->setPlainText(text);
@@ -1652,14 +1663,19 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
+// A gone Host, or a mudlet singleton already past its destructor, is further
+// along than the flags rather than healthier, so the nulls count as shutting
+// down too.
+static bool shuttingDown(const QPointer<Host>& pHost)
+{
+    mudlet* pMudlet = mudlet::self();
+    return !pHost || pHost->isClosingDown() || !pMudlet || pMudlet->isGoingDown();
+}
+
 // No documentation available in wiki - internal, test-only function
-// Blocks the calling Lua code inside a nested Qt event loop until the named
-// event is raised (returning the event name followed by its arguments, exactly
-// as an event handler would receive them) or the timeout elapses (returning
-// nil and an error message). Timers, networking and other events keep being
-// processed while blocked, which is what lets busted specs observe asynchronous
-// behaviour without sleeps. Gated behind MUDLET_TEST_MODE so it is inert for
-// normal users.
+// Blocks the calling Lua code until the named event is raised, returning the
+// event name and its arguments exactly as an event handler would receive them,
+// or nil and an error message. Timers and networking run on meanwhile.
 int TLuaInterpreter::waitForEvent(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -1690,36 +1706,33 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    // A profile reset recreates this profile's lua_State (initLuaGlobals() calls
-    // lua_close()), and shutdown destroys the interpreter outright. Either would
-    // free the state L is executing on while we block, so refuse rather than risk
-    // a use-after-free when the nested loop unwinds. resetProfile_phase1() guards
-    // the mirror case where a reset is requested while we are already blocked.
+    // A reset recreates this lua_State and a shutdown destroys the interpreter,
+    // either of which frees the state L runs on mid-wait. resetProfile_phase1()
+    // guards the mirror case, a reset asked for once we are already blocked.
     if (host.profileResetInProgress() || host.isClosingDown()) {
         lua_pushnil(L);
         lua_pushstring(L, "waitForEvent: cannot wait while the profile is being reset or Mudlet is closing");
         return 2;
     }
 
-    QEventLoop loop;
     TEventWait wait;
     wait.mName = eventName;
-    wait.mpLoop = &loop;
     pLuaInterpreter->mPendingEventWaits.append(&wait);
 
-    QTimer timeoutTimer;
-    timeoutTimer.setSingleShot(true);
-    QObject::connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
-    timeoutTimer.start(timeoutMs);
+    const QPointer<Host> pHost(&host);
+    const bool stoppedEarly = EventLoopPump::pumpFor(timeoutMs, [&wait, &pHost]() {
+        return wait.mCaptured || shuttingDown(pHost);
+    });
 
-    loop.exec();
-
-    timeoutTimer.stop();
     pLuaInterpreter->mPendingEventWaits.removeAll(&wait);
 
     if (!wait.mCaptured) {
         lua_pushnil(L);
-        lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
+        if (stoppedEarly) {
+            lua_pushstring(L, qsl("waitForEvent: gave up waiting for event '%1', Mudlet is shutting down").arg(eventName).toUtf8().constData());
+        } else {
+            lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
+        }
         return 2;
     }
 
@@ -1745,6 +1758,60 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     lua_remove(L, argsTableIndex);
     luaL_unref(L, LUA_REGISTRYINDEX, wait.mArgsRef);
     return argCount;
+}
+
+// No documentation available in wiki - internal, test-only function
+// Keeps Mudlet delivering events for the given number of milliseconds: the
+// sleep a spec wants to let queued work run when there is no named event to
+// wait for.
+int TLuaInterpreter::pumpEvents(lua_State* L)
+{
+    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: only available in test mode (set the MUDLET_TEST_MODE environment variable)");
+        return 2;
+    }
+
+    // The ceiling matches waitForEvent()'s: below busted's per-spec CI timeout,
+    // so a runaway pump fails on its own rather than taking the suite with it.
+    constexpr int defaultTimeoutMs = 50;
+    constexpr int maximumTimeoutMs = 30000;
+    int timeoutMs = defaultTimeoutMs;
+    if (!lua_isnoneornil(L, 1)) {
+        timeoutMs = getVerifiedInt(L, __func__, 1, "duration in milliseconds", true);
+    }
+    timeoutMs = std::clamp(timeoutMs, 0, maximumTimeoutMs);
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    // Same use-after-free waitForEvent() guards, and worse here: the pump is
+    // itself what delivers the zero-timer phase2 is armed on.
+    if (host.profileResetInProgress() || host.isClosingDown()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: cannot pump while the profile is being reset or Mudlet is closing");
+        return 2;
+    }
+
+    const QPointer<Host> pHost(&host);
+    ++pLuaInterpreter->mEventPumpDepth;
+    const auto pumpGuard = qScopeGuard([pLuaInterpreter]() {
+        --pLuaInterpreter->mEventPumpDepth;
+    });
+    const bool stoppedEarly = EventLoopPump::pumpFor(timeoutMs, [&pHost]() {
+        return shuttingDown(pHost);
+    });
+
+    if (stoppedEarly) {
+        // Ran short, so whatever the caller queued may not have happened - a
+        // spec flushing a profile save needs to hear that, not just get true.
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: stopped early, Mudlet is shutting down");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseGlobalEvent

@@ -19,7 +19,6 @@
 
 #include <OAuthClientFlow.h>
 #include <QtTest/QtTest>
-#include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
@@ -96,11 +95,9 @@ class OAuthClientFlowTest : public QObject
     Q_OBJECT
 
 public slots:
-    void captureBrowserUrl(const QUrl& url) { mBrowserUrl = url; }
+    void captureAuthorizationUrl(const QUrl& url) { mAuthorizationUrl = url; }
 
 private slots:
-    void initTestCase();
-    void cleanupTestCase();
     void init();
     void testCodeVerifierFormat();
     void testCodeVerifierUnique();
@@ -116,22 +113,12 @@ private slots:
     void testEmptyCodeFailsFlow();
 
 private:
-    QUrl mBrowserUrl;
+    QUrl mAuthorizationUrl;
 };
-
-void OAuthClientFlowTest::initTestCase()
-{
-    QDesktopServices::setUrlHandler(QStringLiteral("http"), this, "captureBrowserUrl");
-}
-
-void OAuthClientFlowTest::cleanupTestCase()
-{
-    QDesktopServices::unsetUrlHandler(QStringLiteral("http"));
-}
 
 void OAuthClientFlowTest::init()
 {
-    mBrowserUrl.clear();
+    mAuthorizationUrl.clear();
 }
 
 
@@ -199,15 +186,16 @@ void OAuthClientFlowTest::testFullFlowCapturesAuthorizationCode()
 {
     MiniDiscoveryServer discovery(QStringLiteral("http://127.0.0.1:1/authorize"));
     OAuthClientFlow flow;
+    connect(&flow, &OAuthClientFlow::authorizationUrlReady, this, &OAuthClientFlowTest::captureAuthorizationUrl);
     QSignalSpy capturedSpy(&flow, &OAuthClientFlow::authorizationCaptured);
     QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
-    QSignalSpy openedSpy(&flow, &OAuthClientFlow::browserOpened);
+    QSignalSpy urlReadySpy(&flow, &OAuthClientFlow::authorizationUrlReady);
 
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, true);
-    QTRY_VERIFY(!mBrowserUrl.isEmpty());
-    QCOMPARE(openedSpy.count(), 1);
+    QTRY_VERIFY(!mAuthorizationUrl.isEmpty());
+    QCOMPARE(urlReadySpy.count(), 1);
 
-    const QUrlQuery query(mBrowserUrl);
+    const QUrlQuery query(mAuthorizationUrl);
     QCOMPARE(query.queryItemValue(QStringLiteral("response_type")), QStringLiteral("code"));
     QCOMPARE(query.queryItemValue(QStringLiteral("client_id")), QStringLiteral("test-client"));
     QCOMPARE(query.queryItemValue(QStringLiteral("scope"), QUrl::FullyDecoded), QStringLiteral("openid"));
@@ -231,6 +219,7 @@ void OAuthClientFlowTest::testFullFlowCapturesAuthorizationCode()
     QCOMPARE(args.at(0).toString(), QStringLiteral("test-auth-code"));
     QCOMPARE(OAuthClientFlow::codeChallengeS256(args.at(1).toString()), challenge);
     QCOMPARE(args.at(2).toString(), redirectUri.toString());
+    QCOMPARE(args.at(3).toString(), query.queryItemValue(QStringLiteral("nonce")));
     QCOMPARE(failedSpy.count(), 0);
 
     // Wait for the full status line (peek does not consume) so a split packet cannot yield a partial read.
@@ -241,12 +230,13 @@ void OAuthClientFlowTest::testStateMismatchFailsFlow()
 {
     MiniDiscoveryServer discovery(QStringLiteral("http://127.0.0.1:1/authorize"));
     OAuthClientFlow flow;
+    connect(&flow, &OAuthClientFlow::authorizationUrlReady, this, &OAuthClientFlowTest::captureAuthorizationUrl);
     QSignalSpy capturedSpy(&flow, &OAuthClientFlow::authorizationCaptured);
     QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
 
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
-    QTRY_VERIFY(!mBrowserUrl.isEmpty());
-    const QUrlQuery query(mBrowserUrl);
+    QTRY_VERIFY(!mAuthorizationUrl.isEmpty());
+    const QUrlQuery query(mAuthorizationUrl);
     const QUrl redirectUri(query.queryItemValue(QStringLiteral("redirect_uri"), QUrl::FullyDecoded));
 
     QTcpSocket browser;
@@ -265,12 +255,13 @@ void OAuthClientFlowTest::testNonRedirectRequestIgnored()
 {
     MiniDiscoveryServer discovery(QStringLiteral("http://127.0.0.1:1/authorize"));
     OAuthClientFlow flow;
+    connect(&flow, &OAuthClientFlow::authorizationUrlReady, this, &OAuthClientFlowTest::captureAuthorizationUrl);
     QSignalSpy capturedSpy(&flow, &OAuthClientFlow::authorizationCaptured);
     QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
 
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
-    QTRY_VERIFY(!mBrowserUrl.isEmpty());
-    const QUrlQuery query(mBrowserUrl);
+    QTRY_VERIFY(!mAuthorizationUrl.isEmpty());
+    const QUrlQuery query(mAuthorizationUrl);
     const QUrl redirectUri(query.queryItemValue(QStringLiteral("redirect_uri"), QUrl::FullyDecoded));
 
     // A browser side-request (no code/error) must be answered without ending the flow.
@@ -294,34 +285,41 @@ void OAuthClientFlowTest::testNonRedirectRequestIgnored()
 void OAuthClientFlowTest::testDiscoveryFetchFailureFailsFlow()
 {
     OAuthClientFlow flow;
+    connect(&flow, &OAuthClientFlow::authorizationUrlReady, this, &OAuthClientFlowTest::captureAuthorizationUrl);
     QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
     // A server that accepts the connection then closes it immediately guarantees the discovery
     // fetch fails deterministically, rather than relying on a host refusing a particular port.
     MiniClosingServer discovery;
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
     QTRY_COMPARE_WITH_TIMEOUT(failedSpy.count(), 1, 15000);
+    // A failed discovery fetch must not have produced an authorization URL.
+    QVERIFY(mAuthorizationUrl.isEmpty());
 }
 
 void OAuthClientFlowTest::testNonLoopbackHttpDiscoveryUrlRejected()
 {
     OAuthClientFlow flow;
+    connect(&flow, &OAuthClientFlow::authorizationUrlReady, this, &OAuthClientFlowTest::captureAuthorizationUrl);
     QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
     // Plain http is only acceptable for loopback hosts; anything else must be refused
     // before any network activity happens.
     flow.start(QUrl(QStringLiteral("http://example.com/.well-known/openid-configuration")), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
     QCOMPARE(failedSpy.count(), 1);
+    // The rejected discovery URL must not have produced an authorization URL.
+    QVERIFY(mAuthorizationUrl.isEmpty());
 }
 
 void OAuthClientFlowTest::testProviderErrorFailsFlow()
 {
     MiniDiscoveryServer discovery(QStringLiteral("http://127.0.0.1:1/authorize"));
     OAuthClientFlow flow;
+    connect(&flow, &OAuthClientFlow::authorizationUrlReady, this, &OAuthClientFlowTest::captureAuthorizationUrl);
     QSignalSpy capturedSpy(&flow, &OAuthClientFlow::authorizationCaptured);
     QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
 
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
-    QTRY_VERIFY(!mBrowserUrl.isEmpty());
-    const QUrlQuery query(mBrowserUrl);
+    QTRY_VERIFY(!mAuthorizationUrl.isEmpty());
+    const QUrlQuery query(mAuthorizationUrl);
     const QUrl redirectUri(query.queryItemValue(QStringLiteral("redirect_uri"), QUrl::FullyDecoded));
 
     QTcpSocket browser;
@@ -337,12 +335,13 @@ void OAuthClientFlowTest::testEmptyCodeFailsFlow()
 {
     MiniDiscoveryServer discovery(QStringLiteral("http://127.0.0.1:1/authorize"));
     OAuthClientFlow flow;
+    connect(&flow, &OAuthClientFlow::authorizationUrlReady, this, &OAuthClientFlowTest::captureAuthorizationUrl);
     QSignalSpy capturedSpy(&flow, &OAuthClientFlow::authorizationCaptured);
     QSignalSpy failedSpy(&flow, &OAuthClientFlow::flowFailed);
 
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
-    QTRY_VERIFY(!mBrowserUrl.isEmpty());
-    const QUrlQuery query(mBrowserUrl);
+    QTRY_VERIFY(!mAuthorizationUrl.isEmpty());
+    const QUrlQuery query(mAuthorizationUrl);
     const QUrl redirectUri(query.queryItemValue(QStringLiteral("redirect_uri"), QUrl::FullyDecoded));
 
     // A redirect with a matching state but an empty code (code= present but blank) must fail, not

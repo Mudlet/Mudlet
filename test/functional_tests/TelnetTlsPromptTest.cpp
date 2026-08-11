@@ -112,10 +112,6 @@ private slots:
         data.append(tlsPort);
         data.append(TN_IAC);
         data.append(TN_SE);
-        // processSocketData() writes a NUL at in_buffer[size + 1], so give the
-        // backing buffer a little slack before handing it its data pointer.
-        data.reserve(data.size() + 16);
-
         host->mTelnet.loopbackTest(data);
 
         // The signal is emitted synchronously inside loopbackTest(), so it has
@@ -160,7 +156,6 @@ private slots:
         // Advertise a secure port so mMSSPTlsPort is populated (the handler is
         // detached, so nothing pops up).
         QByteArray advertise = msspTlsPayload("48000");
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
 
         // The user answers No; the reconnect that follows must complete.
@@ -176,7 +171,6 @@ private slots:
         // the user has declined (don't-ask-again is sticky for the session).
         QSignalSpy promptSpy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
         QByteArray advertiseAgain = msspTlsPayload("48000");
-        advertiseAgain.reserve(advertiseAgain.size() + 16);
         host->mTelnet.loopbackTest(advertiseAgain);
         QCOMPARE(promptSpy.count(), 0);
 #endif
@@ -204,7 +198,6 @@ private slots:
 
         // Advertise the second stub's port as the secure port.
         QByteArray advertise = msspTlsPayload(QByteArray::number(securePort));
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
         QCOMPARE(host->mMSSPTlsPort, static_cast<int>(securePort));
 
@@ -243,7 +236,6 @@ private slots:
         QVERIFY(spy.isValid());
 
         QByteArray advertise = msspTlsPayload("48000");
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
         if (spy.isEmpty()) {
             QVERIFY2(spy.wait(2s), "cTelnet did not emit signal_promptTlsAvailable for the first advertisement.");
@@ -253,7 +245,6 @@ private slots:
         // Nobody has answered, so the prompt is still in flight: a repeated
         // advertisement (as a hostile server could spam) must be swallowed.
         QByteArray advertiseAgain = msspTlsPayload("48000");
-        advertiseAgain.reserve(advertiseAgain.size() + 16);
         host->mTelnet.loopbackTest(advertiseAgain);
         QCOMPARE(spy.count(), 1);
 #endif
@@ -277,7 +268,6 @@ private slots:
         // Advertise so the port is recorded and the latch is set, mirroring a
         // real pending prompt.
         QByteArray advertise = msspTlsPayload("48000");
-        advertise.reserve(advertise.size() + 16);
         host->mTelnet.loopbackTest(advertise);
 
         const int originalPort = host->getPort();
@@ -314,12 +304,10 @@ private slots:
         QSignalSpy bellSpy(&host->mTelnet, &cTelnet::signal_bell);
 
         QByteArray oneBell("\a");
-        oneBell.reserve(oneBell.size() + 16);
         host->mTelnet.loopbackTest(oneBell);
         QCOMPARE(bellSpy.count(), 1);
 
         QByteArray twoBells("\a\a");
-        twoBells.reserve(twoBells.size() + 16);
         host->mTelnet.loopbackTest(twoBells);
         QCOMPARE(bellSpy.count(), 3);
     }

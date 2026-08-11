@@ -95,7 +95,7 @@ QJsonObject releaseJson()
 }
 } // namespace
 
-class UpdaterChecksumTest : public QObject
+class ReleaseChecksumPairingTest : public QObject
 {
     Q_OBJECT
 
@@ -115,7 +115,7 @@ private slots:
 
 // The updater picks the first asset matching its platform, so this is the file
 // whose checksum has to be present
-void UpdaterChecksumTest::windowsDownloadIsThePlatformExe()
+void ReleaseChecksumPairingTest::windowsDownloadIsThePlatformExe()
 {
     const dblsqd::Release release(releaseJson(), QStringLiteral("win"), QStringLiteral("x86_64"));
 
@@ -124,21 +124,21 @@ void UpdaterChecksumTest::windowsDownloadIsThePlatformExe()
 }
 
 // The regression: this is why Windows auto-update failed
-void UpdaterChecksumTest::publishedChecksumsDoNotCoverTheWindowsDownload()
+void ReleaseChecksumPairingTest::publishedChecksumsDoNotCoverTheWindowsDownload()
 {
     const dblsqd::Release release(releaseJson(), QStringLiteral("win"), QStringLiteral("x86_64"));
 
     QVERIFY(dblsqd::Feed::findChecksum(publishedChecksums(), release.getDownloadUrl().fileName()).isEmpty());
 }
 
-void UpdaterChecksumTest::mergedChecksumsCoverTheWindowsDownload()
+void ReleaseChecksumPairingTest::mergedChecksumsCoverTheWindowsDownload()
 {
     const dblsqd::Release release(releaseJson(), QStringLiteral("win"), QStringLiteral("x86_64"));
 
     QCOMPARE(dblsqd::Feed::findChecksum(mergedChecksums(), release.getDownloadUrl().fileName()), windowsHash);
 }
 
-void UpdaterChecksumTest::everyOtherPlatformWasAlreadyCovered()
+void ReleaseChecksumPairingTest::everyOtherPlatformWasAlreadyCovered()
 {
     const dblsqd::Release linuxRelease(releaseJson(), QStringLiteral("linux"), QStringLiteral("x86_64"));
     QCOMPARE(linuxRelease.getDownloadUrl().fileName(), linuxAsset);
@@ -155,7 +155,7 @@ void UpdaterChecksumTest::everyOtherPlatformWasAlreadyCovered()
 
 // sha256sum writes two spaces in text mode and " *" in binary mode; the Windows
 // build produces the latter
-void UpdaterChecksumTest::binaryAndTextModeLinesBothParse()
+void ReleaseChecksumPairingTest::binaryAndTextModeLinesBothParse()
 {
     QCOMPARE(dblsqd::Feed::findChecksum(QStringLiteral("%1 *%2").arg(windowsHash, windowsAsset), windowsAsset), windowsHash);
     QCOMPARE(dblsqd::Feed::findChecksum(QStringLiteral("%1  %2").arg(windowsHash, windowsAsset), windowsAsset), windowsHash);
@@ -166,7 +166,7 @@ void UpdaterChecksumTest::binaryAndTextModeLinesBothParse()
 
 // The rebuilt installer's entry must not be accepted for a different file, or the
 // updater would check the download against the wrong hash
-void UpdaterChecksumTest::anotherBuildsEntryDoesNotCoverThisDownload()
+void ReleaseChecksumPairingTest::anotherBuildsEntryDoesNotCoverThisDownload()
 {
     const QString rebuiltOnly = QStringLiteral("%1 *%2\n").arg(rebuiltWindowsHash, rebuiltWindowsAsset);
 
@@ -177,7 +177,7 @@ void UpdaterChecksumTest::anotherBuildsEntryDoesNotCoverThisDownload()
 // SHA256SUMS.txt accumulates entries across builds, so a name that merely contains
 // the download's name must not hand back its hash - the updater would then reject a
 // perfectly good download as corrupt
-void UpdaterChecksumTest::aLongerNameContainingThisOneDoesNotCoverIt()
+void ReleaseChecksumPairingTest::aLongerNameContainingThisOneDoesNotCoverIt()
 {
     const QString longerName = QStringLiteral("old-%1").arg(windowsAsset);
 
@@ -186,12 +186,12 @@ void UpdaterChecksumTest::aLongerNameContainingThisOneDoesNotCoverIt()
     QVERIFY(dblsqd::Feed::findChecksum(QStringLiteral("%1  %2.tar\n").arg(rebuiltWindowsHash, linuxAsset), linuxAsset).isEmpty());
 }
 
-void UpdaterChecksumTest::aPathPrefixedEntryStillCoversTheDownload()
+void ReleaseChecksumPairingTest::aPathPrefixedEntryStillCoversTheDownload()
 {
     QCOMPARE(dblsqd::Feed::findChecksum(QStringLiteral("%1 *upload/%2\n").arg(windowsHash, windowsAsset), windowsAsset), windowsHash);
 }
 
-void UpdaterChecksumTest::malformedLinesAreIgnored()
+void ReleaseChecksumPairingTest::malformedLinesAreIgnored()
 {
     // too short, non-hex, and no separator respectively, then the real entry
     const QString data = QStringLiteral("abc123  %1\n"
@@ -203,7 +203,7 @@ void UpdaterChecksumTest::malformedLinesAreIgnored()
     QCOMPARE(dblsqd::Feed::findChecksum(data, windowsAsset), windowsHash);
 }
 
-void UpdaterChecksumTest::emptyInputsYieldNoChecksum()
+void ReleaseChecksumPairingTest::emptyInputsYieldNoChecksum()
 {
     QVERIFY(dblsqd::Feed::findChecksum(QString(), windowsAsset).isEmpty());
     QVERIFY(dblsqd::Feed::findChecksum(mergedChecksums(), QString()).isEmpty());
@@ -211,7 +211,7 @@ void UpdaterChecksumTest::emptyInputsYieldNoChecksum()
 
 // A release that forgot one platform and a payload that was never a checksum file
 // both yield no hash, but they need different messages
-void UpdaterChecksumTest::entriesParsedTellsAnUnreadableFileFromAMissingEntry()
+void ReleaseChecksumPairingTest::entriesParsedTellsAnUnreadableFileFromAMissingEntry()
 {
     int entriesParsed = -1;
     QVERIFY(dblsqd::Feed::findChecksum(publishedChecksums(), windowsAsset, &entriesParsed).isEmpty());
@@ -226,5 +226,5 @@ void UpdaterChecksumTest::entriesParsedTellsAnUnreadableFileFromAMissingEntry()
     QCOMPARE(entriesParsed, 5);
 }
 
-#include "UpdaterChecksumTest.moc"
-QTEST_MAIN(UpdaterChecksumTest)
+#include "ReleaseChecksumPairingTest.moc"
+QTEST_MAIN(ReleaseChecksumPairingTest)

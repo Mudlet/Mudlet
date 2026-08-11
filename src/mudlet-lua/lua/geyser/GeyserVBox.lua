@@ -10,7 +10,8 @@ Geyser.VBox = Geyser.Container:new({
 
 -- Internal function: lays the box out, or remembers that it still has to be laid
 -- out when updates are being deferred, so that the reposition end_update() runs
--- picks the work up again
+-- picks the work up again. A box being deleted defers as well and never gets
+-- that reposition, which is deliberate - it has no layout left worth doing.
 -- @param box the VBox to organize
 local function organizeOrDefer(box)
   if box.defer_updates then
@@ -39,8 +40,17 @@ function Geyser.VBox:add2 (window, cons, passAdd2, exclude)
   organizeOrDefer(self)
 end
 
+-- The base remove only edits the bookkeeping, so without this the survivors
+-- keep the geometry that was worked out for the old child count and the box is
+-- left with a hole. Every removal path - delete, changeContainer, adding a
+-- child to another container - comes through here.
+function Geyser.VBox:remove (window)
+  Geyser.remove(self, window)
+  organizeOrDefer(self)
+end
+
 --- Responsible for organizing the elements inside the VBox
--- Called when a new element is added
+-- Called when an element is added or removed
 function Geyser.VBox:organize()
   local self_height = self:get_height()
   local self_width = self:get_width()
