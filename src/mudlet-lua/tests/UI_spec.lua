@@ -12,9 +12,9 @@ local function registryEntryCount()
   return count
 end
 
--- Runs the refusals twice and counts only the second round: releasing a
--- reference puts it on the registry's free list, and the first round is what
--- fills that list, so a count taken across it grows even when nothing leaks.
+-- Counts the registry across 20 refusals, after one warm-up refusal: releasing
+-- a reference puts it on the registry's free list, and the first release is what
+-- creates that list, so a count taken across it grows even when nothing leaks.
 local function registryGrowthOver(refuseOnce)
   refuseOnce()
   local before = registryEntryCount()
@@ -5522,8 +5522,8 @@ describe("Toolbar buttons", function()
   local floatingButton = "buttonSpecFloatingButton" .. suffix
   local packageFile = specFilePath(packageName .. ".xml")
 
-  -- location 0 is a button bar across the top of the profile's window and
-  -- location 4 a floating toolbar of the application's own
+  -- location 0 is a button bar in the profile's window, location 4 the floating
+  -- setting that showToolBar() and hideToolBar() do not move
   local function actionXml(name, pushButton, isFolder, location)
     return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
       <name>%s</name>
@@ -5753,7 +5753,7 @@ describe("Toolbar buttons", function()
 
   describe("showToolBar and hideToolBar", function()
     -- both flip the active flag of the toolbar's own action, which isActive()
-    -- reads back; the toolbar itself is only visible in a screenshot
+    -- reads back; whether the bar is on screen is not readable from Lua
     local function toolbarActive()
       return isActive(toolbar, "button")
     end

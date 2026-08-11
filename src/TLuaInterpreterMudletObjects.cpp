@@ -1765,11 +1765,13 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
             break;
         case LUA_TNIL:
-        default:
-            // nothing else survives the loop above
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
             break;
+        default:
+            // the loop above refused every other type, so a type reaching here
+            // means the two have gone out of step
+            Q_UNREACHABLE();
         }
     }
 

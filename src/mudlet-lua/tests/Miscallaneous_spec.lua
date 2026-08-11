@@ -1386,8 +1386,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
       it("raises a Lua error for a later argument it cannot carry", function()
         -- the arguments are all vetted before the TEvent is built, so this raise
-        -- has nothing to strand either; the leak-checking CI job is what would
-        -- notice if that changed
+        -- has nothing to strand; the leak-checking CI job is what would notice
+        -- if that changed
         assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument type #2")
       end)
 

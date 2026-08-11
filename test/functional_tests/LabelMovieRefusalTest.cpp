@@ -190,15 +190,14 @@ private slots:
         QCOMPARE(refusalMessage, qsl("no valid movie found at '%1'").arg(mNotAGifPath));
 
         QVERIFY(pLabel->mpMovie);
-        // these three are what a refused call over a working movie gets wrong:
-        // it hands the label's own QMovie the path, leaving it invalid, named
-        // after the file that is not a movie, and with no frames
+        // a refusal must not hand the label's own QMovie the new path: that
+        // would leave it invalid, renamed after a file that is not a movie, and
+        // with no frames
         QVERIFY2(pLabel->mpMovie->isValid(), "the refused file left the label with a movie it cannot play");
         QCOMPARE(pLabel->mpMovie->fileName(), mGifPath);
         QCOMPARE(pLabel->mpMovie->frameCount(), frameCount);
-        // a QMovie handed a file that is not one keeps running, so this says
-        // nothing on its own - it is here because the label must still be
-        // playing what it was playing
+        // the label has to still be playing, which a QMovie handed a file that
+        // is not one also reports, so this only holds the line
         QCOMPARE(pLabel->mpMovie->state(), QMovie::Running);
 
         mpHost->mpConsole->deleteLabel(mLabelName);

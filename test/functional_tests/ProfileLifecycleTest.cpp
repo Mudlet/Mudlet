@@ -561,10 +561,10 @@ private slots:
     //
     // Refusing an argument is a lua_error(), which longjmps straight out of the
     // C function, so a TEvent being filled in on the stack there would never be
-    // destroyed and whatever it had already collected would leak. The named
-    // event with a table after it is the case that has collected something by
-    // the time it is refused, and LeakSanitizer fails the whole binary if it
-    // does.
+    // destroyed and whatever it had collected would leak. The named event with a
+    // table after it is the case that would strand a partly filled one if the
+    // arguments stopped being vetted first, and LeakSanitizer fails the whole
+    // binary if it ever does.
     void test_raiseGlobalEventRefusesArgumentsItCannotCarry()
     {
         const QString tableError = runLua(mpFirstHost, qsl("raiseGlobalEvent({})"));

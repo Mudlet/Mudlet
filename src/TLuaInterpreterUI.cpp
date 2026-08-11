@@ -162,8 +162,10 @@ static bool isMain(const QString& name)
         label_;                                                                                                                                                                                        \
     })
 
-// Parsing a commands table anchors each function it holds in the Lua registry,
-// so a call that goes on to fail has to let those references go again
+// Parsing a command or a commands table anchors each function it holds in the
+// Lua registry, so a call that goes on to fail has to let those references go
+// again. CONSOLE() returns straight out of its caller, which is why every one of
+// these functions resolves its window before it parses.
 static void releaseLuaReferences(lua_State* L, const QVector<int>& luaReferences)
 {
     for (const int luaReference : luaReferences) {
@@ -939,8 +941,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
         return lua_error(L);
     }
 
-    // CONSOLE() returns straight out of the function, so the window is resolved
-    // before parseCommandOrFunction() anchors a function in the Lua registry
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     auto console = CONSOLE(L, windowName);
 
@@ -997,9 +998,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return lua_error(L);
     }
 
-    // CONSOLE() returns straight out of the function, so the window is resolved
-    // before parseCommandsOrFunctionsTable() anchors any of the table's
-    // functions in the Lua registry
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     auto console = CONSOLE(L, windowName);
 
@@ -1887,8 +1886,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
         return lua_error(L);
     }
 
-    // CONSOLE() returns straight out of the function, so the window is resolved
-    // before parseCommandOrFunction() anchors a function in the Lua registry
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     auto console = CONSOLE(L, windowName);
 
@@ -1935,9 +1933,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return lua_error(L);
     }
 
-    // CONSOLE() returns straight out of the function, so the window is resolved
-    // before parseCommandsOrFunctionsTable() anchors any of the table's
-    // functions in the Lua registry
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     auto console = CONSOLE(L, windowName);
 
@@ -2421,14 +2417,12 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
-    // the flag is what stops Mudlet saving the layout a second time on the way
-    // out, and a save asked for from a script is no substitute for that one, so
-    // it is only lowered for the length of this call
+    // the flag is what makes the save on the way out a no-op, and a save asked
+    // for from a script is no substitute for that one, so it goes back up only
+    // if this call really saved
     const bool hadSavedLayout = pMudlet->mHasSavedLayout;
     pMudlet->mHasSavedLayout = false;
     const bool saved = pMudlet->saveWindowLayout();
-    // and a save that did not happen leaves nothing for the one at shutdown to
-    // stand in for either
     pMudlet->mHasSavedLayout = hadSavedLayout && saved;
     lua_pushboolean(L, saved);
     return 1;
@@ -3336,8 +3330,7 @@ int TLuaInterpreter::setLink(lua_State* L)
         return lua_error(L);
     }
 
-    // CONSOLE() returns straight out of the function, so the window is resolved
-    // before parseCommandOrFunction() anchors a function in the Lua registry
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const Host& host = getHostFromLua(L);
     auto console = CONSOLE(L, QString{windowName});
 
@@ -3466,9 +3459,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return lua_error(L);
     }
 
-    // CONSOLE() returns straight out of the function, so the window is resolved
-    // before parseCommandsOrFunctionsTable() anchors any of the table's
-    // functions in the Lua registry
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const Host& host = getHostFromLua(L);
     auto console = CONSOLE(L, QString{windowName});
 
