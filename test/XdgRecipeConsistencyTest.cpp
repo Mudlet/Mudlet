@@ -357,11 +357,10 @@ private slots:
             const QDir dir(directory);
             QVERIFY2(dir.exists(), qPrintable(QStringLiteral("no such directory: %1 - is MUDLET_TEST_DIR right?").arg(directory)));
             const QStringList sources = dir.entryList({QStringLiteral("*.cpp")}, QDir::Files, QDir::Name);
+            // This file is scanned along with the rest: its fixtures spell the
+            // stale recipe out inside string literals, so the sweep staying
+            // green is what says a quoted recipe does not read as a call.
             for (const QString& name : sources) {
-                // its own fixtures spell the stale recipe out on purpose
-                if (name == QStringLiteral("XdgRecipeConsistencyTest.cpp")) {
-                    continue;
-                }
                 QFile source(dir.filePath(name));
                 QVERIFY2(source.open(QIODevice::ReadOnly | QIODevice::Text), qPrintable(source.fileName()));
                 ++scanned;
