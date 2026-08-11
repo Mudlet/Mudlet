@@ -155,6 +155,15 @@ if(NOT WIN32)
     )
 endif()
 
+# Checks that the LeakSanitizer tracer-crash launcher retries only that one
+# signature. The flake it exists for cannot be reproduced on demand, so the
+# launcher is driven against captured CI output instead
+if(NOT WIN32)
+    add_test(NAME LsanTracerRetryTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/lsan-tracer-retry-test.sh
+    )
+endif()
+
 add_subdirectory(functional_tests)
 
 # CI runners are elevated, so nothing there catches a test executable Windows

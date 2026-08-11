@@ -595,10 +595,10 @@ jobs:
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      # This leg drives the real discord-rpc library, whose reconnects
-      # happen in wall-clock time. The launcher only ever runs the suite a
-      # second time for the LeakSanitizer tracer crash, so the budget is twice
-      # what one run needs.
+      # This leg drives the real discord-rpc library, whose reconnects happen in
+      # wall-clock time, hence the budget. Twice what one run needs, because the
+      # launcher reruns the suite when LeakSanitizer's tracer crashes on the way
+      # out and takes the busted summary with it (#9809).
       timeout-minutes: 6
       run: >
         cmake -P ${{github.workspace}}/test/lsan-tracer-retry.cmake --

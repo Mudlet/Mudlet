@@ -132,10 +132,9 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         set(leakCheck "detect_leaks=1")
-        # Every leak-checked exit is another chance to hit LeakSanitizer's
-        # tracer crash, which fails the run without reporting anything, so the
-        # leak-checked tests go through a launcher that retries that one
-        # signature once. See test/lsan-tracer-retry.cmake.
+        # Every leak-checked exit is another chance to hit LeakSanitizer's tracer
+        # crash, which fails the run without reporting anything (#9809), so these
+        # go through a launcher that retries that one signature once
         add_test(NAME ${test_name} COMMAND ${CMAKE_COMMAND} -P
             ${CMAKE_SOURCE_DIR}/test/lsan-tracer-retry.cmake --
             $<TARGET_FILE:${test_name}>)
