@@ -604,6 +604,11 @@ jobs:
         # environment quirk. macOS runners start no player at all, so the gate
         # stays off there.
         MUDLET_TEST_REQUIRE_MEDIA: 1
+        # Xvfb has no window manager to overrule a resize request, so the main
+        # window here follows setMainWindowSize exactly and one that stops
+        # following it is a regression rather than an environment quirk. The
+        # macOS runners are not gated: their window server can refuse a resize.
+        MUDLET_TEST_REQUIRE_WINDOW_RESIZE: 1
         # The fake Discord IPC server's socket lives in this runtime directory,
         # and the bundled discord-rpc library is only reachable through this
         # library path - without both the Discord specs have nothing to talk to.
