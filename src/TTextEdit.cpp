@@ -2380,7 +2380,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
     const TChar timeStampStyle = timeStampCharStyle();
     LineLayout previousLine;
     LineLayout currentLine;
-    for (int i = 0; i < lineCount; i++, linesDrawn++) {
+    for (int i = 0; i < lineCount; ++i) {
         if (!hasBufferLine(i + lineOffset)) {
             break;
         }
@@ -2389,9 +2389,12 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
         paintBackgrounds(painter, currentLine);
         paintForegrounds(painter, previousLine);
         previousLine.swap(currentLine);
+        // counted here rather than in the loop's increment, so that the timeout
+        // below reports the line it just drew instead of the one before it
+        ++linesDrawn;
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
-            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
+            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << linesDrawn << " lines";
             paintForegrounds(painter, previousLine);
             return {false, linesDrawn};
         }
