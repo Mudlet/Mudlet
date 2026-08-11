@@ -2338,6 +2338,19 @@ describe("Tests db's internal SQL helpers", function()
       assert.is_false(ok)
       assert.is_truthy(string.find(err, "Must specify either a table array or string for index, not number", 1, true))
     end)
+
+    it("refuses a list member that is not a string", function()
+      local ok, err = pcall(function() return db:_sql_columns({42}) end)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "Column names must be strings, not number", 1, true))
+    end)
+
+    it("quotes a leading sort direction as the column name it has to be", function()
+      -- there is no column in front of it to attach it to, and a sheet is
+      -- allowed a column called desc
+      assert.are.equal('"desc"', db:_sql_columns({"desc"}))
+      assert.are.equal('"asc","name"', db:_sql_columns({"asc", "name"}))
+    end)
   end)
 
   describe("Tests db:_sql_fields", function()
@@ -2580,6 +2593,28 @@ describe("Tests db's internal SQL helpers", function()
       local before = 'CREATE TABLE people ("name" TEXT UNIQUE ON CONFLICT FAIL)'
       local after = 'CREATE TABLE people ("name" TEXT UNIQUE ON CONFLICT FAIL, "city" TEXT NULL DEFAULT "")'
       assert.are.equal(db:_extract_table_constraints(before), db:_extract_table_constraints(after))
+    end)
+
+    it("sees a UNIQUE that carries no ON CONFLICT clause", function()
+      -- sqlite defaults the conflict resolution to ABORT, so a table this
+      -- module did not write can hold one of these; missing it makes a sheet
+      -- with a unique constraint compare equal to one without
+      assert.are.equal("unique",
+        db:_extract_table_constraints('CREATE TABLE people ("name" TEXT NULL DEFAULT "" UNIQUE, "city" TEXT NULL)'))
+      assert.are.equal('unique("name", "city")',
+        db:_extract_table_constraints('CREATE TABLE people ("name" TEXT NULL, "city" TEXT NULL, UNIQUE("name", "city"))'))
+    end)
+
+    it("tells a bare UNIQUE apart from one with a conflict clause", function()
+      local bare = 'CREATE TABLE people ("name" TEXT UNIQUE)'
+      local resolved = 'CREATE TABLE people ("name" TEXT UNIQUE ON CONFLICT FAIL)'
+      assert.are_not.equal(db:_extract_table_constraints(bare), db:_extract_table_constraints(resolved))
+      assert.are_not.equal(db:_extract_table_constraints(bare), db:_extract_table_constraints('CREATE TABLE people ("name" TEXT)'))
+    end)
+
+    it("does not mistake a column named after the keyword for a constraint", function()
+      assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("unique_id" TEXT NULL DEFAULT "")'))
+      assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("uniqueness" TEXT NULL DEFAULT "")'))
     end)
   end)
 
@@ -2877,6 +2912,34 @@ describe("Tests db's internals against a real database", function()
       assert.are.equal(1, #rows)
       assert.are.equal("Bob", rows[1].name)
       assert.is_nil(rows[1].city)
+    end)
+
+    it("rebuilds a sheet whose UNIQUE carries no conflict clause", function()
+      -- sqlite defaults the conflict resolution to ABORT, so a sheet that this
+      -- module did not write can hold a bare UNIQUE. Dropping _unique from the
+      -- schema then has to rebuild the table, which it only does if the bare
+      -- constraint is seen in the first place
+      local schema = db.__schema[dbName].people
+      local conn = db.__conn[dbName]
+
+      schema.options._unique = {"name"}
+      local legacy = db:_build_create_table_sql(schema, "people"):gsub(" ON CONFLICT %u+", "")
+      assert.is_truthy(string.find(legacy, '"name" TEXT NULL DEFAULT "" UNIQUE', 1, true))
+      conn:execute("DROP TABLE people")
+      conn:execute(legacy)
+      conn:commit()
+
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+
+      schema.options._unique = nil
+      db:_migrate(dbName, "people")
+
+      -- the uniqueness the schema no longer asks for is gone, and the row that
+      -- was there came through the rebuild
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+      local rows = db:fetch(db:get_database(dbName).people)
+      assert.are.equal(2, #rows)
+      assert.are.equal("Bob", rows[1].name)
     end)
 
     it("creates the indexes the schema asks for", function()

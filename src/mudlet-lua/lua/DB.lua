@@ -117,8 +117,10 @@ function db:_sql_columns(value)
 
   if t == "table" then
     for _, v in ipairs(value) do
-      -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term
-      if v:lower() == "desc" or v:lower() == "asc" then
+      assert(type(v) == "string", "Column names must be strings, not " .. type(v) .. ".")
+      -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term, which is
+      -- only a sort direction when there is a column in front of it to sort
+      if col_chunks[1] and (v:lower() == "desc" or v:lower() == "asc") then
         col_chunks[#col_chunks] = col_chunks[#col_chunks] .. " " .. v
       else
         col_chunks[#col_chunks + 1] = '"' .. v:lower() .. '"'
@@ -466,7 +468,7 @@ end
 
 
 -- NOT LUADOC
--- Extracts UNIQUE constraints with ON CONFLICT clauses from a CREATE TABLE statement.
+-- Extracts UNIQUE constraints from a CREATE TABLE statement.
 -- This includes both column-level constraints (e.g., "col1" TEXT UNIQUE ON CONFLICT REPLACE)
 -- and table-level constraints (e.g., UNIQUE("col1", "col2") ON CONFLICT FAIL).
 -- This allows us to detect when constraint definitions have changed without being affected by
@@ -487,17 +489,39 @@ function db:_extract_table_constraints(sql)
 
   local constraints = {}
 
-  -- Find table-level UNIQUE constraints
-  -- They look like: UNIQUE("col1") ON CONFLICT REPLACE or UNIQUE("col1", "col2") ON CONFLICT FAIL
-  for constraint in content:gmatch('unique%s*%([^)]+%)%s+on%s+conflict%s+%w+') do
-    table.insert(constraints, constraint)
-  end
+  -- Each UNIQUE is picked up with the column list it may carry, then with the
+  -- ON CONFLICT clause it may carry. Both parts are optional: SQLite defaults
+  -- the conflict resolution to ABORT, so a sheet whose table was not written by
+  -- this module can hold a bare UNIQUE, and a bare one has to be seen or a
+  -- change in uniqueness compares equal to no uniqueness at all.
+  local position = 1
+  while true do
+    local start, stop = content:find("unique", position, true)
+    if not start then
+      break
+    end
+    position = stop + 1
 
-  -- Find column-level UNIQUE constraints
-  -- They look like: "col1" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE
-  -- We need to extract just the "UNIQUE ON CONFLICT X" part for comparison
-  for constraint in content:gmatch('unique%s+on%s+conflict%s+%w+') do
-    table.insert(constraints, constraint)
+    -- a column called "unique_id" or a default value spelt unique is not one
+    local before = start > 1 and content:sub(start - 1, start - 1) or " "
+    local after = content:sub(stop + 1, stop + 1)
+    if not before:match("[%w_]") and not after:match("[%w_]") then
+      local constraint = "unique"
+
+      local columns_start, columns_stop = content:find("^%s*%([^)]+%)", position)
+      if columns_start then
+        constraint = constraint .. content:sub(columns_start, columns_stop)
+        position = columns_stop + 1
+      end
+
+      local conflict_start, conflict_stop = content:find("^%s+on%s+conflict%s+%w+", position)
+      if conflict_start then
+        constraint = constraint .. content:sub(conflict_start, conflict_stop)
+        position = conflict_stop + 1
+      end
+
+      table.insert(constraints, constraint)
+    end
   end
 
   -- Sort for consistent comparison
