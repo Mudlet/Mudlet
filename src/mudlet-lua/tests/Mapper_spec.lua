@@ -2066,6 +2066,17 @@ describe("Tests saveMap and loadMap", function()
       assert.is_false(saveMap(savePath, 9999))
     end)
 
+    it("refuses a format version older than this Mudlet can write", function()
+      finally(function()
+        saveMap(savePath)
+        os.remove(savePath)
+      end)
+      -- 16 is one below the oldest format this Mudlet writes, and a refusal
+      -- has to be as flat as the one for a version that is too new
+      assert.is_false(saveMap(savePath, 16))
+      assert.is_false(saveMap(savePath, -1))
+    end)
+
     it("resolves a relative location against the profile directory", function()
       -- and not against the directory Mudlet happens to have been started in,
       -- which for a spec run is the build or source tree
