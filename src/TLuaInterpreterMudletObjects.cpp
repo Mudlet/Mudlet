@@ -1722,6 +1722,25 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         return lua_error(L);
     }
 
+    // every argument is vetted before the event is built: lua_error() longjmps
+    // past the TEvent's destructor, stranding whatever it has collected by then
+    for (int i = 1; i <= n; ++i) {
+        switch (lua_type(L, i)) {
+        case LUA_TNUMBER:
+        case LUA_TSTRING:
+        case LUA_TBOOLEAN:
+        case LUA_TNIL:
+            break;
+        default:
+            lua_pushfstring(L,
+                            "raiseGlobalEvent: bad argument type #%d (boolean, number, string or nil\n"
+                            "expected, got a %s!)",
+                            i,
+                            luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
     TEvent event{};
 
     for (int i = 1; i <= n; ++i) {
@@ -1746,16 +1765,11 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
             break;
         case LUA_TNIL:
+        default:
+            // nothing else survives the loop above
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
             break;
-        default:
-            lua_pushfstring(L,
-                            "raiseGlobalEvent: bad argument type #%d (boolean, number, string or nil\n"
-                            "expected, got a %s!)",
-                            i,
-                            luaL_typename(L, i));
-            return lua_error(L);
         }
     }
 
