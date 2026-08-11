@@ -2,6 +2,9 @@ if(NOT WIN32)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 
+# Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
+cmake_language(DEFER CALL restore_windows_test_output)
+
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     TelnetTextDisplayedTest.cpp
@@ -25,8 +28,11 @@ set(FUNCTIONAL_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
+    ProfileLifecycleTest.cpp
+    MxpFramePlacementTest.cpp
     ColorTriggerFilterChildTest.cpp
     CopyAsImageTest.cpp
+    GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
     SetScriptCallbackTest.cpp
@@ -36,9 +42,9 @@ set(FUNCTIONAL_TEST_SOURCES
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
-    PackageSelfUninstallTest.cpp
+    PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
-    PackageUninstallSaveTeardownTest.cpp
+    PackageRemovalSaveTeardownTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
@@ -47,7 +53,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UndoServerWrapTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
-    ActionSelfUninstallTest.cpp
+    ActionSelfRemovalTest.cpp
     ProfileFolderNameTest.cpp
     ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
@@ -65,7 +71,7 @@ set(FUNCTIONAL_TEST_SOURCES
 # The updater sources are only built with USE_UPDATER, and on macOS the
 # Updater wraps Sparkle instead of creating an UpdateDialog
 if(USE_UPDATER AND NOT APPLE)
-    list(APPEND FUNCTIONAL_TEST_SOURCES UpdaterTeardownTest.cpp)
+    list(APPEND FUNCTIONAL_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
 endif()
 
 set(FUNCTIONAL_TEST_UTILS
@@ -103,11 +109,11 @@ endif()
 # These still leak and stay unchecked until their defects are fixed:
 # - dlgTriggerEditorUndoRedoTest: never destroys its dlgTriggerEditor, leaving
 #   ~3.4MB of tree-item QIcon/QPixmap behind
-# - UpdaterTeardownTest: Qt's one-time system CA-certificate store load on
-#   first TLS use, cached for the process lifetime
+# - NewReleaseDialogTeardownTest: Qt's one-time system CA-certificate store load
+#   on first TLS use, cached for the process lifetime
 set(leakCheckExcludedTests
     dlgTriggerEditorUndoRedoTest
-    UpdaterTeardownTest
+    NewReleaseDialogTeardownTest
 )
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
@@ -149,11 +155,19 @@ set_tests_properties(TriggerSameLineMatchTest PROPERTIES
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
+# GlyphOverflowTest creates a fresh profile per test method and sweeps two font
+# families across 22 sizes, so it needs a longer timeout
+set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
+
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
+
+# ProfileLifecycleTest opens and closes several profiles, and every open is a
+# full profile load and every close a full save, so it needs a longer timeout
+set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
 # and each clip has to be waited out in real time, so it needs a longer timeout.
