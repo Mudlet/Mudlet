@@ -1505,6 +1505,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals(0, select('#', clearCmdLineBlacklist()))
           assert.equals(0, select('#', clearCmdLineBlacklist("main")))
         end)
+
+        it("still reads the command line name when something trails it", function()
+          local ok, err = clearCmdLineBlacklist("mudlet-spec-no-such-command-line", "trailing")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "not found"), tostring(err))
+        end)
       end)
 
       describe("Tests the functionality of showUnzipProgress", function()
