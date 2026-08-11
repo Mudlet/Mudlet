@@ -22,7 +22,7 @@ end
 local function assertArgError(fn, needle)
   local ok, err = pcall(fn)
   assert.is_false(ok)
-  assert.is_true(contains(err, needle))
+  assert.is_true(contains(err, needle), tostring(err))
 end
 
 describe("Media playback functions validate their parameters", function()
@@ -199,8 +199,7 @@ describe("Media load functions validate their parameters", function()
   end)
 
   it("the table form raises a Lua error naming the load that was called", function()
-    -- #9785: the shared table parser reported every one of them as
-    -- loadMusicFile, which sent anyone debugging a script to the wrong call
+    -- the three share one table parser, so each has to name its own caller
     assertArgError(function() loadSoundFile({}) end, "loadSoundFile: missing name")
     assertArgError(function() loadMusicFile({}) end, "loadMusicFile: missing name")
     assertArgError(function() loadVideoFile({}) end, "loadVideoFile: missing name")
@@ -464,9 +463,10 @@ describe("Media playback effects with a generated sound file", function()
 
   -- The fixture server of CI/http-fixture-server.py, when the harness started
   -- one and handed its ephemeral port over. A preload's observable effect is
-  -- the fetch it starts for a file the profile does not have, so the load specs
-  -- below are the media ones that need a server to talk to. Anything asked of
-  -- it below /media is answered with generated silence rather than from disk.
+  -- the fetch it starts for a file the profile does not have, so the specs
+  -- below that name a url are the media ones that need a server to talk to. A
+  -- GET below /media for a .wav is answered with generated silence rather than
+  -- from disk.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
   local requireFixture = os.getenv("MUDLET_TEST_REQUIRE_HTTP_FIXTURE")
   -- the file CI/http-fixtures/ serves, and its contents
@@ -996,8 +996,8 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     -- #9783: the download's completion played what it had just written. The
-    -- fixture server generates ten seconds of silence for this path, so a
-    -- playback that started would still be running when this looks.
+    -- fixture server answers this path with MEDIA_SECONDS of silence, long
+    -- enough that a playback which started would still be running here.
     local downloadName = "busted-media-download.wav"
     local downloaded = mediaDirectory .. "/" .. downloadName
     lfs.mkdir(mediaDirectory)
@@ -1018,7 +1018,6 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingMusic())
     assert.equals(0, #getPlayingVideos())
 
-    -- and the file is in the media directory, which is what the preload was for
     assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the preload did not keep the file it downloaded")
   end)
 
@@ -1029,18 +1028,48 @@ describe("Media playback effects with a generated sound file", function()
     -- #9784: what a load is filed as decides which players it can reach.
     -- playMedia() looks for a paused player to resume before it does anything
     -- else, among the players of the type the request carries - and a load that
-    -- set no type at all searched every list this profile has, so a sound
+    -- carried no type at all searched all three of the API lists, so a sound
     -- preload took over music.
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
     writeSoundFiles()
     assert.is_true(playMusicFile({name = longSoundFile, key = "busted-load-typed"}))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.is_true(pauseMusic())
+    waitForCount("sysMediaPaused", paused, 1)
     assert.equals(1, #getPausedMusic())
 
+    -- both parsers stamp the type, and each has its own copy of that line
     assert.is_true(loadSoundFile({name = longSoundFile}))
+    assert.is_true(loadSoundFile(longSoundFile))
     assert.equals(1, #getPausedMusic())
     assert.equals(0, #getPlayingMusic())
     assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a play with a url plays the file once the download lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- the other half of #9783's guard: a request that is not a preload still
+    -- has to play what it fetched, or the fix would have taken playback away
+    -- from every play*File() that names a url
+    local downloadName = "busted-media-play.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-played"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
+
+    local playing = getPlayingSounds()
+    assert.equals(1, #playing)
+    assert.equals(downloadName, playing[1].name)
   end)
 
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
