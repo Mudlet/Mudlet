@@ -139,6 +139,21 @@ local function activityFrom(action, accept, timeoutMilliseconds)
   return activity
 end
 
+-- How many of the frames recorded after `mark` the fake Discord client could
+-- not decode. The fixture files a frame whose payload is not valid JSON (or not
+-- valid UTF-8, which JSON decoding of the payload requires) as {"raw": <text>}
+-- instead of the parsed object, so this counts exactly the presence updates a
+-- real Discord client would have had to throw away whole.
+local function undecodableFramesAfter(mark)
+  local count = 0
+  for _, frame in ipairs(framesAfter(mark)) do
+    if type(frame.payload) == "table" and frame.payload.raw ~= nil then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 -- How many presence updates have reached the fake Discord client. Counting
 -- SET_ACTIVITY frames rather than all of them keeps an unrelated handshake or
 -- subscription from being mistaken for a presence update.
@@ -344,9 +359,8 @@ describe("setDiscordDetail", function()
     if not readyForDiscord() then
       return
     end
-    -- What reaches Discord is fine; it is only the getter that mangles this,
-    -- which the pending spec at the end of this file covers. Reading it back
-    -- here would be the thing that misbehaves, so this one stops at the wire.
+    -- Only what reaches Discord is asserted on here; reading the same text back
+    -- is the other half, covered by the percent sequence specs below.
     local activity = activityFrom(function() setDiscordDetail("Level %d Mage") end,
                                   function(seen) return seen.details ~= nil end)
     assert.equals("Level %d Mage", activity.details)
@@ -368,10 +382,32 @@ describe("setDiscordDetail", function()
     local overlong = string.rep("a", 200)
     local activity = activityFrom(function() setDiscordDetail(overlong) end,
                                   function(seen) return seen.details ~= nil end)
-    assert.equals(127, #activity.details)
-    assert.equals(string.rep("a", 127), activity.details)
+    -- The whole documented 128 bytes, not 127: the buffer holding this used to
+    -- be exactly 128 bytes and lost its last byte to the null terminator
+    -- (#9634).
+    assert.equals(128, #activity.details)
+    assert.equals(string.rep("a", 128), activity.details)
     -- Only what Discord is sent is truncated; Mudlet keeps the whole string.
     assert.equals(overlong, getDiscordDetail())
+  end)
+
+  it("cuts an overlong non-ASCII detail text between characters", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- #9634: the cut used to be made at the byte limit with no regard for
+    -- UTF-8, leaving the last character in the field as a lone lead byte. That
+    -- does not merely damage one field - the payload stops being decodable, so
+    -- the whole SET_ACTIVITY frame is discarded and every well-formed field in
+    -- it goes with it.
+    local mark = frameCount()
+    -- 65 two-byte characters, 130 bytes: two more than the field holds, so the
+    -- cut has to fall inside the 65th character.
+    local activity = activityFrom(function() setDiscordDetail(string.rep("ä", 65)) end,
+                                  function(seen) return seen.details ~= nil end)
+    assert.equals(string.rep("ä", 64), activity.details)
+    assert.equals(128, #activity.details)
+    assert.equals(0, undecodableFramesAfter(mark))
   end)
 end)
 
@@ -461,6 +497,20 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
     assert.equals("shield", getDiscordSmallIcon())
   end)
 
+  it("sends a full length icon key without dropping its last character", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- #9634: a Discord asset key may be the full 32 bytes the API documents,
+    -- but the buffer was 32 bytes including the terminator, so the last
+    -- character was cut off and the icon never resolved.
+    local key = string.rep("a", 32)
+    local activity = activityFrom(function() setDiscordLargeIcon(key) end,
+                                  function(seen) return seen.assets.large_image ~= "mudlet" end)
+    assert.equals(32, #activity.assets.large_image)
+    assert.equals(key, activity.assets.large_image)
+  end)
+
   it("sends the small icon's tooltip text", function()
     if not readyForDiscord() then
       return
@@ -491,6 +541,68 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
     assert.is_nil(ok)
     assert.is_true(contains(message, "text of length 1 not allowed by Discord"))
     assert.equals("unchanged", getDiscordSmallIconText())
+  end)
+end)
+
+describe("presence text containing percent sequences", function()
+  -- The getters used to hand the stored text to lua_pushfstring() as its format
+  -- string, so every '%' in it was read as a printf specifier: "Level %d Mage"
+  -- came back with a garbage number where the %d was, and a "%s" dereferenced a
+  -- pointer that had never been passed. Presence text can arrive from the game
+  -- server over GMCP, so a status line with a stray percent sign in it was all
+  -- it took. All six getters are covered below rather than a sample of them,
+  -- so a seventh added the old way would be caught here too.
+  it("reports a detail text containing %d unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordDetail("Level %d Mage"))
+    assert.equals("Level %d Mage", getDiscordDetail())
+  end)
+
+  it("reports a state text containing %s unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordState("Wielding %s in the left hand"))
+    assert.equals("Wielding %s in the left hand", getDiscordState())
+  end)
+
+  it("reports an icon tooltip containing percent signs unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- A doubled "%%" is the sequence the format-string path did not garble but
+    -- silently halved, and a bare "% " one it left alone - a caller could not
+    -- have escaped its way around either.
+    assert.is_true(setDiscordLargeIconText("100%% health, 50% mana"))
+    assert.equals("100%% health, 50% mana", getDiscordLargeIconText())
+  end)
+
+  it("reports a detail text ending in a percent sign unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- The worst shape of the old bug rather than another spelling of the first
+    -- spec: on a trailing '%' the format-string path stepped one byte past the
+    -- terminator and scanned on, which ASan reports as a heap buffer overflow.
+    assert.is_true(setDiscordDetail("mana at 50%"))
+    assert.equals("mana at 50%", getDiscordDetail())
+  end)
+
+  it("reports the icon keys and the small icon tooltip unchanged", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- The remaining three of the six getters. Icon keys come back lower-cased
+    -- because that is what Discord's asset names are, which is the only change
+    -- to them anyone should see.
+    assert.is_true(setDiscordLargeIcon("Level %d Mage"))
+    assert.equals("level %d mage", getDiscordLargeIcon())
+    assert.is_true(setDiscordSmallIcon("Shield %s"))
+    assert.equals("shield %s", getDiscordSmallIcon())
+    assert.is_true(setDiscordSmallIconText("100%% shielded, 50% rested"))
+    assert.equals("100%% shielded, 50% rested", getDiscordSmallIconText())
   end)
 end)
 
@@ -750,18 +862,19 @@ describe("setDiscordApplicationID", function()
   end)
 end)
 
-describe("known Discord API defects", function()
-  it("returns a detail text containing a percent sequence unchanged", function()
-    pending("getDiscordDetail() and the other five Discord getters pass the stored text to "
-            .. "lua_pushfstring() as its format string, so a detail of 'Level %d Mage' comes back "
-            .. "with a garbage number in place of the %d and a '%s' would dereference a pointer "
-            .. "that was never passed - fix TLuaInterpreterDiscord.cpp to push the string as data, "
-            .. "then unpend this")
-  end)
-
-  it("truncates an overlong detail text on a character boundary", function()
-    pending("localDiscordPresence cuts the text at 127 bytes without regard for UTF-8, so 64 "
-            .. "two-byte characters reach Discord as 63 characters plus half of one - the frame is "
-            .. "no longer valid UTF-8. Fix the truncation in discord.cpp, then unpend this")
+describe("an icon key that has to be truncated", function()
+  it("cuts a non-ASCII key between characters and keeps the frame decodable", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- The 32 byte fields cut in the same place as the 128 byte ones, so they
+    -- broke the frame in the same way (#9634). 16 two-byte characters are 32
+    -- bytes, which now fits exactly; a 17th has to go, whole.
+    local mark = frameCount()
+    local activity = activityFrom(function() setDiscordLargeIcon(string.rep("é", 17)) end,
+                                  function(seen) return seen.assets.large_image ~= "mudlet" end)
+    assert.equals(string.rep("é", 16), activity.assets.large_image)
+    assert.equals(32, #activity.assets.large_image)
+    assert.equals(0, undecodableFramesAfter(mark))
   end)
 end)

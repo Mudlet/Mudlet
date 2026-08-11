@@ -49,6 +49,8 @@ LuaInterface::LuaInterface(lua_State* L)
     lua_atpanic(L, &onPanic);
 }
 
+// Does not release lrefs: a profile reset closes the lua_State before this
+// object is replaced, so unref'ing here would write into a freed state.
 LuaInterface::~LuaInterface() = default;
 
 int LuaInterface::onPanic(lua_State* L)
@@ -66,6 +68,19 @@ int LuaInterface::onPanic(lua_State* L)
 VarUnit* LuaInterface::getVarUnit()
 {
     return varUnit.data();
+}
+
+lua_State* LuaInterface::getState() const
+{
+    return mL;
+}
+
+void LuaInterface::releaseVariableReferences()
+{
+    for (const int ref : std::as_const(lrefs)) {
+        luaL_unref(mL, LUA_REGISTRYINDEX, ref);
+    }
+    lrefs.clear();
 }
 
 QStringList LuaInterface::varName(TVar* var)
@@ -825,17 +840,19 @@ void LuaInterface::getVars(bool hide)
     //returns the base item
     // QElapsedTimer t;
     // t.start();
+    // onPanic() longjmp()s to the shared buf, so without a setjmp of our own
+    // that jump lands in whichever frame set it last - usually one that has
+    // already returned, taking the caller's scope down with it.
+    if (setjmp(buf) != 0) {
+        qWarning() << "LuaInterface::getVars() WARNING - Lua panicked while reading the variables in; the variable tree is incomplete.";
+        return;
+    }
     lua_pushnil(mL);
     depth = 0;
     auto global = new TVar();
     global->setName("_G", LUA_TSTRING);
     global->setValue("{}", LUA_TTABLE);
-    QListIterator<int> it(lrefs);
-    while (it.hasNext()) {
-        const int ref = it.next();
-        luaL_unref(mL, LUA_REGISTRYINDEX, ref);
-    }
-    lrefs.clear();
+    releaseVariableReferences();
     varUnit->clear();
     varUnit->setBase(global);
     varUnit->addVariable(global);

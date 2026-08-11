@@ -1117,6 +1117,15 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScrollBarVisible
+int TLuaInterpreter::getScrollBarVisible(lua_State* L)
+{
+    const QString windowName{WINDOW_NAME(L, 1)};
+    auto console = CONSOLE(L, windowName);
+    lua_pushboolean(L, console->getScrollBarVisible());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTimeStamps
 int TLuaInterpreter::enableTimeStamps(lua_State* L)
 {
@@ -1248,7 +1257,7 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
 int TLuaInterpreter::getBorderColor(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    const QColor color = host.mpConsole->mpMainFrame->palette().color(QPalette::Window);
+    const QColor color = host.mpConsole->borderColor();
     lua_pushnumber(L, color.red());
     lua_pushnumber(L, color.green());
     lua_pushnumber(L, color.blue());
@@ -2468,6 +2477,7 @@ int TLuaInterpreter::selectCmdLineText(lua_State* L)
     }
     auto commandline = COMMANDLINE(L, name);
     commandline->selectAll();
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -2692,6 +2702,10 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
 
     Host* host = &getHostFromLua(L);
     if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
+        if (fullWindow) {
+            // the console name is already validated above, so this is about the image
+            return warnArgumentValue(L, __func__, qsl("could not use '%1' as a full window background image").arg(imgPath));
+        }
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 
@@ -2790,11 +2804,7 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     const int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     const int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     const Host& host = getHostFromLua(L);
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(luaRed, luaGreen, luaBlue, 255));
-    host.mpConsole->mpMainFrame->setPalette(framePalette);
+    host.mpConsole->setBorderColor(QColor(luaRed, luaGreen, luaBlue));
     return 0;
 }
 
@@ -2963,15 +2973,19 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
 int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // The mandatory stylesheet is last, but with no arguments at all that would
+    // be index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int styleSheetIndex = qMax(n, 1);
     if (n > 1 && !checkStringArg(L, __func__, 1, "command line name", true)) {
         return lua_error(L);
     }
-    if (!checkStringArg(L, __func__, n, "StyleSheet")) {
+    if (!checkStringArg(L, __func__, styleSheetIndex, "StyleSheet")) {
         return lua_error(L);
     }
 
     const QString name = (n > 1) ? QString{lua_tostring(L, 1)} : qsl("main");
-    const QString styleSheet{lua_tostring(L, n)};
+    const QString styleSheet{lua_tostring(L, styleSheetIndex)};
     const Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setCmdLineStyleSheet(name, styleSheet); !success) {
@@ -2980,6 +2994,27 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLineStyleSheet
+int TLuaInterpreter::getCmdLineStyleSheet(lua_State* L)
+{
+    // an explicit nil means "the main command line", as it does for the window
+    // name of every other getter that takes an optional one
+    const bool hasName = lua_gettop(L) > 0 && !lua_isnil(L, 1);
+    if (hasName && !checkStringArg(L, __func__, 1, "command line name")) {
+        return lua_error(L);
+    }
+
+    const QString name = hasName ? QString{lua_tostring(L, 1)} : qsl("main");
+    const Host& host = getHostFromLua(L);
+
+    if (auto styleSheet = host.mpConsole->getCmdLineStyleSheet(name)) {
+        lua_pushstring(L, styleSheet->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("command-line name '%1' not found").arg(name));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFont
@@ -3122,6 +3157,23 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelToolTip
+int TLuaInterpreter::getLabelToolTip(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (auto toolTip = host.mpConsole->getLabelToolTip(labelName)) {
+        lua_pushstring(L, toolTip->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelClickCallback
@@ -3294,6 +3346,19 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapWindowTitle
+int TLuaInterpreter::getMapWindowTitle(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+
+    if (auto title = host.getMapperTitle()) {
+        lua_pushstring(L, title->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, "no floating/dockable type map window found");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
@@ -3595,6 +3660,21 @@ int TLuaInterpreter::setUserWindowTitle(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getUserWindowTitle
+int TLuaInterpreter::getUserWindowTitle(lua_State* L)
+{
+    const QString name = getVerifiedString(L, __func__, 1, "name");
+    const Host& host = getHostFromLua(L);
+
+    auto [success, result] = host.mpConsole->getUserWindowTitle(name);
+    if (!success) {
+        return warnArgumentValue(L, __func__, result);
+    }
+
+    lua_pushstring(L, result.toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowStyleSheet
 int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 {
@@ -3611,6 +3691,23 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getUserWindowStyleSheet
+int TLuaInterpreter::getUserWindowStyleSheet(lua_State* L)
+{
+    const QString userWindowName = getVerifiedString(L, __func__, 1, "userwindow name");
+    if (userWindowName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a userwindow cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (auto styleSheet = host.mpConsole->getUserWindowStyleSheet(userWindowName)) {
+        lua_pushstring(L, styleSheet->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("userwindow name '%1' not found").arg(userWindowName));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindow
@@ -3654,10 +3751,17 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     }
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 1) {
+        // a width of zero or less cannot hold a single character, so nothing
+        // could be displayed in such a window - the preferences dialog does not
+        // offer these values either
+        return warnArgumentValue(L, __func__, qsl("wrapAt must be greater than zero, got %1").arg(luaFrom));
+    }
     console->setWrapAt(luaFrom);
-    // only mirror values the preferences dialog itself accepts into the
-    // profile, otherwise an invalid width would reach NAWS and get saved
-    if (luaFrom >= 1 && console->getType() == TConsole::MainConsole) {
+    // only the main console's width belongs to the profile - it is what the
+    // preferences dialog shows, what NEW-ENVIRON reports as WORD_WRAP and what
+    // caps the width NAWS reports to the game
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         const int priorWrapAt = host.mWrapAt;
         host.mWrapAt = luaFrom;
@@ -3666,7 +3770,8 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         }
         host.updateDisplayDimensions();
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapIndent

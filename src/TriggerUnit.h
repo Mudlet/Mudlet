@@ -26,6 +26,9 @@
 
 #include "utils.h"
 
+#include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QHash>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
@@ -38,6 +41,7 @@ class TTrigger;
 
 class TriggerUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(TriggerUnit) // Needed so we can use tr() even though TriggerUnit is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 
@@ -81,11 +85,39 @@ public:
     // is deferred to doCleanup() once mProcessingDepth returns to 0.
     const QString* currentExecutingTriggerName() const { return mpCurrentExecutingTriggerName; }
     void setCurrentExecutingTriggerName(const QString* pName) { mpCurrentExecutingTriggerName = pName; }
+    // The same-line creation lineage of the root of the trigger whose script is
+    // running, so a trigger it creates joins that lineage rather than starting
+    // one - see registerTrigger(). Zero while no trigger script is running (an
+    // alias or a timer counts as none), or while the running one predates the
+    // line being processed.
+    int currentSameLineChainId() const { return mCurrentSameLineChainId; }
+    int currentSameLineGeneration() const { return mCurrentSameLineGeneration; }
+    void setCurrentSameLineChain(const int chainId, const int generation)
+    {
+        mCurrentSameLineChainId = chainId;
+        mCurrentSameLineGeneration = generation;
+    }
     // Turns an endless self-feeding-trigger loop into a catchable Lua error before
     // it overflows the stack. Sized for the smallest platform stack (~1MB on
     // Windows, where the original crash hit before Lua's own 200-C-call guard):
     // a few times any legitimate nesting, comfortably below the native limit.
     inline static const int scmMaxProcessingDepth = 50;
+    // How many creations deep one lineage of same-line creations may go while a
+    // single line is processed. Separate from the depth above, which measures the
+    // C stack: nothing recurses here, it is the list processDataStream() walks
+    // that grows. Generations rather than a head count is what separates the two
+    // shapes: a script arming a batch produces one generation however big the
+    // batch, while a trigger that re-creates itself adds a generation per round
+    // and is the only thing that can go on forever. 1000 is far past any chain a
+    // real script builds.
+    inline static const int scmMaxSameLineGenerations = 1000;
+    // Generations alone do not bound what one line costs: a lineage that widens
+    // as it deepens multiplies. Past this many creations new triggers stop being
+    // offered the line, and since matching is what makes them create more, that
+    // ends the growth. Nothing is stopped or disowned here - all of them are
+    // still armed for the lines that follow - so it can sit well clear of any
+    // legitimate batch.
+    inline static const qsizetype scmMaxSameLineCreationsPerLine = 20000;
 
     QList<TTrigger*> uninstallList;
 
@@ -97,6 +129,8 @@ private:
     void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
+    void startOrExtendSameLineChain(TTrigger* pT);
+    void stopSameLineCreationLoop(const int chainId);
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;
@@ -115,6 +149,18 @@ private:
     // pass can match the ones created during it against the line being
     // processed - see processDataStream(). Cleared once the outermost pass ends.
     QList<TTrigger*> mRootNodesAddedWhileProcessing;
+    // The name of the trigger whose script started each same-line creation
+    // lineage, for the message when one runs away. Keyed by chain id, so a
+    // trigger dying mid-line cannot leave a stale pointer behind. Cleared once
+    // the outermost pass ends.
+    QHash<int, QString> mSameLineChainStarters;
+    int mCurrentSameLineChainId = 0;
+    int mCurrentSameLineGeneration = 0;
+    // Handed out monotonically and never deliberately recycled: an id that
+    // outlived the pass it was given out in would otherwise be misfiled under a
+    // later lineage. Zero means "none".
+    int mLastSameLineChainId = 0;
+    QElapsedTimer mSameLineLoopReportTimer;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

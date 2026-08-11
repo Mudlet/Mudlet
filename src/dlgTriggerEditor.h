@@ -204,9 +204,6 @@ public:
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
     void repopulateVars();
-    // true while the Variables view is the one shown on screen, so a profile
-    // save can avoid rebuilding the tree out from under the live widget
-    bool variablesViewActive() const;
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
@@ -379,6 +376,7 @@ private slots:
     void slot_saveProperty_ActionCommandUp();
     void slot_saveProperty_ActionIsPushDown();
     void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarFillerOffset();
     void slot_saveProperty_ActionBarOrientation();
     void slot_saveProperty_ActionBarLocation();
     void slot_saveProperty_ActionButtonRotation();

@@ -128,6 +128,69 @@ describe("Tests functionality of Geyser.VBox", function()
     end)
   end)
 
+  -- The box lays itself out when a child arrives, and has to do the same when
+  -- one leaves: without it the survivors keep the geometry computed for the old
+  -- child count and the box is left with a permanent hole. contains_fixed is
+  -- false for a box of plain labels, so reposition() does not heal it either.
+  describe("Geyser.VBox:remove", function()
+    local box
+
+    before_each(function()
+      box = track(Geyser.VBox:new({name = "gvbShrink", x = 0, y = 0, width = 50, height = 600}))
+      track(Geyser.Label:new({name = "gvbShrinkA"}, box))
+      track(Geyser.Label:new({name = "gvbShrinkB"}, box))
+    end)
+
+    it("re-stacks the column when a child is deleted", function()
+      local third = track(Geyser.Label:new({name = "gvbShrinkC"}, box))
+      third:delete()
+      assert.are.same({"gvbShrinkA", "gvbShrinkB"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 50, height = 300}, geometry("gvbShrinkA"))
+      assert.are.same({x = 0, y = 300, width = 50, height = 300}, geometry("gvbShrinkB"))
+    end)
+
+    it("re-stacks the column when a child is removed by hand", function()
+      box:remove(box.windowList.gvbShrinkB)
+      assert.are.same({"gvbShrinkA"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 50, height = 600}, geometry("gvbShrinkA"))
+    end)
+
+    it("re-stacks the column a child left for another container", function()
+      local elsewhere = track(Geyser.Container:new({name = "gvbElsewhere", x = 100, y = 0, width = 100, height = 100}))
+      box.windowList.gvbShrinkB:changeContainer(elsewhere)
+      assert.are.same({"gvbShrinkA"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 50, height = 600}, geometry("gvbShrinkA"))
+    end)
+
+    -- an emptied box has no children to divide its height between, and
+    -- organize() still has to come through that without raising
+    it("survives losing its last child", function()
+      assert.has_no.errors(function()
+        box:remove(box.windowList.gvbShrinkA)
+        box:remove(box.windowList.gvbShrinkB)
+      end)
+      assert.are.same({}, box.windows)
+    end)
+
+    it("holds the layout back while updates are deferred", function()
+      local third = track(Geyser.Label:new({name = "gvbShrinkDeferred"}, box))
+      local heightOfThree = geometry("gvbShrinkA").height
+      box.defer_updates = true
+      third:delete()
+      assert.are.equal(heightOfThree, geometry("gvbShrinkA").height)
+      box.defer_updates = false
+      box:reposition()
+      assert.are.equal(300, geometry("gvbShrinkA").height)
+    end)
+
+    it("deletes a box that still holds children", function()
+      assert.has_no.errors(function() box:delete() end)
+      assert.is_nil(getWindowGeometry("gvbShrinkA"))
+      assert.is_nil(getWindowGeometry("gvbShrinkB"))
+      assert.is_nil(Geyser.windowList.gvbShrink)
+    end)
+  end)
+
   describe("Geyser.VBox:reposition", function()
     local box
 

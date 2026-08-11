@@ -40,7 +40,10 @@
 #include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
+
+#include <QTreeWidget>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -68,6 +71,7 @@ class XMLexportVariablesTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
+    dlgTriggerEditor* mpEditor = nullptr;
     const QString mHostname = "XMLexportVars-Test";
     const QString mLocalhost = "localhost";
 
@@ -95,6 +99,7 @@ private slots:
 
     void cleanupTestCase()
     {
+        mpEditor = nullptr;
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
@@ -107,6 +112,10 @@ private slots:
     // must still be written out - the save path has to refresh the tree.
     void test_lateCreatedSavedVariableIsExported()
     {
+        // QTest runs slots in declaration order and these stand for a profile
+        // whose Variables view was never opened. Profile load builds the editor
+        // dialog itself, so what matters is that no slot has shown it yet.
+        QVERIFY2(!mpEditor, "a Variables-view test was declared before the ones that must run without it");
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         // build the tree directly, standing in for the initial build that
@@ -387,7 +396,161 @@ private slots:
         vu->removeHidden(qsl("userHiddenPrefVar"));
     }
 
+    // VarUnit has two hidden sets: hiddenByUser, and hidden, which
+    // Host::hideMudletsVariables() fills with Mudlet's own Lua API. Both have to
+    // reach the export's tree or a saved table drags the internals into the XML.
+    void test_internallyHiddenMemberOfSavedTableIsNotExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "internalHiddenTable = {plainMember = 'plain member value', internalMember = 'internal member value'}"), 0);
+        vu->savedVars.insert(qsl("internalHiddenTable"));
+        // what addHidden(TVar*, 0) records - the non-user half of the pair
+        vu->hidden.insert(qsl("internalHiddenTable.internalMember"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("plain member value")), "a plain member of a saved table must be exported");
+        QVERIFY2(!xml.contains(qsl("internal member value")), "a member hidden by Mudlet itself must not ride along with its saved table");
+
+        vu->savedVars.remove(qsl("internalHiddenTable"));
+        vu->hidden.remove(qsl("internalHiddenTable.internalMember"));
+        QCOMPARE(luaL_dostring(L, "internalHiddenTable = nil"), 0);
+    }
+
+    // A variable tree takes a Lua registry reference per reference-keyed entry.
+    // The export throws its tree away, so if the references went with it the
+    // registry would grow by that many slots on every save.
+    void test_exportDoesNotLeakLuaRegistryReferences()
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        // several reference-keyed members, so a leak grows the registry visibly
+        QCOMPARE(luaL_dostring(L, "refKeyLeakTable = {} for i = 1, 20 do refKeyLeakTable[{}] = i end"), 0);
+
+        // freed slots go on a free list and come straight back out, so the
+        // number stops climbing once the registry fits one pass's worth.
+        // Measuring after the first export leaves that one-off growth out.
+        QVERIFY(!exportProfileXml().isEmpty());
+        lua_pushboolean(L, 1);
+        const int refAfterOne = luaL_ref(L, LUA_REGISTRYINDEX);
+        luaL_unref(L, LUA_REGISTRYINDEX, refAfterOne);
+
+        for (int i = 0; i < 5; ++i) {
+            QVERIFY(!exportProfileXml().isEmpty());
+        }
+
+        lua_pushboolean(L, 1);
+        const int refAfterSix = luaL_ref(L, LUA_REGISTRYINDEX);
+        luaL_unref(L, LUA_REGISTRYINDEX, refAfterSix);
+
+        // five more exports keeping 20 references each would put this 100 higher
+        QVERIFY2(refAfterSix < refAfterOne + 20,
+                 qPrintable(qsl("the exports pinned Lua registry slots: a reference taken after one export was %1, one taken after six was %2").arg(refAfterOne).arg(refAfterSix)));
+
+        QCOMPARE(luaL_dostring(L, "refKeyLeakTable = nil"), 0);
+    }
+
+    // A script adds to a saved table while the editor sits on the Variables
+    // view. A session's last save is taken with whatever view was left on
+    // screen, so quitting from there is enough to reach this.
+    void test_savedTableMemberIsExportedWithVariablesViewOpen()
+    {
+        QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
+
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "varsViewTable = {seedMember = 'seed member value'}"), 0);
+        vu->savedVars.insert(qsl("varsViewTable"));
+        vu->savedVars.insert(qsl("varsViewTable.seedMember"));
+        mpEditor->repopulateVars();
+
+        // a script running afterwards, with the view still up
+        QCOMPARE(luaL_dostring(L, "varsViewTable.lateMember = 'late member value'"), 0);
+        QCOMPARE(luaL_dostring(L, "varsViewTable.seedMember = nil"), 0);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("late member value")), "a member added while the Variables view was open must still be saved");
+        // secondary: writeVariable() re-reads values from Lua, so a stale tree
+        // writes this one out empty rather than with its old value
+        QVERIFY2(!xml.contains(qsl("seed member value")), "a member a script removed while the Variables view was open must not be saved back");
+
+        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
+        QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
+        QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
+        QVERIFY2(vu->getWVar(pBaseItem->child(0)), "a save taken with the Variables view on screen must leave its items resolving to their variables");
+
+        vu->savedVars.remove(qsl("varsViewTable"));
+        vu->savedVars.remove(qsl("varsViewTable.seedMember"));
+        QCOMPARE(luaL_dostring(L, "varsViewTable = nil"), 0);
+    }
+
+    // ... and the same for a whole variable rather than a table member.
+    void test_lateSavedVariableIsExportedWithVariablesViewOpen()
+    {
+        QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
+
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        mpEditor->repopulateVars();
+
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "varsViewLateVar = 'late variable value'"), 0);
+        vu->savedVars.insert(qsl("varsViewLateVar"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("late variable value")), "a saved variable created while the Variables view was open must still be saved");
+
+        vu->savedVars.remove(qsl("varsViewLateVar"));
+        QCOMPARE(luaL_dostring(L, "varsViewLateVar = nil"), 0);
+    }
+
+    // The other side: a save must not pull the tree out from under the editor.
+    // Its tree widget and search results resolve items through VarUnit's
+    // item -> TVar map, which rebuilding the shared tree empties.
+    void test_variablesEditorItemMappingSurvivesExport()
+    {
+        QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
+        mpEditor->repopulateVars();
+
+        VarUnit* vu = mpHost->getLuaInterface()->getVarUnit();
+        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
+        QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
+        QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
+        QTreeWidgetItem* pVariableItem = pBaseItem->child(0);
+        TVar* pMappedBefore = vu->getWVar(pVariableItem);
+        QVERIFY2(pMappedBefore, "the Variables view's items should resolve to a variable");
+
+        // any save does it: the Save Profile button, the autosave, a package change
+        mpEditor->slot_showTriggers();
+        QVERIFY(!exportProfileXml().isEmpty());
+
+        QVERIFY2(vu->getWVar(pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
+    }
+
 private:
+    // Returns false rather than asserting: a QVERIFY here would only return from
+    // this helper, leaving the caller to dereference a null editor.
+    bool showEditorOnVariablesView()
+    {
+        if (!mpEditor) {
+            mudlet::self()->slot_showScriptDialog();
+            QTest::qWait(100);
+            mpEditor = mpHost->mpEditorDialog;
+            if (!mpEditor) {
+                return false;
+            }
+        }
+        mpEditor->slot_showVariables();
+        QTest::qWait(50);
+        return true;
+    }
+
     QString exportProfileXml()
     {
         const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");

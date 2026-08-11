@@ -70,14 +70,19 @@ public:
     QString getCurrentLine(const std::string&);
     TConsole* createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
+    std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
+    std::pair<bool, QString> getUserWindowTitle(const QString& name) const;
     bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
+    void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
+    void deregisterSubCommandLine(TCommandLine* pCommandLine);
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
+    std::optional<QString> getCmdLineStyleSheet(const QString& name) const;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
     std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
@@ -87,6 +92,7 @@ public:
     std::pair<bool, QString> deleteTextBox(const QString&);
     std::pair<bool, QString> deleteScrollBox(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
+    std::optional<QString> getLabelToolTip(const QString& name) const;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
     bool setBackgroundImage(const QString& name, const QString& path);
@@ -144,6 +150,9 @@ public:
     bool mLogToLogFile = false;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
     QPointer<QProgressDialog> mpMapProgressDialog;
+    // Outlives Host::closeMapWidget(), which only hides it, so this being
+    // non-null says the profile has made a map widget at some point, not that it
+    // has one on screen - see Host::mapWidget() for the latter.
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 

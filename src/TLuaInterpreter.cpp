@@ -1340,12 +1340,15 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
 {
     const QString moduleName = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (host.mModulePriorities.contains(moduleName)) {
-        const int priority = host.mModulePriorities[moduleName];
-        lua_pushnumber(L, priority);
-        return 1;
+    // Installing a module does not seed mModulePriorities, so whether the module
+    // exists has to be asked of mInstalledModules - the same list
+    // setModulePriority() checks. A module nobody has set a priority on has the
+    // default of 0 that the module manager and the saved profile use (#9655).
+    if (!host.mInstalledModules.contains(moduleName)) {
+        return warnArgumentValue(L, __func__, "module doesn't exist");
     }
-    return warnArgumentValue(L, __func__, "module doesn't exist");
+    lua_pushnumber(L, host.mModulePriorities.value(moduleName));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModulePriority
@@ -2802,15 +2805,19 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // The mandatory text is last, but with no arguments at all that would be
+    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!checkStringArg(L, __func__, n, "suggestion text")) {
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
         return lua_error(L);
     }
     auto pN = COMMANDLINE(L, QString{name});
-    pN->addBlacklist(QString{lua_tostring(L, n)});
+    pN->addBlacklist(QString{lua_tostring(L, textIndex)});
     return 0;
 }
 
@@ -2818,15 +2825,17 @@ int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
+    // See addCmdLineBlacklist() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!checkStringArg(L, __func__, n, "suggestion text")) {
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
         return lua_error(L);
     }
     auto pN = COMMANDLINE(L, QString{name});
-    pN->removeBlacklist(QString{lua_tostring(L, n)});
+    pN->removeBlacklist(QString{lua_tostring(L, textIndex)});
     return 0;
 }
 
@@ -4968,8 +4977,6 @@ int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
 }
 
 // No documentation available in wiki - internal, test-only helper for waitForEvent()
-// If a waitForEvent() call is blocked waiting for this event, capture its
-// arguments and quit that call's nested event loop. Called from Host::raiseEvent().
 void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
 {
     if (mPendingEventWaits.isEmpty() || pE.mArgumentList.isEmpty()) {
@@ -4982,9 +4989,6 @@ void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
         }
         pWait->mArgsRef = createEventArgsTableRef(pE);
         pWait->mCaptured = true;
-        if (pWait->mpLoop) {
-            pWait->mpLoop->quit();
-        }
     }
 }
 
@@ -5371,6 +5375,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getFontSize", TLuaInterpreter::getFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);
     lua_register(pGlobalLua, "setUserWindowTitle", TLuaInterpreter::setUserWindowTitle);
+    lua_register(pGlobalLua, "getUserWindowTitle", TLuaInterpreter::getUserWindowTitle);
     lua_register(pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow);
     lua_register(pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer);
     lua_register(pGlobalLua, "disableTimer", TLuaInterpreter::disableTimer);
@@ -5399,6 +5404,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
     lua_register(pGlobalLua, "raiseEvent", TLuaInterpreter::raiseEvent);
     lua_register(pGlobalLua, "waitForEvent", TLuaInterpreter::waitForEvent);
+    lua_register(pGlobalLua, "pumpEvents", TLuaInterpreter::pumpEvents);
     lua_register(pGlobalLua, "deleteLine", TLuaInterpreter::deleteLine);
     lua_register(pGlobalLua, "copy", TLuaInterpreter::copy);
     lua_register(pGlobalLua, "cut", TLuaInterpreter::cut);
@@ -5434,6 +5440,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setTextEditTabMovesFocus", TLuaInterpreter::setTextEditTabMovesFocus);
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
+    lua_register(pGlobalLua, "getLabelToolTip", TLuaInterpreter::getLabelToolTip);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
@@ -5463,6 +5470,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setCmdLineAction", TLuaInterpreter::setCmdLineAction);
     lua_register(pGlobalLua, "resetCmdLineAction", TLuaInterpreter::resetCmdLineAction);
     lua_register(pGlobalLua, "setCmdLineStyleSheet", TLuaInterpreter::setCmdLineStyleSheet);
+    lua_register(pGlobalLua, "getCmdLineStyleSheet", TLuaInterpreter::getCmdLineStyleSheet);
     lua_register(pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback);
     lua_register(pGlobalLua, "setLabelDoubleClickCallback", TLuaInterpreter::setLabelDoubleClickCallback);
     lua_register(pGlobalLua, "setLabelReleaseCallback", TLuaInterpreter::setLabelReleaseCallback);
@@ -5481,6 +5489,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
     lua_register(pGlobalLua, "openMapWidget", TLuaInterpreter::openMapWidget);
     lua_register(pGlobalLua, "closeMapWidget", TLuaInterpreter::closeMapWidget);
+    lua_register(pGlobalLua, "getMapWidgetGeometry", TLuaInterpreter::getMapWidgetGeometry);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
     lua_register(pGlobalLua, "getUserWindowSize", TLuaInterpreter::getUserWindowSize);
@@ -5555,6 +5564,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
+    lua_register(pGlobalLua, "getScrollBarVisible", TLuaInterpreter::getScrollBarVisible);
     lua_register(pGlobalLua, "enableHorizontalScrollBar", TLuaInterpreter::enableHorizontalScrollBar);
     lua_register(pGlobalLua, "disableHorizontalScrollBar", TLuaInterpreter::disableHorizontalScrollBar);
     lua_register(pGlobalLua, "enableCommandLine", TLuaInterpreter::enableCommandLine);
@@ -5584,6 +5594,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killAlias", TLuaInterpreter::killAlias);
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
     lua_register(pGlobalLua, "setUserWindowStyleSheet", TLuaInterpreter::setUserWindowStyleSheet);
+    lua_register(pGlobalLua, "getUserWindowStyleSheet", TLuaInterpreter::getUserWindowStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
     lua_register(pGlobalLua, "getEpoch", TLuaInterpreter::getEpoch);
     lua_register(pGlobalLua, "invokeFileDialog", TLuaInterpreter::invokeFileDialog);
@@ -5876,6 +5887,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
+    lua_register(pGlobalLua, "getMapWindowTitle", TLuaInterpreter::getMapWindowTitle);
     lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
     lua_register(pGlobalLua, "getMapBackgroundColor", TLuaInterpreter::getMapBackgroundColor);
     lua_register(pGlobalLua, "setMapBackgroundColor", TLuaInterpreter::setMapBackgroundColor);

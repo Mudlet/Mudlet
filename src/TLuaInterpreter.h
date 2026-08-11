@@ -62,7 +62,6 @@ extern "C" {
 #include <optional>
 
 class Host;
-class QEventLoop;
 class TAction;
 class TEvent;
 class TLuaThread;
@@ -371,6 +370,7 @@ public:
     static int getFontSize(lua_State*);
     static int openUserWindow(lua_State*);
     static int setUserWindowTitle(lua_State*);
+    static int getUserWindowTitle(lua_State*);
     static int echoUserWindow(lua_State*);
     static int clearUserWindow(lua_State*);
     static int enableTimer(lua_State*);
@@ -397,6 +397,7 @@ public:
     static int tempLineTrigger(lua_State*);
     static int raiseEvent(lua_State*);
     static int waitForEvent(lua_State*);
+    static int pumpEvents(lua_State*);
     static int deleteLine(lua_State*);
     static int copy(lua_State*);
     static int cut(lua_State*);
@@ -464,12 +465,14 @@ public:
     static int setTextEditTabMovesFocus(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
+    static int getLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);
     static int setWindow(lua_State*);
     static int openMapWidget(lua_State*);
     static int closeMapWidget(lua_State*);
+    static int getMapWidgetGeometry(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int resetBackgroundImage(lua_State*);
@@ -486,6 +489,7 @@ public:
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
+    static int getCmdLineStyleSheet(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
@@ -560,6 +564,7 @@ public:
     static int getConsoleBufferSize(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
+    static int getScrollBarVisible(lua_State*);
     static int disableScrollBar(lua_State*);
     static int disableHorizontalScrollBar(lua_State*);
     static int enableHorizontalScrollBar(lua_State*);
@@ -599,6 +604,7 @@ public:
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
+    static int getUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
@@ -727,6 +733,7 @@ public:
     static int getConnectionInfo(lua_State*);
     static int unzipAsync(lua_State*);
     static int setMapWindowTitle(lua_State*);
+    static int getMapWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
     static int getMapBackgroundColor(lua_State*);
     static int setMapBackgroundColor(lua_State*);
@@ -785,14 +792,11 @@ public:
     void freeLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
 
-    // Test-only support for the waitForEvent() Lua helper (MUDLET_TEST_MODE):
-    // called from Host::raiseEvent() so an event that fires while a busted spec
-    // is blocked inside a nested event loop can be captured and unblock it.
+    // Called from Host::raiseEvent(), to unblock a waitForEvent() on that event.
     void captureEventForWaits(const TEvent&);
-    // True while a waitForEvent() call is blocked in its nested event loop. Lets
-    // Host refuse a profile reset that would lua_close() the state out from
-    // under it. Always false (a no-op) outside MUDLET_TEST_MODE.
-    bool hasPendingEventWaits() const { return !mPendingEventWaits.isEmpty(); }
+    // Lets callers refuse anything that would lua_close() the state the pump is
+    // running Lua on. Always false outside MUDLET_TEST_MODE.
+    bool pumpingEvents() const { return !mPendingEventWaits.isEmpty() || mEventPumpDepth > 0; }
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
             {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
@@ -918,16 +922,18 @@ private:
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
     QMap<QNetworkReply*, QString> downloadMap;
 
-    // A waitForEvent() call in progress: the nested event loop to quit when the
-    // named event arrives, plus a Lua registry reference to the captured args.
+    // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,
+    // so it has to be unref'd once the waiter has read it.
     struct TEventWait
     {
         QString mName;
-        QEventLoop* mpLoop = nullptr;
         int mArgsRef = LUA_NOREF;
         bool mCaptured = false;
     };
     QList<TEventWait*> mPendingEventWaits;
+    // pumpEvents() registers no TEventWait of its own, so it needs its own
+    // counter to be visible to pumpingEvents().
+    int mEventPumpDepth = 0;
     int createEventArgsTableRef(const TEvent&);
 
     lua_State* pGlobalLua = nullptr;

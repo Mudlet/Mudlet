@@ -67,6 +67,7 @@ public:
     int getNewID();
     void markCleanup(TAlias* pT);
     void doCleanup();
+    int processingDepth() const { return mProcessingDepth; }
 
     QMultiMap<QString, TAlias*> mLookupTable;
     QSet<TAlias*> mCleanupSet;

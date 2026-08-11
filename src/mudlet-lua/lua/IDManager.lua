@@ -93,7 +93,12 @@ function IDMgr:stopAllTimers()
 end
 
 function IDMgr:stopAllTriggers()
-  return self:stopAll("triggers")
+  -- named triggers live in two stores - registerNamedTrigger() fills "triggers"
+  -- and registerNamedRegexTrigger() fills "regexTriggers" - so stopping them all
+  -- has to walk both, exactly as deleteAllTriggers() does
+  local regex = self:stopAll("regexTriggers")
+  local substring = self:stopAll("triggers")
+  return regex and substring
 end
 
 function IDMgr:deleteAllEvents()
@@ -175,7 +180,7 @@ end
 function IDMgr:emergencyStop()
   self:stopAll("events")
   self:stopAll("timers")
-  self:stopAll("triggers")
+  self:stopAllTriggers()
   return true
 end
 

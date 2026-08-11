@@ -332,7 +332,11 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
   windowName = windowName or "main"
   x = x or 0
   y = y or 0
-  show = show or true
+  -- `show or true` would turn an explicit false into true, since false is the
+  -- one value the `x or default` idiom cannot carry
+  if show == nil then
+    show = true
+  end
   assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
   setWindow(windowName, gaugeName .. "_back", x, y, show)
   setWindow(windowName, gaugeName .. "_front", x, y, show)
@@ -413,22 +417,21 @@ end
 
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---
---- @usage Following command will returns "F0".
+--- @usage Following command will return "0F".
 ---   <pre>
 ---   PadHexNum("F")
 ---   </pre>
 function PadHexNum(incString)
   assert(type(incString) == 'string', 'PadHexNum: bad argument #1 type (expected string, got '..type(incString)..'!)')
-  local l_Return = incString
-  if tonumber(incString, 16) < 16 then
-    if tonumber(incString, 16) < 10 then
-      l_Return = "0" .. l_Return
-    elseif tonumber(incString, 16) > 10 then
-      l_Return = l_Return .. "0"
-    end
+  assert(tonumber(incString, 16) ~= nil, 'PadHexNum: bad argument #1 value (hex number as string expected, got "'..incString..'"!)')
+
+  -- the pad goes on the front, and it is the width that decides whether one is
+  -- needed: "00" is already two digits wide even though its value is below 16
+  if #incString < 2 then
+    return "0" .. incString
   end
 
-  return l_Return
+  return incString
 end
 
 
@@ -614,6 +617,7 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
   assert(type(consoleName) == 'string', 'createConsole: invalid type for consoleName (expected string, got '..type(consoleName)..'!)')
   assert(type(fontSize) == 'number', 'createConsole: invalid type for fontSize (expected number, got '..type(fontSize)..'!)')
   assert(type(charsPerLine) == 'number', 'createConsole: invalid type for charsPerLine (expected number, got '..type(charsPerLine)..'!)')
+  assert(charsPerLine >= 1, 'createConsole: charsPerLine must be 1 or more, got '..charsPerLine..'!')
   assert(type(numberOfLines) == 'number', 'createConsole: invalid type for numberOfLines (expected number, got '..type(numberOfLines)..'!)')
   assert(type(Xpos) == 'number', 'createConsole: invalid type for Xpos (expected number, got '..type(Xpos)..'!)')
   assert(type(Ypos) == 'number', 'createConsole: invalid type for Ypos (expected number, got '..type(Ypos)..'!)')
@@ -2204,7 +2208,10 @@ function suffix(what, func, fgc, bgc, window)
   window = window or "main"
   func = insertFuncs[func] or func or insertText
   local length = utf8.len(getCurrentLine(window))
-  moveCursor(window, length - 1, getLineNumber(window))
+  moveCursor(window, length, getLineNumber(window))
+  -- fg()/bg() also repaint whatever is selected in the window, so drop any
+  -- live selection first - only the text being added is meant to be coloured
+  deselect(window)
   if fgc then fg(window,fgc) end
   if bgc then bg(window,bgc) end
   func(window,what)
@@ -2226,6 +2233,8 @@ function prefix(what, func, fgc, bgc, window)
   window = window or "main"
   func = insertFuncs[func] or func or insertText
   moveCursor(window, 0, getLineNumber(window))
+  -- see suffix() - colouring must not leak onto the current selection
+  deselect(window)
   if fgc then fg(window,fgc) end
   if bgc then bg(window,bgc) end
   func(window,what)
@@ -2239,7 +2248,7 @@ end
 function moveCursorUp(window, lines, keep_horizontal)
   if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
   lines = tonumber(lines) or 1
-  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  if type(keep_horizontal) ~= "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
   if not curLine then return nil, "window does not exist" end
   local x = 0
@@ -2254,7 +2263,7 @@ end
 function moveCursorDown(window, lines, keep_horizontal)
   if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
   lines = tonumber(lines) or 1
-  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  if type(keep_horizontal) ~= "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
   if not curLine then return nil, "window does not exist" end
   local x = 0
@@ -2379,7 +2388,12 @@ function getRoomNameOffset(room)
   local d = getRoomUserData(room, "room.ui_nameOffset")
   if d == nil or d == "" then return 0,0 end
   local split = {}
-  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end
+  -- the minus has to be part of the match: T2DMap parses the same user data with
+  -- QString::toDouble(), so a negative offset the renderer honours must read
+  -- back negative here too. This still only scrapes numbers out of the string,
+  -- so malformed user data reads back as a plausible pair the renderer will not
+  -- draw - unchanged by the sign fix
+  for w in string.gfind(d, '%-?[%.%d]+') do split[#split+1] = tonumber(w) end
   if #split == 1 then return 0,split[1] end
   if #split >= 2 then return split[1],split[2] end
   return 0,0
@@ -2668,9 +2682,10 @@ end
 function scrollUp(window, lines)
   if type(window) ~= "string" then window, lines = "main", window end
   lines = tonumber(lines) or 1
-  local numLines = getLastLineNumber(window)
-  if not numLines then return nil, "window does not exist" end
+  -- getScroll() is what actually answers nil for an unknown window;
+  -- getLastLineNumber() answers -1, so guarding on it never fires
   local curScroll = getScroll(window)
+  if not curScroll then return nil, "window does not exist" end
   scrollTo(window, math.max(curScroll - lines, 0))
 end
 
@@ -2680,10 +2695,11 @@ end
 function scrollDown(window, lines)
   if type(window) ~= "string" then window, lines = "main", window end
   lines = tonumber(lines) or 1
-  local numLines = getLastLineNumber(window)
-  if not numLines then return nil, "window does not exist" end
+  -- see scrollUp() on why the guard is on getScroll() rather than on the line count
   local curScroll = getScroll(window)
-  scrollTo(window, math.min(curScroll + lines, numLines))
+  if not curScroll then return nil, "window does not exist" end
+  -- getScroll() having answered means the window exists, so this cannot fail
+  scrollTo(window, math.min(curScroll + lines, getLastLineNumber(window)))
 end
 
 --[[
