@@ -1046,11 +1046,8 @@ describe("Tests the functionality of installPackageFromUrl", function()
   end)
 
   it("names the file, not the whole path, in the announcement", function()
-    -- BUG: verbosePackageInstall() strips the profile folder off the name it
-    -- announces, but uses that folder as a Lua pattern - a profile path holding
-    -- a "-" (a home folder with one will do it) never matches, so the whole
-    -- path is announced instead of the file.
-    pending("verbosePackageInstall() strips the profile folder with an unescaped Lua pattern")
+    -- the profile folder has to come off as a literal prefix: as a Lua pattern
+    -- the "-" in "Mudlet self-test" never matches, so nothing would be stripped
     defer(function()
       removeFixturePackage(minimalPackage)
       os.remove(getMudletHomeDir() .. "/" .. downloadedName)
