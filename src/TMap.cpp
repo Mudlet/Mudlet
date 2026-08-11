@@ -1112,8 +1112,6 @@ bool TMap::findPath(int from, int to)
 
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
-    // zero means "whatever this Mudlet saves by default", anything else has to
-    // be a format version this Mudlet can actually write
     if (saveVersion > mMaxVersion) {
         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                                   "for this version of Mudlet. Supported are only formats up to version %2.")

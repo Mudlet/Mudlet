@@ -2617,6 +2617,10 @@ describe("Tests db's internal SQL helpers", function()
       assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("uniqueness" TEXT NULL DEFAULT "")'))
       assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("unique" TEXT NULL DEFAULT "")'))
       assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("kind" TEXT NULL DEFAULT "unique")'))
+      assert.are.equal("", db:_extract_table_constraints('CREATE TABLE people ("kind" TEXT NULL DEFAULT "a unique sword")'))
+      -- and a column that is both named after the keyword and carries one
+      assert.are.equal("unique on conflict fail",
+        db:_extract_table_constraints('CREATE TABLE people ("unique" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT FAIL)'))
     end)
   end)
 
@@ -3201,9 +3205,10 @@ describe("Tests db:create with a single column name as _index", function()
   end)
 
   it("refuses the _row_id no sheet definition names either", function()
-    -- db:_migrate_indexes only sees the columns the sheet was defined with, so
-    -- an index on the implicit _row_id is never created and would take the rest
-    -- of the sheet's indexes down with it as an unmatched wanted entry
+    -- the sheet is given one, but no definition declares it: it is not there to
+    -- index on the db:create that makes the sheet, and db:_drop_orphaned_indexes
+    -- cannot match the leading underscore, so an index on it was dropped and
+    -- made again on every db:create after that
     local ok, err = pcall(function()
       db:create(dbName, {people = {name = "", city = "", _index = "_row_id"}})
     end)
@@ -3274,13 +3279,22 @@ describe("Tests db:create with a sheet given as a list of column names", functio
   end)
 
   it("refuses a key that is neither a column name nor a sheet option", function()
-    -- half a list and half a table: the keyed half used to become a column
-    -- named after its default value
+    -- neither form on its own: "city" is keyed, and it is not a sheet option
     local ok, err = pcall(function()
       db:create(dbName, {people = {"name", city = ""}})
     end)
     assert.is_false(ok)
     assert.is_truthy(string.find(err, "city is neither one of the sheet's column names nor a sheet option", 1, true))
+  end)
+
+  it("refuses a listed column name that is not a string", function()
+    -- it would otherwise reach the CREATE TABLE build, which raises from inside
+    -- string.format naming neither the sheet nor the column
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {"name", true}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "column name #2 is a boolean", 1, true))
   end)
 end)
 

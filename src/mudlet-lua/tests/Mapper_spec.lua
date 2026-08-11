@@ -2091,6 +2091,9 @@ describe("Tests saveMap and loadMap", function()
       assert.is_true(saveMap(relative))
       assert.is_true(io.exists(getMudletHomeDir() .. "/" .. relative))
       assert.is_false(io.exists(relative))
+      -- and loadMap has to look in the same place, or a map saved under a bare
+      -- name cannot be loaded back under it
+      assert.is_true(loadMap(relative))
     end)
 
     it("resolves a number the same way, Lua having made a name out of it", function()

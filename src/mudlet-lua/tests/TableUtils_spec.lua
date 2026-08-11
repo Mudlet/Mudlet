@@ -554,7 +554,9 @@ describe("Tests TableUtils.lua functions", function()
       local label = Geyser.Label:new({
         name = "tableUtilsSpecCycleLabel", x = 0, y = 0, width = 50, height = 20,
       })
-      finally(function() label:hide() end)
+      finally(function() label:delete() end)
+      -- the search below is only worth anything while that is really a cycle
+      assert.are.equal(label, label.container.windowList[label.name])
 
       assert.is_true(table.contains(label, "tableUtilsSpecCycleLabel"))
       assert.is_false(table.contains(label, "no Geyser object holds this"))
