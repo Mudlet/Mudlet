@@ -120,20 +120,22 @@ if(REGISTER_PERF_BENCHMARK)
         TIMEOUT 600)
 endif()
 
-# These still leak and stay unchecked until their defects are fixed:
-# - dlgTriggerEditorUndoRedoTest: never destroys its dlgTriggerEditor, leaving
-#   ~3.4MB of tree-item QIcon/QPixmap behind
-# - NewReleaseDialogTeardownTest: Qt's one-time system CA-certificate store load
-#   on first TLS use, cached for the process lifetime
+# Tests that run with the leak check off:
+# - dlgTriggerEditorUndoRedoTest still leaks, never destroying its
+#   dlgTriggerEditor and leaving ~3.4MB of tree-item QIcon/QPixmap behind
+# - NewReleaseDialogTeardownTest still leaks, on Qt's one-time system
+#   CA-certificate store load on first TLS use, cached for the process lifetime
+# - TriggerSameLineMatchTest replaces ASAN_OPTIONS further down to add an RSS
+#   ceiling, which drops detect_leaks with it
 set(leakCheckExcludedTests
     dlgTriggerEditorUndoRedoTest
     NewReleaseDialogTeardownTest
+    TriggerSameLineMatchTest
 )
 
-# Apple's ASan runtime has no LeakSanitizer, and Windows builds have no
-# sanitizer at all, so detect_leaks is only meaningful where the address or
-# leak sanitizer is actually compiled in
-if(NOT APPLE AND NOT WIN32 AND "${USE_SANITIZER}" MATCHES "[Aa]ddress|[Ll]eak")
+# Apple's ASan runtime has no LeakSanitizer, so detect_leaks is only meaningful
+# where the address or leak sanitizer is actually compiled in
+if(NOT APPLE AND "${USE_SANITIZER}" MATCHES "[Aa]ddress|[Ll]eak")
     set(leakCheckAvailable TRUE)
 else()
     set(leakCheckAvailable FALSE)
@@ -149,8 +151,8 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         set(leakCheck "detect_leaks=1")
         # Every leak-checked exit is another chance to hit LeakSanitizer's tracer
-        # crash, which fails the run without reporting anything (#9809), so these
-        # go through a launcher that retries that one signature once
+        # crash, which fails the run without reporting a leak (#9809), so these
+        # go through a launcher that reruns that one signature once
         add_test(NAME ${test_name} COMMAND ${CMAKE_COMMAND} -P
             ${CMAKE_SOURCE_DIR}/test/lsan-tracer-retry.cmake --
             $<TARGET_FILE:${test_name}>)
@@ -176,7 +178,7 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # A regression in the self-re-creating-trigger cases does not fail, it hangs and
 # grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
 # into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
-# again.
+# again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
 set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
     TIMEOUT 300)

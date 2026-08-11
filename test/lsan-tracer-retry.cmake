@@ -1,22 +1,25 @@
 # Runs a command and reruns it once when LeakSanitizer's stop-the-world tracer
-# crashed on the way out - a sanitizer runtime bug that says nothing about the
-# code under test. See asan-suppressions.txt for the analysis; the short version
-# is that the tracer segfaults dereferencing a range it was told to scan, aborts
-# the leak check, and exits non-zero without ever reporting a leak.
+# died on the way out (#9809) - a sanitizer runtime bug that says nothing about
+# the code under test, and that no entry in asan-suppressions.txt can reach,
+# because it aborts the leak check before any leak is reported.
 #
 # Usage:
 #   cmake -P lsan-tracer-retry.cmake -- [--failure-marker=<path>] <command> [args...]
 #
-# Retrying needs positive evidence that the run itself was clean, or a genuine
-# failure that happened to be followed by a tracer crash would be retried too.
-# By default that evidence is QTest's own summary line. Runners that print no
-# such summary - the Lua suite, whose summary LeakSanitizer's Die() eats along
-# with the rest of the unflushed stdio - pass --failure-marker=<path> instead,
-# naming the file they write when their tests fail; the run counts as clean
-# while that file is absent.
+# Rerunning takes evidence that the run itself was clean, or a genuine failure
+# that happened to be followed by a tracer crash would be rerun too. By default
+# that evidence is QTest's summary line. Busted prints no such line, so the Lua
+# suite passes --failure-marker=<path> instead, naming the file it writes when
+# its tests fail, and counts as clean while that file is absent. Absence is
+# weaker evidence than a summary - a suite that never started leaves no marker
+# either - so that mode leans on the caller checking the marker again afterwards
+# the way both workflows do.
 #
 # A leak report, a failing test, a hang killed from outside and a second tracer
-# crash all still fail. There is exactly one retry.
+# crash all still fail. There is exactly one rerun. The command's own exit status
+# is not preserved: every failure comes back from here as 1. Arguments reach the
+# command as given except that a semicolon in one would split it, CMake lists
+# being what they are.
 cmake_minimum_required(VERSION 3.25.1)
 
 set(failureMarker "")
@@ -32,7 +35,17 @@ if(CMAKE_ARGC GREATER 3)
                 continue()
             elseif(argument MATCHES "^--failure-marker=(.*)$")
                 set(failureMarker "${CMAKE_MATCH_1}")
+                # An empty path would fall back to looking for a QTest summary
+                # the caller has just said it does not print, and the rerun would
+                # then never fire again
+                if(NOT failureMarker)
+                    message(FATAL_ERROR "lsan-tracer-retry: --failure-marker needs a path")
+                endif()
                 continue()
+            elseif(argument MATCHES "^--")
+                # Otherwise a mistyped option becomes the command and the run
+                # fails reporting that the option does not exist as a program
+                message(FATAL_ERROR "lsan-tracer-retry: unknown option ${argument}")
             endif()
             set(parsingOptions FALSE)
         endif()
@@ -44,8 +57,19 @@ if(NOT command)
     message(FATAL_ERROR "lsan-tracer-retry: no command given")
 endif()
 
-# The output is echoed as it arrives as well as captured, so wrapping a test
-# does not change what ctest shows for it.
+# run-tests.xml writes to MUDLET_TEST_FAILURE_MARKER when it is set, and only
+# falls back to the path the workflow passes here if that write fails, so both
+# have to be checked or a failed suite could look unmarked
+set(failureMarkers "")
+if(failureMarker)
+    list(APPEND failureMarkers "${failureMarker}")
+endif()
+if(NOT "$ENV{MUDLET_TEST_FAILURE_MARKER}" STREQUAL "")
+    list(APPEND failureMarkers "$ENV{MUDLET_TEST_FAILURE_MARKER}")
+endif()
+
+# Echoed as it arrives as well as captured, so ctest still shows everything the
+# command printed
 function(run_command resultVariable logVariable)
     execute_process(
         COMMAND ${command}
@@ -62,10 +86,10 @@ endfunction()
 function(tracer_crashed_after_a_clean_run log outVariable)
     set(${outVariable} FALSE PARENT_SCOPE)
 
-    # Both halves. LeakSanitizer announces its other fatal errors with the same
-    # second line, and the tracer prints the first one for signals it recovers
-    # from, so either alone is a different situation
-    if(NOT "${log}" MATCHES "Tracer caught signal")
+    # Both halves, and the signal number too. LeakSanitizer prints the second
+    # line for its other fatal errors as well, and a tracer death on some other
+    # signal is a failure nobody has looked at yet.
+    if(NOT "${log}" MATCHES "Tracer caught signal 11")
         return()
     endif()
     if(NOT "${log}" MATCHES "LeakSanitizer has encountered a fatal error")
@@ -79,11 +103,15 @@ function(tracer_crashed_after_a_clean_run log outVariable)
         return()
     endif()
 
-    if(failureMarker)
-        if(EXISTS "${failureMarker}")
-            return()
-        endif()
-    elseif(NOT "${log}" MATCHES "Totals: [0-9]+ passed, 0 failed")
+    if(failureMarkers)
+        foreach(marker ${failureMarkers})
+            if(EXISTS "${marker}")
+                return()
+            endif()
+        endforeach()
+        # At least one test has to have passed: a run that skipped everything
+        # reports "0 passed, 0 failed" and proves nothing
+    elseif(NOT "${log}" MATCHES "Totals: [1-9][0-9]* passed, 0 failed")
         return()
     endif()
 
@@ -98,18 +126,21 @@ if(NOT result STREQUAL "0")
     tracer_crashed_after_a_clean_run("${log}" retryable)
     if(retryable)
         set(notice
-            "lsan-tracer-retry: rerunning ${commandName} - it passed, then LeakSanitizer's tracer crashed on the way out (asan-suppressions.txt)")
+            "lsan-tracer-retry: rerunning ${commandName} - it passed, then LeakSanitizer's tracer crashed on the way out (#9809)")
         message("${notice}")
         # ctest swallows the output of a test that ends up passing, so leave a
         # trace in the job summary too - otherwise there is no way to tell how
-        # often this fires
-        if(DEFINED ENV{GITHUB_STEP_SUMMARY})
-            file(APPEND "$ENV{GITHUB_STEP_SUMMARY}" "${notice}\n")
+        # often this fires. Skipped unless the path really is a file to append
+        # to: file(APPEND) is fatal, and reporting the flake must never be what
+        # fails a run.
+        if(EXISTS "$ENV{GITHUB_STEP_SUMMARY}" AND NOT IS_DIRECTORY "$ENV{GITHUB_STEP_SUMMARY}")
+            file(APPEND "$ENV{GITHUB_STEP_SUMMARY}" "- ${notice}\n")
         endif()
         run_command(result log)
     endif()
 endif()
 
 if(NOT result STREQUAL "0")
-    message(FATAL_ERROR "${commandName} failed: ${result}")
+    string(JOIN " " commandLine ${command})
+    message(FATAL_ERROR "${commandName} failed: ${result}\n  ${commandLine}")
 endif()
