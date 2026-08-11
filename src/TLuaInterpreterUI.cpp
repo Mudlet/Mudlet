@@ -2433,7 +2433,9 @@ int TLuaInterpreter::saveWindowLayout(lua_State* L)
     const bool hadSavedLayout = pMudlet->mHasSavedLayout;
     pMudlet->mHasSavedLayout = false;
     const bool saved = pMudlet->saveWindowLayout();
-    pMudlet->mHasSavedLayout = hadSavedLayout;
+    // and a save that did not happen leaves nothing for the one at shutdown to
+    // stand in for either
+    pMudlet->mHasSavedLayout = hadSavedLayout && saved;
     lua_pushboolean(L, saved);
     return 1;
 }

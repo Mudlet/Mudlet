@@ -18,16 +18,16 @@
  ***************************************************************************/
 
 /*
- * Two things about the main window that the busted suite cannot reach.
+ * Two things about the main window that the busted suite cannot pin down.
  *
- * getMainWindowSize() only reports a size it no longer has once the window
- * loses more than half its width in one go, and the suite's own window will not
- * grow far enough above the minimum width for a spec to ask for that.
+ * getMainWindowSize() has to follow the window below half the width it had. The
+ * busted spec for it pends when the display will not make the window that much
+ * narrower; here the same case is a hard skip, so it is never quietly green.
  *
  * saveWindowLayout() from Lua must not stand in for the layout save Mudlet
  * makes on the way out. That save is guarded by mudlet::mHasSavedLayout, which
- * nothing lowers again for the rest of the session, and the flag is not
- * readable from Lua.
+ * only a later layout change lowers again, and the flag is not readable from
+ * Lua at all.
  *
  * Run with: ctest -R MainWindowSizeAndLayoutTest -V
  */
@@ -199,11 +199,13 @@ private slots:
         const int narrowConsoleWidth = console->width();
         const QSize narrow = console->getMainWindowSize();
 
-        // the window has a minimum width of its own, so how narrow it really
-        // became is measured rather than assumed
-        QVERIFY2(narrowConsoleWidth * 2 < wideConsoleWidth,
-                 qPrintable(qsl("the console only went from %1 to %2 pixels wide, which is not the more than half this test needs")
-                                    .arg(QString::number(wideConsoleWidth), QString::number(narrowConsoleWidth))));
+        // the window has a minimum width of its own and the display may refuse
+        // the resize outright, so how narrow it really became is measured
+        // rather than assumed
+        if (narrowConsoleWidth * 2 >= wideConsoleWidth) {
+            QSKIP(qPrintable(qsl("this display only took the console from %1 to %2 pixels wide, which is not the more than half this needs")
+                                     .arg(QString::number(wideConsoleWidth), QString::number(narrowConsoleWidth))));
+        }
         QVERIFY2(narrow.width() < wide.width(),
                  qPrintable(qsl("getMainWindowSize() still reported %1 while the console went from %2 to %3 pixels wide")
                                     .arg(QString::number(narrow.width()), QString::number(wideConsoleWidth), QString::number(narrowConsoleWidth))));
@@ -221,7 +223,7 @@ private slots:
         QVERIFY2(mudlet::self()->saveWindowLayout(), "the layout save Mudlet makes when it closes was refused");
     }
 
-    void test_aScriptedSaveAfterAnAutomaticOnePutsTheFlagBack()
+    void test_aScriptedSaveIsNotRefusedAfterAnAutomaticOne()
     {
         mudlet::self()->mHasSavedLayout = false;
         QVERIFY(mudlet::self()->saveWindowLayout());
