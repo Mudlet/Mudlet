@@ -490,7 +490,8 @@ private:
     std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
-    QSize mOldSize;
+    // the last size getMainWindowSize() measured, which it records as it goes
+    mutable QSize mOldSize;
     SearchOptions mSearchOptions = SearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;

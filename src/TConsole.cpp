@@ -802,10 +802,11 @@ void TConsole::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
 
     if (mType & MainConsole) {
-        // don't call event in lua if size didn't change
-        const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
-        mOldSize = getMainWindowSize();
-        if (preventLuaEvent) {
+        // don't call event in lua if size didn't change - and getMainWindowSize()
+        // records the size it measures, so the one from before this resize has
+        // to be taken first
+        const QSize sizeBeforeResize = mOldSize;
+        if (getMainWindowSize() == sizeBeforeResize) {
             return;
         }
         if (!mpHost.isNull()) {
@@ -2334,22 +2335,22 @@ QSize TConsole::getMainWindowSize() const
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
-    QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
+    const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
-    // Reject obviously invalid or suspiciously small sizes during profile switch transitions
+    // A console that is still being laid out, as one is while a profile switch
+    // is in flight, measures as next to nothing, and the last size it really
+    // had is a better answer than that. Anything above the floor is the size it
+    // has now, however much smaller than before it is: a main window that was
+    // made half as wide is a main window half as wide.
     const int minValidWidth = 50;
     if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
         return mOldSize;
     }
 
-    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
-    if (mOldSize.width() > 0) {
-        const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
-        if (shrinkageRatio < 0.5) {
-            return mOldSize;
-        }
-    }
-
+    // what that check compares against has to be a size that was measured -
+    // remembering the answer instead lets one size the window no longer has
+    // stand in for every size it takes afterwards
+    mOldSize = mainWindowSize;
     return mainWindowSize;
 }
 
