@@ -5177,15 +5177,24 @@ describe("Main window size and saved layout", function()
   end
 
   setup(function()
-    originalWidth, originalHeight = getMainWindowSize()
-    measurable = testMode and originalWidth > 0 and originalHeight > 0
+    local firstWidth, firstHeight = getMainWindowSize()
+    measurable = testMode and firstWidth > 0 and firstHeight > 0
     if not measurable then
       return
     end
-    setMainWindowSize(originalWidth + 300, originalHeight + 300)
+    setMainWindowSize(firstWidth + 300, firstHeight + 300)
     pumpEvents(200)
     local width, height = getMainWindowSize()
-    resizable = width > originalWidth and height > originalHeight
+    resizable = width > firstWidth and height > firstHeight
+
+    -- A dock another spec file left open - the map widget is the one that does
+    -- this - only takes its width out of the console at the next re-layout,
+    -- which is the resize just above. So the size to put the window back to is
+    -- read after asking for the first one again rather than before: a size the
+    -- window has actually been is a size it can be put back to.
+    setMainWindowSize(firstWidth, firstHeight)
+    pumpEvents(200)
+    originalWidth, originalHeight = getMainWindowSize()
     restoreMainWindowSize()
   end)
 
