@@ -7262,10 +7262,11 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 
 // No documentation available in wiki - internal function
 // The folder a profile name resolves to, or an empty string if there is no such
-// profile. Stricter than mudlet::getCanonicalProfileName(): a game Mudlet ships
-// with does not count until it has a folder, because writeProfileData() creates
-// whatever folder it is handed and that would turn a game nobody has opened into
-// a profile of its own.
+// profile. For writers, and so stricter than mudlet::getCanonicalProfileName(),
+// which also resolves a game Mudlet ships with that has never been opened:
+// writeProfileData() creates whatever folder it is handed, so writing under such
+// a name would turn that game into a profile of its own. Readers want the looser
+// call.
 static QString canonicalProfileFolder(const QString& profileName)
 {
     const QString folder = mudlet::self()->getCanonicalProfileName(profileName);
@@ -8670,8 +8671,9 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
         // profile:
         return warnArgumentValue(L, __func__, "disabled by profile global preference");
     }
-    // with no arguments at all these defaults stand, and turn the "save command
-    // history" on for the main command line:
+    // both defaults have to stand outside the argument handling below:
+    // setSaveCommandHistory() and setSaveCommandHistory(name) each turn saving
+    // on, so neither belongs inside a branch on the argument count:
     const char* name = "main";
     bool saveCommands = true;
     if (n > 0) {

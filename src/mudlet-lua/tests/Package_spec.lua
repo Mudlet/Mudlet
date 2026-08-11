@@ -980,10 +980,12 @@ describe("Tests the functionality of verbosePackageInstall", function()
   end)
 
   it("names the file, not the whole path, when the install fails", function()
-    -- the failure announcement trims the same way the success one does, and it
-    -- is the one players actually read. The file does not have to be there, so
-    -- this costs no install and no profile save.
+    -- the announcement is trimmed on both branches, and only the success one is
+    -- reached from installPackageFromUrl's spec
     local name = "mudlet-spec-there-is-no-such-package.mpackage"
+    -- an install asked for while a save is running is postponed and answered
+    -- with a bare true, so the failure under test would be announced a success
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
     verbosePackageInstall(getMudletHomeDir() .. "/" .. name)
@@ -1062,8 +1064,9 @@ describe("Tests the functionality of installPackageFromUrl", function()
   end)
 
   it("names the file, not the whole path, in the announcement", function()
-    -- the profile folder has to come off as a literal prefix: as a Lua pattern
-    -- the "-" in "Mudlet self-test" never matches, so nothing would be stripped
+    -- this only bites while the profile name holds a Lua pattern magic
+    -- character ("Mudlet self-test" holds a "-"): a pattern-based strip finds
+    -- nothing to match there and announces the whole path
     defer(function()
       removeFixturePackage(minimalPackage)
       os.remove(getMudletHomeDir() .. "/" .. downloadedName)

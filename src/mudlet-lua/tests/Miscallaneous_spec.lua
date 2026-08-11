@@ -337,11 +337,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- what it found: the self-test profile is reused between runs.
       local descriptionFile = getMudletHomeDir() .. "/description"
 
-      -- One of the games Mudlet lists in the connection dialog that nobody has
-      -- opened here. getProfiles() lists folders, so a bundled game it does not
-      -- report has none - which is what makes it a name that resolves without
-      -- being a profile. Which game is picked does not matter, only that it has
-      -- no folder, so an interactive run on a real config finds one too.
+      -- A game Mudlet lists in the connection dialog that has no folder here, or
+      -- nil if they all have one. Such a name resolves for a profile lookup
+      -- without being a profile, which is the case worth testing. getProfiles()
+      -- lists folders, so a bundled game missing from it has none; several are
+      -- offered so that a run against a config where some have been opened still
+      -- finds one.
       local function unopenedBundledGame()
         local profiles = getProfiles()
         for _, game in ipairs({"Achaea", "Aetolia", "Lusternia", "Imperian", "StickMUD", "Materia Magica"}) do
@@ -447,6 +448,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             return
           end
 
+          -- the getter answers for this name, which is what makes it the
+          -- bundled-game case rather than a second unknown-name spec
+          assert.is_string(getProfileInformation(game))
+
           local ok, err = setProfileInformation(game, "text")
           assert.is_nil(ok)
           assert.equals(("profile '%s' does not exist"):format(game), err)
@@ -473,11 +478,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             return
           end
 
-          -- worse than the setter's version of this: the description a bundled
-          -- game ships with would be written into the folder it just conjured
+          assert.is_string(getProfileInformation(game))
+
           local ok, err = clearProfileInformation(game)
           assert.is_nil(ok)
           assert.equals(("profile '%s' does not exist"):format(game), err)
+          -- clearing writes the description the game ships with, so a folder
+          -- made here would not merely exist, it would read as a set up profile
           assert.is_nil(getProfiles()[game])
         end)
 
@@ -485,6 +492,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           finally(restoreDescription())
           setProfileInformation("something else entirely")
 
+          -- both forms have to restore the blurb, so the named one clears first
+          -- and the description is dirtied again for the no-argument one
           assert.is_true(clearProfileInformation(getProfileName()))
           setProfileInformation("something else entirely")
           assert.is_true(clearProfileInformation())
