@@ -5083,6 +5083,19 @@ describe("Console buffer size", function()
     assert.are.same({1000, 100}, {getConsoleBufferSize(console)})
   end)
 
+  it("a batch deletion size of none at all is raised to one line", function()
+    -- the buffer is trimmed a batch at a time, so a batch of none would trim
+    -- nothing and let the buffer grow past its limit without end
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 0))
+    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    for lineNumber = 1, 400 do
+      echo(console, ("buffer line %d\n"):format(lineNumber))
+    end
+    local lineCount = getLineCount(console)
+    assert.is_true(lineCount <= 110, "line count was " .. lineCount)
+  end)
+
   it("the buffer actually stops growing past the limit that was set", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 10))
