@@ -2013,10 +2013,16 @@ describe("The IRC configuration functions round-trip through the profile", funct
     -- Both of these read whether the profile has an IRC dialog, and nothing in
     -- the suite creates one - see the openIRC spec below for why. Should
     -- something start doing so, these are where it shows up first.
+    --
+    -- Which is also why only the failure half of getIrcConnectedHost's pair is
+    -- checked here: the other half needs a connection to an IRC server that has
+    -- sent its welcome. #9788 was in that half - it pushed true and the host
+    -- name but returned only one of them.
     it("getIrcConnectedHost returns false and says there is no client", function()
       local ok, err = getIrcConnectedHost()
       assert.is_false(ok)
       assert.equals("no client active", err)
+      assert.equals(2, select("#", getIrcConnectedHost()))
     end)
 
     it("restartIrc returns false", function()

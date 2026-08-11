@@ -221,7 +221,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     lua_pushboolean(L, true);
     lua_pushstring(L, cHostName.toUtf8().constData());
 
-    return 1;
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcNick
