@@ -365,7 +365,6 @@ describe("Trigger processing", function()
             _G.TrigSpec = {count = 0}
             local id = tempExactMatchTrigger("exact_line_only", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
             assert.is_number(id)
-            -- superset line must NOT match an exact trigger
             feedTriggers("\nexact_line_only and more\n")
             assert.is_equal(0, _G.TrigSpec.count, "an exact-match trigger must not fire on a superset line")
             feedTriggers("\nexact_line_only\n")
@@ -986,6 +985,23 @@ describe("Trigger processing", function()
 
             assert.is_true(nestedFed)
             assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
+        end)
+
+        it("does not let enableTrigger revive a trigger that is waiting to be freed", function()
+            -- a killed trigger stays findable by name until the deferred delete
+            -- runs, so enabling it again would resurrect it
+            local name = "Spec Enable Resurrection"
+            _G.EnableResurrectionSpec = 0
+            finally(function() _G.EnableResurrectionSpec = nil end)
+
+            tempComplexRegexTrigger(name, "^enable_resurrection$",
+                [[_G.EnableResurrectionSpec = _G.EnableResurrectionSpec + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.is_true(killTrigger(name))
+            assert.is_false(enableTrigger(name), "a killed trigger must not be re-enabled before it is freed")
+
+            feedTriggers("\nenable_resurrection\n")
+
+            assert.are.equal(0, _G.EnableResurrectionSpec, "a killed trigger must not fire, whatever enableTrigger was told")
         end)
 
         it("keeps a same-named permanent trigger in the lookup table", function()

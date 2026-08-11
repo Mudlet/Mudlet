@@ -747,6 +747,12 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
+    // MXP frames are positioned by hand against the space the borders leave, so
+    // they have to be moved whenever the window or those borders change
+    if ((mType & MainConsole) && !mpHost.isNull()) {
+        mpHost->mMxpFrameManager.scheduleRelayout();
+    }
+
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
     if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
         const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
@@ -1588,11 +1594,26 @@ bool TConsole::setWindowBackgroundImage(const QString& imgPath, int mode)
     if (mode == 5) {
         QPixmap pixmap(imgPath);
         if (pixmap.isNull()) {
+            qWarning().nospace().noquote() << "TConsole::setWindowBackgroundImage() ERROR - could not load \"" << imgPath << "\" as an image.";
             return false;
         }
+        const QPixmap previousSource = mWindowBgSourcePixmap;
+        const QString previousPath = mWindowBgImagePath;
+        const QString previousStyleSheet = mpWindowBackground->styleSheet();
         mWindowBgSourcePixmap = pixmap;
+        mWindowBgImagePath = imgPath;
+        // clearing a stylesheet repolishes the widget and drops the palette brush,
+        // so it has to happen before the brush is installed
         mpWindowBackground->setStyleSheet(QString());
-        updateWindowBackgroundCoverPixmap();
+        if (!updateWindowBackgroundCoverPixmap()) {
+            mWindowBgSourcePixmap = previousSource;
+            mWindowBgImagePath = previousPath;
+            mpWindowBackground->setStyleSheet(previousStyleSheet);
+            // the failed attempt dropped the brush, so rebuild the one the previous
+            // source was showing rather than waiting for the next resize
+            updateWindowBackgroundCoverPixmap();
+            return false;
+        }
     } else {
         const QColor bgColor = mpHost ? mpHost->mBgColor : QColorConstants::Black;
         const QString styleSheet = buildBackgroundImageStyleSheet(qsl("WindowBackground"), bgColor, mode, imgPath);
@@ -1636,30 +1657,69 @@ void TConsole::updateMainFrameTransparency()
     QPalette framePalette;
     framePalette.setColor(QPalette::Text, QColor(Qt::black));
     framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, mWindowBgImageMode ? QColor(0, 0, 0, 0) : QColor(0, 0, 0, 255));
+    framePalette.setColor(QPalette::Window, mWindowBgImageMode ? QColor(0, 0, 0, 0) : mBorderColor);
     mpMainFrame->setPalette(framePalette);
     mpMainFrame->setAutoFillBackground(true);
 }
 
-// Simulates CSS "cover" since QT stylesheets do not support it
-void TConsole::updateWindowBackgroundCoverPixmap()
+void TConsole::setBorderColor(const QColor& color)
+{
+    mBorderColor = color;
+    updateMainFrameTransparency();
+}
+
+void TConsole::lowerMainDisplay()
+{
+    mpMainDisplay->lower();
+    if (mpWindowBackground) {
+        mpWindowBackground->lower();
+    }
+}
+
+// The largest centred rectangle of the source that has the target's aspect ratio.
+QRect TConsole::coverSourceRect(const QSize& sourceSize, const QSize& targetSize)
+{
+    QSize cropSize = targetSize;
+    cropSize.scale(sourceSize, Qt::KeepAspectRatio);
+    cropSize = cropSize.boundedTo(sourceSize).expandedTo(QSize(1, 1));
+    return QRect(QPoint((sourceSize.width() - cropSize.width()) / 2, (sourceSize.height() - cropSize.height()) / 2), cropSize);
+}
+
+// Simulates CSS "cover" since QT stylesheets do not support it. Crop first: the
+// other order multiplies the intermediate by the aspect mismatch, so a 3000x100
+// image in a 1920x1080 window builds a 32400x1080 (~140MB) one on every resize.
+bool TConsole::updateWindowBackgroundCoverPixmap()
 {
     if (!mpWindowBackground || mWindowBgSourcePixmap.isNull()) {
-        return;
+        return true;
     }
 
     const QSize targetSize = mpWindowBackground->size();
     if (targetSize.isEmpty()) {
-        return;
+        return true;
     }
 
-    const QPixmap scaled = mWindowBgSourcePixmap.scaled(targetSize, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    const QRect cropRect(qMax(0, (scaled.width() - targetSize.width()) / 2), qMax(0, (scaled.height() - targetSize.height()) / 2), targetSize.width(), targetSize.height());
+    const QRect sourceRect = coverSourceRect(mWindowBgSourcePixmap.size(), targetSize);
+    const QPixmap cropped = (sourceRect == mWindowBgSourcePixmap.rect()) ? mWindowBgSourcePixmap : mWindowBgSourcePixmap.copy(sourceRect);
+    const QPixmap scaled = cropped.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (scaled.isNull()) {
+        if (!mWindowBgCoverScaleFailed) {
+            mWindowBgCoverScaleFailed = true;
+            qWarning().nospace().noquote() << "TConsole::updateWindowBackgroundCoverPixmap() ERROR - could not scale \"" << mWindowBgImagePath << "\" (source area " << sourceRect << ") to "
+                                           << targetSize << '.';
+        }
+        // a brush smaller than the widget tiles, so drop the stale one
+        mpWindowBackground->setAutoFillBackground(false);
+        mpWindowBackground->setPalette(QPalette());
+        return false;
+    }
+    mWindowBgCoverScaleFailed = false;
 
     QPalette palette;
-    palette.setBrush(QPalette::Window, QBrush(scaled.copy(cropRect)));
+    palette.setBrush(QPalette::Window, QBrush(scaled));
     mpWindowBackground->setPalette(palette);
     mpWindowBackground->setAutoFillBackground(true);
+    return true;
 }
 
 void TConsole::setCmdVisible(bool isVisible)

@@ -456,6 +456,15 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
+    // The editor is a parentless top-level window, so delete it here while the
+    // units it references are still alive. Null the QPointer first: it only
+    // clears itself once ~QObject is reached, so anything looking at
+    // mpEditorDialog mid-teardown would find a half-destroyed widget:
+    if (auto* pEditor = mpEditorDialog.data()) {
+        mpEditorDialog = nullptr;
+        delete pEditor;
+    }
+
     // The notepad and the IRC client are parentless top-level windows, so they
     // outlive a Host that closeChildren() never got to. Null each QPointer
     // before deleting - it only clears itself once ~QObject is reached - and
@@ -734,10 +743,9 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
         writer->writeModuleXML(moduleName);
         // The writer stays in `writers` purely as the save-in-progress token that
         // xmlSaved() retires on the main thread, so the XMLexport - a QObject with
-        // main-thread affinity - is only ever destroyed there. What gets written out
-        // is the job's own copy of the document, which outlives both of them.
+        // main-thread affinity - is only ever destroyed there.
         writers.insert(xmlFilename, writer);
-        jobs.append({writer->cloneExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
+        jobs.append({writer->takeExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
 
         if (entry.at(1).toInt()) {
             mModulesToSync << moduleName;
@@ -933,12 +941,10 @@ bool Host::resetProfile_phase1()
         return false;
     }
 
-    // A test-mode waitForEvent() is blocked in a nested event loop on this
-    // profile's lua_State; phase2 would lua_close() that state underneath it (a
-    // use-after-free). Refuse until the wait finishes. Always empty (so a no-op)
-    // outside MUDLET_TEST_MODE, where waitForEvent() is inert.
-    if (mLuaInterpreter.hasPendingEventWaits()) {
-        qWarning() << "Host::resetProfile_phase1() called while a waitForEvent() is blocked, ignoring";
+    // Phase 2 lua_close()s the very state the pump is running Lua code on, so
+    // refuse rather than reset into a use-after-free.
+    if (mLuaInterpreter.pumpingEvents()) {
+        qWarning() << "Host::resetProfile_phase1() called while the test-mode event pump is running, ignoring";
         return false;
     }
 
@@ -5081,19 +5087,23 @@ std::optional<QString> Host::windowType(const QString& name) const
     return {};
 }
 
-// Returns the position and size of a named window element, matching what
-// moveWindow()/resizeWindow() set. pos()/size() (rather than geometry()) are
-// used deliberately: they are the exact inverse of the move()/resize() calls
-// those setters make, including for a floating user-window dock where move()
-// targets the frame origin while geometry() would report the client area.
-// Mirrors the widget dispatch of moveWindow()/resizeWindow(); user windows are
-// moved/resized through their dock widget, so read the dock, not the console.
+// Returns the position and size of a window element, matching what
+// moveWindow()/resizeWindow() set and mirroring their widget dispatch, so user
+// windows are read from their dock widget rather than their console.
+// pos()/size() rather than geometry(): for a floating dock move() targets the
+// frame origin while geometry() would report the client area.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
 {
     if (!mpConsole) {
         return {};
     }
 
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        // 0,0 rather than the console's pos(), which under multi-view is an
+        // offset within the split; the size is getMainWindowSize()'s so the two
+        // functions cannot disagree.
+        return {QRect(QPoint(0, 0), mpConsole->getMainWindowSize())};
+    }
     if (auto pL = mpConsole->mLabelMap.value(name)) {
         return {QRect(pL->pos(), pL->size())};
     }
@@ -5116,32 +5126,39 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
     return {};
 }
 
-// Returns whether a named window element is currently visible. Mirrors the
-// widget dispatch of hideWindow()/showWindow(); user windows report the
-// visibility of their dock widget, which is what those functions toggle.
+// Returns whether a window element is currently visible, mirroring the widget
+// dispatch of hideWindow()/showWindow() - user windows report their dock's
+// visibility, which is what those toggle. Answered relative to the profile's
+// own console: a child of a hidden user window still reads hidden, but a
+// profile that is merely not the front tab does not.
 std::optional<bool> Host::windowVisible(const QString& name) const
 {
     if (!mpConsole) {
         return {};
     }
 
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        // only the tab machinery hides the main console, and that is the hiding
+        // this function looks past
+        return {true};
+    }
     if (auto pL = mpConsole->mLabelMap.value(name)) {
-        return {pL->isVisible()};
+        return {pL->isVisibleTo(mpConsole)};
     }
     if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
         if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
-            return {pD->isVisible()};
+            return {pD->isVisibleTo(mpConsole)};
         }
-        return {pC->isVisible()};
+        return {pC->isVisibleTo(mpConsole)};
     }
     if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
-        return {pS->isVisible()};
+        return {pS->isVisibleTo(mpConsole)};
     }
     if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
-        return {pN->isVisible()};
+        return {pN->isVisibleTo(mpConsole)};
     }
     if (auto pT = mpConsole->mTextBoxMap.value(name)) {
-        return {pT->isVisible()};
+        return {pT->isVisibleTo(mpConsole)};
     }
 
     return {};

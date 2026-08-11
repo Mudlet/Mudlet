@@ -2,6 +2,9 @@ if(NOT WIN32)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 
+# Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
+cmake_language(DEFER CALL restore_windows_test_output)
+
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     TelnetTextDisplayedTest.cpp
@@ -21,10 +24,14 @@ set(FUNCTIONAL_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
+    WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
+    ProfileLifecycleTest.cpp
+    MxpFramePlacementTest.cpp
     ColorTriggerFilterChildTest.cpp
+    GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
     SetScriptCallbackTest.cpp
@@ -34,27 +41,37 @@ set(FUNCTIONAL_TEST_SOURCES
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
-    PackageSelfUninstallTest.cpp
+    PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
-    PackageUninstallSaveTeardownTest.cpp
+    PackageRemovalSaveTeardownTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
+    MapCloseDuringImportTest.cpp
+    TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
-    ActionSelfUninstallTest.cpp
+    ActionSelfRemovalTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
+    ConnectionDialogCrashTest.cpp
+    EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
+    StarterUiTriggerCostTest.cpp
+    ProfileSwitchShortcutTest.cpp
+    ExperiencedPlayerGateTest.cpp
+    WindowBackgroundTest.cpp
+    EmbeddedMapperCreationTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
 # Updater wraps Sparkle instead of creating an UpdateDialog
 if(USE_UPDATER AND NOT APPLE)
-    list(APPEND FUNCTIONAL_TEST_SOURCES UpdaterTeardownTest.cpp)
+    list(APPEND FUNCTIONAL_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
 endif()
 
 set(FUNCTIONAL_TEST_UTILS
@@ -66,7 +83,7 @@ set(FUNCTIONAL_TEST_UTILS
 # output - built but deliberately not registered with ctest:
 add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_UTILS})
 add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
-target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 
 # Report-only perf harness for manual before/after comparisons
@@ -78,7 +95,7 @@ set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_executable(PipelineBenchmark PipelineBenchmark.cpp ${FUNCTIONAL_TEST_UTILS})
 add_dependencies(PipelineBenchmark ${LIB_MUDLET_TARGET})
-target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 set_target_properties(PipelineBenchmark PROPERTIES ENABLE_EXPORTS ON)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
@@ -89,15 +106,32 @@ if(REGISTER_PERF_BENCHMARK)
         TIMEOUT 600)
 endif()
 
+# These still leak and stay unchecked until their defects are fixed:
+# - dlgTriggerEditorUndoRedoTest: never destroys its dlgTriggerEditor, leaving
+#   ~3.4MB of tree-item QIcon/QPixmap behind
+# - NewReleaseDialogTeardownTest: Qt's one-time system CA-certificate store load
+#   on first TLS use, cached for the process lifetime
+set(leakCheckExcludedTests
+    dlgTriggerEditorUndoRedoTest
+    NewReleaseDialogTeardownTest
+)
+
+# mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file} ${FUNCTIONAL_TEST_UTILS})
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
-    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
+    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    # Apple's ASan runtime has no LeakSanitizer
+    if(APPLE OR test_name IN_LIST leakCheckExcludedTests)
+        set(leakCheck "detect_leaks=0")
+    else()
+        set(leakCheck "detect_leaks=1")
+    endif()
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
@@ -110,14 +144,30 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
+# A regression in the self-re-creating-trigger cases does not fail, it hangs and
+# grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
+# into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
+# again.
+set_tests_properties(TriggerSameLineMatchTest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
+    TIMEOUT 300)
+
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 300)
+set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
+
+# GlyphOverflowTest creates a fresh profile per test method and sweeps two font
+# families across 22 sizes, so it needs a longer timeout
+set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
+
+# ProfileLifecycleTest opens and closes several profiles, and every open is a
+# full profile load and every close a full save, so it needs a longer timeout
+set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
 # and each clip has to be waited out in real time, so it needs a longer timeout.
@@ -139,10 +189,15 @@ endif()
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
-set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest PROPERTIES TIMEOUT 300)
+set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest MapCloseDuringImportTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
+
+# ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
+# on top of a full mudlet start under ASan, so the 60s default is too tight for
+# a loaded machine even though the file runs in ~2s
+set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)

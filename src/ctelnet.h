@@ -52,6 +52,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <utility>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
@@ -187,12 +188,14 @@ public:
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
+    void sendInfoNewEnvironValues(const QStringList&);
+    void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
-    bool purgeMediaCache();
+    std::pair<bool, QString> purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void checkNAWS();

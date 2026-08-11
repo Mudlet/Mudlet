@@ -182,6 +182,12 @@ void VarUnit::addTreeItem(QTreeWidgetItem* p, TVar* var)
     wVars.insert(p, var);
 }
 
+void VarUnit::removeTreeItem(QTreeWidgetItem* p)
+{
+    wVars.remove(p);
+    tVars.remove(p);
+}
+
 void VarUnit::addTempVar(QTreeWidgetItem* p, TVar* var)
 {
     tVars.insert(p, var);

@@ -172,6 +172,20 @@ public:
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
 
+    // Set when the trigger is registered as a root node while a line is being
+    // processed, and cleared when that line is done with - see TriggerUnit's
+    // same-line creation chains. The id names the lineage this trigger belongs
+    // to, the generation is how many creations deep in it this trigger sits;
+    // everything its script creates during that line joins the same lineage one
+    // generation further down.
+    int sameLineChainId() const { return mSameLineChainId; }
+    int sameLineGeneration() const { return mSameLineGeneration; }
+    void setSameLineChain(const int chainId, const int generation)
+    {
+        mSameLineChainId = chainId;
+        mSameLineGeneration = generation;
+    }
+
 
 private:
     TTrigger() = default;
@@ -225,6 +239,8 @@ private:
     bool mModuleMember = false;
     // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
     int mExpiryCount = -1;
+    int mSameLineChainId = 0;
+    int mSameLineGeneration = 0;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

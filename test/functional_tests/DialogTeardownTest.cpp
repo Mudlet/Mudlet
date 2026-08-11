@@ -40,6 +40,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAction>
 #include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QScopeGuard>
@@ -321,6 +322,41 @@ private slots:
         // shows whether it ran while the editor was being destroyed
         QVERIFY2(!mpHost->getTriggerUnit()->findTrigger(typedName), "Being destroyed made the editor rename the trigger");
         QVERIFY2(mpHost->getTriggerUnit()->findTrigger(nameBefore), "The trigger lost its name while the editor was destroyed");
+    }
+
+    void test_protocolActionsFireAfterPreferencesReopen()
+    {
+        mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
+        QTest::qWait(100ms);
+        auto* first = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(first, "Preferences dialog was not created");
+        delete first;
+        QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
+
+        mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
+        QTest::qWait(100ms);
+        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "Preferences dialog was not recreated");
+
+        QAction* gmcpAction = nullptr;
+        for (auto* action : preferences->findChildren<QAction*>()) {
+            if (action->text().startsWith(qsl("GMCP"))) {
+                gmcpAction = action;
+                break;
+            }
+        }
+        QVERIFY2(gmcpAction, "GMCP protocol action not found under the reopened dialog - parenting to the menu broke discovery or population");
+
+        // initWithHost() wires GMCP's toggled() to this button's setEnabled(),
+        // so the button flipping proves the fresh action is connected
+        const bool enabledBefore = preferences->pushButton_forgetSavedSignIn->isEnabled();
+        QCOMPARE(enabledBefore, gmcpAction->isChecked());
+        gmcpAction->toggle();
+        QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), !enabledBefore);
+        gmcpAction->toggle();
+        QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), enabledBefore);
+
+        delete preferences;
     }
 };
 

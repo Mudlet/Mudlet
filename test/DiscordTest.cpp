@@ -19,17 +19,17 @@
 
 #include <discord.h>
 #include <Host.h>
+#include <utils.h>
 #include <QFile>
 #include <QtTest/QtTest>
 
-class DiscordTest : public QObject {
+class DiscordTest : public QObject
+{
     Q_OBJECT
 
 private slots:
 
-    void initTestCase()
-    {
-    }
+    void initTestCase() {}
 
     // Test that convert() returns nullptr for empty string fields
     void testConvertNullIfEmpty()
@@ -155,14 +155,79 @@ private slots:
     void testStringTruncation()
     {
         localDiscordPresence presence;
-        // Details buffer is 128 bytes - test with a string longer than that
+        // Discord documents details as holding 128 bytes, so a longer string is
+        // cut down to exactly that - the buffer allows for its own terminator
+        // rather than spending one of those 128 bytes on it (#9634).
         QString longString(200, QChar('A'));
         presence.setDetailText(longString);
 
         DiscordRichPresence converted = presence.convert();
         QVERIFY(converted.details != nullptr);
-        // Should be truncated but not crash
-        QVERIFY(strlen(converted.details) < 128);
+        QCOMPARE(strlen(converted.details), size_t{128});
+    }
+
+    // A field of exactly the documented length has to arrive whole: an asset key
+    // that loses its last character resolves to no icon at all (#9634).
+    void testFullLengthFieldsSurviveWhole()
+    {
+        localDiscordPresence presence;
+        presence.setLargeImageKey(QString(32, QChar('a')));
+        presence.setStateText(QString(128, QChar('s')));
+
+        DiscordRichPresence converted = presence.convert();
+        QCOMPARE(strlen(converted.largeImageKey), size_t{32});
+        QCOMPARE(strlen(converted.state), size_t{128});
+    }
+
+    // Truncation has to fall between characters. A field cut through the middle
+    // of a multi-byte one is no longer valid UTF-8, and Discord discards the
+    // whole presence frame carrying it rather than just that field (#9634).
+    void testTruncationKeepsUtf8Intact()
+    {
+        localDiscordPresence presence;
+        // 65 two-byte characters: 130 bytes, so the cut has to fall inside the
+        // 65th and take all of it.
+        presence.setDetailText(QString(65, QChar(0x00E9)));
+        // 17 of the same in a 32 byte field, which holds 16 of them.
+        presence.setLargeImageKey(QString(17, QChar(0x00E9)));
+
+        DiscordRichPresence converted = presence.convert();
+        QCOMPARE(QByteArray(converted.details), QString(64, QChar(0x00E9)).toUtf8());
+        QCOMPARE(QByteArray(converted.largeImageKey), QString(16, QChar(0x00E9)).toUtf8());
+        // A three-byte character has two ways to be cut in half, so check the
+        // other one too: 43 of them are 129 bytes.
+        presence.setStateText(QString(43, QChar(0x4F60)));
+        converted = presence.convert();
+        QCOMPARE(QByteArray(converted.state), QString(42, QChar(0x4F60)).toUtf8());
+
+        // And an emoji, the four-byte case, where the walk-back has to step
+        // over three continuation bytes: 33 of them are 132 bytes.
+        const char32_t grinningFace = 0x1F600;
+        const QString emoji = QString::fromUcs4(&grinningFace, 1);
+        presence.setDetailText(emoji.repeated(33));
+        converted = presence.convert();
+        QCOMPARE(QByteArray(converted.details), emoji.repeated(32).toUtf8());
+    }
+
+    // The truncation itself, at boundaries the fixed-size presence fields
+    // cannot reach.
+    void testCopyUtf8StringEdgeCases()
+    {
+        char buffer[8];
+        // Nothing to copy, and a destination too small even to terminate:
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), "", 0), size_t{0});
+        QCOMPARE(utils::copyUtf8String(buffer, 0, "abc", 3), size_t{0});
+        // Exactly filling the usable space is not a truncation, so there is
+        // nothing to walk back from:
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), "abcdefg", 7), size_t{7});
+        QCOMPARE(QByteArray(buffer), QByteArray("abcdefg"));
+        // One byte too many, cut between characters:
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), "abcdefgh", 8), size_t{7});
+        // Input that is nothing but continuation bytes cannot be cut anywhere
+        // valid, so an empty field is what comes out - never a broken sequence.
+        const char continuationBytes[] = "\x80\x80\x80\x80\x80\x80\x80\x80\x80";
+        QCOMPARE(utils::copyUtf8String(buffer, sizeof(buffer), continuationBytes, 9), size_t{0});
+        QCOMPARE(QByteArray(buffer), QByteArray());
     }
 
     // Test that Discord username comparison is case-insensitive.
@@ -229,13 +294,10 @@ private slots:
                 ++checked;
             }
         }
-        // All 22 Discord Lua API functions should have been categorised:
         QVERIFY2(checked >= 22, qPrintable(qsl("only categorised %1 Discord Lua functions - has the source moved?").arg(checked)));
     }
 
-    void cleanupTestCase()
-    {
-    }
+    void cleanupTestCase() {}
 };
 
 #include "DiscordTest.moc"

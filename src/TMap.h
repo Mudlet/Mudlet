@@ -184,6 +184,20 @@ public:
     void disableTransferProgressCancel();
     void clearTransferProgress();
 
+    // True while a map import, export or download is on the stack. Those pump
+    // qApp->processEvents() to keep their progress display alive, so anything
+    // delivered from an event loop can find itself running nested inside one -
+    // and destroying this map's Host from there would free the operation's own
+    // "this" (#9520). Whoever would do that has to wait for this to go false.
+    bool mapOperationInProgress() const { return mMapOperationDepth > 0; }
+    // Ask an operation that is in progress to stop at its next opportunity, so
+    // that a caller waiting on the above does not wait for a whole map. Only the
+    // JSON import and export poll this; an XML import or a download runs to its
+    // own end. Asking twice does nothing, which mapOperationAbortRequested()
+    // also lets a caller polling in a loop see.
+    void requestMapOperationAbort();
+    bool mapOperationAbortRequested() const { return mMapOperationAbortRequested; }
+
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
@@ -381,6 +395,34 @@ public slots:
 
 
 private:
+    // Held for the whole of a map operation that pumps the event loop, so that
+    // mapOperationInProgress() can tell anything re-entered from that pump that
+    // this map is on the stack. Nested operations are counted, not flagged: an
+    // XML import can start from inside a download's pump.
+    class MapOperationScope
+    {
+    public:
+        explicit MapOperationScope(TMap* pMap)
+        : mpMap(pMap)
+        {
+            if (!mpMap->mMapOperationDepth) {
+                mpMap->mMapOperationAbortRequested = false;
+            }
+            ++mpMap->mMapOperationDepth;
+        }
+        ~MapOperationScope() { --mpMap->mMapOperationDepth; }
+        MapOperationScope(const MapOperationScope&) = delete;
+        MapOperationScope& operator=(const MapOperationScope&) = delete;
+
+    private:
+        TMap* mpMap = nullptr;
+    };
+
+    int mMapOperationDepth = 0;
+    // requestMapOperationAbort() is asked again on every retry of a deferred
+    // profile close, and asking twice would abort a network reply twice over.
+    bool mMapOperationAbortRequested = false;
+
     void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
                              unsigned int source,
