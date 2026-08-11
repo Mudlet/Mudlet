@@ -1819,8 +1819,11 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-    host.getActionUnit()->hideToolBar(windowName);
-    return 0;
+    if (!host.getActionUnit()->hideToolBar(windowName)) {
+        return warnArgumentValue(L, __func__, qsl("toolbar '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow
@@ -3823,8 +3826,11 @@ int TLuaInterpreter::showToolBar(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-    host.getActionUnit()->showToolBar(windowName);
-    return 0;
+    if (!host.getActionUnit()->showToolBar(windowName)) {
+        return warnArgumentValue(L, __func__, qsl("toolbar '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandBackgroundColor

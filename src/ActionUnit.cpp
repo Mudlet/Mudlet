@@ -501,26 +501,65 @@ TAction* ActionUnit::getHeadAction(TToolBar* pT)
     return nullptr;
 }
 
-void ActionUnit::showToolBar(const QString& name)
+// Every root action that is not a package or module container has a toolbar of
+// its own, and for one that is a container it is the children that are the
+// toolbars. Location 4 is a floating toolbar - a TToolBar rather than one of
+// the TEasyButtonBars these two functions move.
+TAction* ActionUnit::findEasyButtonBarAction(const QString& name)
 {
-    for (auto& easyButtonBar : mEasyButtonBarList) {
-        if (easyButtonBar->mpTAction->getName() == name) {
-            easyButtonBar->mpTAction->setIsActive(true);
-            updateAllToolbars();
+    for (auto& rootAction : mActionRootNodeList) {
+        if (!rootAction->mPackageName.isEmpty()) {
+            for (auto& childAction : *rootAction->mpMyChildrenList) {
+                if (childAction->mLocation != 4 && childAction->getName() == name) {
+                    return childAction;
+                }
+            }
+            continue;
+        }
+        if (rootAction->mLocation != 4 && rootAction->getName() == name) {
+            return rootAction;
         }
     }
-    mudlet::self()->processEventLoopHack();
+    return nullptr;
 }
 
-void ActionUnit::hideToolBar(const QString& name)
+bool ActionUnit::setToolBarActive(const QString& name, const bool active)
 {
-    for (auto& easyButtonBar : mEasyButtonBarList) {
-        if (easyButtonBar->mpTAction->getName() == name) {
-            easyButtonBar->mpTAction->setIsActive(false);
-            updateAllToolbars();
+    bool found = false;
+    if (auto* pAction = findEasyButtonBarAction(name)) {
+        pAction->setIsActive(active);
+        found = true;
+    } else {
+        // the name of a package is accepted as well, and covers every toolbar
+        // that came in it
+        for (auto& rootAction : mActionRootNodeList) {
+            if (rootAction->mPackageName.isEmpty() || rootAction->getName() != name) {
+                continue;
+            }
+            for (auto& childAction : *rootAction->mpMyChildrenList) {
+                if (childAction->mLocation != 4) {
+                    childAction->setIsActive(active);
+                    found = true;
+                }
+            }
         }
     }
+
+    if (found) {
+        updateAllToolbars();
+    }
     mudlet::self()->processEventLoopHack();
+    return found;
+}
+
+bool ActionUnit::showToolBar(const QString& name)
+{
+    return setToolBarActive(name, true);
+}
+
+bool ActionUnit::hideToolBar(const QString& name)
+{
+    return setToolBarActive(name, false);
 }
 
 void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)

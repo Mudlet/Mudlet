@@ -84,8 +84,8 @@ public:
     void regenerateEasyButtonBars();
     void constructToolbar(TAction*, TToolBar* pToolBar);
     void constructToolbar(TAction*, TEasyButtonBar* pTB);
-    void showToolBar(const QString&);
-    void hideToolBar(const QString&);
+    bool showToolBar(const QString&);
+    bool hideToolBar(const QString&);
 
     QList<TAction*> uninstallList;
 
@@ -93,6 +93,8 @@ private:
     ActionUnit() = default;
 
     TAction* getActionPrivate(int id);
+    TAction* findEasyButtonBarAction(const QString& name);
+    bool setToolBarActive(const QString& name, const bool active);
     void addActionRootNode(TAction* pT, int parentPosition = -1, int childPosition = -1);
     void addAction(TAction* pT);
     void removeActionRootNode(TAction* pT);

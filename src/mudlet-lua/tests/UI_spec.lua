@@ -5651,41 +5651,54 @@ describe("Toolbar buttons", function()
   end)
 
   describe("showToolBar and hideToolBar", function()
-    -- both answer nothing at all, but they flip the active flag of the action
-    -- the toolbar was built from, which isActive() reads back. For a toolbar
-    -- that came out of a package that action is the package's own folder
-    -- rather than the toolbar, so the package's name is what they answer to
+    -- both flip the active flag of the toolbar's own action, which isActive()
+    -- reads back; the toolbar itself is only visible in a screenshot
     local function toolbarActive()
-      return isActive(packageName, "button")
+      return isActive(toolbar, "button")
     end
 
     after_each(function()
-      showToolBar(packageName)
+      showToolBar(toolbar)
     end)
 
     it("hideToolBar deactivates the toolbar and showToolBar activates it again", function()
       assert.are.equal(1, toolbarActive())
-      assert.are.equal(0, select("#", hideToolBar(packageName)))
+      assert.is_true(hideToolBar(toolbar))
       assert.are.equal(0, toolbarActive())
-      assert.are.equal(0, select("#", showToolBar(packageName)))
+      assert.is_true(showToolBar(toolbar))
       assert.are.equal(1, toolbarActive())
     end)
 
     it("hiding and showing repeatedly ends up where it started", function()
-      hideToolBar(packageName)
-      showToolBar(packageName)
-      hideToolBar(packageName)
-      showToolBar(packageName)
+      hideToolBar(toolbar)
+      showToolBar(toolbar)
+      hideToolBar(toolbar)
+      showToolBar(toolbar)
       assert.are.equal(1, toolbarActive())
       assert.is_true(setButtonStyleSheet(pushDownButton, ""))
     end)
 
     it("a name that is no toolbar is refused", function()
-      pending("both walk the toolbar list and do nothing at all when no name matches, so a typo is silent")
+      local absent = "toolbarNoSuchBar" .. suffix
+      local hideOk, hideErr = hideToolBar(absent)
+      assert.is_nil(hideOk)
+      assert.are.equal(("toolbar '%s' not found"):format(absent), hideErr)
+      local showOk, showErr = showToolBar(absent)
+      assert.is_nil(showOk)
+      assert.are.equal(("toolbar '%s' not found"):format(absent), showErr)
     end)
 
-    it("a packaged toolbar answering to its own name", function()
-      pending("regenerateEasyButtonBars builds a package's toolbars against the package's own action, so hideToolBar only answers to the package name and moves every toolbar in the package at once")
+    it("a packaged toolbar answers to its own name, leaving the package alone", function()
+      assert.is_true(hideToolBar(toolbar))
+      assert.are.equal(0, isActive(toolbar, "button"))
+      assert.are.equal(1, isActive(packageName, "button"))
+    end)
+
+    it("the name of the package a toolbar came in still moves it", function()
+      assert.is_true(hideToolBar(packageName))
+      assert.are.equal(0, toolbarActive())
+      assert.is_true(showToolBar(packageName))
+      assert.are.equal(1, toolbarActive())
     end)
 
     it("both hard-error on a non-string toolbar name", function()
