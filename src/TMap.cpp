@@ -1596,6 +1596,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
 
 bool TMap::restore(QString location)
 {
+    const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
     QElapsedTimer _time;
@@ -2498,6 +2499,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
 
 void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     if (!pHost) {
         return;
@@ -2639,6 +2641,7 @@ bool TMap::importMap(QFile& file, QString* errMsg)
 
 bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     bool isLocalImport = false;
     if (!pHost) {
@@ -2942,6 +2945,23 @@ void TMap::clearTransferProgress()
     }
 }
 
+void TMap::requestMapOperationAbort()
+{
+    if (!mMapOperationDepth || mMapOperationAbortRequested) {
+        return;
+    }
+    mMapOperationAbortRequested = true;
+    // Deliberately not slot_mapProgressDialogCancelled(): that is the user
+    // pressing Abort and says so in the console, whereas this is the profile
+    // going away and has no console left to say it to. What it does share is
+    // the flag the JSON import and export poll at their next progress step, and
+    // dropping a download that would otherwise hold the close up on the network.
+    mMapProgressCancelRequested = true;
+    if (mMapProgressIsTransfer && mpNetworkReply) {
+        mpNetworkReply->abort();
+    }
+}
+
 void TMap::slot_mapProgressDialogCancelled()
 {
     // The JSON path polls mMapProgressCancelRequested in its increment loop; the
@@ -3032,6 +3052,7 @@ void TMap::setRoomNamesShown(bool shown)
  */
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
+    const MapOperationScope operationScope(this);
     QString destination{dest};
 
     if (destination.isEmpty()) {
@@ -3222,6 +3243,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 // Lua sub-system and do need to report the file:
 std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts)
 {
+    const MapOperationScope operationScope(this);
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
 

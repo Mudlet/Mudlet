@@ -67,7 +67,7 @@ public:
     void writeKey(TKey*, pugi::xml_node xmlParent);
     void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false);
     void writeModuleXML(const QString& moduleName);
-    std::shared_ptr<pugi::xml_document> cloneExportDocument() const;
+    std::shared_ptr<pugi::xml_document> takeExportDocument();
     static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
 
     bool exportHost(const QString& filename_pugi_xml);

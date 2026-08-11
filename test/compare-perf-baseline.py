@@ -33,12 +33,15 @@ import sys
 # ASan build to a release build, whose absolute numbers are incomparable.
 INVARIANTS = ("text_corpus_lines", "text_corpus_bytes", "trigger_count", "build_asan")
 
-# Gated by default: throughput (lines/sec) for the text and trigger pipelines.
+# Gated by default: throughput (lines/sec) for the text and trigger pipelines,
+# plus the shipped default packages on the same corpus - the pipeline metrics run
+# on a bare profile, so only defaults_text_lines_per_sec can see a package
+# costing every new user throughput.
 # trigger_overhead_ms is intentionally NOT here - it is a difference of two noisy
 # best-passes (up to ~16% run-to-run worst case, wider than the 10% gate), so it
 # would fire on noise. It stays emitted and reportable, and can be gated
 # explicitly with --gate trigger_overhead_ms when a change targets matching.
-DEFAULT_GATE = ("text_lines_per_sec", "trigger_lines_per_sec")
+DEFAULT_GATE = ("text_lines_per_sec", "trigger_lines_per_sec", "defaults_text_lines_per_sec")
 
 # Wall-clock ceiling for a single benchmark run under --run. The ASan/offscreen
 # functional-test build feeds a huge corpus several times, so this is generous.

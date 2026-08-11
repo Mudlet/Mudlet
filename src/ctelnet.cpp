@@ -1975,67 +1975,67 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironOSCHyperlinks()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSend()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPrompt()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyleBasic()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksStyleStates()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksTooltip()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksMenu()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksCompact()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksPresets()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksVisibility()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSelection()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksSpoiler()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
 {
-    return qsl("1");
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
 bool cTelnet::oscHyperlinkConfigFeatureEnabled()
@@ -2133,22 +2133,36 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
 // SEND INFO per https://www.rfc-editor.org/rfc/rfc1572
 void cTelnet::sendInfoNewEnvironValue(const QString& var)
 {
+    sendInfoNewEnvironValues(QStringList{var});
+}
+
+// RFC 1572 gives INFO the same syntax as IS, so one subnegotiation may carry
+// several variables. Preferred when a single preference changes a group of
+// them, because the server then sees one consistent change rather than a run of
+// partial ones.
+void cTelnet::sendInfoNewEnvironValues(const QStringList& vars)
+{
     if (!enableNewEnviron || !mpHost->mEnableNEWENVIRON) {
-        return;
-    }
-
-    if (mpHost->mEnableMNES && !isMNESVariable(var)) {
-        return;
-    }
-
-    if (!newEnvironVariablesSent.contains(var)) {
-        qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
         return;
     }
 
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
-    if (newEnvironDataMap.contains(var)) {
+    std::string payload;
+    for (const auto& var : vars) {
+        if (mpHost->mEnableMNES && !isMNESVariable(var)) {
+            continue;
+        }
+
+        if (!newEnvironVariablesSent.contains(var)) {
+            qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
+            continue;
+        }
+
+        if (!newEnvironDataMap.contains(var)) {
+            continue;
+        }
+
         qDebug() << "We updated NEW_ENVIRON" << var;
 
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
@@ -2156,24 +2170,15 @@ void cTelnet::sendInfoNewEnvironValue(const QString& var)
         const bool isUserVar = !mpHost->mEnableMNES && newEnvironData.first;
         const QString val = newEnvironData.second;
 
-        std::string output;
-        output += TN_IAC;
-        output += TN_SB;
-        output += OPT_NEW_ENVIRON;
-        output += NEW_ENVIRON_INFO;
-        output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += prepareNewEnvironData(var).toStdString();
-        output += NEW_ENVIRON_VAL;
+        payload += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
+        payload += prepareNewEnvironData(var).toStdString();
+        payload += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += prepareNewEnvironData(val).toStdString();
+            payload += prepareNewEnvironData(val).toStdString();
         }
-
-        output += TN_IAC;
-        output += TN_SE;
-        socketOutRaw(output);
 
         if (mpHost->mEnableMNES) {
             if (!val.isEmpty()) {
@@ -2193,6 +2198,39 @@ void cTelnet::sendInfoNewEnvironValue(const QString& var)
             qDebug() << "WE inform NEW_ENVIRON USERVAR" << var << "as an empty VAL";
         }
     }
+
+    // Every candidate was filtered out, so send nothing rather than an empty
+    // INFO subnegotiation.
+    if (payload.empty()) {
+        return;
+    }
+
+    std::string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_NEW_ENVIRON;
+    output += NEW_ENVIRON_INFO;
+    output += payload;
+    output += TN_IAC;
+    output += TN_SE;
+    socketOutRaw(output);
+}
+
+void cTelnet::sendInfoNewEnvironOSCHyperlinks()
+{
+    // Derived from the advertised set rather than a second hand-kept list, so a
+    // capability added later is announced without touching this - as long as it
+    // keeps the OSC_HYPERLINKS prefix.
+    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+
+    QStringList vars;
+    for (auto it = newEnvironDataMap.cbegin(); it != newEnvironDataMap.cend(); ++it) {
+        if (it.key().startsWith(qsl("OSC_HYPERLINKS"))) {
+            vars.append(it.key());
+        }
+    }
+
+    sendInfoNewEnvironValues(vars);
 }
 
 void cTelnet::appendAllNewEnvironValues(std::string& output, const bool isUserVar, const QMap<QString, QPair<bool, QString>>& newEnvironDataMap)
@@ -4341,7 +4379,7 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 }
 #endif
 
-bool cTelnet::purgeMediaCache()
+std::pair<bool, QString> cTelnet::purgeMediaCache()
 {
     return mpHost->mpMedia->purgeMediaCache();
 }

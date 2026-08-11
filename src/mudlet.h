@@ -243,6 +243,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
@@ -370,6 +371,9 @@ public:
     QStringList mOnlyShownPredefinedProfiles;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
+    // Test-only: PipelineBenchmark sets this so its profile measures the
+    // pipeline rather than the shipped default packages.
+    bool mSkipDefaultPackageInstall = false;
     QPointer<dlgConnectionProfiles> mpConnectionDialog;
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
@@ -789,6 +793,7 @@ private:
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
+    void closeHostOfClosedDetachedWindow(const QString& profileName);
     void detachTab(int tabIndex, const QPoint& position);
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);

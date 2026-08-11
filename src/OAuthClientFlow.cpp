@@ -23,7 +23,6 @@
 #include "utils.h"
 
 #include <QCryptographicHash>
-#include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
@@ -192,14 +191,7 @@ void OAuthClientFlow::handleDiscoveryReply(QNetworkReply* reply)
 
     mCodeVerifier = generateCodeVerifier();
     mState = randomUrlSafeToken(16);
-    const QUrl authorizationUrl = buildAuthorizationUrl(authorizationEndpoint, mClientId, mScopes, mRedirectUri, mState, codeChallengeS256(mCodeVerifier), mNonce);
-
-    if (QDesktopServices::openUrl(authorizationUrl)) {
-        emit browserOpened(authorizationUrl.toString());
-    } else {
-        // Keep the listener up: the user can still open the link by hand and complete the sign-in.
-        emit browserOpenFailed(authorizationUrl.toString());
-    }
+    emit authorizationUrlReady(buildAuthorizationUrl(authorizationEndpoint, mClientId, mScopes, mRedirectUri, mState, codeChallengeS256(mCodeVerifier), mNonce));
 }
 
 void OAuthClientFlow::handleRedirectConnection()
@@ -278,11 +270,15 @@ void OAuthClientFlow::readRedirectRequest(QTcpSocket* socket)
     respond(socket, "200 OK", tr("You are signed in. You can close this tab and return to Mudlet."));
 
     mCompleted = true;
+    // Move rather than copy: cleanup() scrubs mNonce next, and clearing a shared QString detaches,
+    // zeroing a fresh copy while the real value stays in the buffer this one still points at.
+    QString nonce = std::move(mNonce);
     cleanup();
-    emit authorizationCaptured(code, mCodeVerifier, mRedirectUri);
+    emit authorizationCaptured(code, mCodeVerifier, mRedirectUri, nonce);
     // The authorization code and verifier are single-use secrets; the receiver has taken its own copies
     // (and is responsible for scrubbing them), so drop ours now.
     SecureStringUtils::secureStringClear(code);
+    SecureStringUtils::secureStringClear(nonce);
     SecureStringUtils::secureStringClear(mCodeVerifier);
 }
 

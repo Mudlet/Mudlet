@@ -115,20 +115,30 @@ public:
     int8_t getInstance() const { return mInstance; }
 
 private:
-    char mState[128];
-    char mDetails[128];
+    // The limits Discord documents for each field, in bytes (see the struct
+    // comment above). The buffers are one byte larger than the limit they hold:
+    // sized at exactly the limit, the null terminator would take the last byte
+    // and a field of the full documented length would always lose its final
+    // character. Named in the 'k' form the rest of the codebase gives an array
+    // size (TArea.cpp's kPixmapDataLineSize) rather than the 'scm' one it gives
+    // other static class members.
+    static constexpr size_t kTextByteLimit = 128;
+    static constexpr size_t kImageKeyByteLimit = 32;
+
+    char mState[kTextByteLimit + 1];
+    char mDetails[kTextByteLimit + 1];
     int64_t mStartTimestamp = 0;
     int64_t mEndTimestamp = 0;
-    char mLargeImageKey[32];
-    char mLargeImageText[128];
-    char mSmallImageKey[32];
-    char mSmallImageText[128];
-    char mPartyId[128];
+    char mLargeImageKey[kImageKeyByteLimit + 1];
+    char mLargeImageText[kTextByteLimit + 1];
+    char mSmallImageKey[kImageKeyByteLimit + 1];
+    char mSmallImageText[kTextByteLimit + 1];
+    char mPartyId[kTextByteLimit + 1];
     int mPartySize = 0;
     int mPartyMax = 0;
-    char mMatchSecret[128];
-    char mJoinSecret[128];
-    char mSpectateSecret[128];
+    char mMatchSecret[kTextByteLimit + 1];
+    char mJoinSecret[kTextByteLimit + 1];
+    char mSpectateSecret[kTextByteLimit + 1];
     int8_t mInstance = 1;
 };
 
