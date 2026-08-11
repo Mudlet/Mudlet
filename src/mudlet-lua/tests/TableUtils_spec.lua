@@ -534,6 +534,63 @@ describe("Tests TableUtils.lua functions", function()
 
   end)
 
+  -- table.contains is a loop over table._contains, one pass per value it was
+  -- asked about. Everything the search itself does lives in _contains, and it
+  -- is the only one of the two that reports being handed something that is not
+  -- a table: table.contains treats that report as "not found".
+  describe("Tests the functionality of table._contains", function()
+
+    it("should return true for a value in the table", function()
+      assert.is_true(table._contains({"one", "two"}, "two"))
+    end)
+
+    it("should return true for a key in the table", function()
+      assert.is_true(table._contains({one = 1, two = 2}, "two"))
+    end)
+
+    it("should find a value nested inside another table", function()
+      assert.is_true(table._contains({outer = {inner = {"needle"}}}, "needle"))
+      assert.is_true(table._contains({outer = {inner = {"needle"}}}, "inner"))
+    end)
+
+    it("should return false for something the table does not hold", function()
+      assert.is_false(table._contains({one = 1}, "two"))
+    end)
+
+    it("should return false for an empty table", function()
+      assert.is_false(table._contains({}, "anything"))
+    end)
+
+    it("should report being handed something that is not a table", function()
+      local found, message = table._contains("not a table", "anything")
+      assert.is_nil(found)
+      assert.are.equal("first parameter passed isn't a table", message)
+
+      found, message = table._contains(nil, "anything")
+      assert.is_nil(found)
+      assert.are.equal("first parameter passed isn't a table", message)
+    end)
+
+    it("should let table.contains turn that report into a plain false", function()
+      -- the caller of table.contains never sees the message, so a script that
+      -- wants to know it passed a table has to ask _contains
+      assert.is_false(table.contains("not a table", "anything"))
+    end)
+
+    it("should search for exactly one value, unlike table.contains", function()
+      -- table.contains loops over its extra arguments, _contains ignores them
+      assert.is_false(table._contains({"one"}, "two", "one"))
+      assert.is_true(table.contains({"one"}, "two", "one"))
+    end)
+
+    it("should find a false value stored in the table", function()
+      -- returning the search result rather than the value found is what makes
+      -- a stored false distinguishable from "not there"
+      assert.is_true(table._contains({flag = false}, false))
+      assert.is_false(table._contains({flag = true}, false))
+    end)
+  end)
+
   describe("Tests the functionality of table.index_of", function()
     it("should return the index of the item being searched", function()
       local tbl = {

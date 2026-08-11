@@ -209,10 +209,12 @@ private slots:
         file.close();
 
         TMediaData data{};
+        // Declared ahead of the player: should a player ever emit while being destroyed again,
+        // the lambda below has to have somewhere live to write to.
+        bool announcedFromInsideSetSource = false;
         TMediaPlayer player(nullptr, data);
         QVERIFY(player.isInitialized());
 
-        bool announcedFromInsideSetSource = false;
         connect(player.mediaPlayer(), &QMediaPlayer::sourceChanged, player.mediaPlayer(), [&](const QUrl&) {
             player.noteEndAnnounced();
             announcedFromInsideSetSource = true;
@@ -223,6 +225,62 @@ private slots:
 
         QVERIFY2(announcedFromInsideSetSource, "setSource() emitted nothing synchronously, so the ordering this test is about was never staged.");
         QVERIFY2(!player.endAnnounced(), "The new pass started already counted as announced, so its own ending would be swallowed as a duplicate.");
+    }
+
+    // Destroying a player unloads whatever it still holds, and nothing may hear that: a handler
+    // that does would be reading a TMediaPlayer whose members are about to go. The handlers
+    // TMedia installs decline anyway, each by way of a weak_ptr already expired by then, so
+    // what this holds to is that no future one has to. Staged rather than played, since the
+    // unload needs a source and not a backend that can decode it (#9740).
+    void test_destroyingAPlayerAnnouncesNothing()
+    {
+        const QString path = qsl("%1/teardown.wav").arg(mProbeDir.path());
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(wavBytes());
+        file.close();
+
+        int announcementsWhileBeingDestroyed = 0;
+        bool beingDestroyed = false;
+        const auto count = [&]() {
+            if (beingDestroyed) {
+                ++announcementsWhileBeingDestroyed;
+            }
+        };
+
+        TMediaData data{};
+
+        {
+            TMediaPlayer player(nullptr, data);
+            QVERIFY(player.isInitialized());
+
+            connect(player.mediaPlayer(), &QMediaPlayer::sourceChanged, player.mediaPlayer(), count);
+            connect(player.mediaPlayer(), &QMediaPlayer::playbackStateChanged, player.mediaPlayer(), count);
+
+            player.continuePlaying(QUrl::fromLocalFile(path));
+            QVERIFY2(!player.mediaPlayer()->source().isEmpty(), "The player holds no source, so its destructor has nothing to unload and this test proves nothing.");
+
+            beingDestroyed = true;
+        }
+
+        QVERIFY2(announcementsWhileBeingDestroyed == 0, "A player announced its own teardown, so every handler connected to it ran against a player being deleted.");
+
+        // The same unload on a player that is not being destroyed, to keep the assertion above
+        // from passing on a Qt that has stopped announcing unloads at all.
+        int announcementsFromAnUnblockedUnload = 0;
+        const auto countUnblocked = [&]() {
+            ++announcementsFromAnUnblockedUnload;
+        };
+
+        QMediaPlayer unblocked;
+        connect(&unblocked, &QMediaPlayer::sourceChanged, &unblocked, countUnblocked);
+        connect(&unblocked, &QMediaPlayer::playbackStateChanged, &unblocked, countUnblocked);
+        unblocked.setSource(QUrl::fromLocalFile(path));
+        announcementsFromAnUnblockedUnload = 0;
+        unblocked.stop();
+        unblocked.setSource(QUrl());
+
+        QVERIFY2(announcementsFromAnUnblockedUnload > 0, "An unload announced nothing even unblocked, so the assertion above passes without the destructor having to block anything.");
     }
 
     // The deferred cleanup must still fire for a genuinely finished track, otherwise the
