@@ -190,16 +190,11 @@ end
 
 
 
---- Determines if a table contains a value as a key or as a value (recursive).
-function table._contains(t, value, seen)
-  if type(t) ~= "table" then
-    return nil, "first parameter passed isn't a table"
-  end
-
-  -- Tables that reach themselves are ordinary here: every Geyser object holds
-  -- its container, which holds it back again, so the descent has to remember
-  -- where it has been or it never ends
-  seen = seen or {}
+-- Tables that reach themselves are ordinary here: every Geyser object holds its
+-- container, which holds it back again, so the descent has to remember where it
+-- has been or it never ends. The set is kept out of table._contains' own
+-- signature, which ignores anything past the value to look for.
+local function containsValue(t, value, seen)
   if seen[t] then
     return false
   end
@@ -211,12 +206,21 @@ function table._contains(t, value, seen)
     elseif k == value then
       return true
     elseif type(v) == "table" then
-      if table._contains(v, value, seen) then
+      if containsValue(v, value, seen) then
         return true
       end
     end
   end
   return false
+end
+
+--- Determines if a table contains a value as a key or as a value (recursive).
+function table._contains(t, value)
+  if type(t) ~= "table" then
+    return nil, "first parameter passed isn't a table"
+  end
+
+  return containsValue(t, value, {})
 end
 
 function table.contains(tbl, ...)
