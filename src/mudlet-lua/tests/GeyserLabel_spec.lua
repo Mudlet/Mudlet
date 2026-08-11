@@ -521,3 +521,576 @@ describe("Tests functionality of Geyser.Label widget state", function()
     end)
   end)
 end)
+
+-- The movie wrappers, the callback registration bookkeeping and the nested
+-- label machinery. All three are places where Geyser keeps state of its own
+-- alongside the widget's, and the state is what these specs read back: a real
+-- mouse is what fires the callbacks and what drives the nest, and Lua cannot
+-- make one.
+describe("Tests Geyser.Label movies, callbacks and nesting", function()
+  local created
+  local container
+  local gifPath = getMudletHomeDir() .. "/geyser_label_spec.gif"
+
+  local function geometry(name)
+    local x, y, width, height = getWindowGeometry(name)
+    return {x = x, y = y, width = width, height = height}
+  end
+
+  local function track(object)
+    created[#created + 1] = object
+    return object
+  end
+
+  local function alive(object)
+    if not object or not object.container or not object.container.windowList then
+      return false
+    end
+    return object.container.windowList[object.name] == object
+  end
+
+  -- The smallest animated GIF there is: 1x1 pixels, two frames, a two entry
+  -- colour table. Written at run time so that no binary has to be committed.
+  local function writeAnimatedGif(path)
+    local bytes = {
+      0x47, 0x49, 0x46, 0x38, 0x39, 0x61,             -- "GIF89a"
+      0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00,       -- 1x1, global colour table of 2
+      0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF,             -- black, white
+      0x21, 0xFF, 0x0B,                               -- application extension
+      0x4E, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, -- "NETSCAPE"
+      0x32, 0x2E, 0x30,                               -- "2.0"
+      0x03, 0x01, 0x00, 0x00, 0x00,                   -- loop forever
+      0x21, 0xF9, 0x04, 0x00, 0x0A, 0x00, 0x00, 0x00, -- frame 1 control block
+      0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+      0x02, 0x02, 0x44, 0x01, 0x00,                   -- frame 1: the black pixel
+      0x21, 0xF9, 0x04, 0x00, 0x0A, 0x00, 0x00, 0x00, -- frame 2 control block
+      0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+      0x02, 0x02, 0x4C, 0x01, 0x00,                   -- frame 2: the white pixel
+      0x3B,                                           -- trailer
+    }
+    local characters = {}
+    for index, byte in ipairs(bytes) do
+      characters[index] = string.char(byte)
+    end
+    local file = assert(io.open(path, "wb"), "could not write the GIF fixture")
+    file:write(table.concat(characters))
+    file:close()
+  end
+
+  setup(function()
+    writeAnimatedGif(gifPath)
+  end)
+
+  teardown(function()
+    os.remove(gifPath)
+  end)
+
+  before_each(function()
+    created = {}
+    container = track(Geyser.Container:new({name = "glnHost", x = 0, y = 0, width = 600, height = 400}))
+  end)
+
+  after_each(function()
+    -- doNestShow/doNestLeave arm a timer that closes the nest seconds later,
+    -- long after the labels it closes have been deleted
+    if Geyser.Label.closeAllTimer then
+      killTimer(Geyser.Label.closeAllTimer)
+      Geyser.Label.closeAllTimer = nil
+    end
+    for _, object in ipairs(created) do
+      -- the scroll tables are keyed by the label object and outlive it
+      Geyser.Label.scrollV[object] = nil
+      Geyser.Label.scrollH[object] = nil
+      if alive(object) then
+        object:delete()
+      end
+    end
+    created = {}
+  end)
+
+  describe("Geyser.Label movie wrappers", function()
+    local label
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glnMovie", x = 0, y = 0, width = 60, height = 40}, container))
+    end)
+
+    it("setMovie puts the GIF on the label", function()
+      assert.is_true(label:setMovie(gifPath))
+    end)
+
+    it("setMovie reports a file that is not a movie", function()
+      local ok, message = label:setMovie(getMudletHomeDir() .. "/nosuchmovie.gif")
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find("no valid movie", 1, true))
+    end)
+
+    it("startMovie and pauseMovie drive the movie that was set", function()
+      label:setMovie(gifPath)
+      assert.is_true(label:startMovie())
+      assert.is_true(label:pauseMovie())
+      assert.is_true(label:startMovie())
+    end)
+
+    it("the movie functions all refuse a label with no movie on it", function()
+      local bare = track(Geyser.Label:new({name = "glnNoMovie", x = 0, y = 0, width = 60, height = 40}, container))
+      for _, call in ipairs({
+        function() return bare:startMovie() end,
+        function() return bare:pauseMovie() end,
+        function() return bare:setMovieSpeed(200) end,
+        function() return bare:setMovieFrame(0) end,
+        function() return bare:scaleMovie() end,
+      }) do
+        local ok, message = call()
+        assert.is_nil(ok)
+        assert.is_truthy(message:find("no movie found at label 'glnNoMovie'", 1, true))
+      end
+    end)
+
+    it("setMovieSpeed takes a percentage and refuses anything else", function()
+      label:setMovie(gifPath)
+      assert.is_true(label:setMovieSpeed(200))
+      assert.is_true(label:setMovieSpeed(50))
+      assert.has_error(function() label:setMovieSpeed("double") end)
+    end)
+
+    it("setMovieFrame reports whether the frame could be reached", function()
+      label:setMovie(gifPath)
+      assert.is_true(label:setMovieFrame(0))
+      -- the fixture has two frames, so this one is out of reach
+      assert.is_false(label:setMovieFrame(99))
+      assert.has_error(function() label:setMovieFrame("first") end)
+    end)
+
+    -- whether the movie is actually being kept at the label's size is not
+    -- readable from Lua: the connection scaleMovie(true) makes lives on the
+    -- widget and there is no getter for the movie's scaled size
+    pending("the movie following the label's size needs a getter for the scaled size")
+
+    it("scaleMovie turns scaling on unless it is explicitly told false", function()
+      -- the argument is what carries the meaning and the return value is true
+      -- either way, so watch what the wrapper passes on
+      local scaling = spy.on(_G, "scaleMovie")
+      finally(function() scaling:revert() end)
+      label:setMovie(gifPath)
+
+      assert.is_true(label:scaleMovie(false))
+      assert.spy(scaling).was.called_with("glnMovie", false)
+
+      assert.is_true(label:scaleMovie(true))
+      assert.spy(scaling).was.called_with("glnMovie", true)
+    end)
+
+    it("scaleMovie treats anything that is not false as a yes", function()
+      local scaling = spy.on(_G, "scaleMovie")
+      finally(function() scaling:revert() end)
+      label:setMovie(gifPath)
+
+      -- no argument at all, and a nil one, both mean scale
+      assert.is_true(label:scaleMovie())
+      assert.is_true(label:scaleMovie(nil))
+      -- so does something that is not a boolean, rather than raising
+      assert.is_true(label:scaleMovie("nonsense"))
+      assert.spy(scaling).was.called(3)
+      assert.spy(scaling).was_not.called_with("glnMovie", false)
+    end)
+  end)
+
+  describe("Geyser.Label callback registration", function()
+    local label
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glnCallback", x = 0, y = 0, width = 60, height = 40}, container))
+    end)
+
+    -- firing needs a real mouse over a real widget, which the suite has no way
+    -- of producing; what is checked here is that the registration reached the
+    -- widget and that Geyser remembers it
+    pending("the label callbacks firing on a real mouse event needs GUI automation")
+
+    it("remembers the function and the arguments it registered", function()
+      local handler = function() end
+      label:setClickCallback(handler, "first", 2)
+      assert.are.equal(handler, label.clickCallback)
+      assert.are.same({"first", 2}, label.clickArgs)
+    end)
+
+    it("passes the label name, the function and the arguments straight through", function()
+      -- no getter for a registered callback, so spy on the global; spy.on
+      -- leaves the real registration in place
+      local registration = spy.on(_G, "setLabelClickCallback")
+      finally(function() registration:revert() end)
+      local handler = function() end
+      label:setClickCallback(handler, "first", 2)
+      assert.spy(registration).was.called_with("glnCallback", handler, "first", 2)
+    end)
+
+    it("registers each kind of callback through its own global", function()
+      local handler = function() end
+      local globals = {
+        setClickCallback = "setLabelClickCallback",
+        setDoubleClickCallback = "setLabelDoubleClickCallback",
+        setReleaseCallback = "setLabelReleaseCallback",
+        setMoveCallback = "setLabelMoveCallback",
+        setWheelCallback = "setLabelWheelCallback",
+        setOnEnter = "setLabelOnEnter",
+        setOnLeave = "setLabelOnLeave",
+      }
+      -- reverting inside the loop would be skipped by a failing assertion, and
+      -- a spy left on a Mudlet global is picked up as the "real" function by
+      -- the next spy.on in any later spec file
+      local spied = {}
+      finally(function()
+        for _, global in ipairs(spied) do
+          _G[global]:revert()
+        end
+      end)
+
+      for method, global in pairs(globals) do
+        local registration = spy.on(_G, global)
+        spied[#spied + 1] = global
+        label[method](label, handler, "arg")
+        assert.spy(registration).was.called_with("glnCallback", handler, "arg")
+      end
+    end)
+
+    it("deregisters when it is handed nil instead of a function", function()
+      label:setClickCallback(function() end, "first")
+      label:setClickCallback(nil)
+      assert.is_nil(label.clickCallback)
+      assert.are.same({}, label.clickArgs)
+    end)
+
+    -- setDoubleClickCallback is missing from the readback below on purpose: it
+    -- stores self.doubleclickCallback/doubleclickArgs while the constructor and
+    -- every other setter use the doubleClickCallback/doubleClickArgs spelling,
+    -- so there is nothing here worth freezing until that is settled
+    it("remembers what the other callbacks registered too", function()
+      local handler = function() end
+      label:setReleaseCallback(handler, "r")
+      label:setMoveCallback(handler, "m")
+      label:setWheelCallback(handler, "w")
+      label:setOnEnter(handler, "e")
+      label:setOnLeave(handler, "l")
+      assert.are.same({"r"}, label.releaseArgs)
+      assert.are.same({"m"}, label.moveArgs)
+      assert.are.same({"w"}, label.wheelArgs)
+      assert.are.same({"e"}, label.onEnterArgs)
+      assert.are.same({"l"}, label.onLeaveArgs)
+      assert.are.equal(handler, label.releaseCallback)
+      assert.are.equal(handler, label.moveCallback)
+      assert.are.equal(handler, label.wheelCallback)
+      assert.are.equal(handler, label.onEnter)
+      assert.are.equal(handler, label.onLeave)
+    end)
+
+    it("hard-errors on a callback that is neither a function nor nil", function()
+      assert.has_error(function() label:setClickCallback(42) end)
+      assert.has_error(function() label:setWheelCallback({}) end)
+    end)
+
+    it("registers the callbacks the constructor was given", function()
+      local built = track(Geyser.Label:new({
+        name = "glnConsCallback", x = 0, y = 0, width = 60, height = 40,
+        clickCallback = "echo", clickArgs = {"hello"},
+        onEnter = "echo", onEnterArgs = "hello",
+      }, container))
+      assert.are.equal("echo", built.clickCallback)
+      assert.are.same({"hello"}, built.clickArgs)
+      assert.are.equal("echo", built.onEnter)
+      assert.are.same({"hello"}, built.onEnterArgs)
+    end)
+  end)
+
+  describe("Geyser.Label:addChild", function()
+    local parent
+
+    before_each(function()
+      parent = track(Geyser.Label:new({name = "glnParent", x = 100, y = 100, width = 50, height = 20}, container))
+    end)
+
+    it("hands back a hidden nested label that knows its parent", function()
+      local child = track(parent:addChild({name = "glnChild", width = 50, height = 20}, container))
+      assert.are.equal("nestedLabel", child.type)
+      assert.are.equal(parent, child.nestParent)
+      assert.is_true(child.hidden)
+      assert.is_false(windowVisible("glnChild"))
+      assert.are.same({child}, parent.nestedLabels)
+    end)
+
+    it("defaults to flying out to the left, laid out vertically", function()
+      local child = track(parent:addChild({name = "glnChildDefault", width = 50, height = 20}, container))
+      assert.are.equal("L", child.flyDir)
+      assert.are.equal("V", child.layoutDir)
+    end)
+
+    it("splits layoutDir into a fly direction and a layout axis", function()
+      local child = track(parent:addChild({name = "glnChildRH", width = 50, height = 20, layoutDir = "RH"}, container))
+      assert.are.equal("R", child.flyDir)
+      assert.are.equal("H", child.layoutDir)
+    end)
+
+    it("wires the child up so that hovering it opens its own nest", function()
+      local child = track(parent:addChild({name = "glnChildHover", width = 50, height = 20}, container))
+      assert.are.equal("doNestEnter", child.onEnter)
+      assert.are.equal("doNestLeave", child.onLeave)
+    end)
+
+    it("keeps the children in the order they were added", function()
+      local first = track(parent:addChild({name = "glnChildOne", width = 50, height = 20}, container))
+      local second = track(parent:addChild({name = "glnChildTwo", width = 50, height = 20}, container))
+      assert.are.same({first, second}, parent.nestedLabels)
+    end)
+
+    it("puts a child with an index where the index says", function()
+      local first = track(parent:addChild({name = "glnIndexOne", width = 50, height = 20}, container))
+      local jumped = track(parent:addChild({name = "glnIndexTwo", width = 50, height = 20, index = 1}, container))
+      assert.are.same({jumped, first}, parent.nestedLabels)
+    end)
+
+    it("nests a child under a child", function()
+      local child = track(parent:addChild({name = "glnGrandParent", width = 50, height = 20}, container))
+      local grandChild = track(child:addChild({name = "glnGrandChild", width = 50, height = 20}, container))
+      assert.are.equal(child, grandChild.nestParent)
+      assert.are.same({grandChild}, child.nestedLabels)
+    end)
+
+    it("gives a nestable label the click callback that opens its nest", function()
+      local nestable = track(Geyser.Label:new({name = "glnNestable", x = 0, y = 0, width = 50, height = 20, nestable = true}, container))
+      assert.are.equal("doNestShow", nestable.clickCallback)
+    end)
+
+    it("gives a nestflyout label the hover callback that opens its nest", function()
+      local flyout = track(Geyser.Label:new({name = "glnFlyout", x = 0, y = 0, width = 50, height = 20, nestflyout = true}, container))
+      assert.are.equal("doNestShow", flyout.onEnter)
+    end)
+  end)
+
+  describe("Geyser.Label nest display and closing", function()
+    local parent, child
+
+    before_each(function()
+      parent = track(Geyser.Label:new({name = "glnNestParent", x = 100, y = 100, width = 50, height = 20}, container))
+      child = track(parent:addChild({name = "glnNestChild", width = 50, height = 20, layoutDir = "RV"}, container))
+    end)
+
+    it("displayNest shows the children and lays them out beside the parent", function()
+      parent:displayNest()
+      assert.is_true(windowVisible("glnNestChild"))
+      -- flyDir R puts the child past the parent's right edge, at its own top
+      assert.are.same({x = 150, y = 100, width = 50, height = 20}, geometry("glnNestChild"))
+    end)
+
+    it("displayNest stacks a second child below the first", function()
+      local second = track(parent:addChild({name = "glnNestChildTwo", width = 50, height = 20, layoutDir = "RV"}, container))
+      parent:displayNest()
+      assert.is_true(windowVisible("glnNestChildTwo"))
+      assert.are.equal(100, geometry("glnNestChild").y)
+      assert.are.equal(120, geometry(second.name).y)
+    end)
+
+    it("displayNest lays a horizontal nest out sideways instead", function()
+      -- two children, because one H child lands on the same pixel as one V
+      -- child would: only the second one shows which axis the nest grew along
+      local first = track(parent:addChild({name = "glnNestSideways", width = 50, height = 20, layoutDir = "RH"}, container))
+      local second = track(parent:addChild({name = "glnNestSidewaysTwo", width = 50, height = 20, layoutDir = "RH"}, container))
+      parent:displayNest()
+
+      assert.is_true(windowVisible(first.name))
+      assert.is_true(windowVisible(second.name))
+      assert.are.same({x = 150, y = 100}, {x = geometry(first.name).x, y = geometry(first.name).y})
+      -- along x, where the vertical nest would have gone along y
+      assert.are.same({x = 200, y = 100}, {x = geometry(second.name).x, y = geometry(second.name).y})
+    end)
+
+    it("closeNestChildren hides the children again", function()
+      parent:displayNest()
+      closeNestChildren(parent)
+      assert.is_false(windowVisible("glnNestChild"))
+    end)
+
+    it("closeNestChildren reaches grandchildren too", function()
+      local grandChild = track(child:addChild({name = "glnNestGrandChild", width = 50, height = 20}, container))
+      parent:displayNest()
+      child:displayNest()
+      assert.is_true(windowVisible(grandChild.name))
+
+      closeNestChildren(parent)
+      assert.is_false(windowVisible("glnNestChild"))
+      assert.is_false(windowVisible(grandChild.name))
+    end)
+
+    it("closeNestChildren does nothing for a label with no nest", function()
+      local lonely = track(Geyser.Label:new({name = "glnLonely", x = 0, y = 0, width = 50, height = 20}, container))
+      assert.has_no.errors(function() closeNestChildren(lonely) end)
+      assert.is_true(windowVisible("glnLonely"))
+    end)
+
+    it("closeAllLevels hides every nested label in the container", function()
+      local other = track(Geyser.Label:new({name = "glnOtherParent", x = 300, y = 100, width = 50, height = 20}, container))
+      local otherChild = track(other:addChild({name = "glnOtherChild", width = 50, height = 20}, container))
+      parent:displayNest()
+      other:displayNest()
+
+      closeAllLevels(parent)
+
+      assert.is_false(windowVisible("glnNestChild"))
+      assert.is_false(windowVisible(otherChild.name))
+      -- the parents themselves have no nestParent, so they stay put
+      assert.is_true(windowVisible("glnNestParent"))
+      assert.is_true(windowVisible(other.name))
+    end)
+
+    it("closeNeighbourChildren closes the nests either side of a child", function()
+      local sibling = track(parent:addChild({name = "glnSibling", width = 50, height = 20}, container))
+      local siblingChild = track(sibling:addChild({name = "glnSiblingChild", width = 50, height = 20}, container))
+      parent:displayNest()
+      sibling:displayNest()
+      assert.is_true(windowVisible(siblingChild.name))
+
+      closeNeighbourChildren(child)
+
+      assert.is_false(windowVisible(siblingChild.name))
+    end)
+
+    it("doNestShow opens a closed nest and arms the timer that closes it", function()
+      assert.is_false(windowVisible("glnNestChild"))
+      doNestShow(parent)
+      assert.is_true(windowVisible("glnNestChild"))
+      assert.is_number(Geyser.Label.closeAllTimer)
+      assert.is_number(remainingTime(Geyser.Label.closeAllTimer))
+    end)
+
+    it("doNestShow closes a nest that is already open", function()
+      -- it is the click handler of a nestable label, so clicking twice has to
+      -- put the nest away again: it always closes everything first and only
+      -- reopens when the first child was hidden
+      doNestShow(parent)
+      assert.is_true(windowVisible("glnNestChild"))
+      doNestShow(parent)
+      assert.is_false(windowVisible("glnNestChild"))
+    end)
+
+    it("doNestShow replaces the timer rather than stacking a second one", function()
+      doNestShow(parent)
+      local firstTimer = Geyser.Label.closeAllTimer
+      doNestShow(parent)
+      assert.are_not.equal(firstTimer, Geyser.Label.closeAllTimer)
+      assert.is_nil(remainingTime(firstTimer))
+    end)
+
+    it("doNestEnter opens the nest of a child that flies out", function()
+      local grandChild = track(child:addChild({name = "glnEnterGrandChild", width = 50, height = 20}, container))
+      child.flyOut = true
+      doNestEnter(child)
+      assert.is_true(windowVisible(grandChild.name))
+    end)
+
+    it("doNestEnter leaves the nest of a child that does not fly out closed", function()
+      local grandChild = track(child:addChild({name = "glnNoFlyGrandChild", width = 50, height = 20}, container))
+      child.flyOut = nil
+      doNestEnter(child)
+      assert.is_false(windowVisible(grandChild.name))
+    end)
+
+    it("doNestEnter cancels the timer that would have closed everything", function()
+      doNestShow(parent)
+      local armed = Geyser.Label.closeAllTimer
+      doNestEnter(child)
+      assert.is_nil(remainingTime(armed))
+    end)
+
+    it("doNestEnter ignores being handed nothing", function()
+      assert.has_no.errors(function() doNestEnter(nil) end)
+    end)
+
+    it("doNestLeave arms the timer that closes everything", function()
+      doNestLeave(child)
+      assert.is_number(Geyser.Label.closeAllTimer)
+      assert.is_number(remainingTime(Geyser.Label.closeAllTimer))
+    end)
+  end)
+
+  describe("Geyser.Label:addScrollbars and doNestScroll", function()
+    local parent, first, second
+
+    before_each(function()
+      parent = track(Geyser.Label:new({name = "glnScrollParent", x = 100, y = 100, width = 50, height = 20}, container))
+      first = track(parent:addChild({name = "glnScrollOne", width = 50, height = 20, layoutDir = "RV"}, container))
+      second = track(parent:addChild({name = "glnScrollTwo", width = 50, height = 20, layoutDir = "RV"}, container))
+    end)
+
+    local function makeScrollbars()
+      local bars = Geyser.Label:addScrollbars(parent, "RV")
+      track(bars[1])
+      track(bars[2])
+      Geyser.Label.scrollV[parent] = bars
+      finally(function() Geyser.Label.scrollV[parent] = nil end)
+      return bars[1], bars[2]
+    end
+
+    it("makes a backward and a forward label named after the nest", function()
+      local backward, forward = makeScrollbars()
+      assert.are.equal("backScrollglnScrollOneRV", backward.name)
+      assert.are.equal("forScrollglnScrollOneRV", forward.name)
+      assert.are.equal(parent, backward.nestParent)
+      assert.are.equal(parent, forward.nestParent)
+      assert.are.equal("More...", forward.message)
+    end)
+
+    it("sizes the forward scrollbar's reach to the nest it scrolls", function()
+      local _, forward = makeScrollbars()
+      -- two children in the nest, plus the scroll window's own end marker
+      assert.are.equal(3, forward.maxScroll)
+    end)
+
+    it("wires both scrollbars up to doNestScroll", function()
+      local backward, forward = makeScrollbars()
+      assert.are.equal("doNestScroll", backward.clickCallback)
+      assert.are.equal("doNestScroll", forward.clickCallback)
+      assert.are.equal("doNestEnter", forward.onEnter)
+      assert.are.equal("doNestLeave", forward.onLeave)
+    end)
+
+    it("doNestScroll moves the window forward when the forward bar is clicked", function()
+      local backward, forward = makeScrollbars()
+      backward.scroll, forward.scroll, forward.maxScroll = 0, 3, 5
+
+      doNestScroll(forward)
+
+      assert.are.equal(1, backward.scroll)
+      assert.are.equal(4, forward.scroll)
+    end)
+
+    it("doNestScroll moves the window back when the backward bar is clicked", function()
+      local backward, forward = makeScrollbars()
+      backward.scroll, forward.scroll, forward.maxScroll = 1, 4, 5
+
+      doNestScroll(backward)
+
+      assert.are.equal(0, backward.scroll)
+      assert.are.equal(3, forward.scroll)
+    end)
+
+    it("doNestScroll will not scroll back past the first entry", function()
+      local backward, forward = makeScrollbars()
+      backward.scroll, forward.scroll, forward.maxScroll = 0, 3, 5
+
+      doNestScroll(backward)
+
+      assert.are.equal(0, backward.scroll)
+      assert.are.equal(3, forward.scroll, "the window has to keep its size when it hits the top")
+    end)
+
+    it("doNestScroll will not scroll on past the last entry", function()
+      local backward, forward = makeScrollbars()
+      backward.scroll, forward.scroll, forward.maxScroll = 2, 5, 5
+
+      doNestScroll(forward)
+
+      assert.are.equal(2, backward.scroll)
+      assert.are.equal(5, forward.scroll)
+    end)
+  end)
+end)
