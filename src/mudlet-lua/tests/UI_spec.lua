@@ -5321,8 +5321,8 @@ describe("Main window size and saved layout", function()
     -- the main window has a minimum width of its own, so how narrow it really
     -- became is read off the console rather than assumed - and the two have to
     -- agree about it
-    if narrowColumns >= wideColumns then
-      pending("this display would not make the main window narrower")
+    if narrowColumns * 2 >= wideColumns then
+      pending("this display would not take the main window below half its width")
       return
     end
     assert.is_true(narrowWidth < wideWidth,

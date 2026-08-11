@@ -802,11 +802,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
 
     if (mType & MainConsole) {
-        // don't call event in lua if size didn't change - and getMainWindowSize()
-        // records the size it measures, so the one from before this resize has
-        // to be taken first
-        const QSize sizeBeforeResize = mOldSize;
-        if (getMainWindowSize() == sizeBeforeResize) {
+        // don't call event in lua if size didn't change
+        const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
+        mOldSize = getMainWindowSize();
+        if (preventLuaEvent) {
             return;
         }
         if (!mpHost.isNull()) {
@@ -2329,7 +2328,7 @@ void TConsole::slot_searchBufferDown()
 QSize TConsole::getMainWindowSize() const
 {
     if (isHidden()) {
-        return mOldSize;
+        return mLastMeasuredSize;
     }
     const QSize consoleSize = size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
@@ -2339,18 +2338,13 @@ QSize TConsole::getMainWindowSize() const
 
     // A console that is still being laid out, as one is while a profile switch
     // is in flight, measures as next to nothing, and the last size it really
-    // had is a better answer than that. Anything above the floor is the size it
-    // has now, however much smaller than before it is: a main window that was
-    // made half as wide is a main window half as wide.
+    // had is a better answer than that.
     const int minValidWidth = 50;
-    if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
-        return mOldSize;
+    if (mainWindowSize.width() < minValidWidth && mLastMeasuredSize.width() >= minValidWidth) {
+        return mLastMeasuredSize;
     }
 
-    // what that check compares against has to be a size that was measured -
-    // remembering the answer instead lets one size the window no longer has
-    // stand in for every size it takes afterwards
-    mOldSize = mainWindowSize;
+    mLastMeasuredSize = mainWindowSize;
     return mainWindowSize;
 }
 
