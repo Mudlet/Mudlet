@@ -26,12 +26,31 @@ else
     # there is no static "APP_BUILD" line left to validate here.
   }
 
+  function validate_release_tag() {
+    local TAG_NAME="${TRAVIS_TAG:-}"
+    if [[ "${GITHUB_REF:-}" =~ ^refs/tags/ ]]; then
+      TAG_NAME="${GITHUB_REF#refs/tags/}"
+    fi
+    if [ -z "${TAG_NAME}" ]; then
+      error "This is a release build, but the tag being built could not be determined from GITHUB_REF or TRAVIS_TAG."
+    fi
+
+    local APP_VERSION
+    APP_VERSION=$(pcre2grep --only-matching=1 "set\(APP_VERSION (.+)\)$" < CMakeLists.txt)
+    if [ -z "${APP_VERSION}" ]; then
+      error "No set(APP_VERSION ...) line could be read out of CMakeLists.txt."
+    fi
+
+    bash "$(dirname "${BASH_SOURCE[0]}")/check-release-tag.sh" "${APP_VERSION}" "${TAG_NAME}" || exit $?
+  }
+
   function validate_updater_environment_variable() {
     if [ "$WITH_UPDATER" == "NO" ]; then
        error "Updater is disabled in a release build."
     fi
   }
 
+  validate_release_tag
   validate_cmake
   validate_updater_environment_variable
 fi

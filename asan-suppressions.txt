@@ -15,6 +15,27 @@
 # Qt modules) - a suppression matches if ANY frame does, so those can hide
 # genuine Mudlet leaks too.
 #
+# A leak: line can only match a frame that still resolves to a module path or a
+# symbol name. Leaks reported as "<unknown module>" with no symbols cannot be
+# matched by any leak: line: the allocating library was dlclose()d (or the code
+# was JITed) before LeakSanitizer runs at exit, so there is no name left to
+# compare against. Those have to be handled at their source, not here - see the
+# GPU driver note below for the recurring example.
+#
+# Do not suppress a Qt allocation primitive to quieten a report. By default
+# AddressSanitizer captures allocation stacks with the frame-pointer unwinder,
+# and the Qt binaries CI installs are built without frame pointers, so the walk
+# stops at the first Qt frame. Every leaked QString in the program then reports
+# as the same three-frame stack
+#   malloc / allocateHelper / QArrayData::allocate2
+# with no caller to identify it, and every leaked QByteArray as the allocate1
+# equivalent. Suppressing those symbols hides the whole class - which is what
+# `leak:QArrayData::allocate2` did here until it was removed. To get the real
+# callers of such a report, re-run with the accurate unwinder:
+#   ASAN_OPTIONS=fast_unwind_on_malloc=0:malloc_context_size=30
+# It costs roughly 3x the runtime of the test run, which is why CI does not use
+# it by default, but the stacks it produces name the leaking function.
+#
 # See: https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
 
 # ==============================================================================
@@ -25,6 +46,34 @@
 leak:libcuda.so
 leak:nvidia
 leak:_dri.so
+
+# leak:_dri.so above can only match when the driver is still mapped at process
+# exit, where LeakSanitizer runs its check. Mesa dlopen()s a DRI driver on first
+# GL use and dlclose()s it when the last GL context - e.g. the 3D map view's
+# QOpenGLWidget - is torn down. A driver-init allocation that leaks and is then
+# unloaded before exit is reported as "<unknown module>" (the .so is gone by the
+# time LeakSanitizer runs), so NO leak: line can match it. On the CI leak job
+# (Ubuntu 22.04) this recurs as a small (~240 byte) realloc+calloc leak during
+# mudlet teardown and flakes across unrelated PRs; it does not reproduce on newer
+# Mesa. Do not try to silence it with a leak: line here (there is no name to
+# match) - keep the GL context from being created/destroyed under the sanitizer
+# test-side instead, as PR #9534 did for the show3dMapView test.
+#
+# A second un-suppressible flake lives on the same CI job: LeakSanitizer's
+# stop-the-world tracer - the helper process that ptrace-attaches at exit to
+# scan memory for live pointers - itself segfaults during exit-time teardown,
+# apparently racing driver/X cleanup. The job log then ends with
+#   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
+#   ==NNNNN==LeakSanitizer has encountered a fatal error.
+# right after "mudlet::~mudlet() INFO - uninstalling translation...", with no
+# leak report at all, and the busted summary line goes missing too (LSan's
+# Die() skips the stdio flush - the Lua tests themselves passed). Since
+# exitcode=1 the job fails. Suppressions filter leak *reports*, and this
+# aborts before reporting begins, so nothing in this file can help; it is
+# also unrelated to the change under test (the same faulting instruction was
+# observed on development-branch runs 26705214438 and 28641460889 and on PR
+# run 30744002320, at a rate of roughly 1 in 250-500 leak-job runs). If a
+# leak job fails with this signature, just re-run it.
 
 # ==============================================================================
 # Fontconfig library leaks
@@ -69,6 +118,15 @@ leak:libgobject-2.0.so
 leak:libexpat.so
 
 # ==============================================================================
+# speech-dispatcher client library leak
+# One-time allocation in the speech-dispatcher client (libspeechd) when its
+# connection is first opened, reached via QtTextToSpeech's speechd engine.
+# Only surfaces when a speech-dispatcher daemon is reachable and something
+# touches the tts* API; no Mudlet frames are involved.
+# ==============================================================================
+leak:libspeechd.so
+
+# ==============================================================================
 # Qt internal leaks (Qt's integration with system libraries)
 # These are typically initialization leaks in Qt's platform integration
 # ==============================================================================
@@ -82,9 +140,6 @@ leak:QFontEngineMultiFontConfig
 
 # Qt translation system (one-time initialization)
 leak:QTranslatorPrivate::do_load
-
-# Qt array data allocation (internal caching)
-leak:QArrayData::allocate2
 
 # ==============================================================================
 # OpenSSL 3 provider initialization leaks

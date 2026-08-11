@@ -105,8 +105,8 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  -- methods skipped here: printTable, _printTable, listPrint, listAdd, listRemove
-  -- they are undocumented and unused in our own code.
+  -- printTable, listPrint, __printTable, listAdd and listRemove are covered
+  -- near the end of this file.
 
   describe("Tests the functionality of table.size", function()
 
@@ -263,7 +263,31 @@ describe("Tests TableUtils.lua functions", function()
       local errfn = function()
         table.n_collect(tbl, func)
       end
-      assert.has_error(errfn, "table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)") 
+      assert.has_error(errfn, "table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)")
+    end)
+
+    it("should keep a value that is equal to an index already collected", function()
+      local actual = table.n_collect({ "a", 1 }, function() return true end)
+      table.sort(actual, function(a, b) return tostring(a) < tostring(b) end)
+      assert.are.same({ 1, "a" }, actual)
+    end)
+
+    it("should keep a value that also appears inside a nested table", function()
+      local actual = table.n_collect({ { "z" }, "z" }, function() return true end)
+      assert.are.equal(2, #actual)
+      local nested, plain
+      for _, value in ipairs(actual) do
+        if type(value) == "table" then nested = value else plain = value end
+      end
+      assert.are.same({ "z" }, nested)
+      assert.are.equal("z", plain)
+    end)
+
+    it("should still drop real duplicates", function()
+      local actual = table.n_collect({ 5, "x", 5, "x" }, function() return true end)
+      assert.are.equal(2, #actual)
+      table.sort(actual, function(a, b) return tostring(a) < tostring(b) end)
+      assert.are.same({ 5, "x" }, actual)
     end)
   end)
 
@@ -510,6 +534,63 @@ describe("Tests TableUtils.lua functions", function()
 
   end)
 
+  -- table.contains is a loop over table._contains, one pass per value it was
+  -- asked about. Everything the search itself does lives in _contains, and it
+  -- is the only one of the two that reports being handed something that is not
+  -- a table: table.contains treats that report as "not found".
+  describe("Tests the functionality of table._contains", function()
+
+    it("should return true for a value in the table", function()
+      assert.is_true(table._contains({"one", "two"}, "two"))
+    end)
+
+    it("should return true for a key in the table", function()
+      assert.is_true(table._contains({one = 1, two = 2}, "two"))
+    end)
+
+    it("should find a value nested inside another table", function()
+      assert.is_true(table._contains({outer = {inner = {"needle"}}}, "needle"))
+      assert.is_true(table._contains({outer = {inner = {"needle"}}}, "inner"))
+    end)
+
+    it("should return false for something the table does not hold", function()
+      assert.is_false(table._contains({one = 1}, "two"))
+    end)
+
+    it("should return false for an empty table", function()
+      assert.is_false(table._contains({}, "anything"))
+    end)
+
+    it("should report being handed something that is not a table", function()
+      local found, message = table._contains("not a table", "anything")
+      assert.is_nil(found)
+      assert.are.equal("first parameter passed isn't a table", message)
+
+      found, message = table._contains(nil, "anything")
+      assert.is_nil(found)
+      assert.are.equal("first parameter passed isn't a table", message)
+    end)
+
+    it("should let table.contains turn that report into a plain false", function()
+      -- the caller of table.contains never sees the message, so a script that
+      -- wants to know it passed a table has to ask _contains
+      assert.is_false(table.contains("not a table", "anything"))
+    end)
+
+    it("should search for exactly one value, unlike table.contains", function()
+      -- table.contains loops over its extra arguments, _contains ignores them
+      assert.is_false(table._contains({"one"}, "two", "one"))
+      assert.is_true(table.contains({"one"}, "two", "one"))
+    end)
+
+    it("should find a false value stored in the table", function()
+      -- returning the search result rather than the value found is what makes
+      -- a stored false distinguishable from "not there"
+      assert.is_true(table._contains({flag = false}, false))
+      assert.is_false(table._contains({flag = true}, false))
+    end)
+  end)
+
   describe("Tests the functionality of table.index_of", function()
     it("should return the index of the item being searched", function()
       local tbl = {
@@ -643,6 +724,24 @@ describe("Tests TableUtils.lua functions", function()
       }
       local actual = table.union(tblA, tblB, tblC)
       assert.same(expected,actual)
+    end)
+
+    it("should not modify a table it was given", function()
+      local first = { key = { 1, 2 } }
+      local actual = table.union(first, { key = 5 })
+      assert.same({ { 1, 2 }, 5 }, actual.key)
+      assert.same({ 1, 2 }, first.key)
+      assert.is_false(rawequal(actual.key, first.key))
+    end)
+
+    it("should collect a colliding false into a subtable", function()
+      local actual = table.union({ key = false }, { key = 7 })
+      assert.same({ false, 7 }, actual.key)
+    end)
+
+    it("should append a third colliding value to the same subtable", function()
+      local actual = table.union({ key = 1 }, { key = 2 }, { key = 3 })
+      assert.same({ 1, 2, 3 }, actual.key)
     end)
   end)
 
@@ -794,6 +893,206 @@ describe("Tests TableUtils.lua functions", function()
       local expected = {enabled = {feature1 = true, feature2 = false}}
       local actual = table.update(tblA, tblB)
       assert.same(expected, actual)
+    end)
+  end)
+
+  describe("Tests the functionality of table.deepcopy nested independence", function()
+    it("should copy nested tables so mutating the copy does not affect the original", function()
+      local original = { a = 1, nested = { b = 2, deep = { c = 3 } } }
+      local copy = table.deepcopy(original)
+      copy.nested.b = 20
+      copy.nested.deep.c = 30
+      assert.equals(2, original.nested.b)
+      assert.equals(3, original.nested.deep.c)
+      -- the nested tables are distinct references
+      assert.are_not.equal(original.nested, copy.nested)
+      assert.are_not.equal(original.nested.deep, copy.nested.deep)
+    end)
+
+    it("should preserve the metatable of the copied table", function()
+      local mt = { __index = function() return "default" end }
+      local original = setmetatable({}, mt)
+      local copy = table.deepcopy(original)
+      assert.equals(mt, getmetatable(copy))
+      assert.equals("default", copy.anything)
+    end)
+
+    it("should return non-table values unchanged", function()
+      assert.equals(5, table.deepcopy(5))
+      assert.equals("text", table.deepcopy("text"))
+    end)
+  end)
+
+  describe("Tests the functionality of spairs on an empty table", function()
+    it("should iterate zero times over an empty table", function()
+      local count = 0
+      for _ in spairs({}) do
+        count = count + 1
+      end
+      assert.equals(0, count)
+    end)
+  end)
+
+  describe("Tests the functionality of listAdd", function()
+    it("should append an item to the end of the list", function()
+      local list = { "one", "two" }
+      listAdd(list, "three")
+      assert.same({ "one", "two", "three" }, list)
+    end)
+
+    it("should append to an empty list", function()
+      local list = {}
+      listAdd(list, "only")
+      assert.same({ "only" }, list)
+    end)
+  end)
+
+  describe("Tests the functionality of listRemove", function()
+    it("should remove a matching item from the list", function()
+      local list = { "one", "two", "three" }
+      listRemove(list, "two")
+      assert.same({ "one", "three" }, list)
+    end)
+
+    it("should leave the list unchanged when the item is not present", function()
+      local list = { "one", "two" }
+      listRemove(list, "missing")
+      assert.same({ "one", "two" }, list)
+    end)
+
+    it("should leave an empty list empty", function()
+      local list = {}
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    it("should remove the sole element when it matches", function()
+      local list = { "x" }
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    -- #9546: removal used to happen during an ipairs loop, so deleting index i
+    -- shifted i+1 down into i, which the loop then skipped, leaving one of each
+    -- run of consecutive duplicates behind.
+    it("should remove a pair of consecutive duplicate matches", function()
+      local list = { "a", "x", "x", "b" }
+      listRemove(list, "x")
+      assert.same({ "a", "b" }, list)
+    end)
+
+    it("should remove a run of three or more consecutive duplicates", function()
+      local list = { "x", "x", "x" }
+      listRemove(list, "x")
+      assert.same({}, list)
+    end)
+
+    it("should remove every match whether the duplicates are adjacent or apart", function()
+      local list = { "x", "a", "x", "x", "b", "x" }
+      listRemove(list, "x")
+      assert.same({ "a", "b" }, list)
+    end)
+  end)
+
+  describe("Tests the contract of printTable", function()
+    -- printTable/listPrint write to the screen via echo; we spy on the real
+    -- echo (pass-through) to assert the framing lines without mocking it.
+    it("should echo a header, a line per key/value pair and a footer", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      printTable({ alpha = "one", beta = "two" })
+      -- header + 2 pairs + footer; header and footer are the same dashed string,
+      -- so the count is what pins that both framing lines are present
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("-------------------------------------------------------\n")
+      assert.spy(echo).was.called_with("key=alpha value=one\n")
+      assert.spy(echo).was.called_with("key=beta value=two\n")
+    end)
+
+    it("should render a value that is neither a string nor a number", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      local nested = {}
+      printTable({ flag = true, nested = nested, fn = print })
+      assert.spy(echo).was.called(5)
+      assert.spy(echo).was.called_with("key=flag value=true\n")
+      assert.spy(echo).was.called_with("key=nested value=" .. tostring(nested) .. "\n")
+      assert.spy(echo).was.called_with("key=fn value=" .. tostring(print) .. "\n")
+    end)
+
+    it("should render a key that is neither a string nor a number", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      local key = {}
+      printTable({ [key] = "one", [true] = "two" })
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("key=" .. tostring(key) .. " value=one\n")
+      assert.spy(echo).was.called_with("key=true value=two\n")
+    end)
+
+    it("should not raise on a table of mixed value types", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      assert.has_no.errors(function() printTable({ 1, "two", true, {}, print }) end)
+      assert.has_no.errors(function() printTable({}) end)
+    end)
+
+    it("should name itself when it is not given a table", function()
+      assert.has_error(function() printTable(nil) end,
+        'printTable: bad argument #1 type (table expected, got nil!)')
+      assert.has_error(function() listPrint("not a table") end,
+        'listPrint: bad argument #1 type (table expected, got string!)')
+    end)
+  end)
+
+  describe("Tests the contract of listPrint", function()
+    it("should echo a numbered line for each list entry framed by dashed lines", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      listPrint({ "first", "second" })
+      -- header + 2 entries + footer
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("1. ) first\n")
+      assert.spy(echo).was.called_with("2. ) second\n")
+    end)
+
+    it("should render entries that are neither strings nor numbers", function()
+      local echo = spy.on(_G, "echo")
+      finally(function() echo:revert() end)
+      local nested = {}
+      listPrint({ true, nested })
+      assert.spy(echo).was.called(4)
+      assert.spy(echo).was.called_with("1. ) true\n")
+      assert.spy(echo).was.called_with("2. ) " .. tostring(nested) .. "\n")
+    end)
+  end)
+
+  describe("Tests the contract of __printTable", function()
+    -- __printTable is documented as printTable's helper but printTable never
+    -- calls it; it is a standalone one pair formatter reachable from scripts,
+    -- writing into the main console at the cursor
+    it("should insert a newline terminated key and value pair", function()
+      local insertText = spy.on(_G, "insertText")
+      finally(function() insertText:revert() end)
+      __printTable("alpha", "one")
+      assert.spy(insertText).was.called(1)
+      assert.spy(insertText).was.called_with("\nkey = alpha value = one")
+    end)
+
+    it("should tostring both the key and the value", function()
+      local insertText = spy.on(_G, "insertText")
+      finally(function() insertText:revert() end)
+      __printTable(3, true)
+      assert.spy(insertText).was.called_with("\nkey = 3 value = true")
+    end)
+
+    it("should land the pair in the main console buffer", function()
+      clearWindow()
+      echo("a line for the cursor to sit on\n")
+      moveCursorEnd()
+      __printTable("visible", "value")
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      assert.is_truthy(text:find("key = visible value = value", 1, true))
     end)
   end)
 end)

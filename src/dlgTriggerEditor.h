@@ -107,6 +107,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
     // Allow QTest-based test class to access private members
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorBannerViewSwitchTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -173,6 +174,7 @@ public:
 
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
+    ~dlgTriggerEditor();
 
     Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
@@ -374,6 +376,7 @@ private slots:
     void slot_saveProperty_ActionCommandUp();
     void slot_saveProperty_ActionIsPushDown();
     void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarFillerOffset();
     void slot_saveProperty_ActionBarOrientation();
     void slot_saveProperty_ActionBarLocation();
     void slot_saveProperty_ActionButtonRotation();
@@ -791,6 +794,7 @@ private:
 
     // Banner methods
     void handleBannerDismiss();
+    void cancelBannerUndoTimer();
     void showBannerUndoToast();
     void undoBannerDismiss();
     void handlePermanentBannerDismiss();

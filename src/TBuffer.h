@@ -292,10 +292,10 @@ class TBuffer
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
 
+public:
     // limit on how many characters a single echo can accept for performance reasons
     static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
-public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     ~TBuffer();
     TBuffer(const TBuffer& other);
@@ -312,6 +312,9 @@ public:
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
+    // Colors of the current trigger-pass line as committed, before any
+    // trigger ran; nullptr when lineNumber is not the line being processed:
+    const std::deque<TChar>* preTriggerPassLine(int lineNumber) const;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -391,6 +394,7 @@ public:
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
+    void syncPreTriggerPassLine(int y);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
@@ -444,6 +448,9 @@ private:
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
     bool mGotESC = false;
+    // Set between the ESC '(', ')', '*' or '+' of an ISO 2022 character set
+    // designation and the byte that names the set:
+    bool mGotEscCharset = false;
     // Second stage in decoding SGR sequences - set true when we see the ASCII
     // ESC character followed by the '[' one:
     bool mGotCSI = false;
@@ -503,6 +510,8 @@ private:
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
+    std::deque<TChar> mPreTriggerPassLine;
+    int mPreTriggerPassLineNumber = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
@@ -523,13 +532,14 @@ private:
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
-    // The parser sequence state (mGotESC, mGotCSI, mGotOSC, mGotString and
+    // The parser sequence state (the mGot... latches and
     // mIncompleteSequenceBytes) for whichever of the two data channels - Game
     // Server stream or locally generated text - is not currently being
     // processed; translateToPlainText() swaps it in around a local feed so
     // that such text cannot consume or clear a latch belonging to a sequence
     // split across Game Server packets (and vice versa):
     bool mLocalGotESC = false;
+    bool mLocalGotEscCharset = false;
     bool mLocalGotCSI = false;
     bool mLocalGotOSC = false;
     bool mLocalGotString = false;

@@ -1146,10 +1146,10 @@ function db:fetch(sheet, query, order_by, descending)
   local sql = "SELECT * FROM " .. s_name
 
   if query then
-    if type(query) == "table" then
+    if type(query) == "table" and not query._isExp then
       sql = sql .. " WHERE " .. db:AND(unpack(query))
     else
-      sql = sql .. " WHERE " .. query
+      sql = sql .. " WHERE " .. tostring(query)
     end
   end
 
@@ -1202,10 +1202,10 @@ function db:aggregate(field, fn, query, distinct)
 
   if query then
     sql_chunks[#sql_chunks + 1] = "WHERE"
-    if type(query) == "table" then
+    if type(query) == "table" and not query._isExp then
       sql_chunks[#sql_chunks + 1] = db:AND(unpack(query))
     else
-      sql_chunks[#sql_chunks + 1] = query
+      sql_chunks[#sql_chunks + 1] = tostring(query)
     end
   end
 
@@ -1275,7 +1275,7 @@ function db:delete(sheet, query)
   assert(query, "must pass a query argument to db:delete()")
   if type(query) == "number" then
     query = "_row_id = " .. tostring(query)
-  elseif type(query) == "table" then
+  elseif type(query) == "table" and not query._isExp then
     assert(query._row_id, "Passed a non-result table to db:delete, need a _row_id field to continue.")
     query = "_row_id = " .. tostring(query._row_id)
   end
@@ -1283,7 +1283,7 @@ function db:delete(sheet, query)
   local sql = "DELETE FROM " .. s_name
 
   if query ~= true then
-    sql = sql .. " WHERE " .. query
+    sql = sql .. " WHERE " .. tostring(query)
   end
 
   db:echo_sql(sql)
@@ -1499,7 +1499,7 @@ function db:set(field, value, query)
     s_name,
     field.name,
     db:_coerce(field, value),
-    query
+    tostring(query)
   )
 
   db:echo_sql(sql)
@@ -1563,7 +1563,9 @@ end
 -- type of the specified field. Strings will be single-quoted (and single-quotes
 -- within will be properly escaped), numbers will be rendered properly, and such.
 function db:_coerce(field, value)
-  if type(value) == "table" and value._isNull then
+  if type(value) == "table" and value._isExp then
+    return value._expression
+  elseif type(value) == "table" and value._isNull then
     return "NULL"
   elseif field.type == "number" then
     return tonumber(value) or ("'" .. value .. "'")
@@ -1775,6 +1777,20 @@ end
 
 
 
+-- NOT LUADOC
+-- The metatable for db:exp values. It renders as the raw expression text whenever
+-- concatenated or stringified, so WHERE-position use (db:fetch, db:AND, db:OR, ...)
+-- is unchanged, while db:_coerce recognises the _isExp marker and passes the raw
+-- expression through (letting db:exp be used as a db:set value, not just in WHERE).
+db.__Expression = {
+  __tostring = function(self)
+    return self._expression
+  end,
+  __concat = function(a, b)
+    return tostring(a) .. tostring(b)
+  end,
+}
+
 --- Returns the string as-is to the database. <br/><br/>
 ---
 --- Use this function with caution, but it is very useful in some circumstances. One of the most
@@ -1797,7 +1813,7 @@ end
 ---
 --- @see db:fetch
 function db:exp(text)
-  return text
+  return setmetatable({ _expression = text, _isExp = true }, db.__Expression)
 end
 
 
@@ -1827,6 +1843,10 @@ end
 ---
 --- @see db:fetch
 function db:OR(left, right)
+  -- coerce to strings so db:exp sentinels work here as well as plain expressions
+  left = tostring(left)
+  right = tostring(right)
+
   if not string.starts(left, "(") then
     left = "(" .. left .. ")"
   end
@@ -2067,16 +2087,16 @@ end
 
 function db.Database:_drop(s_name)
   local conn = db.__conn[self._db_name]
-  local schema = db.__schema[self._db_name]
+  local schema = db.__schema[self._db_name][s_name]
 
-  if schema.options._index then
-    for _, value in schema.options._index do
-      conn:execute("DROP INDEX IF EXISTS " .. db:_index_name(s_name, value))
+  -- _index and _unique can each be a single column name (a string) or a list of
+  -- them, so normalise to a list before iterating to drop the matching indexes.
+  local index_groups = { schema.options._index, schema.options._unique }
+  for _, group in pairs(index_groups) do
+    if type(group) == "string" then
+      group = { group }
     end
-  end
-
-  if schema.options._unique then
-    for _, value in schema.options._unique do
+    for _, value in pairs(group) do
       conn:execute("DROP INDEX IF EXISTS " .. db:_index_name(s_name, value))
     end
   end
