@@ -57,6 +57,14 @@ public:
     ~TMediaPlayer()
     {
         if (mMediaPlayer) {
+            // The unload below releases the media file, and announces itself wherever it
+            // changes something - sourceChanged from clearing the source, playbackStateChanged
+            // from a stop that had something to stop - synchronously, into handlers reading a
+            // TMediaPlayer whose members are about to go. The handlers TMedia installs decline
+            // by way of a weak_ptr that has already expired by now; blocking makes that
+            // structural rather than something each new handler has to remember. The unload
+            // still happens, and Qt unblocks in ~QObject so destroyed() still arrives.
+            mMediaPlayer->blockSignals(true);
             mMediaPlayer->stop();
             mMediaPlayer->setSource(QUrl());
         }

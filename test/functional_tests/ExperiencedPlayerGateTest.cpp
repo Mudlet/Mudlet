@@ -296,10 +296,10 @@ private slots:
             QSKIP("portable.txt present - setupConfig() takes the portable branch");
         }
         QVERIFY(mLiveConfig.isValid());
-        // An empty $XDG_CONFIG_HOME/mudlet is the opt-in marker, without which
+        // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in marker, without which
         // setupConfig() keeps using a legacy ~/.config/mudlet
         const QString configDir = qsl("%1/mudlet").arg(mLiveConfig.path());
-        QVERIFY(QDir().mkpath(configDir));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(configDir)));
         qputenv("XDG_CONFIG_HOME", mLiveConfig.path().toUtf8());
 
         initializeQRCResourcesForExperiencedPlayerGateTest();
@@ -307,7 +307,7 @@ private slots:
         mudlet::self()->setupConfig();
         QCOMPARE(mudlet::getMudletPath(enums::mainPath), configDir);
         QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
-        QVERIFY(!QDir(mudlet::getMudletPath(enums::profilesPath)).exists());
+        QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(), "the opt-in profiles/ dir has to be empty, or this is not a fresh install");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
 
         mudlet::self()->init();

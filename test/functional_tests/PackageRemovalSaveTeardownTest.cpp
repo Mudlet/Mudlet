@@ -40,7 +40,7 @@
  * contract the fix rests on, and a sanitizer run over the uninstall/close/
  * destroy/pump sequence itself.
  *
- * Run with: ctest -R PackageUninstallSaveTeardownTest -V
+ * Run with: ctest -R PackageRemovalSaveTeardownTest -V
  */
 
 #include <QtTest/QtTest>
@@ -64,16 +64,16 @@ extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForPackageUninstallSaveTeardownTest();
+void initializeQRCResourcesForPackageRemovalSaveTeardownTest();
 
-class PackageUninstallSaveTeardownTest : public QObject
+class PackageRemovalSaveTeardownTest : public QObject
 {
     Q_OBJECT
 
 private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
-    const QString mProfileName = qsl("PackageUninstallSaveTeardown-Test");
+    const QString mProfileName = qsl("PackageRemovalSaveTeardown-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort; // the stub's actual ephemeral port, assigned in initTestCase()
     // The refusal test below installs an archive that names itself ".." - that
@@ -177,7 +177,7 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForPackageUninstallSaveTeardownTest();
+        initializeQRCResourcesForPackageRemovalSaveTeardownTest();
 
         // Keep the test hermetic: point the config dir resolution at a temporary
         // directory instead of the user's real profiles - one of the tests below
@@ -384,7 +384,7 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForPackageUninstallSaveTeardownTest()
+void initializeQRCResourcesForPackageRemovalSaveTeardownTest()
 {
 #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
     qInitResources_additional_splash_screens();
@@ -399,5 +399,5 @@ void initializeQRCResourcesForPackageUninstallSaveTeardownTest()
     qInitResources_qm();
 }
 
-#include "PackageUninstallSaveTeardownTest.moc"
-QTEST_MAIN(PackageUninstallSaveTeardownTest)
+#include "PackageRemovalSaveTeardownTest.moc"
+QTEST_MAIN(PackageRemovalSaveTeardownTest)

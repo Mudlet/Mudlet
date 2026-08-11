@@ -79,6 +79,12 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
 // retrieve its password. Mirrors the pattern used there:
 const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
 
+// Listing what is expected rather than what to watch out for keeps an
+// unrecognised file - a stored password, a character name the user typed - on
+// the side of asking. ProfileDeletionSafetyTest fails if the connection form
+// comes to write anything this does not name:
+const QStringList dlgConnectionProfiles::scmConnectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
+
 // A lone "." is made entirely of permitted characters, yet every path built
 // from it addresses the profiles directory rather than a profile of its own -
 // as does "..", which scmUnusableProfileNameChars already covers:
@@ -1120,16 +1126,11 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    // A profile that has never been played holds nothing but the connection
-    // details written out when it was selected. Listing what is expected rather
-    // than what to watch out for keeps an unrecognised file - a stored password,
-    // a personal dictionary - on the side of asking:
-    static const QStringList connectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
     const QDir profileDir(mudlet::getMudletPath(enums::profileHomePath, profile));
     bool nothingToLose = !profileDir.exists() || profileDir.entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty();
     if (nothingToLose) {
         for (const QString& fileName : profileDir.entryList(QDir::Files | QDir::Hidden)) {
-            if (!connectionDetailFiles.contains(fileName)) {
+            if (!scmConnectionDetailFiles.contains(fileName)) {
                 nothingToLose = false;
                 break;
             }
@@ -1208,6 +1209,9 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     return ret;
 }
 
+// A new item here may need adding to scmConnectionDetailFiles above. Unlike
+// mudlet::writeProfileData() this does not create the profile's folder, so a
+// write before there is one is quietly dropped.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
     QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
