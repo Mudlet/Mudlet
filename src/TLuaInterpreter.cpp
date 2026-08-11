@@ -7260,6 +7260,21 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
     return 1;
 }
 
+// No documentation available in wiki - internal function
+// The folder a profile name resolves to, or an empty string if there is no such
+// profile. Stricter than mudlet::getCanonicalProfileName(): a game Mudlet ships
+// with does not count until it has a folder, because writeProfileData() creates
+// whatever folder it is handed and that would turn a game nobody has opened into
+// a profile of its own.
+static QString canonicalProfileFolder(const QString& profileName)
+{
+    const QString folder = mudlet::self()->getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, folder)).exists()) {
+        return QString();
+    }
+    return folder;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#setProfileInformation
 int TLuaInterpreter::setProfileInformation(lua_State* L)
 {
@@ -7279,9 +7294,7 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
         text = lua_tostring(L, 1);
     } else {
         const QString requestedName = lua_tostring(L, 1);
-        // writeProfileData() creates the folder it is told to write into, so
-        // without this a name that is not a profile conjures one up
-        profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        profileName = canonicalProfileFolder(requestedName);
         if (profileName.isEmpty()) {
             return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
         }
@@ -7289,11 +7302,10 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
     }
 
     const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
-    lua_pushboolean(L, result.first);
-    if (!result.second.isEmpty()) {
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
     }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -7308,9 +7320,7 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
     QString profileName = getHostFromLua(L).getName();
     if (params > 0) {
         const QString requestedName = lua_tostring(L, 1);
-        // writeProfileData() creates the folder it is told to write into, so
-        // without this a name that is not a profile conjures one up
-        profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        profileName = canonicalProfileFolder(requestedName);
         if (profileName.isEmpty()) {
             return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
         }
@@ -7326,11 +7336,10 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
     }
 
     const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
-    lua_pushboolean(L, result.first);
-    if (!result.second.isEmpty()) {
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
     }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -8661,10 +8670,10 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
         // profile:
         return warnArgumentValue(L, __func__, "disabled by profile global preference");
     }
+    // with no arguments at all these defaults stand, and turn the "save command
+    // history" on for the main command line:
     const char* name = "main";
     bool saveCommands = true;
-    // if there is no arguments we will set the "save command history" on the
-    // main  command line:
     if (n > 0) {
         if (lua_type(L, 1) == LUA_TSTRING) {
             // First argument is a string so is presumably a command line name

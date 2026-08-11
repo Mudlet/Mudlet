@@ -337,6 +337,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- what it found: the self-test profile is reused between runs.
       local descriptionFile = getMudletHomeDir() .. "/description"
 
+      -- One of the games Mudlet lists in the connection dialog that nobody has
+      -- opened here. getProfiles() lists folders, so a bundled game it does not
+      -- report has none - which is what makes it a name that resolves without
+      -- being a profile. Which game is picked does not matter, only that it has
+      -- no folder, so an interactive run on a real config finds one too.
+      local function unopenedBundledGame()
+        local profiles = getProfiles()
+        for _, game in ipairs({"Achaea", "Aetolia", "Lusternia", "Imperian", "StickMUD", "Materia Magica"}) do
+          if not profiles[game] then
+            return game
+          end
+        end
+      end
+
       local function restoreDescription()
         local original = getProfileInformation()
         -- a profile that has never had a description has no file for one, and
@@ -397,6 +411,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals("named form", getProfileInformation())
         end)
 
+        it("matches the profile whatever case it is named in", function()
+          finally(restoreDescription())
+
+          assert.is_true(setProfileInformation(getProfileName():upper(), "shouted form"))
+          assert.equals("shouted form", getProfileInformation())
+          -- naming the profile in the wrong case must find the folder it has,
+          -- not make a second one beside it
+          assert.is_nil(getProfiles()[getProfileName():upper()])
+        end)
+
         it("is what getProfiles reports as the description", function()
           finally(restoreDescription())
           setProfileInformation("as seen by getProfiles")
@@ -407,11 +431,26 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("refuses a profile that does not exist", function()
           local ok, err = setProfileInformation("mudlet-spec-never-a-profile", "text")
           assert.is_nil(ok)
-          assert.is_true(contains(err, "does not exist"), tostring(err))
+          assert.equals("profile 'mudlet-spec-never-a-profile' does not exist", err)
           -- refusing is not enough on its own: the write goes through
           -- writeProfileData(), which creates whatever folder it is handed, and
           -- a folder here is a profile to getProfiles() and the connection dialog
-          assert.is_nil(getProfiles()["mudlet-spec-never-a-profile"])
+          local profiles = getProfiles()
+          assert.is_table(profiles[getProfileName()], "getProfiles() answered nothing at all")
+          assert.is_nil(profiles["mudlet-spec-never-a-profile"])
+        end)
+
+        it("refuses a game Mudlet ships with that has no profile of its own", function()
+          local game = unopenedBundledGame()
+          if not game then
+            pending("every bundled game this spec knows of has a profile here")
+            return
+          end
+
+          local ok, err = setProfileInformation(game, "text")
+          assert.is_nil(ok)
+          assert.equals(("profile '%s' does not exist"):format(game), err)
+          assert.is_nil(getProfiles()[game])
         end)
       end)
 
@@ -423,14 +462,31 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("refuses a profile that does not exist", function()
           local ok, err = clearProfileInformation("mudlet-spec-never-a-profile")
           assert.is_nil(ok)
-          assert.is_true(contains(err, "does not exist"), tostring(err))
+          assert.equals("profile 'mudlet-spec-never-a-profile' does not exist", err)
           assert.is_nil(getProfiles()["mudlet-spec-never-a-profile"])
+        end)
+
+        it("refuses a game Mudlet ships with that has no profile of its own", function()
+          local game = unopenedBundledGame()
+          if not game then
+            pending("every bundled game this spec knows of has a profile here")
+            return
+          end
+
+          -- worse than the setter's version of this: the description a bundled
+          -- game ships with would be written into the folder it just conjured
+          local ok, err = clearProfileInformation(game)
+          assert.is_nil(ok)
+          assert.equals(("profile '%s' does not exist"):format(game), err)
+          assert.is_nil(getProfiles()[game])
         end)
 
         it("puts back the description a bundled game ships with", function()
           finally(restoreDescription())
           setProfileInformation("something else entirely")
 
+          assert.is_true(clearProfileInformation(getProfileName()))
+          setProfileInformation("something else entirely")
           assert.is_true(clearProfileInformation())
 
           -- the self-test profile is one of Mudlet's own games, so clearing
@@ -472,14 +528,45 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("turns saving on when told which command line, or none at all, but not whether to", function()
           local original = getSaveCommandHistory()
           finally(function() setSaveCommandHistory(original) end)
-          setSaveCommandHistory(false)
+          -- turning it off first is what makes turning it on observable, so the
+          -- off state is asserted rather than assumed
+          assert.is_true(setSaveCommandHistory(false))
+          assert.is_false((getSaveCommandHistory()))
 
           assert.is_true(setSaveCommandHistory())
           assert.is_true((getSaveCommandHistory()))
 
-          setSaveCommandHistory(false)
+          assert.is_true(setSaveCommandHistory(false))
+          assert.is_false((getSaveCommandHistory()))
           assert.is_true(setSaveCommandHistory("main"))
           assert.is_true((getSaveCommandHistory()))
+        end)
+
+        it("turns saving on for the command line it is named, and no other", function()
+          -- "main" is also the name the no-argument form falls back to, so only
+          -- a second command line can tell "the name was read" from "the name
+          -- was dropped and main was used"
+          local commandLine = "mudlet-spec-save-history"
+          createCommandLine(commandLine, 10, 10, 120, 30)
+          local original = getSaveCommandHistory()
+          finally(function()
+            setSaveCommandHistory("main", original)
+            deleteCommandLine(commandLine)
+          end)
+
+          assert.is_true(setSaveCommandHistory(commandLine, false))
+          assert.is_true(setSaveCommandHistory("main", false))
+
+          assert.is_true(setSaveCommandHistory(commandLine))
+
+          assert.is_true((getSaveCommandHistory(commandLine)))
+          assert.is_false((getSaveCommandHistory("main")))
+        end)
+
+        it("returns nil+msg for a command line that does not exist", function()
+          local ok, err = setSaveCommandHistory("mudlet-spec-no-such-command-line")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "not found"), tostring(err))
         end)
 
         it("round-trips through getSaveCommandHistory", function()
