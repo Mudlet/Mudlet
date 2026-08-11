@@ -1,0 +1,1186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<AliasGroup isActive="yes" isFolder="yes">
+			<name>Mini Quest</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex></regex>
+			<Alias isActive="yes" isFolder="no">
+				<name>Directions</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+local dir = matches[2]
+
+if dir == "n" then dir = "north" end
+if dir == "s" then dir = "south" end
+if dir == "e" then dir = "east" end
+if dir == "w" then dir = "west" end
+if dir == "u" then dir = "up" end
+if dir == "d" then dir = "down" end
+
+local exits = getRoomExits(getPlayerRoom())
+local doors = getDoors(getPlayerRoom())
+local doorStatus = {"open", "closed", "locked"}
+
+-- if there's an exit that's not a door, or the door is already open then
+if exits[dir] and not doors[string.cut(dir, 1)] or doors[string.cut(dir, 1)] == 1 then
+  hq.onRoomExit()  
+  echo(f("You head {dir}.\n\n"))
+  centerview(exits[dir])
+  hq.onRoomEntry()
+  cecho(hq.prompt)
+  hq.state = "PLAYING"
+elseif doors[string.cut(dir, 1)] then
+  echo(f("The way {dir} is " .. doorStatus[doors[string.cut(dir, 1)]] .. ".\n"))
+  if not hq.openDoorHelp then
+    hq.help("MUDs can have doors which can be &lt;r&gt;&lt;b&gt;open&lt;r&gt;&lt;dark_sea_green&gt;ed and &lt;r&gt;&lt;b&gt;close&lt;r&gt;&lt;dark_sea_green&gt;d.\n\nHINT: use the verb in combination with the direction e.g., &lt;r&gt;&lt;b&gt;open north&lt;r&gt;&lt;green&gt;.\n")
+    hq.openDoorHelp = true
+  end
+  cecho(hq.prompt)  
+else
+  echo(f("There is no exit {dir}.\n"))
+  cecho(hq.prompt)  
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^(n|north|s|south|e|east|w|west|u|up|d|down)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Say</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+-- roomID, keyword, reply
+local dialog = { { 1, "help", "The Sheriff replies, 'I'm too busy right now.'\n" },
+                 { 1, "lunch", "The Sheriff replies, 'Yes please.  Go buy me an apple from the fruit vendor.'\n" },
+                 { 1, "hello", "The Sheriff smiles at you warmly.\n" },
+                 { 5, "hello", "The vendor smiles and says, 'Hello, how can I help you?'\n" },
+                 { 5, "fruit", "The vendor says, 'Please look at the sign for more information.'\n" }
+               }
+
+local talk = matches[2]
+
+if hq.debugging then hq.debug(matches[2]) end
+
+echo(f"You say, '{matches[2]}'\n")
+
+for i = 1, #dialog do
+  if dialog[i][1] == getPlayerRoom() and dialog[i][2] == talk then
+    echo(dialog[i][3])
+    cecho(hq.prompt)
+    return
+  end
+end
+
+echo("No one around responds to your words.\n")
+cecho(hq.prompt)</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^say (.+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Open</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+local args = matches[2]
+
+if args == "n" then args = "north" end
+if args == "s" then args = "south" end
+if args == "e" then args = "east" end
+if args == "w" then args = "west" end
+if args == "u" then args = "up" end
+if args == "d" then args = "down" end
+
+local doors = getDoors(getPlayerRoom())
+local exits = getRoomExits(getPlayerRoom())
+
+if table.contains(doors, string.cut(args, 1)) then
+  if doors[string.cut(args, 1)] == 3 then --door locked
+    echo("Door is locked.\n")
+    cecho(hq.prompt)
+    return
+  elseif doors[string.cut(args, 1)] == 2 then -- closed
+    echo("You open the door.\n")
+    cecho(hq.prompt)
+    setDoor(getPlayerRoom(), string.cut(args, 1), 1)
+    setDoor(exits[args], hq.reverseDirs[string.cut(args, 1)], 1)
+    return
+  elseif doors[string.cut(args, 1)] == 1 then -- open
+    echo("The door is already open.\n")
+    cecho(hq.prompt)
+    return
+  end
+end
+
+echo("You don't see that here.\n")
+cecho(hq.prompt)</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^open (.+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Close</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+local args = matches[2]
+
+if args == "n" then args = "north" end
+if args == "s" then args = "south" end
+if args == "e" then args = "east" end
+if args == "w" then args = "west" end
+if args == "u" then args = "up" end
+if args == "d" then args = "down" end
+
+local doors = getDoors(getPlayerRoom())
+local exits = getRoomExits(getPlayerRoom())
+
+if table.contains(doors, string.cut(args, 1)) then
+  if doors[string.cut(args, 1)] &gt; 1 then -- door closed, or locked
+    echo("Door is already closed.\n")
+    cecho(hq.prompt)
+    return
+  elseif doors[string.cut(args, 1)] == 1 then -- closed
+    echo("You close the door.\n")
+    cecho(hq.prompt)
+    setDoor(getPlayerRoom(), string.cut(args, 1), 2)
+    setDoor(exits[args], hq.reverseDirs[string.cut(args, 1)], 2)
+    return
+  end
+end
+
+echo("You don't see that here.\n")
+cecho(hq.prompt)</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^close (.+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Look Objects</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+local args = matches[3]
+
+-- Strip leading prepositions and articles for natural English input
+args = args:gsub("^at the ", "")
+args = args:gsub("^at an ", "")
+args = args:gsub("^at a ", "")
+args = args:gsub("^at ", "")
+args = args:gsub("^the ", "")
+args = args:gsub("^an ", "")
+args = args:gsub("^a ", "")
+
+-- Handle "look around" / "look room" as bare look
+if args == "around" or args == "room" then
+  cecho(f"&lt;cyan&gt;{getRoomName(getPlayerRoom())}&lt;r&gt;\n")
+  cecho(getRoomUserData(getPlayerRoom(), "description"))
+  echo("\n")
+  cecho(hq.prompt)
+  return
+end
+
+local mobiles, items = getRoomUserData(getPlayerRoom(), "mobiles"),
+                       getRoomUserData(getPlayerRoom(), "items")
+
+if mobiles:len() &gt; 0 then
+  mobiles = yajl.to_value(mobiles)
+  
+  if table.contains(mobiles, args) then 
+    cecho(mobiles[args])
+    cecho(hq.prompt)
+    return
+  end
+end
+
+if items:len() &gt; 0 then
+  items = yajl.to_value(items)
+  
+  if table.contains(items, args) then 
+    cecho(items[args])
+    cecho(hq.prompt)    
+    return
+  end
+end
+
+-- Try stripping spatial prepositions and retry lookup
+local stripped = args:gsub("^under ", "")
+stripped = stripped:gsub("^behind ", "")
+stripped = stripped:gsub("^inside ", "")
+stripped = stripped:gsub("^beneath ", "")
+stripped = stripped:gsub("^in ", "")
+stripped = stripped:gsub("^on ", "")
+if stripped ~= args then
+  if mobiles and type(mobiles) == "table" and table.contains(mobiles, stripped) then
+    cecho(mobiles[stripped])
+    cecho(hq.prompt)
+    return
+  end
+  if items and type(items) == "table" and table.contains(items, stripped) then
+    cecho(items[stripped])
+    cecho(hq.prompt)
+    return
+  end
+end
+
+echo("You don't see that here.\n")
+cecho(hq.prompt)</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^(l|look|examine) (.+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Look</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+local mobiles, items, onRoomEntry, onRoomHelp = getRoomUserData(getPlayerRoom(), "mobiles"),
+                                                getRoomUserData(getPlayerRoom(), "items"),
+                                                getRoomUserData(getPlayerRoom(), "onRoomEntry"),
+                                                getRoomUserData(getPlayerRoom(), "onRoomHelp")
+                                                
+cecho(f"&lt;cyan&gt;{getRoomName(getPlayerRoom())}&lt;r&gt;\n")
+cecho(getRoomUserData(getPlayerRoom(), "description"))
+echo("\n")
+
+cecho(hq.prompt)</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^(l|look)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Buy at Fruit Vendor</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+local item = matches[2]
+if item then
+  -- Strip leading articles for natural English input
+  item = item:gsub("^the ", "")
+  item = item:gsub("^some ", "")
+  item = item:gsub("^an ", "")
+  item = item:gsub("^a ", "")
+end
+
+if getPlayerRoom() == 5 and (item == "apple" or item == "apples" or item == "banana" or item == "bananas") then
+  if table.contains(hq.char.inv, "some silver coins") then
+    local fruit = string.gsub(item, "s", "")
+    echo("You give the vendor some silver coins.\n")
+    echo(f"The vendor gives you some {fruit}s.\n")
+    echo("The vendor says, 'Go give that to the Sheriff, and say hello for me.'\n")
+    echo("The vendor smiles at you.\n")
+    cecho(hq.prompt)
+    
+    table.insert(hq.char.inv, f"some {fruit}s")
+    table.remove(hq.char.inv, table.index_of(hq.char.inv, "some silver coins"))
+
+  setRoomUserData(5, "onRoomEntry", "The fruit vendor yells, 'Fresh fruit and vegetables for sale!'\n")
+  clearRoomUserDataItem(5, "onRoomHelp")
+
+  else
+    echo("The vendor says, 'You don't have enough coins.'\n")
+    cecho(hq.prompt)
+  end
+else
+  echo("There is nothing like that to buy here.\n")
+  cecho(hq.prompt)
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^buy(?: (.+))?$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Inventory</name>
+				<script>if hq.char.inv and #hq.char.inv &gt; 0 then
+  echo("You are carrying;\n")
+  for k, v in pairs(hq.char.inv) do
+    echo(f" - {v}\n")
+  end
+  cecho(hq.prompt)  
+else
+  echo("You aren't carrying anything.")
+  cecho(hq.prompt)
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^(i|inv|inventory)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Give</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+if getPlayerRoom() == 1 then
+  local fruit = ""
+  -- Handle generic terms by checking what fruit is in inventory
+  if matches[2] == "fruit" or matches[2] == "food" or matches[2] == "lunch" then
+    if table.contains(hq.char.inv, "some apples") then
+      fruit = "some apples"
+    elseif table.contains(hq.char.inv, "some bananas") then
+      fruit = "some bananas"
+    else
+      echo("You aren't carrying any food.\n")
+      cecho(hq.prompt)
+      return
+    end
+  elseif matches[2] == "apple" or matches[2] == "apples" then
+    fruit = "some apples"
+  elseif matches[2] == "banana" or matches[2] == "bananas" then
+    fruit = "some bananas"
+  end
+
+  if table.contains(hq.char.inv, fruit) then
+     echo(f"You give {fruit} to the Sheriff.\n")
+     echo("The Sheriff says, 'Ah, thank you so much, I'm starving.'\n")
+     echo(f"The Sheriff scoffs down {fruit}.\n")
+     table.remove(hq.char.inv, table.index_of(hq.char.inv, fruit))
+     clearRoomUserDataItem(1, "onRoomEntry")
+     echo("The Sheriff says, 'While you were gone the librarian reported she had lost her wedding ring, perhaps you could help her find it?'\n")
+     echo("The Sheriff says, 'You'll find her at the Library of course, marked with an 'L' on your map.\n")
+     cecho(hq.prompt)
+  else
+    echo("You aren't carrying that.")
+    if not hq.invHint then
+      hq.help("To see what items you are carrying use the command &lt;r&gt;&lt;b&gt;inventory&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;i&lt;r&gt;&lt;dark_sea_green&gt; for short.")
+      hq.invHint = true
+    end
+    cecho(hq.prompt)
+  end
+    
+elseif getPlayerRoom() == 6 and (matches[2] == "ring" or matches[2] == "wedding") then
+  if table.contains(hq.char.inv, "a wedding ring") then
+    clearRoomUserDataItem(6, "onRoomEntry")
+    clearRoomUserDataItem(6, "onRoomHelp")
+    echo(f"The librarian says, 'Oh, thank you so much {hq.char.name}!  I thought it was lost forever. Can you let the Sheriff know you've found it?'\n")
+    echo("The librarian wipes away a tear and returns to her work.\n")
+    cecho(hq.prompt)
+    table.remove(hq.char.inv, table.index_of(hq.char.inv, "a wedding ring"))     
+    hq.ringQuestComplete = true
+    setRoomUserData(6, "description", "Dusty tomes line towering shelves beneath a vaulted ceiling, where the hush of whispered study and the faint rustle of turning pages echo through the candlelit stillness.  A simple woven rug lies on the floor.  The librarian smiles as she sees you.\n")
+    setRoomUserData(6, "mobiles", yajl.to_string({ librarian = "The librarian smiles as she sees you.\n" }))       
+    setRoomUserData(1, "onRoomEntry", f"The Sheriff says, 'Congratulations on finding the wedding ring!  You're becoming quite useful around here {hq.char.name}, but alas I am out of jobs for now.'\n")
+    setRoomUserData(1, "onRoomHelp", "This ends the mini-quest for Mudlet.  You've learnt some MUD basics while helping out the citizens of Whitehaven.  Feel free to wander around town or use the &lt;r&gt;&lt;b&gt;quit&lt;r&gt;&lt;dark_sea_green&gt; command to finish up.")
+  else
+    echo("You aren't carrying that.\n")
+    cecho(hq.prompt)
+  end
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^give (?:the |some |an? )?(apple|apples|banana|bananas|ring|wedding|fruit|food|lunch)(?: (.+))?$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Get</name>
+				<script>if hq.state ~= "PLAYING" then return end
+
+if getPlayerRoom() == 6 and not hq.ringQuestRingFound then
+  table.insert(hq.char.inv, "a wedding ring")
+  echo("You get a wedding ring.\n")
+  hq.help("Remember you can check your inventory to see what you are carrying.\n")
+  cecho(hq.prompt)
+  hq.ringQuestRingFound = true
+  setRoomUserData(6, "description", "Dusty tomes line towering shelves beneath a vaulted ceiling, where the hush of whispered study and the faint rustle of turning pages echo through the candlelit stillness.  A simple woven rug lies on the floor.  The librarian waits patiently for you to give her the ring.\n")
+  setRoomUserData(6, "mobiles", yajl.to_string({ librarian = "The librarian waits patiently for you to give her the ring.\n" }))  
+  setRoomUserData(6, "items", yajl.to_string({ shelves = "You search the shelves for the ring, but fail to find anything.\n",
+                                               shelf = "You search the shelves for the ring, but fail to find anything.\n",
+                                               rug = "A simple woven rug lies on the floor.\n",
+                                               tomes = "Books, books, old and new.  Too many to search through.\n" }))
+     
+else
+  cecho("You don't see that here.\n")
+  cecho(hq.prompt)
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^(?:get|take|grab|pick up|pickup|collect) (?:the |a |an )?(?:wedding )?ring(?: .+)?$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Quit</name>
+				<script>hq.help("Thank you for playing.  You are now ready to step into a real MUD to expand on this knowledge further.  Mudlet provides a collection of high quality games for you to try out and plenty more can be found through an internet search.")
+hq.help("While this tutorial was quite basic, Mudlet can be very powerful and has some advanced features.  We recommend reading the introduction on our wiki - it is designed for players new to Mudlet and introduces some more advanced topics.\n")
+cechoLink("&lt;deep_sky_blue&gt;&lt;u&gt;http://wiki.mudlet.org/Introduction&lt;r&gt;\n", function() openWebPage("https://wiki.mudlet.org/w/Manual:Introduction") end, "Click to open link.", true)
+hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to return to the Mudlet start screen.\n")</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^quit$</regex>
+			</Alias>
+		</AliasGroup>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage>
+		<ScriptGroup isActive="yes" isFolder="yes">
+			<name>Mini Quest</name>
+			<packageName></packageName>
+			<script>uninstallPackage("generic_mapper")
+
+hq = hq or {}
+
+clearWindow()
+closeMapWidget()</script>
+			<eventHandlerList />
+			<Script isActive="yes" isFolder="no">
+				<name>Mini-Game Intro</name>
+				<packageName></packageName>
+				<script>hq.prompt = "&lt;yellow&gt;-&gt; &lt;r&gt;"
+
+function hq.parser(event, command)
+
+  hq.debug("Parsing command: " .. command)
+  
+  if hq.state == "GET_CHAR_NAME" then
+  
+    if string.len(command) == 0 then
+      echo("Your name cannot be blank.\n")
+      cecho(f"What is your name, Mudleteer?\n{hq.prompt}")
+      return
+    end
+    
+    hq.char = {}
+    hq.char.name = string.title(command)
+    
+    hq.state = "INTRODUCTION"
+  
+    echo(f"\nWelcome {hq.char.name}.  You have passed the Adventurer's Guild test and set out to stake your claim as a hero.\n")
+    tempTimer(2, function() echo("\nYou pass through mountain high and valley low, braving rain and the bitter, cold snow.\n") end)
+    tempTimer(4, function() echo("\nAs you wander into a small village you notice a sign tacked to the gates.\n") end)
+    tempTimer(6, function() echo("\n\"Assistant Wanted for the Hamlet of Whitehaven.  Apply to Sheriff.\"\n") end)
+    tempTimer(8, function() echo("\nAh, your first true test as a new adventurer! You step through the gates to seek out the sheriff.\n") end)
+    tempTimer(12, function() echo("\nAs luck would have it you find him immediately and introduce yourself.\n") end)
+    tempTimer(14, function() echo(f("\nThe Sheriff says, 'Well met {hq.char.name}.  I'm looking for an assistant.  Think you can handle the job?'\n")) end)
+    tempTimer(16, function() echo("\nBefore you can respond he shoves a map into your hands.\n") end)
+    tempTimer(20, function() echo("\nThe Sheriff says, 'Here is a map of the village to help you get aquainted.  Welcome aboard!'\n") end)
+ 
+    tempTimer(22, hq.initMap)
+    tempTimer(22, hq.showLayout)
+    tempTimer(22, function() hq.state = "PLAYING" end)
+    
+    tempTimer(24, function() hq.help("Mudlet provides a built-in map to help you explore.  Some games provide maps to help you learn, some don't to encourage exploration but you can always make your own.\n") end)
+    tempTimer(25, function() echo("The Sheriff says, 'As your first task I need you to go buy me some lunch from the fruit vendor to the north.  It is marked with a 'F' on your map.'\n") end)
+    tempTimer(25, function() 
+      echo("The Sheriff gives you some coins.\n")
+      hq.char.inv = {}
+      table.insert(hq.char.inv, "some silver coins")
+    end)
+    
+    tempTimer(26, function() 
+      hq.help("MUDs are divided into different 'rooms' where each represents a location on the map (the red squares).  It could be a house, a section of road, or part of a forest.  MUDs allow movement betweens these rooms by typing commands like; &lt;r&gt;&lt;b&gt;north&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;west&lt;r&gt;&lt;dark_sea_green&gt;, &lt;r&gt;&lt;b&gt;in&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;out&lt;r&gt;&lt;dark_sea_green&gt;.  See if you can navigate to the fruit vendor ('F') using the commands and following the map.\n\nHINT: it is two rooms north of your current location which is marked with the red circle.")
+      cecho(hq.prompt)
+    end)
+
+    
+  end
+  
+  if hq.state == "WALKING" then
+    denyCurrentSend()
+    echo("You are already walking.\n")
+  end
+  
+  if hq.state == "PLAYING" then
+    if string.len(command) == 0 then
+      echo("You need to type in a command before pressing enter.\n")
+      cecho(hq.prompt)
+    else
+      local suggestion = hq.suggestCommand(command)
+      if suggestion == "COMMANDS_LIST" then
+        hq.showCommands()
+        cecho(hq.prompt)
+      elseif suggestion then
+        hq.help(suggestion)
+        cecho(hq.prompt)
+      else
+        echo("I don't understand. Type help for available commands.\n")
+        cecho(hq.prompt)
+      end
+    end
+    
+    return
+  end
+
+end
+
+registerNamedEventHandler("mudlet-tutorial", "parser", "sysDataSendRequest", hq.parser, false)</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>Misc Functions</name>
+				<packageName></packageName>
+				<script>function hq.debug(str)
+
+  if hq.debugMode == true then
+    cecho(f("\n&lt;cyan&gt;DEBUG: {str}&lt;reset&gt;\n"))
+  end
+
+end
+
+function hq.help(str)
+  cecho(f"\n&lt;green&gt;[ HELP ] &lt;dark_sea_green&gt;{str}&lt;r&gt;\n")
+end
+
+function hq.showCommands()
+  cecho("\n&lt;green&gt;[ HELP ] &lt;dark_sea_green&gt;Available commands:&lt;r&gt;\n")
+  echo("  north, south, east, west, up, down  - Move (or n, s, e, w, u, d)\n")
+  echo("  look                                - Look at your surroundings\n")
+  echo("  look/examine &lt;object&gt;               - Examine something or someone\n")
+  echo("  say &lt;message&gt;                       - Say something\n")
+  echo("  open &lt;direction&gt;                    - Open a door\n")
+  echo("  close &lt;direction&gt;                   - Close a door\n")
+  echo("  get &lt;item&gt;                          - Pick up an item\n")
+  echo("  give &lt;item&gt;                         - Give an item to someone\n")
+  echo("  buy &lt;item&gt;                          - Buy an item\n")
+  echo("  inventory                           - Check what you're carrying (or i)\n")
+  echo("  quit                                - End the tutorial\n")
+end
+
+function hq.suggestCommand(command)
+  local cmd = command:lower():match("^%s*(.-)%s*$")
+  if not cmd or cmd == "" then return nil end
+
+  -- Movement verbs: "go north", "walk east", etc.
+  local dir = cmd:match("^go%s+(.+)$")
+          or cmd:match("^walk%s+(.+)$")
+          or cmd:match("^move%s+(.+)$")
+          or cmd:match("^head%s+(.+)$")
+          or cmd:match("^run%s+(.+)$")
+          or cmd:match("^travel%s+(.+)$")
+  if dir then
+    local validDirs = {n=true, north=true, s=true, south=true, e=true, east=true,
+                       w=true, west=true, u=true, up=true, d=true, down=true}
+    dir = dir:gsub("^the ", "")
+    if validDirs[dir] then
+      return "In MUDs, you move by typing just the direction. Try: &lt;r&gt;&lt;b&gt;" .. dir .. "&lt;r&gt;"
+    end
+  end
+
+  -- Talk/speak/tell/ask/greet + target
+  if cmd:match("^talk%s+to%s+") or cmd:match("^speak%s+to%s+")
+     or cmd:match("^speak%s+with%s+") or cmd:match("^tell%s+")
+     or cmd:match("^ask%s+") or cmd:match("^greet%s+")
+     or cmd:match("^chat%s+to%s+") or cmd:match("^chat%s+with%s+") then
+    return "To talk, use: &lt;r&gt;&lt;b&gt;say &lt;message&gt;&lt;r&gt;&lt;dark_sea_green&gt;  (e.g., &lt;r&gt;&lt;b&gt;say hello&lt;r&gt;&lt;dark_sea_green&gt;)"
+  end
+
+  -- Bare talk/speak/chat verbs with no argument
+  if cmd == "talk" or cmd == "speak" or cmd == "chat" or cmd == "say" then
+    return "Try: &lt;r&gt;&lt;b&gt;say &lt;message&gt;&lt;r&gt;&lt;dark_sea_green&gt;  (e.g., &lt;r&gt;&lt;b&gt;say hello&lt;r&gt;&lt;dark_sea_green&gt;)"
+  end
+
+  -- Bare greetings
+  if cmd == "hello" or cmd == "hi" or cmd == "hey"
+     or cmd == "howdy" or cmd == "greetings" then
+    return "To speak in MUDs, use the say command. Try: &lt;r&gt;&lt;b&gt;say hello&lt;r&gt;"
+  end
+
+  -- Read/search/inspect + object -> look
+  local obj = cmd:match("^read%s+(.+)$")
+          or cmd:match("^search%s+(.+)$")
+          or cmd:match("^inspect%s+(.+)$")
+          or cmd:match("^check%s+(.+)$")
+          or cmd:match("^study%s+(.+)$")
+          or cmd:match("^observe%s+(.+)$")
+  if obj then
+    obj = obj:gsub("^the ", ""):gsub("^a ", ""):gsub("^an ", "")
+    return "Try: &lt;r&gt;&lt;b&gt;look " .. obj .. "&lt;r&gt;"
+  end
+
+  -- Bare search (no object, common in library)
+  if cmd == "search" then
+    return "Try: &lt;r&gt;&lt;b&gt;look&lt;r&gt;&lt;dark_sea_green&gt;  (or &lt;r&gt;&lt;b&gt;look &lt;object&gt;&lt;r&gt;&lt;dark_sea_green&gt; to examine something specific)"
+  end
+
+  -- Purchase/order -> buy
+  local buyItem = cmd:match("^purchase%s+(.+)$")
+              or cmd:match("^order%s+(.+)$")
+  if buyItem then
+    buyItem = buyItem:gsub("^the ", ""):gsub("^some ", ""):gsub("^a ", ""):gsub("^an ", "")
+    return "Try: &lt;r&gt;&lt;b&gt;buy " .. buyItem .. "&lt;r&gt;"
+  end
+
+  -- Hand/offer/pass -> give
+  local giveItem = cmd:match("^hand%s+(.+)$")
+               or cmd:match("^offer%s+(.+)$")
+               or cmd:match("^pass%s+(.+)$")
+               or cmd:match("^return%s+(.+)$")
+  if giveItem then
+    giveItem = giveItem:gsub("^the ", ""):gsub("^a ", ""):gsub("^an ", "")
+    return "Try: &lt;r&gt;&lt;b&gt;give " .. giveItem .. "&lt;r&gt;"
+  end
+
+  -- Unlock/knock -> open
+  local door = cmd:match("^unlock%s+(.+)$")
+           or cmd:match("^knock%s+on%s+(.+)$")
+           or cmd:match("^knock%s+(.+)$")
+  if door then
+    door = door:gsub("^the ", ""):gsub("door", ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if door ~= "" then
+      return "Try: &lt;r&gt;&lt;b&gt;open " .. door .. "&lt;r&gt;"
+    else
+      return "Try: &lt;r&gt;&lt;b&gt;open &lt;direction&gt;&lt;r&gt;&lt;dark_sea_green&gt;  (e.g., &lt;r&gt;&lt;b&gt;open north&lt;r&gt;&lt;dark_sea_green&gt;)"
+    end
+  end
+
+  -- Inventory synonyms
+  if cmd == "items" or cmd == "bag" or cmd == "bags"
+     or cmd == "equipment" or cmd == "eq" or cmd == "backpack"
+     or cmd == "pockets" or cmd == "carrying" or cmd == "stuff" then
+    return "Try: &lt;r&gt;&lt;b&gt;inventory&lt;r&gt;&lt;dark_sea_green&gt;  (or just: &lt;r&gt;&lt;b&gt;i&lt;r&gt;&lt;dark_sea_green&gt;)"
+  end
+
+  -- Lift/flip/pull/push/turn + object -> look
+  local moveObj = cmd:match("^lift%s+(.+)$")
+              or cmd:match("^flip%s+(.+)$")
+              or cmd:match("^pull%s+(.+)$")
+              or cmd:match("^push%s+(.+)$")
+              or cmd:match("^turn%s+(.+)$")
+              or cmd:match("^pick up%s+(.+)$")
+              or cmd:match("^pickup%s+(.+)$")
+  if moveObj then
+    moveObj = moveObj:gsub("^the ", ""):gsub("^a ", ""):gsub("^an ", "")
+    return "Try: &lt;r&gt;&lt;b&gt;look " .. moveObj .. "&lt;r&gt;"
+  end
+
+  -- Help/commands
+  if cmd == "help" or cmd == "commands" or cmd == "?"
+     or cmd == "hint" or cmd == "hints" or cmd == "info"
+     or cmd:match("^help%s") then
+    return "COMMANDS_LIST"
+  end
+
+  -- Exit/leave synonyms
+  if cmd == "exit" or cmd == "leave" or cmd == "q"
+     or cmd == "logout" or cmd == "logoff" or cmd == "bye"
+     or cmd == "end" or cmd == "stop" or cmd == "finish" then
+    return "Try: &lt;r&gt;&lt;b&gt;quit&lt;r&gt;"
+  end
+
+  -- Common MUD verbs not available in tutorial
+  if cmd:match("^kill") or cmd:match("^attack") or cmd:match("^fight")
+     or cmd:match("^hit ") or cmd:match("^cast") or cmd:match("^wield")
+     or cmd:match("^wear") or cmd:match("^remove%s")
+     or cmd:match("^eat") or cmd:match("^drink")
+     or cmd:match("^drop") or cmd:match("^throw")
+     or cmd:match("^sleep") or cmd:match("^wake") or cmd:match("^rest$")
+     or cmd:match("^sit$") or cmd:match("^stand$")
+     or cmd == "score" or cmd == "who" or cmd == "map"
+     or cmd == "stats" or cmd == "status"
+     or cmd:match("^whisper") or cmd:match("^shout") or cmd:match("^yell") then
+    return "That command isn't available in this tutorial. Type &lt;r&gt;&lt;b&gt;help&lt;r&gt;&lt;dark_sea_green&gt; for available commands."
+  end
+
+  return nil
+end</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>GUI Tutorial</name>
+				<packageName></packageName>
+				<script>hq.fgColor = "white"
+hq.bgColor = "grey"
+hq.fontSize = 14
+hq.labelCSS = [[ margin: 10px; background-color: black; border: 5px solid white; ]]
+
+function hq.guiTutorialStart()
+
+  Geyser.hideAll()  
+
+  hq.mainMenuContainer = Geyser.Container:new({
+    name = "hq.mainMenuContainer",
+    x = "25%", y = "25%",
+    width = "50%", height = "50%"
+  })
+
+  hq.mainMenuLabel = Geyser.Label:new({
+    name = "hq.mainMenuLabel",
+    x = "0%", y = "0%",
+    width = "100%", height = "100%",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    color = hq.bgColor,
+    message = [[&lt;center&gt;
+    &lt;p&gt;Welcome Adventurer!  This is the Mudlet Tutorial and mini-quest.&lt;/p&gt;
+    
+    This tutorial will coach you through learning how to play&lt;br&gt;
+    MUDs (Multi-User Dungeons) while exploring some of Mudlet's&lt;br&gt;
+    basic features.&lt;br&gt;
+    
+    &lt;p&gt;Click next to continue.&lt;p&gt;
+    &lt;p&gt;(next)&lt;/p&gt;&lt;/center&gt;]]
+    
+  }, hq.mainMenuContainer)
+  hq.mainMenuLabel:setClickCallback(hq.guiTutorialStep1)
+  hq.mainMenuLabel:setStyleSheet(hq.labelCSS)
+  
+  tempTimer(0.2, function() clearWindow() end)
+
+end
+
+function hq.guiTutorialStep1()
+  
+  Geyser.hideAll()
+    
+  hq.guiStep1Container = Geyser.Container:new({
+    name = "hq.guiStep1Container",
+    x = "0%", y = "0%",
+    width = "100%", height = "100%"
+  })
+  
+  hq.guiStep1Label = Geyser.Label:new({
+    name = "hq.guiStep1Label",
+    x = "25%", y = "25%",
+    width = "50%", height = "50%",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    color = hq.bgColor,
+    message = [[
+    &lt;p&gt;This large area is called the 'main window'.&lt;/p&gt;
+    It displays text coming from the game such as;&lt;br&gt;
+    - your location in the game world,&lt;br&gt;
+    - chat messages from other players,&lt;br&gt;
+    - progress and score,&lt;br&gt;
+    - and lots more depending on the game.&lt;br&gt;
+    
+    &lt;p&gt;(next)&lt;/p&gt;]]
+  }, hq.guiStep1Container) 
+  hq.guiStep1Label:setClickCallback(hq.guiTutorialStep2)
+  hq.guiStep1Label:setStyleSheet(hq.labelCSS)
+  
+  tempTimer(1, function() hq.guiStep1Container:flash(0.2) end)
+  tempTimer(1.5, function() hq.guiStep1Container:flash(0.2) end)
+  tempTimer(2, function() hq.guiStep1Container:flash(0.2) end)
+  
+  tempTimer(3, function() echo("This is the main window text.\n") end)
+  tempTimer(4, function() echo("Anything coming from the game will show up here.\n") end)
+  tempTimer(5, function() cecho("&lt;cyan&gt;It may also show in colour if your game supports this :)&lt;r&gt;\n") end)
+--  tempTimer(6, function() echo("New game text will display on the next line and once it reaches the bottom\n") end)
+--  tempTimer(7, function() echo("it will scroll up - just like a live text document.\n") end)
+--  tempTimer(8, function() echo("You can use your mouse to scroll up and down to read anything you missed.\n") end)
+
+end
+
+function hq.guiTutorialStep2()
+
+  Geyser.hideAll()
+    
+  hq.guiStep2Container = Geyser.Container:new({
+    name = "hq.guiStep2Container",
+    x = "0%", y = "0%",
+    width = "100%", height = "100%"
+  })  
+  
+  hq.guiStep2Label = Geyser.Label:new({
+    name = "hq.guiStep2Label",
+    x = "5%", y = "80%",
+    width = "45%", height = "20%",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    color = hq.bgColor,
+    message = [[
+    &lt;p&gt;The area below is called the 'command line'.&lt;/p&gt;
+    &lt;p&gt;It is used for sending commands via your keyboard&lt;br&gt;
+    to the game to control your character. (next)&lt;/p&gt;]]
+  }, hq.guiStep2Container)  
+  hq.guiStep2Label:setClickCallback(hq.guiTutorialStep3)
+  hq.guiStep2Label:setStyleSheet(hq.labelCSS)
+  
+  tempTimer(1, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  tempTimer(1.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  tempTimer(1.5, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  tempTimer(1.7, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  tempTimer(2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  tempTimer(2.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+
+end
+
+function hq.guiTutorialStep3()
+
+  Geyser.hideAll()  
+  
+  hq.guiStep3Container = Geyser.Container:new({
+    name = "hq.guiStep3Container",
+    x = "0%", y = "0%",
+    width = "100%", height = "100%"
+  })  
+  
+  hq.guiStep3Label = Geyser.Label:new({
+    name = "hq.guiStep3Label",
+    x = "50%", y = "80%",
+    width = "45%", height = "20%",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    color = hq.bgColor,
+    message = [[
+    &lt;p&gt;The below buttons are used for searching,&lt;br&gt;
+    showing of timestamps and logging facilities.&lt;/p&gt;
+    
+    &lt;p&gt;We can learn more about them later.  (next)&lt;/p&gt;]]
+  }, hq.guiStep3Container)  
+  hq.guiStep3Label:setClickCallback(hq.guiTutorialStep4)
+  hq.guiStep3Label:setStyleSheet(f"{hq.labelCSS} qproperty-alignment: AlignRight;")  
+
+end
+
+function hq.guiTutorialStep4()
+
+  Geyser.hideAll()
+    
+  hq.guiStep4Container = Geyser.Container:new({
+    name = "hq.guiStep4Container",
+    x = "0%", y = "0%",
+    width = "100%", height = "100%"
+  })  
+  
+  hq.guiStep4Label = Geyser.Label:new({
+    name = "hq.guiStep4Label",
+    x = "5%", y = "0%",
+    width = "45%", height = "20%",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    color = hq.bgColor,
+    message = [[&lt;p&gt;
+    The above menu bar contains options to connect and&lt;br&gt;
+    disconnect from your game, preferences and other tools.&lt;/p&gt;
+    
+    &lt;p&gt;We can learn more about them later.  (next)&lt;/p&gt;]]
+  }, hq.guiStep4Container)  
+  hq.guiStep4Label:setClickCallback(hq.guiTutorialStepFinal)
+  hq.guiStep4Label:setStyleSheet(hq.labelCSS)
+
+end
+
+function hq.guiTutorialStepFinal()
+
+  Geyser.hideAll()
+  clearWindow()
+    
+  hq.guiStepFinalContainer = Geyser.Container:new({
+    name = "hq.guiStepFinalContainer",
+    x = "25%", y = "15%",
+    width = "50%", height = "70%"
+  })  
+  
+  hq.guiStepFinalLabel = Geyser.Label:new({
+    name = "hq.guiStepFinalLabel",
+    x = "0%", y = "0%",
+    width = "100%", height = "100%",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    color = hq.bgColor,
+    message = [[&lt;center&gt;
+    &lt;p&gt;That covers the basics of Mudlet's screen.  More in depth&lt;br&gt;
+    information can be found on the wiki at https://wiki.mudlet.org&lt;/p&gt;
+    &lt;p&gt;Let's move on to the fun stuff, playing a MUD!&lt;/p&gt;
+    
+    &lt;p&gt;During this tutorial you will play the role of a young&lt;br&gt;
+    adventurer who has just arrived in the Halmet of Whitehaven where&lt;br&gt;
+    the Sheriff is looking for help, hopefully you can assist him.&lt;/p&gt;
+    
+    &lt;p&gt;You will need to complete his requests to gain experience&lt;br&gt;
+    and be rewarded with fame and respect from the townsfolk.&lt;/p&gt;
+    
+    &lt;p&gt;You will learn how to interact with MUDs during this&lt;br&gt;
+    simulation by waiting for the game to send you information&lt;br&gt;
+    on the main window and answering with commands from the&lt;br&gt;
+    command line.  Good luck!&lt;/p&gt;
+    
+    &lt;p&gt;Now follow along in the main window.  (next)&lt;/p&gt;&lt;/center&gt;]]
+  }, hq.guiStepFinalContainer)  
+  hq.guiStepFinalLabel:setClickCallback(hq.newGameScreen)
+  hq.guiStepFinalLabel:setStyleSheet(hq.labelCSS)
+
+end
+
+function hq.newGameScreen()
+
+  Geyser.hideAll()  
+  clearWindow()
+  closeMapWidget()
+  deleteMap()
+  
+  hq.state = "GET_CHAR_NAME"
+  
+  echo("Welcome to The Mudlet MUD Tutorial!\n\n")
+  
+  hq.help("Information to help you learn will be displayed in green.")
+  hq.help("Game text will appear as white, just like the question below asking for your name.")
+  hq.help("Most games will have some sort of prompt to let you know it is ready for your instructions.  In this simulation we will use the prompt &lt;yellow&gt;-&gt;&lt;r&gt;")
+  hq.help("Answer the following question on the command line and press enter.\n\n")
+  
+  cecho(f"What is your name, Mudleteer?\n{hq.prompt}")
+  
+end</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>Set up Map</name>
+				<packageName></packageName>
+				<script>hq.reverseDirs = { ["n"] = "s", 
+                   ["s"] = "n",
+                   ["e"] = "w",
+                   ["w"] = "e", 
+                   ["u"] = "d",
+                   ["d"] = "u" }
+
+function doSpeedWalk()
+
+  echo("You point to your map but it fails to magically transport you anywhere.\n")
+  
+end
+
+function hq.initMapperWindow()
+
+  hq.mapperWindow = Adjustable.Container:new({
+    name = "hq.mapperWindow",
+    x = "65%", y = "5%",
+    width = "30%", height = "40%",
+    --buttonFontSize = 12,
+    --buttonsize = 20,
+    titleText = "Map",
+    titleTxtColor = "white",
+    padding = 10
+  })
+  
+  hq.mapper = Geyser.Mapper:new({
+    name = "hq.mapper",
+    x = 0, y = 0,
+    width = "100%", height = "100%"
+  }, hq.mapperWindow)
+
+  disableMapInfo("Short")
+  disableMapInfo("Full")
+  enableMapInfo("None")
+  
+end
+
+function hq.initMap()
+
+  --hq.initMapperWindow()
+  hq.mapperWindow:show()
+  --openMapWidget()
+  
+  -- create map of the village
+  hq.initVillage()  
+  hq.drawMapHint()
+    
+end
+
+function hq.drawMapHint()
+
+  hq.mapHintContainer = Geyser.Container:new({
+    name = "hq.mapHintContainer",
+    x = "25%", y = "25%",
+    width = "50%", height = "50%"
+  })
+
+  hq.mapHintLabel = Geyser.Label:new({
+    name = "hq.mapHintLabel",
+    x = "0%", y = "0%",
+    width = "100%", height = "100%",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    color = hq.bgColor,
+    message = [[&lt;center&gt;
+    &lt;p&gt;The map window is shown in the upper right corner.&lt;/p&gt;
+    
+    &lt;p&gt;Like other windows it can be moved and resized by&lt;br&gt;
+    mousing over the edges.&lt;br&gt;
+    Click and hold inside the map window to pan.&lt;br&gt;
+    The mouse wheel is used to zoom in and out.&lt;/p&gt;
+    
+    &lt;p&gt;(next)&lt;/p&gt;&lt;/center&gt;]]
+    
+  }, hq.mapHintContainer)
+  hq.mapHintLabel:setClickCallback(function() hq.mapHintContainer:hide() end)
+  hq.mapHintLabel:setStyleSheet(hq.labelCSS)
+  tempTimer(1, function() hq.mapperWindow:flash(0.2) end)
+  tempTimer(1.5, function() hq.mapperWindow:flash(0.2) end)
+  tempTimer(2, function() hq.mapperWindow:flash(0.2) end)
+
+end
+
+function hq.initVillage()
+
+  deleteMap()
+
+  local hamletAreaID = addAreaName("Whitehaven Hamlet") or 1
+  
+  hq.debug("new area ID = " .. hamletAreaID)
+  
+  hq.addRoom("Inside the Gates of Whitehaven", 1, hamletAreaID, 0, 0, 0)
+  setRoomUserData(1, "description", "You stand beside the weathered gates of a modest town, where dusty roads meet wary eyes and quiet promise.  The Sheriff stands nearby.\n")
+
+  hq.addRoom("Outside the Tavern", 2, hamletAreaID, -1, 0, 0)
+  setRoomUserData(2, "description", "Laughter and the clink of mugs spill from the tavern’s heavy wooden door, while the scent of ale and roasted meat wafts into the lantern-lit street.")
+  hq.addRoom("Outside the Fruit &amp; Vegetable Shoppe", 3, hamletAreaID, 0, 1, 0)
+  setRoomUserData(3, "description", "The scent of ripe produce drifts from the open-air shoppe to the north, where crates of colorful fruits and vegetables spill onto the cobbled street in cheerful disarray.\n")
+  
+  hq.addRoom("Outside The Library", 4, hamletAreaID, -1, 1, 0)
+  setRoomUserData(4, "description", "Tall stone columns frame the entrance to the quiet library, where the scent of old parchment drifts through the air and a carved sign creaks gently in the breeze.\n")
+
+  hq.addRoom("The Fruit &amp; Vegetable Shoppe", 5, hamletAreaID, 0, 2, 0, "F")
+  setRoomUserData(5, "description", "Wooden shelves brim with vibrant produce, their earthy scents mingling in the cozy air as a cheerful vendor chats with passersby beneath hanging bundles of herbs.  There is a small sign here.\n")
+  
+  hq.addRoom("The Library", 6, hamletAreaID, -1, 2, 0, "L")
+  setRoomUserData(6, "description", "Dusty tomes line towering shelves beneath a vaulted ceiling, where the hush of whispered study and the faint rustle of turning pages echo through the candlelit stillness.  A simple woven rug lies on the floor.  The librarian is here searching frantically for something.\n")
+  
+  hq.addRoom("Outside The Inn", 7, hamletAreaID, -2, 1, 0)
+  setRoomUserData(7, "description", "A flickering lantern casts a warm glow over the inn’s timbered facade, where weary travelers pause beneath the signboard swinging gently in the evening breeze.")
+  
+  hq.addRoom("The Tavern", 8, hamletAreaID, -1, -1, 0, "T")
+  setRoomUserData(8, "description", "The tavern hums with warmth and revelry, its smoky air thick with laughter, clinking mugs, and the scent of spiced stew simmering over the hearth.")
+  
+  hq.addRoom("The Inn", 9, hamletAreaID, -2, 2, 0, "I")
+  setRoomUserData(9, "description", "Soft candlelight flickers across polished wood and worn rugs, as quiet conversation and the scent of fresh bread fill the air of this welcoming refuge for weary travelers.")
+  
+  hq.addRoom("A Road in the Halmet", 10, hamletAreaID, -2, 0, 0)
+  setRoomUserData(10, "description", "A narrow dirt road winds between humble cottages and overgrown gardens, where chickens peck at the dust and the scent of woodsmoke lingers in the quiet air.")
+  
+  hq.addRoom("A Road in the Halmet", 12, hamletAreaID, -3, 0, 0)
+  setRoomUserData(12, "description", "A modest wooden door stands beneath a sloped roof, flanked by flowerpots and a worn path that hints at years of quiet comings and goings.")
+  
+  hq.addRoom("Inside a House", 13, hamletAreaID, -3, -1, 0)
+  setRoomUserData(13, "description", "The cozy interior is filled with the scent of hearthfire and aged wood, where simple furnishings and personal trinkets speak of quiet lives and long-forgotten stories.")
+ 
+  hq.linkRoom(1, 2, "w")
+  hq.linkRoom(1, 3, "n")
+  hq.linkRoom(3, 4, "w")
+  hq.linkRoom(3, 5, "n")
+  hq.linkRoom(4, 6, "n", true)
+  hq.linkRoom(4, 7, "w")
+  hq.linkRoom(2, 8, "s", true)
+  hq.linkRoom(7, 9, "n", true)
+  hq.linkRoom(2, 10, "w")
+  hq.linkRoom(10, 12, "w")
+  hq.linkRoom(12, 13, "s", true, true)
+  
+  
+  -- the sheriff
+  setRoomUserData(1, "mobiles", yajl.to_string({ sheriff = "The Sheriff stands tall and proud, looking over the village of Whitehaven.\n" }))
+  setRoomUserData(1, "onRoomEntry", "The Sheriff says, 'Did you find me something for lunch?'\n")
+
+  -- the fruit vendor  
+  setRoomUserData(5, "mobiles", yajl.to_string({ vendor = "A vendor stands here waiting patiently to sell you fruit.\n" }))
+  setRoomUserData(5, "items", yajl.to_string({ sign = "Apples - 5 silver\nBananas - 10 silver\nTo purchase an item simply type &lt;b&gt;buy apple&lt;r&gt; or &lt;b&gt;buy banana&lt;r&gt;\n" }))
+  setRoomUserData(5, "onRoomEntry", "The fruit vendor says, 'Fresh fruit and vegetables for sale.'\nThe fruit vendor says, 'Oh, you must be new in town.  Let me guess; the Sheriff forgot his lunch again?'\nThe vendor points to the sign.\n")
+  setRoomUserData(5, "onRoomHelp", "MUDs allow interaction with the game world through various commands using verbs like &lt;r&gt;&lt;b&gt;look&lt;r&gt;&lt;dark_sea_green&gt;, &lt;r&gt;&lt;b&gt;say&lt;r&gt;&lt;dark_sea_green&gt;, &lt;r&gt;&lt;b&gt;buy&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;give&lt;r&gt;&lt;dark_sea_green&gt;.\nHINT: Try looking at the sign and the vendor.\n")
+  setRoomUserData(5, "onRoomExit", "The fruit vendor says, 'See you next time.'\n")
+  
+  -- the librarian
+  setRoomUserData(6, "mobiles", yajl.to_string({ librarian = "The librarian looks to be in a frantic state, searching high and low for something.\n" }))
+  setRoomUserData(6, "items", yajl.to_string({ shelves = "You search the shelves for the ring, but fail to find anything.\n",
+                                               shelf = "You search the shelves for the ring, but fail to find anything.\n",
+                                               rug = "You lift the rug and peer underneath.  Huzzah!  You found the wedding ring!\n",
+                                               tomes = "Books, books, old and new.  Too many to search through.\n" }))
+  setRoomUserData(6, "onRoomEntry", "The librarian says, 'Oh, please you must help me.  I've lost my wedding ring!  Can you help me find it by taking a look around?'\n")
+  setRoomUserData(6, "onRoomHelp",  "HINT: Search the room using the look command on various objects.  If you can find it use the &lt;r&gt;&lt;b&gt;get&lt;r&gt;&lt;dark_sea_green&gt; command to pick it up.\n")
+  
+  setMapZoom(7)
+  centerview(1) 
+
+end
+
+function hq.addRoom(name, vnum, area, x, y, z, char)
+
+  addRoom(vnum)
+  setRoomName(vnum, name)
+  setRoomArea(vnum, area)
+  setRoomCoordinates(vnum, x, y, z)
+  
+  if char then setRoomChar(vnum, char) end
+  
+end
+
+function hq.linkRoom(source, destination, direction, door, locked)
+
+  setExit(source, destination, direction)
+  setExit(destination, source, hq.reverseDirs[direction])
+  
+  if door then 
+    if locked then 
+      setDoor(source, direction, 3)
+      setDoor(destination, hq.reverseDirs[direction], 3)
+    else
+      setDoor(source, direction, 2)
+      setDoor(destination, hq.reverseDirs[direction], 2)
+    end
+  end
+  
+end</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>Room Scripts</name>
+				<packageName></packageName>
+				<script>function hq.onRoomEntry()
+
+  local mobiles, items, onRoomEntry, onRoomHelp = getRoomUserData(getPlayerRoom(), "mobiles"),
+                                                  getRoomUserData(getPlayerRoom(), "items"),
+                                                  getRoomUserData(getPlayerRoom(), "onRoomEntry"),
+                                                  getRoomUserData(getPlayerRoom(), "onRoomHelp")
+                                                  
+  cecho(f"&lt;cyan&gt;{getRoomName(getPlayerRoom())}&lt;r&gt;\n")
+  cecho(getRoomUserData(getPlayerRoom(), "description"))
+  echo("\n")
+
+  if string.len(onRoomEntry) &gt; 0 then
+    cecho(onRoomEntry)
+  end
+  
+  if string.len(onRoomHelp) &gt; 0 then
+    hq.help(onRoomHelp)
+  end
+  
+end
+
+function hq.onRoomExit()
+
+  local onRoomExit = getRoomUserData(getPlayerRoom(), "onRoomExit")
+
+  if string.len(onRoomExit) &gt; 0 then
+    cecho(onRoomExit)
+  end
+  
+end
+</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>Init</name>
+				<packageName></packageName>
+				<script>function hq.hideLayout()
+  hq.mapperWindow:hide()
+end
+
+function hq.showLayout()
+  hq.mapperWindow:show()
+end 
+
+local function beginTutorial()
+  hq.initMapperWindow()
+  hq.guiTutorialStart()
+  hq.hideLayout()
+  clearWindow()
+end
+
+-- when Mudlet's UI tour is about to run, hold the lesson until it finishes
+if mudlet and mudlet.uiTourPending then
+  registerAnonymousEventHandler("sysUiTourFinished", beginTutorial, true)
+else
+  tempTimer(0, beginTutorial)
+end</script>
+				<eventHandlerList />
+			</Script>
+		</ScriptGroup>
+	</ScriptPackage>
+	<KeyPackage>
+		<Key isActive="yes" isFolder="no">
+			<name>Reset Profile</name>
+			<packageName></packageName>
+			<script>Geyser.hideAll()
+resetProfile()</script>
+			<command></command>
+			<keyCode>16777275</keyCode>
+			<keyModifier>0</keyModifier>
+		</Key>
+	</KeyPackage>
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

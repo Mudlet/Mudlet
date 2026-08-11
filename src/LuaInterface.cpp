@@ -49,6 +49,8 @@ LuaInterface::LuaInterface(lua_State* L)
     lua_atpanic(L, &onPanic);
 }
 
+// Does not release lrefs: a profile reset closes the lua_State before this
+// object is replaced, so unref'ing here would write into a freed state.
 LuaInterface::~LuaInterface() = default;
 
 int LuaInterface::onPanic(lua_State* L)
@@ -66,6 +68,19 @@ int LuaInterface::onPanic(lua_State* L)
 VarUnit* LuaInterface::getVarUnit()
 {
     return varUnit.data();
+}
+
+lua_State* LuaInterface::getState() const
+{
+    return mL;
+}
+
+void LuaInterface::releaseVariableReferences()
+{
+    for (const int ref : std::as_const(lrefs)) {
+        luaL_unref(mL, LUA_REGISTRYINDEX, ref);
+    }
+    lrefs.clear();
 }
 
 QStringList LuaInterface::varName(TVar* var)
@@ -118,7 +133,7 @@ bool LuaInterface::loadKey(lua_State* L, TVar* var)
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
             if (keyType == LUA_TNUMBER) {
-                lua_pushnumber(L, var->getName().toInt());
+                lua_pushnumber(L, var->getName().toDouble());
             } else if (keyType == LUA_TTABLE) {
             } else if (keyType == LUA_TBOOLEAN) {
                 lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0);
@@ -363,7 +378,7 @@ bool LuaInterface::setCValue(QList<TVar*> vars)
             lua_pushstring(mL, var->getValue().toUtf8().constData());
             break;
         case LUA_TNUMBER:
-            lua_pushnumber(mL, var->getValue().toInt());
+            lua_pushnumber(mL, var->getValue().toDouble());
             break;
         case LUA_TBOOLEAN:
             lua_pushboolean(mL, var->getValue().toLower() == "true" ? 1 : 0);
@@ -397,7 +412,8 @@ bool LuaInterface::setValue(TVar* var)
         if (vars[i]->isReference()) {
             return setCValue(vars);
         }
-        if (vars[i]->getKeyType() == LUA_TNUMBER) {
+        const int keyType = vars[i]->getKeyType();
+        if (keyType == LUA_TNUMBER || keyType == LUA_TBOOLEAN) {
             variableChangeCode.append(qsl("[%1]").arg(vars.at(i)->getName()));
         } else {
             variableChangeCode.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
@@ -437,7 +453,8 @@ void LuaInterface::deleteVar(TVar* var)
     QList<TVar*> vars = varOrder(var);
     QString oldName = vars[0]->getName();
     for (int i = 1; i < vars.size(); i++) {
-        if (vars[i]->getKeyType() == LUA_TNUMBER) {
+        const int keyType = vars[i]->getKeyType();
+        if (keyType == LUA_TNUMBER || keyType == LUA_TBOOLEAN) {
             oldName.append(qsl("[%1]").arg(vars[i]->getName()));
         } else {
             oldName.append(qsl(R"(["%1"])").arg(vars[i]->getName()));
@@ -472,8 +489,9 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         for (; i < vars.size() - 1; i++) {
             kType = vars[i]->getKeyType();
             if (kType == LUA_TNUMBER) {
-                lua_pushnumber(mL, QString(vars[i]->getName()).toInt());
+                lua_pushnumber(mL, QString(vars[i]->getName()).toDouble());
             } else if (kType == LUA_TTABLE) {
+                // registry references are integer refs so must stay toInt()
                 lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
             } else {
                 lua_pushstring(mL, QString(vars[i]->getName()).toUtf8().constData());
@@ -483,7 +501,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
                 //value didn't exist, make it
                 lua_pop(mL, -1);
                 if (kType == LUA_TNUMBER) {
-                    lua_pushnumber(mL, QString(vars[i]->getName()).toInt());
+                    lua_pushnumber(mL, QString(vars[i]->getName()).toDouble());
                 } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
                     lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
                 } else {
@@ -499,7 +517,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         if (kType == LUA_TSTRING) {
             lua_pushstring(mL, QString(var->getNewName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getNewName().toInt());
+            lua_pushnumber(mL, var->getNewName().toDouble());
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
@@ -514,7 +532,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         for (; i < vars.size() - 1; i++) {
             kType = vars[i]->getKeyType();
             if (kType == LUA_TNUMBER) {
-                lua_pushnumber(mL, QString(vars[i]->getName()).toInt());
+                lua_pushnumber(mL, QString(vars[i]->getName()).toDouble());
             } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
                 lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
             } else {
@@ -528,7 +546,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         if (kType == LUA_TSTRING) {
             lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getName().toInt());
+            lua_pushnumber(mL, var->getName().toDouble());
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
@@ -544,7 +562,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         if (kType == LUA_TSTRING) {
             lua_pushstring(mL, QString(var->getNewName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getNewName().toInt());
+            lua_pushnumber(mL, var->getNewName().toDouble());
         } else if (kType == LUA_TTABLE) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
@@ -561,7 +579,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         if (kType == LUA_TSTRING) {
             lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getName().toInt());
+            lua_pushnumber(mL, var->getName().toDouble());
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
             lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
@@ -583,7 +601,7 @@ bool LuaInterface::loadVar(TVar* var)
         const int vType = var->getValueType();
         if (vType == LUA_TTABLE) {
             if (kType == LUA_TNUMBER) {
-                lua_pushnumber(mL, QString(var->getName()).toInt());
+                lua_pushnumber(mL, QString(var->getName()).toDouble());
             } else if (kType == LUA_TTABLE) {
                 lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
             } else {
@@ -592,12 +610,13 @@ bool LuaInterface::loadVar(TVar* var)
             if (lua_istable(mL, -2)) {
                 lua_gettable(mL, -2);
                 return true;
-            } else {
-                lua_pop(mL, 1);
-                return false;
             }
-        } else if (vType == LUA_TNUMBER) {
-            lua_pushnumber(mL, QString(var->getValue()).toInt());
+            lua_pop(mL, 1);
+            return false;
+        }
+
+        if (vType == LUA_TNUMBER) {
+            lua_pushnumber(mL, QString(var->getValue()).toDouble());
         } else if (vType == LUA_TBOOLEAN) {
             lua_pushboolean(mL, var->getValue().toLower() == "true" ? 1 : 0);
         } else if (vType == LUA_TSTRING) {
@@ -626,21 +645,21 @@ void LuaInterface::renameVar(TVar* var)
 
     for (int i = 1; i < vars.size(); i++) {
         const int kType = vars[i]->getKeyType();
-        if (kType == LUA_TNUMBER) {
+        // numbers and booleans use unquoted subscripts: t[3.14], t[true]
+        if (kType == LUA_TNUMBER || kType == LUA_TBOOLEAN) {
             oldVariable.append(qsl("[%1]").arg(vars.at(i)->getName()));
             if (i < vars.size() - 1) {
                 newName.append(qsl("[%1]").arg(vars[i]->getName()));
             }
-
         } else if (kType == LUA_TTABLE) {
             renameCVar(vars);
             return;
-        }
-
-        // That leaves LUA_TSTRING:
-        oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
-        if (i < vars.size() - 1) {
-            newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+        } else {
+            // that leaves LUA_TSTRING
+            oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+            if (i < vars.size() - 1) {
+                newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
+            }
         }
     }
 
@@ -649,7 +668,7 @@ void LuaInterface::renameVar(TVar* var)
         newName.append(qsl("_G[\"%1\"]").arg(vars.last()->getNewName()));
     } else {
         // this variable is nested in a table
-        if (var->getNewKeyType() == LUA_TNUMBER) {
+        if (var->getNewKeyType() == LUA_TNUMBER || var->getNewKeyType() == LUA_TBOOLEAN) {
             newName.append(qsl("[%1]").arg(vars.last()->getNewName()));
         } else {
             newName.append(qsl(R"(["%1"])").arg(vars.last()->getNewName()));
@@ -702,7 +721,11 @@ QString LuaInterface::getValue(TVar* var)
         if (firstVariable->getKeyType() == LUA_TSTRING) {
             lua_getglobal(mL, (firstVariable->getName()).toUtf8().constData());
         } else if (firstVariable->getKeyType() == LUA_TNUMBER) {
-            lua_rawgeti(mL, LUA_GLOBALSINDEX, firstVariable->getName().toInt());
+            lua_pushnumber(mL, firstVariable->getName().toDouble());
+            lua_gettable(mL, LUA_GLOBALSINDEX);
+        } else if (firstVariable->getKeyType() == LUA_TBOOLEAN) {
+            lua_pushboolean(mL, firstVariable->getName().toLower() == "true" ? 1 : 0);
+            lua_gettable(mL, LUA_GLOBALSINDEX);
         }
         if (lua_isnoneornil(mL, lua_gettop(mL))) {
             qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() << "onto the Lua stack in order to get value of" << var->getName()
@@ -741,6 +764,10 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX)); //this function pops the top item
             lrefs.append(keyName.toInt());
             var->setReference(true);
+        } else if (kType == LUA_TBOOLEAN) {
+            //lua_tostring() returns NULL for booleans, name the key ourselves
+            keyName = lua_toboolean(L, -1) ? qsl("true") : qsl("false");
+            lua_pop(L, 1);
         } else {
             keyName = lua_tostring(L, -1);
             if (kType == LUA_TFUNCTION && keyName.isEmpty()) {
@@ -813,17 +840,19 @@ void LuaInterface::getVars(bool hide)
     //returns the base item
     // QElapsedTimer t;
     // t.start();
+    // onPanic() longjmp()s to the shared buf, so without a setjmp of our own
+    // that jump lands in whichever frame set it last - usually one that has
+    // already returned, taking the caller's scope down with it.
+    if (setjmp(buf) != 0) {
+        qWarning() << "LuaInterface::getVars() WARNING - Lua panicked while reading the variables in; the variable tree is incomplete.";
+        return;
+    }
     lua_pushnil(mL);
     depth = 0;
     auto global = new TVar();
     global->setName("_G", LUA_TSTRING);
     global->setValue("{}", LUA_TTABLE);
-    QListIterator<int> it(lrefs);
-    while (it.hasNext()) {
-        const int ref = it.next();
-        luaL_unref(mL, LUA_REGISTRYINDEX, ref);
-    }
-    lrefs.clear();
+    releaseVariableReferences();
     varUnit->clear();
     varUnit->setBase(global);
     varUnit->addVariable(global);

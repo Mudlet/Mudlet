@@ -30,6 +30,8 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
+#include <QSet>
+
 #include <functional>
 
 /* We need an explicit constructor in this file as the Host class is forward
@@ -75,10 +77,46 @@ void ActionUnit::uninstall(const QString& packageName)
             uninstallList.append(rootAction);
         }
     }
-    for (auto& action : uninstallList) {
-        delete action;
+    // Re-entrant uninstall (#9337): a button's own script (e.g. a package
+    // auto-updater calling uninstallPackage()) is removing its package while
+    // TAction::execute() is still on the call stack for that button. Deleting
+    // now would be a use-after-free, so defer to doCleanup() at depth 0.
+    // Deactivating stops the buttons from firing again in the meantime.
+    if (mProcessingDepth > 0) {
+        for (auto action : uninstallList) {
+            action->setIsActive(false);
+        }
+        return;
+    }
+    // Not inside a button script - delete now. Route through doCleanup() rather
+    // than an inline loop so the same seen-set guards against a double free if a
+    // re-entrant uninstall of the same package queued any action twice.
+    doCleanup();
+}
+
+void ActionUnit::doCleanup()
+{
+    if (mProcessingDepth > 0) {
+        return;
+    }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls.
+    QSet<TAction*> deletedActions;
+    for (auto action : uninstallList) {
+        if (!deletedActions.contains(action)) {
+            deletedActions.insert(action);
+            delete action;
+        }
     }
     uninstallList.clear();
+}
+
+void ActionUnit::endProcessing()
+{
+    --mProcessingDepth;
+    Q_ASSERT(mProcessingDepth >= 0);
 }
 
 void ActionUnit::compileAll()
@@ -92,13 +130,11 @@ void ActionUnit::compileAll()
 
 TAction* ActionUnit::findAction(const QString& name)
 {
-    //QMap<int, TAction *>  mActionMap;
-
     QMapIterator<int, TAction*> it(mActionMap);
     while (it.hasNext()) {
         it.next();
         if (it.value()->getName() == name) {
-            qDebug() << it.value()->getName();
+            // qDebug().nospace().noquote() << "ActionUnit::findAction(const QString&) INFO - found: \"" << it.value()->getName() << "\".";
             TAction* pT = it.value();
             return pT;
         }
@@ -256,10 +292,9 @@ bool ActionUnit::registerAction(TAction* pT)
     if (pT->getParent()) {
         addAction(pT);
         return true;
-    } else {
-        addActionRootNode(pT);
-        return true;
     }
+    addActionRootNode(pT);
+    return true;
 }
 
 void ActionUnit::unregisterAction(TAction* pT)
@@ -271,33 +306,29 @@ void ActionUnit::unregisterAction(TAction* pT)
         removeAction(pT);
         updateAllToolbars();
         return;
-    } else {
-        if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
-            if (pT->mLocation == 0) {
-                mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 2) {
-                mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 3) {
-                mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-            }
-            if (pT->mLocation == 4) {
-                if (pT->mpToolBar) {
-                    pT->mpToolBar->setFloating(false);
-                    mudlet::self()->removeDockWidget(pT->mpToolBar);
-                }
-            }
-        }
-        if (!pT->getParent()) {
-            removeAction(pT);
-            removeActionRootNode(pT);
-        } else {
-            removeAction(pT);
-        }
-        updateAllToolbars();
-        return;
     }
+    if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
+        if (pT->mLocation == 0) {
+            mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 2) {
+            mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 3) {
+            mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+        }
+        if (pT->mLocation == 4) {
+            if (pT->mpToolBar) {
+                pT->mpToolBar->setFloating(false);
+                mudlet::self()->removeDockWidget(pT->mpToolBar);
+            }
+        }
+    }
+    removeAction(pT);
+    if (!pT->getParent()) {
+        removeActionRootNode(pT);
+    }
+    updateAllToolbars();
 }
 
 
@@ -536,8 +567,9 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pAction->mLocation == 4) {
         if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
-            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
-                       << "\"), for this toolbar forcing it to the Left one!";
+            qWarning().nospace().noquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\""
+                                           << pAction->getName()
+                                           << "\"), for this toolbar forcing it to the Left one!";
         }
         mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
         if (pAction->mToolbarLastFloatingState) {

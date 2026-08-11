@@ -37,11 +37,13 @@
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TFeatureCallout.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
+#include "TUiTour.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
@@ -63,6 +65,7 @@
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QImage>
+#include <QKeyEvent>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
@@ -90,6 +93,7 @@
 
 #include <QRandomGenerator>
 
+#include <chrono>
 #include <cmath>
 #include <memory>
 #include <zip.h>
@@ -171,9 +175,13 @@ mudlet::mudlet()
     // Initialisation happens later in setupConfig() and init()
 }
 
+static bool anyProfilesExist(const QString& profilesPath);
+
 void mudlet::init()
 {
-    smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
+    smFirstLaunch = !anyProfilesExist(mudlet::getMudletPath(enums::profilesPath));
+    // Must be after setupConfig() created mpSettings and before anything of this run is written
+    rememberFirstLaunch(*mpSettings, mudlet::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
     if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -582,6 +590,7 @@ void mudlet::init()
     connect(dactionNewMapWindow, &QAction::triggered, this, &mudlet::slot_newMapWindow);
 
     connect(dactionHelp, &QAction::triggered, this, &mudlet::slot_showHelpDialog);
+    connect(dactionUiTour, &QAction::triggered, this, &mudlet::slot_showUiTour);
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_showHelpDialogVideo);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_showHelpDialogForum);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
@@ -666,6 +675,13 @@ void mudlet::init()
     mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
     mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
     mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
+    // Physical Ctrl+Tab (Qt::META is the Ctrl key on macOS), matching the
+    // system-wide window-tab cycling convention there. Spelt with Key_Tab and
+    // not Key_Backtab because QShortcutMap never generates a Shift+Backtab
+    // candidate for a Shift+Tab press - the Shift is consumed producing the
+    // Backtab keysym, so only "...+Shift+Tab" matches:
+    mKeySequenceNextProfile = QKeySequence(Qt::META | Qt::Key_Tab);
+    mKeySequencePreviousProfile = QKeySequence(Qt::META | Qt::SHIFT | Qt::Key_Tab);
 #else
     mKeySequenceTriggers = QKeySequence(Qt::ALT | Qt::Key_E);
     mKeySequenceShowMap = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -684,7 +700,18 @@ void mudlet::init()
     mKeySequenceToggleReplay = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_R);
     mKeySequenceToggleLogging = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_L);
     mKeySequenceToggleEmergencyStop = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_S);
+    // Spelt with Key_Tab and not Key_Backtab because QShortcutMap never
+    // generates a Shift+Backtab candidate for a Shift+Tab press - the Shift
+    // is consumed producing the Backtab keysym, so only "Ctrl+Shift+Tab"
+    // matches:
+    mKeySequenceNextProfile = QKeySequence(Qt::CTRL | Qt::Key_Tab);
+    mKeySequencePreviousProfile = QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab);
 #endif
+    // Qt::CTRL is the Cmd key on macOS, so this gives the Cmd+1..9
+    // (Safari/Chrome/iTerm2) convention there and Ctrl+1..9 elsewhere:
+    for (int i = 0; i < 9; ++i) {
+        mKeySequencesSwitchToProfile[i] = QKeySequence(Qt::CTRL | static_cast<Qt::Key>(Qt::Key_1 + i));
+    }
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_updateShortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
     connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assignShortcutsFromProfile);
@@ -707,6 +734,12 @@ void mudlet::init()
     mpShortcutsManager->registerShortcut(qsl("Toggle Replay"), tr("Toggle Replay"), &mKeySequenceToggleReplay);
     mpShortcutsManager->registerShortcut(qsl("Toggle Logging"), tr("Toggle Logging"), &mKeySequenceToggleLogging);
     mpShortcutsManager->registerShortcut(qsl("Toggle Emergency Stop"), tr("Toggle Emergency Stop"), &mKeySequenceToggleEmergencyStop);
+    mpShortcutsManager->registerShortcut(qsl("Next profile"), tr("Next profile"), &mKeySequenceNextProfile);
+    mpShortcutsManager->registerShortcut(qsl("Previous profile"), tr("Previous profile"), &mKeySequencePreviousProfile);
+    for (int i = 0; i < 9; ++i) {
+        //: Name of the keyboard shortcut that switches to the numbered profile tab, %1 is that number (1 to 9)
+        mpShortcutsManager->registerShortcut(qsl("Switch to profile %1").arg(i + 1), tr("Switch to profile %1").arg(i + 1), &mKeySequencesSwitchToProfile[i]);
+    }
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
@@ -727,7 +760,11 @@ void mudlet::init()
     connect(this, &mudlet::signal_windowStateChanged, this, &mudlet::slot_windowStateChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, !releaseVersion);
+    // The main window deletes itself on close (WA_DeleteOnClose). The updater
+    // shows its "an update is ready" dialog only after the last window closes,
+    // so it must outlive the main window - parent it to the application, not to
+    // the window that is about to be destroyed:
+    pUpdater = new Updater(qApp, mpSettings, !releaseVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
@@ -773,14 +810,14 @@ void mudlet::init()
     setupTrayIcon();
 
     // emit the signal for adjusting accessible names
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         emit signal_adjustAccessibleNames();
     });
 
     // 200ms interval for WCAG 2.3.1 compliance (max 3 Hz)
     // 4-state counter per ISO/IEC 8613-6: slow blink < 150 cycles/min, fast > 150
     mpBlinkTimer = new QTimer(this);
-    mpBlinkTimer->setInterval(33);
+    mpBlinkTimer->setInterval(33ms);
     connect(mpBlinkTimer, &QTimer::timeout, this, [this]() {
         // Use actual elapsed time so the animation phase stays accurate even
         // when the main thread is busy (map loads, incoming MUD data floods, etc.)
@@ -911,11 +948,25 @@ void mudlet::setupConfig()
         }
         confPath = portPath;
     } else {
-        confPath = confDirDefault;
+        const auto resolution = utils::xdgConfigDir(confDirDefault);
+        confPath = resolution.path;
+        if (resolution.migrationPending) {
+            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
+                              << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
+        }
+        if (!resolution.shadowedProfilesPath.isEmpty()) {
+            qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
+                                 << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
+        }
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
 
-    mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat);
+    // parented to the application, not this window: the window deletes itself
+    // on close and the Updater keeps using this QSettings past that point.
+    // Which is also why setupConfig() must not run again once init() has
+    // created the Updater - the delete below would dangle its pointer.
+    delete mpSettings;
+    mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat, qApp);
     migrateConfig(*mpSettings);
 }
 
@@ -928,6 +979,16 @@ void mudlet::setupConfig()
 
 void mudlet::initEdbee()
 {
+    // edbee's init() has no re-entry guard - a second call reassigns all of its
+    // manager members and orphans the previous graph. Everything set up here is
+    // process-global, so one pass is enough however many mudlet instances a
+    // test constructs.
+    static bool initialised = false;
+    if (initialised) {
+        return;
+    }
+    initialised = true;
+
     auto edbee = edbee::Edbee::instance();
     edbee->init();
     edbee->autoShutDownOnAppExit();
@@ -1655,11 +1716,15 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
+    if (closeHeldOffByEventPump(pH)) {
+        return;
+    }
+
     if (!pH->requestClose()) {
         return;
     }
 
-    QTimer::singleShot(0, this, [this, name] {
+    QTimer::singleShot(0ms, this, [this, name] {
         closeHost(name);
         // Update main window title based on remaining profiles
         updateMainWindowTitle();
@@ -1671,6 +1736,18 @@ void mudlet::slot_closeProfileRequested(int tab)
     });
 }
 
+// Closing a profile destroys the lua_State the pump is still executing on. The
+// application-wide close paths are deliberately not guarded like this: refusing
+// there would cancel a shutdown nobody would retry.
+bool mudlet::closeHeldOffByEventPump(Host* pHost) const
+{
+    if (!pHost->getLuaInterpreter()->pumpingEvents()) {
+        return false;
+    }
+    qWarning() << "mudlet: asked to close profile" << pHost->getName() << "while the test-mode event pump is running on it, ignoring";
+    return true;
+}
+
 void mudlet::slot_closeProfileByName(const QString& profileName)
 {
     Host* pH = mHostManager.getHost(profileName);
@@ -1678,11 +1755,15 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
         return;
     }
 
+    if (closeHeldOffByEventPump(pH)) {
+        return;
+    }
+
     if (!pH->requestClose()) {
         return;
     }
 
-    QTimer::singleShot(0, this, [this, profileName] {
+    QTimer::singleShot(0ms, this, [this, profileName] {
         closeHost(profileName);
         // Update main window toolbar state in case this was the active profile
         updateMainWindowToolbarState();
@@ -1971,6 +2052,39 @@ void mudlet::closeHost(const QString& name)
         return;
     }
 
+    if (pH->mpMap && pH->mpMap->mapOperationInProgress()) {
+        // A map import, export or download is on the stack, and it is that
+        // operation's own qApp->processEvents() that has delivered whatever
+        // asked for this close. Destroying the Host here would free the TMap
+        // under its running loop (#9520), so tell the operation to stop and try
+        // again once the stack has unwound. Retried on a timer rather than
+        // immediately: the retry would otherwise land back in the same pump,
+        // spinning until the operation ends instead of letting it get there.
+        if (!pH->mpMap->mapOperationAbortRequested()) {
+            qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
+        }
+        pH->mpMap->requestMapOperationAbort();
+        const QPointer<Host> pClosingHost(pH);
+        QTimer::singleShot(50ms, this, [this, name, pClosingHost]() {
+            if (mHostManager.getHost(name) != pClosingHost) {
+                // Somebody else closed it while we waited, and the name now
+                // belongs to a profile that was never asked to close.
+                return;
+            }
+            closeHost(name);
+            // The callers that defer to us run their own follow-up before this
+            // retry comes round, when the profile is still open and it does
+            // nothing. Left out, closing the last profile mid-operation ends
+            // with no profile and no connection dialog either.
+            updateMainWindowToolbarState();
+            if (!mHostManager.getHostCount() && !mIsGoingDown) {
+                disableToolbarButtons();
+                slot_showConnectionDialog();
+            }
+        });
+        return;
+    }
+
     migrateDebugConsole(pH);
 
     // Clean up any main window dock widgets for this profile
@@ -2056,6 +2170,79 @@ void mudlet::reshowRequiredMainConsoles()
     }
 }
 
+void mudlet::slot_nextProfile()
+{
+    const int count = mpTabBar->count();
+    if (count > 1) {
+        mpTabBar->setCurrentIndex((mpTabBar->currentIndex() + 1) % count);
+    }
+}
+
+void mudlet::slot_previousProfile()
+{
+    const int count = mpTabBar->count();
+    if (count > 1) {
+        mpTabBar->setCurrentIndex((mpTabBar->currentIndex() + count - 1) % count);
+    }
+}
+
+void mudlet::switchToProfileTab(int index)
+{
+    if (index >= 0 && index < mpTabBar->count()) {
+        mpTabBar->setCurrentIndex(index);
+    }
+}
+
+// Whether this key press would activate one of the profile tab switching
+// shortcuts. Comparing it to them literally is not enough - a shortcut can be
+// spelt differently to the press that activates it:
+bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
+{
+    if (!ke) {
+        return false;
+    }
+
+    const auto key = static_cast<Qt::Key>(ke->key());
+    const Qt::KeyboardModifiers modifiers = ke->modifiers();
+
+    // QShortcutMap retries with the modifiers the platform consumed producing
+    // the character stripped off, so Ctrl and a numpad digit activates Ctrl+1,
+    // and so does Ctrl+Shift+1 on layouts needing Shift for a top-row digit
+    // (French AZERTY) - the same reason handleCtrlTabChange() ignores Shift.
+    QList<QKeySequence> candidates;
+    const Qt::KeyboardModifiers strippable[] = {Qt::NoModifier, Qt::KeypadModifier, Qt::ShiftModifier, Qt::ShiftModifier | Qt::KeypadModifier};
+    for (const auto stripped : strippable) {
+        const QKeySequence candidate(QKeyCombination(modifiers & ~stripped, key));
+        if (!candidates.contains(candidate)) {
+            candidates.append(candidate);
+        }
+    }
+
+    if (key == Qt::Key_Backtab) {
+        // Shift+Tab produces the Backtab keysym while the sequences are spelt
+        // with Key_Tab. Shift is normally still set here, but Qt's own Backtab
+        // handling does not rely on that, so put it back rather than assume:
+        candidates.append(QKeySequence(QKeyCombination(modifiers | Qt::ShiftModifier, Qt::Key_Tab)));
+    }
+
+    auto shadows = [&candidates](const QKeySequence& sequence) {
+        // A shortcut cleared in the preferences is empty, and would match any candidate that was too
+        return !sequence.isEmpty() && candidates.contains(sequence);
+    };
+
+    if (shadows(mKeySequenceNextProfile) || shadows(mKeySequencePreviousProfile)) {
+        return true;
+    }
+
+    for (const auto& sequence : mKeySequencesSwitchToProfile) {
+        if (shadows(sequence)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Moved as much as possible to activateProfile()...
 void mudlet::slot_tabChanged(int tabID)
 {
@@ -2089,6 +2276,29 @@ void mudlet::slot_telnetConnectionStateChanged()
     updateDetachedWindowTabIndicators();
 }
 
+// Renders a key sequence for use inside a sentence. NativeText produces the
+// macOS shortcut glyphs (like the tab glyph in "⌃⇥") which many users cannot
+// read, so on macOS spell the keys out the way Apple's docs do instead
+// ("Control-Tab", "Command-1"):
+static QString keySequenceForProse(const QKeySequence& sequence)
+{
+#if defined(Q_OS_MACOS)
+    QStringList keys = sequence.toString(QKeySequence::PortableText).split(QLatin1Char('+'));
+    for (auto& key : keys) {
+        if (key == qsl("Meta")) {
+            key = qsl("Control");
+        } else if (key == qsl("Ctrl")) {
+            key = qsl("Command");
+        } else if (key == qsl("Alt")) {
+            key = qsl("Option");
+        }
+    }
+    return keys.join(QLatin1Char('-'));
+#else
+    return sequence.toString(QKeySequence::NativeText);
+#endif
+}
+
 void mudlet::addConsoleForNewHost(Host* pH)
 {
     if (pH->mpConsole) {
@@ -2107,6 +2317,78 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
+    // Qt::UniqueConnection cannot dedupe the functor connections below (a documented
+    // no-op that also prints a warning); duplicate wiring is instead prevented by
+    // the `if (pH->mpConsole) return;` early-return at the top of this function.
+    connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this]() {
+        QApplication::alert(this, 3000);
+        if (!muteGame()) {
+            QApplication::beep();
+        }
+    });
+
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadStarted, pConsole, &TMainConsole::showPackageDownloadProgress, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_packageDownloadFinished, pConsole, &TMainConsole::closePackageDownloadProgress, Qt::UniqueConnection);
+
+    connect(pH, &Host::signal_showMapperScriptReminder, pConsole, &TMainConsole::showMapperScriptReminder, Qt::UniqueConnection);
+    connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
+    connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
+
+    // Wire the map engine's progress signals to the console that owns the dialog.
+    // Must be connected before the profile's map is loaded (further down in
+    // slot_connectionDialogueFinished()), or early map operations have no
+    // frontend to show progress.
+    if (!pH->mpMap.isNull()) {
+        auto pMap = pH->mpMap.data();
+        connect(pMap, &TMap::signal_mapTransferProgressStart, pConsole, &TMainConsole::showMapTransferProgress, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapJsonProgressStart, pConsole, &TMainConsole::showMapJsonProgress, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetLabel, pConsole, &TMainConsole::setMapProgressDialogLabel, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetRange, pConsole, &TMainConsole::setMapProgressDialogRange, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressSetValue, pConsole, &TMainConsole::setMapProgressDialogValue, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressDisableCancel, pConsole, &TMainConsole::disableMapProgressDialogCancel, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressClose, pConsole, &TMainConsole::closeMapProgressDialog, Qt::UniqueConnection);
+    }
+
+    if (pH->mpMedia) {
+        // Pin DirectConnection so the bool& out-parameter is filled synchronously, never queued.
+        connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+        connect(pH->mpMedia.data(), &TMedia::signal_hideVideoOutput, pConsole, &TMainConsole::hideVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
+    }
+
+#if !defined(QT_NO_SSL)
+    // A queued connection is essential here. signal_promptTlsAvailable() is
+    // emitted deep inside cTelnet's socket-parsing call stack, and the modal
+    // QMessageBox::exec() below spins a nested event loop. Delivering it queued
+    // lets that parse pass unwind first, so the dialog runs with no cTelnet frames
+    // beneath it: a profile teardown while the dialog is open (e.g. a Lua
+    // closeProfile()) then cannot free the cTelnet whose stack we would otherwise
+    // return into, and the answer cannot mutate the socket mid-parse. The QPointer
+    // capture then fully protects the (now top-level) lambda body.
+    connect(
+            &pH->mTelnet,
+            &cTelnet::signal_promptTlsAvailable,
+            this,
+            [pH = QPointer<Host>(pH)](const QString& text, const QString& informativeText) {
+                auto pMsgBox = new QMessageBox();
+                pMsgBox->setIcon(QMessageBox::Question);
+                pMsgBox->setText(text);
+                pMsgBox->setInformativeText(informativeText);
+                pMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                pMsgBox->setDefaultButton(QMessageBox::Yes);
+                // Make using Escape mean no change:
+                pMsgBox->setEscapeButton(QMessageBox::No);
+                const int ret = pMsgBox->exec();
+                delete pMsgBox;
+                if (!pH) {
+                    qWarning() << "mudlet: the profile vanished while the TLS upgrade prompt was open; discarding the user's answer.";
+                    return;
+                }
+                pH->mTelnet.slot_tlsUpgradeResponse(ret == QMessageBox::Yes);
+            },
+            Qt::QueuedConnection);
+#endif
+
     // Apply Host's console buffer size settings to the newly created console
     int bufferSize = pH->getConsoleBufferSize();
     if (pH->getUseMaxConsoleBufferSize()) {
@@ -2123,10 +2405,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
         if (detachedWindow) {
             detachedWindow->addProfile(profileName, pConsole);
             return;
-        } else {
-            qWarning() << "addConsoleForNewHost: Profile" << profileName << "has null detached window, removing from map";
-            mDetachedWindows.remove(profileName);
         }
+        qWarning() << "addConsoleForNewHost: Profile" << profileName << "has null detached window, removing from map";
+        mDetachedWindows.remove(profileName);
     }
 
     // Add to main window (original behavior)
@@ -2157,6 +2438,20 @@ void mudlet::addConsoleForNewHost(Host* pH)
         mpTabBar->setTabConnectionIndicator(newTabID, TabConnectionIndicator::Connecting);
     }
     mpTabBar->repaint();
+
+    // Tab switching only becomes relevant once a second profile is open; an
+    // empty sequence means the player cleared the shortcut and already knows
+    // about the feature:
+    if (mpTabBar->count() == 2 && !mKeySequenceNextProfile.isEmpty()) {
+        //: Title of a balloon pointing out the newly added profile tab switching shortcuts
+        TFeatureCallout::maybeShow(
+                qsl("profileTabShortcuts"),
+                mpTabBar,
+                tr("Switch games with the keyboard"),
+                //: %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9 (Control-Tab, Command-1 and Command-9 on macOS)
+                tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
+                        .arg(keySequenceForProse(mKeySequenceNextProfile), keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back())));
+    }
 
     // update the window title for the currently selected profile
     updateMainWindowTitle();
@@ -2212,7 +2507,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     // Set up a timer to refresh tab indicators after a few seconds
     // This catches connection status changes that typically happen shortly after profile creation
-    QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
+    QTimer::singleShot(3s, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
 
@@ -2251,6 +2546,14 @@ void mudlet::slot_timerFires()
         if (pTT && pTT->checkRestart()) {
             pTT->start();
         }
+
+        // Flush any deletes TimerUnit::uninstall() deferred whilst execute() was
+        // on the stack (a timer script uninstalling its own package). Doing it
+        // here - after the last use of pTT - keeps the window in which the
+        // "uninstalled" timers linger down to this event loop iteration, before
+        // the profile save that Host::uninstallPackage() queues for the next
+        // event loop pass can serialize them back into the profile:
+        pHost->getTimerUnit()->doCleanup();
 
         // Okay now we've found it we are done:
         return;
@@ -2684,7 +2987,7 @@ void mudlet::showEvent(QShowEvent* event)
         startupValidationDone = true;
 
         // Use a timer to defer this check until after full initialization
-        QTimer::singleShot(1000, this, [this]() {
+        QTimer::singleShot(1s, this, [this]() {
             QStringList orphanedProfiles = getOrphanedProfiles();
 
             if (!orphanedProfiles.isEmpty()) {
@@ -3197,7 +3500,14 @@ void mudlet::slot_showConnectionDialog()
 
     // Use a timer to ensure the main window is ready before showing the dialog
     // This is especially important at startup when the main window might not be fully initialized
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
+        // closeEvent() closes this WA_DeleteOnClose dialog and clears the
+        // QPointer, so quitting before this runs leaves nothing to show - and
+        // show() below would undo closeEvent()'s hide() of the main window
+        if (!mpConnectionDialog) {
+            return;
+        }
+
         // Ensure the main window is visible and ready
         if (!isVisible()) {
             show();
@@ -3242,7 +3552,7 @@ void mudlet::slot_showEditorDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3285,7 +3595,7 @@ void mudlet::slot_showTriggerDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3324,7 +3634,7 @@ void mudlet::slot_showAliasDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3360,7 +3670,7 @@ void mudlet::slot_showTimerDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3388,7 +3698,7 @@ void mudlet::slot_showTimerDialog()
 void mudlet::restoreProfileFocus(const QString& profileName)
 {
     // Small delay to ensure the dialog window is fully processed
-    QTimer::singleShot(50, [profileName]() {
+    QTimer::singleShot(50ms, [profileName]() {
         auto mudletInstance = mudlet::self();
         if (!mudletInstance) {
             return;
@@ -3442,7 +3752,7 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
         // If a specific target window is provided (detached window), focus that
         if (targetWindow) {
             // Small delay to ensure the editor window is fully processed
-            QTimer::singleShot(50, [profileName, targetWindow]() {
+            QTimer::singleShot(50ms, [profileName, targetWindow]() {
                 targetWindow->show();
                 targetWindow->raise();
                 targetWindow->activateWindow();
@@ -3573,7 +3883,7 @@ void mudlet::slot_showKeyDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3609,7 +3919,7 @@ void mudlet::slot_showVariableDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3645,7 +3955,7 @@ void mudlet::slot_showActionDialog()
 
     // Set up focus restoration to return to this main window when the editor closes
     connect(pEditor, &QObject::destroyed, this, [this]() {
-        QTimer::singleShot(50, this, [this]() {
+        QTimer::singleShot(50ms, this, [this]() {
             // Activate the main window
             this->show();
             this->raise();
@@ -3669,9 +3979,11 @@ void mudlet::slot_showActionDialog()
 }
 
 // tab must be the "objectName" of the tab in the preferences NOT the "titleText"
-void mudlet::showOptionsDialog(const QString& tab)
+void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
 {
-    Host* pHost = getActiveHost();
+    if (!pHost) {
+        pHost = getActiveHost();
+    }
 
     auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mpDlgProfilePreferences;
 
@@ -3709,9 +4021,8 @@ void mudlet::showOptionsDialog(const QString& tab)
 
     // Force reposition after showing, since preferences dialog may be a singleton
     // that restores its position after being shown
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
+    QWidget* hostConsole = pHost ? pHost->mpConsole : nullptr;
+    QWidget* referenceWidget = hostConsole ? hostConsole : this;
     utils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
 
@@ -3765,6 +4076,25 @@ void mudlet::slot_updateShortcuts()
 void mudlet::assignKeySequences()
 {
     mMenuVisibleState = !(mMenuBarVisibility == enums::visibleNever || (mMenuBarVisibility == enums::visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
+
+    // The profile tab switching shortcuts have no menu-action counterparts so
+    // they are always plain QShortcuts, whatever the menu visibility:
+    delete mpShortcutNextProfile.data();
+    mpShortcutNextProfile = new QShortcut(mKeySequenceNextProfile, this);
+    connect(mpShortcutNextProfile.data(), &QShortcut::activated, this, &mudlet::slot_nextProfile);
+
+    delete mpShortcutPreviousProfile.data();
+    mpShortcutPreviousProfile = new QShortcut(mKeySequencePreviousProfile, this);
+    connect(mpShortcutPreviousProfile.data(), &QShortcut::activated, this, &mudlet::slot_previousProfile);
+
+    for (int i = 0; i < 9; ++i) {
+        delete mpShortcutsSwitchToProfile[i].data();
+        mpShortcutsSwitchToProfile[i] = new QShortcut(mKeySequencesSwitchToProfile[i], this);
+        connect(mpShortcutsSwitchToProfile[i].data(), &QShortcut::activated, this, [this, i]() {
+            switchToProfileTab(i);
+        });
+    }
+
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
 
@@ -3925,6 +4255,36 @@ void mudlet::slot_showHelpDialog()
     QDesktopServices::openUrl(QUrl("https://wiki.mudlet.org/w/Manual:Contents"));
 }
 
+void mudlet::slot_showUiTour()
+{
+    showUiTour(false);
+}
+
+void mudlet::showUiTour(const bool skipIntroStep)
+{
+    if (mpUiTour) {
+        mpUiTour->raise();
+        mpUiTour->setFocus();
+        return;
+    }
+    mpUiTour = new TUiTour(this, skipIntroStep);
+    connect(mpUiTour, &TUiTour::signal_tourFinished, this, &mudlet::slot_uiTourClosed);
+    TUiTour::rememberShown();
+    mpUiTour->start();
+}
+
+// Covers every way the tour can go away: Finish, Skip and Esc all close it
+void mudlet::slot_uiTourClosed()
+{
+    for (auto pHost : mHostManager) {
+        pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("if mudlet then mudlet.uiTourPending = false end"));
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysUiTourFinished"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
+    }
+}
+
 void mudlet::slot_showHelpDialogVideo()
 {
     QDesktopServices::openUrl(QUrl("https://www.mudlet.org/media/"));
@@ -4012,8 +4372,8 @@ void mudlet::slot_showMapperDialog()
             mpCurrentMapDockWidget = nullptr;
 
             // Restore the host's default mapper if it exists
-            if (pHost->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
@@ -4025,8 +4385,8 @@ void mudlet::slot_showMapperDialog()
     }
 
     // If the host already has its default dock widget, hide it to avoid conflicts
-    if (pHost->mpDockableMapWidget) {
-        pHost->mpDockableMapWidget->setVisible(false);
+    if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+        pHost->mpConsole->mpDockableMapWidget->setVisible(false);
     }
 
     // Create a new docked mapper widget for this profile in the main window
@@ -4117,8 +4477,8 @@ void mudlet::slot_showMapperDialog()
             }
 
             // Restore the host's default mapper when hiding
-            if (pHost->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                 if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                     pMap->mpMapper = hostMapper;
@@ -4289,7 +4649,7 @@ void mudlet::slot_reconnect()
 
     // Set up a timer to refresh tab indicators after a few seconds
     // This catches connection status changes that typically happen shortly after reconnection
-    QTimer::singleShot(3000, this, &mudlet::slot_refreshTabIndicatorsDelayed);
+    QTimer::singleShot(3s, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
 void mudlet::slot_disconnect()
@@ -4769,6 +5129,14 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         mudlet::installModulesList(pHost, modules);
     }
 
+    // Decided before packages install so their scripts can see the flag and
+    // hold off on their own introductions until the tour is done - the
+    // tutorial package does this
+    const bool wantUiTour = TUiTour::shouldShowOnFirstProfile();
+    if (wantUiTour) {
+        pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true"));
+    }
+
     // install default packages
     for (const auto& package : std::as_const(mPackagesToInstallList)) {
         pHost->installPackage(package, enums::PackageModuleType::Package);
@@ -4829,6 +5197,17 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->raiseEvent(event);
     pHost->mIsProfileLoadingSequence = false;
     emit signal_profileLoaded();
+
+    if (wantUiTour) {
+        // The tutorial profile greets new players itself, so skip the tour's
+        // own welcome step there:
+        const bool skipIntroStep = profile == qsl("Mudlet Tutorial");
+        // give the freshly opened profile a moment to finish laying out before
+        // the tour starts highlighting parts of it
+        QTimer::singleShot(1s, this, [this, skipIntroStep]() {
+            showUiTour(skipIntroStep);
+        });
+    }
 }
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
@@ -5236,7 +5615,7 @@ bool mudlet::replayStart()
     mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
     mpTimerReplay = new QTimer(this);
-    mpTimerReplay->setInterval(1000);
+    mpTimerReplay->setInterval(1s);
     mpTimerReplay->setSingleShot(false);
     connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
 
@@ -5583,10 +5962,9 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (extra1.compare(qsl("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match
             return qsl("%1/edbee/Colorsublime-Themes-master/themes/%2").arg(confPath, extra1);
-        } else {
-            // Match - return path to copy held in resource file
-            return qsl(":/edbee_defaults/Mudlet.tmTheme");
         }
+        // Match - return path to copy held in resource file
+        return qsl(":/edbee_defaults/Mudlet.tmTheme");
     case enums::editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
         // an edbee editor widget theme:
@@ -5606,22 +5984,24 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/local/share/hunspell/");
-        } else if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
+        }
+        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_OPENBSD)
         // OpenBSD uses dictionary files from Mozilla rather than direct from,
         // Hunspell, but it does not ship a en_us one so we cannot use that on
@@ -5631,65 +6011,69 @@ QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& e
         if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/local/share/mozilla-dicts/");
-        } else if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
+        }
+        if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/mozilla-dicts/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_LINUX)
         if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory
             // alongside the ./src one. {Typically QMake builds from Qtcreator
             // with CONFIG containing both 'debug_and_release' and
             // 'debug_and_release_target' (this is normal also on Windows):
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one. {Typically
             // QMake builds from Qtcreator with CONFIG NOT containing both
             // 'debug_and_release' and 'debug_and_release_target':
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory above the ./src one. {Typically
             // CMake builds from Qtcreator which are outside of the unpacked
             // source code from a git repo or tarball - which has to have been
             // unpacked/placed in a directory called 'mudlet'}:
             mudlet::self()->mUsingMudletDictionaries = true;
             return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src AND installer builds that bundle
-            // dictionaries in the same directory as the executable:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src AND installer builds that bundle
+        // dictionaries in the same directory as the executable:
+        mudlet::self()->mUsingMudletDictionaries = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #else
         // Probably Windows!
         mudlet::self()->mUsingMudletDictionaries = true;
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src
-            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
+        // From build within ./src
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #endif
     }
     Q_UNREACHABLE();
@@ -5800,10 +6184,13 @@ void mudlet::slot_updateInstalled()
     // disable existing functionality to show the updates window
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
-    // rejig to restart Mudlet instead
-    connect(dactionUpdate, &QAction::triggered, this, [=, this]() {
-        forceClose();
-        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+    // rejig to restart Mudlet instead. The updater owns the restart flow on
+    // all platforms: on Windows the downloaded installer still has to run,
+    // and everywhere the update dialog must be told not to reappear when the
+    // last window closes, which would keep the old instance alive alongside
+    // the restarted one:
+    connect(dactionUpdate, &QAction::triggered, this, [this]() {
+        pUpdater->slot_installOrRestartClicked(nullptr, QString());
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
@@ -5853,11 +6240,23 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     const QString folder = getMudletPath(enums::profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    // Only consider profile saves (*.xml): a crash during a save can leave behind
+    // an empty QSaveFile temporary (e.g. "2026-01-01#12-00-00.xml.AbCdEf") as the
+    // newest file, and loading that instead of the newest real save presents the
+    // profile with all of its triggers/scripts seemingly wiped out
+    QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
     // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
     pHost->hideMudletsVariables();
-    if (entries.isEmpty()) {
+    // NB: an explicitly requested saveFileName is honored even when no *.xml
+    // is present - failing to open it then reports a proper load error rather
+    // than silently starting a fresh profile:
+    if (entries.isEmpty() && saveFileName.isEmpty()) {
+        if (!dir.entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty()) {
+            qWarning().nospace().noquote() << "mudlet::loadProfile(" << profile_name << ", ...) WARNING - profile directory \"" << folder
+                                           << "\" contains files but no completed (*.xml) save; treating the profile as new. An interrupted save may have left "
+                                              "a recoverable QSaveFile temporary behind.";
+        }
         preInstallPackages = true;
         pHost->mLoadedOk = true;
         pHost->mMapInfoContributors.insert(qsl("Short"));
@@ -6005,7 +6404,8 @@ bool mudlet::isVersionAtLeast(const QString& minVersion)
 
         if (currentPart > minPart) {
             return true;
-        } else if (currentPart < minPart) {
+        }
+        if (currentPart < minPart) {
             return false;
         }
         // If equal, continue to next part
@@ -6055,7 +6455,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     }
 
     // Always emit the signal (either immediately or after migrations complete)
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         emit signal_passwordsMigratedToSecure();
     });
 
@@ -6109,7 +6509,7 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     // If no old-format entries need to be checked, emit signal immediately
     if (mProfilePasswordsToMigrate.isEmpty()) {
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             emit signal_passwordsMigratedToProfiles();
         });
     }
@@ -6916,7 +7316,7 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost->mpConsole->refresh();
         // Defer subconsole refresh to allow Qt to fully process the show event
         // and update widget geometry before we try to recalculate screen dimensions
-        QTimer::singleShot(0, mpCurrentActiveHost->mpConsole, &TMainConsole::refreshSubconsoles);
+        QTimer::singleShot(0ms, mpCurrentActiveHost->mpConsole, &TMainConsole::refreshSubconsoles);
         mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
 
         // If NOT in multiview mode, hide all other consoles in the main window
@@ -6959,7 +7359,7 @@ void mudlet::activateProfile(Host* pHost)
     // When switching profiles, Qt widget geometry isn't updated until the event loop processes
     // show/hide events. Calling adjustHeight() immediately would use incorrect document width,
     // causing the input bar to have the wrong height.
-    QTimer::singleShot(0, mpCurrentActiveHost->mpConsole->mpCommandLine, &TCommandLine::adjustHeight);
+    QTimer::singleShot(0ms, mpCurrentActiveHost->mpConsole->mpCommandLine, &TCommandLine::adjustHeight);
 
     // Update the main application window title based on active profiles in main window
     updateMainWindowTitle();
@@ -6974,7 +7374,7 @@ void mudlet::activateProfile(Host* pHost)
     // otherwise mScreenWidth hits its qMax(40, ...) floor and the server
     // pre-wraps output too narrowly. Receiver-form singleShot is safe if the
     // Host is destroyed first - do not change to a lambda.
-    QTimer::singleShot(0, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
+    QTimer::singleShot(0ms, mpCurrentActiveHost.data(), &Host::updateDisplayDimensions);
 
     // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
@@ -7104,30 +7504,36 @@ void mudlet::refreshTabBar()
 // doesn't make sense to make it static since it modifies a class variable
 void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
 {
+    if (mSkipDefaultPackageInstall) {
+        return;
+    }
+
     const QHash<QString, QStringList> defaultScripts = {
             // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/run-lua-code.mpackage"),             {qsl("*")}},
-        {qsl(":/echo.mpackage"),                     {qsl("*")}},
-        {qsl(":/deleteOldProfiles.mpackage"),        {qsl("*")}},
-        {qsl(":/enable-accessibility.mpackage"),     {qsl("*")}},
-        {qsl(":/mpkg.mpackage"),                     {qsl("*")}},
-        {qsl(":/mudlet-lua/lua/gui-drop/gui-drop.mpackage"), {qsl("*")}},
-        {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
-        {qsl(":/icesus-loader.xml"),                 {qsl("icesus.org")}},
-        {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de"),
-                                                      qsl("mud.morgengrauen.info"),
-                                                      qsl("mg.morgengrauen.info"),
-                                                      qsl("morgengrauen.info")}},
-        {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
-        {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
-        {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
-                                                      qsl("achaea.com"),
-                                                      qsl("lusternia.com"),
-                                                      qsl("imperian.com"),
-                                                      qsl("starmourn.com"),
-                                                      qsl("stickmud.com")}},
-        {qsl(":/MedBootstrap.xml"),                  {qsl("medievia.com")}}
+        {qsl(":/packages/run-lua-code/run-lua-code.mpackage"), {qsl("*")}},
+        {qsl(":/packages/echo/echo.mpackage"), {qsl("*")}},
+        {qsl(":/packages/deleteOldProfiles/deleteOldProfiles.mpackage"), {qsl("*")}},
+        {qsl(":/packages/enable-accessibility/enable-accessibility.mpackage"), {qsl("*")}},
+        {qsl(":/packages/mpkg/mpkg.mpackage"), {qsl("*")}},
+        {qsl(":/packages/gui-drop/gui-drop.mpackage"), {qsl("*")}},
+        {qsl(":/packages/CF-loader/CF-loader.mpackage"), {qsl("carrionfields.net")}},
+        {qsl(":/packages/icesus-loader/icesus-loader.mpackage"), {qsl("icesus.org")}},
+        {qsl(":/packages/mg-loader/mg-loader.mpackage"), {qsl("mg.mud.de"),
+                                                          qsl("mud.morgengrauen.info"),
+                                                          qsl("mg.morgengrauen.info"),
+                                                          qsl("morgengrauen.info")}},
+        {qsl(":/packages/run-tests/run-tests.mpackage"), {qsl("mudlet.org")}},
+        {qsl(":/packages/StressinatorDisplayBench/StressinatorDisplayBench.mpackage"), {qsl("mudlet.org")}},
+        // the IRE mapper is maintained upstream and published as an xml, so it
+        // is the one preinstall that is not packaged - see update-3rdparty.yml
+        {qsl(":/mudlet-mapper.xml"), {qsl("aetolia.com"),
+                                      qsl("achaea.com"),
+                                      qsl("lusternia.com"),
+                                      qsl("imperian.com"),
+                                      qsl("starmourn.com"),
+                                      qsl("stickmud.com")}},
+        {qsl(":/packages/MedBootstrap/MedBootstrap.mpackage"), {qsl("medievia.com")}}
             // clang-format on
     };
 
@@ -7140,12 +7546,23 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 
     if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.mpackage"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/generic_mapper/generic_mapper.mpackage"));
+    }
+
+    // A modest starter UI that adapts to whatever any game provides, only for
+    // players new to Mudlet - veterans will have their own layouts already.
+    // Games whose bundled loader above fetches the game's own full interface
+    // (flagged in TGameDetails) are skipped: the starter UI would only fight
+    // it for the same screen space. Games that push a GUI via Client.GUI at
+    // connect time are handled at runtime instead - the starter UI stands
+    // aside when one installs.
+    if (!mudlet::self()->experiencedMudletPlayer() && !TGameDetails::gameProvidesOwnUi(gameUrl)) {
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
     }
 
     // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
     if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-tutorial.mpackage"));
+        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-tutorial/mudlet-tutorial.mpackage"));
     }
 }
 
@@ -7246,7 +7663,19 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 // to be done on the next Qt event loop iteration:
 void mudlet::armForceClose()
 {
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
+        // Deferring by one event loop iteration is meant to land outside Lua,
+        // but the pump runs the event loop from inside Lua, so it can land
+        // right back in it. Retrying terminates: the pump is capped at 30s.
+        for (auto pHost : mHostManager) {
+            if (pHost->getLuaInterpreter()->pumpingEvents()) {
+                qWarning() << "mudlet::armForceClose() - the test-mode event pump is running, waiting for it to finish";
+                QTimer::singleShot(50ms, this, [this]() {
+                    armForceClose();
+                });
+                return;
+            }
+        }
         forceClose();
     });
 }
@@ -7281,8 +7710,67 @@ void mudlet::showedCharacterModeWarning()
     mCharacterModeWarningsShown = std::min(mCharacterModeWarningsShown + 1, mCharacterModeWarningsMax);
 }
 
-// returns true if the Mudlet player is considered 'experienced' and doesn't need to be shown the basic
-// tutorial tips, such as splitscreen cancel shortcut
+static const QLatin1String settingsKeyFirstLaunch("firstLaunchDate");
+static constexpr int experiencedPlayerMonths = 6;
+
+static bool anyProfilesExist(const QString& profilesPath)
+{
+    const QDir profiles(profilesPath);
+    if (!profiles.exists()) {
+        return false;
+    }
+    if (!QFileInfo(profilesPath).isReadable()) {
+        // Unlistable reads as empty, which would stamp an existing user with today as their first launch
+        qWarning() << "anyProfilesExist() WARNING - the profiles directory exists but cannot be read:" << profilesPath
+                   << "- assuming it holds profiles, so an existing user is not mistaken for a new one.";
+        return true;
+    }
+    return !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+}
+
+// Settings count as well as profiles: someone who kept their Mudlet.ini but not
+// their profiles is still not on their first run.
+static bool mudletUsedBefore(const QSettings& settings, const QString& profilesPath)
+{
+    return anyProfilesExist(profilesPath) || !settings.allKeys().isEmpty();
+}
+
+// Called only from init(), before anything of this run has been written. Where
+// there is a trace of earlier use the start date is unrecoverable - no timestamp
+// survives Mudlet's own writes, nor a copy to another machine - so nothing is
+// recorded and evaluateExperiencedPlayer() falls back.
+/*static*/ void mudlet::rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    // Not conditioned on the value parsing: re-recording would restart the clock today
+    if (settings.contains(settingsKeyFirstLaunch) || mudletUsedBefore(settings, profilesPath)) {
+        return;
+    }
+
+    settings.setValue(settingsKeyFirstLaunch, now.toUTC().toString(Qt::ISODate));
+    settings.sync();
+    if (settings.status() != QSettings::NoError) {
+        qWarning() << "mudlet::rememberFirstLaunch() WARNING - could not record the first launch date in" << settings.fileName() << "- QSettings status:" << settings.status()
+                   << "- this installation will later be taken for an experienced user's.";
+    }
+}
+
+/*static*/ bool mudlet::evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now)
+{
+    const QString recorded = settings.value(settingsKeyFirstLaunch).toString();
+    const QDateTime firstLaunch = QDateTime::fromString(recorded, Qt::ISODate);
+    if (firstLaunch.isValid()) {
+        return firstLaunch <= now.addMonths(-experiencedPlayerMonths);
+    }
+    if (!recorded.isEmpty()) {
+        qWarning().nospace().noquote() << "evaluateExperiencedPlayer() WARNING - \"" << settingsKeyFirstLaunch << "\" holds \"" << recorded
+                                       << "\", which is not ISO 8601 - falling back to looking for signs of earlier use.";
+    }
+
+    // Erring towards 'experienced' is deliberate: interrupting a veteran with a
+    // beginner tour is worse than a newcomer missing one.
+    return mudletUsedBefore(settings, profilesPath);
+}
+
 bool mudlet::experiencedMudletPlayer()
 {
     static std::optional<bool> cachedResult;
@@ -7290,19 +7778,15 @@ bool mudlet::experiencedMudletPlayer()
         return cachedResult.value();
     }
 
-    // crude metric to check if the player is experienced in Mudlet: see if any of the profiles is more than 6mo old
-    QDir profilesDir(mudlet::getMudletPath(enums::profilesPath));
-    QFileInfoList entries = profilesDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-    QDateTime sixMonthsAgo = QDateTime::currentDateTime().addMonths(-6);
-
-    for (const QFileInfo& entry : std::as_const(entries)) {
-        if (entry.lastModified() < sixMonthsAgo) {
-            cachedResult = true;
-            return true;
-        }
+    const auto* settings = getQSettings();
+    if (!settings) {
+        // Not cached: a guess, and caching it would pin every gate for the process
+        qWarning() << "mudlet::experiencedMudletPlayer() WARNING - called before setupConfig(), so assuming an experienced player and showing no first-run guidance.";
+        return true;
     }
-    cachedResult = false;
-    return false;
+
+    cachedResult = evaluateExperiencedPlayer(*settings, getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    return cachedResult.value();
 }
 
 dlgTriggerEditor* mudlet::createMudletEditor()
@@ -7419,20 +7903,37 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
         updateMainWindowTitle();
 
         // Properly close the host to avoid dangling connections
-        Host* pHost = mHostManager.getHost(profileName);
-        if (pHost) {
-            if (pHost->requestClose()) {
-                QTimer::singleShot(0, this, [this, profileName] {
-                    closeHost(profileName);
-                    // Check to see if there are any profiles left...
-                    if (!mHostManager.getHostCount() && !mIsGoingDown) {
-                        disableToolbarButtons();
-                        slot_showConnectionDialog();
-                        setWindowTitle(scmVersion);
-                    }
-                });
+        closeHostOfClosedDetachedWindow(profileName);
+    }
+}
+
+// Unlike the tab-close slots, the window and its bookkeeping are already gone by
+// the time we get here, so dropping the close while the pump runs would leave
+// the profile loaded with no way to reach it. Wait the pump out instead.
+void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
+{
+    Host* pHost = mHostManager.getHost(profileName);
+    if (!pHost) {
+        return;
+    }
+
+    if (closeHeldOffByEventPump(pHost)) {
+        QTimer::singleShot(50ms, this, [this, profileName]() {
+            closeHostOfClosedDetachedWindow(profileName);
+        });
+        return;
+    }
+
+    if (pHost->requestClose()) {
+        QTimer::singleShot(0ms, this, [this, profileName] {
+            closeHost(profileName);
+            // Check to see if there are any profiles left...
+            if (!mHostManager.getHostCount() && !mIsGoingDown) {
+                disableToolbarButtons();
+                slot_showConnectionDialog();
+                setWindowTitle(scmVersion);
             }
-        }
+        });
     }
 }
 
@@ -8463,8 +8964,8 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpDockableMapWidget) {
-                            auto hostMapWidget = pHost->mpDockableMapWidget->widget();
+                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                            auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                             if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
                                 pMap->mpMapper = hostMapper;

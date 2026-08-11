@@ -122,13 +122,13 @@ public:
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
-    bool match_substring(const QString&, const QString&, int, int posOffset = 0);
-    bool match_perl(char*, const QString&, int, int posOffset = 0);
-    bool match_exact_match(const QString&, const QString&, int, int posOffset = 0);
-    bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset = 0);
+    bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber);
+    bool match_perl(char*, const QString&, int, int posOffset, int lineNumber);
+    bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
+    bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
     bool match_line_spacer(int patternNumber);
-    bool match_color_pattern(int, int);
+    bool match_color_pattern(int line, int patternNumber, int posOffset, int length);
     bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
     int getConditionLineDelta() const { return mConditionLineDelta; }
@@ -172,18 +172,39 @@ public:
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
 
+    // Set when the trigger is registered as a root node while a line is being
+    // processed, and cleared when that line is done with - see TriggerUnit's
+    // same-line creation chains. The id names the lineage this trigger belongs
+    // to, the generation is how many creations deep in it this trigger sits;
+    // everything its script creates during that line joins the same lineage one
+    // generation further down.
+    int sameLineChainId() const { return mSameLineChainId; }
+    int sameLineGeneration() const { return mSameLineGeneration; }
+    void setSameLineChain(const int chainId, const int generation)
+    {
+        mSameLineChainId = chainId;
+        mSameLineGeneration = generation;
+    }
+
 
 private:
     TTrigger() = default;
 
     inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
-    inline void filter(std::string&, int&);
-    void processExactMatch(const QString& line, int patternNumber, int posOffset);
-    void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                           const QSharedPointer<pcre2_code>& re, int haystackCLength, pcre2_match_data* match_data, int rc);
-    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
-    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
-    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
+    inline void filter(std::string&, int&, int lineNumber);
+    void processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processRegexMatch(const char* haystackC,
+                           const QString& haystack,
+                           int patternNumber,
+                           int posOffset,
+                           const QSharedPointer<pcre2_code>& re,
+                           int haystackCLength,
+                           pcre2_match_data* match_data,
+                           int rc,
+                           int lineNumber);
+    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
+    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
 
 
@@ -218,6 +239,8 @@ private:
     bool mModuleMember = false;
     // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
     int mExpiryCount = -1;
+    int mSameLineChainId = 0;
+    int mSameLineGeneration = 0;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

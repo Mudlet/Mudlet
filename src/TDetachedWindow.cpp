@@ -59,6 +59,9 @@
 #include <QDockWidget>
 #include <QDesktopServices>
 #include <QUrl>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent, bool toolbarVisible)
 : QMainWindow(parent)
@@ -123,9 +126,9 @@ TDetachedWindow::~TDetachedWindow()
                     if (auto pHost = mudletInstance->getHostManager().getHost(profileName)) {
                         auto pMap = pHost->mpMap.data();
 
-                        if (pMap && pHost->mpDockableMapWidget) {
+                        if (pMap && pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
                             // Find the main window's mapper
-                            auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                            auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                             if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                                 pMap->mpMapper = mainMapper;
@@ -148,9 +151,9 @@ TDetachedWindow::~TDetachedWindow()
                 if (auto pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
                     auto pMap = pHost->mpMap.data();
 
-                    if (pMap && pHost->mpDockableMapWidget) {
+                    if (pMap && pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
                         // Find the main window's mapper
-                        auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                        auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                         if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                             pMap->mpMapper = mainMapper;
@@ -648,7 +651,7 @@ void TDetachedWindow::moveEvent(QMoveEvent* event)
     QMainWindow::moveEvent(event);
 
     // Check if we should offer to merge with another detached window
-    QTimer::singleShot(100, this, &TDetachedWindow::checkForWindowMergeOpportunity);
+    QTimer::singleShot(100ms, this, &TDetachedWindow::checkForWindowMergeOpportunity);
 }
 
 void TDetachedWindow::resizeEvent(QResizeEvent* event)
@@ -679,7 +682,7 @@ void TDetachedWindow::hideEvent(QHideEvent* event)
         qDebug() << "TDetachedWindow::hideEvent: Preventing window hide - has" << mpTabBar->count() << "profiles";
 #endif
         // Force the window to stay visible - but only if not minimized
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(0ms, this, [this]() {
             if (mpTabBar && mpTabBar->count() > 0 && !mIsBeingMinimized) {
                 setVisible(true);
                 show();
@@ -713,7 +716,7 @@ void TDetachedWindow::onReattachAction()
         emit reattachRequested(mCurrentProfileName);
 
         // Reset the flag after a short delay to allow for the operation to complete
-        QTimer::singleShot(500, this, [this]() {
+        QTimer::singleShot(500ms, this, [this]() {
             mReattachInProgress = false;
         });
     }
@@ -1558,8 +1561,8 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                 if (auto pMudlet = mudlet::self()) {
                     if (auto pHost = pMudlet->getHostManager().getHost(dockProfileName)) {
                         if (auto pMap = pHost->mpMap.data()) {
-                            if (pHost->mpDockableMapWidget) {
-                                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                                 if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                                     pMap->mpMapper = mainMapper;
@@ -1612,7 +1615,7 @@ void TDetachedWindow::slot_toggleAlwaysOnTop()
     show(); // Required after changing window flags
 
     // Reset flag after a short delay to allow the window operations to complete
-    QTimer::singleShot(100, this, [this]() {
+    QTimer::singleShot(100ms, this, [this]() {
         mIsChangingWindowFlags = false;
     });
 }
@@ -2008,7 +2011,7 @@ bool TDetachedWindow::addProfile(const QString& profileName, TMainConsole* conso
     repaint();
 
     // Schedule a delayed update to handle any Qt layout timing issues
-    QTimer::singleShot(10, this, [this, profileName]() {
+    QTimer::singleShot(10ms, this, [this, profileName]() {
         auto console = mProfileConsoleMap.value(profileName);
 
         if (console) {
@@ -2051,8 +2054,8 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             if (auto pMudlet = mudlet::self()) {
                 if (auto pHost = pMudlet->getHostManager().getHost(profileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpDockableMapWidget) {
-                            auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                            auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                             if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                                 pMap->mpMapper = mainMapper;
@@ -2187,7 +2190,7 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
 
         // Also schedule a delayed visibility restoration in case the drag operation
         // affects window state after this method returns
-        QTimer::singleShot(100, this, [this, profileName]() {
+        QTimer::singleShot(100ms, this, [this, profileName]() {
             if (mpTabBar->count() > 0) {
                 setVisible(true);
                 show();
@@ -2298,7 +2301,7 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
     repaint();
 
     // Schedule a delayed update to handle any Qt layout timing issues
-    QTimer::singleShot(10, this, [this, profileName]() {
+    QTimer::singleShot(10ms, this, [this, profileName]() {
         auto console = mProfileConsoleMap.value(profileName);
 
         if (console) {
@@ -2413,7 +2416,7 @@ void TDetachedWindow::closeProfileByIndex(int index)
         // so we need to notify the main window about the window closure here
         emit windowClosed(profileName);
 
-        QTimer::singleShot(0, this, [this] {
+        QTimer::singleShot(0ms, this, [this] {
             close();
         });
     }
@@ -2504,7 +2507,7 @@ void TDetachedWindow::performWindowMerge(TDetachedWindow* otherWindow)
     }
 
     // Automatically merge without prompting - defer the operation to avoid timing issues
-    QTimer::singleShot(0, this, [this, otherWindow, ourProfiles, mergePair]() {
+    QTimer::singleShot(0ms, this, [this, otherWindow, ourProfiles, mergePair]() {
         // Check if the other window is still valid
         if (!otherWindow) {
             return;
@@ -2523,7 +2526,7 @@ void TDetachedWindow::performWindowMerge(TDetachedWindow* otherWindow)
     });
 
     // Clean up the active merge tracking after a delay
-    QTimer::singleShot(100, [mergePair]() {
+    QTimer::singleShot(100ms, [mergePair]() {
         activeMergeOperations.remove(mergePair);
     });
 }
@@ -2782,8 +2785,8 @@ void TDetachedWindow::slot_showMapperDialog()
             mpMapDockWidget = nullptr;
 
             // Restore the main window's mapper as the active one
-            if (pHost->mpDockableMapWidget) {
-                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
                 if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                     pMap->mpMapper = mainMapper;
                 }
@@ -2799,7 +2802,7 @@ void TDetachedWindow::slot_showMapperDialog()
 
     // Store the main window's mapper temporarily so we can restore it later
     QPointer<dlgMapper> mainMapper = pMap->mpMapper;
-    QPointer<QDockWidget> mainDockWidget = pHost->mpDockableMapWidget;
+    QPointer<QDockWidget> mainDockWidget = (pHost->mpConsole ? pHost->mpConsole->mpDockableMapWidget : nullptr);
 
     // Create a new mapper instance for the detached window
     // We need to copy player room style details first
@@ -2878,8 +2881,8 @@ void TDetachedWindow::slot_showMapperDialog()
             }
 
             // Restore the main window's mapper as the active one when hiding
-            if (pHost->mpDockableMapWidget) {
-                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
                 if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                     pMap->mpMapper = mainMapper;
                 }
@@ -3248,8 +3251,8 @@ void TDetachedWindow::addTransferredDockWidget(const QString& mapKey, QDockWidge
             }
 
             // Restore the main window's mapper as the active one when hiding
-            if (pHost->mpDockableMapWidget) {
-                auto mainMapWidget = pHost->mpDockableMapWidget->widget();
+            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
+                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
 
                 if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
                     pMap->mpMapper = mainMapper;

@@ -47,6 +47,7 @@
 #include <QList>
 #include <QMargins>
 #include <QPointer>
+#include <QRect>
 #include <QStack>
 #include <QTextStream>
 
@@ -56,10 +57,13 @@
 #include "TMxpProcessor.h"
 #include "TMxpFrameManager.h"
 
-class QDialog;
+namespace pugi {
+class xml_document;
+}
+
 class QDockWidget;
-class QPushButton;
-class QListWidget;
+class QJsonObject;
+class QKeyEvent;
 
 class TEvent;
 class TArea;
@@ -151,6 +155,8 @@ class Host : public QObject
     friend class XMLexport;
     friend class XMLimport;
     friend class dlgProfilePreferences;
+    // Allows the functional test to set the Discord username restriction:
+    friend class TDiscordModeTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -172,11 +178,7 @@ public:
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
-    enum DiscordMode {
-        DiscordDisabled = 0,
-        DiscordShowMudletOnly = 1,
-        DiscordShowGameDetails = 2
-    };
+    enum DiscordMode { DiscordDisabled = 0, DiscordShowMudletOnly = 1, DiscordShowGameDetails = 2 };
 
 
     QString getName() { return mHostName; }
@@ -194,6 +196,14 @@ public:
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    // True once the user has sent any command to the game on the current connection. It gates whether
+    // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
+    // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
+    // input, whereas one at an untouched connection is not and must not silently launch a browser.
+    // GMCPAuthenticator clears it again when it auto-opens, so one player action can launch at most
+    // one browser hand-off however many sign-in addresses the game pushes.
+    bool userSentInputThisConnection() const { return mUserSentInputThisConnection; }
+    void setUserSentInputThisConnection(const bool b) { mUserSentInputThisConnection = b; }
     int getRetries() { return mRetries; }
     void setRetries(const int retries) { mRetries = retries; }
     int getTimeout() { return mTimeout; }
@@ -237,6 +247,7 @@ public:
     QStringList getValidExperiments() const;
 
     void forceClose();
+    bool profileResetInProgress() const { return mResetProfile; }
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
@@ -347,6 +358,9 @@ public:
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether a package install or uninstall still owes the profile a save - see
+    // mDeferredSaveTimer.
+    bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
     void waitForProfileSave();
     void clearDiscordData();
@@ -391,6 +405,8 @@ public:
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    std::optional<QString> getMapperTitle() const;
+    QDockWidget* mapWidget() const;
 
     // Multiple map views support
     std::pair<int, QString> createMapView(int areaId = 0);
@@ -425,6 +441,7 @@ public:
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget();
+    std::optional<QRect> mapWidgetGeometry() const;
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
@@ -443,8 +460,8 @@ public:
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
-    bool setBackgroundImage(const QString& name, QString& path, int mode);
-    bool resetBackgroundImage(const QString& name);
+    bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
+    bool resetBackgroundImage(const QString& name, bool fullWindow = false);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
@@ -459,10 +476,13 @@ public:
         mScreenHeight = height;
     }
     std::optional<QString> windowType(const QString& name) const;
+    std::optional<QRect> windowGeometry(const QString& name) const;
+    std::optional<bool> windowVisible(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
+    bool caretShortcutMatches(const QKeyEvent*) const;
     void setFocusOnHostActiveCommandLine();
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
@@ -670,6 +690,12 @@ public:
     int mWrapAt = 100;
     int mWrapIndentCount = 0;
     int mWrapHangingIndentCount = 0;
+    // Rejoin lines that the game hard-wrapped itself so that triggers see the
+    // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
+    bool mUndoServerWrap = false;
+    int mUndoServerWrapWidth = 80;
+    // The one-time "this game seems to wrap its own lines" hint was shown:
+    bool mServerWrapHintShown = false;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
@@ -801,7 +827,6 @@ public:
     bool mMapperCenterSmallAreas = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
-    QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
     // Set from profile preferences, if the timer interval is less
@@ -831,6 +856,12 @@ public:
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
+
+    // Turning this off both ignores incoming OSC 8 sequences and advertises 0
+    // for them, so a server can fall back to MXP or plain text rather than
+    // sending links Mudlet will not render. It is checked as sequences are
+    // decoded, so links already drawn in the buffer stay clickable.
+    bool mEnableOSC8Hyperlinks = true;
 
     enum class BlankLineBehaviour { Show, Hide, ReplaceWithSpace };
     Q_ENUM(BlankLineBehaviour)
@@ -866,9 +897,15 @@ signals:
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
+    // The frontend (TMainConsole) owns the dialogs these drive; the strings are
+    // built here so they stay in Host's translation context.
+    void signal_showMapperScriptReminder();
+    void signal_showUnpackingProgress(const QString& message, const QString& title);
+    void signal_hideUnpackingProgress();
 
 private slots:
     void slot_purgeTemps();
+    void slot_saveProfileAfterPackageChange();
 
 private:
     void setBorders(const QMargins);
@@ -883,10 +920,37 @@ private:
     void createMapper(const bool);
     void removePackageInfo(const QString& packageName, const bool);
     static void createModuleBackup(const QString& filename, const QString& saveName);
-    void writeModule(const QString& moduleName, const QString& filename);
+    // A single module queued to be written out during a profile save. Its XML document
+    // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
+    // is deferred to a background task. The job is a complete, self-contained order:
+    // its own copy of the document plus every path the write needs, so it holds nothing
+    // whose lifetime the Host controls. It has to: a close that answers "No" to "Save
+    // profile?", and one that finds the main console already gone, wait for nothing, so
+    // the Host can be destroyed while the write is still queued.
+    struct ModuleWriteJob
+    {
+        std::shared_ptr<pugi::xml_document> document;
+        QString moduleName;
+        QString filename;
+        QString xmlFilename;
+        // Empty when this save is not to be backed up first.
+        QString backupName;
+    };
+    // Main thread only: builds every to-be-synced module's XML document, registers its
+    // writer in `writers`, resolves every path and creates the directories the write
+    // needs, returning the jobs a background task should serialize.
+    QList<ModuleWriteJob> prepareModuleSaves(bool backup);
+    // Writes the prepared module documents (and updates their zips) to disk. Static on
+    // purpose: it must keep working after the Host that ordered it has been destroyed,
+    // so it may not reach for any member. Usually a thread pool task, but a waiter in
+    // waitForProfileSave() can steal it onto the main thread, so it must suit either.
+    static void writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    static void updateModuleZip(const ModuleWriteJob& job);
+    // Main thread only: snapshot of the still-pending profile-save futures, so a
+    // background task never reads `writers`/`saveFutures` while the main thread mutates
+    // them (that concurrent access is a heap-corrupting data race).
+    QList<QFuture<bool>> pendingXmlSaveFutures() const;
     void waitForAsyncXmlSave();
-    void saveModules(bool backup = true);
-    void updateModuleZips(const QString& zipName, const QString& moduleName);
     void reloadModules();
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
@@ -912,8 +976,15 @@ private:
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
     GifTracker mGifTracker;
-    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
-    std::optional<bool> mSaveTimer;
+    // The profile save that a package/module install or uninstall owes is put off
+    // to the next event loop pass, so that the asynchronous save mechanism is not
+    // asked to write out something that was just taken out of memory. Restarting
+    // this timer also folds a batch of installs/uninstalls into a single save.
+    // It has to be a member timer rather than a QTimer::singleShot(): a call
+    // queued on the Host is still delivered after the Host has been destroyed,
+    // and the save then reads freed members - closeChildren() and ~Host() stop
+    // this one instead (#9653).
+    QTimer mDeferredSaveTimer;
 
     QFile mErrorLogFile;
 
@@ -929,6 +1000,10 @@ private:
     QString mPass;
 
     int mPort;
+
+    // Reset to false whenever a connection is (re)established; set true by Host::send() on the first
+    // user/script command. See userSentInputThisConnection().
+    bool mUserSentInputThisConnection = false;
 
     int mRetries = 5;
     bool mSaveProfileOnExit = false;

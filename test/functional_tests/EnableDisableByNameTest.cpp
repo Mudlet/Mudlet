@@ -29,6 +29,7 @@
  */
 
 #include <QtTest/QtTest>
+#include <chrono>
 
 #include <functional>
 
@@ -62,6 +63,8 @@ extern "C" {
 #endif
 }
 
+using namespace std::chrono_literals;
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -77,13 +80,17 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "EnableDisableByName-Test";
-    const QString mPort = "4005";
+    QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = "localhost";
 
     void runLua(const QString& code)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        luaL_dostring(L, code.toUtf8().constData());
+        if (luaL_dostring(L, code.toUtf8().constData()) != 0) {
+            const QString error = QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 1);
+            QFAIL(qPrintable(qsl("Lua error running test script: %1").arg(error)));
+        }
     }
 
     // Drives one item type through the shared expectation: enableX(dupName)
@@ -121,7 +128,8 @@ private slots:
         initializeQRCResourcesForEnableDisableByNameTest();
 
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mLocalhost, mPort.toUShort());
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
@@ -273,21 +281,21 @@ private slots:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
+            QTest::qWait(100ms);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 

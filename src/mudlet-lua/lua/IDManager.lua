@@ -93,7 +93,12 @@ function IDMgr:stopAllTimers()
 end
 
 function IDMgr:stopAllTriggers()
-  return self:stopAll("triggers")
+  -- named triggers live in two stores - registerNamedTrigger() fills "triggers"
+  -- and registerNamedRegexTrigger() fills "regexTriggers" - so stopping them all
+  -- has to walk both, exactly as deleteAllTriggers() does
+  local regex = self:stopAll("regexTriggers")
+  local substring = self:stopAll("triggers")
+  return regex and substring
 end
 
 function IDMgr:deleteAllEvents()
@@ -175,7 +180,7 @@ end
 function IDMgr:emergencyStop()
   self:stopAll("events")
   self:stopAll("timers")
-  self:stopAll("triggers")
+  self:stopAllTriggers()
   return true
 end
 
@@ -192,9 +197,27 @@ function IDMgr:getTimers()
 end
 
 function IDMgr:getTriggers()
-  local triggerNames = table.update(table.keys(self.triggers), table.keys(self.regexTriggers))
+  -- substring and regex names live in separate 1..n arrays, so merge them by
+  -- value (table.n_union), not by index, or entries at the same index collide
+  local triggerNames = table.n_union(table.keys(self.triggers), table.keys(self.regexTriggers))
   table.sort(triggerNames)
   return triggerNames
+end
+
+function IDMgr:remainingTime(name)
+  local object = self.timers[name]
+  if not object then
+    return nil, "timer not found"
+  end
+  if object.handlerID == -1 then
+    return nil, "timer is inactive"
+  end
+  local remaining = remainingTime(object.handlerID)
+  if remaining == nil then
+    -- underlying tempTimer is gone, e.g. an already-fired one-shot
+    return nil, "timer is inactive"
+  end
+  return remaining
 end
 
 function IDMgr:new()
@@ -449,6 +472,21 @@ function deleteAllNamedTimers(user)
   end
   local mgr = getManager(user)
   return mgr:deleteAllTimers()
+end
+
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#remainingNamedTimer
+function remainingNamedTimer(user, name)
+  local funcName = "remainingNamedTimer"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  local mgr = getManager(user)
+  return mgr:remainingTime(name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedTrigger

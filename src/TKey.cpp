@@ -103,6 +103,27 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
 }
 
 
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    // Also covers the dereference below - isActive() is false once mpMyChildrenList is gone
+    if (!isActive()) {
+        return false;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return true;
+    }
+
+    for (auto childKey : *mpMyChildrenList) {
+        if (childKey->wouldMatch(key, modifier)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 bool TKey::registerKey()
 {
     if (!mpHost) {
@@ -164,6 +185,17 @@ void TKey::compile()
 
 bool TKey::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempKey with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Otherwise execute() keeps calling the stale
+    // function so the new script never runs, and the registry entry leaks - the
+    // destructor would take its mScript-based branch and delete the compiled function.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     mNeedsToBeCompiled = true;
     mOK_code = compileScript();
@@ -179,11 +211,10 @@ bool TKey::compileScript()
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 void TKey::validateKeyBinding()
