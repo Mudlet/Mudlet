@@ -76,9 +76,9 @@ private slots:
         initializeQRCResourcesForDefaultGameDeleteTest();
 
         QVERIFY(mConfigDir.isValid());
-        // pre-create $XDG_CONFIG_HOME/mudlet so setupConfig() adopts it and the
-        // test never touches the real profiles or settings
-        QVERIFY(QDir().mkpath(qsl("%1/mudlet").arg(mConfigDir.path())));
+        // pre-create $XDG_CONFIG_HOME/mudlet/profiles so setupConfig() adopts it
+        // and the test never touches the real profiles or settings
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 

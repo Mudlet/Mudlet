@@ -129,7 +129,7 @@ private slots:
 
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         QVERIFY(mXdgDir.isValid());
-        QVERIFY(QDir().mkpath(qsl("%1/mudlet").arg(mXdgDir.path()))); // empty dir = XDG opt-in
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mXdgDir.path()))); // profiles/ = XDG opt-in
         qputenv("XDG_CONFIG_HOME", mXdgDir.path().toUtf8());
 
         mudlet::start();
