@@ -5792,8 +5792,7 @@ describe("Toolbar buttons", function()
     it("a floating toolbar is refused by name rather than reported missing", function()
       local hideOk, hideErr = hideToolBar(floatingToolbar)
       assert.is_nil(hideOk)
-      assert.are.equal(("toolbar '%s' is a floating toolbar, which cannot be shown or hidden from Lua"):format(floatingToolbar), hideErr)
-      -- and it is left as it was
+      assert.are.equal(("toolbar '%s' is set to float, which showToolBar() and hideToolBar() do not move"):format(floatingToolbar), hideErr)
       assert.are.equal(1, isActive(floatingToolbar, "button"))
     end)
 

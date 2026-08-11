@@ -89,7 +89,7 @@ private:
 
     TAction* getActionPrivate(int id);
     TAction* findEasyButtonBarAction(const QString& name);
-    bool isFloatingToolBarName(const QString& name);
+    bool namesAFloatingToolBar(const QString& name);
     std::pair<bool, QString> setToolBarActive(const QString& name, const bool active);
     void addActionRootNode(TAction* pT, int parentPosition = -1, int childPosition = -1);
     void addAction(TAction* pT);

@@ -502,9 +502,8 @@ TAction* ActionUnit::getHeadAction(TToolBar* pT)
 }
 
 // A root action that is a package or module container is not a toolbar itself -
-// its children are. Location 4 makes a floating TToolBar rather than one of the
-// TEasyButtonBars, and regenerateEasyButtonBars() reads that off the root before
-// it looks at the children.
+// its children are. Location 4 is the floating setting, which is not one of the
+// TEasyButtonBars that live in the profile's window.
 TAction* ActionUnit::findEasyButtonBarAction(const QString& name)
 {
     for (auto& rootAction : mActionRootNodeList) {
@@ -526,9 +525,9 @@ TAction* ActionUnit::findEasyButtonBarAction(const QString& name)
     return nullptr;
 }
 
-// A floating toolbar is a dock widget of the application rather than a bar
-// inside the profile's window, and neither of these two calls reaches one.
-bool ActionUnit::isFloatingToolBarName(const QString& name)
+// showToolBar() and hideToolBar() only reach the button bars in the profile's
+// window, so a toolbar set to float is worth telling apart from a typo.
+bool ActionUnit::namesAFloatingToolBar(const QString& name)
 {
     for (auto& rootAction : mActionRootNodeList) {
         if (rootAction->mLocation == 4 && rootAction->getName() == name) {
@@ -575,8 +574,8 @@ std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const
     if (found) {
         return {true, QString()};
     }
-    if (isFloatingToolBarName(name)) {
-        return {false, qsl("toolbar '%1' is a floating toolbar, which cannot be shown or hidden from Lua").arg(name)};
+    if (namesAFloatingToolBar(name)) {
+        return {false, qsl("toolbar '%1' is set to float, which showToolBar() and hideToolBar() do not move").arg(name)};
     }
     return {false, qsl("toolbar '%1' not found").arg(name)};
 }
