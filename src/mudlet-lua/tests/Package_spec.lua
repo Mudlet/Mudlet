@@ -978,6 +978,22 @@ describe("Tests the functionality of verbosePackageInstall", function()
     assert.is_true(containsWrapped(text, "could not open file"), text)
     assert.is_false(packageInstalled("mudlet-spec-there-is-no-such-package"))
   end)
+
+  it("names the file, not the whole path, when the install fails", function()
+    -- the failure announcement trims the same way the success one does, and it
+    -- is the one players actually read. The file does not have to be there, so
+    -- this costs no install and no profile save.
+    local name = "mudlet-spec-there-is-no-such-package.mpackage"
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(getMudletHomeDir() .. "/" .. name)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Installing '" .. name .. "' failed:"), text)
+    -- the reason installPackage() gives does name the whole path, so only the
+    -- announcement's own name is checked for having been trimmed
+    assert.is_false(containsWrapped(text, "Installing '" .. getMudletHomeDir()), text)
+  end)
 end)
 
 describe("Tests the functionality of verboseModuleInstall", function()
