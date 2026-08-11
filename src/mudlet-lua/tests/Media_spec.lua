@@ -198,11 +198,12 @@ describe("Media load functions validate their parameters", function()
     assert.is_true(contains(err, "missing argument 1"), tostring(err))
   end)
 
-  it("the table form raises a Lua error when it is given no name", function()
-    -- Only the tail of the message: all three loads report this one as
-    -- loadMusicFile, whichever was called, and pinning that here would hold
-    -- that in place.
-    assertArgError(function() loadSoundFile({}) end, "missing name")
+  it("the table form raises a Lua error naming the load that was called", function()
+    -- #9785: the shared table parser reported every one of them as
+    -- loadMusicFile, which sent anyone debugging a script to the wrong call
+    assertArgError(function() loadSoundFile({}) end, "loadSoundFile: missing name")
+    assertArgError(function() loadMusicFile({}) end, "loadMusicFile: missing name")
+    assertArgError(function() loadVideoFile({}) end, "loadVideoFile: missing name")
   end)
 
   it("the ordered form raises a Lua error when the url is not a string", function()
@@ -276,12 +277,14 @@ describe("Media query and stop functions validate their parameters", function()
     assert.is_table(getPausedVideos({[1] = "junk", key = "busted-media-no-such-key"}))
   end)
 
-  it("the ordered play forms refuse a negative fade", function()
-    -- Only the range refusal, not the whole message: the music parser's fade
-    -- messages name playSoundFile, and pinning that here would hold it in
-    -- place.
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "bad argument range for fadein")
-    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "bad argument range for fadeout")
+  it("the ordered play forms refuse a negative fade, start or finish and name the call", function()
+    -- #9785: the music parser's four range messages all named playSoundFile
+    -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "playMusicFile: bad argument range for fadein")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, -1) end, "playMusicFile: bad argument range for fadeout")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, -1) end, "playMusicFile: bad argument range for start")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, "k", "t", false, nil, -1) end, "playMusicFile: bad argument range for finish")
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "playSoundFile: bad argument range for fadeout")
   end)
 
   it("every query returns an empty table while nothing is playing", function()
