@@ -26,6 +26,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
+    MainWindowSizeAndLayoutTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp

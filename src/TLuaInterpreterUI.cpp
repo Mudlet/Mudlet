@@ -2416,8 +2416,15 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
-    mudlet::self()->mHasSavedLayout = false;
-    lua_pushboolean(L, mudlet::self()->saveWindowLayout());
+    mudlet* pMudlet = mudlet::self();
+    // the flag is what stops Mudlet saving the layout a second time on the way
+    // out, and a save asked for from a script is no substitute for that one, so
+    // it is only lowered for the length of this call
+    const bool hadSavedLayout = pMudlet->mHasSavedLayout;
+    pMudlet->mHasSavedLayout = false;
+    const bool saved = pMudlet->saveWindowLayout();
+    pMudlet->mHasSavedLayout = hadSavedLayout;
+    lua_pushboolean(L, saved);
     return 1;
 }
 
