@@ -474,12 +474,6 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("turns saving on when told which command line, or none at all, but not whether to", function()
-          -- BUG: both forms are meant to default to turning saving on - the
-          -- implementation says so, and the branch that would read a second
-          -- argument after a name is unreachable without one. Both count their
-          -- arguments one too high, so they reach the type check and raise
-          -- instead. Left pending rather than pinning the raise as the contract.
-          pending("setSaveCommandHistory() and setSaveCommandHistory(name) raise instead of turning saving on")
           local original = getSaveCommandHistory()
           finally(function() setSaveCommandHistory(original) end)
           setSaveCommandHistory(false)

@@ -8652,9 +8652,7 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
     bool saveCommands = true;
     // if there is no arguments we will set the "save command history" on the
     // main  command line:
-    if (n == 1) {
-        saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
-    } else {
+    if (n > 0) {
         if (lua_type(L, 1) == LUA_TSTRING) {
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);
