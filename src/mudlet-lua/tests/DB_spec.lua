@@ -3170,15 +3170,43 @@ describe("Tests db:create with a single column name as _index", function()
     assert.are.equal("Bob", rows[1].name)
   end)
 
-  it("makes no index at all for a column the sheet does not have", function()
-    -- db:_index_valid refuses the column quietly rather than raising, so a
-    -- typo in the string costs the index and the ones that were there before
+  it("refuses a column the sheet does not have, keeping the indexes it had", function()
+    -- an index on a column that is not there can never be created, and taking
+    -- the typo for the wanted set would drop the indexes the sheet did have
     db:create(dbName, {people = {name = "", city = "", _index = "city"}})
     assert.are.equal(1, #indexNames("people"))
-    db:close(dbName)
 
-    db:create(dbName, {people = {name = "", city = "", _index = "citty"}})
-    assert.are.same({}, indexNames("people"))
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {name = "", city = "", _index = "citty"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, '_index names "citty", which is not one of the sheet\'s columns', 1, true))
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("refuses a typo in a list or a compound index too", function()
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {name = "", city = "", _index = {"city", "citty"}}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, '_index names "citty"', 1, true))
+
+    ok, err = pcall(function()
+      db:create(dbName, {people = {name = "", city = "", _index = {{"city", "citty"}}}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, '_index names "citty"', 1, true))
+  end)
+
+  it("refuses the _row_id no sheet definition names either", function()
+    -- db:_migrate_indexes only sees the columns the sheet was defined with, so
+    -- an index on the implicit _row_id is never created and would take the rest
+    -- of the sheet's indexes down with it as an unmatched wanted entry
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {name = "", city = "", _index = "_row_id"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, '_index names "_row_id"', 1, true))
   end)
 end)
 

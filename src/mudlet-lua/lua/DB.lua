@@ -118,8 +118,9 @@ function db:_sql_columns(value)
   if t == "table" then
     for _, v in ipairs(value) do
       assert(type(v) == "string", "Column names must be strings, not " .. type(v) .. ".")
-      -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term, which is
-      -- only a sort direction when there is a column in front of it to sort
+      -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term: a sort
+      -- direction belongs to the column in front of it, so one that leads the
+      -- list can only be a column of that name
       if col_chunks[1] and (v:lower() == "desc" or v:lower() == "asc") then
         col_chunks[#col_chunks] = col_chunks[#col_chunks] .. " " .. v
       else
@@ -448,6 +449,24 @@ function db:create(db_name, sheets, force)
       -- both of them.
       if type(options._index) == "string" then
         options._index = { options._index }
+      end
+
+      -- An index on a column the sheet does not have can never be created:
+      -- db:_migrate_indexes skips it, while db:_drop_orphaned_indexes takes it
+      -- for part of the wanted set and drops every index that is not in there,
+      -- so a typo would silently cost the sheet the indexes it did have. The
+      -- shapes _validate_index already refused above are left to it to report.
+      if type(options._index) == "table" then
+        for _, index_entry in ipairs(options._index) do
+          local index_columns = type(index_entry) == "table" and index_entry or {index_entry}
+          for _, column_name in ipairs(index_columns) do
+            if type(column_name) == "string" and columns[column_name] == nil then
+              is_valid = false
+              table.insert(msgs, "db:create - "..sheet_name.." - _index names \""..column_name..
+                "\", which is not one of the sheet's columns.")
+            end
+          end
+        end
       end
     end
 
