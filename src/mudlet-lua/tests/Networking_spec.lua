@@ -1940,6 +1940,39 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals(6667, port)
       assert.is_false(secure)
     end)
+
+    it("takes an explicit nil for any optional argument, as leaving it off does", function()
+      -- #9787: a script forwarding optional variables passes nil for the ones
+      -- it has no value for, and only the port accepted that
+      local passwordFile = getMudletHomeDir() .. "/irc_password"
+      local nick = getIrcNick()
+      local hostName, port, secure = getIrcServer()
+      local channels = getIrcChannels()
+      local ownPassword = readBinaryFile(passwordFile)
+      finally(function()
+        setIrcNick(nick)
+        setIrcServer(hostName, port, secure)
+        setIrcChannels(channels)
+        if ownPassword then
+          writeBinaryFile(passwordFile, ownPassword)
+        else
+          os.remove(passwordFile)
+        end
+      end)
+
+      assert.is_true(setIrcServer("irc.busted-nil.invalid", 6697, true, "BustedNilSecret"))
+      local stored = readBinaryFile(passwordFile)
+      assert.is_true(contains(stored, utf16be("BustedNilSecret")))
+
+      assert.is_true(setIrcServer("irc.busted-nil.invalid", nil, nil, nil))
+      local storedHost, storedPort, storedSecure = getIrcServer()
+      assert.equals("irc.busted-nil.invalid", storedHost)
+      -- a nil optional is the default, the same as leaving it off
+      assert.equals(6667, storedPort)
+      assert.is_false(storedSecure)
+      -- except for the password, which an omitted argument keeps as it is
+      assert.equals(stored, readBinaryFile(passwordFile))
+    end)
   end)
 
   describe("setIrcChannels", function()
