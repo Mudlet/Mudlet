@@ -194,10 +194,9 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
-<<<<<<< HEAD
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 300)
-=======
+
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
 # a loaded machine even though the file runs in ~2s
@@ -205,7 +204,6 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
->>>>>>> origin/development
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's
