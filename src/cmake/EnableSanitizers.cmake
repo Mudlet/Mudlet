@@ -3,12 +3,7 @@ include(${CMAKE_SOURCE_DIR}/3rdparty/cmake-scripts/sanitizers.cmake)
 if(DEFINED ENV{MUDLET_SANITIZERS} AND NOT "$ENV{MUDLET_SANITIZERS}" STREQUAL "")
 
     # The available sanitizers are OS dependent - we ought to account for that
-    set(SANITIZERS_SELECTED
-        "$ENV{MUDLET_SANITIZERS}"
-        CACHE STRING
-        "Compile with sanitizers. Available sanitizers are (case-sensitive): \
-        Address, Memory, MemoryWithOrigins, Undefined, Thread, or Leak"
-    )
+    set(SANITIZERS_SELECTED "$ENV{MUDLET_SANITIZERS}")
 
     # Only set the options on sanitizers we are using - otherwise an unneeded
     # availability/compatibility check is done for each one:
@@ -31,9 +26,17 @@ if(DEFINED ENV{MUDLET_SANITIZERS} AND NOT "$ENV{MUDLET_SANITIZERS}" STREQUAL "")
             -fsanitize-memory-track-origins)
     endif()
 
+    # add_sanitizer_support(... ) seems to need a spave separated string of
+    # sanitizers wanted
     LIST(JOIN SANITIZERS_SELECTED " " SANITIZERS_AS_STRING)
-    add_sanitizer_support("${SANITIZERS_SELECTED}")
-    # Don't report which sanitizers are being used here as this is used more
-    # than once in a full build and there is no need to repeat the message,
-    # it is now done in the second-level src/CMakeLists.txt file.
+else()
+    unset(SANITIZERS_SELECTED)
+    unset(SANITIZERS_AS_STRING)
 endif()
+
+# In the event that MUDLET_SANITIZERS is not defined or is empty this should
+# clear any prior configuration. Don't report which sanitizers are being used
+# here as this is used more than once in a full build and there is no need to
+# repeat the message, it is now done in the second-level src/CMakeLists.txt
+# file.
+add_sanitizer_support("${SANITIZERS_SELECTED}")

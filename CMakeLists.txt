@@ -192,16 +192,20 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
-# MacOS might also support compiling with libasan or other sanitizers but we do
-# not currently seem to use it there. MUDLET_SANITIZERS also needs to be set to
-# a (semi-colon separated, initial capital letter) list of sanitizers to include.
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SANITIZERS
                         OPTION_VARIABLE USE_SANITIZERS
                         READABLE_NAME "sanitizers"
-                        SUPPORTED_SYSTEMS "Linux"
-                                          "Windows"
-                                          "FreeBSD")
+                        DEFAULT OFF)
 find_package(Qt6 6.8.2 REQUIRED)
+
+# Fail LOUDLY if any old control variable for the Address sanitizer is seen
+if(DEFINED ENV{USE_SANITIZER})
+  message(FATAL_ERROR "Environmental variable 'USE_SANITIZER' seen, this is no longer supported, use environmetal variables 'WITH_SANITIZERS' set to 'YES' as a master switch {defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon separated list of sanitizers to include.")
+endif()
+
+if(DEFINED USE_SANITIZER)
+  message(FATAL_ERROR "CMake variable 'USE_SANITIZER' seen, this is no longer supported, use environmetal variables 'WITH_SANITIZERS' set to 'YES' as a master switch {defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon separated list of sanitizers to include.")
+endif()
 
 if(WIN32 AND DEFINED ENV{MSYSTEM} AND NOT "$ENV{MSYSTEM}" STREQUAL "CLANG64" AND USE_SANITIZERS)
   message(WARNING "Sanitizers are not available for the MSYS2 $ENV{MSYSTEM} environment in Windows, disabling them in build...")

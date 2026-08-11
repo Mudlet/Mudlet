@@ -519,6 +519,7 @@ endif()
 
 if(USE_SANITIZERS)
   include(cmake/EnableSanitizers.cmake)
+  # The above script sets the SANITIZERS_AS_STRING variable:
   if (NOT SANITIZERS_AS_STRING)
     message(STATUS "No sanitizers selected, if required add them to the environment variable MUDLET_SANITIZERS.")
   else()
@@ -686,7 +687,7 @@ if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
 endif()
 
-if(USE_SANITIZERS)
+if(USE_SANITIZERS AND SANITIZERS_AS_STRING)
   # This is ONLY used to include the Licence details for the Sanitizers - as
   # such it only needs to/should be present for builds that "package" Mudlet
   # i.e. installer builds (for MacOS and Windows) and AppImages (for Linux)
