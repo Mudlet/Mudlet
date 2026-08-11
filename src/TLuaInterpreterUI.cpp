@@ -955,10 +955,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     luaReferences << luaReference;
     hintList << QString{lua_tostring(L, hintPos)};
 
-    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-    auto console = CONSOLE(L, windowName);
     console->echoLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
@@ -1906,10 +1903,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     luaReferences << luaReference;
     hintList << QString{lua_tostring(L, hintPos)};
 
-    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-    auto console = CONSOLE(L, windowName);
     console->insertLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
@@ -3358,7 +3352,6 @@ int TLuaInterpreter::setLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
     luaReferences << luaReference;
 
-    auto console = CONSOLE(L, QString{windowName});
     console->setLink(commandList, hintList, luaReferences);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();

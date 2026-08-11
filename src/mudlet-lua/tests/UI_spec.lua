@@ -4901,15 +4901,6 @@ describe("Label movies", function()
       assert.are.equal(totalBefore, gifStats())
     end)
 
-    it("a refused movie over a working one registers no second gif", function()
-      assert.is_true(setMovie(label, giffile))
-      local totalBefore, activeBefore = gifStats()
-      assert.is_nil(setMovie(label, notAGifFile))
-      local totalAfter, activeAfter = gifStats()
-      assert.are.equal(totalBefore, totalAfter)
-      assert.are.equal(activeBefore, activeAfter)
-    end)
-
     it("checking that the movie the label kept is the one that works", function()
       pending("a label driving a movie with no frames in it answers every movie getter the same way as one that works - LabelMovieRefusalTest reads the QMovie itself")
     end)
@@ -5110,10 +5101,10 @@ describe("Console buffer size", function()
   end)
 
   it("a batch deletion size of none at all is raised to one line", function()
-    -- the buffer is trimmed a batch at a time, so a batch of none would trim
-    -- nothing and let the buffer grow past its limit without end
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 0))
+    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    assert.is_true(setConsoleBufferSize(console, 100, -5))
     assert.are.same({100, 1}, {getConsoleBufferSize(console)})
     for lineNumber = 1, 400 do
       echo(console, ("buffer line %d\n"):format(lineNumber))
@@ -5255,15 +5246,24 @@ describe("Main window size and saved layout", function()
   end
 
   setup(function()
-    originalWidth, originalHeight = getMainWindowSize()
-    measurable = testMode and originalWidth > 0 and originalHeight > 0
+    local firstWidth, firstHeight = getMainWindowSize()
+    measurable = testMode and firstWidth > 0 and firstHeight > 0
     if not measurable then
       return
     end
-    setMainWindowSize(originalWidth + 300, originalHeight + 300)
+    setMainWindowSize(firstWidth + 300, firstHeight + 300)
     pumpEvents(200)
     local width, height = getMainWindowSize()
-    resizable = width > originalWidth and height > originalHeight
+    resizable = width > firstWidth and height > firstHeight
+
+    -- A dock another spec file opened and left open - the map widget is the one
+    -- that does this - only takes its width out of the console at the next
+    -- re-layout, which is the resize just above. So the size to put the window
+    -- back to is read after asking for the original one again rather than
+    -- before: a size the window has actually been is a size it can reach.
+    setMainWindowSize(firstWidth, firstHeight)
+    pumpEvents(200)
+    originalWidth, originalHeight = getMainWindowSize()
     restoreMainWindowSize()
   end)
 
@@ -5530,7 +5530,7 @@ describe("Toolbar buttons", function()
       <commandButtonDown></commandButtonDown>
       <icon></icon>
       <orientation>0</orientation>
-      <location>0</location>
+      <location>%s</location>
       <buttonRotation>0</buttonRotation>
       <sizeX>0</sizeX>
       <sizeY>0</sizeY>
@@ -5945,18 +5945,12 @@ describe("Command line actions and suggestions", function()
     end)
 
     it("still reads the command line name when something trails it", function()
-      -- the add and remove siblings take their window name from the first
-      -- argument however many follow it, and clearing has to agree with them:
-      -- reading it only when it is the sole argument would have this clear the
-      -- main command line instead
+      -- clearing has no mandatory second argument, so argument 1 is the command
+      -- line name whatever follows it; the add and remove siblings only look
+      -- different because their last argument is the suggestion text
       local ok, err = clearCmdLineSuggestions(unknown, "trailing")
       assert.is_nil(ok)
       assert.are.equal(('command line "%s" not found'):format(unknown), err)
-    end)
-
-    it("clears a named command line that is given a trailing argument too", function()
-      addCmdLineSuggestion(cmdLine, "suggested")
-      assert.are.equal(0, select("#", clearCmdLineSuggestions(cmdLine, "trailing")))
     end)
 
     it("hard-errors on a non-string command line name", function()

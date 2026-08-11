@@ -19,9 +19,9 @@
 
 /*
  * A setMovie() that refuses a file must leave the movie the label was already
- * playing alone. Every Lua getter says the label is fine either way - the gif
- * still counts as running, startMovie() answers true and setMovieFrame() jumps
- * to a frame that is not there - so only the QMovie itself tells the two apart.
+ * playing alone. The gif count, startMovie() and setMovieFrame() all answer the
+ * same for a label left holding a movie with no frames in it, so the QMovie is
+ * what tells the two states apart.
  *
  * Run with: ctest -R LabelMovieRefusalTest -V
  */
@@ -61,11 +61,17 @@ private:
     const QString mLocalhost = qsl("localhost");
     const QString mLabelName = qsl("movieRefusalLabel");
     QTemporaryDir mFixtureDir;
+    // a configuration directory of its own, so the profile this opens is never
+    // one of the developer's
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdgConfigHome;
     QString mGifPath;
     QString mNotAGifPath;
 
-    // three frames so there is somewhere to jump to, and a frame delay long
-    // enough that the animation never advances while the test reads it back
+    static bool portableMarkerPresent() { return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())); }
+
+    // three frames so the count is a distinctive thing to compare, and a 60
+    // second frame delay so the animation never advances between two reads
     static QByteArray threeFrameGif()
     {
         QByteArray gif("GIF89a");
@@ -86,7 +92,17 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - cannot redirect the config dir for this test");
+        }
         initializeQRCResourcesForLabelMovieRefusalTest();
+
+        QVERIFY(mConfigDir.isValid());
+        // setupConfig() only adopts $XDG_CONFIG_HOME once the profiles
+        // directory under it is there to be adopted
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdgConfigHome = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         QVERIFY(mFixtureDir.isValid());
         mGifPath = qsl("%1/movie.gif").arg(mFixtureDir.path());
@@ -101,6 +117,9 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
+        mudlet::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -144,6 +163,11 @@ private slots:
         const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
         delete mudlet::self();
+        if (mSavedXdgConfigHome.isEmpty()) {
+            qunsetenv("XDG_CONFIG_HOME");
+        } else {
+            qputenv("XDG_CONFIG_HOME", mSavedXdgConfigHome);
+        }
     }
 
     void test_aRefusedMovieLeavesTheOneTheLabelWasPlaying()
@@ -166,9 +190,15 @@ private slots:
         QCOMPARE(refusalMessage, qsl("no valid movie found at '%1'").arg(mNotAGifPath));
 
         QVERIFY(pLabel->mpMovie);
+        // these three are what a refused call over a working movie gets wrong:
+        // it hands the label's own QMovie the path, leaving it invalid, named
+        // after the file that is not a movie, and with no frames
         QVERIFY2(pLabel->mpMovie->isValid(), "the refused file left the label with a movie it cannot play");
         QCOMPARE(pLabel->mpMovie->fileName(), mGifPath);
         QCOMPARE(pLabel->mpMovie->frameCount(), frameCount);
+        // a QMovie handed a file that is not one keeps running, so this says
+        // nothing on its own - it is here because the label must still be
+        // playing what it was playing
         QCOMPARE(pLabel->mpMovie->state(), QMovie::Running);
 
         mpHost->mpConsole->deleteLabel(mLabelName);

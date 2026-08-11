@@ -1381,19 +1381,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("raises a Lua error for a first argument it cannot carry", function()
-        -- safe to assert, unlike the spec below: nothing has been put into the
-        -- event yet, so the raise has nothing to strand
         assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument type #1")
       end)
 
       it("raises a Lua error for a later argument it cannot carry", function()
-        -- BUG: the refusal is right, but it is raised with lua_error() after the
-        -- event has been built, and that longjmps past the destructor of the
-        -- TEvent holding the arguments read so far, which LeakSanitizer reports
-        -- and which would turn the leak-checking CI job red. Refusing the first
-        -- argument (above) is safe because nothing has been appended yet. Left
-        -- pending until the raise happens before the event is built.
-        pending("raiseGlobalEvent() leaks the event it was building when it refuses a later argument")
+        -- the arguments are all vetted before the TEvent is built, so this raise
+        -- has nothing to strand either; the leak-checking CI job is what would
+        -- notice if that changed
         assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument type #2")
       end)
 

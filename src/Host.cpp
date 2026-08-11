@@ -4608,10 +4608,9 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
-    // The file is read through a movie of its own first: handing the path to
-    // the label's live QMovie is what would leave the label driving a movie
-    // that turns out not to be one, and registering a QMovie before the read
-    // is what would count a refused call in the profile's gif total
+    // Validated through a movie of its own: the label's own QMovie must not
+    // take the path before it is known to be a movie, and the gif tracker must
+    // not count one this call goes on to refuse
     if (const QMovie candidate(moviePath); !candidate.isValid()) {
         return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
     }
