@@ -378,6 +378,25 @@ describe("Tests functionality of Geyser.Container", function()
       assert.is_nil(table.index_of(Geyser.windows, "gcsDeleteRoot"))
     end)
 
+    -- the deferral is per container rather than per cascade, so a box nested
+    -- inside the container being deleted has to go quiet on its own account
+    it("holds the layout of a box it is deleting back", function()
+      local container = track(Geyser.Container:new({name = "gcsDeleteCost", x = 0, y = 0, width = 400, height = 100}))
+      local box = track(Geyser.HBox:new({name = "gcsDeleteCostBox", width = 400, height = 100}, container))
+      for i = 1, 5 do
+        track(Geyser.Label:new({name = "gcsDeleteCostChild" .. i}, box))
+      end
+      local organizes = 0
+      local organize = box.organize
+      box.organize = function(...)
+        organizes = organizes + 1
+        return organize(...)
+      end
+      container:delete()
+      assert.are.equal(0, organizes)
+      assert.is_nil(getWindowGeometry("gcsDeleteCostChild1"))
+    end)
+
     it("unregisters a child from its parent", function()
       local container = track(Geyser.Container:new({name = "gcsDeleteParent", x = 0, y = 0, width = 100, height = 100}))
       local child = track(Geyser.Label:new({name = "gcsDeleteMe"}, container))
@@ -649,6 +668,23 @@ describe("Tests functionality of Geyser.Container", function()
       Geyser:end_update()
       assert.are.same({x = 0, y = 0, width = 200, height = 100}, geometry("gcsRootDeferredA"))
       assert.are.same({x = 0, y = 100, width = 200, height = 100}, geometry("gcsRootDeferredB"))
+    end)
+
+    -- delete() defers the box it is emptying, and that borrowed deferral must
+    -- not end a deferral the caller asked for: the box has to stay held back
+    -- until end_update, and then still catch up on the layout it skipped
+    it("leaves a root deferral running when a box loses a child to delete", function()
+      -- leaving the flag set would stop every later spec repositioning
+      finally(function() Geyser.defer_updates = false end)
+      local box = track(Geyser.HBox:new({name = "gcsRootDelete", x = 0, y = 0, width = 400, height = 100}))
+      track(Geyser.Label:new({name = "gcsRootDeleteKeep"}, box))
+      local doomed = track(Geyser.Container:new({name = "gcsRootDeleteGone"}, box))
+      Geyser:begin_update()
+      doomed:delete()
+      assert.is_true(Geyser.defer_updates)
+      assert.are.equal(200, geometry("gcsRootDeleteKeep").width)
+      Geyser:end_update()
+      assert.are.equal(400, geometry("gcsRootDeleteKeep").width)
     end)
 
     it("repositions every window when Geyser:reposition is called directly", function()
