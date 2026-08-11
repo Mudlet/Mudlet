@@ -26,7 +26,7 @@ if(DEFINED ENV{MUDLET_SANITIZERS} AND NOT "$ENV{MUDLET_SANITIZERS}" STREQUAL "")
             -fsanitize-memory-track-origins)
     endif()
 
-    # add_sanitizer_support(... ) seems to need a spave separated string of
+    # add_sanitizer_support(... ) seems to need a space separated string of
     # sanitizers wanted
     LIST(JOIN SANITIZERS_SELECTED " " SANITIZERS_AS_STRING)
 else()
