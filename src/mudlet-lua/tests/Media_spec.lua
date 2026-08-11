@@ -173,10 +173,10 @@ end)
 
 describe("Media load functions validate their parameters", function()
   -- loadMusicFile/loadSoundFile/loadVideoFile are one preload request behind
-  -- three names: they share a pair of parsers which set no media type at all,
-  -- so what actually differs between them is the name in their error messages
-  -- and loadVideoFile taking the table form only. Nothing here names a file
-  -- that exists, so no preload gets as far as the media engine.
+  -- three names: they share a pair of parsers, each call stamping its own media
+  -- type on the request, and loadVideoFile takes the table form only. Nothing
+  -- here names a file that exists, so no preload gets as far as the media
+  -- engine.
   it("each raises a Lua error when called with no arguments", function()
     assertArgError(function() loadMusicFile() end, "loadMusicFile: need at least one argument")
     assertArgError(function() loadSoundFile() end, "loadSoundFile: need at least one argument")
@@ -985,6 +985,27 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.equals(1, #done)
     assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("a sound preload leaves paused music of the same name paused", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- #9784: what a load is filed as decides which players it can reach.
+    -- playMedia() looks for a paused player to resume before it does anything
+    -- else, among the players of the type the request carries - and a load that
+    -- set no type at all searched every list this profile has, so a sound
+    -- preload took over music.
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-load-typed"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(pauseMusic())
+    assert.equals(1, #getPausedMusic())
+
+    assert.is_true(loadSoundFile({name = longSoundFile}))
+    assert.equals(1, #getPausedMusic())
+    assert.equals(0, #getPlayingMusic())
+    assert.equals(0, #getPlayingSounds())
   end)
 
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()

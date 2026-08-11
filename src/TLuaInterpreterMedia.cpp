@@ -60,7 +60,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
 {
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
@@ -110,6 +110,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
             }
 
             mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+            mediaData.setMediaType(mediaType);
             mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
 
             host.mpMedia->playMedia(mediaData);
@@ -125,7 +126,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
 {
     const Host& host = getHostFromLua(L);
 
@@ -178,6 +179,7 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
                 errorPushed = true;
             } else {
                 mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+                mediaData.setMediaType(mediaType);
                 mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
 
                 host.mpMedia->playMedia(mediaData);
@@ -202,10 +204,10 @@ int TLuaInterpreter::loadMusicFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeMusic);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
+    return loadMediaFileAsOrderedArguments(L, __func__, TMediaData::MediaTypeMusic);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadSoundFile
@@ -217,10 +219,10 @@ int TLuaInterpreter::loadSoundFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeSound);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
+    return loadMediaFileAsOrderedArguments(L, __func__, TMediaData::MediaTypeSound);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadVideoFile
@@ -236,7 +238,7 @@ int TLuaInterpreter::loadVideoFile(lua_State* L)
         return lua_error(L);
     }
 
-    return loadMediaFileAsTableArgument(L, __func__);
+    return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeVideo);
 }
 
 // Private
