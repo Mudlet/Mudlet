@@ -246,9 +246,8 @@ private slots:
                 },
                 2000));
 
-        // Every entry ends at the wrap column and reads as a sentence, so
-        // only the marker tells the list from a wrapped paragraph. The last
-        // carries the single leading space a game may indent an index by:
+        // Only the marker tells these entries from a wrapped paragraph; the
+        // last carries the single leading space a game may indent an index by:
         const QString entry1 = heldLine(qsl("[581] Stat Fury - a viking only stat that grants bonuses"));
         const QString entry2 = heldLine(qsl("(3) Viking Default: what you get if you do not customise"));
         const QString entry3 = heldLine(qsl("1. Viking Specializations lists the class specialisations"));
