@@ -1803,10 +1803,10 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
 // A list entry reads exactly like wrapped prose: a sentence that can end
 // right at the wrap column. Only its marker tells the list apart from a
 // paragraph, so every form accepted here has to be one that word wrap would
-// not itself produce at the start of a continuation.
-// The ambiguous ones are left out on purpose: a spaced dash opens a
-// continuation whenever the wrap lands on it, and a parenthesised number is
-// as often an aside as a label, so it is capped like a bare one.
+// not itself produce at the start of a continuation. The ambiguous ones are
+// left out on purpose: a spaced dash opens a continuation whenever the wrap
+// lands on it, and a parenthesised number is as often an aside as a label,
+// so it is capped like a bare one.
 bool TBuffer::startsWithListMarker(const QString& line)
 {
     qsizetype start = 0;
@@ -1825,18 +1825,18 @@ bool TBuffer::startsWithListMarker(const QString& line)
     static const QString openers = qsl("[(");
     static const QString closers = qsl("])");
     const qsizetype bracket = openers.indexOf(line.at(start));
-    const qsizetype labelStart = (bracket < 0) ? start : start + 1;
-    qsizetype labelEnd = labelStart;
-    while (labelEnd < line.size() && line.at(labelEnd).isDigit()) {
-        ++labelEnd;
+    const qsizetype numberStart = (bracket < 0) ? start : start + 1;
+    qsizetype numberEnd = numberStart;
+    while (numberEnd < line.size() && line.at(numberEnd).isDigit()) {
+        ++numberEnd;
     }
-    const qsizetype digits = labelEnd - labelStart;
-    if (!digits || labelEnd >= line.size()) {
+    const qsizetype digits = numberEnd - numberStart;
+    if (!digits || numberEnd >= line.size()) {
         return false;
     }
-    const bool labelFitsAList = digits <= csmServerWrapMaxListLabelDigits || line.at(start) == QChar('[');
-    const bool closed = (bracket >= 0) ? line.at(labelEnd) == closers.at(bracket) : (line.at(labelEnd) == QChar('.') || line.at(labelEnd) == QChar(')'));
-    return labelFitsAList && closed && labelEnd + 1 < line.size() && line.at(labelEnd + 1) == QChar::Space;
+    const bool numberFitsAList = digits <= csmMaxListNumberDigits || line.at(start) == QChar('[');
+    const bool closed = (bracket >= 0) ? line.at(numberEnd) == closers.at(bracket) : (line.at(numberEnd) == QChar('.') || line.at(numberEnd) == QChar(')'));
+    return numberFitsAList && closed && numberEnd + 1 < line.size() && line.at(numberEnd + 1) == QChar::Space;
 }
 
 void TBuffer::joinPendingServerWrapOntoCurrent()

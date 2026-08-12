@@ -618,8 +618,8 @@ private:
     // it really was complete:
     static constexpr int csmServerWrapFlushDelayMs = 300;
     // A longer number opening a line is likelier a year or a price ending a
-    // wrapped sentence than a list label; only "[...]" is trusted past it:
-    static constexpr qsizetype csmServerWrapMaxListLabelDigits = 3;
+    // wrapped sentence than a list number; only "[...]" is trusted past it:
+    static constexpr qsizetype csmMaxListNumberDigits = 3;
     // Wrap detection hint: how many lines ending within 8 characters of a
     // stable ceiling column are needed before suggesting mUndoServerWrap:
     static constexpr int csmWrapDetectThreshold = 40;
