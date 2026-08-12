@@ -317,6 +317,28 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.hidden")), "standing aside for the game's own interface left the floating bars on screen");
     }
 
+    // A save that fails is what loses a dropped position, so it has to say so.
+    // table.save reports a path it cannot write by returning a message rather
+    // than by raising, so the pcall around it never sees the failure by itself.
+    void test_aFailedSaveIsNotSilent()
+    {
+        Host* host = startProfileWithGauges();
+        QVERIFY(host);
+
+        // a directory where the settings file goes, so io.open cannot open it
+        QVERIFY(runLua(host,
+                       qsl("local path = getMudletHomeDir() .. '/base_ui_settings.lua'\n"
+                           "os.remove(path)\n"
+                           "__baseUi = { madeDir = lfs.mkdir(path) }\n"
+                           "local ok, _, message = pcall(table.save, path, { a = 1 })\n"
+                           "__baseUi.pcallOk, __baseUi.message = ok, message")));
+        QVERIFY2(luaTrue(host, qsl("__baseUi.madeDir")), "could not make the settings path unwritable, so this proves nothing");
+        QVERIFY2(luaTrue(host, qsl("__baseUi.pcallOk and __baseUi.message ~= nil")), "table.save now raises on a path it cannot write, so saveSettings could go back to trusting pcall alone");
+
+        QVERIFY(runLua(host, qsl("BaseUI.floatGauges({ x = 0.02, y = 0.85, width = 0.3, scale = 1 })")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.warnedSaveFailed")), "a failed save said nothing, so a dropped position vanishes with no explanation");
+    }
+
     // A bar hidden under the pointer takes Qt's mouse grab with it, so the
     // release never arrives: whatever hid it has to end the drag, or the next
     // click carries on from an anchor several seconds old.

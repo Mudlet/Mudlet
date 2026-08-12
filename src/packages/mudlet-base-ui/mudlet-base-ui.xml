@@ -1222,9 +1222,15 @@ function BaseUI.loadSettings()
 end
 
 function BaseUI.saveSettings()
-  -- a full disk or a read-only profile fails every save from here on, so say
-  -- so once rather than on every drag
-  if not pcall(table.save, settingsFile, BaseUI.settings) and not BaseUI.warnedSaveFailed then
+  -- table.save reports a path it cannot write by returning nil and a message
+  -- rather than by raising, so pcall on its own would never see that happen.
+  -- A full disk or a read-only profile fails every save from here on, so say
+  -- so once rather than on every drag.
+  local ok, _, message = pcall(table.save, settingsFile, BaseUI.settings)
+  if ok and message == nil then
+    return
+  end
+  if not BaseUI.warnedSaveFailed then
     BaseUI.warnedSaveFailed = true
     cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not save your settings, so this will not be remembered.&lt;reset&gt;\n")
   end
