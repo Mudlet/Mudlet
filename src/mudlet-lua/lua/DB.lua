@@ -276,6 +276,39 @@ function db:_validate_unique_contraints(unique_constraints)
 end
 
 
+--- Checks an _index sheet option, which takes the same shapes _unique does: a
+--- single column name, a list of column names, or a list holding a list of
+--- column names for a compound index.
+---@param index string|table
+---@return boolean is_valid
+---@return string msg
+function db:_validate_index(index)
+  local type_of = type(index)
+
+  if type_of == "string" then
+    return true, ""
+  elseif type_of ~= "table" then
+    return false, "_index must be a string or a table.  Received "..type_of.."."
+  end
+
+  local msgs = {}
+  for _, index_entry in ipairs(index) do
+    type_of = type(index_entry)
+    if type_of == "table" then
+      for _, column_name in ipairs(index_entry) do
+        if type(column_name) ~= "string" then
+          table.insert(msgs, "Multi-column definitions for _index must be a list of strings, for example: _index = { {'foo', 'bar'} }.  Received "..type(column_name)..".")
+        end
+      end
+    elseif type_of ~= "string" then
+      table.insert(msgs, "Members of _index must be a string or table. Received "..type_of..".")
+    end
+  end
+
+  return msgs[1] == nil, table.concat(msgs, "\n")
+end
+
+
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
 --- script: in fact it is recommended you run this function at a top-level without any kind of guards.
 --- If the named database does not exist it will create it. If the database does exist then it will add
@@ -324,6 +357,8 @@ end
 ---   )
 ---   </pre>
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
+---   A single column may be given on its own instead of in a list, so _index = "city"
+---   and _unique = "name" mean the same as the two lines above.
 function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
@@ -377,6 +412,25 @@ function db:create(db_name, sheets, force)
       if is_unique_valid == false then
         is_valid = false
         table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
+      end
+    end
+
+    -- A falsy _index means the sheet wants no indexes, the same as _unique and
+    -- _violations above treat theirs
+    if options._index then
+      local is_index_valid, msg = db:_validate_index(options._index)
+      if is_index_valid == false then
+        is_valid = false
+        table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
+      end
+
+      -- A single column name is as good an _index as a list of them, but the
+      -- readers of _index only handle the list: db:_drop_orphaned_indexes walks
+      -- it with ipairs and db:_migrate_indexes ignores anything that is not a
+      -- table. db.__schema is only written here, so normalising once covers
+      -- both of them.
+      if type(options._index) == "string" then
+        options._index = { options._index }
       end
     end
 
