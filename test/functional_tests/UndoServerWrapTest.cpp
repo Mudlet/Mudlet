@@ -236,6 +236,48 @@ private slots:
         QVERIFY2(waitForLineInBuffer(sentencePadded), "sentence-final line padded with several spaces was not committed on its own");
     }
 
+    void test_listEntriesAreNotJoined()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // A help index. Every entry is a sentence and the long ones end
+        // right at the wrap column, so nothing but the "[1364]" marker
+        // distinguishes the list from a wrapped paragraph:
+        const QString entry1 = qsl("[581] Stat Fury - a viking only stat that grants bonuses to their ") + QString(10, QChar('x')) + qsl(".");
+        const QString entry2 = qsl("[1364] Viking Default: if you chose not to customize your viking ") + QString(10, QChar('y')) + qsl(".");
+        const QString entry3 = qsl("3) Vikings: a barbaric fighter class.");
+        mpServer->sendRaw(entry1.toUtf8() + "\r\n" + entry2.toUtf8() + "\r\n" + entry3.toUtf8() + "\r\n");
+
+        QVERIFY2(waitForLineInBuffer(entry1), "full-width list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry2), "full-width list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry3), "numbered list entry was joined onto the entry above it");
+        QVERIFY2(!bufferHasLine(entry1 + QChar::Space + entry2), "consecutive list entries were joined into one line");
+    }
+
+    void test_wrappedListEntryStillJoins()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // A list entry too long for one line still wraps like any other
+        // prose - its continuation carries no marker of its own:
+        const QString entry = qsl("[1364] Viking Default: if you chose not to customize your viking ") + QString(10, QChar('z'));
+        mpServer->sendRaw(entry.toUtf8() + "\r\nthis is what is included.\r\n");
+
+        QVERIFY2(waitForLineInBuffer(entry + qsl(" this is what is included.")), "a wrapped list entry was no longer joined back together");
+    }
+
     void test_wrapDetectionRaisesHint()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
