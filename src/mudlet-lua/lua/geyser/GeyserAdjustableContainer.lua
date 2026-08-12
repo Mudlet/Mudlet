@@ -14,12 +14,59 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({name = "Adj
 
 local adjustInfo = {}
 
+-- how far the mouse pointer has to be taken past a parent container before the
+-- container being dragged comes out of it, so that pushing a container flush
+-- into a corner of its parent and overshooting a little does not take it out
+local dragOutMargin = 20
+
 -- Internal function to add "%" to a value and round it
 -- Resulting percentage has five precision points to ensure accurate 
 -- representation in pixel space.
 -- @param num Any float. For 0-100% output, use 0.0-1.0
 local function make_percent(num)
     return string.format("%.5f%%", (num * 100))
+end
+
+-- Internal function: the container everything in a window is nested in, which is
+-- where a container dragged out of its parent ends up
+-- @param self the Adjustable.Container itself
+local function windowRoot(self)
+    local parentWindow = self.windowname and self.windowname ~= "main" and Geyser.parentWindows and Geyser.parentWindows[self.windowname]
+    return parentWindow or Geyser
+end
+
+-- Internal function: tells whether a container is still part of the layout. A
+-- deleted container is dropped from the one it was in but goes on existing for
+-- as long as anything holds a reference to it
+-- @param container the container to check
+local function stillInLayout(container)
+    local owner = container and container.container
+    return owner ~= nil and owner.windowList ~= nil and owner.windowList[container.name] == container
+end
+
+-- Internal function: tells whether a constraint means a different size once the
+-- container it belongs to is put somewhere else. A percentage is a share of the
+-- parent and a negative value is measured from the parent's far edge, while a
+-- plain pixel or character size means the same wherever the container ends up.
+-- @param constraint a Geyser size constraint
+local function relativeToParent(constraint)
+    if type(constraint) ~= "string" then
+        return false
+    end
+    return string.find(constraint, "%%") ~= nil or string.find(constraint, "-") ~= nil
+end
+
+-- Internal function: works out what a constraint measures in a given container,
+-- by letting Geyser compile it against that container rather than by parsing it
+-- @param self the Adjustable.Container itself
+-- @param constraint the constraint to measure
+-- @param dimension "width" or "height"
+-- @param container the container to measure the constraint in
+local function constraintInPixels(self, constraint, dimension, container)
+    local probe = {x = self.x, y = self.y, width = self.width, height = self.height, fontSize = self.fontSize}
+    probe[dimension] = constraint
+    Geyser.calc_constraints(probe, probe, container)
+    return probe["get_"..dimension](probe)
 end
 
 -- Internal function: checks where the mouse is at on the Label
@@ -51,7 +98,7 @@ local function adjust_Info(self, label, event)
         end
     end
 
-    adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move}
+    adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move, grabX = event.x, grabY = event.y}
 end
 
 --- function to give your adjustable container a new title
@@ -134,6 +181,95 @@ function Adjustable.Container:onRelease (label, event)
     end
 end
 
+-- internal function to tell if a drag has taken the mouse pointer out of the
+-- container this one is nested in.
+-- The pointer has to leave rather than the container: the container is held at
+-- its parent's edge while the drag carries on, so a test on the container's own
+-- position would take it out of its parent as soon as it is dragged flush
+-- against that edge.
+-- @param ux x position the drag asks for, relative to the parent and before the parent holds it back
+-- @param uy y position the drag asks for, relative to the parent and before the parent holds it back
+-- @param grabX x position within the container the drag grabbed it at
+-- @param grabY y position within the container the drag grabbed it at
+function Adjustable.Container:dragLeavesParent(ux, uy, grabX, grabY)
+    local parent = self.container
+    -- an attached container has a main window border sized to it rather than
+    -- being placed by its parent, and adjustBorder() detaches one that is dragged
+    -- away from that border, so this only holds it in while it is still attached
+    if not self.dragOut or self.attached or not parent or parent == windowRoot(self) then
+        return false
+    end
+    local left, top = 0, 0
+    local right, bottom = parent.get_width(), parent.get_height()
+    -- an Adjustable.Container keeps its children in an inside container which
+    -- leaves room for its title bar and border, and a pointer over those is still
+    -- over the parent however far outside that inside container it is
+    local owner = parent.container
+    if owner and owner.Inside == parent then
+        left, top = owner.get_x() - parent.get_x(), owner.get_y() - parent.get_y()
+        right, bottom = left + owner.get_width(), top + owner.get_height()
+    end
+    local pointerX, pointerY = ux + grabX, uy + grabY
+    return pointerX < left - dragOutMargin or pointerY < top - dragOutMargin
+        or pointerX > right + dragOutMargin or pointerY > bottom + dragOutMargin
+end
+
+-- internal function to take the container out of the container it is nested in
+-- and put it at the top level of the window it is in, at the position the drag
+-- asks for, which keeps the container under the mouse pointer so that the drag
+-- carries on from there
+-- @param ux x position the drag asks for, relative to the parent
+-- @param uy y position the drag asks for, relative to the parent
+function Adjustable.Container:dragOutOfParent(ux, uy)
+    local parent = self.container
+    local root = windowRoot(self)
+    if not parent or parent == root then
+        return false
+    end
+    local w, h = self:get_width(), self:get_height()
+    local rootw, rooth = root.get_width(), root.get_height()
+    local x, y = parent.get_x() + ux - root.get_x(), parent.get_y() + uy - root.get_y()
+    x, y = math.max(0, x), math.max(0, y)
+    -- a scrollBox scrolls to what does not fit into it rather than bounding it
+    if root.type ~= "scrollBox" then
+        x, y = math.min(x, rootw - w), math.min(y, rooth - h)
+    end
+    -- the height a minimized container restores to is measured in its parent as
+    -- well, so it has to be read while the parent still is the parent
+    local origh = self.minimized and relativeToParent(self.origh) and constraintInPixels(self, self.origh, "height", parent)
+    -- where it came from, so that settings saved before it was dragged out can
+    -- be loaded back into the parent they were saved for
+    self.dragOutParent = parent
+    self:changeContainer(root)
+    -- changeContainer turns down anything that is not a container, and geometry
+    -- for the window would be nonsense inside the parent it did not leave
+    if self.container ~= root then
+        return false
+    end
+    -- a size measured against the parent means a different size in the window
+    -- the container is in now, so it becomes the share of that window which
+    -- keeps the container the size it is
+    if relativeToParent(self.width) then self.width = make_percent(w/rootw) end
+    if relativeToParent(self.height) then self.height = make_percent(h/rooth) end
+    if origh then self.origh = make_percent(origh/rooth) end
+    self:move(make_percent(x/rootw), make_percent(y/rooth))
+    self.draggedOut = true
+    return true
+end
+
+-- overridden changeContainer which keeps track of a container dragged out of its
+-- parent, so that saved settings only take a container back out of a parent it was
+-- dragged out of, and not out of one a script has put it in since
+-- @param container the container to move into
+-- @return what Geyser:changeContainer returns: nothing when the container moved, nil and a message when it did not
+function Adjustable.Container:changeContainer(container)
+    local result, err = Geyser.changeContainer(self, container)
+    if self.container ~= windowRoot(self) then
+        self.draggedOut = false
+    end
+    return result, err
+end
+
 -- internal function to handle the onMove event of main Adjustable.Container Label
 -- @param label the main Adjustable.Container Label
 -- @param event the onMove event and its information
@@ -172,6 +308,18 @@ function Adjustable.Container:onMove (label, event)
         local hasScrollBox = self.windowname and Geyser.parentWindows and Geyser.parentWindows[self.windowname] and Geyser.parentWindows[self.windowname].type == "scrollBox"
         if adjustInfo.move and not self.connectedContainers then
             label:setCursor("ClosedHand")
+            if self.dragOut then
+                -- the parent holds the container at its edge while the drag carries
+                -- on, so where the drag asks for the container to be has to be kept
+                -- apart from where it is allowed to be to know where the pointer got to
+                adjustInfo.ux, adjustInfo.uy = (adjustInfo.ux or x1) - dx, (adjustInfo.uy or y1) - dy
+                if self:dragLeavesParent(adjustInfo.ux, adjustInfo.uy, adjustInfo.grabX or 0, adjustInfo.grabY or 0) then
+                    self:dragOutOfParent(adjustInfo.ux, adjustInfo.uy)
+                    adjustInfo.x, adjustInfo.y = x, y
+                    adjustInfo.ux, adjustInfo.uy = nil, nil
+                    return
+                end
+            end
             local tx, ty = max(0,x1-dx), max(0,y1-dy)
             -- get rid of move/size limits when in scrollbox (as it is scrollable)
             if not(hasScrollBox) then
@@ -766,6 +914,7 @@ function Adjustable.Container:save(slot, dir)
     mytable.connectedToBorder = self.connectedToBorder
     mytable.connectedContainers = self.connectedContainers
     mytable.windowname = self.windowname
+    mytable.draggedOut = self.draggedOut
     if not(io.exists(dir)) then lfs.mkdir(dir) end
     table.save(saveDir, mainTable)
     return true
@@ -806,6 +955,19 @@ function Adjustable.Container:load(slot, dir)
             self:changeContainer(Geyser)
         else
             self:changeContainer(Geyser.parentWindows[mytable.windowname])
+        end
+    end
+
+    -- a saved position is a position in whichever container the container was in,
+    -- and which container that was is not part of what gets saved. Only the drag
+    -- out itself is, so settings from before one go back into the parent and
+    -- settings from after it stay out of it
+    if self.dragOut then
+        if mytable.draggedOut then
+            self:changeContainer(windowRoot(self))
+            self.draggedOut = true
+        elseif self.draggedOut and stillInLayout(self.dragOutParent) then
+            self:changeContainer(self.dragOutParent)
         end
     end
 
@@ -1136,6 +1298,7 @@ end
 --@param[opt=true] cons.raiseOnClick  raise your container if you click on it with your left mouse button
 --@param[opt=true] cons.autoSave  saves your container settings on exit (sysExitEvent). If set to false it won't autoSave
 --@param[opt=true] cons.autoLoad  loads the container settings (if there are some to load) at creation of the container. If set to false it won't load the settings at creation
+--@param[opt=false] cons.dragOut  lets a container nested in another container be dragged out of it, into the window it is in. A nested container is otherwise held inside its parent. There is no dragging back in, use changeContainer for that
 
 function Adjustable.Container:new(cons,container)
     Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
@@ -1203,6 +1366,7 @@ function Adjustable.Container:new(cons,container)
     me:setTitle()
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
+    me.dragOut = me.dragOut or false
     if not(me.raiseOnClick == false) then
         me.raiseOnClick = true
     end
