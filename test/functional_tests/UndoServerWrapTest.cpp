@@ -246,18 +246,21 @@ private slots:
                 },
                 2000));
 
-        // A help index. Every entry is a sentence and the long ones end
-        // right at the wrap column, so nothing but the "[1364]" marker
-        // distinguishes the list from a wrapped paragraph:
-        const QString entry1 = qsl("[581] Stat Fury - a viking only stat that grants bonuses to their ") + QString(10, QChar('x')) + qsl(".");
-        const QString entry2 = qsl("[1364] Viking Default: if you chose not to customize your viking ") + QString(10, QChar('y')) + qsl(".");
-        const QString entry3 = qsl("3) Vikings: a barbaric fighter class.");
-        mpServer->sendRaw(entry1.toUtf8() + "\r\n" + entry2.toUtf8() + "\r\n" + entry3.toUtf8() + "\r\n");
+        // Every entry ends at the wrap column and reads as a sentence, so
+        // only the marker tells the list from a wrapped paragraph. The last
+        // one is short enough to commit on its own and carries the single
+        // leading space a game may indent an index by:
+        const QString entry1 = heldLine(qsl("[581] Stat Fury - a viking only stat that grants bonuses"));
+        const QString entry2 = heldLine(qsl("(3) Viking Default: what you get if you do not customise"));
+        const QString entry3 = heldLine(qsl("1. Viking Specializations lists the class specialisations"));
+        const QString entry4 = qsl(" [1366] Vikings: a barbaric fighter class.");
+        verifyHeldLines({entry1, entry2, entry3});
+        mpServer->sendRaw(entry1.toUtf8() + "\r\n" + entry2.toUtf8() + "\r\n" + entry3.toUtf8() + "\r\n" + entry4.toUtf8() + "\r\n");
 
-        QVERIFY2(waitForLineInBuffer(entry1), "full-width list entry was joined onto the entry below it");
-        QVERIFY2(waitForLineInBuffer(entry2), "full-width list entry was joined onto the entry below it");
-        QVERIFY2(waitForLineInBuffer(entry3), "numbered list entry was joined onto the entry above it");
-        QVERIFY2(!bufferHasLine(entry1 + QChar::Space + entry2), "consecutive list entries were joined into one line");
+        QVERIFY2(waitForLineInBuffer(entry1), "bracketed list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry2), "parenthesised list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry3), "numbered list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry4), "indented list entry was joined onto the entry above it");
     }
 
     void test_wrappedListEntryStillJoins()
@@ -270,12 +273,45 @@ private slots:
                 },
                 2000));
 
-        // A list entry too long for one line still wraps like any other
-        // prose - its continuation carries no marker of its own:
-        const QString entry = qsl("[1364] Viking Default: if you chose not to customize your viking ") + QString(10, QChar('z'));
-        mpServer->sendRaw(entry.toUtf8() + "\r\nthis is what is included.\r\n");
+        // The marker is looked for on the continuation only, so an entry too
+        // long for one line still wraps like any other prose:
+        const QString entry = heldLine(qsl("[1364] Viking Default: if you chose not to customise your"));
+        verifyHeldLines({entry});
+        mpServer->sendRaw(entry.toUtf8() + "\r\nviking this is what is included.\r\n");
 
-        QVERIFY2(waitForLineInBuffer(entry + qsl(" this is what is included.")), "a wrapped list entry was no longer joined back together");
+        QVERIFY2(waitForLineInBuffer(entry + qsl(" viking this is what is included.")), "a wrapped list entry was no longer joined back together");
+    }
+
+    void test_proseIsNotMistakenForAList()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // Every one of these continuations opens with something a list
+        // marker could be mistaken for, and every one of them is ordinary
+        // prose the game merely wrapped:
+        const QString dash = heldLine(qsl("The Grand Bazaar sells everything you could want in this"));
+        const QString aside = heldLine(qsl("You gain a large amount of experience for your daring"));
+        const QString price = heldLine(qsl("The merchant paid for the whole shipment in advance, all"));
+        const QString reference = heldLine(qsl("More detail about the viking class can be found over"));
+        verifyHeldLines({dash, aside, price, reference});
+
+        mpServer->sendRaw(dash.toUtf8() + "\r\n- weapons, armour and rope - at a very fair price.\r\n");
+        QVERIFY2(waitForLineInBuffer(dash + qsl(" - weapons, armour and rope - at a very fair price.")), "a spaced dash opening a continuation was mistaken for a bullet");
+
+        mpServer->sendRaw(aside.toUtf8() + "\r\n(2500) and the whole town cheers for you.\r\n");
+        QVERIFY2(waitForLineInBuffer(aside + qsl(" (2500) and the whole town cheers for you.")), "a parenthesised number too long to be a label was mistaken for one");
+
+        mpServer->sendRaw(price.toUtf8() + "\r\n1364. gold was a fair price for it.\r\n");
+        QVERIFY2(waitForLineInBuffer(price + qsl(" 1364. gold was a fair price for it.")), "a number too long to be a list label was mistaken for one");
+
+        mpServer->sendRaw(reference.toUtf8() + "\r\n(see help vikings) for the full list.\r\n");
+        QVERIFY2(waitForLineInBuffer(reference + qsl(" (see help vikings) for the full list.")), "a parenthesised phrase carrying no number was mistaken for a list marker");
     }
 
     void test_wrapDetectionRaisesHint()
@@ -324,6 +360,23 @@ private:
         // Keep Mudlet's own display wrap out of the way so that logical
         // lines can be compared with buffer lines verbatim:
         host->mpConsole->buffer.mWrapAt = 500;
+    }
+
+    // Only a line inside the join band - the wrap column of 80 less
+    // csmServerWrapSlack - is ever held back for a continuation, so pad the
+    // ones that have to be held to a fixed width well inside it:
+    static constexpr qsizetype smHeldLineLength = 70;
+
+    static QString heldLine(const QString& text) { return text + QChar::Space + QString(smHeldLineLength - text.size() - 1, QChar('x')); }
+
+    // A held line that drifted out of the band would never be held, leaving
+    // the assertions that follow it passing without the code under test
+    // having run at all:
+    void verifyHeldLines(const QList<QString>& lines)
+    {
+        for (const QString& line : lines) {
+            QVERIFY2(line.size() == smHeldLineLength, qPrintable(qsl("test line is %1 characters, not the %2 that put it inside the join band").arg(line.size()).arg(smHeldLineLength)));
+        }
     }
 
     // Utility function to manually start a profile like a user would do via the

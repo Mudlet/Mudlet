@@ -617,11 +617,9 @@ private:
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
     static constexpr int csmServerWrapFlushDelayMs = 300;
-    // Longest number accepted inside a "[1364]" style list marker, and - for
-    // the unbracketed "3." style - the longest that is more likely to be a
-    // list label than a year or an amount of gold in mid-sentence:
-    static constexpr qsizetype csmServerWrapMaxListLabelDigits = 6;
-    static constexpr qsizetype csmServerWrapMaxBareListLabelDigits = 3;
+    // A longer number opening a line is likelier a year or a price ending a
+    // wrapped sentence than a list label; only "[...]" is trusted past it:
+    static constexpr qsizetype csmServerWrapMaxListLabelDigits = 3;
     // Wrap detection hint: how many lines ending within 8 characters of a
     // stable ceiling column are needed before suggesting mUndoServerWrap:
     static constexpr int csmWrapDetectThreshold = 40;

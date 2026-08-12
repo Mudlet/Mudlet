@@ -1598,12 +1598,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         if (!mServerWrapPendingLine.isEmpty()) {
             // A continuation of wrapped prose starts with a word - or with
             // the single space some games move the break to instead of
-            // swallowing it. Deeper indentation, a symbol-heavy line or a
-            // line opening with its own list marker instead belongs to
-            // centered ASCII art, menu columns, dividers, help indexes and
-            // the like, so the held line was complete after all:
-            const bool indentedContinuation = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
-            if (indentedContinuation || !proseSegment || startsWithListMarker(mMudLine)) {
+            // swallowing it. Anything else means the held line was complete
+            // after all:
+            const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine)) {
                 flushPendingServerWrapJoin();
             }
         }
@@ -1802,12 +1800,13 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
     return nonSpace > 0 && letters * 10 >= nonSpace * 6;
 }
 
-// Games list help entries, shop stock and menu choices one per line, each
-// opening with its own "[1364]", "(3)", "2." or bullet. Such an entry reads
-// exactly like wrapped prose - it is a sentence that can end right at the
-// wrap column - so the marker is the only thing that tells the list apart
-// from a paragraph. Word wrap does not put one at the start of a
-// continuation, so a segment that has one begins a new line of its own:
+// A list entry reads exactly like wrapped prose: a sentence that can end
+// right at the wrap column. Only its "[1364]", "(3)", "2." or bullet tells
+// the list apart from a paragraph, so every form accepted here has to be one
+// that word wrap would not itself produce at the start of a continuation.
+// The ambiguous ones are left out on purpose: a spaced dash opens a
+// continuation whenever the wrap lands on it, and a parenthesised number is
+// as often an aside as a label, so it is capped like a bare one.
 bool TBuffer::startsWithListMarker(const QString& line)
 {
     qsizetype start = 0;
@@ -1818,7 +1817,7 @@ bool TBuffer::startsWithListMarker(const QString& line)
         return false;
     }
 
-    static const QString bullets = qsl("*+-•·●◦");
+    static const QString bullets = qsl("*+•·●◦");
     if (bullets.contains(line.at(start))) {
         return start + 1 < line.size() && line.at(start + 1) == QChar::Space;
     }
@@ -1835,12 +1834,9 @@ bool TBuffer::startsWithListMarker(const QString& line)
     if (!digits || labelEnd >= line.size()) {
         return false;
     }
-    if (bracket >= 0) {
-        return digits <= csmServerWrapMaxListLabelDigits && line.at(labelEnd) == closers.at(bracket);
-    }
-    // Nothing marks off an unbracketed label but the punctuation and the
-    // space after it, so insist on both:
-    return digits <= csmServerWrapMaxBareListLabelDigits && (line.at(labelEnd) == QChar('.') || line.at(labelEnd) == QChar(')')) && labelEnd + 1 < line.size() && line.at(labelEnd + 1) == QChar::Space;
+    const bool labelFitsAList = digits <= csmServerWrapMaxListLabelDigits || line.at(start) == QChar('[');
+    const bool closed = (bracket >= 0) ? line.at(labelEnd) == closers.at(bracket) : (line.at(labelEnd) == QChar('.') || line.at(labelEnd) == QChar(')'));
+    return labelFitsAList && closed && labelEnd + 1 < line.size() && line.at(labelEnd + 1) == QChar::Space;
 }
 
 void TBuffer::joinPendingServerWrapOntoCurrent()
