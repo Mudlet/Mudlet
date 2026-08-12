@@ -809,12 +809,16 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
   end
 
   before_each(function()
+    -- the window is whatever size the machine running the specs gives them, so
+    -- the container everything else nests in is sized to fit in it rather than
+    -- assumed to. Everything below goes by what it reads back, not by these
     local winWidth, winHeight = getMainWindowSize()
-    assert.is_true(winWidth >= 600 and winHeight >= 500,
-      string.format("these specs need room for a 400x300 container, the window is %dx%d", winWidth, winHeight))
+    local width, height = math.min(400, winWidth - 100), math.min(300, winHeight - 100)
+    assert.is_true(width >= 200 and height >= 150,
+      string.format("these specs need a window with room for a container in it, this one is %dx%d", winWidth, winHeight))
     dock = Adjustable.Container:new({
       name = dockName,
-      x = 100, y = 100, width = 400, height = 300,
+      x = 50, y = 50, width = width, height = height,
       autoLoad = false,
       autoSave = false,
     })
@@ -1063,7 +1067,7 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
   end)
 
   it("comes out into the user window it is in rather than into the main window", function()
-    local userWindow = Geyser.UserWindow:new({name = "gadUserWindow", x = 0, y = 0, width = 400, height = 400})
+    local userWindow = Geyser.UserWindow:new({name = "gadUserWindow", x = 0, y = 0, width = 200, height = 200})
     finally(function()
       -- the user window's own root container is what takes the window and
       -- everything left in it with it
@@ -1074,7 +1078,7 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
     end)
     local windowDock = Adjustable.Container:new({
       name = "gadWindowDock",
-      x = 0, y = 0, width = 300, height = 200,
+      x = 0, y = 0, width = 150, height = 150,
       autoLoad = false, autoSave = false,
     }, userWindow)
     local windowChild = Adjustable.Container:new({
@@ -1152,10 +1156,10 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
         box:delete()
       end
     end)
-    box = Geyser.ScrollBox:new({name = "gadScrollBox", x = 0, y = 0, width = 300, height = 300})
+    box = Geyser.ScrollBox:new({name = "gadScrollBox", x = 0, y = 0, width = 200, height = 200})
     local boxDock = Adjustable.Container:new({
       name = "gadBoxDock",
-      x = 0, y = 0, width = 200, height = 200,
+      x = 0, y = 0, width = 150, height = 150,
       autoLoad = false, autoSave = false,
     }, box)
     local boxChild = Adjustable.Container:new({
