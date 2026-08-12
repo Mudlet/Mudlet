@@ -1801,9 +1801,9 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
 }
 
 // A list entry reads exactly like wrapped prose: a sentence that can end
-// right at the wrap column. Only its "[1364]", "(3)", "2." or bullet tells
-// the list apart from a paragraph, so every form accepted here has to be one
-// that word wrap would not itself produce at the start of a continuation.
+// right at the wrap column. Only its marker tells the list apart from a
+// paragraph, so every form accepted here has to be one that word wrap would
+// not itself produce at the start of a continuation.
 // The ambiguous ones are left out on purpose: a spaced dash opens a
 // continuation whenever the wrap lands on it, and a parenthesised number is
 // as often an aside as a label, so it is capped like a bare one.

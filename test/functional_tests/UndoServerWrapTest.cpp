@@ -248,8 +248,7 @@ private slots:
 
         // Every entry ends at the wrap column and reads as a sentence, so
         // only the marker tells the list from a wrapped paragraph. The last
-        // one is short enough to commit on its own and carries the single
-        // leading space a game may indent an index by:
+        // carries the single leading space a game may indent an index by:
         const QString entry1 = heldLine(qsl("[581] Stat Fury - a viking only stat that grants bonuses"));
         const QString entry2 = heldLine(qsl("(3) Viking Default: what you get if you do not customise"));
         const QString entry3 = heldLine(qsl("1. Viking Specializations lists the class specialisations"));
@@ -293,8 +292,7 @@ private slots:
                 2000));
 
         // Every one of these continuations opens with something a list
-        // marker could be mistaken for, and every one of them is ordinary
-        // prose the game merely wrapped:
+        // marker could be mistaken for:
         const QString dash = heldLine(qsl("The Grand Bazaar sells everything you could want in this"));
         const QString aside = heldLine(qsl("You gain a large amount of experience for your daring"));
         const QString price = heldLine(qsl("The merchant paid for the whole shipment in advance, all"));
@@ -363,15 +361,14 @@ private:
     }
 
     // Only a line inside the join band - the wrap column of 80 less
-    // csmServerWrapSlack - is ever held back for a continuation, so pad the
-    // ones that have to be held to a fixed width well inside it:
+    // csmServerWrapSlack - is ever held back for a continuation. Lines that
+    // have to be held are padded to a fixed width inside it and checked,
+    // because one that drifted out would never be held, leaving every
+    // assertion after it passing without the code under test having run:
     static constexpr qsizetype smHeldLineLength = 70;
 
     static QString heldLine(const QString& text) { return text + QChar::Space + QString(smHeldLineLength - text.size() - 1, QChar('x')); }
 
-    // A held line that drifted out of the band would never be held, leaving
-    // the assertions that follow it passing without the code under test
-    // having run at all:
     void verifyHeldLines(const QList<QString>& lines)
     {
         for (const QString& line : lines) {
