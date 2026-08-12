@@ -146,7 +146,9 @@ jobs:
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 2
+      # Matches the other platforms: the suite alone can run past two minutes
+      # on a slow runner.
+      timeout-minutes: 3
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
