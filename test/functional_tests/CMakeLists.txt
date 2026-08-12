@@ -11,6 +11,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetSubnegotiationTest.cpp
     TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
+    TelnetMccp4Test.cpp
     TelnetBenchmark.cpp
     cTelnetBufferTest.cpp
     DefaultGameDeleteTest.cpp
@@ -195,6 +196,9 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
+
+# TelnetMccp4Test creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(TelnetMccp4Test PROPERTIES TIMEOUT 300)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for

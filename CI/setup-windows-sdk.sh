@@ -128,6 +128,7 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-cmake" \
     "${MINGW_PACKAGE_PREFIX}-meson" \
     "${MINGW_PACKAGE_PREFIX}-ninja" \
+    "${MINGW_PACKAGE_PREFIX}-zstd" \
     "${MINGW_PACKAGE_PREFIX}-assimp" \
     "${MINGW_PACKAGE_PREFIX}-curl" \
     "${MINGW_PACKAGE_PREFIX}-python" \

@@ -70,6 +70,14 @@ void TelnetServerStub::onNewConnection()
 
     QPointer<QTcpSocket> safeClient = client;
 
+    connect(client, &QTcpSocket::readyRead, this, [this, safeClient]()
+    {
+        if (!safeClient) {
+            return;
+        }
+        mReceivedData.append(safeClient->readAll());
+    });
+
     QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]()
     {
         if (!safeClient) {

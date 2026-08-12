@@ -560,6 +560,7 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(zstd REQUIRED)
 find_package(PCRE2 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
@@ -748,6 +749,7 @@ target_link_libraries(
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
+        zstd::libzstd_shared
 # PLACEMARKER: sample benchmarking code
 #       nanobench
         ${QT_LIBS})

@@ -32,6 +32,7 @@ class TelnetServerStub : public QTcpServer
 
     QString mpWelcomeMessage = "";
     QPointer<QTcpSocket> mpClient;
+    QByteArray mReceivedData;
 
 public:
     explicit TelnetServerStub(QObject* parent = nullptr);
@@ -45,6 +46,10 @@ public:
     // bytes like IAC GA to be included:
     void sendRaw(const QByteArray& data);
     bool clientConnected() const { return !mpClient.isNull(); }
+    // Everything the client has sent so far, so a test can assert on what
+    // Mudlet put on the wire (telnet negotiation replies, for instance):
+    QByteArray receivedData() const { return mReceivedData; }
+    void clearReceivedData() { mReceivedData.clear(); }
 
 private slots:
     void onNewConnection();
