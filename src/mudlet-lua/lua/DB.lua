@@ -117,8 +117,11 @@ function db:_sql_columns(value)
 
   if t == "table" then
     for _, v in ipairs(value) do
-      -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term
-      if v:lower() == "desc" or v:lower() == "asc" then
+      assert(type(v) == "string", "Column names must be strings, not " .. type(v) .. ".")
+      -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term: a sort
+      -- direction belongs to the column in front of it, so one that leads the
+      -- list can only be a column of that name
+      if col_chunks[1] and (v:lower() == "desc" or v:lower() == "asc") then
         col_chunks[#col_chunks] = col_chunks[#col_chunks] .. " " .. v
       else
         col_chunks[#col_chunks + 1] = '"' .. v:lower() .. '"'
@@ -359,6 +362,9 @@ end
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
 ---   A single column may be given on its own instead of in a list, so _index = "city"
 ---   and _unique = "name" mean the same as the two lines above.
+---   A sheet may also be given as a plain list of its column names, which then all
+---   hold text and default to "". The sheet options are keys rather than list members,
+---   so they work there too: enemies = {"name", "city", _index = "city"}
 function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
@@ -380,9 +386,28 @@ function db:create(db_name, sheets, force)
 
     -- the sheet was provided in {"column1", "column2"} format
     if sheet[1] ~= nil then
-      -- assume field types are text, and should default to ""
-      for _, col_name in pairs(sheet) do
-        columns[col_name] = ""
+      -- The list holds the column names, which are text defaulting to "". A key
+      -- is a sheet option when it starts with an underscore and an error
+      -- otherwise: sweeping keys in with the column names would make a column
+      -- out of an index definition. Numeric keys are checked against #sheet so
+      -- that a stray [7] in a two-item list is not taken for a column name.
+      local column_count = #sheet
+      for key, value in pairs(sheet) do
+        if type(key) == "number" and key % 1 == 0 and key >= 1 and key <= column_count then
+          if type(value) == "string" then
+            columns[value] = ""
+          else
+            is_valid = false
+            table.insert(msgs, "db:create - "..sheet_name.." - column name #"..key..
+              " is a "..type(value)..", but a sheet's column names have to be strings.")
+          end
+        elseif type(key) == "string" and string.starts(key, "_") then
+          options[key] = value
+        else
+          is_valid = false
+          table.insert(msgs, "db:create - "..sheet_name.." - "..tostring(key)..
+            " is neither one of the sheet's column names nor a sheet option: a sheet is either a list of column names or a table of column names and their default values.")
+        end
       end
 
     -- sheet provided in {"column1" = default} format
@@ -432,6 +457,35 @@ function db:create(db_name, sheets, force)
       if type(options._index) == "string" then
         options._index = { options._index }
       end
+
+      -- An index on a column this sheet does not declare is refused rather than
+      -- carried: db:_migrate_indexes cannot make the index a typo asks for, and
+      -- a typo that replaced the only entry leaves db:_drop_orphaned_indexes
+      -- treating it as the whole wanted set, dropping the index the sheet did
+      -- have. The shapes _validate_index refused above are left to it to report.
+      if type(options._index) == "table" then
+        for _, index_entry in ipairs(options._index) do
+          local index_columns = type(index_entry) == "table" and index_entry or {index_entry}
+          for _, column_name in ipairs(index_columns) do
+            if type(column_name) == "string" and columns[column_name] == nil then
+              local lowered = column_name:lower()
+              is_valid = false
+              if column_name == "_row_id" then
+                table.insert(msgs, "db:create - "..sheet_name.." - _index names \"_row_id\", which is the "..
+                  "key every sheet is given rather than one of its own columns.")
+              elseif lowered == "asc" or lowered == "desc" then
+                -- db:_sql_columns would build the ordering term, but
+                -- db:_index_valid refuses it, so the index was never made
+                table.insert(msgs, "db:create - "..sheet_name.." - _index names \""..column_name..
+                  "\", and an index takes column names only, not a sort direction.")
+              else
+                table.insert(msgs, "db:create - "..sheet_name.." - _index names \""..column_name..
+                  "\", which is not one of the sheet's columns.")
+              end
+            end
+          end
+        end
+      end
     end
 
     schema[sheet_name] = { columns = columns, options = options }
@@ -466,9 +520,10 @@ end
 
 
 -- NOT LUADOC
--- Extracts UNIQUE constraints with ON CONFLICT clauses from a CREATE TABLE statement.
+-- Extracts UNIQUE constraints from a CREATE TABLE statement.
 -- This includes both column-level constraints (e.g., "col1" TEXT UNIQUE ON CONFLICT REPLACE)
--- and table-level constraints (e.g., UNIQUE("col1", "col2") ON CONFLICT FAIL).
+-- and table-level constraints (e.g., UNIQUE("col1", "col2") ON CONFLICT FAIL), each of
+-- which may come without its ON CONFLICT clause (e.g., "col1" TEXT UNIQUE).
 -- This allows us to detect when constraint definitions have changed without being affected by
 -- column additions/removals.
 function db:_extract_table_constraints(sql)
@@ -487,17 +542,48 @@ function db:_extract_table_constraints(sql)
 
   local constraints = {}
 
-  -- Find table-level UNIQUE constraints
-  -- They look like: UNIQUE("col1") ON CONFLICT REPLACE or UNIQUE("col1", "col2") ON CONFLICT FAIL
-  for constraint in content:gmatch('unique%s*%([^)]+%)%s+on%s+conflict%s+%w+') do
-    table.insert(constraints, constraint)
+  -- A column name and a default value are both quoted, and either can hold the
+  -- word, so the search runs over a copy with the quoted parts blanked out.
+  -- Same-length blanks keep every offset lined up with the content itself.
+  local function blank(quoted)
+    return (" "):rep(#quoted)
   end
+  local searchable = content:gsub('"[^"]*"', blank)
+  searchable = searchable:gsub("'[^']*'", blank)
 
-  -- Find column-level UNIQUE constraints
-  -- They look like: "col1" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT REPLACE
-  -- We need to extract just the "UNIQUE ON CONFLICT X" part for comparison
-  for constraint in content:gmatch('unique%s+on%s+conflict%s+%w+') do
-    table.insert(constraints, constraint)
+  -- Each UNIQUE is picked up with the column list it may carry, then with the
+  -- ON CONFLICT clause it may carry. Both parts are optional: SQLite defaults
+  -- the conflict resolution to ABORT, so a sheet whose table was not written by
+  -- this module can hold a bare UNIQUE, and a bare one has to be seen or a
+  -- change in uniqueness compares equal to no uniqueness at all.
+  local position = 1
+  while true do
+    local start, stop = searchable:find("unique", position, true)
+    if not start then
+      break
+    end
+    position = stop + 1
+
+    -- and a column called unique_id is not one either
+    local before = start > 1 and searchable:sub(start - 1, start - 1) or " "
+    local after = searchable:sub(stop + 1, stop + 1)
+    if not before:match("[%w_]") and not after:match("[%w_]") then
+      local constraint = "unique"
+
+      local columns_start, columns_stop = content:find("^%s*%([^)]+%)", position)
+      if columns_start then
+        constraint = constraint .. content:sub(columns_start, columns_stop)
+        position = columns_stop + 1
+      end
+
+      local conflict_start, conflict_stop = content:find("^%s+on%s+conflict%s+%w+", position)
+      if conflict_start then
+        constraint = constraint .. content:sub(conflict_start, conflict_stop)
+        position = conflict_stop + 1
+      end
+
+      table.insert(constraints, constraint)
+    end
   end
 
   -- Sort for consistent comparison
