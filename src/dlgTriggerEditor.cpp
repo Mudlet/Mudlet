@@ -8512,7 +8512,12 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->label_idNumber->clear();
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
-    // mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
+    // Has to stay after the event handler list's clear(): clear() drops the
+    // selection before it deletes the items, and that selection change runs
+    // slot_scriptMainAreaEditHandler(), which notes the item that is about to be
+    // deleted. saveScript()'s own nulling of the note above does not cover that,
+    // and it is skipped altogether when the same item is re-selected (#9835)
+    slot_scriptMainAreaClearHandlerSelection(nullptr);
 
     if (pT) {
         const QString name = pT->getName();
@@ -10719,7 +10724,8 @@ void dlgTriggerEditor::slot_saveSelectedItem()
 
 // Should the functionality change in this method be sure to review the code
 // for "case SearchResultIsEventHandler" for "Scripts" in:
-// slot_itemSelectedInSearchResults(...)
+// slot_itemSelectedInSearchResults(...), which notes the same item by hand, and
+// the clearing of that note in slot_scriptsSelected(...)
 void dlgTriggerEditor::slot_scriptMainAreaEditHandler()
 {
     QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
@@ -10748,7 +10754,8 @@ void dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection(QListWidgetItem*
 
 void dlgTriggerEditor::slot_scriptMainAreaDeleteHandler()
 {
-    mpScriptsMainArea->listWidget_script_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentRow());
+    // takeItem() hands ownership of the row over to us
+    delete mpScriptsMainArea->listWidget_script_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentRow());
     slot_scriptMainAreaClearHandlerSelection(nullptr);
 }
 
