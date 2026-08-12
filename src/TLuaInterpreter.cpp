@@ -7340,6 +7340,22 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
     return 1;
 }
 
+// No documentation available in wiki - internal function
+// The folder a profile name resolves to, or an empty string if there is no such
+// profile. For writers, and so stricter than mudlet::getCanonicalProfileName(),
+// which also resolves a game Mudlet ships with that has never been opened:
+// writeProfileData() creates whatever folder it is handed, so writing under such
+// a name would turn that game into a profile of its own. Readers want the looser
+// call.
+static QString canonicalProfileFolder(const QString& profileName)
+{
+    const QString folder = mudlet::self()->getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, folder)).exists()) {
+        return QString();
+    }
+    return folder;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#setProfileInformation
 int TLuaInterpreter::setProfileInformation(lua_State* L)
 {
@@ -7358,18 +7374,20 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
     if (params == 1) {
         text = lua_tostring(L, 1);
     } else {
-        profileName = lua_tostring(L, 1);
+        const QString requestedName = lua_tostring(L, 1);
+        profileName = canonicalProfileFolder(requestedName);
+        if (profileName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
+        }
         text = lua_tostring(L, 2);
     }
 
-    QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
-    int returnCode = 1;
-    lua_pushboolean(L, result.first);
-    if (!result.second.isEmpty()) {
-        lua_pushfstring(L, "setProfileInformation: %s does not exist", profileName.toUtf8().constData());
-        returnCode = 2;
+    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
     }
-    return returnCode;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#clearProfileInformation
@@ -7380,7 +7398,14 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         return lua_error(L);
     }
 
-    QString profileName = (params > 0) ? QString{lua_tostring(L, 1)} : getHostFromLua(L).getName();
+    QString profileName = getHostFromLua(L).getName();
+    if (params > 0) {
+        const QString requestedName = lua_tostring(L, 1);
+        profileName = canonicalProfileFolder(requestedName);
+        if (profileName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
+        }
+    }
     QString desc = "";
 
     // if this is a default game, return to the orginal text
@@ -7391,14 +7416,12 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
-    int returnCode = 1;
-    lua_pushboolean(L, result.first);
-    if (!result.second.isEmpty()) {
-        lua_pushstring(L, "Profile not found");
-        returnCode = 2;
+    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
     }
-    return returnCode;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Internal function - helper for updateColorTable().
@@ -8728,13 +8751,12 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
         // profile:
         return warnArgumentValue(L, __func__, "disabled by profile global preference");
     }
+    // both defaults have to stand outside the argument handling below:
+    // setSaveCommandHistory() and setSaveCommandHistory(name) each turn saving
+    // on, so neither belongs inside a branch on the argument count:
     const char* name = "main";
     bool saveCommands = true;
-    // if there is no arguments we will set the "save command history" on the
-    // main  command line:
-    if (n == 1) {
-        saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
-    } else {
+    if (n > 0) {
         if (lua_type(L, 1) == LUA_TSTRING) {
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);

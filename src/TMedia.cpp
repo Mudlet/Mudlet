@@ -1094,7 +1094,12 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
 
-                TMedia::play(mediaData);
+                // A preload (volume 0) asked for the file to be in the cache, not to be
+                // heard: playMedia() returns before playing one it already has, so a
+                // download must not play the copy it has just made either.
+                if (mediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
+                    TMedia::play(mediaData);
+                }
             } else {
                 event.mArgumentList << QLatin1String("sysDownloadError");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;

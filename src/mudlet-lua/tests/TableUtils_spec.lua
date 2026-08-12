@@ -532,6 +532,36 @@ describe("Tests TableUtils.lua functions", function()
       assert.is_false(table.contains(tbl, "five"))
     end)
 
+    it("should cope with a table that holds itself", function()
+      local tbl = {one = 1}
+      tbl.self = tbl
+      assert.is_true(table.contains(tbl, "one"))
+      assert.is_false(table.contains(tbl, "five"))
+    end)
+
+    it("should cope with a cycle between two tables", function()
+      local first, second = {}, {}
+      first.second = second
+      second.first = first
+      second.needle = "found me"
+      assert.is_true(table.contains(first, "found me"))
+      assert.is_false(table.contains(first, "not in here"))
+    end)
+
+    it("should cope with a Geyser object, which always holds itself", function()
+      -- a label knows its container and the container's windowList knows the
+      -- label, so this is the cycle ordinary scripts hit
+      local label = Geyser.Label:new({
+        name = "tableUtilsSpecCycleLabel", x = 0, y = 0, width = 50, height = 20,
+      })
+      finally(function() label:delete() end)
+      -- the search below is only worth anything while that is really a cycle
+      assert.are.equal(label, label.container.windowList[label.name])
+
+      assert.is_true(table.contains(label, "tableUtilsSpecCycleLabel"))
+      assert.is_false(table.contains(label, "no Geyser object holds this"))
+    end)
+
   end)
 
   -- table.contains is a loop over table._contains, one pass per value it was

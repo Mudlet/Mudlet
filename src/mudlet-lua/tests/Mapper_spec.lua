@@ -2065,6 +2065,50 @@ describe("Tests saveMap and loadMap", function()
       end)
       assert.is_false(saveMap(savePath, 9999))
     end)
+
+    it("refuses a format version older than this Mudlet can write", function()
+      finally(function()
+        saveMap(savePath)
+        os.remove(savePath)
+      end)
+      -- 16 is one below the oldest format this Mudlet writes, and a refusal
+      -- has to be as flat as the one for a version that is too new
+      assert.is_false(saveMap(savePath, 16))
+      assert.is_false(saveMap(savePath, -1))
+    end)
+
+    it("resolves a relative location against the profile directory", function()
+      -- and not against the directory Mudlet happens to have been started in,
+      -- which for a spec run is the build or source tree
+      local relative = "mapper_spec_relative.dat"
+      local function clear()
+        os.remove(getMudletHomeDir() .. "/" .. relative)
+        os.remove(relative)
+      end
+      clear()
+      finally(clear)
+
+      assert.is_true(saveMap(relative))
+      assert.is_true(io.exists(getMudletHomeDir() .. "/" .. relative))
+      assert.is_false(io.exists(relative))
+      -- and loadMap has to look in the same place, or a map saved under a bare
+      -- name cannot be loaded back under it
+      assert.is_true(loadMap(relative))
+    end)
+
+    it("resolves a number the same way, Lua having made a name out of it", function()
+      local numbered = "42"
+      local function clear()
+        os.remove(getMudletHomeDir() .. "/" .. numbered)
+        os.remove(numbered)
+      end
+      clear()
+      finally(clear)
+
+      assert.is_true(saveMap(42))
+      assert.is_true(io.exists(getMudletHomeDir() .. "/" .. numbered))
+      assert.is_false(io.exists(numbered))
+    end)
   end)
 
   -- Careful with the order of anything added here: a load that fails still

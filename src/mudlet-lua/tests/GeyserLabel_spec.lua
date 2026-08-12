@@ -762,22 +762,21 @@ describe("Tests Geyser.Label movies, callbacks and nesting", function()
       assert.are.same({}, label.clickArgs)
     end)
 
-    -- setDoubleClickCallback is missing from the readback below on purpose: it
-    -- stores self.doubleclickCallback/doubleclickArgs while the constructor and
-    -- every other setter use the doubleClickCallback/doubleClickArgs spelling,
-    -- so there is nothing here worth freezing until that is settled
     it("remembers what the other callbacks registered too", function()
       local handler = function() end
+      label:setDoubleClickCallback(handler, "d")
       label:setReleaseCallback(handler, "r")
       label:setMoveCallback(handler, "m")
       label:setWheelCallback(handler, "w")
       label:setOnEnter(handler, "e")
       label:setOnLeave(handler, "l")
+      assert.are.same({"d"}, label.doubleClickArgs)
       assert.are.same({"r"}, label.releaseArgs)
       assert.are.same({"m"}, label.moveArgs)
       assert.are.same({"w"}, label.wheelArgs)
       assert.are.same({"e"}, label.onEnterArgs)
       assert.are.same({"l"}, label.onLeaveArgs)
+      assert.are.equal(handler, label.doubleClickCallback)
       assert.are.equal(handler, label.releaseCallback)
       assert.are.equal(handler, label.moveCallback)
       assert.are.equal(handler, label.wheelCallback)
@@ -794,12 +793,27 @@ describe("Tests Geyser.Label movies, callbacks and nesting", function()
       local built = track(Geyser.Label:new({
         name = "glnConsCallback", x = 0, y = 0, width = 60, height = 40,
         clickCallback = "echo", clickArgs = {"hello"},
+        doubleClickCallback = "echo", doubleClickArgs = "hello",
         onEnter = "echo", onEnterArgs = "hello",
       }, container))
       assert.are.equal("echo", built.clickCallback)
       assert.are.same({"hello"}, built.clickArgs)
+      assert.are.equal("echo", built.doubleClickCallback)
+      assert.are.same({"hello"}, built.doubleClickArgs)
       assert.are.equal("echo", built.onEnter)
       assert.are.same({"hello"}, built.onEnterArgs)
+    end)
+
+    it("hands a double-click callback back to the constructor's spelling", function()
+      -- the constructor and Geyser.Label:new's re-registration only look at
+      -- doubleClickCallback, so a setter that stored any other key would leave
+      -- a label that forgets its handler the moment it is rebuilt
+      local handler = function() end
+      label:setDoubleClickCallback(handler, "a", 2)
+      assert.are.equal(handler, label.doubleClickCallback)
+      assert.are.same({"a", 2}, label.doubleClickArgs)
+      assert.is_nil(label.doubleclickCallback)
+      assert.is_nil(label.doubleclickArgs)
     end)
   end)
 
