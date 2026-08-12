@@ -12,16 +12,21 @@ health, mana, movement and experience gauges - built only from data your
 game actually provides (GMCP, MSDP, or recognisable prompt and score
 lines). Nothing appears until the game sends something to show.
 
+The gauges are not stuck in the dock: drag one and the whole group comes
+away, to sit wherever you drop it over the game's text, down to the input
+line. Where you leave them is remembered.
+
 Commands:
 
 ```
 > baseui        -- show status and options
 > baseui hide   -- remove the interface (remembered between sessions)
 > baseui show   -- bring it back
+> baseui dock   -- put the gauges back in the dock
 ```
 
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.2.0]]
+version = [[1.3.0]]
 created = "2026-07-25T12:00:00+00:00"
