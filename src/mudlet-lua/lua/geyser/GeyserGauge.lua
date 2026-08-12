@@ -170,6 +170,91 @@ local function extractCSSSpacing(css, property)
   return spacing.left, spacing.right, spacing.top, spacing.bottom, unreadable
 end
 
+-- Reads the back label's margin, border and padding as one set of offsets, kept
+-- against the stylesheet they were read from: setValue runs on every prompt in
+-- most UIs and these three readings cost more than everything else it does,
+-- while the stylesheet behind them changes about once a session.
+-- @return left, right, top, bottom, and the first declaration that held a
+--         length with no pixel reading
+local function backSpacing(gauge)
+  local css = gauge.backCSS
+  local cached = gauge.backSpacingCache
+  -- read is its own flag because a gauge with no back stylesheet at all has a
+  -- css of nil, which is a reading in its own right
+  if cached.read and cached.css == css then
+    return cached.left, cached.right, cached.top, cached.bottom, cached.unreadable
+  end
+
+  local left, right, top, bottom, unreadable = 0, 0, 0, 0, nil
+  if css then
+    local ml, mr, mt, mb, marginUnreadable = extractCSSSpacing(css, "margin")
+    local bl, br, bt, bb, borderUnreadable = extractCSSSpacing(css, "border")
+    local pl, pr, pt, pb, paddingUnreadable = extractCSSSpacing(css, "padding")
+    left, right, top, bottom = ml + bl + pl, mr + br + pr, mt + bt + pt, mb + bb + pb
+    unreadable = marginUnreadable or borderUnreadable or paddingUnreadable
+  end
+
+  cached.read, cached.css = true, css
+  cached.left, cached.right, cached.top, cached.bottom, cached.unreadable = left, right, top, bottom, unreadable
+  return left, right, top, bottom, unreadable
+end
+
+-- Gives the front label the constraints for one orientation. They are functions
+-- rather than "<n>px" because a negative pixel constraint is measured from the
+-- opposite edge, which is not what a negative margin asks for, and they read the
+-- gauge's fill table rather than closing over its numbers, so that a new value
+-- costs a layout pass and not a fresh set of constraints. Only the back label's
+-- spacing is compensated for: Qt lays the front label's own border and padding
+-- outside its content area, and setStyleSheet strips its margins.
+local function setFrontConstraints(gauge)
+  local fill = gauge.frontFill
+  local front = gauge.front
+  local orientation = gauge.orientation
+
+  if orientation == "horizontal" then
+    front.x = function() return fill.left end
+    front.y = function() return fill.top end
+    front.width = function()
+      return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
+    end
+    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+  elseif orientation == "vertical" then
+    -- bottom to top, so an emptier gauge starts further down
+    front.x = function() return fill.left end
+    front.y = function()
+      return fill.top + math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (1 - fill.value / 100) + 0.5)
+    end
+    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.height = function()
+      return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
+    end
+  elseif orientation == "goofy" then
+    -- right to left, so an emptier gauge starts further right
+    front.x = function()
+      return fill.left + math.floor((gauge.back.get_width() - fill.left - fill.right) * (1 - fill.value / 100) + 0.5)
+    end
+    front.y = function() return fill.top end
+    front.width = function()
+      return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
+    end
+    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+  else -- batty (top to bottom), and anything the gauge cannot make sense of
+    front.x = function() return fill.left end
+    front.y = function() return fill.top end
+    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.height = function()
+      return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
+    end
+  end
+
+  -- the constraints as installed, so that anything that replaces one of them -
+  -- an autoAdjustSize on the front label, a script moving it by hand - is
+  -- noticed and undone on the next update rather than sticking for good
+  fill.orientation = orientation
+  fill.x, fill.y, fill.width, fill.height = front.x, front.y, front.width, front.height
+  front:set_constraints(front)
+end
+
 --- Sets the gauge amount.
 -- @param currentValue Current numeric value, or if maxValue is omitted, then
 --        it is assumed that currentValue is a value between 0 and 100 and is
@@ -206,88 +291,41 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
 -- prevent the gauge from overflowing its borders if currentValue > maxValue if gauge is set to be strict
   if self.strict and self.value > 100 then self.value = 100 end
   
-  -- Calculate spacing from the back label's CSS (margins, borders, padding)
-  -- This fixes issue #5344: gauges with margins were misaligned
-  local leftOffset, rightOffset, topOffset, bottomOffset = 0, 0, 0, 0
-  
-  if self.backCSS then
-    local ml, mr, mt, mb, marginUnreadable = extractCSSSpacing(self.backCSS, "margin")
-    local bl, br, bt, bb, borderUnreadable = extractCSSSpacing(self.backCSS, "border")
-    local pl, pr, pt, pb, paddingUnreadable = extractCSSSpacing(self.backCSS, "padding")
+  -- the constructor makes both of these; a gauge that got here without them is
+  -- given them rather than made to error
+  self.frontFill = self.frontFill or {}
+  self.backSpacingCache = self.backSpacingCache or {}
 
-    leftOffset = ml + bl + pl
-    rightOffset = mr + br + pr
-    topOffset = mt + bt + pt
-    bottomOffset = mb + bb + pb
+  -- Spacing from the back label's CSS (margins, borders, padding), so that a
+  -- gauge with margins is not misaligned (issue #5344)
+  local leftOffset, rightOffset, topOffset, bottomOffset, unreadable = backSpacing(self)
 
-    -- Qt still applies a spacing Geyser cannot measure, so the fill bar ends up
-    -- laid out against the wrong box and spills past the gauge's frame. Say so
-    -- rather than leave it looking like a Geyser bug - latched, because setValue
-    -- runs on every prompt.
-    local unreadable = marginUnreadable or borderUnreadable or paddingUnreadable
-    if unreadable and not self.warnedUnreadableCSS then
-      self.warnedUnreadableCSS = true
-      debugc(string.format(
-        "Geyser.Gauge: gauge '%s' has a stylesheet spacing Geyser cannot measure in pixels (%s), so it is left out of the fill bar's position - use px or unitless lengths",
-        self.name, unreadable))
-    end
+  -- Qt still applies a spacing Geyser cannot measure, so the fill bar ends up
+  -- laid out against the wrong box and spills past the gauge's frame. Say so
+  -- rather than leave it looking like a Geyser bug - latched, because setValue
+  -- runs on every prompt.
+  if unreadable and not self.warnedUnreadableCSS then
+    self.warnedUnreadableCSS = true
+    debugc(string.format(
+      "Geyser.Gauge: gauge '%s' has a stylesheet spacing Geyser cannot measure in pixels (%s), so it is left out of the fill bar's position - use px or unitless lengths",
+      self.name, unreadable))
   end
-  
-  -- Update gauge in the requested orientation
-  -- Note: We use function-based constraints for dynamic sizing that accounts for margins
-  -- The front label can have its own borders and padding (margins are stripped in setStyleSheet)
-  -- Qt applies border/padding outside the widget's content area, so we don't need to compensate for them
-  -- The offsets are given as functions rather than as "<n>px": a negative pixel
-  -- constraint is measured from the opposite edge, which is not what a negative
-  -- margin asks for
 
-  if self.orientation == "horizontal" then
-    -- Position the front label inside the back's content area
-    self.front:move(function() return leftOffset end, function() return topOffset end)
-    -- For width: we want value% of the CONTENT width (back label's content area)
-    -- Content width = back_label_width - leftOffset - rightOffset
-    local totalBackOffset = leftOffset + rightOffset
-    local gaugeValue = self.value
-    self.front:resize(
-      function() return math.floor((self.back.get_width() - totalBackOffset) * (gaugeValue / 100) + 0.5) end,
-      function() return math.floor(self.back.get_height() - topOffset - bottomOffset + 0.5) end
-    )
-  elseif self.orientation == "vertical" then
-    -- For vertical (bottom-to-top), position needs to be calculated based on remaining space
-    -- At 100%: y = topOffset (fills from top to bottom of content area)
-    -- At 0%: y = topOffset + contentHeight (zero height at bottom)
-    local totalBackOffset = topOffset + bottomOffset
-    local gaugeValue = self.value
-    self.front:move(
-      function() return leftOffset end,
-      function() return topOffset + math.floor((self.back.get_height() - totalBackOffset) * (1 - gaugeValue / 100) + 0.5) end
-    )
-    self.front:resize(
-      function() return math.floor(self.back.get_width() - leftOffset - rightOffset + 0.5) end,
-      function() return math.floor((self.back.get_height() - totalBackOffset) * (gaugeValue / 100) + 0.5) end
-    )
-  elseif self.orientation == "goofy" then
-    -- For goofy (right-to-left), position needs to be calculated based on remaining space
-    -- At 100%: x = leftOffset (fills from left to right edge)
-    -- At 0%: x = leftOffset + contentWidth (zero width at right edge)
-    local totalBackOffset = leftOffset + rightOffset
-    local gaugeValue = self.value
-    self.front:move(
-      function() return leftOffset + math.floor((self.back.get_width() - totalBackOffset) * (1 - gaugeValue / 100) + 0.5) end,
-      function() return topOffset end
-    )
-    self.front:resize(
-      function() return math.floor((self.back.get_width() - totalBackOffset) * (gaugeValue / 100) + 0.5) end,
-      function() return math.floor(self.back.get_height() - topOffset - bottomOffset + 0.5) end
-    )
-  else -- batty (top to bottom)
-    self.front:move(function() return leftOffset end, function() return topOffset end)
-    local totalBackOffset = topOffset + bottomOffset
-    local gaugeValue = self.value
-    self.front:resize(
-      function() return math.floor(self.back.get_width() - leftOffset - rightOffset + 0.5) end,
-      function() return math.floor((self.back.get_height() - totalBackOffset) * (gaugeValue / 100) + 0.5) end
-    )
+  local fill = self.frontFill
+  local moved = fill.value ~= self.value or fill.left ~= leftOffset or fill.right ~= rightOffset
+                or fill.top ~= topOffset or fill.bottom ~= bottomOffset
+  fill.value, fill.left, fill.right, fill.top, fill.bottom = self.value, leftOffset, rightOffset, topOffset, bottomOffset
+
+  -- The constraints read the fill table, so a new value only needs the front
+  -- label laid out again, and a gauge sitting on the value it already has -
+  -- which the gauges a UI repaints wholesale on every prompt usually are - does
+  -- not even need that.
+  local front = self.front
+  if fill.orientation ~= self.orientation or front.x ~= fill.x or front.y ~= fill.y
+     or front.width ~= fill.width or front.height ~= fill.height then
+    setFrontConstraints(self)
+  elseif moved then
+    front:reposition()
   end
 
   if text then
@@ -472,6 +510,11 @@ function Geyser.Gauge:new (cons, container)
   setmetatable(me, self)
   self.__index = self
   me.windowname = me.windowname or me.container.windowname or "main"
+
+  -- what the front label was last laid out against, and the reading taken off
+  -- the back label's stylesheet
+  me.frontFill = {}
+  me.backSpacingCache = {}
 
   -- Now create the Gauge using primitives and tastey classes
 
