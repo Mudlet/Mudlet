@@ -301,8 +301,8 @@ private slots:
         removeScripts({pScript});
     }
 
-    // Dropping the note takes the "Add User Event" text with it, so a name that was typed
-    // but never added cannot follow the user to the next script and land on that one.
+    // Dropping the note takes the "Add User Event" text with it, so a half-typed name
+    // cannot follow the user to the next script and land on that one instead.
     void testTypedButUnaddedTextDoesNotFollowToTheNextScript()
     {
         QTreeWidgetItem* pScriptA = addSavedScript(qsl("TypedTextA"), {});
@@ -358,8 +358,8 @@ private slots:
         removeScripts({pScript, pNewScript});
     }
 
-    // Renaming an entry still has to work: nothing tears the list down between
-    // selecting the entry and pressing "+".
+    // Nothing tears the list down between selecting the entry and pressing "+", so the
+    // note has to survive here - guards against dropping it too eagerly.
     void testRenamingASelectedHandlerStillWorks()
     {
         QTreeWidgetItem* pScript = addSavedScript(qsl("RenameScript"), {qsl("firstEvent")});
@@ -406,10 +406,9 @@ private slots:
         removeScripts({pScript});
     }
 
-    // Jumping to an event handler from the search results notes the item too,
-    // from slot_itemSelectedInSearchResults() rather than from the list widget's
-    // own selection, and it does so after every teardown of the list - so the
-    // note it leaves has to survive, and the next script selection has to drop it.
+    // slot_itemSelectedInSearchResults() notes the item by hand rather than through the
+    // list widget's selection, and only after every teardown of the list - so that note
+    // has to survive, and the next script selection has to drop it.
     void testSearchResultNotesALiveHandler()
     {
         QTreeWidgetItem* pScriptA = addSavedScript(qsl("SearchScript"), {qsl("searchableEvent")});
