@@ -229,11 +229,14 @@ function Adjustable.Container:dragOutOfParent(ux, uy)
     local w, h = self:get_width(), self:get_height()
     local rootw, rooth = root.get_width(), root.get_height()
     local x, y = parent.get_x() + ux - root.get_x(), parent.get_y() + uy - root.get_y()
-    x, y = math.max(0, x), math.max(0, y)
-    -- a scrollBox scrolls to what does not fit into it rather than bounding it
+    -- a scrollBox scrolls to what does not fit into it rather than bounding it.
+    -- The lower bound is applied last: a container too big for the window has a
+    -- negative upper bound, and a negative position is read as one measured from
+    -- the far edge, which would put the container's far corner at the origin
     if root.type ~= "scrollBox" then
         x, y = math.min(x, rootw - w), math.min(y, rooth - h)
     end
+    x, y = math.max(0, x), math.max(0, y)
     -- the height a minimized container restores to is measured in its parent as
     -- well, so it has to be read while the parent still is the parent
     local origh = self.minimized and relativeToParent(self.origh) and constraintInPixels(self, self.origh, "height", parent)

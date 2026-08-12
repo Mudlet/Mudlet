@@ -1121,10 +1121,27 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
       dragOut = true,
     }, middle)
     assert.are.equal(middle.Inside, deep.container)
+    local x, y = deep:get_x(), deep:get_y()
 
-    assert.is_true(deep:dragOutOfParent(0, 0))
+    assert.is_true(deep:dragOutOfParent(x - middle.Inside.get_x(), y - middle.Inside.get_y()))
 
     assert.are.equal(Geyser, deep.container)
+    -- the position of a container two levels down counts in every container it
+    -- is inside of, so it has to come out of all of them onto the same spot
+    assertNear(deep:get_x(), x, "x")
+    assertNear(deep:get_y(), y, "y")
+  end)
+
+  it("keeps a container bigger than the window at the window's corner", function()
+    local winWidth, winHeight = getMainWindowSize()
+    makeChild({dragOut = true, width = winWidth + 200, height = winHeight + 200})
+
+    child:dragOutOfParent(0, 0)
+
+    -- there is nowhere to put a container that does not fit that keeps all of it
+    -- on screen, so it goes at the corner rather than off the top left of it
+    assert.are.equal(0, child:get_x())
+    assert.are.equal(0, child:get_y())
   end)
 
   it("does not hold a container back at the edge of a scroll box", function()
