@@ -1595,13 +1595,15 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // prompts ('\xff' from GA/EOR), timer-flushed fragments ('\r'),
         // MXP <br> breaks and blank lines - is a real line boundary.
         const bool proseSegment = looksLikeWrappedProse(mMudLine);
-        if (!mServerWrapPendingLine.isEmpty() && ((mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace()) || !proseSegment)) {
+        if (!mServerWrapPendingLine.isEmpty()) {
             // A continuation of wrapped prose starts with a word - or with
             // the single space some games move the break to instead of
-            // swallowing it. Deeper indentation or a symbol-heavy line
-            // instead belongs to centered ASCII art, menu columns, dividers
-            // and the like, so the held line was complete after all:
-            flushPendingServerWrapJoin();
+            // swallowing it. Anything else means the held line was complete
+            // after all:
+            const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine)) {
+                flushPendingServerWrapJoin();
+            }
         }
         // Deliberately judged before the pending line is joined on: ending at
         // the game's wrap column is a property of the segment as the game
@@ -1796,6 +1798,45 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
         }
     }
     return nonSpace > 0 && letters * 10 >= nonSpace * 6;
+}
+
+// A list entry reads exactly like wrapped prose: a sentence that can end
+// right at the wrap column. Only its marker tells the list apart from a
+// paragraph, so every form accepted here has to be one that word wrap would
+// not itself produce at the start of a continuation. The ambiguous ones are
+// left out on purpose: a spaced dash opens a continuation whenever the wrap
+// lands on it, and a parenthesised number is as often an aside as a label,
+// so it is capped like a bare one.
+bool TBuffer::startsWithListMarker(const QString& line)
+{
+    qsizetype start = 0;
+    while (start < line.size() && line.at(start).isSpace()) {
+        ++start;
+    }
+    if (start >= line.size()) {
+        return false;
+    }
+
+    static const QString bullets = qsl("*+•·●◦");
+    if (bullets.contains(line.at(start))) {
+        return start + 1 < line.size() && line.at(start + 1) == QChar::Space;
+    }
+
+    static const QString openers = qsl("[(");
+    static const QString closers = qsl("])");
+    const qsizetype bracket = openers.indexOf(line.at(start));
+    const qsizetype numberStart = (bracket < 0) ? start : start + 1;
+    qsizetype numberEnd = numberStart;
+    while (numberEnd < line.size() && line.at(numberEnd).isDigit()) {
+        ++numberEnd;
+    }
+    const qsizetype digits = numberEnd - numberStart;
+    if (!digits || numberEnd >= line.size()) {
+        return false;
+    }
+    const bool numberFitsAList = digits <= csmMaxListNumberDigits || line.at(start) == QChar('[');
+    const bool closed = (bracket >= 0) ? line.at(numberEnd) == closers.at(bracket) : (line.at(numberEnd) == QChar('.') || line.at(numberEnd) == QChar(')'));
+    return numberFitsAList && closed && numberEnd + 1 < line.size() && line.at(numberEnd + 1) == QChar::Space;
 }
 
 void TBuffer::joinPendingServerWrapOntoCurrent()
