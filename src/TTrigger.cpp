@@ -127,6 +127,8 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mPatterns.append(patterns.at(i));
             mPatternKinds.append(patternKinds.at(i));
 
+            const int patternIndex = mPatterns.size() - 1;
+
             if (patternKinds.at(i) == REGEX_PERL) {
                 const QByteArray& regexp = patterns.at(i).toUtf8();
 
@@ -156,7 +158,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                         TDebug(Qt::white, Qt::darkGreen) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
                     }
                 }
-                mRegexMap[i] = re;
+                mRegexMap[patternIndex] = re;
                 mTriggerContainsPerlRegex = true;
             }
 
@@ -176,7 +178,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                         TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in lua condition function: ")" << patterns.at(i) << "\"\n" >> mpHost;
                     }
                 } else {
-                    mLuaConditionMap[i] = funcName;
+                    mLuaConditionMap[patternIndex] = funcName;
                 }
             }
 
