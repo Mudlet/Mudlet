@@ -1844,6 +1844,7 @@ void TBuffer::startServerWrapFlushTimer()
             mpHost->mpConsole->mTriggerEngineMode = true;
             flushPendingServerWrapJoin();
             mpHost->mpConsole->mTriggerEngineMode = false;
+            mpHost->mpConsole->finalize();
         });
     }
     mpServerWrapFlushTimer->start();
