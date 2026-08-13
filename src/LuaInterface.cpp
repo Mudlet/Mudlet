@@ -750,6 +750,14 @@ QString LuaInterface::getValue(TVar* var)
     return {};
 }
 
+// The value types a profile save can write and an import can read back. A member
+// of any other type is dropped from the save, which is what XMLexport has to
+// know about to keep the ride-along export honest (#9857).
+static bool serializableValueType(const int valueType)
+{
+    return valueType == LUA_TTABLE || valueType == LUA_TSTRING || valueType == LUA_TNUMBER || valueType == LUA_TBOOLEAN;
+}
+
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 {
     depth++;
@@ -783,14 +791,21 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             lua_pop(L, 1);
             continue;
         }
-        if (mSavedVarsOnly && depth == 1) {
-            if (!mSavedRootNames.contains(keyName)) {
-                lua_pop(L, 1);
-                continue;
+        if (mSavedVarsOnly) {
+            if (depth == 1) {
+                if (!mSavedRootNames.contains(keyName)) {
+                    lua_pop(L, 1);
+                    continue;
+                }
+                // each saved global is walked in its own dedup scope, so two of them
+                // that reference the same table both get a complete subtree
+                varUnit->clearPointers();
+                mCurrentSavedRootName = keyName;
+            } else if (!serializableValueType(vType)) {
+                // against the global rather than the table the value sits in:
+                // what a script reads back is the whole variable
+                mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
             }
-            // each saved global is walked in its own dedup scope, so two of them
-            // that reference the same table both get a complete subtree
-            varUnit->clearPointers();
         }
         auto var = new TVar();
         var->setReference(keyIsReference);
@@ -898,6 +913,8 @@ void LuaInterface::getSavedVars()
     }
     mSavedRootNames.clear();
     mTruncatedSavedTables.clear();
+    mSavedRootsHoldingUnsaveableValues.clear();
+    mCurrentSavedRootName.clear();
     for (const QString& savedVarName : std::as_const(varUnit->savedVars)) {
         // savedVars holds dotted paths, but a global's own name may contain a
         // dot as well, so both readings count as a name to walk
