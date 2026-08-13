@@ -19,6 +19,8 @@
 
 #include <QtTest/QtTest>
 
+#include <cmath>
+
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -339,6 +341,67 @@ private slots:
                  "wrap detection did not fire on 100 lines against a stable ceiling");
     }
 
+    void test_hintLinkReadsAndReversesTheChange()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        // so that the messages under test can be compared with buffer lines
+        // verbatim rather than as Mudlet chose to wrap them
+        host->mpConsole->buffer.mWrapAt = 500;
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        QByteArray data;
+        const QByteArray line = QString(QString(72, QChar('y')) + qsl(" hello")).toUtf8();
+        for (int i = 0; i < 100; ++i) {
+            data += line + "\r\n";
+        }
+        mpServer->sendRaw(data);
+
+        const QString hintLinkText = qsl("  ➜ Click here to turn that on now");
+        QVERIFY2(waitForLineInBuffer(hintLinkText), "the link offering to undo the game's wrapping was not printed");
+
+        const TChar hintLink = firstCharacterOf(hintLinkText);
+        QVERIFY2(hintLink.isUnderlined(), "the hint link is not underlined, so it does not read as clickable");
+        QVERIFY2(hintLink.foreground() != QColor(Qt::blue), "the hint link is still in the blue that is unreadable on a dark background");
+        QVERIFY2(contrastRatio(hintLink.foreground(), hintLink.background()) > 4.5, "the hint link does not contrast enough with the console background to be read");
+
+        clickLink(hintLinkText);
+        QVERIFY2(host->mUndoServerWrap, "clicking the hint link did not turn undoing the game's wrapping on");
+        QCOMPARE(host->mUndoServerWrapWidth, 78);
+
+        const QString confirmation = qsl("[ INFO ]  - Mudlet now undoes the game's wrapping, so triggers see whole lines:");
+        QVERIFY2(waitForLineInBuffer(confirmation), "turning the option on was not confirmed as a Mudlet info message");
+
+        const QString undoLinkText = qsl("  ➜ Undo, leave the lines as they come in");
+        QVERIFY2(waitForLineInBuffer(undoLinkText), "the confirmation did not offer a link to undo the change");
+        const TChar undoLink = firstCharacterOf(undoLinkText);
+        QCOMPARE(undoLink.foreground(), hintLink.foreground());
+
+        clickLink(undoLinkText);
+        QVERIFY2(!host->mUndoServerWrap, "clicking the undo link did not turn undoing the game's wrapping back off");
+        QVERIFY2(waitForLineInBuffer(qsl("[ INFO ]  - Mudlet no longer undoes the game's wrapping, so triggers see the")), "turning the option back off was not confirmed as a Mudlet info message");
+    }
+
+    void test_settingIsNotAnnouncedWithoutTheHint()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        QVERIFY(!host->mServerWrapHintShown);
+
+        host->mLuaInterpreter.compileAndExecuteScript(qsl("setConfig(\"undoServerWrap\", true)"));
+        QVERIFY(host->mUndoServerWrap);
+        QTest::qWait(100);
+
+        QVERIFY2(!bufferHasLine(qsl("[ INFO ]  - Mudlet now undoes the game's wrapping, so triggers see whole lines:")),
+                 "a script changing the setting was reported on although no hint had offered it");
+    }
+
     void cleanup()
     {
         delete mpServer;
@@ -410,6 +473,58 @@ private:
         if (!spy2.wait(2000)) {
             QFAIL("Could not connect with the host.");
         }
+    }
+
+    int lineNumberOf(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i) == text) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    TChar firstCharacterOf(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        const int y = lineNumberOf(text);
+        if (y < 0 || console->buffer.buffer.at(y).empty()) {
+            // the caller gets a TChar that fails its own assertions, so say
+            // outright what actually went wrong
+            QTest::qFail(qPrintable(qsl("no buffer line reading \"%1\"").arg(text)), __FILE__, __LINE__);
+            return TChar(nullptr);
+        }
+        return console->buffer.buffer.at(y).front();
+    }
+
+    // Runs the link's command the way a click would. A real click does more -
+    // spoilers, disabled links, visited state, Lua-reference links - none of
+    // which these hint links use
+    void clickLink(const QString& text)
+    {
+        auto host = mudlet::self()->getActiveHost();
+        const QStringList commands = host->mpConsole->buffer.mLinkStore.getLinksConst(firstCharacterOf(text).linkIndex());
+        QVERIFY2(commands.size() == 1, qPrintable(qsl("\"%1\" is not a link carrying exactly one command").arg(text)));
+        host->mLuaInterpreter.compileAndExecuteScript(commands.first());
+    }
+
+    // WCAG relative luminance, so that "readable" is a measurement rather than
+    // a preference about which blue looks nicer
+    static double relativeLuminance(const QColor& color)
+    {
+        const auto channel = [](const double value) {
+            return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+    }
+
+    static double contrastRatio(const QColor& first, const QColor& second)
+    {
+        const double one = relativeLuminance(first);
+        const double other = relativeLuminance(second);
+        return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
     }
 
     bool bufferHasLine(const QString& text)

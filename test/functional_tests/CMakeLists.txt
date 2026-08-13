@@ -34,6 +34,7 @@ set(FUNCTIONAL_TEST_SOURCES
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
     CopyAsImageTest.cpp
+    FeatureCalloutTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
@@ -206,6 +207,9 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
+
+# UndoServerWrapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(UndoServerWrapTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and

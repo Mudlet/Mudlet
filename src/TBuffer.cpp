@@ -1929,6 +1929,7 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
     }
 
     mpHost->mServerWrapHintShown = true;
+    mpHost->mServerWrapHintShownThisSession = true;
 
     // Deferred so the hint does not interleave with the line being committed:
     QPointer<Host> hostGuard = mpHost;
@@ -1941,12 +1942,7 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
                                            "makes triggers awkward to write. Mudlet can undo that, so that triggers\n"
                                            "always see whole lines and wrapping follows your window size instead:")
                                        .arg(QString::number(ceiling)));
-        //: Confirmation shown after the player clicks the link that enables undoing the game's own line wrapping
-        QString confirmation = QObject::tr("Done - Mudlet now undoes the game's wrapping, and triggers see whole lines.");
-        // the text is embedded in a double-quoted Lua string:
-        confirmation.replace(QChar('\\'), qsl("\\\\")).replace(QChar('"'), qsl("\\\""));
-        const QString clickAction = qsl("setConfig(\"undoServerWrapWidth\", %1) setConfig(\"undoServerWrap\", true) cecho(\"\\n<green>%2\\n\")").arg(QString::number(ceiling), confirmation);
-        QStringList func(clickAction);
+        QStringList func(qsl("setConfig(\"undoServerWrapWidth\", %1) setConfig(\"undoServerWrap\", true)").arg(QString::number(ceiling)));
         //: Tooltip on the link that enables the option to undo the game's own line wrapping
         QStringList hint(QObject::tr("Turn on \"Undo the game's own wrapping\" - also found in the settings under Main display"));
         //: Clickable link shown in the main window when a game that wraps its own lines is detected
@@ -1954,6 +1950,35 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
         hostGuard->mpConsole->echoLink(linkText, func, hint, false);
         hostGuard->mpConsole->print("\n");
     });
+}
+
+// Called whenever setConfig() sets Host::mUndoServerWrap, and silent unless this
+// session printed the wrap hint - the follow-up only means anything to a player
+// who just saw it. Reports even when the setting did not change, so that
+// clicking either link always says something back. The settings dialog writes
+// the flag directly, so it does not report at all:
+void TBuffer::announceUndoServerWrapChange(const bool enabled)
+{
+    if (!mpHost || !mpHost->mServerWrapHintShownThisSession) {
+        return;
+    }
+
+    if (!enabled) {
+        //: Shown after the player clicks the link that turns undoing the game's own line wrapping back off
+        mpHost->postMessage(QObject::tr("[ INFO ]  - Mudlet no longer undoes the game's wrapping, so triggers see the\n"
+                                        "lines exactly as the game sent them."));
+        return;
+    }
+
+    //: Shown after the player clicks the link that turns on undoing the game's own line wrapping
+    mpHost->postMessage(QObject::tr("[ INFO ]  - Mudlet now undoes the game's wrapping, so triggers see whole lines:"));
+    QStringList func(qsl("setConfig(\"undoServerWrap\", false)"));
+    //: Tooltip on the link that turns the option to undo the game's own line wrapping back off
+    QStringList hint(QObject::tr("Turn \"Undo the game's own wrapping\" back off"));
+    //: Clickable link that undoes turning on the option to undo the game's own line wrapping
+    const QString linkText = QObject::tr("  ➜ Undo, leave the lines as they come in");
+    mpHost->mpConsole->echoLink(linkText, func, hint, false);
+    mpHost->mpConsole->print("\n");
 }
 
 const std::deque<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const

@@ -694,8 +694,12 @@ public:
     // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
     bool mUndoServerWrap = false;
     int mUndoServerWrapWidth = 80;
-    // The one-time "this game seems to wrap its own lines" hint was shown:
+    // Saved with the profile: the "this game seems to wrap its own lines" hint
+    // is offered once per profile, ever:
     bool mServerWrapHintShown = false;
+    // Not saved: the follow-up message is only worth printing to a player who
+    // saw the hint in this session:
+    bool mServerWrapHintShownThisSession = false;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;

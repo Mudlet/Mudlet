@@ -22,6 +22,7 @@
 #include "mudlet.h"
 
 #include <QEvent>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
@@ -95,6 +96,9 @@ TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, con
     for (QWidget* pWidget = pAnchor; pWidget; pWidget = pWidget->parentWidget()) {
         pWidget->installEventFilter(this);
     }
+
+    mApplicationActive = qGuiApp->applicationState() == Qt::ApplicationActive;
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, &TFeatureCallout::slot_applicationStateChanged);
 }
 
 void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body)
@@ -124,15 +128,13 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
         if (!pAnchor->isVisible()) {
             return;
         }
-        // the session budget is claimed only once the balloon really appears,
-        // so an anchor that stayed hidden does not use it up - which is why
-        // the check runs again in here
+        // the session budget is claimed here rather than up front, so an
+        // anchor that stayed hidden for the whole delay does not use it up -
+        // which is why the check runs again in here
         if (smSessionShown.contains(featureId) || smSessionShown.size() >= maximumPerSession) {
             return;
         }
         smSessionShown.insert(featureId);
-        auto* settings = mudlet::getQSettings();
-        settings->setValue(shownCountKey(featureId), settings->value(shownCountKey(featureId), 0).toInt() + 1);
         auto* pCallout = new TFeatureCallout(featureId, pAnchor, title, body);
         pCallout->showAnchored();
     });
@@ -140,14 +142,55 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
 
 void TFeatureCallout::showAnchored()
 {
-    if (!mpAnchor) {
+    if (!mpAnchor || !mpAnchor->isVisible()) {
         return;
     }
+    if (!mApplicationActive) {
+        mWaitingForActivation = true;
+        return;
+    }
+    place();
+}
+
+void TFeatureCallout::place()
+{
     adjustSize();
     reposition();
     show();
     raise();
-    mudlet::self()->announce(mAnnouncement);
+    if (!mAnnounced) {
+        mAnnounced = true;
+        // an appearance is only spent once the balloon is really on screen
+        auto* settings = mudlet::getQSettings();
+        settings->setValue(shownCountKey(mFeatureId), settings->value(shownCountKey(mFeatureId), 0).toInt() + 1);
+        mudlet::self()->announce(mAnnouncement);
+    }
+}
+
+void TFeatureCallout::slot_applicationStateChanged(const Qt::ApplicationState state)
+{
+    mApplicationActive = state == Qt::ApplicationActive;
+    if (!mApplicationActive) {
+        if (isVisible()) {
+            mWaitingForActivation = true;
+            hide();
+            // hide() was measured not to unmap the tooltip window on X11,
+            // leaving the balloon on top of the other application anyway.
+            // Dropping the native window does, and show() builds a fresh one -
+            // done on every platform because it costs nothing to recreate:
+            destroy();
+        }
+        return;
+    }
+    if (!mWaitingForActivation) {
+        return;
+    }
+    mWaitingForActivation = false;
+    if (!mpAnchor || !mpAnchor->isVisible()) {
+        close();
+        return;
+    }
+    place();
 }
 
 void TFeatureCallout::markDismissed()

@@ -338,6 +338,7 @@ public:
     // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
     // - public so that the connection teardown can flush it:
     void flushPendingServerWrapJoin();
+    void announceUndoServerWrapChange(const bool enabled);
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
     // Drops any half-received ANSI sequence or multi-byte character, on both

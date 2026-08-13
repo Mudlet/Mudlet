@@ -7942,7 +7942,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("undoServerWrap")) {
-        host.mUndoServerWrap = getVerifiedBool(L, __func__, 2, "value");
+        const bool state = getVerifiedBool(L, __func__, 2, "value");
+        host.mUndoServerWrap = state;
+        if (host.mpConsole) {
+            host.mpConsole->buffer.announceUndoServerWrapChange(state);
+        }
         return success();
     }
     if (key == qsl("undoServerWrapWidth")) {
