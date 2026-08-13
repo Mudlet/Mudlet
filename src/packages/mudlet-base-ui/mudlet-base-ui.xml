@@ -452,7 +452,10 @@ local layout = {
   chatHeader = { y = "38.5%", height = "3%" },
   tabs = { y = "42.5%", height = "3.8%" },
   chat = { y = "46.3%", height = "29.7%" },
-  gaugePanel = { y = "78%" },
+  -- the panel holding the bars keeps a title bar of this many pixels above
+  -- them, which is what there is to take hold of it by. Its own container
+  -- leaves twice its padding there, so the padding is half of this.
+  gaugePanel = { y = "78%", chrome = 20 },
 }
 
 local headerCss = string.format(
@@ -463,12 +466,15 @@ local placeholderCss = string.format(
   [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
   theme.panel, theme.borderSoft)
 
--- only shown once the gauges float free of the dock: the bars are transparent
--- above their line, so away from the dock they would be read against whatever
--- game text happens to be behind them
-local floatingGaugesCss = string.format(
-  [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
-  theme.bg, theme.border)
+-- the gauge panel's own background, which is all there is to it in the dock -
+-- the alignment is what keeps its title in the title bar rather than centred
+-- over the bars
+local gaugePanelCss = {
+  docked = [[background-color: transparent; border: 0px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
+  floating = string.format(
+    [[background-color: %s; border: 1px solid %s; border-radius: 6px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
+    theme.bg, theme.border),
+}
 
 local tabCss = {
   active = string.format(
@@ -1234,14 +1240,8 @@ function BaseUI.loadSettings()
     BaseUI.settings = {}
     cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not read the saved settings - using the defaults.&lt;reset&gt;\n")
   end
-  -- a saved gauge position is checked here, before anything is built from it
-  if BaseUI.settings.gaugePanel ~= nil then
-    local spot = BaseUI.readGaugePlacement(BaseUI.settings.gaugePanel)
-    BaseUI.settings.gaugePanel = spot
-    if not spot then
-      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] The saved position of the health bars made no sense, so they are back in the dock.&lt;reset&gt;\n")
-    end
-  end
+  -- where the gauge panel was left is Geyser's to remember, in a file of its own
+  BaseUI.settings.gaugePanel = nil
 end
 
 function BaseUI.saveSettings()
@@ -1410,19 +1410,27 @@ function BaseUI.build()
   BaseUI.refreshChatTabs()
   BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
   -- the gauges live in a container of their own so the whole group moves as
-  -- one, wherever the player puts it. The backdrop is created before any gauge
-  -- so the bars stack on top of it, and only earns its keep once they float.
-  -- placeGaugePanel gives the panel its height, which follows the bar count.
-  BaseUI.gaugePanel = Geyser.Container:new({
+  -- one, and an adjustable one so the player can drag it out of the dock.
+  -- placeGaugePanel gives it its height, which follows the bar count.
+  BaseUI.gaugePanel = Adjustable.Container:new({
     name = "BaseUI_gauges",
-    x = "0%", y = layout.gaugePanel.y, width = "100%", height = "0%",
+    x = "0%", y = layout.gaugePanel.y .. "-" .. layout.gaugePanel.chrome,
+    width = "100%", height = "0%",
+    dragOut = true,
+    padding = layout.gaugePanel.chrome / 2,
+    titleText = "VITALS",
+    titleTxtColor = theme.accent,
+    titleFormat = "l8",
+    adjLabelstyle = gaugePanelCss.docked,
+    buttonstyle = string.format(
+      [[QLabel{ border-color: %s; background-color: %s; } QLabel::hover{ background-color: rgba(90,100,110,50%%); }]],
+      theme.border, theme.bg),
+    -- loaded by hand below instead, and saved on the drop as well as on exit
+    autoLoad = false,
+    autoSave = true,
   }, BaseUI.container)
-  BaseUI.gaugeBackdrop = Geyser.Label:new({
-    name = "BaseUI_gauges_backdrop",
-    x = "0%", y = "0%", width = "100%", height = "100%",
-  }, BaseUI.gaugePanel)
-  BaseUI.gaugeBackdrop:setStyleSheet(floatingGaugesCss)
-  BaseUI.armGaugeDrag(BaseUI.gaugeBackdrop)
+  BaseUI.gaugePanel:newCustomItem("Back to the dock", BaseUI.dockGauges)
+  BaseUI.loadGaugePanel()
   -- the container remembers its own hidden/detached state from the previous
   -- session (it saves on exit) - our setting says it should be visible, so
   -- override whatever it restored
@@ -1477,21 +1485,16 @@ function BaseUI.noteChatActivity(key)
   BaseUI.refreshChatTabs()
 end
 
--- The bars are one group the player can pull out of the dock: press on any of
--- them and drag. Nothing moves until the pointer really has, so a click that
--- happens to land on a bar leaves the layout alone.
-local dragThreshold = 6
-
+-- The bars live in an adjustable container of their own. Dragging its title
+-- bar moves it inside the dock; dragging it clear of the dock floats it over
+-- the game's text, which is what the dragOut constraint gives us. Geyser
+-- remembers both where it was left and which of the two it was in, so what is
+-- left here is fitting the panel to the bars in it and the dock's lifecycle.
 -- how tall the bars are, as shares of the dock: the pitch from one bar's top
--- to the next, and the bar itself. The panel is sized from these to fit
--- exactly the bars it holds, so a floating one is never part empty backdrop
--- over the game's text
+-- to the next, and the bar itself
 local gaugePitch, gaugeSpan = 0.055, 0.045
 -- a game with more stats than this loses the last of them - see vitalsStats
 local maxGaugeSlots = 4
--- a panel narrower than this would be too small to grab and move again
-local minGaugeWidth = 0.05
-
 local function asPercent(fraction)
   return string.format("%.4f%%", fraction * 100)
 end
@@ -1500,257 +1503,130 @@ local function gaugePanelHeight(slots)
   return gaugePitch * slots - (gaugePitch - gaugeSpan)
 end
 
--- both nan and an infinity get past tonumber() and neither is a size Geyser
--- can parse; nan is spotted by comparing it with itself
-local function finiteNumber(value)
-  local number = tonumber(value)
-  if not number or number ~= number or number == math.huge or number == -math.huge then
-    return nil
-  end
-  return number
-end
-
--- Turns what is in the settings file, or what was measured off the panel, into
--- a placement that is safe to build from - or into nothing, which means the
--- dock. Geyser raises on a size it cannot parse and that error lands mid-build,
--- so a nonsense position would cost the player their whole interface.
--- The height is not stored: bars keep arriving, and a panel saved with two of
--- them has to grow when the third turns up, so what is kept is the factor its
--- natural height is multiplied by.
-function BaseUI.readGaugePlacement(spot)
-  if type(spot) ~= "table" then
-    return nil
-  end
-  local x, y, width = finiteNumber(spot.x), finiteNumber(spot.y), finiteNumber(spot.width)
-  local scale = finiteNumber(spot.scale) or 1
-  if not x or not y or not width or scale &lt;= 0 then
-    return nil
-  end
-  width = math.min(math.max(width, minGaugeWidth), 1)
-  return {
-    x = math.min(math.max(x, 0), 1 - width),
-    y = math.min(math.max(y, 0), 1),
-    width = width,
-    scale = math.min(scale, 4),
-  }
-end
-
 function BaseUI.gaugesFloating()
-  return BaseUI.settings.gaugePanel ~= nil
+  return BaseUI.gaugePanel ~= nil and BaseUI.gaugePanel.draggedOut == true
 end
 
--- Reconciles the panel with the settings: docked or floating, as tall as the
--- bars in it, shown or hidden. A drag in progress moves the panel itself and
--- deliberately does not come through here; every other change does.
-function BaseUI.placeGaugePanel()
-  local panel, spot = BaseUI.gaugePanel, BaseUI.settings.gaugePanel
-  if not panel or not BaseUI.gaugeBackdrop then
+-- the bars are shares of the panel, so the panel is given the height they need
+-- wherever it is: a share of the dock while it is in the dock, and the same
+-- number of pixels as a share of the window once it has been dragged out
+local function gaugePanelSize(slots)
+  local parent = BaseUI.gaugePanel and BaseUI.gaugePanel.container
+  local within = parent and parent.get_height and parent.get_height() or 0
+  if slots == 0 or within &lt;= 0 then
+    return nil
+  end
+  local bars = gaugePanelHeight(slots) * BaseUI.container.Inside:get_height()
+  return asPercent(bars / within) .. "+" .. layout.gaugePanel.chrome
+end
+
+-- Adjustable's own buttons and most of its menu would let the player put the
+-- bars somewhere with no obvious way back - closed, collapsed, or locked in
+-- place. Locking is no alternative to hiding them: whichever lockStyle it
+-- uses, a locked container cannot be dragged either.
+-- Called again after a load, which puts the buttons and the inside container
+-- back the way the constructor had them.
+function BaseUI.trimGaugePanelChrome()
+  local panel = BaseUI.gaugePanel
+  if not panel then
     return
   end
-  -- Geyser is the main window itself; the dock adds its children to an inset
-  -- container of its own, which is what the docked percentages are measured of
-  local home = spot and Geyser or BaseUI.container.Inside
-  if panel.container ~= home then
-    panel:changeContainer(home)
+  panel.exitLabel:hide()
+  panel.minimizeLabel:hide()
+  if panel.minimized then
+    panel:restore()
   end
-  local slots = BaseUI.usedGaugeSlots
-  local height = slots &gt; 0 and gaugePanelHeight(slots) or 0
-  if spot then
-    height = math.min(height * spot.scale, 1)
-    -- a window shorter than the one the bars were left in, or a bar that has
-    -- arrived since, must not push them off screen where nothing can grab them
-    spot.y = math.min(spot.y, 1 - height)
-    panel:resize(asPercent(spot.width), asPercent(height))
-    panel:move(asPercent(spot.x), asPercent(spot.y))
+  for _, item in ipairs({ "lockLabel", "minLabel", "saveLabel", "loadLabel", "lockStylesLabel" }) do
+    panel.adjLabel:hideMenuLabel(item)
+  end
+  -- the bars fill the panel under its title bar, as they filled the dock
+  panel.Inside:move(0, layout.gaugePanel.chrome)
+  panel.Inside:resize("100%", "100%-" .. layout.gaugePanel.chrome)
+end
+
+-- Adjustable keeps its own geometry, and whether it was dragged out of the
+-- dock, in a file of its own. A saved value Geyser cannot parse raises while
+-- it is being applied, which here would be in the middle of building the
+-- interface - so a file that cannot be read is dropped rather than obeyed.
+-- A load also puts back the buttons and the inside container the constructor
+-- was given, hence the trim afterwards.
+function BaseUI.loadGaugePanel()
+  local panel = BaseUI.gaugePanel
+  if not panel then
+    return
+  end
+  BaseUI.trimGaugePanelChrome()
+  if not pcall(panel.load, panel) then
+    panel:deleteSaveFile()
+    panel:changeContainer(BaseUI.container.Inside)
+  end
+  BaseUI.trimGaugePanelChrome()
+end
+
+-- in the dock the panel is one more section of it and only its title shows;
+-- out of the dock the bars need something to be read against, since they are
+-- transparent above their own line
+function BaseUI.styleGaugePanel()
+  local panel = BaseUI.gaugePanel
+  panel.adjLabelstyle = BaseUI.gaugesFloating() and gaugePanelCss.floating or gaugePanelCss.docked
+  panel.adjLabel:setStyleSheet(panel.adjLabelstyle)
+  panel:setTitle("VITALS", theme.accent, "l8")
+  panel.adjLabel:setToolTip(BaseUI.gaugesFloating()
+    and "Drag to move these bars - right-click to put them back in the dock"
+    or "Drag this out of the dock to put the bars anywhere", 0)
+end
+
+-- Fits the panel to the bars and to the dock's state. Where a floating panel
+-- sits is the player's business and Geyser's, so only its height is set here;
+-- a docked one is placed outright.
+function BaseUI.placeGaugePanel()
+  local panel = BaseUI.gaugePanel
+  if not panel then
+    return
+  end
+  BaseUI.placedGaugeSlots = BaseUI.usedGaugeSlots
+  local height = gaugePanelSize(BaseUI.usedGaugeSlots)
+  if BaseUI.gaugesFloating() then
+    if height then
+      panel:resize(nil, height)
+    end
   else
-    panel:resize("100%", asPercent(height))
-    panel:move("0%", layout.gaugePanel.y)
+    panel:move("0%", layout.gaugePanel.y .. "-" .. layout.gaugePanel.chrome)
+    panel:resize("100%", height or "0%")
   end
-  -- the backdrop is only there to keep game text from showing through the bars
-  if spot and slots &gt; 0 then
-    BaseUI.gaugeBackdrop:show()
-  else
-    BaseUI.gaugeBackdrop:hide()
-  end
-  if BaseUI.dormant() then
+  BaseUI.styleGaugePanel()
+  -- a panel with no bars in it yet has nothing to show but its own title
+  if BaseUI.dormant() or BaseUI.usedGaugeSlots == 0 then
     panel:hide()
-    BaseUI.endGaugeDrag()
   else
     panel:show()
   end
-  BaseUI.raiseGaugePanel()
-  BaseUI.describeGaugeDrag()
+  -- a panel attached to a main window border keeps that border reserved for
+  -- itself, and a hidden one has no business doing that
+  panel:adjustBorder()
 end
 
--- clicking the dock raises it over everything it overlaps, so the panel has to
--- come back up whenever it is placed or grabbed
-function BaseUI.raiseGaugePanel()
-  if not BaseUI.gaugeBackdrop then
-    return
-  end
-  BaseUI.gaugeBackdrop:raise()
-  for _, gauge in pairs(BaseUI.gauges) do
-    gauge:raiseAll()
-  end
-end
-
--- what a player who missed the announcement has to go on
-function BaseUI.describeGaugeDrag()
-  local hint = BaseUI.gaugesFloating()
-    and "Drag to move these bars, or drop them on the dock to put them back"
-    or "Drag to pull these bars out of the dock"
-  if BaseUI.gaugeBackdrop then
-    BaseUI.gaugeBackdrop:setToolTip(hint, 0)
-  end
-  for _, gauge in pairs(BaseUI.gauges) do
-    gauge:setToolTip(hint, 0)
-  end
-end
-
-function BaseUI.armGaugeDrag(label)
-  label:setClickCallback("BaseUI.gaugeDragStart")
-  label:setReleaseCallback("BaseUI.gaugeDragEnd")
-  label:setMoveCallback("BaseUI.gaugeDragMove")
-  label:setCursor("OpenHand")
-end
-
-local function setGaugeCursor(shape)
-  if BaseUI.gaugeBackdrop then
-    BaseUI.gaugeBackdrop:setCursor(shape)
-  end
-  for _, gauge in pairs(BaseUI.gauges) do
-    gauge.text:setCursor(shape)
-  end
-end
-
--- hiding the bar being dragged takes Qt's mouse grab with it, and the release
--- that would have ended the drag never arrives - so everything that can hide
--- one ends the drag itself, or the next click starts from a stale anchor
-function BaseUI.endGaugeDrag()
-  BaseUI.gaugeDrag = nil
-  setGaugeCursor("OpenHand")
-end
-
-function BaseUI.gaugeDragStart(event)
-  if event.button ~= "LeftButton" or not BaseUI.gaugePanel then
-    return
-  end
-  BaseUI.gaugeDrag = { x = event.globalX, y = event.globalY }
-  BaseUI.raiseGaugePanel()
-  setGaugeCursor("ClosedHand")
-end
-
--- Qt keeps sending move and release events to whatever was pressed until the
--- button comes back up, so a drag survives the pointer outrunning the panel
-function BaseUI.gaugeDragMove(event)
-  local drag, panel = BaseUI.gaugeDrag, BaseUI.gaugePanel
-  if not drag or not panel or not table.contains(event.buttons, "LeftButton") then
-    return
-  end
-  local dx, dy = event.globalX - drag.x, event.globalY - drag.y
-  if not drag.moved then
-    if math.abs(dx) &lt; dragThreshold and math.abs(dy) &lt; dragThreshold then
-      return
-    end
-    drag.moved = true
-    BaseUI.floatGauges()
-    if not BaseUI.gaugesFloating() then
-      -- the bars would not come out of the dock, so there is nothing to drag
-      BaseUI.endGaugeDrag()
-      return
-    end
-  end
-  drag.x, drag.y = event.globalX, event.globalY
-  BaseUI.moveGaugePanel(panel:get_x() + dx, panel:get_y() + dy)
-end
-
-function BaseUI.gaugeDragEnd(event)
-  -- a right button coming up mid-drag is not the drop
-  if event.button ~= "LeftButton" then
-    return
-  end
-  local drag = BaseUI.gaugeDrag
-  BaseUI.endGaugeDrag()
-  if not drag or not drag.moved then
-    return
-  end
-  if BaseUI.overDock(getMousePosition()) then
-    BaseUI.dockGauges()
-  else
-    BaseUI.saveSettings()
-  end
-end
-
--- dropping the bars back on the dock is the way back in, and where they were
--- dropped decides rather than what the panel happens to overlap. A minimized
--- dock is title bar only: dropping into that would hide the bars in a
--- collapsed container, and "baseui dock" could not bring them back because
--- they would already be docked.
-function BaseUI.overDock(x, y)
-  local dock = BaseUI.container
-  if not dock or dock.hidden or dock.minimized then
-    return false
-  end
-  return x &gt;= dock:get_x() and x &lt;= dock:get_x() + dock:get_width()
-    and y &gt;= dock:get_y() and y &lt;= dock:get_y() + dock:get_height()
-end
-
--- pulling the bars out leaves them exactly where they were, so the drag that
--- pulled them carries straight on
-function BaseUI.floatGauges(spot)
-  local panel = BaseUI.gaugePanel
-  if not panel or (BaseUI.gaugesFloating() and not spot) then
-    return
-  end
-  if not spot then
-    local winw, winh = getMainWindowSize()
-    local slots = BaseUI.usedGaugeSlots
-    -- a main window with no size would make every fraction below infinite, and
-    -- saving those leaves the whole settings file unreadable next session
-    if winw &lt;= 0 or winh &lt;= 0 or slots == 0 then
-      return
-    end
-    spot = {
-      x = panel:get_x() / winw, y = panel:get_y() / winh,
-      width = panel:get_width() / winw,
-      scale = panel:get_height() / winh / gaugePanelHeight(slots),
-    }
-  end
-  spot = BaseUI.readGaugePlacement(spot)
-  if not spot then
-    return
-  end
-  BaseUI.settings.gaugePanel = spot
-  BaseUI.saveSettings()
-  BaseUI.placeGaugePanel()
-end
-
--- the setting is what decides where the bars go, so it is cleared whether or
--- not there is a panel on screen yet to put back
+-- Geyser has no dragging back into a parent, so this is the way back. It is
+-- the dock's inside container that holds its children, not the dock itself.
 function BaseUI.dockGauges()
-  if not BaseUI.gaugesFloating() then
+  local panel = BaseUI.gaugePanel
+  if not panel or not BaseUI.gaugesFloating() then
     return
   end
-  BaseUI.settings.gaugePanel = nil
-  BaseUI.saveSettings()
+  if panel.attached then
+    panel:detach()
+  end
+  panel:changeContainer(BaseUI.container.Inside)
   BaseUI.placeGaugePanel()
+  panel:save()
 end
 
--- the position is kept as a fraction of the main window, so the bars stay where
--- they were put when the window is resized. Writing the settings file is left
--- to the end of the drag rather than done per pixel of it.
-function BaseUI.moveGaugePanel(x, y)
-  local panel, spot = BaseUI.gaugePanel, BaseUI.settings.gaugePanel
-  if not panel or not spot then
-    return
+-- Adjustable saves on exit by itself; saving on the drop as well means a
+-- session that ends badly still remembers where the bars were put
+function BaseUI.saveGaugePanel(_, name)
+  if BaseUI.gaugePanel and name == BaseUI.gaugePanel.name then
+    BaseUI.gaugePanel:save()
   end
-  local winw, winh = getMainWindowSize()
-  if winw &lt;= 0 or winh &lt;= 0 then
-    return
-  end
-  spot.x = math.max(0, math.min(x, winw - panel:get_width())) / winw
-  spot.y = math.max(0, math.min(y, winh - panel:get_height())) / winh
-  panel:move(asPercent(spot.x), asPercent(spot.y))
 end
 
 -- keep the created gauges in vitalsStats order and packed from the top,
@@ -1801,9 +1677,6 @@ function BaseUI.ensureGauge(key)
   gauge:setAlignment("l")
   gauge:setBold(true)
   BaseUI.gauges[key] = gauge
-  -- the text label is the topmost of the gauge's three, so it is the one the
-  -- whole bar's worth of mouse events arrive at
-  BaseUI.armGaugeDrag(gauge.text)
   BaseUI.layoutGauges()
   return gauge
 end
@@ -1893,9 +1766,16 @@ function BaseUI.renderVitals()
       end
     elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
       BaseUI.gauges[stat.key]:hide()
-      -- the opponent's bar can go away under the pointer mid-drag
-      BaseUI.endGaugeDrag()
     end
+  end
+  -- The panel is built before there are any bars to put in it, so it starts
+  -- hidden; fitting it here rather than only where a bar is created is what
+  -- brings it back for a session that already has its bars - a reinstall keeps
+  -- them, so nothing would create one again.
+  -- Only when something it decides has changed, though: doing it on every line
+  -- would put a panel being dragged back where the settings say it belongs.
+  if BaseUI.usedGaugeSlots ~= BaseUI.placedGaugeSlots or BaseUI.gaugePanel.hidden then
+    BaseUI.placeGaugePanel()
   end
 end
 
@@ -2067,7 +1947,7 @@ function BaseUI.announce()
   BaseUI.settings.announced = true
   BaseUI.saveSettings()
   cecho("\n&lt;cyan&gt;[ Mudlet UI ] Built you a starter interface from what your game supports - health bars, map and chat.\n")
-  cecho("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, or drag the bars out to put them anywhere - type &lt;yellow&gt;baseui&lt;cyan&gt; for options.&lt;reset&gt;\n")
+  cecho("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, or the bars' own out of it to put them anywhere - type &lt;yellow&gt;baseui&lt;cyan&gt; for options.&lt;reset&gt;\n")
 end
 
 function BaseUI.hide()
@@ -2165,6 +2045,7 @@ registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture
 registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
 registerAnonymousEventHandler("sysDisconnectionEvent", "BaseUI.handleDisconnect")
 registerAnonymousEventHandler("sysDataSendRequest", "BaseUI.noteCommandSent")
+registerAnonymousEventHandler("AdjustableContainerRepositionFinish", "BaseUI.saveGaugePanel")
 registerAnonymousEventHandler("sysServerGuiInstalled", "BaseUI.standAside")
 registerAnonymousEventHandler("sysUninstallPackage", "BaseUI.serverGuiRemoved")
 for _, stat in ipairs(msdpStats) do

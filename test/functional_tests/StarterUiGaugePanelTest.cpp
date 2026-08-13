@@ -17,10 +17,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// The starter UI's gauges can be dragged out of its dock and dropped over the
-// game's text, which is remembered between sessions. This pins that the default
-// layout is exactly what it was before they could move, and drives the drag
-// through the same callbacks the mouse does.
+// The starter UI's gauges sit in an adjustable container of their own, which can
+// be dragged out of the dock and dropped over the game's text and remembers
+// where it was left. Geyser owns the dragging itself; what is pinned here is the
+// glue around it - the default layout, the panel fitting the bars in it, the
+// chrome that is deliberately taken away, and the way back into the dock.
 //
 // The self-test profile's Lua specs never run the starter UI's interface code
 // (that profile has no base UI package), so nothing else covers the gauge
@@ -82,23 +83,20 @@ private slots:
     // The bars moved into a panel of their own to be draggable as a group, so
     // the numbers a player sees have to come out where they always did: the
     // expectations here are the constraints the gauges themselves used to carry.
+    // The bars moved into a panel of their own to be draggable as a group, so
+    // the numbers a player sees have to come out where they always did: the
+    // expectations here are the constraints the gauges themselves used to carry.
+    // The panel's title bar sits in the gap above them, so they do not move.
     void test_theBarsComeUpInTheDockWhereTheyAlwaysWere()
     {
         Host* host = startProfileWithGauges();
         QVERIFY(host);
 
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugePanel.hidden and not BaseUI.gaugePanel.auto_hidden")), "the bars are in the dock but not on screen");
         QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugesFloating()")), "the gauges came up floating on a profile that never moved them");
         QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.container == BaseUI.container.Inside")), "the gauge panel is not inside the dock");
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugeBackdrop.hidden")), "the floating backdrop is drawn while the bars are docked");
-        // the topmost of a gauge's three labels is the one the mouse reaches,
-        // and every bar carries the handlers so the group can be grabbed anywhere
-        QVERIFY2(luaTrue(host,
-                         qsl("BaseUI.gauges.hp.text.clickCallback == 'BaseUI.gaugeDragStart'"
-                             " and BaseUI.gauges.hp.text.moveCallback == 'BaseUI.gaugeDragMove'"
-                             " and BaseUI.gauges.hp.text.releaseCallback == 'BaseUI.gaugeDragEnd'"
-                             " and BaseUI.gauges.mp.text.clickCallback == 'BaseUI.gaugeDragStart'")),
-                 "the bars are not wired to the drag handlers, so the mouse never reaches them");
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugeBackdrop.clickCallback == 'BaseUI.gaugeDragStart'")), "the gaps between floating bars are not draggable");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.hp.container == BaseUI.gaugePanel.Inside")), "the bars are not inside the gauge panel");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.dragOut == true")), "the panel cannot be dragged out of the dock at all");
 
         QVERIFY(runLua(host,
                        qsl("local inside = BaseUI.container.Inside\n"
@@ -109,202 +107,155 @@ private slots:
                            "  slipW = math.abs(BaseUI.gauges.hp:get_width() - inside:get_width()) }")));
         QVERIFY2(luaTrue(host, qsl("__baseUi.hpSlipY <= 1 and __baseUi.hpSlipH <= 1 and __baseUi.mpSlipY <= 1")),
                  "a docked gauge no longer lands on the slot it used to, so the default interface has moved");
-        QVERIFY(luaTrue(host, qsl("__baseUi.slipX <= 1 and __baseUi.slipW <= 1")));
+        QVERIFY2(luaTrue(host, qsl("__baseUi.slipX <= 1 and __baseUi.slipW <= 1")), "the bars no longer span the dock the way they used to");
 
         // two bars, so the panel is two slots tall (5.5% of the dock each, less
-        // the 1% gap the last one does not have): a panel any taller is empty
-        // backdrop once it floats
-        QVERIFY(runLua(host, qsl("__baseUi.panelSlip = math.abs(BaseUI.gaugePanel:get_height() - 0.1 * BaseUI.container.Inside:get_height())")));
-        QVERIFY2(luaTrue(host, qsl("__baseUi.panelSlip <= 1")), "the gauge panel is not the height of the bars it holds");
+        // the 1% gap the last one does not have) plus its own title bar
+        QVERIFY(runLua(host, qsl("__baseUi.panelSlip = math.abs(BaseUI.gaugePanel:get_height() - (0.1 * BaseUI.container.Inside:get_height() + 20))")));
+        QVERIFY2(luaTrue(host, qsl("__baseUi.panelSlip <= 1")), "the gauge panel is not the height of the bars it holds plus its title bar");
     }
 
-    // The whole group is one drag target: pressing any bar and moving picks up
-    // all of them, and only a real movement takes them out of the dock.
-    void test_draggingABarPullsTheWholeGroupOutOfTheDock()
+    // Everything that could put the bars somewhere with no obvious way back is
+    // taken off the panel: closing it, collapsing it, locking it in place, and
+    // loading a stale save over it.
+    void test_theChromeThatCouldWedgeTheBarsIsGone()
     {
         Host* host = startProfileWithGauges();
         QVERIFY(host);
-        QVERIFY(runLua(host, qsl("__baseUi = { x = BaseUI.gaugePanel:get_x(), y = BaseUI.gaugePanel:get_y(), gap = BaseUI.gauges.mp:get_y() - BaseUI.gauges.hp:get_y() }")));
 
-        QVERIFY(runLua(host, qsl("BaseUI.gaugeDragStart({ button = 'LeftButton', buttons = { 'LeftButton' }, globalX = 400, globalY = 300 })")));
-        QVERIFY(runLua(host, qsl("BaseUI.gaugeDragMove({ button = 'NoButton', buttons = { 'LeftButton' }, globalX = 403, globalY = 302 })")));
-        QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugesFloating()")), "a three pixel wobble took the bars out of the dock, so a click on one moves them");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.exitLabel.hidden and BaseUI.gaugePanel.minimizeLabel.hidden")),
+                 "the panel still has its close and minimise buttons, which hide the bars with no visible way back");
+        QVERIFY(runLua(host,
+                       qsl("__baseUi = { menu = {} }\n"
+                           "for _, item in ipairs({ 'lockLabel', 'minLabel', 'saveLabel', 'loadLabel', 'lockStylesLabel' }) do\n"
+                           "  local element = BaseUI.gaugePanel.adjLabel:findMenuElement(item)\n"
+                           "  __baseUi.menu[item] = element ~= nil and element.ignore == true\n"
+                           "end\n"
+                           "__baseUi.dockItem = BaseUI.gaugePanel.adjLabel:findMenuElement('customItemsLabel.Back to the dock') ~= nil")));
+        QVERIFY2(luaTrue(host,
+                         qsl("__baseUi.menu.lockLabel and __baseUi.menu.minLabel and __baseUi.menu.saveLabel"
+                             " and __baseUi.menu.loadLabel and __baseUi.menu.lockStylesLabel")),
+                 "a right-click menu item that can wedge the bars is still there");
+        QVERIFY2(luaTrue(host, qsl("__baseUi.dockItem")), "the right-click menu has no way back into the dock");
+    }
 
-        QVERIFY(runLua(host, qsl("BaseUI.gaugeDragMove({ button = 'NoButton', buttons = { 'LeftButton' }, globalX = 300, globalY = 250 })")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugesFloating()")), "dragging a bar did not pull the gauges out of the dock");
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.container == Geyser")), "the gauges left the dock but are not in the main window");
-        QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugeBackdrop.hidden")), "the floating bars have no backdrop, so game text shows through them");
+    // Geyser does the dragging; this is the glue reacting to it - the panel ends
+    // up in the main window, keeps the bars, and knows it is out.
+    void test_theBarsCanBeTakenOutOfTheDock()
+    {
+        Host* host = startProfileWithGauges();
+        QVERIFY(host);
+        QVERIFY(runLua(host, qsl("__baseUi = { height = BaseUI.gaugePanel:get_height(), gap = BaseUI.gauges.mp:get_y() - BaseUI.gauges.hp:get_y() }")));
+
+        // what Adjustable.Container does once a drag leaves the dock behind
+        QVERIFY(runLua(host, qsl("BaseUI.gaugePanel:dragOutOfParent(-200, 120)\nBaseUI.placeGaugePanel()")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugesFloating()")), "the panel did not come out of the dock");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.container == Geyser")), "the panel left the dock but is not in the main window");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.hp.container == BaseUI.gaugePanel.Inside")), "the bars stayed behind in the dock");
 
         QVERIFY(runLua(host,
-                       qsl("__baseUi.slipX = math.abs(BaseUI.gaugePanel:get_x() - (__baseUi.x - 100))\n"
-                           "__baseUi.slipY = math.abs(BaseUI.gaugePanel:get_y() - (__baseUi.y - 50))\n"
+                       qsl("__baseUi.slipH = math.abs(BaseUI.gaugePanel:get_height() - __baseUi.height)\n"
                            "__baseUi.slipGap = math.abs((BaseUI.gauges.mp:get_y() - BaseUI.gauges.hp:get_y()) - __baseUi.gap)")));
-        QVERIFY2(luaTrue(host, qsl("__baseUi.slipX <= 1 and __baseUi.slipY <= 1")), "the panel did not follow the pointer by the distance it moved");
+        QVERIFY2(luaTrue(host, qsl("__baseUi.slipH <= 1")), "the panel changed height on its way out of the dock");
         QVERIFY2(luaTrue(host, qsl("__baseUi.slipGap <= 1")), "the bars lost their spacing on the way out of the dock");
-
-        // getMousePosition() decides whether a drop landed on the dock, and the
-        // test has no pointer to place - so this asserts what it reads rather
-        // than pretending to drop there.
-        QVERIFY2(luaTrue(host, qsl("not BaseUI.overDock(getMousePosition())")), "the test's pointer sits over the dock, so the drop below re-docks the bars");
-        QVERIFY(runLua(host, qsl("BaseUI.gaugeDragEnd({ button = 'LeftButton', buttons = {}, globalX = 300, globalY = 250 })")));
-        QVERIFY(luaTrue(host, qsl("BaseUI.gaugesFloating()")));
-
+        // dragOutOfParent keeps the panel inside the window it lands in
         QVERIFY(runLua(host,
-                       qsl("__baseUi.saved = {}\n"
-                           "table.load(getMudletHomeDir() .. '/base_ui_settings.lua', __baseUi.saved)\n"
-                           "local winw, winh = getMainWindowSize()\n"
-                           "__baseUi.savedSlip = __baseUi.saved.gaugePanel and\n"
-                           "  math.abs(__baseUi.saved.gaugePanel.x * winw - BaseUI.gaugePanel:get_x())\n"
-                           "  + math.abs(__baseUi.saved.gaugePanel.y * winh - BaseUI.gaugePanel:get_y())")));
-        QVERIFY2(luaTrue(host, qsl("__baseUi.savedSlip ~= nil and __baseUi.savedSlip <= 2")), "where the bars were dropped did not reach the settings file, so the next session loses it");
-
-        // a chat line builds the interface before any vitals arrive, so a
-        // restored position can be applied to a panel holding nothing yet
-        QVERIFY(runLua(host, qsl("__baseUi.slots = BaseUI.usedGaugeSlots\nBaseUI.usedGaugeSlots = 0\nBaseUI.placeGaugePanel()")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugeBackdrop.hidden")), "a floating panel with no bars in it paints an empty box over the game's text");
-        QVERIFY(runLua(host, qsl("BaseUI.usedGaugeSlots = __baseUi.slots\nBaseUI.layoutGauges()")));
-        QVERIFY(luaTrue(host, qsl("not BaseUI.gaugeBackdrop.hidden")));
-    }
-
-    // What a new session does with that file: the settings are read, and the
-    // panel is placed where they say - which is all build() does at the end.
-    // The height is not in the file, because a bar arriving later has to make
-    // the panel taller; it comes from the bar count and the saved scale.
-    void test_aSavedPositionIsRestoredOnTheNextSession()
-    {
-        Host* host = startProfileWithGauges();
-        QVERIFY(host);
-
-        QVERIFY(runLua(host,
-                       qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua',\n"
-                           "  { gaugePanel = { x = 0.05, y = 0.8, width = 0.3, scale = 1 } })\n"
-                           "BaseUI.loadSettings()\n"
-                           "BaseUI.placeGaugePanel()\n"
-                           "local winw, winh = getMainWindowSize()\n"
-                           "__baseUi = { slip = math.abs(BaseUI.gaugePanel:get_x() - 0.05 * winw)\n"
-                           "  + math.abs(BaseUI.gaugePanel:get_y() - 0.8 * winh)\n"
-                           "  + math.abs(BaseUI.gaugePanel:get_width() - 0.3 * winw)\n"
-                           "  + math.abs(BaseUI.gaugePanel:get_height() - 0.1 * winh) }")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugesFloating()")), "a saved position did not survive being read back");
-        QVERIFY2(luaTrue(host, qsl("__baseUi.slip <= 4")), "the bars did not come back where they were left");
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.hp:get_x() >= BaseUI.gaugePanel:get_x() and BaseUI.gauges.hp:get_x() <= BaseUI.gaugePanel:get_x() + BaseUI.gaugePanel:get_width()")),
-                 "the bars stayed behind when the panel was restored");
+                       qsl("local winw, winh = getMainWindowSize()\n"
+                           "__baseUi.overRight = BaseUI.gaugePanel:get_x() + BaseUI.gaugePanel:get_width() - winw\n"
+                           "__baseUi.offLeft = -BaseUI.gaugePanel:get_x()")));
+        QVERIFY2(luaTrue(host, qsl("__baseUi.overRight <= 1 and __baseUi.offLeft <= 1")), "a drag that left the dock to the left put the panel off screen");
 
         // a third bar turns up while they are floating
         QVERIFY(runLua(host, qsl("__baseUi.twoBars = BaseUI.gaugePanel:get_height()")));
         feedLine(host, qsl("Moves:    800/800"));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.mv ~= nil and BaseUI.gauges.mv.container == BaseUI.gaugePanel")), "a gauge created while the bars floated did not join them");
-        QVERIFY(runLua(host, qsl("__baseUi.grew = BaseUI.gaugePanel:get_height() / __baseUi.twoBars")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.mv ~= nil and BaseUI.gauges.mv.container == BaseUI.gaugePanel.Inside")), "a gauge created while the bars floated did not join them");
+        QVERIFY(runLua(host, qsl("__baseUi.grew = (BaseUI.gaugePanel:get_height() - 20) / (__baseUi.twoBars - 20)")));
         QVERIFY2(luaTrue(host, qsl("math.abs(__baseUi.grew - 1.55) <= 0.03")), "the floating panel did not grow by one slot for the new bar");
     }
 
-    // A position that cannot be read is not a position: Geyser raises on a size
-    // it cannot parse, and that error lands inside build() - the player would
-    // be left with no interface at all rather than with the bars in the dock.
-    void test_aCorruptSavedPositionLeavesTheBarsInTheDock()
-    {
-        Host* host = startProfileWithGauges();
-        QVERIFY(host);
-
-        const QStringList nonsense = {
-                qsl("'over there'"),
-                qsl("{ x = 0.1 }"),
-                qsl("{ x = 0.1, y = 0.1, width = 'wide' }"),
-                qsl("{ x = 0.1, y = 0.1, width = 0.3, scale = 0 }"),
-                qsl("{ x = 0.1, y = 0.1, width = 0.3, scale = -2 }"),
-        };
-        for (const QString& entry : nonsense) {
-            QVERIFY(runLua(host,
-                           qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { gaugePanel = %1 })\n"
-                               "BaseUI.loadSettings()\n"
-                               "BaseUI.placeGaugePanel()")
-                                   .arg(entry)));
-            QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugesFloating()")), qPrintable(qsl("a saved position of %1 was taken seriously").arg(entry)));
-            QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.container == BaseUI.container.Inside")), qPrintable(qsl("the panel is not in the dock after reading %1").arg(entry)));
-        }
-
-        // table.save writes these as tokens Lua cannot read back, so they never
-        // reach the file - only the reader itself can be held to them
-        QVERIFY2(luaTrue(host, qsl("BaseUI.readGaugePlacement({ x = 0/0, y = 0.1, width = 0.3, scale = 1 }) == nil")), "a not-a-number position was accepted");
-        QVERIFY2(luaTrue(host, qsl("BaseUI.readGaugePlacement({ x = 0.1, y = 0.1, width = 1/0, scale = 1 }) == nil")), "an infinite width was accepted");
-        // 0 is a perfectly good coordinate, and the nan test must not catch it
-        QVERIFY(luaTrue(host, qsl("BaseUI.readGaugePlacement({ x = 0, y = 0, width = 0.3 }) ~= nil")));
-    }
-
-    // A width or a corner from a bigger window, or from a hand-edited file, has
-    // to end up somewhere the pointer can still reach.
-    void test_aPositionOffTheEdgeIsPulledBackOnScreen()
+    // Where the panel was left is Adjustable's own save file, not the package's
+    // settings: this is the round trip a restart makes, through the real file.
+    void test_whereTheBarsWereLeftSurvivesARestart()
     {
         Host* host = startProfileWithGauges();
         QVERIFY(host);
 
         QVERIFY(runLua(host,
-                       qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua',\n"
-                           "  { gaugePanel = { x = 0.9, y = 0.95, width = 0.3, scale = 1 } })\n"
-                           "BaseUI.loadSettings()\n"
+                       qsl("BaseUI.gaugePanel:dragOutOfParent(-200, 120)\n"
+                           "BaseUI.gaugePanel:move('12%', '61%')\n"
+                           "BaseUI.saveGaugePanel(nil, BaseUI.gaugePanel.name)\n"
+                           "__baseUi = { x = BaseUI.gaugePanel:get_x(), y = BaseUI.gaugePanel:get_y() }")));
+
+        // what the next session does: a panel built into the dock, then loaded
+        QVERIFY(runLua(host,
+                       qsl("BaseUI.gaugePanel:changeContainer(BaseUI.container.Inside)\n"
                            "BaseUI.placeGaugePanel()\n"
-                           "local winw, winh = getMainWindowSize()\n"
-                           "__baseUi = { overRight = BaseUI.gaugePanel:get_x() + BaseUI.gaugePanel:get_width() - winw,\n"
-                           "  overBottom = BaseUI.gaugePanel:get_y() + BaseUI.gaugePanel:get_height() - winh }")));
-        QVERIFY(luaTrue(host, qsl("BaseUI.gaugesFloating()")));
-        QVERIFY2(luaTrue(host, qsl("__baseUi.overRight <= 1")), "the panel hangs off the right of the window");
-        QVERIFY2(luaTrue(host, qsl("__baseUi.overBottom <= 1")), "the panel hangs off the bottom of the window");
+                           "BaseUI.loadGaugePanel()\n"
+                           "BaseUI.placeGaugePanel()\n"
+                           "__baseUi.slip = math.abs(BaseUI.gaugePanel:get_x() - __baseUi.x) + math.abs(BaseUI.gaugePanel:get_y() - __baseUi.y)")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugesFloating()")), "a panel that was out of the dock came back docked");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.container == Geyser")), "the restored panel is not in the main window");
+        QVERIFY2(luaTrue(host, qsl("__baseUi.slip <= 2")), "the bars did not come back where they were left");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.exitLabel.hidden and BaseUI.gaugePanel.minimizeLabel.hidden")),
+                 "loading put the panel's buttons back, so the bars can be closed with no way back");
     }
 
-    // The settings are read at script load, long before the game sends anything
-    // to build the interface from, so "baseui dock" has to clear a saved
-    // position whether or not there is a panel to move yet.
-    void test_dockingBeforeTheInterfaceIsBuiltStillClearsThePosition()
+    // A saved position that cannot be applied raises inside Geyser, and that
+    // would land in the middle of building the interface: the player would be
+    // left with no interface at all rather than with the bars in the dock.
+    void test_anUnreadableSavedPositionLeavesTheBarsInTheDock()
     {
         Host* host = startProfileWithGauges();
         QVERIFY(host);
 
         QVERIFY(runLua(host,
-                       qsl("BaseUI.settings.gaugePanel = BaseUI.readGaugePlacement({ x = 0.1, y = 0.1, width = 0.3 })\n"
-                           "__baseUi = { panel = BaseUI.gaugePanel }\n"
-                           "BaseUI.gaugePanel = nil\n"
-                           "BaseUI.alias('dock')\n"
-                           "BaseUI.gaugePanel = __baseUi.panel\n"
-                           "__baseUi.saved = {}\n"
-                           "table.load(getMudletHomeDir() .. '/base_ui_settings.lua', __baseUi.saved)")));
-        QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugesFloating()")), "\"baseui dock\" said the bars were back while the setting still floated them");
-        QVERIFY2(luaTrue(host, qsl("__baseUi.saved.gaugePanel == nil")), "the position stayed in the settings file, so the next session floats the bars again");
+                       qsl("__baseUi = { path = getMudletHomeDir() .. '/AdjustableContainer/' .. BaseUI.gaugePanel.name .. '.lua' }\n"
+                           "table.save(__baseUi.path, { x = 'over there', y = '0%', width = '50%', height = '20%' })\n"
+                           "BaseUI.loadGaugePanel()\n"
+                           "BaseUI.placeGaugePanel()\n"
+                           "__baseUi.fileLeft = io.exists(__baseUi.path)")));
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugesFloating()")), "a position that could not be applied left the bars out of the dock");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.container == BaseUI.container.Inside")), "the panel is not back in the dock after an unreadable save");
+        QVERIFY2(luaTrue(host, qsl("not __baseUi.fileLeft")), "the unreadable save file was kept, so it fails again every session");
+        // and the bars are still where they belong
+        QVERIFY(runLua(host,
+                       qsl("local inside = BaseUI.container.Inside\n"
+                           "__baseUi.slip = math.abs(BaseUI.gauges.hp:get_y() - (inside:get_y() + 0.78 * inside:get_height()))")));
+        QVERIFY(luaTrue(host, qsl("__baseUi.slip <= 1")));
     }
 
-    // Two ways back into the dock: dropping the bars on it, and "baseui dock".
+    // Geyser has no dragging back in, so "baseui dock" and the panel's own menu
+    // item are the whole of the way back.
     void test_theBarsGoBackIntoTheDock()
     {
         Host* host = startProfileWithGauges();
         QVERIFY(host);
-        QVERIFY(runLua(host, qsl("BaseUI.floatGauges({ x = 0.02, y = 0.85, width = 0.3, scale = 1 })")));
+        QVERIFY(runLua(host, qsl("BaseUI.gaugePanel:dragOutOfParent(-200, 120)\nBaseUI.placeGaugePanel()")));
         QVERIFY(luaTrue(host, qsl("BaseUI.gaugesFloating()")));
-
-        // what a drop over the dock is decided by
-        QVERIFY2(luaTrue(host, qsl("BaseUI.overDock(BaseUI.container:get_x() + 5, BaseUI.container:get_y() + 5)")), "a drop just inside the dock does not count as one");
-        QVERIFY2(luaTrue(host, qsl("not BaseUI.overDock(BaseUI.container:get_x() - 5, BaseUI.container:get_y() + 5)")), "a drop outside the dock counts as one, so the bars could never leave");
-        // a minimized dock is its title bar: the bars would go into a collapsed
-        // container and "baseui dock" could not fetch them back out
-        QVERIFY(runLua(host, qsl("BaseUI.container.minimized = true")));
-        QVERIFY2(luaTrue(host, qsl("not BaseUI.overDock(BaseUI.container:get_x() + 5, BaseUI.container:get_y() + 5)")), "a drop on a minimized dock was accepted, which loses the bars");
-        QVERIFY(runLua(host, qsl("BaseUI.container.minimized = false")));
 
         QVERIFY(runLua(host, qsl("BaseUI.alias('dock')")));
         QVERIFY2(luaTrue(host, qsl("not BaseUI.gaugesFloating()")), "\"baseui dock\" did not put the bars back");
         QVERIFY(luaTrue(host, qsl("BaseUI.gaugePanel.container == BaseUI.container.Inside")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugeBackdrop.hidden")), "the floating backdrop stayed on after the bars went back into the dock");
+        QVERIFY(runLua(host,
+                       qsl("local inside = BaseUI.container.Inside\n"
+                           "__baseUi = { slip = math.abs(BaseUI.gauges.hp:get_y() - (inside:get_y() + 0.78 * inside:get_height())) }")));
+        QVERIFY2(luaTrue(host, qsl("__baseUi.slip <= 1")), "the bars came back into the dock but not into their slots");
 
-        QVERIFY(runLua(host, qsl("__baseUi = { saved = {} }\ntable.load(getMudletHomeDir() .. '/base_ui_settings.lua', __baseUi.saved)")));
-        QVERIFY2(luaTrue(host, qsl("__baseUi.saved.gaugePanel == nil")), "the settings file still holds a position, so the bars float again next session");
+        // docking is saved at once, so a session that ends badly still has them docked
+        QVERIFY(runLua(host,
+                       qsl("__baseUi.saved = {}\n"
+                           "table.load(getMudletHomeDir() .. '/AdjustableContainer/' .. BaseUI.gaugePanel.name .. '.lua', __baseUi.saved)")));
+        QVERIFY2(luaTrue(host, qsl("not __baseUi.saved.draggedOut")), "the save file still says the bars are out of the dock");
     }
 
-    // Hiding the interface has to take gauges that are no longer the dock's
-    // children with it, or "baseui hide" leaves bars behind over the game text.
+    // Hiding the interface has to take a panel that is no longer the dock's
+    // child with it, or "baseui hide" leaves bars behind over the game text.
     // Standing aside for a game's own interface hides just the same.
     void test_hidingTheInterfaceHidesFloatingBarsToo()
     {
         Host* host = startProfileWithGauges();
         QVERIFY(host);
-        QVERIFY(runLua(host, qsl("BaseUI.floatGauges({ x = 0.02, y = 0.85, width = 0.3, scale = 1 })")));
+        QVERIFY(runLua(host, qsl("BaseUI.gaugePanel:dragOutOfParent(-200, 120)\nBaseUI.placeGaugePanel()")));
 
         QVERIFY(runLua(host, qsl("BaseUI.hide()")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.hidden")), "\"baseui hide\" left the floating bars on screen");
@@ -317,9 +268,9 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.gaugePanel.hidden")), "standing aside for the game's own interface left the floating bars on screen");
     }
 
-    // A save that fails is what loses a dropped position, so it has to say so.
-    // table.save reports a path it cannot write by returning a message rather
-    // than by raising, so the pcall around it never sees the failure by itself.
+    // A save that fails is what loses the player's own settings, so it has to
+    // say so. table.save reports a path it cannot write by returning a message
+    // rather than by raising, so the pcall around it never sees that by itself.
     void test_aFailedSaveIsNotSilent()
     {
         Host* host = startProfileWithGauges();
@@ -335,22 +286,8 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("__baseUi.madeDir")), "could not make the settings path unwritable, so this proves nothing");
         QVERIFY2(luaTrue(host, qsl("__baseUi.pcallOk and __baseUi.message ~= nil")), "table.save now raises on a path it cannot write, so saveSettings could go back to trusting pcall alone");
 
-        QVERIFY(runLua(host, qsl("BaseUI.floatGauges({ x = 0.02, y = 0.85, width = 0.3, scale = 1 })")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.warnedSaveFailed")), "a failed save said nothing, so a dropped position vanishes with no explanation");
-    }
-
-    // A bar hidden under the pointer takes Qt's mouse grab with it, so the
-    // release never arrives: whatever hid it has to end the drag, or the next
-    // click carries on from an anchor several seconds old.
-    void test_hidingTheBarsMidDragEndsTheDrag()
-    {
-        Host* host = startProfileWithGauges();
-        QVERIFY(host);
-
-        QVERIFY(runLua(host, qsl("BaseUI.gaugeDragStart({ button = 'LeftButton', buttons = { 'LeftButton' }, globalX = 400, globalY = 300 })")));
-        QVERIFY(luaTrue(host, qsl("BaseUI.gaugeDrag ~= nil")));
         QVERIFY(runLua(host, qsl("BaseUI.hide()")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gaugeDrag == nil")), "the interface was hidden mid-drag and the drag is still live");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.warnedSaveFailed")), "a failed save said nothing, so a setting vanishes with no explanation");
     }
 
 private:
