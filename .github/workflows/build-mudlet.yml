@@ -630,7 +630,10 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
-        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1', github.workspace) || '' }}
+        # log_threads names the stack and TLS range of every thread the tracer
+        # walks, so the last one printed before a crash is the range it died on
+        # (#9809). Seven lines a run, and the only way to see that from CI.
+        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1:log_threads=1', github.workspace) || '' }}
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'

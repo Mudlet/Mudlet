@@ -120,13 +120,23 @@ if(NOT result STREQUAL "0")
         set(notice
             "lsan-tracer-retry: rerunning ${commandName} - it passed, then LeakSanitizer's tracer crashed on the way out (#9809)")
         message("${notice}")
+        # The run that crashed is the only evidence of #9809 there is, and ctest
+        # shows nothing for a test that goes on to pass, so carry the tracer's own
+        # trace out with the notice: the thread ranges it walked, in order, and
+        # the address it died on. The last range named is the one it faulted in.
+        # LSAN_OPTIONS=log_threads=1 in the test environment is what fills it in;
+        # without that only the crash line is here.
+        string(REGEX MATCHALL "[^\n]*(Processing thread|Stack at|TLS at|DTLS |Tracer caught signal)[^\n]*"
+            tracerTrace "${log}")
+        list(JOIN tracerTrace "\n      " tracerTrace)
         # ctest swallows the output of a test that ends up passing, so leave a
         # trace in the job summary too - otherwise there is no way to tell how
         # often this fires. Skipped unless the path really is a file to append
         # to: file(APPEND) is fatal, and reporting the flake must never be what
         # fails a run.
         if(EXISTS "$ENV{GITHUB_STEP_SUMMARY}" AND NOT IS_DIRECTORY "$ENV{GITHUB_STEP_SUMMARY}")
-            file(APPEND "$ENV{GITHUB_STEP_SUMMARY}" "- ${notice}\n")
+            file(APPEND "$ENV{GITHUB_STEP_SUMMARY}"
+                "- ${notice}\n\n      ${tracerTrace}\n\n")
         endif()
         run_command(result log)
     endif()

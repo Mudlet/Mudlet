@@ -137,6 +137,12 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         set(leakCheck "detect_leaks=1")
+        # The tracer prints the stack and TLS range of each thread as it reaches
+        # it, so the last one before a crash names the range it died scanning -
+        # the one thing the crash line alone does not say (#9809). Seven lines a
+        # run; LeakSanitizer's own hint also suggests verbosity=1, which adds
+        # ~2400 lines of allocator poisoning traffic and no extra diagnosis.
+        set(leakLog "LSAN_OPTIONS=log_threads=1;")
         # Every leak-checked exit is another chance to hit LeakSanitizer's tracer
         # crash, which fails the run without reporting a leak (#9809), so these
         # go through a launcher that reruns that one signature once. The rerun
@@ -148,10 +154,11 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
             $<TARGET_FILE:${test_name}>)
     else()
         set(leakCheck "detect_leaks=0")
+        set(leakLog "")
         add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     endif()
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )

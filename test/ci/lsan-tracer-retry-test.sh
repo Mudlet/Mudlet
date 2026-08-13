@@ -60,7 +60,16 @@ Totals: 5 passed, 0 failed, 0 skipped, 0 blacklisted, 4773ms
 ********* Finished testing of TelnetTextDisplayedTest *********
 EOF
 
+# The leak-checked legs run with LSAN_OPTIONS=log_threads=1, so the tracer names
+# each thread's ranges on its way through and the crash lands mid-list - the last
+# Stack line is the range it died on. Kept in the fixture because that traffic is
+# what the matcher now has to read past.
 cat > "${WORK_DIR}/tracer-crash.err" <<'EOF'
+==17930==Processing thread 17923.
+==17930==Stack at 0x7ffd1e4a2000-0x7ffd1eca2000 (SP = 0x7ffd1ec9de10).
+==17930==TLS at 0x7fbee8a1bb00-0x7fbee8a1cdc0.
+==17930==Processing thread 17926.
+==17930==Stack at 0x29800000-0x29ffed40 (SP = 0x29ffe9f0).
 Tracer caught signal 11: addr=0x29800018 pc=0x7fbee80e17e8 sp=0x7fbedd3ffd20
 ==17923==LeakSanitizer has encountered a fatal error.
 ==17923==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
@@ -225,6 +234,13 @@ assert_contains "lsan-tracer-retry: rerunning"
 # ctest hides the output of a test that ends up passing, so the job summary is
 # the only place the flake stays countable
 assert_summary_contains "lsan-tracer-retry: rerunning"
+
+start_test "the crashed run's tracer trace survives into the job summary"
+# The rerun passes, so ctest shows nothing at all - if the thread ranges and the
+# faulting address do not reach the summary here, #9809 leaves no evidence to
+# diagnose from and log_threads=1 in the test environment buys nothing
+assert_summary_contains "Stack at 0x29800000-0x29ffed40"
+assert_summary_contains "Tracer caught signal 11: addr=0x29800018"
 
 start_test "the retry is bounded: a second tracer crash fails the run"
 write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
