@@ -750,9 +750,10 @@ QString LuaInterface::getValue(TVar* var)
     return {};
 }
 
-// The value types a profile save can write and an import can read back. A member
-// of any other type is dropped from the save, which is what XMLexport has to
-// know about to keep the ride-along export honest (#9857).
+// The value types a variable can survive a save as: XMLimport hands every element
+// it reads to setValue(), which can rebuild nothing else. A value of any other
+// type is lost across the save, so a saved global holding one anywhere inside it
+// cannot be exported whole (#9857).
 static bool serializableValueType(const int valueType)
 {
     return valueType == LUA_TTABLE || valueType == LUA_TSTRING || valueType == LUA_TNUMBER || valueType == LUA_TBOOLEAN;
@@ -802,8 +803,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
                 varUnit->clearPointers();
                 mCurrentSavedRootName = keyName;
             } else if (!serializableValueType(vType)) {
-                // against the global rather than the table the value sits in:
-                // what a script reads back is the whole variable
+                // the whole global, not just the table this value sits in: a
+                // script gets the global back as one object, so one member the
+                // save cannot carry makes all of it untrustworthy
                 mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
             }
         }
@@ -908,6 +910,11 @@ void LuaInterface::getSavedVars()
         // getVars() does not clear this itself, so a later walk on this same
         // interface would inherit the filter
         mSavedVarsOnly = false;
+        // the global the walk died inside was not read to the end, so nothing
+        // says it is one the save can carry whole
+        if (!mCurrentSavedRootName.isEmpty()) {
+            mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
+        }
         qWarning() << "LuaInterface::getSavedVars() WARNING - Lua panicked while reading the saved variables in; the variable tree is incomplete.";
         return;
     }

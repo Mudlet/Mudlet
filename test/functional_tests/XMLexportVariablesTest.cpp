@@ -27,7 +27,9 @@
  * runtime: they have no savedVars entry of their own but must be saved with
  * the table (issue #9517), while hidden and unsaveable members must not be.
  * Also covers a saved table that other globals reference, which must export in
- * full under every saved name that reaches it (issue #9755).
+ * full under every saved name that reaches it (issue #9755), and the boundary of
+ * the fence that stops a table holding a function exporting in part (issue
+ * #9857) - SavedVariableFenceTest covers that one in full.
  *
  * Run with: ctest -R XMLexportVariablesTest -V
  */
@@ -369,8 +371,8 @@ private slots:
 
     // Function members cannot be saved, and a table holding one therefore cannot
     // be written out as it stands: the ride-along is off for the whole variable,
-    // which for a table ticked while empty leaves an empty group, exactly as
-    // Mudlet wrote it before (#9857). SavedVariableFenceTest covers that in full.
+    // which for a table ticked while empty leaves an empty group (#9857).
+    // SavedVariableFenceTest covers that in full.
     void test_functionMemberBlocksTheRideAlong()
     {
         LuaInterface* lI = mpHost->getLuaInterface();
@@ -382,8 +384,8 @@ private slots:
 
         const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
-        QVERIFY2(xml.contains(qsl("callableHolderTable")), "the saved table itself must still be exported");
-        QVERIFY2(!xml.contains(qsl("data member value")), "a table holding a function exports the members registered in savedVars and no others");
+        QVERIFY2(xml.contains(qsl("<name>callableHolderTable</name>")), "the saved table itself must still be exported, or the next session sees nil rather than an empty table");
+        QVERIFY2(!xml.contains(qsl("dataMember")), "a table holding a function exports the members registered in savedVars and no others");
         QVERIFY2(!xml.contains(qsl("callableMember")), "a function member must not ride along with its saved table");
 
         vu->savedVars.remove(qsl("callableHolderTable"));

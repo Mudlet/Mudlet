@@ -788,13 +788,18 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     saveTimeUnit->hiddenByUser = vu->hiddenByUser;
     saveTimeInterface.getSavedVars();
 
-    // A saved global holding a function, userdata or coroutine cannot be written
-    // out as it stands, and exporting the rest of it hands the next session a
-    // table its own scripts no longer recognise - a cron job without its
-    // command, say. Mudlet up to 4.22 wrote such a variable as an empty group,
-    // which is what the "if it is empty, rebuild it" guard packages carry keys
-    // off, so those variables go on being exported the way they were: registered
-    // members only, no ride-along (#9857).
+    // A saved global with a value anywhere inside it that no save can carry (see
+    // serializableValueType() in LuaInterface.cpp) cannot come back whole, and
+    // writing out the parts that can be saved hands the next session a table its
+    // own scripts no longer recognise - a cron job without its command, say. Such
+    // a global therefore exports only the members registered in savedVars, which
+    // for a table registered while it was empty is an empty group: the state the
+    // "it is empty, so rebuild it" guard packages carry needs to see (#9857).
+    // Only the value type counts. A member dropped for its size, for being a
+    // second name for a table already written, or for being hidden still rides
+    // along with its siblings, because those are limits on how much of a table
+    // to write rather than on what a table can hold, and fencing the whole
+    // variable on one of them would lose more than it saved.
     const QSet<QString> unsaveableRoots = saveTimeInterface.savedRootsHoldingUnsaveableValues();
     if (TVar* base = saveTimeUnit->getBase()) {
         QListIterator<TVar*> itVariable(base->getChildren(false));
@@ -898,8 +903,8 @@ void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
     // silently dropped (#9517). The ride-along skips hidden variables
     // (Mudlet's internals and ones the user hid) and unsaveable ones
     // (functions, references, oversized tables), and it is off altogether for a
-    // variable the save cannot carry whole, see writeVariablePackage(); an
-    // explicitly saved variable exports as it always has.
+    // variable the save cannot carry whole, see writeVariablePackage(). A
+    // variable with its own savedVars entry exports either way.
     const bool exportable = pVariableUnit->isSaved(pVar) || (insideSavedTable && rideAlongAllowed && pVariableUnit->shouldSave(pVar) && !pVariableUnit->isHidden(pVar));
     if (exportable) {
         if (pVar->getValueType() == LUA_TTABLE) {
