@@ -50,6 +50,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
+    StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
     NarrowWindowWrapTest.cpp
@@ -189,6 +190,11 @@ if(mediaLoopTestBackend)
     # APPEND, so the environment set by the loop above stays in force rather than being replaced
     set_property(TEST TMediaLoopTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
+
+# StarterUiSectionsTest creates a fresh profile per test method and one of them
+# waits out the delay before the interface comes back on duty, so it needs a
+# longer timeout
+set_tests_properties(StarterUiSectionsTest PROPERTIES TIMEOUT 300)
 
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
