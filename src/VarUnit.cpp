@@ -65,6 +65,14 @@ void VarUnit::addPointer(const void* pointer)
     mPointers.insert(pointer);
 }
 
+// Resets the seen-pointer set varExists() answers from. iterateTable() does this
+// per saved root so a table two roots share is walked in full under each; within
+// one walk that set is the cycle guard, with the depth cap as the backstop.
+void VarUnit::clearPointers()
+{
+    mPointers.clear();
+}
+
 bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
 {
     auto var = getWVar(pWidgetItem);

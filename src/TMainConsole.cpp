@@ -1593,16 +1593,27 @@ void TMainConsole::finalize()
 // to the TMap class...?
 bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
-    const QString filename_map =
-            location.isEmpty() ? mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))) : location;
+    QString filename_map = location;
+    if (filename_map.isEmpty()) {
+        filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
+        // Resolve the name relative to the profile home directory the way
+        // TMainConsole::importMap does, rather than against whatever directory
+        // Mudlet happens to have been started in:
+        filename_map = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+    }
 
     const QDir dir_map(mudlet::getMudletPath(enums::profileMapsPath, mProfileName));
     if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
         return false;
     }
 
     QSaveFile file_map(filename_map);
     if (!file_map.open(QIODevice::WriteOnly)) {
+        // Naming the file matters more than usual: a relative location is not
+        // the path the caller typed
+        qDebug().noquote() << "Error saving map to" << filename_map << ":" << file_map.errorString();
         return false;
     }
 
@@ -1651,12 +1662,19 @@ bool TMainConsole::loadMap(const QString& location)
 
     pHost->mpMap->mapClear();
 
+    // The same resolution saveMap and importMap use, so that a map written
+    // under a bare name is looked for where it was written:
+    QString filePathName = location;
+    if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
+        filePathName = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+    }
+
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
     pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
     const QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
-    if (pHost->mpMap->restore(location)) {
+    if (pHost->mpMap->restore(filePathName)) {
         pHost->mpMap->audit();
         pHost->mpMap->mpMapper->mp2dMap->init();
         pHost->mpMap->mpMapper->updateAreaComboBox();
@@ -1669,10 +1687,10 @@ bool TMainConsole::loadMap(const QString& location)
         pHost->mpMap->mpMapper->show();
     }
 
-    if (location.isEmpty()) {
+    if (filePathName.isEmpty()) {
         pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
     } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
+        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(filePathName, now.toString(Qt::ISODate)), true);
     }
 
     pHost->mpMap->updateArea(-1);

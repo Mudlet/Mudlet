@@ -105,9 +105,10 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow QTest-based test class to access private members
+    // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorBannerViewSwitchTest;
+    friend class ScriptEventHandlerLifetimeTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -645,6 +646,8 @@ private:
     dlgSystemMessageArea* mpSystemMessageArea = nullptr;
 
     bool mIsScriptsMainAreaEditHandler = false;
+    // Not owned, and does not outlive a
+    // listWidget_script_registered_event_handlers->clear()
     QListWidgetItem* mpScriptsMainAreaEditHandlerItem = nullptr;
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;

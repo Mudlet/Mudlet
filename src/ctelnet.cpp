@@ -179,6 +179,14 @@ void cTelnet::reset()
 
     mNegotiationOrder.clear();
 
+    // Half of an ANSI sequence left over from the previous connection can only
+    // ever be completed by bytes that will never arrive, so drop it instead of
+    // letting it consume the new connection's output. There is nothing to drop
+    // when this runs from the constructor, before the profile has a console:
+    if (mpHost->mpConsole) {
+        mpHost->mpConsole->buffer.resetSequenceParserState();
+    }
+
     // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
     // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
     mpHost->setUserSentInputThisConnection(false);
@@ -5340,6 +5348,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
                 cleandata = "";
             } else {
                 cleandata.push_back('\n');
+                recvdGA = false;
             }
         }
     } //for

@@ -59,7 +59,7 @@ private:
     static constexpr int kMaxRootTriggers = 5;
 
     // What every line of game text really pays for: the substrings the chat
-    // gates scan for before any regex runs. Measures 17. Raising this is a
+    // gates scan for before any regex runs. Measures 18. Raising this is a
     // throughput change and wants measuring first.
     static constexpr int kMaxGatePatterns = 20;
 
@@ -215,6 +215,7 @@ private slots:
                 {qsl("You tell the formation you are ready."), qsl("tells")},
                 {qsl("Ann whispers to you, 'psst'"), qsl("tells")},
                 {qsl("Bob tells the group, 'incoming'"), qsl("tells")},
+                {qsl("You gossip, 'test!'"), qsl("tells")},
                 {qsl("Bob says, 'hello everyone'"), QString()},
                 {qsl("Bob asks, 'where is the bank?'"), QString()},
                 {qsl("Bob exclaims, 'at last!'"), QString()},
