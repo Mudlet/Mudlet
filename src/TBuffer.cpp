@@ -290,6 +290,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mMudBuffer(other.mMudBuffer)
 , mServerWrapPendingLine(other.mServerWrapPendingLine)
 , mServerWrapPendingBuffer(other.mServerWrapPendingBuffer)
+, mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
 , mWrapDetectCounts(other.mWrapDetectCounts)
 , mWrapDetectSamples(other.mWrapDetectSamples)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
@@ -387,6 +388,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mMudBuffer = other.mMudBuffer;
         mServerWrapPendingLine = other.mServerWrapPendingLine;
         mServerWrapPendingBuffer = other.mServerWrapPendingBuffer;
+        mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
         mWrapDetectCounts = other.mWrapDetectCounts;
         mWrapDetectSamples = other.mWrapDetectSamples;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
@@ -1596,12 +1598,14 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // MXP <br> breaks and blank lines - is a real line boundary.
         const bool proseSegment = looksLikeWrappedProse(mMudLine);
         if (!mServerWrapPendingLine.isEmpty()) {
-            // A continuation of wrapped prose starts with a word - or with
-            // the single space some games move the break to instead of
-            // swallowing it. Anything else means the held line was complete
-            // after all:
+            // A held segment was only wrapped if what follows continues it:
+            // prose rather than art, not a list entry, indented by no more
+            // than the single space some games move the break to instead of
+            // swallowing it, and opening with a word that would not have
+            // fitted on the line above. Anything else means the held line was
+            // complete after all:
             const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
-            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine)) {
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine) || pendingLineHadRoomForNextWord()) {
                 flushPendingServerWrapJoin();
             }
         }
@@ -1609,10 +1613,12 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // the game's wrap column is a property of the segment as the game
         // sent it, not of the longer joined line.
         const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment;
+        const qsizetype segmentLength = mMudLine.size();
         joinPendingServerWrapOntoCurrent();
         if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
             mServerWrapPendingLine.swap(mMudLine);
             mServerWrapPendingBuffer.swap(mMudBuffer);
+            mServerWrapPendingSegmentLength = segmentLength;
             startServerWrapFlushTimer();
             ++localBufferPosition;
             return true;
@@ -1746,9 +1752,10 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
 }
 
 // A line whose length is within csmServerWrapSlack characters below the
-// configured column ends where the game's own word wrap would have broken it
-// (the game breaks at the last space that fits, so wrapped segments fall up
-// to a word short of the column):
+// configured column could have been broken there by the game's own word wrap
+// (which breaks at the last space that fits, so wrapped segments fall up to a
+// word short of the column); pendingLineHadRoomForNextWord() settles whether
+// it really was once the continuation is in:
 bool TBuffer::endsAtServerWrapColumn() const
 {
     const qsizetype width = mpHost->mUndoServerWrapWidth;
@@ -1837,6 +1844,36 @@ bool TBuffer::startsWithListMarker(const QString& line)
     const bool numberFitsAList = digits <= csmMaxListNumberDigits || line.at(start) == QChar('[');
     const bool closed = (bracket >= 0) ? line.at(numberEnd) == closers.at(bracket) : (line.at(numberEnd) == QChar('.') || line.at(numberEnd) == QChar(')'));
     return numberFitsAList && closed && numberEnd + 1 < line.size() && line.at(numberEnd + 1) == QChar::Space;
+}
+
+// Word wrap breaks a line for one reason only: the next word did not fit. So
+// a continuation whose first word would have gone on the game line above it
+// is not a continuation at all - the game ended that line itself. Without
+// this two sentences that each stop short of the wrap column read exactly
+// like one wrapped paragraph. Only clear room counts, see
+// csmServerWrapFitTolerance.
+bool TBuffer::pendingLineHadRoomForNextWord() const
+{
+    // Measured against the last game line joined into the held text rather
+    // than the held text itself, which by then may be a whole paragraph:
+    qsizetype trailingSpaces = 0;
+    while (trailingSpaces < mServerWrapPendingLine.size() && mServerWrapPendingLine.at(mServerWrapPendingLine.size() - trailingSpaces - 1).isSpace()) {
+        ++trailingSpaces;
+    }
+    const qsizetype heldEnd = mServerWrapPendingSegmentLength - trailingSpaces;
+    qsizetype wordStart = 0;
+    while (wordStart < mMudLine.size() && mMudLine.at(wordStart).isSpace()) {
+        ++wordStart;
+    }
+    qsizetype wordEnd = wordStart;
+    while (wordEnd < mMudLine.size() && !mMudLine.at(wordEnd).isSpace()) {
+        ++wordEnd;
+    }
+    // The word starts past whatever the join will put between the two: the
+    // spaces the game left on either side of the break, or the single one
+    // added for it when the game swallowed it:
+    const qsizetype separator = std::max<qsizetype>(1, trailingSpaces + wordStart);
+    return heldEnd + separator + (wordEnd - wordStart) + csmServerWrapFitTolerance <= mpHost->mUndoServerWrapWidth;
 }
 
 void TBuffer::joinPendingServerWrapOntoCurrent()
