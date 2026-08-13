@@ -385,6 +385,15 @@ private slots:
         clickLink(undoLinkText);
         QVERIFY2(!host->mUndoServerWrap, "clicking the undo link did not turn undoing the game's wrapping back off");
         QVERIFY2(waitForLineInBuffer(qsl("[ INFO ]  - Mudlet no longer undoes the game's wrapping, so triggers see the")), "turning the option back off was not confirmed as a Mudlet info message");
+
+        // Every click that changes something reports; clicking a link for the
+        // setting it already has is the one case that stays quiet
+        const QString offMessage = qsl("[ INFO ]  - Mudlet no longer undoes the game's wrapping, so triggers see the");
+        QCOMPARE(bufferLineCount(offMessage), 1);
+        clickLink(undoLinkText);
+        QTest::qWait(100);
+        QCOMPARE(bufferLineCount(offMessage), 1);
+        QVERIFY2(!host->mUndoServerWrap, "a redundant click changed the setting");
     }
 
     void test_settingIsNotAnnouncedWithoutTheHint()
@@ -525,6 +534,18 @@ private:
         const double one = relativeLuminance(first);
         const double other = relativeLuminance(second);
         return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
+    }
+
+    int bufferLineCount(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        int found = 0;
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i) == text) {
+                ++found;
+            }
+        }
+        return found;
     }
 
     bool bufferHasLine(const QString& text)

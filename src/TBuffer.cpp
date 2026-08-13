@@ -1952,11 +1952,11 @@ void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
     });
 }
 
-// Called whenever setConfig() sets Host::mUndoServerWrap, and silent unless this
+// Called when setConfig() changes Host::mUndoServerWrap, and silent unless this
 // session printed the wrap hint - the follow-up only means anything to a player
-// who just saw it. Reports even when the setting did not change, so that
-// clicking either link always says something back. The settings dialog writes
-// the flag directly, so it does not report at all:
+// who just saw it. A call that asks for the setting it already has is silent
+// too, which is what clicking either link a second time amounts to. The
+// settings dialog writes the flag directly, so it does not report at all:
 void TBuffer::announceUndoServerWrapChange(const bool enabled)
 {
     if (!mpHost || !mpHost->mServerWrapHintShownThisSession) {
