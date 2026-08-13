@@ -76,6 +76,7 @@ public:
     QString mCommand;
     QString mRegexCode;
     QSharedPointer<pcre2_code> mpRegex;
+    QSharedPointer<pcre2_match_data> mpMatchData;
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;
