@@ -39,6 +39,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
     ClearWindowLogTest.cpp
+    ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
