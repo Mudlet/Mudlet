@@ -57,8 +57,8 @@ private:
 
     int anchorCentre() const { return mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0)).x(); }
 
-    // Whatever application state the offscreen platform reports is not the one
-    // this test is about, so pin it rather than assume it
+    // Whichever application state this platform happens to report is not the
+    // one these cases are about, so pin it rather than wait on a real one
     TFeatureCallout* shownCallout()
     {
         auto* callout = new TFeatureCallout(mFeatureId, mpAnchor, qsl("Title"), qsl("Body"));

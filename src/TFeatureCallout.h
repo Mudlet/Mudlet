@@ -46,8 +46,8 @@ public:
 public slots:
     // A balloon is a tooltip window, which the platforms Mudlet ships on keep
     // above ordinary windows - including those of whatever application the
-    // player switched to. Public so that the tests can drive it: the offscreen
-    // platform does not emit applicationStateChanged:
+    // player switched to. Public so that the tests can drive the transitions
+    // instead of waiting on a real one:
     void slot_applicationStateChanged(const Qt::ApplicationState state);
 
 protected:
