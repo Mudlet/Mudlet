@@ -31,7 +31,7 @@
 using namespace std::chrono_literals;
 
 TelnetServerStub::TelnetServerStub(QObject* parent)
-    : QTcpServer(parent)
+: QTcpServer(parent)
 {
     connect(this, &QTcpServer::newConnection, this, &TelnetServerStub::onNewConnection);
 }
@@ -47,10 +47,27 @@ void TelnetServerStub::start(const QString& host, quint16 port)
     }
 }
 
+TelnetServerStub::~TelnetServerStub()
+{
+    if (!mPendingData.isEmpty()) {
+        qWarning().noquote() << qsl("⚠️ TelnetServerStub destroyed with %1 undelivered queued bytes - no client was ever accepted.").arg(mPendingData.size());
+    }
+}
+
 void TelnetServerStub::sendRaw(const QByteArray& data)
 {
     if (!mpClient) {
-        qWarning() << "⚠️ sendRaw called without a connected client.";
+        if (mHadClient) {
+            // Between sessions there is no race to absorb, so queuing here
+            // would leak a dead session's bytes into the next connection:
+            qWarning() << "⚠️ sendRaw called without a connected client.";
+            return;
+        }
+        // Tests wait on the client-side connected signal, which can fire
+        // before this server side has accepted the connection - dropping the
+        // bytes here loses the payload on fast runners, so hold them until
+        // onNewConnection():
+        mPendingData.append(data);
         return;
     }
     mpClient->write(data);
@@ -66,25 +83,32 @@ void TelnetServerStub::onNewConnection()
         return;
     }
     mpClient = client;
+    mHadClient = true;
     qInfo().noquote() << qsl("🔌 Client connected: %1").arg(client->peerAddress().toString());
+
+    if (!mPendingData.isEmpty()) {
+        const auto bytesWritten = client->write(mPendingData);
+        client->flush();
+        if (bytesWritten <= 0) {
+            qWarning().noquote() << qsl("⚠️ Failed to deliver %1 queued bytes to %2").arg(QString::number(mPendingData.size()), client->peerAddress().toString());
+        }
+        mPendingData.clear();
+    }
 
     QPointer<QTcpSocket> safeClient = client;
 
-    QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]()
-    {
+    QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]() {
         if (!safeClient) {
             return;
         }
         const auto bytesWritten = safeClient->write(welcomeMessage.toUtf8() + "\r\n");
         safeClient->flush();
         if (bytesWritten <= 0) {
-            qWarning().noquote() << qsl("⚠️ Failed to send welcome message to %1")
-                                    .arg(safeClient->peerAddress().toString());
+            qWarning().noquote() << qsl("⚠️ Failed to send welcome message to %1").arg(safeClient->peerAddress().toString());
         }
     });
 
-    connect(client, &QTcpSocket::disconnected, [safeClient]()
-    {
+    connect(client, &QTcpSocket::disconnected, [safeClient]() {
         if (!safeClient) {
             return;
         }
