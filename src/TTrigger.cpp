@@ -841,7 +841,7 @@ void TTrigger::processPromptMatch(int patternNumber)
 
 bool TTrigger::match_exact_match(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
-    QString text = haystack;
+    QStringView text(haystack);
     if (text.endsWith(QChar('\n'))) {
         text.chop(1);
     }
