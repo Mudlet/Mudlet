@@ -26,6 +26,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
+    TelnetCharsetNegotiationTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
@@ -163,6 +164,10 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
+
+# TelnetCharsetNegotiationTest creates a fresh profile per test case, each of which
+# also reconnects, so it needs a longer timeout
+set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
