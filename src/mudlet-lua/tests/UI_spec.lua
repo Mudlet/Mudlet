@@ -2021,6 +2021,7 @@ describe("Tests UI functions", function()
         "You tell the group 'incoming'",
         "Bob whispers to you, 'psst'",
         "Bob tells the group 'incoming'",
+        "You gossip, 'test!'",
         "Bob says, 'hello'",
         "Bob asks, 'where is the bank?'",
         "Bob exclaims, 'at last!'",
