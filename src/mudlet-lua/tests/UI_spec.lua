@@ -2714,6 +2714,53 @@ describe("Tests UI functions", function()
       selectCurrentLine(dst)
       assert.are.equal("pastetext", getCurrentLine(dst))
     end)
+
+    -- selectCurrentLine is the one case where an inclusive and an exclusive end
+    -- column agree, so these use selectString to pin a mid-line selection.
+    it("appendBuffer copies exactly the selection, not one character more", function()
+      echo(src, "one two.three\n")
+      moveCursor(src, 0, 0)
+      assert.is_true(selectString(src, "two", 1) > -1)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("two", lines[1])
+    end)
+
+    it("paste places exactly the selection, not one character more", function()
+      echo(src, "alpha beta.gamma\n")
+      moveCursor(src, 0, 0)
+      assert.is_true(selectString(src, "beta", 1) > -1)
+      copy(src)
+      paste(dst)
+      moveCursor(dst, 0, 0)
+      selectCurrentLine(dst)
+      assert.are.equal("beta", getCurrentLine(dst))
+    end)
+
+    -- Guards against over-correcting the end-column clamp: a selection reaching
+    -- the last character of the line must still include it.
+    it("a selection reaching the end of the line keeps its last character", function()
+      echo(src, "alpha omega\n")
+      moveCursor(src, 0, 0)
+      assert.is_true(selectString(src, "omega", 1) > -1)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("omega", lines[1])
+    end)
+
+    -- A chunk holding one empty line still has to terminate the destination's
+    -- current line, so mirroring a blank spacer line reproduces it.
+    it("appendBuffer reproduces a copied blank line", function()
+      echo(src, "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      local before = getLineCount(dst)
+      appendBuffer(dst)
+      assert.are.equal(before + 1, getLineCount(dst))
+    end)
   end)
 end)
 
