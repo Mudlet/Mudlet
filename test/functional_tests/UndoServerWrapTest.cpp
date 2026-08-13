@@ -115,6 +115,8 @@ private slots:
 
     void test_loneFullWidthLineIsFlushed()
     {
+        const QString welcome = qsl("Welcome to the test game.");
+        mpServer->setWelcomeMessage(welcome);
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
         QVERIFY(QTest::qWaitFor(
@@ -123,11 +125,47 @@ private slots:
                 },
                 2000));
 
+        // The stub sends its welcome message 100ms after connecting. Letting it
+        // land first is what makes this test exercise the flush timer at all:
+        // otherwise it arrives as a following line and commits the held segment
+        // through the ordinary painted path before the timer ever fires.
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return bufferHasLine(welcome);
+                },
+                2000));
+
         // Nothing follows, so the held line has to be committed by the
         // flush timer once the game goes quiet:
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n");
 
+        // The timer is created when the line is first held back:
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QTimer* flushTimer = nullptr;
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
+                             return flushTimer && flushTimer->isActive();
+                         },
+                         2000),
+                 "the full-width line was not held back for a continuation");
+
+        // Only showNewLines() advances buffer.mCursorY, so it having caught up
+        // with the buffer is what distinguishes a painted line from an appended
+        // one. It has to be read the moment the flush returns rather than
+        // polled for: cTelnet's posting timer calls finalize() as well and
+        // repaints within a tick, so any wait long enough to see the line
+        // appear is also long enough to lose the evidence.
+        int sizeAtFlush = -1;
+        int cursorAtFlush = -1;
+        connect(flushTimer, &QTimer::timeout, this, [&]() {
+            sizeAtFlush = console->buffer.size();
+            cursorAtFlush = console->buffer.mCursorY;
+        });
+
         QVERIFY2(waitForLineInBuffer(mSegment1), "held full-width line was not flushed after the game went quiet");
+        QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
+        QCOMPARE(cursorAtFlush, sizeAtFlush);
     }
 
     void test_blankLineEndsParagraph()
