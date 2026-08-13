@@ -2727,15 +2727,23 @@ describe("Tests UI functions", function()
       assert.are.equal("two", lines[1])
     end)
 
+    -- TConsole::paste() only reaches TBuffer::paste() when the target holds a
+    -- line after the cursor's; against a freshly cleared window it falls through
+    -- to appendBuffer(), so the target is pre-filled to pin the insert path.
     it("paste places exactly the selection, not one character more", function()
       echo(src, "alpha beta.gamma\n")
       moveCursor(src, 0, 0)
       assert.is_true(selectString(src, "beta", 1) > -1)
       copy(src)
+      echo(dst, "xxx\nyyy\n")
+      moveCursor(dst, 0, 0)
       paste(dst)
       moveCursor(dst, 0, 0)
       selectCurrentLine(dst)
-      assert.are.equal("beta", getCurrentLine(dst))
+      assert.are.equal("betaxxx", getCurrentLine(dst))
+      moveCursor(dst, 0, 1)
+      selectCurrentLine(dst)
+      assert.are.equal("yyy", getCurrentLine(dst))
     end)
 
     -- Guards against over-correcting the end-column clamp: a selection reaching
@@ -2748,6 +2756,23 @@ describe("Tests UI functions", function()
       appendBuffer(dst)
       local lines = getLines(dst, 0, getLineCount(dst))
       assert.are.equal("omega", lines[1])
+    end)
+
+    -- cut() is copy() and replaceInLine() composed, and only ever acts on the
+    -- main console. The deletion was always exclusive, so while the copy was
+    -- inclusive the clipboard held one character more than the line lost.
+    it("cut copies exactly the text it removes", function()
+      clearWindow("main")
+      echo("main", "one two.three\n")
+      moveCursor("main", 0, 0)
+      assert.is_true(selectString("two", 1) > -1)
+      cut()
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("two", lines[1])
+      moveCursor("main", 0, 0)
+      selectCurrentLine("main")
+      assert.are.equal("one .three", getCurrentLine("main"))
     end)
 
     -- A chunk holding one empty line still has to terminate the destination's
