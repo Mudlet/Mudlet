@@ -378,6 +378,15 @@ private slots:
                        qsl("__ui.mapperX = math.abs(BaseUI.map:get_x() - BaseUI.sections.map:get_x())\n"
                            "__ui.mapperY = math.abs(BaseUI.map:get_y() - (BaseUI.sections.map:get_y() + 20))")));
         QVERIFY2(luaTrue(host, qsl("__ui.mapperX <= 2 and __ui.mapperY <= 2")), "the mapper did not land inside the floating map section");
+        // The mapper paints its own background over the whole of the section it
+        // is in, so the section has no hole in it for the game's text to show
+        // through. One that stopped filling its section would leave exactly
+        // that, and only its width was ever checked.
+        QVERIFY(runLua(host,
+                       qsl("local inside = BaseUI.sections.map.Inside\n"
+                           "__ui.fillW = math.abs(BaseUI.map:get_width() - inside:get_width())\n"
+                           "__ui.fillH = math.abs(BaseUI.map:get_height() - inside:get_height())")));
+        QVERIFY2(luaTrue(host, qsl("__ui.fillW <= 2 and __ui.fillH <= 2")), "the mapper does not fill the floating map section, so the panel has a hole in it");
         // Geyser.Mapper re-runs createMapper() on every reposition, so the widget
         // has to still be there after the section has been moved about
         QVERIFY(runLua(host, qsl("BaseUI.sections.map:move('30%', '30%')")));
