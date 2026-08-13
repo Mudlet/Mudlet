@@ -31,7 +31,7 @@
 using namespace std::chrono_literals;
 
 TelnetServerStub::TelnetServerStub(QObject* parent)
-    : QTcpServer(parent)
+: QTcpServer(parent)
 {
     connect(this, &QTcpServer::newConnection, this, &TelnetServerStub::onNewConnection);
 }
@@ -50,7 +50,11 @@ void TelnetServerStub::start(const QString& host, quint16 port)
 void TelnetServerStub::sendRaw(const QByteArray& data)
 {
     if (!mpClient) {
-        qWarning() << "⚠️ sendRaw called without a connected client.";
+        // Tests wait on the client-side connected signal, which can fire
+        // before this server side has accepted the connection - dropping the
+        // bytes here loses the payload on fast runners, so hold them until
+        // onNewConnection():
+        mPendingData.append(data);
         return;
     }
     mpClient->write(data);
@@ -68,23 +72,26 @@ void TelnetServerStub::onNewConnection()
     mpClient = client;
     qInfo().noquote() << qsl("🔌 Client connected: %1").arg(client->peerAddress().toString());
 
+    if (!mPendingData.isEmpty()) {
+        client->write(mPendingData);
+        client->flush();
+        mPendingData.clear();
+    }
+
     QPointer<QTcpSocket> safeClient = client;
 
-    QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]()
-    {
+    QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]() {
         if (!safeClient) {
             return;
         }
         const auto bytesWritten = safeClient->write(welcomeMessage.toUtf8() + "\r\n");
         safeClient->flush();
         if (bytesWritten <= 0) {
-            qWarning().noquote() << qsl("⚠️ Failed to send welcome message to %1")
-                                    .arg(safeClient->peerAddress().toString());
+            qWarning().noquote() << qsl("⚠️ Failed to send welcome message to %1").arg(safeClient->peerAddress().toString());
         }
     });
 
-    connect(client, &QTcpSocket::disconnected, [safeClient]()
-    {
+    connect(client, &QTcpSocket::disconnected, [safeClient]() {
         if (!safeClient) {
             return;
         }

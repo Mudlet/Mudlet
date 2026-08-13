@@ -32,6 +32,7 @@ class TelnetServerStub : public QTcpServer
 
     QString mpWelcomeMessage = "";
     QPointer<QTcpSocket> mpClient;
+    QByteArray mPendingData;
 
 public:
     explicit TelnetServerStub(QObject* parent = nullptr);
