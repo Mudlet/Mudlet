@@ -400,6 +400,27 @@ private slots:
         emitMetric("text_best_pass_ms", seconds * 1000.0);
     }
 
+    // ISO 8859-1 has no lookup table, so every received byte takes the single-byte
+    // branch of the decoder - unlike the default encoding, which never enters it.
+    // Decoding the UTF-8 corpus as Latin-1 yields mojibake, which is irrelevant:
+    // the byte count through that branch is what is being timed.
+    void benchLatin1Decode()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+
+        const auto result = host->mTelnet.setEncoding("ISO 8859-1", false);
+        QVERIFY2(result.first, qPrintable(result.second));
+
+        const double seconds = feedCorpusBestPass(host, kFeedPasses);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        emitMetric("latin1_lines_per_sec", mCorpusLines / seconds);
+        emitMetric("latin1_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
+        emitMetric("latin1_best_pass_ms", seconds * 1000.0);
+    }
+
     void benchTriggerEngine()
     {
         Host* host = startProfile();
