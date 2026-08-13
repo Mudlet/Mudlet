@@ -440,7 +440,47 @@ private slots:
         QCOMPARE(host->mTelnet.getEncoding(), QByteArray("ISO 8859-1"));
     }
 
+    // Data handed to feedTelnet() is not the connection's, so a KaVir handshake in
+    // it neither stands in for one nor may swallow what follows it.
+    void test_fedTelnetDataIsNotTruncatedByTheHandshake()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        // As it would be for a profile that has not met a KaVir game yet:
+        host->mPromptedForVersionInTTYPE = false;
+
+        QByteArray fed;
+        for (const auto& announcement : {std::pair<char, char>{TN_DO, OPT_TERMINAL_TYPE},
+                                         {TN_DO, OPT_NAWS},
+                                         {TN_WILL, static_cast<char>(OPT_CHARSET)},
+                                         {TN_WILL, static_cast<char>(OPT_MSDP)},
+                                         {TN_WILL, static_cast<char>(OPT_MSSP)},
+                                         {TN_WILL, static_cast<char>(OPT_ATCP)},
+                                         {TN_WILL, static_cast<char>(OPT_MSP)},
+                                         {TN_WILL, static_cast<char>(OPT_MXP)}}) {
+            fed.append(static_cast<char>(TN_IAC)).append(announcement.first).append(announcement.second);
+        }
+        fed.append("FED_TAIL_MARKER\r\n");
+        host->mTelnet.loopbackTest(fed);
+
+        QVERIFY2(waitForBufferToContain(host, qsl("FED_TAIL_MARKER")), "text fed after a KaVir handshake was dropped instead of displayed");
+    }
+
 private:
+    bool waitForBufferToContain(Host* host, const QString& text)
+    {
+        return QTest::qWaitFor(
+                [host, &text]() {
+                    for (int i = 0; i <= host->mpConsole->buffer.getLastLineNumber(); ++i) {
+                        if (host->mpConsole->buffer.line(i).contains(text)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                5000);
+    }
+
     // An RFC 2066 request for a charset Mudlet can use but is not using.
     QByteArray charsetRequestTrailer() const
     {

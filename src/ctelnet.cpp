@@ -5222,7 +5222,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 command += ch;
                 processTelnetCommand(command);
                 command = "";
-                if (mDeferredReconnect) {
+                if (mDeferredReconnect && !loopbackTesting) {
                     // That announcement completed the KaVir handshake pattern (see
                     // autoEnableTTYPEVersion()), so this connection is about to be
                     // replaced: no further negotiation in it may be acted on. Only
@@ -5230,6 +5230,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // announcements, which nothing else dispatches. Text received
                     // before it is still shown, and the half-parsed state the break
                     // leaves behind is cleared by reset() on the next connection.
+                    // Data fed in by a script is nobody's connection, so it is not
+                    // the doomed one's and must not be cut short.
                     break;
                 }
             } else if (iac && (!insb) && (ch == TN_SB)) {
@@ -5415,7 +5417,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // compressed stream). finalize() runs only at the deepest level. A pending
     // reconnect makes this leftover the dropped connection's, same as the bytes
     // the loop above stopped at.
-    if (remainingData && remainingAmount > 0 && !mDeferredReconnect) {
+    if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
         processSocketData(remainingData, remainingAmount, loopbackTesting);
         return;
     }
