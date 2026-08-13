@@ -94,12 +94,18 @@ static void pcre2_code_deleter(pcre2_code* pointer)
     pcre2_code_free(pointer);
 }
 
+static void pcre2_match_data_deleter(pcre2_match_data* pointer)
+{
+    pcre2_match_data_free(pointer);
+}
+
 //FIXME: lock if code *OR* regex doesn't compile
 bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger)
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
     mRegexMap.clear();
+    mMatchDataMap.clear();
     mPatternKinds.clear();
     mLuaConditionMap.clear();
     mColorPatternList.clear();
@@ -229,21 +235,23 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 
     const int haystackCLength = strlen(haystackC);
 
-    pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(re.data(), nullptr);
-    if (!match_data) {
-        return false;
+    QSharedPointer<pcre2_match_data>& matchData = mMatchDataMap[patternNumber];
+    if (!matchData) {
+        matchData.reset(pcre2_match_data_create_from_pattern(re.data(), nullptr), pcre2_match_data_deleter);
+        if (!matchData) {
+            return false;
+        }
     }
+    pcre2_match_data* match_data = matchData.data();
 
     int rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
     if (rc < 0) {
-        pcre2_match_data_free(match_data);
         return false;
     }
 
     processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, match_data, rc, lineNumber);
 
-    pcre2_match_data_free(match_data);
     return true;
 }
 
