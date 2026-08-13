@@ -62,6 +62,11 @@ public:
     // the saved variables the last getSavedVars() had to cut short, for the
     // caller to tell the user about - they are in no profile save it takes
     QStringList truncatedSavedTables() const { return mTruncatedSavedTables; }
+    // the saved globals the last getSavedVars() found a value inside, at any
+    // depth, that a save cannot carry: anything but a table, string, number or
+    // boolean. A walk cut short by a panic or by scmMaxTableDepth answers only
+    // for what it reached.
+    QSet<QString> savedRootsHoldingUnsaveableValues() const { return mSavedRootsHoldingUnsaveableValues; }
     QStringList varName(TVar* var);
     QList<TVar*> varOrder(TVar* var);
     QString getValue(TVar*);
@@ -98,6 +103,10 @@ private:
     bool mSavedVarsOnly = false;
     // ...and these are the top-level keys such a walk may keep
     QSet<QString> mSavedRootNames;
+    // which of those keys the walk is inside, meaningful only while one is running
+    QString mCurrentSavedRootName;
+    // the keys it found a value under that the save cannot carry
+    QSet<QString> mSavedRootsHoldingUnsaveableValues;
     QStringList mTruncatedSavedTables;
 };
 

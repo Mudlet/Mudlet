@@ -788,10 +788,24 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     saveTimeUnit->hiddenByUser = vu->hiddenByUser;
     saveTimeInterface.getSavedVars();
 
+    // A saved global with a value anywhere inside it that no save can carry (see
+    // serializableValueType() in LuaInterface.cpp) cannot come back whole, and
+    // writing out the parts that can be saved hands the next session a table its
+    // own scripts no longer recognise - a cron job without its command, say. Such
+    // a global therefore exports only the members registered in savedVars, which
+    // for a table registered while it was empty is an empty group: the state the
+    // "it is empty, so rebuild it" guard packages carry needs to see (#9857).
+    // Only the value type counts. A member dropped for its size, for being a
+    // second name for a table already written, or for being hidden still rides
+    // along with its siblings, because those are limits on how much of a table
+    // to write rather than on what a table can hold, and fencing the whole
+    // variable on one of them would lose more than it saved.
+    const QSet<QString> unsaveableRoots = saveTimeInterface.savedRootsHoldingUnsaveableValues();
     if (TVar* base = saveTimeUnit->getBase()) {
         QListIterator<TVar*> itVariable(base->getChildren(false));
         while (itVariable.hasNext()) {
-            writeVariable(itVariable.next(), &saveTimeInterface, saveTimeUnit, variablePackage);
+            TVar* pVariable = itVariable.next();
+            writeVariable(pVariable, &saveTimeInterface, saveTimeUnit, variablePackage, false, !unsaveableRoots.contains(pVariable->getName()));
         }
     }
     saveTimeInterface.releaseVariableReferences();
@@ -881,16 +895,17 @@ void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPac
     }
 }
 
-void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* pVariableUnit, pugi::xml_node xmlParent, bool insideSavedTable)
+void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* pVariableUnit, pugi::xml_node xmlParent, bool insideSavedTable, bool rideAlongAllowed)
 {
     // a member of a saved table is saved with it even without its own
     // savedVars entry: a missing entry cannot be told apart from a member a
     // script added after the table was marked saved, and those must not be
     // silently dropped (#9517). The ride-along skips hidden variables
     // (Mudlet's internals and ones the user hid) and unsaveable ones
-    // (functions, references, oversized tables); an explicitly saved
-    // variable exports as it always has.
-    const bool exportable = pVariableUnit->isSaved(pVar) || (insideSavedTable && pVariableUnit->shouldSave(pVar) && !pVariableUnit->isHidden(pVar));
+    // (functions, references, oversized tables), and it is off altogether for a
+    // variable the save cannot carry whole, see writeVariablePackage(). A
+    // variable with its own savedVars entry exports either way.
+    const bool exportable = pVariableUnit->isSaved(pVar) || (insideSavedTable && rideAlongAllowed && pVariableUnit->shouldSave(pVar) && !pVariableUnit->isHidden(pVar));
     if (exportable) {
         if (pVar->getValueType() == LUA_TTABLE) {
             auto variableGroup = xmlParent.append_child("VariableGroup");
@@ -902,7 +917,7 @@ void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
 
             QListIterator<TVar*> itNestedVariable(pVar->getChildren(false));
             while (itNestedVariable.hasNext()) {
-                writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup, true);
+                writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup, true, rideAlongAllowed);
             }
         } else {
             auto variable = xmlParent.append_child("Variable");

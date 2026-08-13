@@ -31,6 +31,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
+    SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
