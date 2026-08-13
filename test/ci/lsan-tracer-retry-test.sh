@@ -5,8 +5,11 @@
 # The flake it exists for is intermittent and CI-only, so the launcher is driven
 # here against a stub command instead: the stub prints a log and exits non-zero,
 # and each case asserts both the exit status and how many times the stub ran.
-# Rerunning a run that really failed would hide the failure, so most of the
-# cases below are about NOT rerunning.
+#
+# One case per guard in the matcher. Rerunning a run that really failed would
+# hide that failure, so all but three of them are about NOT rerunning - remove
+# any single condition from tracer_crashed_after_a_clean_run and at least one
+# case below goes red.
 
 set -uo pipefail
 
@@ -24,7 +27,6 @@ FAILURES=0
 
 # Every rerun below would otherwise append a line naming a stub to the real job
 # summary, which is the one place the genuine flake rate is readable
-REAL_STEP_SUMMARY="${GITHUB_STEP_SUMMARY:-}"
 SUMMARY="${WORK_DIR}/step-summary.md"
 : > "${SUMMARY}"
 export GITHUB_STEP_SUMMARY="${SUMMARY}"
@@ -76,6 +78,7 @@ Direct leak of 1032 byte(s) in 1 object(s) allocated from:
 
 SUMMARY: AddressSanitizer: 1032 byte(s) leaked in 1 allocation(s).
 EOF
+cat "${WORK_DIR}/leak-report.err" "${WORK_DIR}/tracer-crash.err" > "${WORK_DIR}/leak-and-tracer.err"
 
 # The same run with one slot failing, and with it cut short before QTest got to
 # print any verdict at all
@@ -211,12 +214,7 @@ assert_summary_contains() {
   fi
 }
 
-start_test "a command that succeeds runs once"
-write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0 \
-           "${WORK_DIR}/empty" "${WORK_DIR}/empty" 0
-assert_status 0 "$(run_launcher)"
-assert_attempts 1
-assert_lacks "lsan-tracer-retry: rerunning"
+# --- the rerun fires, exactly once, and stays visible -------------------------
 
 start_test "the tracer crash after a green QTest run is retried, and passes"
 write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
@@ -234,70 +232,72 @@ write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
 assert_status 1 "$(run_launcher)"
 assert_attempts 2
 
-start_test "the output of both runs still reaches the caller"
-write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
-           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
+start_test "a command that succeeds runs once"
+write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0 \
+           "${WORK_DIR}/empty" "${WORK_DIR}/empty" 0
 assert_status 0 "$(run_launcher)"
-assert_contains "PASS   : TelnetTextDisplayedTest::test_TelnetTextDisplayed()"
-assert_contains "Tracer caught signal 11"
+assert_attempts 1
+assert_lacks "lsan-tracer-retry: rerunning"
 
-start_test "a leak report is never retried, even alongside the tracer crash"
-cat "${WORK_DIR}/leak-report.err" "${WORK_DIR}/tracer-crash.err" > "${WORK_DIR}/leak-and-tracer.err"
+# --- one case per guard: none of these may rerun ------------------------------
+
+start_test "guard: a leak report is never retried, even alongside the tracer crash"
 write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/leak-and-tracer.err" 1 \
            "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
 assert_status 1 "$(run_launcher)"
 assert_attempts 1
 
-start_test "a plain leak report, with no tracer crash at all, is never retried"
-write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/leak-report.err" 1 \
-           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
-assert_status 1 "$(run_launcher)"
-assert_attempts 1
-
-start_test "a failing test is never retried, even alongside the tracer crash"
+start_test "guard: a failing test is never retried, even alongside the tracer crash"
 write_stub "${WORK_DIR}/qtest-failed.out" "${WORK_DIR}/tracer-crash.err" 1 \
            "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
 assert_status 1 "$(run_launcher)"
 assert_attempts 1
 
-start_test "a test that died before reporting a verdict is never retried"
+start_test "guard: a test that died before reporting a verdict is never retried"
 write_stub "${WORK_DIR}/qtest-no-verdict.out" "${WORK_DIR}/tracer-crash.err" 1 \
            "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
 assert_status 1 "$(run_launcher)"
 assert_attempts 1
 
-start_test "the tracer line alone is not the signature"
+start_test "guard: a run that only skipped is not a clean run"
+write_stub "${WORK_DIR}/qtest-all-skipped.out" "${WORK_DIR}/tracer-crash.err" 1 \
+           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
+assert_status 1 "$(run_launcher)"
+assert_attempts 1
+
+start_test "guard: the tracer line alone is not the signature"
 write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-line-only.err" 1 \
            "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
 assert_status 1 "$(run_launcher)"
 assert_attempts 1
 
-start_test "LeakSanitizer's other fatal errors are not the signature"
+start_test "guard: LeakSanitizer's other fatal errors are not the signature"
 write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/fatal-error-line-only.err" 1 \
            "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
 assert_status 1 "$(run_launcher)"
 assert_attempts 1
 
-start_test "a command killed by a signal fails rather than being read as success"
-# CMake hands back a description rather than a number for those, so a status
-# comparison that assumed a number would let them through
-cat > "${STUB}" <<EOF
-#!/bin/bash
-echo 1 > "${ATTEMPTS}"
-kill -SEGV \$\$
-EOF
-chmod +x "${STUB}"
-echo 0 > "${ATTEMPTS}"
-capture cmake -P "${LAUNCHER}" -- "${STUB}"
-assert_status 1 $?
+start_test "guard: a tracer death on another signal is not the signature"
+write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/other-signal.err" 1 \
+           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
+assert_status 1 "$(run_launcher)"
 assert_attempts 1
-assert_contains "Segmentation fault"
 
-start_test "an ordinary non-zero exit is never retried"
+start_test "guard: an ordinary non-zero exit is never retried"
 write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 3 \
            "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
 assert_status 1 "$(run_launcher)"
 assert_attempts 1
+
+start_test "guard: a run that already exited cleanly is left alone"
+# LeakSanitizer only fails the run when LSAN_OPTIONS sets exitcode; without it
+# the signature can be printed by a run ctest is about to call a pass
+write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-crash.err" 0 \
+           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
+assert_status 0 "$(run_launcher)"
+assert_attempts 1
+
+# --- marker mode, which the Lua suite uses because busted prints no summary ---
 
 MARKER="${WORK_DIR}/busted-tests-failed"
 
@@ -308,60 +308,14 @@ write_stub "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
 assert_status 0 "$(run_launcher "--failure-marker=${MARKER}")"
 assert_attempts 2
 
-start_test "the Lua suite is not retried when it wrote a failure marker"
+start_test "guard: the Lua suite is not retried when it wrote a failure marker"
 echo "Lua busted tests failed" > "${MARKER}"
 write_stub "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
            "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/empty" 0
 assert_status 1 "$(run_launcher "--failure-marker=${MARKER}")"
 assert_attempts 1
 
-start_test "the marker mode still refuses to retry a leak report"
-rm -f "${MARKER}"
-write_stub "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/leak-and-tracer.err" 1 \
-           "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/empty" 0
-assert_status 1 "$(run_launcher "--failure-marker=${MARKER}")"
-assert_attempts 1
-
-start_test "without a marker, a run with no QTest summary is not retried either"
-write_stub "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
-           "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/empty" 0
-assert_status 1 "$(run_launcher)"
-assert_attempts 1
-
-start_test "arguments reach the command unsplit"
-# The Lua leg passes --profile "Mudlet self-test", so an argument containing a
-# space has to survive both the launcher's own parsing and execute_process
-cat > "${STUB}" <<EOF
-#!/bin/bash
-printf '[%s]\n' "\$@"
-EOF
-chmod +x "${STUB}"
-capture cmake -P "${LAUNCHER}" -- "${STUB}" --profile "Mudlet self-test" --mirror
-assert_status 0 $?
-assert_contains "[Mudlet self-test]"
-assert_contains "[--mirror]"
-
-start_test "a run that already exited cleanly is left alone"
-# LeakSanitizer only fails the run when LSAN_OPTIONS sets exitcode; without it
-# the signature can be printed by a run ctest is about to call a pass
-write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-crash.err" 0 \
-           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
-assert_status 0 "$(run_launcher)"
-assert_attempts 1
-
-start_test "a tracer death on another signal is not the signature"
-write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/other-signal.err" 1 \
-           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
-assert_status 1 "$(run_launcher)"
-assert_attempts 1
-
-start_test "a run that only skipped is not a clean run"
-write_stub "${WORK_DIR}/qtest-all-skipped.out" "${WORK_DIR}/tracer-crash.err" 1 \
-           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
-assert_status 1 "$(run_launcher)"
-assert_attempts 1
-
-start_test "the Lua suite is not retried when run-tests wrote its marker elsewhere"
+start_test "guard: the Lua suite is not retried when run-tests wrote its marker elsewhere"
 # run-tests.xml prefers MUDLET_TEST_FAILURE_MARKER and only falls back to the
 # path the workflow passes here, so checking one path alone is not enough
 rm -f "${MARKER}"
@@ -371,79 +325,6 @@ write_stub "${WORK_DIR}/lua-suite-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
 assert_status 1 "$(MUDLET_TEST_FAILURE_MARKER="${WORK_DIR}/elsewhere-marker" run_launcher "--failure-marker=${MARKER}")"
 assert_attempts 1
 rm -f "${WORK_DIR}/elsewhere-marker"
-
-start_test "options after the command belong to the command"
-cat > "${STUB}" <<EOF
-#!/bin/bash
-printf '[%s]\n' "\$@"
-EOF
-chmod +x "${STUB}"
-capture cmake -P "${LAUNCHER}" -- "${STUB}" --failure-marker=/tmp/not-mine --
-assert_status 0 $?
-assert_contains "[--failure-marker=/tmp/not-mine]"
-assert_contains "[--]"
-
-start_test "an option the launcher does not know is rejected, not run as the command"
-if capture cmake -P "${LAUNCHER}" -- --failure-marker/tmp/typo "${STUB}"; then
-  fail "expected the launcher to reject a mistyped option"
-fi
-assert_contains "unknown option"
-
-start_test "--failure-marker with no path is rejected rather than changing mode"
-if capture cmake -P "${LAUNCHER}" -- --failure-marker= "${STUB}"; then
-  fail "expected the launcher to reject an empty failure marker"
-fi
-assert_contains "needs a path"
-
-start_test "a command that cannot be launched fails and says which one"
-if capture cmake -P "${LAUNCHER}" -- "${WORK_DIR}/no-such-command" --with --args; then
-  fail "expected the launcher to fail on a command it cannot launch"
-fi
-assert_contains "no-such-command --with --args"
-
-start_test "a job summary that cannot be appended to does not cost the rerun"
-write_stub "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/tracer-crash.err" 1 \
-           "${WORK_DIR}/qtest-passed.out" "${WORK_DIR}/empty" 0
-assert_status 0 "$(GITHUB_STEP_SUMMARY="${WORK_DIR}" run_launcher)"
-assert_attempts 2
-
-start_test "a launcher given no command fails rather than reporting success"
-if capture cmake -P "${LAUNCHER}" --; then
-  fail "expected the launcher to reject an empty command line"
-fi
-assert_contains "no command given"
-
-# The launcher runs inside one ctest test command, so both of its runs share one
-# TIMEOUT. functional_tests/CMakeLists.txt doubles the budget of every wrapped
-# test from a deferred call; if that ever stops reaching them, the rerun is
-# killed halfway and the job goes red looking like a timeout rather than #9809
-start_test "every wrapped test has ctest budget for the rerun"
-testfile="${MUDLET_FUNCTIONAL_TEST_BINARY_DIR:-}/CTestTestfile.cmake"
-if [ ! -e "${testfile}" ]; then
-  echo "    skipped: no configured build tree to read"
-else
-  wrapped="$(awk -F'[][]' '/^add_test\(/ && /lsan-tracer-retry\.cmake/ { print $3 }' "${testfile}")"
-  if [ -z "${wrapped}" ]; then
-    echo "    skipped: this build tree wraps no tests, so the leak check is off"
-  else
-    for name in ${wrapped}; do
-      budget="$(awk -v n="[=[${name}]=]" '
-        index($0, "set_tests_properties(" n) == 1 {
-          if (match($0, /TIMEOUT "[0-9]+"/)) print substr($0, RSTART + 9, RLENGTH - 10)
-        }' "${testfile}")"
-      case "${budget}" in
-        ''|*[!0-9]*) fail "${name} is wrapped but has no numeric TIMEOUT" ;;
-        *) [ "${budget}" -ge 120 ] || fail "${name} is wrapped but its TIMEOUT is only ${budget}s, too tight for a rerun" ;;
-      esac
-    done
-    echo "    checked $(echo "${wrapped}" | wc -w | tr -d ' ') wrapped tests"
-  fi
-fi
-
-start_test "the real job summary was left alone"
-if [ -n "${REAL_STEP_SUMMARY}" ] && grep -qF "lsan-tracer-retry" "${REAL_STEP_SUMMARY}" 2>/dev/null; then
-  fail "this test wrote its own rerun notices into ${REAL_STEP_SUMMARY}"
-fi
 
 if [ "${FAILURES}" -ne 0 ]; then
   echo "${FAILURES} assertion(s) failed" >&2

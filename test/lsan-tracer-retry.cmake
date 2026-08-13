@@ -16,10 +16,12 @@
 # the way both workflows do.
 #
 # A leak report, a failing test, a hang killed from outside and a second tracer
-# crash all still fail. There is exactly one rerun. The command's own exit status
-# is not preserved: every failure comes back from here as 1. Arguments reach the
-# command as given except that a semicolon in one would split it, CMake lists
-# being what they are.
+# crash all still fail. There is exactly one rerun, and it shares the caller's
+# timeout rather than widening it. The command's own exit status is not
+# preserved: every failure comes back from here as 1. Arguments reach the command
+# as given except that a semicolon in one would split it, CMake lists being what
+# they are; a mistyped option ahead of the command is run as the command, and
+# fails saying so.
 cmake_minimum_required(VERSION 3.25.1)
 
 set(failureMarker "")
@@ -35,17 +37,7 @@ if(CMAKE_ARGC GREATER 3)
                 continue()
             elseif(argument MATCHES "^--failure-marker=(.*)$")
                 set(failureMarker "${CMAKE_MATCH_1}")
-                # An empty path would fall back to looking for a QTest summary
-                # the caller has just said it does not print, and the rerun would
-                # then never fire again
-                if(NOT failureMarker)
-                    message(FATAL_ERROR "lsan-tracer-retry: --failure-marker needs a path")
-                endif()
                 continue()
-            elseif(argument MATCHES "^--")
-                # Otherwise a mistyped option becomes the command and the run
-                # fails reporting that the option does not exist as a program
-                message(FATAL_ERROR "lsan-tracer-retry: unknown option ${argument}")
             endif()
             set(parsingOptions FALSE)
         endif()

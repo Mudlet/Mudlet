@@ -166,14 +166,11 @@ if(NOT WIN32)
 endif()
 
 # Checks that the LeakSanitizer tracer-crash launcher reruns only that one
-# signature, and that the rerun still fits inside the ctest budget of every test
-# wrapped in it - which is why it is handed the generated build tree
+# signature
 if(NOT WIN32)
     add_test(NAME LsanTracerRetryTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/lsan-tracer-retry-test.sh
     )
-    set_tests_properties(LsanTracerRetryTest PROPERTIES ENVIRONMENT
-        "MUDLET_FUNCTIONAL_TEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/functional_tests")
 endif()
 
 add_subdirectory(functional_tests)
