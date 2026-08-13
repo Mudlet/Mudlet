@@ -36,6 +36,7 @@ set(FUNCTIONAL_TEST_SOURCES
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
+    ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
     ClearWindowLogTest.cpp
     XMLexportVariablesTest.cpp
