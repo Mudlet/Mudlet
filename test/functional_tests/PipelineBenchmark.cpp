@@ -199,7 +199,7 @@ private:
         return out;
     }
 
-    // A realistic ~three-dozen always-active trigger mix. Some patterns never
+    // A realistic ~four-dozen always-active trigger mix. Some patterns never
     // match, so the miss path is costed too. Lua-code matchers are excluded and
     // every trigger carries an empty script, so a match runs the full regex +
     // capture path (the cost we want) but TTrigger::execute() returns before any
@@ -261,6 +261,23 @@ private:
 
         for (const QString& s : {qsl("You are"), qsl("The"), qsl("HP:"), qsl("You gain")}) {
             addKind({s}, REGEX_BEGIN_OF_LINE_SUBSTRING, false);
+        }
+
+        // Exact-match patterns cost the whole line on every call, so they are
+        // costed at the same count as the substring group.
+        for (const QString& s : {qsl("You are hungry."),
+                                 qsl("You are thirsty."),
+                                 qsl("It is pitch black."),
+                                 qsl("The door is closed."),
+                                 qsl("You have no keys."),
+                                 qsl("Nothing happens."),
+                                 qsl("You feel better."),
+                                 qsl("Your wounds close."),
+                                 qsl("The orc dies."),
+                                 qsl("You are hidden."),
+                                 qsl("A cool breeze blows."),
+                                 qsl("You cannot go that way.")}) {
+            addKind({s}, REGEX_EXACT_MATCH, false);
         }
 
         addColor(1, TTrigger::scmIgnored);
