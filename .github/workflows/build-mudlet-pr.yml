@@ -363,8 +363,8 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         WITH_SANITIZERS: ${{ matrix.enable_asan == 'true' && 'YES' || 'NO' }}
-        # The name of the sanitizer(s) to use need to be Initial capital case and semi-colon separated
-        MUDLET_SANITIZERS: ${{ matrix.enable_asan == 'true' && 'Address' || '' }}
+        # The name of the sanitizer(s) to use (semi-colon separated if more than one)
+        MUDLET_SANITIZERS: ${{ matrix.enable_asan == 'true' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache

@@ -2,15 +2,17 @@ include(${CMAKE_SOURCE_DIR}/3rdparty/cmake-scripts/sanitizers.cmake)
 
 if(DEFINED ENV{MUDLET_SANITIZERS} AND NOT "$ENV{MUDLET_SANITIZERS}" STREQUAL "")
 
-    # The available sanitizers are OS dependent - we ought to account for that
+    # The available sanitizers are OS dependent - we ought to account for that - convert the provided
+    # values to lower case as that is what set_sanitizer_options(...) uses:
     set(SANITIZERS_SELECTED "$ENV{MUDLET_SANITIZERS}")
+    string(TOLOWER SANITIZERS_SELECTED $SANITIZERS_SELECTED)
 
     # Only set the options on sanitizers we are using - otherwise an unneeded
     # availability/compatibility check is done for each one:
-    LIST(FIND SANITIZERS_SELECTED "Address" HAS_ADDRESS)
-    LIST(FIND SANITIZERS_SELECTED "Thread" HAS_THREAD)
-    LIST(FIND SANITIZERS_SELECTED "Memory" HAS_MEMORY)
-    LIST(FIND SANITIZERS_SELECTED "MemoryWithOrigins" HAS_MEMORYWITHORIGINS)
+    LIST(FIND SANITIZERS_SELECTED "address" HAS_ADDRESS)
+    LIST(FIND SANITIZERS_SELECTED "thread" HAS_THREAD)
+    LIST(FIND SANITIZERS_SELECTED "memory" HAS_MEMORY)
+    LIST(FIND SANITIZERS_SELECTED "memoryWithOrigins" HAS_MEMORYWITHORIGINS)
     if ("${HAS_ADDRESS}" GREATER_EQUAL 0)
         set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
     endif()
