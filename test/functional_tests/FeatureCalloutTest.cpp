@@ -53,7 +53,11 @@ private:
 
     QString dismissedKey() const { return qsl("whatsNew/%1/dismissed").arg(mFeatureId); }
 
+    QString shownCountKey() const { return qsl("whatsNew/%1/shownCount").arg(mFeatureId); }
+
     bool dismissed() const { return mudlet::getQSettings()->value(dismissedKey(), false).toBool(); }
+
+    int shownCount() const { return mudlet::getQSettings()->value(shownCountKey(), 0).toInt(); }
 
     int anchorCentre() const { return mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0)).x(); }
 
@@ -93,6 +97,7 @@ private slots:
     void init()
     {
         mudlet::getQSettings()->remove(dismissedKey());
+        mudlet::getQSettings()->remove(shownCountKey());
         mpWindow = new QWidget;
         mpWindow->resize(400, 300);
         mpWindow->move(80, 80);
@@ -163,6 +168,49 @@ private slots:
 
         QVERIFY2(anchorCentre() != centreBefore, "the window did not actually move, so nothing was re-anchored");
         QCOMPARE(callout->x() + callout->width() / 2, anchorCentre());
+    }
+
+    // A balloon the player keeps ignoring gives up after a set number of
+    // appearances, so coming back to Mudlet must not count as one of them
+    void test_comingBackDoesNotSpendAnotherAppearance()
+    {
+        auto* callout = shownCallout();
+        QCOMPARE(shownCount(), 1);
+
+        for (int i = 0; i < 3; ++i) {
+            callout->slot_applicationStateChanged(Qt::ApplicationInactive);
+            callout->slot_applicationStateChanged(Qt::ApplicationActive);
+        }
+
+        QVERIFY2(callout->isVisible(), "the callout stopped coming back part way through");
+        QCOMPARE(shownCount(), 1);
+    }
+
+    void test_anAnchorThatIsNotOnScreenSpendsNothing()
+    {
+        mpAnchor->hide();
+
+        auto* callout = new TFeatureCallout(mFeatureId, mpAnchor, qsl("Title"), qsl("Body"));
+        callout->showAnchored();
+
+        QVERIFY2(!callout->isVisible(), "the callout appeared pointing at an anchor that is not on screen");
+        QCOMPARE(shownCount(), 0);
+    }
+
+    void test_doesNotComeBackToAnAnchorThatWentAway()
+    {
+        QPointer<TFeatureCallout> callout = shownCallout();
+
+        callout->slot_applicationStateChanged(Qt::ApplicationInactive);
+        mpAnchor->hide();
+        if (callout) {
+            callout->slot_applicationStateChanged(Qt::ApplicationActive);
+        }
+        // the balloon closes itself, which is a deferred delete
+        QTest::qWait(50);
+
+        QVERIFY2(!callout || !callout->isVisible(), "the callout came back pointing at an anchor that is no longer on screen");
+        QVERIFY2(!dismissed(), "the anchor going away was recorded as the player having dealt with the callout");
     }
 
     void test_gotItStillDismissesForGood()

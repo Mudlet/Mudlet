@@ -396,6 +396,54 @@ private slots:
         QVERIFY2(!host->mUndoServerWrap, "a redundant click changed the setting");
     }
 
+    void test_linkColourFollowsTheConsoleBackground()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mpConsole->buffer.mWrapAt = 500;
+
+        QStringList func(qsl("noop()"));
+        QStringList hint(qsl("a link"));
+
+        const QString onDark = qsl("a link against a dark background");
+        host->mBgColor = QColor(Qt::black);
+        host->mpConsole->echoLink(onDark, func, hint, false);
+        host->mpConsole->print("\n");
+        QVERIFY2(waitForLineInBuffer(onDark), "the link was not printed against the dark background");
+        const TChar dark = firstCharacterOf(onDark);
+
+        const QString onLight = qsl("a link against a light background");
+        host->mBgColor = QColor(Qt::white);
+        host->mpConsole->echoLink(onLight, func, hint, false);
+        host->mpConsole->print("\n");
+        QVERIFY2(waitForLineInBuffer(onLight), "the link was not printed against the light background");
+        const TChar light = firstCharacterOf(onLight);
+
+        QVERIFY2(dark.foreground() != light.foreground(), "the link colour did not follow the console background at all");
+        QVERIFY2(light.foreground() == QColor(Qt::blue), "a light background did not keep the darker blue that reads best on it");
+        QVERIFY2(contrastRatio(dark.foreground(), dark.background()) > 4.5, "the link does not contrast enough with a dark console background");
+        QVERIFY2(contrastRatio(light.foreground(), light.background()) > 4.5, "the link does not contrast enough with a light console background");
+    }
+
+    void test_settingIsNotAnnouncedInALaterSession()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mpConsole->buffer.mWrapAt = 500;
+        // what a profile that was offered the hint months ago comes back as
+        host->mServerWrapHintShown = true;
+        QVERIFY(!host->mServerWrapHintShownThisSession);
+
+        host->mLuaInterpreter.compileAndExecuteScript(qsl("setConfig(\"undoServerWrap\", true)"));
+        QVERIFY(host->mUndoServerWrap);
+        QTest::qWait(100);
+
+        QVERIFY2(!bufferHasLine(qsl("[ INFO ]  - Mudlet now undoes the game's wrapping, so triggers see whole lines:")),
+                 "a profile that saw the hint in an earlier session was reported to, with no hint on screen to report against");
+    }
+
     void test_settingIsNotAnnouncedWithoutTheHint()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
