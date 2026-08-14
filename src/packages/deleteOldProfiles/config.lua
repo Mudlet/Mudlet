@@ -30,5 +30,5 @@ The following files are NOT deleted:
 > delete old maps 10    -- deletes maps older than 10 days
 ```
 ]]
-version = [[1]]
+version = [[2]]
 created = "2024-08-24T08:26:45+02:00"

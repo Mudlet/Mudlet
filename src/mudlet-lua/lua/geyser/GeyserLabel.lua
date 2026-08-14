@@ -514,8 +514,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setDoubleClickCallback (func, ...)
   setLabelDoubleClickCallback(self.name, func, ...)
-  self.doubleclickCallback = func
-  self.doubleclickArgs = { ... }
+  self.doubleClickCallback = func
+  self.doubleClickArgs = { ... }
 end
 
 --- Sets a callback to be used when a mouse click is released over this label. When this

@@ -53,8 +53,10 @@
 					<string>tells the</string>
 					<string>You tell</string>
 					<string>whispers to you</string>
+					<string>You gossip</string>
 				</regexCodeList>
 				<regexCodePropertyList>
+					<integer>0</integer>
 					<integer>0</integer>
 					<integer>0</integer>
 					<integer>0</integer>
@@ -155,6 +157,26 @@
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
 						<string>^\w[\w'-]* tells the (?:group|formation)\b</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you gossip</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You gossip[^,:]{0,20}(?::|,?\s*['"])</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>
@@ -594,6 +616,7 @@ local chatPatterns = {
   { regex = [=[^You tell the (?:group|formation)\b]=] },
   { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
   { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=] },
+  { regex = [=[^You gossip[^,:]{0,20}(?::|,?\s*['"])]=] },
   { regex = [=[^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]]=] },
