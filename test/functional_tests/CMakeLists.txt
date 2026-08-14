@@ -26,11 +26,13 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
+    MapAreaReassignmentTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
+    TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
     CopyAsImageTest.cpp
@@ -53,6 +55,7 @@ set(FUNCTIONAL_TEST_SOURCES
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
+    StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
     NarrowWindowWrapTest.cpp
@@ -67,6 +70,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
+    StarterUiGaugePanelTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
     WindowBackgroundTest.cpp
@@ -111,15 +115,26 @@ if(REGISTER_PERF_BENCHMARK)
         TIMEOUT 600)
 endif()
 
-# These still leak and stay unchecked until their defects are fixed:
-# - dlgTriggerEditorUndoRedoTest: never destroys its dlgTriggerEditor, leaving
-#   ~3.4MB of tree-item QIcon/QPixmap behind
-# - NewReleaseDialogTeardownTest: Qt's one-time system CA-certificate store load
-#   on first TLS use, cached for the process lifetime
+# Tests that run with the leak check off:
+# - dlgTriggerEditorUndoRedoTest still leaks, never destroying its
+#   dlgTriggerEditor and leaving ~3.4MB of tree-item QIcon/QPixmap behind
+# - NewReleaseDialogTeardownTest still leaks, on Qt's one-time system
+#   CA-certificate store load on first TLS use, cached for the process lifetime
+# - TriggerSameLineMatchTest replaces ASAN_OPTIONS further down to add an RSS
+#   ceiling, which drops detect_leaks with it
 set(leakCheckExcludedTests
     dlgTriggerEditorUndoRedoTest
     NewReleaseDialogTeardownTest
+    TriggerSameLineMatchTest
 )
+
+# Apple's ASan runtime has no LeakSanitizer, so detect_leaks is only meaningful
+# where the address or leak sanitizer is actually compiled in
+if(NOT APPLE AND "${USE_SANITIZER}" MATCHES "[Aa]ddress|[Ll]eak")
+    set(leakCheckAvailable TRUE)
+else()
+    set(leakCheckAvailable FALSE)
+endif()
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
@@ -128,15 +143,30 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
-    # Apple's ASan runtime has no LeakSanitizer
-    if(APPLE OR test_name IN_LIST leakCheckExcludedTests)
-        set(leakCheck "detect_leaks=0")
-    else()
+    if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         set(leakCheck "detect_leaks=1")
+        # The tracer prints the stack and TLS range of each thread as it reaches
+        # it, so the last one before a crash names the range it died scanning -
+        # the one thing the crash line alone does not say (#9809). Seven lines a
+        # run; LeakSanitizer's own hint also suggests verbosity=1, which adds
+        # ~2400 lines of allocator poisoning traffic and no extra diagnosis.
+        set(leakLog "LSAN_OPTIONS=log_threads=1;")
+        # Every leak-checked exit is another chance to hit LeakSanitizer's tracer
+        # crash, which fails the run without reporting a leak (#9809), so these
+        # go through a launcher that reruns that one signature once. The rerun
+        # shares the test's TIMEOUT rather than widening it: overrunning the
+        # budget is the right outcome for a hang, and the crash is rare enough
+        # that blunting every test's hang detection to make room costs more.
+        add_test(NAME ${test_name} COMMAND ${CMAKE_COMMAND} -P
+            ${CMAKE_SOURCE_DIR}/test/lsan-tracer-retry.cmake --
+            $<TARGET_FILE:${test_name}>)
+    else()
+        set(leakCheck "detect_leaks=0")
+        set(leakLog "")
+        add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     endif()
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
@@ -152,13 +182,17 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # A regression in the self-re-creating-trigger cases does not fail, it hangs and
 # grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
 # into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
-# again.
+# again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
 set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
     TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
+
+# TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
+# times per method, so it needs a longer timeout
+set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
 
 # GlyphOverflowTest creates a fresh profile per test method and sweeps two font
 # families across 22 sizes, so it needs a longer timeout
@@ -192,9 +226,18 @@ if(mediaLoopTestBackend)
     set_property(TEST TMediaLoopTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
 
+# StarterUiSectionsTest creates a fresh profile per test method and one of them
+# waits out the delay before the interface comes back on duty, so it needs a
+# longer timeout
+set_tests_properties(StarterUiSectionsTest PROPERTIES TIMEOUT 300)
+
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest MapCloseDuringImportTest PROPERTIES TIMEOUT 300)
+
+# MapAreaReassignmentTest reports a cost curve built from thousands of rooms,
+# which takes minutes rather than milliseconds if the quadratic term returns
+set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)

@@ -289,6 +289,11 @@ bool TRoomDB::__removeRoom(int id)
                     r->setOut(-1);
                 }
                 r->removeAllSpecialExitsToRoom(id);
+                // The plain setters above do not touch the area exit records,
+                // which still name the room that is going away:
+                if (TArea* pEnteringRoomArea = getArea(r->getArea())) {
+                    pEnteringRoomArea->determineAreaExitsOfRoom(r->getId());
+                }
             }
             ++i;
         }

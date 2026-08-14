@@ -47,6 +47,7 @@ set(UNIT_TESTS
     OAuthClientFlowTest
     DiscordTest
     TTextEditBlinkTest
+    TAreaSpanIndexTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
     TKeySequenceEditTest
@@ -162,6 +163,14 @@ endif()
 if(NOT WIN32)
     add_test(NAME MilestoneResolutionTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/milestone-resolution-test.sh
+    )
+endif()
+
+# Checks that the LeakSanitizer tracer-crash launcher reruns only that one
+# signature
+if(NOT WIN32)
+    add_test(NAME LsanTracerRetryTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/lsan-tracer-retry-test.sh
     )
 endif()
 
