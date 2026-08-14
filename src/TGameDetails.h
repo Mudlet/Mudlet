@@ -830,6 +830,24 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "Old-school depth. Modern access. New players welcome."),
              true}, // icesus-loader installs Icesus' own interface
+            {qsl("PhoenixMUD"),
+             qsl("phoenixmud.net"),
+             4000,
+             false,
+             qsl("<a href='https://phoenixmud.net'>Website</a><br>"
+                 "<a href='https://phoenixmud.net/PhoenixMUD.mpackage'>Mudlet package</a>"),
+             qsl(":/icons/phoenixmud_480x120.png"),
+             qsl("PhoenixMUD is a free classic DikuMUD, online since 1996. 20,685 rooms across "
+                 "276 zones, 16 classes and 15 races, and 400+ levels of progression: 1-100 to "
+                 "Hero, then three full remort climbs."
+                 "\n\n"
+                 "Our official Mudlet package installs itself on connect: GMCP vitals and effects "
+                 "panes, channel routing into chat windows, and an embedded mapper preloaded with "
+                 "the whole world. The browser client adds a World Atlas: a live map with "
+                 "fog-of-war and route-finding."
+                 "\n\n"
+                 "No payment of any kind, and character creation is open. Actively developed, with "
+                 "a friendly community that makes room for newcomers. New players welcome.")},
             };
     // clang-format on
 };

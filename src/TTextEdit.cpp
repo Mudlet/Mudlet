@@ -1317,7 +1317,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawPixmap(0, 0, pixmap);
     if (!noCopy) {
-        mScreenMap = pixmap.copy();
+        mScreenMap = pixmap;
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
