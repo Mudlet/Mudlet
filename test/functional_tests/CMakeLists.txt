@@ -51,6 +51,7 @@ set(FUNCTIONAL_TEST_SOURCES
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
     PackageRemovalSaveTeardownTest.cpp
+    TutorialInvitationGateTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
