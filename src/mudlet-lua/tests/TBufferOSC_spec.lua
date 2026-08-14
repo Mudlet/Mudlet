@@ -272,4 +272,46 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   end)
 
+  -- A CSI parameter string may only carry one of '<', '=', '>' or '?' in its
+  -- FIRST byte, where it marks a private/reserved sequence that Mudlet does not
+  -- interpret; after that only "0-9:;" are allowed. Getting those two sets the
+  -- wrong way round leaves the tail of such a sequence on screen as game text.
+  describe("Tests private/reserved CSI sequences", function()
+
+    it("should consume a private DEC sequence that hides the cursor", function()
+      assert.is_true(feedTriggers("CSIPRIV1(\027[?25l)CSIPRIV1\n"))
+      assert.equals("CSIPRIV1()CSIPRIV1", findRecentLine("CSIPRIV1"))
+    end)
+
+    it("should consume a private DEC sequence with a multi-digit parameter", function()
+      assert.is_true(feedTriggers("CSIPRIV2(\027[?1049h)CSIPRIV2\n"))
+      assert.equals("CSIPRIV2()CSIPRIV2", findRecentLine("CSIPRIV2"))
+    end)
+
+    it("should consume a reserved sequence introduced by '<'", function()
+      assert.is_true(feedTriggers("CSIPRIV3(\027[<0;10;10M)CSIPRIV3\n"))
+      assert.equals("CSIPRIV3()CSIPRIV3", findRecentLine("CSIPRIV3"))
+    end)
+
+    it("should carry a private sequence split across two packets", function()
+      assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
+      assert.is_true(feedTriggers("l)CSISPLIT1\n"))
+      assert.equals("CSISPLIT1()CSISPLIT1", findRecentLine("CSISPLIT1"))
+    end)
+
+    -- Guards the other direction: an ordinary digit-initial parameter string and
+    -- an empty one must still reach the SGR handler and leave no text behind.
+    it("should still consume a digit-initial SGR sequence", function()
+      assert.is_true(feedTriggers("CSISGR1(\027[0;32mgreen\027[0m)CSISGR1\n"))
+      assert.equals("CSISGR1(green)CSISGR1", findRecentLine("CSISGR1"))
+    end)
+
+    it("should still consume an SGR sequence with no parameters", function()
+      assert.is_true(feedTriggers("CSISGR2(\027[mplain)CSISGR2\n"))
+      assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
+    end)
+
+  end)
+
+
 end)
