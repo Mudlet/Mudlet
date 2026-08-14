@@ -680,11 +680,15 @@ local chatTabs = {
 }
 
 function BaseUI.routeChatLine(family)
-  -- several shapes can match the same line - copy it only once
-  if BaseUI.gmcpChat or BaseUI.dormant() or getLineNumber() == BaseUI.lastChatLine then
+  if BaseUI.gmcpChat or BaseUI.dormant() then
     return
   end
-  BaseUI.lastChatLine = getLineNumber()
+  -- several shapes can match the same line - copy it only once
+  local lineNumber = getLineNumber()
+  if lineNumber == BaseUI.lastChatLine then
+    return
+  end
+  BaseUI.lastChatLine = lineNumber
   selectCurrentLine()
   copy()
   deselect()
@@ -1453,18 +1457,30 @@ function BaseUI.build()
   BaseUI.maybeAnnounce()
 end
 
+-- A chat line landing in a tab you are not looking at repaints all three tabs,
+-- and every setStyleSheet has Qt reparse a stylesheet, while all that moved is
+-- one unread count. Geyser paints these labels from .stylesheet, .message and
+-- .fgColor and keeps them up to date, so reading them back repaints only what
+-- changed - but a label written past Geyser, with rawEcho or a bare
+-- setLabelStyleSheet, would go unnoticed here.
 function BaseUI.refreshChatTabs()
   for _, tab in ipairs(chatTabs) do
     local label = BaseUI.chatTabLabels and BaseUI.chatTabLabels[tab.key]
     if label then
       local active = BaseUI.activeChatTab == tab.key
-      label:setStyleSheet(active and tabCss.active or tabCss.inactive)
+      local css = active and tabCss.active or tabCss.inactive
+      if label.stylesheet ~= css then
+        label:setStyleSheet(css)
+      end
       local text = tab.label
       local unread = BaseUI.unread[tab.key]
       if unread &gt; 0 and not active then
         text = string.format("%s (%d)", tab.label, math.min(unread, 99))
       end
-      label:echo(text, active and theme.text or theme.textDim)
+      local color = active and theme.text or theme.textDim
+      if label.message ~= text or label.fgColor ~= color then
+        label:echo(text, color)
+      end
     end
   end
 end

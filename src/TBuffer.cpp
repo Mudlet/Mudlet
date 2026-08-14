@@ -4808,6 +4808,27 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     if (text.isEmpty()) {
         return;
     }
+    wrapAndTrimAfterAppend(lastLineBeforeWrap, lastLineLength);
+}
+
+// Text already in a buffer, moved rather than arriving: appendLine() reads it
+// for the "!osc8-docs" easter egg, which would swallow the text it is given and
+// print the documentation into the main console instead. That could not happen
+// while these callers went a character at a time, and copying a line must never
+// be able to lose it.
+void TBuffer::appendRun(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
+{
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+    appendCharacters(text, sub_start, sub_end, fgColor, bgColor, flags, linkID);
+    if (text.isEmpty()) {
+        return;
+    }
+    wrapAndTrimAfterAppend(lastLineBeforeWrap, lastLineLength);
+}
+
+void TBuffer::wrapAndTrimAfterAppend(const int lastLineBeforeWrap, const int lastLineLength)
+{
     // optimization: if the lastLine length hasn't changed,
     // skip it and wrap subsequent lines
     if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
@@ -4848,6 +4869,15 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
             mainBuffer.injectOSC8DocumentationExamples();
         }
         return; // Don't display the trigger phrase itself
+    }
+
+    appendCharacters(text, sub_start, sub_end, fgColor, bgColor, flags, linkID);
+}
+
+void TBuffer::appendCharacters(const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID)
+{
+    if (sub_end < 0) {
+        return;
     }
 
     int lastLine = buffer.size() - 1;
@@ -4941,7 +4971,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 
 // This is very poorly designed as P2 is used to determine the last character to
 // copy BUT no consideration is given to P2.y() != p1.y() i.e. a copy of more
-// than a single line - and it copies a single QChar at a time....
+// than a single line.
 TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
     TBuffer slice(mpHost);
@@ -4956,11 +4986,12 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
         x = 0; // Reset x to start of line if out of bounds
     }
-    int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size()) - 1); // Correct P2.x() to prevent out-of-bounds
+    const int lastCharacter = std::min(P2.x(), static_cast<int>(buffer.at(y).size()) - 1); // Correct P2.x() to prevent out-of-bounds
 
     int oldLinkId{}, id{};
-    for (; x <= P2x_corrected; ++x) {
-        const int linkId = buffer.at(y).at(x).linkIndex();
+    for (int runStart = x; runStart <= lastCharacter;) {
+        const TChar& format = buffer.at(y).at(runStart);
+        const int linkId = format.linkIndex();
         if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
             if (mLinkStore.hasStyling(linkId)) {
@@ -4972,8 +5003,15 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         if (!linkId) {
             id = 0;
         }
-        const QString s(lineBuffer.at(y).at(x));
-        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags, id);
+        int runEnd = runStart + 1;
+        // a run longer than one call may carry would lose its tail
+        const int runLimit = std::min(lastCharacter, runStart + MAX_CHARACTERS_PER_ECHO - 1);
+        while (runEnd <= runLimit && sameFormatting(buffer.at(y).at(runEnd), format)) {
+            ++runEnd;
+        }
+        const int length = runEnd - runStart;
+        slice.appendRun(lineBuffer.at(y).mid(runStart, length), 0, length, format.mFgColor, format.mBgColor, format.mFlags, id);
+        runStart = runEnd;
     }
     return slice;
 }
@@ -5013,9 +5051,11 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     if (chunk.buffer.empty()) {
         return;
     }
+    const int lastCharacter = static_cast<int>(chunk.buffer.at(0).size()) - 1;
     int oldLinkId{}, id{};
-    for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
-        const int linkId = chunk.buffer.at(0).at(cx).linkIndex();
+    for (int runStart = 0; runStart <= lastCharacter;) {
+        const TChar& format = chunk.buffer.at(0).at(runStart);
+        const int linkId = format.linkIndex();
         if (linkId && (oldLinkId != linkId)) {
             id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
             if (chunk.mLinkStore.hasStyling(linkId)) {
@@ -5026,11 +5066,18 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
         if (!linkId) {
             id = 0;
         }
-        const QString s(chunk.lineBuffer.at(0).at(cx));
-        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags, id);
+        int runEnd = runStart + 1;
+        // a run longer than one call may carry would lose its tail
+        const int runLimit = std::min(lastCharacter, runStart + MAX_CHARACTERS_PER_ECHO - 1);
+        while (runEnd <= runLimit && sameFormatting(chunk.buffer.at(0).at(runEnd), format)) {
+            ++runEnd;
+        }
+        const int length = runEnd - runStart;
+        appendRun(chunk.lineBuffer.at(0).mid(runStart, length), 0, length, format.mFgColor, format.mBgColor, format.mFlags, id);
+        runStart = runEnd;
     }
 
-    append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
+    appendRun(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None, 0);
 }
 
 int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)

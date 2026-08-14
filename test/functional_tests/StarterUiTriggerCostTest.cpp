@@ -300,6 +300,34 @@ private slots:
                  "line the tree routes, and the vitals layer would read it as a prompt. The first difference is in the error console");
     }
 
+    // Repainting all three tabs for every captured line was the whole of what
+    // #9767 measured, and nothing else here would notice the guard in
+    // refreshChatTabs() going away: the counters below all stay correct.
+    void test_aCapturedLineRepaintsOnlyTheTabItChanged()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        feedLine(host, qsl("Bob tells you, 'hello there'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels ~= nil and BaseUI.chatTabLabels.tells ~= nil")), "a captured chat line did not build the chat dock");
+        QVERIFY(runLua(host, chatTabRepaintCounterScript()));
+
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0\nBaseUI.refreshChatTabs()")));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 0 and __starterUi.styles == 0")), "a refresh with nothing changed still repainted a tab");
+
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0")));
+        feedLine(host, qsl("Ann whispers to you, 'psst'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == 2")), "the second tell did not reach the Tells tab");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 1")), "a captured chat line repainted a tab besides the one whose unread count moved");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.styles == 0")), "a captured chat line restyled a tab, though which tab is active had not changed");
+
+        // Switching tabs does change every tab's styling, so the guard must not
+        // hold any of that back.
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0\nBaseUI.selectChatTab('tells')")));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.styles == 2")), "switching tabs did not restyle both the tab left behind and the tab taken up");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels.tells.message == 'Tells'")), "the tab switched to kept its unread badge");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels.all.message == 'All'")), "the tab switched away from grew an unread badge it had not earned");
+    }
+
     // A game that sends chat over GMCP does not need the gates, but the next
     // connection might.
     void test_theChatLayerRetiresOnceGmcpChatAppears()
@@ -508,6 +536,28 @@ private:
                                             .arg(literal, gate->getName())));
             }
         }
+    }
+
+    // Counts what actually reaches Qt. The wrappers go on the label instances,
+    // which shadow the ones they take from Geyser's class table, so the labels
+    // still paint exactly as they would have.
+    static QString chatTabRepaintCounterScript()
+    {
+        return qsl(R"LUA(
+__starterUi = __starterUi or {}
+__starterUi.echoes, __starterUi.styles = 0, 0
+for _, label in pairs(BaseUI.chatTabLabels) do
+  local echo, setStyleSheet = label.echo, label.setStyleSheet
+  label.echo = function(self, ...)
+    __starterUi.echoes = __starterUi.echoes + 1
+    return echo(self, ...)
+  end
+  label.setStyleSheet = function(self, ...)
+    __starterUi.styles = __starterUi.styles + 1
+    return setStyleSheet(self, ...)
+  end
+end
+)LUA");
     }
 
     static QString treeShapeComparisonScript(const QStringList& treeShapes)

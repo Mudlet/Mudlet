@@ -398,6 +398,16 @@ public:
     bool mEchoingText = false;
 
 private:
+    // Exactly the attributes appendRun() applies, so anything it gains has to be
+    // added here. TChar::operator== will not do: it is non-const, and it also
+    // compares mIsSelected, which is never carried between buffers.
+    static bool sameFormatting(const TChar& lhs, const TChar& rhs)
+    {
+        return lhs.mLinkIndex == rhs.mLinkIndex && lhs.mFlags == rhs.mFlags && lhs.mFgColor == rhs.mFgColor && lhs.mBgColor == rhs.mBgColor;
+    }
+    void appendRun(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID);
+    void appendCharacters(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID);
+    void wrapAndTrimAfterAppend(int lastLineBeforeWrap, int lastLineLength);
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);
