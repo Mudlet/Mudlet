@@ -193,6 +193,41 @@ private slots:
         }
     }
 
+    // With "Force telnet GA signal interpretation off" the GA branch appended a
+    // newline without clearing recvdGA, so every remaining byte of the read
+    // re-entered it and got its own newline. One buffer is fed here because that
+    // guarantees the GA and the text after it share a read, which is the condition
+    // - a socket write could in principle be split. mFORCE_GA_OFF is set directly
+    // because that is what the preference does: cTelnet copies it from the Host at
+    // connect time.
+    void forcedGaOffKeepsTheRestOfTheReadOnOneLine()
+    {
+        const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+        const bool savedGaDriver = mpHost->mTelnet.mGA_Driver;
+        auto restoreFlags = qScopeGuard([this, savedForceGaOff, savedGaDriver]() {
+            mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+            mpHost->mTelnet.mGA_Driver = savedGaDriver;
+        });
+        mpHost->mTelnet.mFORCE_GA_OFF = true;
+
+        const QString trailing = qsl("AFTER-THE-GA this must stay on one line");
+        // A leading newline commits any partial line an earlier test left behind,
+        // so the prompt below cannot be glued onto residue.
+        QByteArray data("\r\nHP:100 MP:50 > ");
+        data += TN_IAC;
+        data += TN_GA;
+        data += trailing.toUtf8();
+        data += "\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        // Pre-fix every byte after the GA became its own line, so no single line
+        // could hold the whole string: this assertion is the regression guard.
+        QVERIFY2(bufferContains(trailing),
+                 "the text following a GA was split up - recvdGA was not cleared in the "
+                 "mFORCE_GA_OFF branch, so every byte after the GA got its own newline");
+    }
+
     // The production route from Lua: feedTelnet() -> loopbackTest() ->
     // processSocketData(). loopbackTest() takes a non-const QByteArray and calls
     // data(), which detaches, so the allocation shape is Qt's choice rather than
