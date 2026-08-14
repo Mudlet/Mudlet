@@ -1230,22 +1230,16 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
         const QSize windowSize = pW->widget()->size();
         const int minValidWidth = 50;
 
-        // Reject obviously invalid sizes
+        // Mid-switch the dock can be a few pixels wide, which nothing can be laid
+        // out in - hand back the last size it really had. Only a size this small
+        // is refused: refusing one that has merely changed a lot would leave the
+        // cache as the yardstick for every size after it, and a window shrunk to
+        // under half its width could never be reported again.
         if (windowSize.width() < minValidWidth) {
             if (mCachedWindowSizes.contains(windowname)) {
                 return mCachedWindowSizes.value(windowname);
             }
             return windowSize;
-        }
-
-        // Reject suspicious shrinkage (more than 50% reduction suggests profile
-        // is transitioning and geometry isn't settled yet)
-        if (mCachedWindowSizes.contains(windowname)) {
-            const QSize cachedSize = mCachedWindowSizes.value(windowname);
-            const double shrinkageRatio = static_cast<double>(windowSize.width()) / cachedSize.width();
-            if (shrinkageRatio < 0.5) {
-                return cachedSize;
-            }
         }
 
         // Size looks valid, cache and return it

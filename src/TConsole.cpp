@@ -2339,18 +2339,19 @@ QSize TConsole::getMainWindowSize() const
     const int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
-    // Reject obviously invalid or suspiciously small sizes during profile switch transitions
-    const int minValidWidth = 50;
-    if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
+    // A profile being switched to gets its geometry over several events, so in
+    // between the console can be a few pixels wide, or shorter than the command
+    // line it has to subtract - which leaves nothing to lay anything out in, so
+    // hand back the last size it really had. Only a size that small is refused:
+    // refusing one that has merely changed a lot would make this the yardstick
+    // every later size is measured against, and since resizeEvent() stores what
+    // this returns, a window shrunk to under half its width could never be
+    // reported again.
+    const int minValidLength = 50;
+    const bool measurementUsable = mainWindowSize.width() >= minValidLength && mainWindowSize.height() >= minValidLength;
+    const bool oldSizeUsable = mOldSize.width() >= minValidLength && mOldSize.height() >= minValidLength;
+    if (!measurementUsable && oldSizeUsable) {
         return mOldSize;
-    }
-
-    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
-    if (mOldSize.width() > 0) {
-        const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
-        if (shrinkageRatio < 0.5) {
-            return mOldSize;
-        }
     }
 
     return mainWindowSize;

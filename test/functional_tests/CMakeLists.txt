@@ -41,6 +41,7 @@ set(FUNCTIONAL_TEST_SOURCES
     InsertTextCapTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
+    MainWindowSizeReportTest.cpp
     ClearWindowLogTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
