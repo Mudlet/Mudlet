@@ -252,6 +252,17 @@ private slots:
 
         host->mTelnet.disconnectIt();
 
+        // An attempt already under way cannot be called off - neither a name lookup nor a connect
+        // in progress can be taken back - so it is given time to run out while the port is still
+        // dead. Without this it is that attempt, and not a retry, that reaches the game below.
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
+                         },
+                         20000),
+                 "the profile was still trying to connect long after the disconnect");
+        QTest::qWait(3s);
+
         const int connectionsBefore = mpServer->connectionCount();
         QVERIFY2(mpServer->restart(), "the stub could not take its port back");
         QTest::qWait(15s);
