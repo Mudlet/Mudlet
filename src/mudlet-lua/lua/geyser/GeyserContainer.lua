@@ -104,16 +104,19 @@ end
 
 --- Responsible for placing/moving/resizing this window to the correct place/size.
 -- Called on window resize events.
-function Geyser.Container:reposition ()
-  local x, y, w, h = self:get_x(), self:get_y(), self:get_width(), self:get_height()
+-- @param skipChildren If true, place only this window, for a caller that walks
+--                     the children itself.
+function Geyser.Container:reposition (skipChildren)
   if self.type ~= "userwindow" then
     moveWindow(self.name, self:get_x(), self:get_y())
     resizeWindow(self.name, self:get_width(), self:get_height())
   end
   -- deal with all children of this container
-  for k, v in pairs(self.windowList) do
-    if k ~= self and not v.nestLabels then
-      v:reposition()
+  if not skipChildren then
+    for k, v in pairs(self.windowList) do
+      if k ~= self and not v.nestLabels then
+        v:reposition()
+      end
     end
   end
 
@@ -278,7 +281,11 @@ end
 -- @param cons Any Lua table that contains appropriate constraint entries.
 function Geyser.Container:set_constraints (cons)
   cons = cons or self
-  Geyser.set_constraints(self, cons, self.container)
+  -- this walk already reaches every descendant, so letting reposition() recurse
+  -- too placed each one again for every ancestor. Self first: ScrollBox:reposition
+  -- zeroes its own origin once placed, and its children are relative to that.
+  Geyser.calc_constraints(self, cons, self.container)
+  self:reposition(true)
   for k, v in pairs(self.windowList) do
     v:set_constraints(v)
   end

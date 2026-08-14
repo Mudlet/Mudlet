@@ -11,8 +11,8 @@ Geyser.MiniConsole = Geyser.Window:new({
   wrapAt = 300, })
 
 --- Override reposition to reset autowrap
-function Geyser.MiniConsole:reposition()
-  self.parent.reposition(self)
+function Geyser.MiniConsole:reposition(skipChildren)
+  self.parent.reposition(self, skipChildren)
   if self.autoWrap then
     self:resetAutoWrap()
   end
