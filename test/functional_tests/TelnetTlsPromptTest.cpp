@@ -293,6 +293,47 @@ private slots:
 #endif
     }
 
+    // The same late answer, but with a connection back up by the time it arrives - so the "is the
+    // socket still there" check passes and the answer looks current. The advertised port belongs
+    // to the connection that has gone, and moving the profile onto it now would be moving it onto
+    // a port this game never mentioned.
+    void test_tlsUpgradeAnswerAfterReconnectingIsDiscarded()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        QByteArray advertise = msspTlsPayload("48000");
+        host->mTelnet.loopbackTest(advertise);
+        QCOMPARE(host->mMSSPTlsPort, 48000);
+
+        const int originalPort = host->getPort();
+        const bool originalSsl = host->mSslTsl;
+
+        QSignalSpy disconnectedSpy(&host->mTelnet, &cTelnet::signal_disconnected);
+        QSignalSpy connectedSpy(&host->mTelnet, &cTelnet::signal_connected);
+        host->mTelnet.disconnectIt();
+        if (disconnectedSpy.isEmpty()) {
+            QVERIFY2(disconnectedSpy.wait(5s), "The connection did not drop.");
+        }
+        host->mTelnet.reconnect();
+        if (connectedSpy.isEmpty()) {
+            QVERIFY2(connectedSpy.wait(5s), "The connection did not come back, so the answer below is not the stale-but-connected case.");
+        }
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("slot_tlsUpgradeResponse.*discarding the user's answer"));
+        host->mTelnet.slot_tlsUpgradeResponse(true);
+
+        QCOMPARE(host->getPort(), originalPort);
+        QCOMPARE(host->mSslTsl, originalSsl);
+#endif
+    }
+
     // A received telnet BELL (0x07) must emit signal_bell() exactly once per
     // bell byte so the frontend can flash/beep without re-alerting on redraws.
     void test_bellEmitsSignalPerBell()
