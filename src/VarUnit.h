@@ -70,6 +70,7 @@ public:
     void removeHidden(const QString& name);
     bool isSaved(TVar*);
     void addPointer(const void*);
+    void clearPointers();
     QString getUnsaveableReason(TVar*);
     QSet<QString> hidden;
     QSet<QString> hiddenByUser;
