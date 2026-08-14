@@ -68,6 +68,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
+    StarterUiGaugePanelTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
     WindowBackgroundTest.cpp
