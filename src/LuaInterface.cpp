@@ -750,6 +750,15 @@ QString LuaInterface::getValue(TVar* var)
     return {};
 }
 
+// The value types a variable can survive a save as: XMLimport hands every element
+// it reads to setValue(), which can rebuild nothing else. A value of any other
+// type is lost across the save, so a saved global holding one anywhere inside it
+// cannot be exported whole (#9857).
+static bool serializableValueType(const int valueType)
+{
+    return valueType == LUA_TTABLE || valueType == LUA_TSTRING || valueType == LUA_TNUMBER || valueType == LUA_TBOOLEAN;
+}
+
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 {
     depth++;
@@ -783,14 +792,22 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             lua_pop(L, 1);
             continue;
         }
-        if (mSavedVarsOnly && depth == 1) {
-            if (!mSavedRootNames.contains(keyName)) {
-                lua_pop(L, 1);
-                continue;
+        if (mSavedVarsOnly) {
+            if (depth == 1) {
+                if (!mSavedRootNames.contains(keyName)) {
+                    lua_pop(L, 1);
+                    continue;
+                }
+                // each saved global is walked in its own dedup scope, so two of them
+                // that reference the same table both get a complete subtree
+                varUnit->clearPointers();
+                mCurrentSavedRootName = keyName;
+            } else if (!serializableValueType(vType)) {
+                // the whole global, not just the table this value sits in: a
+                // script gets the global back as one object, so one member the
+                // save cannot carry makes all of it untrustworthy
+                mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
             }
-            // each saved global is walked in its own dedup scope, so two of them
-            // that reference the same table both get a complete subtree
-            varUnit->clearPointers();
         }
         auto var = new TVar();
         var->setReference(keyIsReference);
@@ -893,11 +910,18 @@ void LuaInterface::getSavedVars()
         // getVars() does not clear this itself, so a later walk on this same
         // interface would inherit the filter
         mSavedVarsOnly = false;
+        // the global the walk died inside was not read to the end, so nothing
+        // says it is one the save can carry whole
+        if (!mCurrentSavedRootName.isEmpty()) {
+            mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
+        }
         qWarning() << "LuaInterface::getSavedVars() WARNING - Lua panicked while reading the saved variables in; the variable tree is incomplete.";
         return;
     }
     mSavedRootNames.clear();
     mTruncatedSavedTables.clear();
+    mSavedRootsHoldingUnsaveableValues.clear();
+    mCurrentSavedRootName.clear();
     for (const QString& savedVarName : std::as_const(varUnit->savedVars)) {
         // savedVars holds dotted paths, but a global's own name may contain a
         // dot as well, so both readings count as a name to walk

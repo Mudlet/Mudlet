@@ -31,13 +31,16 @@ set(FUNCTIONAL_TEST_SOURCES
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
+    SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     InsertTextCapTest.cpp
+    ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
     ClearWindowLogTest.cpp
+    ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp

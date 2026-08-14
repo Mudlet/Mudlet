@@ -419,6 +419,7 @@ private:
     void commitLineData(QString line, std::deque<TChar> chars, char ch);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
+    static bool startsWithListMarker(const QString& line);
     void joinPendingServerWrapOntoCurrent();
     void startServerWrapFlushTimer();
     void recordLineLengthForWrapDetection(qsizetype length);
@@ -616,6 +617,9 @@ private:
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
     static constexpr int csmServerWrapFlushDelayMs = 300;
+    // A longer number opening a line is likelier a year or a price ending a
+    // wrapped sentence than a list number; only "[...]" is trusted past it:
+    static constexpr qsizetype csmMaxListNumberDigits = 3;
     // Wrap detection hint: how many lines ending within 8 characters of a
     // stable ceiling column are needed before suggesting mUndoServerWrap:
     static constexpr int csmWrapDetectThreshold = 40;

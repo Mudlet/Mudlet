@@ -5348,6 +5348,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
                 cleandata = "";
             } else {
                 cleandata.push_back('\n');
+                recvdGA = false;
             }
         }
     } //for
