@@ -26,6 +26,7 @@
 #include <memory>
 
 #include <QCoreApplication>
+#include <QHash>
 #include <QMap>
 #include <QSet>
 #include <QStringList>
@@ -71,13 +72,23 @@ public:
     bool isSaved(TVar*);
     void addPointer(const void*);
     void clearPointers();
+    void clearHiddenTables();
     QString getUnsaveableReason(TVar*);
     QSet<QString> hidden;
     QSet<QString> hiddenByUser;
+    // The identity half of `hidden`: the Lua tables behind those names, so that
+    // one of them reached under a name of the user's own is still recognised.
+    // Only good for as long as those tables live, hence clearHiddenTables() -
+    // and it travels with the private name map, so assigning it alone (as a
+    // save-time copy does, which never un-hides anything) leaves un-hiding a
+    // no-op on the copy.
+    QSet<const void*> hiddenTables;
     QSet<QString> savedVars;
 
 private:
     int countTableItems(TVar*);
+    void rememberHiddenTable(TVar*, const QString& fullName);
+    void forgetHiddenTable(const QString& fullName);
     std::unique_ptr<TVar> base;
     QSet<QString> variableSet;
     // ?? variables
@@ -85,6 +96,8 @@ private:
     // temporary variables
     QMap<QTreeWidgetItem*, TVar*> tVars;
     QSet<const void*> mPointers;
+    // what un-hiding a name has to hand back to hiddenTables
+    QHash<QString, const void*> mHiddenTableByName;
 };
 
 #endif // MUDLET_VARUNIT_H
