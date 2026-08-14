@@ -47,6 +47,7 @@ set(UNIT_TESTS
     OAuthClientFlowTest
     DiscordTest
     TTextEditBlinkTest
+    TAreaSpanIndexTest
     TAreaZLevelIndexTest
     TAreaGridIndexTest
     TKeySequenceEditTest
