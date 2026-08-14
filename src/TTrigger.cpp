@@ -112,8 +112,24 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     mTriggerContainsPerlRegex = false;
 
     if (patternKinds.size() != patterns.size()) {
-        //FIXME: ronny managed to trigger this somehow
-        qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: patternKinds.size() != patterns.size()";
+        // A corrupt or hand-edited save can hold lists of different lengths.
+        // The loop below is bounded by the pattern list but indexes the kind
+        // list, so a pattern with no kind of its own reads past the end of the
+        // kinds. Default that kind rather than drop the pattern: the pattern
+        // text is the user's, and a folder left with no patterns at all stops
+        // gating its children and hands them every line.
+        qWarning().nospace() << "TTrigger::setRegexCodeList(...) ERROR: trigger " << mName << " was saved with " << patterns.size() << " pattern(s) but " << patternKinds.size() << " pattern kind(s)";
+        //: %1 is the name of the trigger. Shown when a saved profile holds a trigger whose list of patterns and list of pattern types are of different lengths.
+        mpHost->postMessage(qsl("[ ERROR ] - %1")
+                                    .arg(tr(R"(The trigger "%1" was saved with a list of patterns and a list of pattern types of different lengths. Any pattern left without a type has been set to )"
+                                            R"(substring and any type left without a pattern dropped, so the trigger can be seen and repaired - until then it will probably not work as expected.)")
+                                                 .arg(mName)));
+
+        if (patternKinds.size() < patterns.size()) {
+            patternKinds.append(QList<int>(patterns.size() - patternKinds.size(), REGEX_SUBSTRING));
+        } else {
+            patternKinds.resize(patterns.size());
+        }
     }
 
     if (existingTrigger && (patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
