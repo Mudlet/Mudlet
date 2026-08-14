@@ -24,7 +24,7 @@
     },
     {
       "name": "macos-debug",
-      "displayName": "macOS Debug (Ninja, AddressSanitizer)",
+      "displayName": "macOS Debug (Ninja)",
       "inherits": "base",
       "condition": {
         "type": "equals",
@@ -33,27 +33,30 @@
       }
     },
     {
-      "name": "macos-debug-nosan",
-      "displayName": "macOS Debug, no sanitizers (fastest build and run)",
+      "name": "macos-debug-asan",
+      "displayName": "macOS Debug, AddressSanitizer",
       "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": ""
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "address"
       }
     },
     {
       "name": "macos-debug-tsan",
       "displayName": "macOS Debug, ThreadSanitizer",
       "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": "Thread"
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "thread"
       }
     },
     {
       "name": "macos-debug-ubsan",
       "displayName": "macOS Debug, UndefinedBehaviorSanitizer",
       "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": "Undefined"
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "undefined"
       }
     },
     {
@@ -66,7 +69,7 @@
     },
     {
       "name": "linux-debug",
-      "displayName": "Linux Debug (Ninja, AddressSanitizer)",
+      "displayName": "Linux Debug (Ninja)",
       "inherits": "base",
       "condition": {
         "type": "equals",
@@ -75,27 +78,30 @@
       }
     },
     {
-      "name": "linux-debug-nosan",
-      "displayName": "Linux Debug, no sanitizers (fastest build and run)",
+      "name": "linux-debug-asan",
+      "displayName": "Linux Debug, AddressSanitizer",
       "inherits": ["variant", "linux-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": ""
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "address"
       }
     },
     {
       "name": "linux-debug-tsan",
       "displayName": "Linux Debug, ThreadSanitizer",
       "inherits": ["variant", "linux-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": "Thread"
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "thread"
       }
     },
     {
       "name": "linux-debug-ubsan",
       "displayName": "Linux Debug, UndefinedBehaviorSanitizer",
       "inherits": ["variant", "linux-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": "Undefined"
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "undefined"
       }
     },
     {
@@ -128,6 +134,60 @@
       "cacheVariables": {
         "CMAKE_PREFIX_PATH": "$env{MSYSTEM_PREFIX}"
       }
+    },
+    {
+      "name": "windows-debug-ubsan",
+      "displayName": "Windows Debug, UndefinedBehaviorSanitizer",
+      "inherits": ["variant", "windows-debug"],
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "undefined"
+      }
+    },
+    {
+      "name": "freebsd-debug",
+      "displayName": "FreeBSD Debug (Ninja)",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "FreeBSD"
+      }
+    },
+    {
+      "name": "freebsd-debug-asan",
+      "displayName": "Freebsd Debug, AddressSanitizer",
+      "inherits": ["variant", "freebsd-debug"],
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "address"
+      }
+    },
+    {
+      "name": "freebsd-debug-tsan",
+      "displayName": "Freebsd Debug, ThreadSanitizer",
+      "inherits": ["variant", "freebsd-debug"],
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "thread"
+      }
+    },
+    {
+      "name": "freebsd-debug-ubsan",
+      "displayName": "Freebsd Debug, UndefinedBehaviorSanitizer",
+      "inherits": ["variant", "freebsd-debug"],
+      "environment": {
+        "USE_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "undefined"
+      }
+    },
+    {
+      "name": "freebsd-static-analysis",
+      "displayName": "Freebsd Debug with clang-tidy and cppcheck",
+      "inherits": ["variant", "freebsd-debug"],
+      "cacheVariables": {
+        "ENABLE_STATIC_ANALYSIS": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -149,25 +209,32 @@
         "rhs": "Linux"
       }
     },
+    {
+      "name": "on-freebsd",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "FreeBSD"
+      }
+    },
     { "name": "macos-debug", "inherits": "on-macos", "configurePreset": "macos-debug" },
-    { "name": "macos-debug-nosan", "inherits": "on-macos", "configurePreset": "macos-debug-nosan" },
+    { "name": "macos-debug-asan", "inherits": "on-macos", "configurePreset": "macos-debug-asan" },
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
     { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
-    { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
+    { "name": "linux-debug-asan", "inherits": "on-linux", "configurePreset": "linux-debug-asan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
     { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
     { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
-    {
-      "name": "linux-lowspec",
-      "inherits": "on-linux",
-      "configurePreset": "linux-lowspec",
-      "jobs": 2
-    },
-    {
-      "name": "windows-debug",
-      "configurePreset": "windows-debug",
+    { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec", "jobs": 2 },
+    { "name": "freebsd-debug", "inherits": "on-freebsd", "configurePreset": "freebsd-debug" },
+    { "name": "freebsd-debug-asan", "inherits": "on-freebsd", "configurePreset": "freebsd-debug-asan" },
+    { "name": "freebsd-debug-tsan", "inherits": "on-freebsd", "configurePreset": "freebsd-debug-tsan" },
+    { "name": "freebsd-debug-ubsan", "inherits": "on-freebsd", "configurePreset": "freebsd-debug-ubsan" },
+    { "name": "freebsd-static-analysis", "inherits": "on-freebsd", "configurePreset": "freebsd-static-analysis" },
+    { "name": "windows-debug", "configurePreset": "windows-debug",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -203,17 +270,31 @@
         "rhs": "Linux"
       }
     },
+    {
+      "name": "on-freebsd",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "FreeBSD"
+      }
+    },
     { "name": "macos-debug", "inherits": "on-macos", "configurePreset": "macos-debug" },
-    { "name": "macos-debug-nosan", "inherits": "on-macos", "configurePreset": "macos-debug-nosan" },
+    { "name": "macos-debug-asan", "inherits": "on-macos", "configurePreset": "macos-debug-asan" },
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
     { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
-    { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
+    { "name": "linux-debug-asan", "inherits": "on-linux", "configurePreset": "linux-debug-asan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
     { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
     { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
     { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec" },
+    { "name": "freebsd-debug", "inherits": "on-freebsd", "configurePreset": "freebsd-debug" },
+    { "name": "freebsd-debug-asan", "inherits": "on-freebsd", "configurePreset": "freebsd-debug-asan" },
+    { "name": "freebsd-debug-tsan", "inherits": "on-freebsd", "configurePreset": "freebsd-debug-tsan" },
+    { "name": "freebsd-debug-ubsan", "inherits": "on-freebsd", "configurePreset": "freebsd-debug-ubsan" },
+    { "name": "freebsd-static-analysis", "inherits": "on-freebsd", "configurePreset": "freebsd-static-analysis" },
     {
       "name": "windows-debug",
       "inherits": "test-defaults",

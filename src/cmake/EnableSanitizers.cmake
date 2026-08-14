@@ -13,6 +13,7 @@ if(DEFINED ENV{MUDLET_SANITIZERS} AND NOT "$ENV{MUDLET_SANITIZERS}" STREQUAL "")
     LIST(FIND SANITIZERS_SELECTED "thread" HAS_THREAD)
     LIST(FIND SANITIZERS_SELECTED "memory" HAS_MEMORY)
     LIST(FIND SANITIZERS_SELECTED "memoryWithOrigins" HAS_MEMORYWITHORIGINS)
+    LIST(FIND SANITIZERS_SELECTED "undefined" HAS_UNDEFINED)
     if ("${HAS_ADDRESS}" GREATER_EQUAL 0)
         set_sanitizer_options(address DEFAULT -fno-omit-frame-pointer)
     endif()
@@ -26,6 +27,12 @@ if(DEFINED ENV{MUDLET_SANITIZERS} AND NOT "$ENV{MUDLET_SANITIZERS}" STREQUAL "")
         set_sanitizer_options(memorywithorigins DEFAULT SANITIZER memory
             -fno-omit-frame-pointer
             -fsanitize-memory-track-origins)
+    endif()
+    # Also if you want UBSan to print symbolized stack trace for each error report you need to run with
+    # UBSAN_OPTIONS=print_stacktrace=1 set in the environment and use UBSAN_OPTIONS=log_path=.... to send
+    # the output to somewhere other than stderr. llvm-symbolizer also needs to be a location in PATH.
+    if ("${HAS_UNDEFINED}" GREATER_EQUAL 0)
+        set_sanitizer_options(memory DEFAULT -g -fno-sanitize-merge -fno-omit-frame-pointer)
     endif()
 
     # add_sanitizer_support(... ) seems to need a space separated string of
