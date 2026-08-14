@@ -78,10 +78,16 @@ public:
     QSet<QString> hiddenByUser;
     // The identity half of `hidden`: the Lua tables behind those names, so that
     // one of them reached under a name of the user's own is still recognised.
-    // Only good for as long as those tables live, hence clearHiddenTables() -
-    // and it travels with the private name map, so assigning it alone (as a
-    // save-time copy does, which never un-hides anything) leaves un-hiding a
-    // no-op on the copy.
+    // An address is only an identity while that table is alive, and Lua hands a
+    // collected one's address back out, so a hidden table dropped since the last
+    // hiding walk can name a live one - which is what clearHiddenTables() bounds
+    // to a single walk. What it costs if that does happen is one ride-along
+    // member of a saved table, since a name the profile saves is checked before
+    // hiding is. Pinning each table with a registry reference would make it
+    // exact, at the price of keeping an uninstalled package's tables alive for
+    // the session.
+    // Travels with the private name map: assigning it alone (as the save-time
+    // copy does, which never un-hides anything) leaves un-hiding a no-op.
     QSet<const void*> hiddenTables;
     QSet<QString> savedVars;
 
