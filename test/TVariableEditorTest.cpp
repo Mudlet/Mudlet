@@ -903,6 +903,56 @@ private slots:
         QVERIFY(!interface->writableByName(var));
     }
 
+    // The tables above a variable are reached by name too, so an ambiguous name
+    // anywhere along the way puts the write somewhere else just as surely.
+    void testNotWritableByNameUnderATableSharingItsNameWithASibling()
+    {
+        execLua(qsl("testTbl = {} testTbl['before\\0after'] = {member = 'first'} testTbl['before'] = {member = 'second'}"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        int checked = 0;
+        for (TVar* ambiguous : table->getChildren(false)) {
+            if (ambiguous->getName() != qsl("before")) {
+                continue;
+            }
+            TVar* member = findChild(ambiguous, qsl("member"));
+            QVERIFY(member);
+            QVERIFY(!interface->writableByName(member));
+            ++checked;
+        }
+        QCOMPARE(checked, 2);
+    }
+
+    // A keyword reads as an identifier but does not parse as one, so the source
+    // the write paths generate for it does not run.
+    void testNotWritableByNameForAGlobalNamedAfterALuaKeyword()
+    {
+        execLua(qsl("_G['end'] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("end"));
+        QVERIFY(var);
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    // The tree is built by iterating the tables, which does not consult
+    // metamethods, so neither does the lookup: what an __index stands in with
+    // once a script removes the real key is a different variable.
+    void testNotWritableByNameWhenOnlyAMetamethodSuppliesTheTable()
+    {
+        execLua(qsl("fallbackTbl = {sub = {member = 'fallback value'}} "
+                    "testTbl = {sub = {member = 'real value'}} "
+                    "setmetatable(testTbl, {__index = fallbackTbl})"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("sub")), qsl("member"));
+        QVERIFY(member);
+        QVERIFY(interface->writableByName(member));
+
+        execLua(qsl("testTbl.sub = nil"));
+        QCOMPARE(getLuaValue(qsl("testTbl.sub.member")), qsl("fallback value"));
+        QVERIFY(!interface->writableByName(member));
+    }
+
     // it walks down to the variable a push at a time, and in the editor that is
     // the profile's own stack, where a slot left behind stays for the session
     void testWritableByNameLeavesTheStackAsItFoundIt()
