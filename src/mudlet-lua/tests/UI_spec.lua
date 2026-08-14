@@ -2426,6 +2426,84 @@ describe("Tests UI functions", function()
       assert.is_nil(result:find("aaa", 1, true))
     end)
 
+    -- Echo a marked line, park the cursor on it, run replaceAll and hand back what
+    -- the line reads afterwards. A budget runs the call under an instruction-count
+    -- hook, so a replaceAll that fails to terminate fails the spec instead of
+    -- hanging the whole suite.
+    local function replaceOnMarkedLine(text, word, what, budget)
+      echo("main", "\n" .. text .. "\n")
+      local lineCount = getLineCount()
+      local target
+      for i = lineCount - 1, math.max(0, lineCount - 8), -1 do
+        moveCursor(0, i)
+        selectCurrentLine()
+        if getCurrentLine():find(text, 1, true) then
+          target = i
+          break
+        end
+      end
+      deselect()
+      assert.is_not_nil(target, "marked line not found in the main console")
+
+      moveCursor(0, target)
+      local terminated, err
+      if budget then
+        local runner = coroutine.create(function() replaceAll(word, what) end)
+        debug.sethook(runner, function() error("replaceAll did not terminate", 0) end, "", budget)
+        terminated, err = coroutine.resume(runner)
+      else
+        terminated, err = pcall(replaceAll, word, what)
+      end
+
+      -- replace() edits the line in place, so its index is still good
+      moveCursor(0, target)
+      selectCurrentLine()
+      local result = getCurrentLine()
+      deselect()
+      moveCursorEnd()
+      return result, terminated, err
+    end
+
+    -- string.find() reported byte offsets while selectSection() indexes characters,
+    -- so any non-ASCII earlier in the line slid the selection to the right
+    it("replaces the right characters when the line contains non-ASCII", function()
+      local result = replaceOnMarkedLine("uiReplaceAllAccent Der H\195\164ndler sagt: John kommt", "John", "Doe")
+      assert.is_truthy(result:find("uiReplaceAllAccent Der H\195\164ndler sagt: Doe kommt", 1, true), "got: " .. result)
+    end)
+
+    -- a three-byte character shifts it by two, and needs no non-English game
+    it("replaces the right characters after a three-byte character", function()
+      local result = replaceOnMarkedLine("uiReplaceAllQuote It\226\128\153s John here", "John", "Doe")
+      assert.is_truthy(result:find("uiReplaceAllQuote It\226\128\153s Doe here", 1, true), "got: " .. result)
+    end)
+
+    -- %a matches an accented letter for utf8.find but not for string.find, whose
+    -- classes are byte-wise and locale-bound
+    it("matches a pattern class against characters, not bytes", function()
+      local result = replaceOnMarkedLine("uiReplaceAllClass caf\195\169 done", "caf%a", "TEA")
+      assert.is_truthy(result:find("uiReplaceAllClass TEA done", 1, true), "got: " .. result)
+    end)
+
+    -- the search used to resume by the PATTERN's length rather than the match's,
+    -- so masking a digit landed back on the digit it had just written
+    it("terminates when the replacement still matches the pattern", function()
+      local result, terminated, err = replaceOnMarkedLine("uiReplaceAllDigits you have 42 gold", "%d", "0", 50000)
+      assert.is_true(terminated, tostring(err))
+      assert.is_truthy(result:find("uiReplaceAllDigits you have 00 gold", 1, true), "got: " .. result)
+    end)
+
+    -- a pattern that can match nothing never advances on its own
+    it("terminates on a pattern that can match the empty string", function()
+      local _, terminated, err = replaceOnMarkedLine("uiReplaceAllEmpty abc", "x*", "-", 50000)
+      assert.is_true(terminated, tostring(err))
+    end)
+
+    -- the shape a script hits when the needle it computed came back empty
+    it("terminates when the search string is empty", function()
+      local _, terminated, err = replaceOnMarkedLine("uiReplaceAllNoNeedle abc", "", "Z", 50000)
+      assert.is_true(terminated, tostring(err))
+    end)
+
     it("hard-errors on non-string arguments", function()
       assert.is_false(pcall(replaceAll, 5, "x"))
       assert.is_false(pcall(replaceAll, "x", 5))
