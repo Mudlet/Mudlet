@@ -24,5 +24,5 @@ See [this forum thread](https://forums.mudlet.org/viewtopic.php?f=13&t=6105) for
 
 See [this forum thread](https://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search&pk_vid=08fcc4383ef3530916874145245184da) for more mapping scripts.
 ]]
-version = [[2.1.9]]
+version = [[2.1.10]]
 created = "2026-07-18T12:00:00+00:00"
