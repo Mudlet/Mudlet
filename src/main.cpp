@@ -228,7 +228,9 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
         }
         confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
     } else {
-        confPath = confDirDefault;
+        // Mirror setupConfig()'s XDG_CONFIG_HOME resolution so this early
+        // Mudlet.ini read looks in the same config root.
+        confPath = utils::xdgConfigDir(confDirDefault).path;
     }
 
     if (confPath.isEmpty()) {
@@ -292,7 +294,7 @@ int main(int argc, char* argv[])
 #ifdef WITH_SENTRY
     initSentry();
     auto sentryClose = qScopeGuard([] {
-        closeSentry();
+        sentry_close();
     });
 #endif
 
@@ -1077,12 +1079,12 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
     if (parser.isSet(startFullscreen)) {
-        QTimer::singleShot(0, [=]() {
+        QTimer::singleShot(0ms, [=]() {
             mudlet::self()->showFullScreen();
         });
     }
 
-    QTimer::singleShot(0, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
@@ -1253,7 +1255,9 @@ bool runUpdate()
         qWarning() << "Launching installer:" << seenUpdatedInstaller.absoluteFilePath();
         QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath(), QStringList());
         return true;
-    } else if (seenUpdatedInstaller.exists()) {
+    }
+
+    if (seenUpdatedInstaller.exists()) {
         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
         if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
             qWarning() << "Couldn't delete old installer:" << seenUpdatedInstaller;

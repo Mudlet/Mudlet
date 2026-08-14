@@ -29,7 +29,10 @@
 #include <QAccessible>
 #include <QDateTime>
 #include <QDebug>
+#include <chrono>
 #include <limits>
+
+using namespace std::chrono_literals;
 
 THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole)
 : QObject(nullptr)
@@ -38,7 +41,7 @@ THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole)
     Q_ASSERT(pConsole);
 
     mpTimer = new QTimer(this);
-    mpTimer->setInterval(100); // Check every 100ms for timer-based concealments
+    mpTimer->setInterval(100ms); // Check every 100ms for timer-based concealments
     connect(mpTimer, &QTimer::timeout, this, &THyperlinkVisibilityManager::slot_checkTimers);
 
     mpOutputGapTimer = new QTimer(this);
@@ -47,7 +50,7 @@ THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole)
 
     mpAnnouncementTimer = new QTimer(this);
     mpAnnouncementTimer->setSingleShot(true);
-    mpAnnouncementTimer->setInterval(300);
+    mpAnnouncementTimer->setInterval(300ms);
     connect(mpAnnouncementTimer, &QTimer::timeout, this, &THyperlinkVisibilityManager::slot_announceHiddenLinks);
 }
 
@@ -180,7 +183,8 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
             performConcealment(link);
             emit visibilityChanged();
             return; // Link was removed from map, must not access reference anymore
-        } else if (link.delayMs > 0 && link.timerActivatedMs == 0) {
+        }
+        if (link.delayMs > 0 && link.timerActivatedMs == 0) {
             // Delayed concealment - start timer
             link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
 #if defined(DEBUG_OSC_PROCESSING)
@@ -596,10 +600,9 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
                     // These phases need the timer even with zero delay
                     hasTimerLinks = true;
                     break;
-                } else {
-                    // Other zero-delay links can be skipped
-                    continue;
                 }
+                // Other zero-delay links can be skipped
+                continue;
             }
 
             if (link.action == TrackedHyperlink::Action::Conceal && !link.isConcealed) {

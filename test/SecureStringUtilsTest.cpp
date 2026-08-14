@@ -20,6 +20,7 @@
 #include <SecureStringUtils.h>
 #include <QtTest/QtTest>
 #include <QVersionNumber>
+#include <string>
 
 class SecureStringUtilsTest : public QObject {
 Q_OBJECT
@@ -142,20 +143,23 @@ void SecureStringUtilsTest::testSecureMemoryClearing()
     QString testString = "sensitive_data";
     QString originalContent = testString;
     
-    // Clear the string
     SecureStringUtils::secureStringClear(testString);
-    
-    // String should be empty after clearing
     QVERIFY(testString.isEmpty());
     QVERIFY(testString != originalContent);
-    
-    // Test QByteArray clearing
+
     QByteArray testArray = "sensitive_bytes";
     QByteArray originalArray = testArray;
-    
+
     SecureStringUtils::secureByteArrayClear(testArray);
     QVERIFY(testArray.isEmpty());
     QVERIFY(testArray != originalArray);
+
+    std::string testStdString = "sensitive_std_data";
+    std::string originalStdString = testStdString;
+
+    SecureStringUtils::secureStdStringClear(testStdString);
+    QVERIFY(testStdString.empty());
+    QVERIFY(testStdString != originalStdString);
 }
 
 void SecureStringUtilsTest::testProfileKeyPersistence()

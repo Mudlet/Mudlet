@@ -1,0 +1,2232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage>
+		<TriggerGroup isActive="no" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Mudlet base UI chat capture</name>
+			<script>-- A gate, then the shapes - the pattern to copy for triggers that have to
+-- watch every line. Each gate matches substrings, no regex engine, and Mudlet
+-- only offers a line to a trigger's children once its own pattern matched. A
+-- trigger with no pattern, like this folder, passes everything through.
+--
+-- Substring patterns are case-sensitive, so every literal a child's regex
+-- needs must appear in its gate's pattern list, spelled the same way. Miss
+-- that and the child silently never sees a line.
+--
+-- It is also why the gates spell out "says" and "You say" rather than the
+-- "say" they share: a gate hit costs a capture list and a script call before
+-- any child regex runs, and "say" would hand all that to every "essay".
+-- The channel gate cannot be narrowed like that, since a bare "[", "(" or
+-- "&lt;" is all a tagged line has in common.
+--
+-- This folder ships inactive and is the only thing the "Mudlet base UI"
+-- script switches: it enables the folder on load and disables it again when
+-- the game turns out to send its chat over GMCP. Nothing reaches a gate while
+-- the folder is off, so one switch retires the whole layer.</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList />
+			<regexCodePropertyList />
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>BaseUI chat: tells</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>tells you</string>
+					<string>tells the</string>
+					<string>You tell</string>
+					<string>whispers to you</string>
+					<string>You gossip</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+				</regexCodePropertyList>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone tells you</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you tell someone</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you tell the group</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You tell the (?:group|formation)\b</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone whispers to you</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone tells the group</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* tells the (?:group|formation)\b</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you gossip</name>
+					<script>BaseUI.routeChatLine("tells")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You gossip[^,:]{0,20}(?::|,?\s*['"])</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</Trigger>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>BaseUI chat: speech</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>says</string>
+					<string>asks</string>
+					<string>exclaims</string>
+					<string>yells</string>
+					<string>shouts</string>
+					<string>You say</string>
+					<string>You ask</string>
+					<string>You exclaim</string>
+					<string>You yell</string>
+					<string>You shout</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+					<integer>0</integer>
+				</regexCodePropertyList>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone says</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you say</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone yells</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you yell</name>
+					<script>BaseUI.routeChatLine()</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You (?:yell|shout)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</Trigger>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>BaseUI chat: channel tags</name>
+				<script></script>
+				<triggerType>2</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>[</string>
+					<string>(</string>
+					<string>&lt;</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>2</integer>
+					<integer>2</integer>
+					<integer>2</integer>
+				</regexCodePropertyList>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>[tag] channel line</name>
+					<script>BaseUI.routeTaggedChatLine(matches[2])</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\[([\w][\w -]{0,18})\]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>(tag) channel line</name>
+					<script>BaseUI.routeTaggedChatLine(matches[2])</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\(([\w -]{1,18})\)[:\s]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>&lt; tag | channel line</name>
+					<script>BaseUI.routeTaggedChatLine(matches[2])</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^&lt; ?([\w -]{1,18}) ?\|</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</Trigger>
+		</TriggerGroup>
+	</TriggerPackage>
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>baseui</name>
+			<script>BaseUI.alias(matches[2])</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^baseui(?:\s+(\w+))?$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>Mudlet base UI</name>
+			<packageName></packageName>
+			<script>-- Mudlet base UI: a small starter interface that adapts to whatever the game
+-- provides. Nothing is created until the game actually sends something:
+-- vitals gauges are built from GMCP character data (normalised across the
+-- dialects games speak, and only for the fields that exist), with the map and
+-- chat windows alongside them. Chat comes from gmcp.Comm.Channel.Text when
+-- the game offers it; for everything else, additive triggers capture the
+-- common chat-line shapes (tells, says, channels) shared by most games - so
+-- on a game with no GMCP at all the UI appears on the first chat line.
+-- Chat is sorted into All/Tells/Channels tabs, and the map pane shows a
+-- placeholder until the profile actually has map data.
+-- Gauges have their own fallback ladder when GMCP is missing: MSDP is
+-- negotiated quietly, self-sufficient prompt lines (labelled cur/max or
+-- percent) are trusted once they recur, score screens are read passively,
+-- and as a last resort "score" is sent once - visibly - to learn the maxima
+-- on games whose prompt only carries current values.
+-- Every section starts in the dock but none is stuck there: dragging a header
+-- row pulls that section out to sit anywhere over the game's text, the sections
+-- left behind share out the space it had, and where each one was left is
+-- remembered between sessions.
+-- Type "baseui" for options; "baseui hide" removes it until "baseui show".
+
+BaseUI = BaseUI or {}
+BaseUI.sections = BaseUI.sections or {}
+BaseUI.gauges = BaseUI.gauges or {}
+BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots or 0
+BaseUI.recentCaptures = BaseUI.recentCaptures or {}
+BaseUI.vitalsTriggerIds = BaseUI.vitalsTriggerIds or {}
+BaseUI.shapeSightings = BaseUI.shapeSightings or {}
+BaseUI.vitalsData = BaseUI.vitalsData or {}
+BaseUI.vitalsLock = BaseUI.vitalsLock or 0
+
+local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
+
+-- one dark theme for the whole dock; the accent appears only on section
+-- headers and the active chat tab so it stays an accent
+local theme = {
+  accent = "#4fc1e9",
+  bg = "#1b1e23",
+  panel = "#14171c",
+  border = "#3a4149",
+  borderSoft = "#2b3138",
+  text = "#e8eef4",
+  textDim = "#96a0ab",
+  font = "Ubuntu",
+}
+
+local layout = {
+  -- Every section of the dock is a container of its own, and what a drag can
+  -- take hold of is the strip of its background label its contents do not
+  -- cover - so each one keeps a header row of this many pixels above them.
+  -- Geyser resizes rather than moves on the top four pixel rows of that strip,
+  -- on its leftmost eleven pixels and its rightmost ten; the rest of the row is
+  -- what a drag can land on. Adjustable leaves twice its padding above its
+  -- contents, so the padding is half of this.
+  header = 20,
+  -- what the dock gives each section as a share of its height, and the gap
+  -- under it. The vitals panel has no height here: its bars decide that.
+  map = { height = 0.37, gap = 0.015 },
+  chat = { height = 0.375, gap = 0.02 },
+  vitals = { gap = 0 },
+  -- where the sections end when the vitals panel is not in the dock to end them
+  floor = 0.98,
+  -- pixels rather than shares, unlike the sections: the chat section's tab row
+  -- and the gap under it
+  tabs = 20, tabGap = 4,
+}
+-- where the bars start, which is everything the dock hands out above them
+layout.barsTop = layout.map.height + layout.map.gap + layout.chat.height + layout.chat.gap
+
+-- top to bottom, which is also the order a section is put back into when it
+-- comes back to the dock
+local sectionOrder = { "map", "chat", "vitals" }
+local sectionTitles = { map = "MAP", chat = "CHAT", vitals = "VITALS" }
+-- what a section is called in the sentences the player reads
+local sectionNames = { map = "map", chat = "chat window", vitals = "health bars" }
+
+local placeholderCss = string.format(
+  [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
+  theme.panel, theme.borderSoft)
+
+-- A section's own background. In the dock only its header row shows, over the
+-- dock's own background; out of the dock it needs a background of its own,
+-- since a section may be part transparent and would otherwise be read against
+-- whatever game text happens to be behind it. The alignment is what keeps the
+-- title in the header row rather than centred over the section's contents.
+local sectionCss = {
+  docked = [[background-color: transparent; border: 0px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
+  floating = string.format(
+    [[background-color: %s; border: 1px solid %s; border-radius: 6px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
+    theme.bg, theme.border),
+}
+
+-- the line closing off a header row. It sits on the row's own bottom pixel, so
+-- it is click-through and takes none of the strip a drag has to land on.
+local headerRuleCss = string.format([[background-color: %s; border: 0px;]], theme.borderSoft)
+
+local sectionButtonCss = string.format(
+  [[QLabel{ border-color: %s; background-color: %s; } QLabel::hover{ background-color: rgba(90,100,110,50%%); }]],
+  theme.border, theme.bg)
+
+-- a grip in front of the title, so a header row reads as something to take hold
+-- of rather than as a caption
+local function sectionTitle(key)
+  return string.format([[&lt;span style="color: %s;"&gt;&amp;#9776;&lt;/span&gt; %s]], theme.textDim, sectionTitles[key])
+end
+
+local tabCss = {
+  active = string.format(
+    [[background-color: #2b323b; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
+    theme.border, theme.accent),
+  inactive = string.format(
+    [[background-color: #1f242a; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
+    theme.borderSoft, theme.borderSoft),
+}
+
+-- every gauge shares one look, a thin HUD line: bold value text floating
+-- over a transparent zone, with a slim stat-colored line along the bottom
+-- 30% tracking the value. The band edge is a hard gradient stop - Qt
+-- gradient stops don't alpha-composite, so each band is either fully
+-- transparent or fully opaque
+local function gaugeStyle(color)
+  return string.format(
+    [[background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0,0,0,0), stop:0.6999 rgba(0,0,0,0), stop:0.70 %s, stop:1 %s); border: none;]],
+    color, color)
+end
+
+local gaugeBack = gaugeStyle("#2c313a")
+
+-- the text label spans the whole gauge; the padding floats the value text
+-- above the line, inset from the left edge
+local gaugeText = [[background-color: transparent; padding-left: 8px; padding-bottom: 9px;]]
+
+local gaugeDefs = {
+  hp = { front = gaugeStyle("#2f9e3f") },
+  mp = { front = gaugeStyle("#2f6f9e") },
+  xp = { front = gaugeStyle("#c28f2c") },
+  mv = { front = gaugeStyle("#2f9e8a") },
+  enemy = { front = gaugeStyle("#b23a3a") },
+}
+
+-- GMCP vitals arrive in several dialects: lowercase namespaces, maxima inside
+-- the vitals message or in a separate Maxstats one, and varying key names.
+-- Every node listed here is scanned on each update (the gmcp table keeps the
+-- latest message per node, so currents and maxima merge naturally even when
+-- they arrive separately) - supporting another dialect is one more line
+local vitalsNodes = {
+  { "Char", "Vitals" },
+  { "char", "vitals" },
+  { "Char", "Maxstats" },
+  { "char", "maxstats" },
+  { "Char", "Status" },
+  { "char", "status" },
+}
+
+-- one row per gauge; current/max/percent list every key spelling observed in
+-- the wild. A percent key is a ready 0-100 value and needs no max: nl (IRE
+-- next-level percent) and tnlpct for xp, opponent_hp_pct and enemypct for
+-- enemy health. transient rows hide their gauge when the value goes away
+-- (the enemy died or was cleared).
+local vitalsStats = {
+  { key = "hp", label = "HP",
+    current = { "hp", "health" },
+    max = { "maxhp", "max_hp", "maxHp", "maxhealth", "max_health", "maxHealth" } },
+  { key = "mp", label = "MP",
+    current = { "mp", "mana", "sp", "energy" },
+    max = { "maxmp", "max_mp", "maxMp", "maxmana", "max_mana", "maxMana",
+            "maxsp", "max_sp", "maxSp", "maxenergy", "max_energy", "maxEnergy" } },
+  { key = "xp", label = "XP",
+    percent = { "nl", "tnlpct" },
+    current = { "xp", "experience" },
+    max = { "maxxp", "max_xp", "maxXp", "maxexperience", "max_experience", "maxExperience" } },
+  { key = "enemy", label = "Enemy", transient = true,
+    percent = { "opponent_hp_pct", "enemypct" } },
+  -- last on purpose: when a game supplies more stats than there are gauge
+  -- slots, movement is the one to lose out
+  { key = "mv", label = "MV",
+    current = { "mv", "moves", "movement" },
+    max = { "maxmv", "max_mv", "maxMv", "maxmoves", "max_moves", "maxMoves",
+            "maxmovement", "max_movement", "maxMovement" } },
+}
+
+-- vitals can also come from MSDP or from prompt/score lines. A source lock
+-- keeps them from fighting: the first source to produce a complete hp
+-- reading owns the gauges, and only a higher-ranked source can take them
+-- over - so gauges built from a prompt hand themselves to GMCP whenever it
+-- turns up, however late
+local sourceRanks = { gmcp = 3, msdp = 2, prompt = 1 }
+
+-- the vitalsStats rows again, keyed by the conventional MSDP variable names
+local msdpStats = {
+  { key = "hp", current = "HEALTH", max = "HEALTH_MAX" },
+  { key = "mp", current = "MANA", max = "MANA_MAX" },
+  { key = "xp", current = "EXPERIENCE", max = "EXPERIENCE_MAX" },
+  { key = "mv", current = "MOVEMENT", max = "MOVEMENT_MAX" },
+  { key = "enemy", current = "OPPONENT_HEALTH", max = "OPPONENT_HEALTH_MAX", transient = true },
+}
+
+local function gmcpNode(path)
+  local node = gmcp
+  for _, key in ipairs(path) do
+    if type(node) ~= "table" then
+      return nil
+    end
+    node = node[key]
+  end
+  if type(node) == "table" then
+    return node
+  end
+end
+
+-- some games send numbers as strings, hence the tonumber()s; nested
+-- cur/max tables (vitals.hp = { cur = 10, max = 20 }) are handled too
+local function statReading(sources, stat)
+  local current, max, percent
+  for _, source in ipairs(sources) do
+    for _, name in ipairs(stat.percent or {}) do
+      percent = percent or tonumber(source[name])
+    end
+    for _, name in ipairs(stat.current or {}) do
+      local value = source[name]
+      if type(value) == "table" then
+        current = current or tonumber(value.cur)
+        max = max or tonumber(value.max)
+      else
+        current = current or tonumber(value)
+      end
+    end
+    for _, name in ipairs(stat.max or {}) do
+      max = max or tonumber(source[name])
+    end
+  end
+  return current, max, percent
+end
+
+-- generic chat capture for games without GMCP chat: trigger shapes most games
+-- share. Capture is additive - the matched line is copied into the chat window
+-- with its colours and never removed from the main one.
+-- a "[tag]", "(tag)" or "&lt; tag |" prefix only counts as chat when its first
+-- word is a well-known channel name - extend this list to cover more games
+BaseUI.chatChannelNames = {
+  chat = true, say = true, tell = true, tells = true, gtell = true,
+  newbie = true, newbies = true, gossip = true, grats = true, gratz = true,
+  congrats = true, ooc = true, ic = true, clan = true, guild = true,
+  order = true, house = true, city = true, market = true, auction = true,
+  trade = true, talk = true, ask = true, answer = true, question = true,
+  questions = true, music = true, quote = true, roleplay = true, rp = true,
+  imm = true, group = true, party = true, team = true, shout = true,
+  yell = true, form = true, town = true,
+}
+
+-- The same shapes as the "Mudlet base UI chat capture" trigger tree, in the
+-- same order (StarterUiTriggerCostTest compares them index by index): the tree
+-- routes chat, this copy tells the vitals layer which lines are conversation.
+-- tagged = true means the shape captures a channel tag that must pass the
+-- list above.
+local chatPatterns = {
+  { regex = [=[^\w[\w'-]* tells you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^You tell [\w'-]+[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^You tell the (?:group|formation)\b]=] },
+  { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
+  { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=] },
+  { regex = [=[^You gossip[^,:]{0,20}(?::|,?\s*['"])]=] },
+  { regex = [=[^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^You (?:yell|shout)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^\[([\w][\w -]{0,18})\]]=], tagged = true },
+  { regex = [=[^\(([\w -]{1,18})\)[:\s]]=], tagged = true },
+  { regex = [=[^&lt; ?([\w -]{1,18}) ?\|]=], tagged = true },
+}
+
+local chatTabs = {
+  { key = "all", label = "All" },
+  { key = "tells", label = "Tells" },
+  { key = "channels", label = "Channels" },
+}
+
+function BaseUI.routeChatLine(family)
+  -- several shapes can match the same line - copy it only once
+  if BaseUI.gmcpChat or BaseUI.dormant() or getLineNumber() == BaseUI.lastChatLine then
+    return
+  end
+  BaseUI.lastChatLine = getLineNumber()
+  selectCurrentLine()
+  copy()
+  deselect()
+  local firstBuild = not BaseUI.container
+  BaseUI.build()
+  if firstBuild then
+    -- building resizes the main window, which can renumber lines; refresh the
+    -- marker so other patterns matching this same line stay deduplicated
+    BaseUI.lastChatLine = getLineNumber()
+  end
+  if not BaseUI.chats then
+    return
+  end
+  BaseUI.chats.all:appendBuffer()
+  BaseUI.noteChatActivity("all")
+  if family and BaseUI.chats[family] then
+    BaseUI.chats[family]:appendBuffer()
+    BaseUI.noteChatActivity(family)
+  end
+  BaseUI.checkMapData()
+  table.insert(BaseUI.recentCaptures, { text = line, time = getEpoch() })
+  if #BaseUI.recentCaptures &gt; 10 then
+    table.remove(BaseUI.recentCaptures, 1)
+  end
+end
+
+function BaseUI.routeTaggedChatLine(tag)
+  tag = type(tag) == "string" and tag:match("(%S+)")
+  if not tag then
+    return
+  end
+  tag = tag:lower()
+  if not BaseUI.chatChannelNames[tag] then
+    return
+  end
+  local family = (tag == "tell" or tag == "tells" or tag == "gtell") and "tells" or "channels"
+  BaseUI.routeChatLine(family)
+end
+
+-- renaming these in the trigger tree means renaming them here
+local chatTree = "Mudlet base UI chat capture"
+local chatGates = { "BaseUI chat: tells", "BaseUI chat: speech", "BaseUI chat: channel tags" }
+
+-- a gate reached through a switched-off folder is not armed whatever its own
+-- flag says, and enableTrigger() only reports that it found the name - hence
+-- the ancestor check
+local function gateArmed(gate)
+  return isActive(gate, "trigger", true) &gt; 0
+end
+
+-- enableTrigger and disableTrigger can only name a trigger, and a name is not
+-- unique: copying this tree in the editor reproduces every name exactly, so
+-- switching ours would switch the player's copy too. Only the folder is ever
+-- named here, which keeps a copied gate out of it, and when the folder name
+-- itself is shared the layer stops switching altogether - routeChatLine()
+-- re-checks gmcpChat and dormant() on every line, so what is captured stays
+-- right either way. All that is lost is the scans disarming would have saved.
+function BaseUI.chatTreeShared()
+  return exists(chatTree, "trigger") ~= 1
+end
+
+function BaseUI.armChatTriggers()
+  if BaseUI.dormant() or BaseUI.gmcpChat then
+    return
+  end
+  if BaseUI.chatTreeShared() then
+    BaseUI.reportSharedChatTree()
+    return
+  end
+  enableTrigger(chatTree)
+  for _, gate in ipairs(chatGates) do
+    if not gateArmed(gate) then
+      BaseUI.reportDeadChatGate(gate)
+    end
+  end
+end
+
+function BaseUI.reportSharedChatTree()
+  if BaseUI.warnedSharedChatTree then
+    return
+  end
+  BaseUI.warnedSharedChatTree = true
+  debugc("[ Mudlet UI ] more than one trigger is called \"" .. chatTree .. "\", so the chat capture is left switched on rather than risk switching yours")
+end
+
+-- debugc alone would not do: it writes to the editor's error console, which is
+-- hidden until the player goes looking for it, and is dropped entirely if the
+-- editor was never opened. The player-facing line is once per session, because
+-- arming runs again on every reconnect.
+function BaseUI.reportDeadChatGate(gate)
+  debugc("[ Mudlet UI ] chat capture gate \"" .. gate .. "\" did not come up, so those lines will not be captured")
+  if BaseUI.warnedDeadChatGate then
+    return
+  end
+  BaseUI.warnedDeadChatGate = true
+  cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Part of the chat capture is switched off, so some chat may not appear here - type &lt;yellow&gt;baseui&lt;dim_grey&gt; for options.&lt;reset&gt;\n")
+end
+
+function BaseUI.disarmChatTriggers()
+  if BaseUI.chatTreeShared() then
+    BaseUI.reportSharedChatTree()
+    return
+  end
+  disableTrigger(chatTree)
+end
+
+function BaseUI.chatTriggersArmed()
+  for _, gate in ipairs(chatGates) do
+    if not gateArmed(gate) then
+      return false
+    end
+  end
+  return true
+end
+
+-- vitals from plain text, for games that offer no protocol at all. Only
+-- self-sufficient shapes may drive a gauge: a labelled cur/max pair, a
+-- labelled percentage, or a labelled score-screen line - current-only
+-- prompts never invent a maximum. kind = "bare" rows exist to recognise
+-- those current-only prompts: they update currents once a maximum is known
+-- and arm the one-time auto-"score" request, nothing more. gated rows only
+-- go live after matching on three separate lines (prompts recur; chat
+-- mentions do not); score-screen rows are trusted on first sight because a
+-- score may only ever be shown once, and each one is anchored to line
+-- structure only a score screen has; windowed rows have no anchor at all
+-- and are trusted only for a few seconds after a "score" command really
+-- went to the game.
+-- two disambiguation lookbehinds recur below. On label-after shapes,
+-- numberFirstGuard keeps the numbers of a label-first reading from being
+-- claimed by the NEXT label ("HP: 523/600 MP: ..." must not read as
+-- 523/600 mp). On label-first shapes, labelFirstGuard keeps a label that
+-- closes a label-after reading from opening a new one ("87%hp 80%m" must
+-- not read as hp 80). Aligned tables pad with runs of spaces, and PCRE
+-- lookbehinds cannot be variable-length, so each guard spells out the run
+-- lengths (up to 8) as fixed-length alternatives.
+local numberFirstGuard = [=[(?&lt;![\d:=])(?&lt;![:=][ ]|[:=][ ]{2}|[:=][ ]{3}|[:=][ ]{4}|[:=][ ]{5}|[:=][ ]{6}|[:=][ ]{7}|[:=][ ]{8})]=]
+local labelFirstGuard = [=[(?&lt;![\d%])(?&lt;!\d[ ]|\d[ ]{2}|\d[ ]{3}|\d[ ]{4}|\d[ ]{5}|\d[ ]{6}|\d[ ]{7}|\d[ ]{8})]=]
+
+-- Add label spellings here rather than inline in a shape below: anyVitalsLabel
+-- is built from these tables, and a spelling that only exists inline is missing
+-- from the prefilter, so the shape never sees a line to read.
+local promptLabels = {
+  hp = [=[hp|health|hits?]=],
+  mp = [=[mp|mana|sp|magic|energy]=],
+  mv = [=[mv|moves?|movement|end(?:urance)?|st(?:amina)?]=],
+  xp = [=[xp|exp|tnl]=],
+}
+-- percentages and current-only prompts need the conservative spellings: a
+-- looser one turns ordinary prose into a reading
+local coreLabels = {
+  hp = [=[hp|health]=],
+  mp = [=[mp|mana|sp]=],
+}
+-- what a terse prompt abbreviates to once the number has been read: "523h"
+local shortLabels = {
+  hp = [=[h(?:p|its?)?]=],
+  mp = [=[m(?:p|ana)?]=],
+  mv = [=[mv|moves?]=],
+}
+
+-- score screens across the codebase families (Diku/Merc/ROM, Circle/tbaMUD,
+-- SMAUG, LPMud, IRE, Aardwolf...) share a handful of label spellings per
+-- stat; the sets below feed every score-screen shape. Unlike prompts, score
+-- screens write big numbers with thousands separators ("3,600"), so the
+-- number shape accepts them
+local scoreNumber = [=[(\d{1,3}(?:,\d{3})+|\d+)]=]
+local slashPair = scoreNumber .. [=[\s*/\s*]=] .. scoreNumber
+-- Circle/tbaMUD and LPMuds write "current(max)" instead of "current/max"
+local parenPair = scoreNumber .. [=[\s*\(\s*]=] .. scoreNumber .. [=[\s*\)]=]
+-- the SMAUG family writes "current of max" ("Hitpoints: 90    of    90")
+local ofPair = scoreNumber .. [=[\s+of\s+]=] .. scoreNumber
+local scoreLabels = {
+  hp = [=[(?:health|hit\s*points?|hits?|hp)]=],
+  mp = [=[(?:mana|magic|spell\s*points?|energy|blood|sp|mp)]=],
+  mv = [=[(?:move(?:ment)?s?(?:\s*points?)?|stamina|endurance|vitality|mv)]=],
+  xp = [=[(?:exp(?:erience)?(?:\s*points?)?|xp)]=],
+}
+local anyScoreLabel = [=[(?:]=] .. scoreLabels.hp .. [=[|]=] .. scoreLabels.mp
+  .. [=[|]=] .. scoreLabels.mv .. [=[|]=] .. scoreLabels.xp .. [=[)]=]
+-- Aardwolf brackets its values ("Hit    : [  168/168  ]"), so a "[" may
+-- open any pair
+local pairLeadIn = [=[\s*[:=\]]+\s*\[?\s*]=]
+-- a line counts as a score-table row when it opens with a labelled vital
+-- ("Health: 3600/3600  Mana: 3400/3400", "| Health : 3600/3600 |"), with a
+-- table border whose first cell is some labelled number ("| Level: 201
+-- Hit Points: 500/500 |"), or with any short "Label: number" cell the way
+-- SMAUG's dashboard rows do ("PRACT: 005   Hitpoints: 90    of    90").
+-- Chat and prose do not open like this, which is what lets the row shapes
+-- read their labels ANYWHERE on such a line while still being trusted on
+-- first sight
+local scoreRowAnchor = [=[(?i)^(?=[^\w\r\n]{0,12}]=] .. anyScoreLabel
+  .. [=[\s*[:=\]]|\s{0,8}[|│┃║+#*!]{1,2}[-= ]{0,10}[\w' .]{1,18}[:=\]]+\s*\[?\s*[\d,]|[a-z][\w' .]{0,14}\s*:\s*\[?\s*[\d,])]=]
+local function scoreRow(stat, pair)
+  return scoreRowAnchor .. [=[.*?\b]=] .. scoreLabels[stat] .. pairLeadIn .. pair
+end
+-- a vital label sitting right after a table border is a score cell wherever
+-- the row itself starts ("| Race: Undead Atavian | Health: 4252/4252 |")
+local function scoreCell(stat, pair)
+  return [=[(?i)[|│┃║]\s*]=] .. scoreLabels[stat] .. pairLeadIn .. pair
+end
+-- no anchor at all: only trusted inside the short window after a "score"
+-- command actually went to the game (see BaseUI.noteCommandSent) - which is
+-- the moment layouts with nothing else to anchor on (AFKMud's "Race : Human
+-- Mana : 1000/1000" rows) really are score output
+local function scoreWindowed(stat, pair)
+  return [=[(?i)\b]=] .. scoreLabels[stat] .. pairLeadIn .. pair
+end
+-- Diku/Merc/ROM and Circle/tbaMUD score screens are sentences: "You have
+-- 100/100 hit, 90/90 mana, and 100/100 movement points." The anchor demands
+-- a number right after "You have" (so "You have collected 5/6 mana
+-- crystals" stays prose) and the tail demands the sentence move on to the
+-- next stat or wind down ("5/6 mana potions" stays prose too)
+local youHave = [=[(?i)^you\s+have\s+(?=[\d,]+\s*[(/])]=]
+local sentenceTail = [=[\s*(?:points?\s*)?(?:[,.;)]|and\b|left\b|remaining\b|$)]=]
+local sentenceLabels = {
+  hp = [=[(?:hit\s*points?|hits?)]=],
+  mp = [=[(?:mana|magic|spell\s*points?)]=],
+  mv = [=[(?:move(?:ment)?s?|stamina|endurance)]=],
+}
+local function scoreSentence(stat, pair)
+  return youHave .. [=[.*?\b]=] .. pair .. [=[\s*]=] .. sentenceLabels[stat] .. sentenceTail
+end
+
+-- The single trigger fronting every shape below. Its one contract: it must
+-- match every line a shape reads a value from, or that game's gauges silently
+-- never appear. Being loose the other way only costs a Lua shape walk, so keep
+-- it loose - "the orc hits you for 12 damage" gets through and that is fine.
+--
+-- (?&lt;![a-z]) / (?![a-z]) rather than \b: a label may abut its number
+-- ("hp100/120"), which is not a word boundary. The optional "points" tail is
+-- for score sentences that run the two together ("100/120 manapoints").
+local anyVitalsLabel = table.concat({
+  promptLabels.hp, promptLabels.mp, promptLabels.mv, promptLabels.xp,
+  coreLabels.hp, coreLabels.mp,
+  shortLabels.hp, shortLabels.mp, shortLabels.mv,
+  scoreLabels.hp, scoreLabels.mp, scoreLabels.mv, scoreLabels.xp,
+  sentenceLabels.hp, sentenceLabels.mp, sentenceLabels.mv,
+  -- two prompt shapes spell a lone "m" for mana inline
+  [=[m]=],
+}, "|")
+BaseUI.vitalsPrefilter = [=[(?i)(?&lt;![a-z])(?:]=] .. anyVitalsLabel .. [=[)(?:\s*points?)?(?![a-z])]=]
+
+local vitalsLinePatterns = {
+  -- self-sufficient prompt shapes: cur/max with the label after the numbers
+  { stat = "hp", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.hp .. [=[)\b]=] },
+  { stat = "mp", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.mp .. [=[|m)\b]=] },
+  { stat = "mv", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.mv .. [=[)\b]=] },
+  { stat = "xp", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.xp .. [=[)\b]=] },
+  -- self-sufficient prompt shapes: cur/max with the label first. The
+  -- explicit-separator form is trusted anywhere; the separator-less form
+  -- needs the digit lookbehinds so "523/600 hp ..." cannot have its own
+  -- trailing label re-read as the start of a new reading
+  { stat = "hp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.hp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "hp", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.hp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.mp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mp", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.mp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mv", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.mv .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "mv", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.mv .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "xp", kind = "curmax", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.xp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
+  { stat = "xp", kind = "curmax", gated = true,
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.xp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
+  -- labelled percentages need no maximum at all
+  { stat = "hp", kind = "percent", gated = true,
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:]=] .. coreLabels.hp .. [=[)\b]=] },
+  { stat = "hp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. coreLabels.hp .. [=[)[:=]\s*(\d+)%]=] },
+  { stat = "hp", kind = "percent", gated = true,
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. coreLabels.hp .. [=[)\s*(\d+)%]=] },
+  { stat = "mp", kind = "percent", gated = true,
+    regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:]=] .. coreLabels.mp .. [=[|m)\b]=] },
+  { stat = "mp", kind = "percent", gated = true,
+    regex = [=[(?i)(?&lt;!%)\b(?:]=] .. coreLabels.mp .. [=[)[:=]\s*(\d+)%]=] },
+  { stat = "mp", kind = "percent", gated = true,
+    regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. coreLabels.mp .. [=[)\s*(\d+)%]=] },
+  -- score-screen shapes, all trusted on first sight. A single labelled row,
+  -- with or without a separator, possibly behind table borders:
+  -- "Health : 523/600", "| Hit Points 3,600/3,600 |"
+  { stat = "hp", kind = "curmax",
+    regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.hp .. [=[\s*[:=\]]*\s*]=] .. slashPair },
+  { stat = "mp", kind = "curmax",
+    regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.mp .. [=[\s*[:=\]]*\s*]=] .. slashPair },
+  { stat = "mv", kind = "curmax",
+    regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.mv .. [=[\s*[:=\]]*\s*]=] .. slashPair },
+  { stat = "xp", kind = "curmax",
+    regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.xp .. [=[\s*[:=\]]*\s*]=] .. slashPair },
+  -- score-table rows read their labels anywhere on the line (the anchor in
+  -- scoreRow decides what counts as a row): "Health: 3600/3600  Mana:
+  -- 3400/3400" (IRE), "| Level: 201 ... Hit Points: 500/500 |" (Aardwolf),
+  -- "Hp: 143 (167) Gp: 240 (240)" (LPMud/Discworld)
+  { stat = "hp", kind = "curmax", regex = scoreRow("hp", slashPair) },
+  { stat = "mp", kind = "curmax", regex = scoreRow("mp", slashPair) },
+  { stat = "mv", kind = "curmax", regex = scoreRow("mv", slashPair) },
+  { stat = "xp", kind = "curmax", regex = scoreRow("xp", slashPair) },
+  { stat = "hp", kind = "curmax", regex = scoreRow("hp", parenPair) },
+  { stat = "mp", kind = "curmax", regex = scoreRow("mp", parenPair) },
+  { stat = "mv", kind = "curmax", regex = scoreRow("mv", parenPair) },
+  { stat = "hp", kind = "curmax", regex = scoreRow("hp", ofPair) },
+  { stat = "mp", kind = "curmax", regex = scoreRow("mp", ofPair) },
+  { stat = "mv", kind = "curmax", regex = scoreRow("mv", ofPair) },
+  -- bordered cells (IRE, Aardwolf): the label follows a "|" mid-line
+  { stat = "hp", kind = "curmax", regex = scoreCell("hp", slashPair) },
+  { stat = "mp", kind = "curmax", regex = scoreCell("mp", slashPair) },
+  { stat = "mv", kind = "curmax", regex = scoreCell("mv", slashPair) },
+  { stat = "xp", kind = "curmax", regex = scoreCell("xp", slashPair) },
+  { stat = "hp", kind = "curmax", regex = scoreCell("hp", parenPair) },
+  { stat = "mp", kind = "curmax", regex = scoreCell("mp", parenPair) },
+  { stat = "mv", kind = "curmax", regex = scoreCell("mv", parenPair) },
+  { stat = "hp", kind = "curmax", regex = scoreCell("hp", ofPair) },
+  { stat = "mp", kind = "curmax", regex = scoreCell("mp", ofPair) },
+  { stat = "mv", kind = "curmax", regex = scoreCell("mv", ofPair) },
+  -- Diku/Merc/ROM and Circle/tbaMUD score sentences: "You have 100/100
+  -- hit, 90/90 mana, and 100/100 movement points." (Diku and Circle write
+  -- "100(100)" instead of "100/100")
+  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", slashPair) },
+  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", slashPair) },
+  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", slashPair) },
+  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", parenPair) },
+  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", parenPair) },
+  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", parenPair) },
+  { stat = "hp", kind = "curmax",
+    regex = [=[(?i)]=] .. slashPair .. [=[\s*hit points\b]=] },
+  -- LPMud 2.4.5 writes current, label, then the max: "50 hit points(50)."
+  { stat = "hp", kind = "curmax",
+    regex = [=[(?i)\b]=] .. scoreNumber .. [=[\s*hit\s*points?\s*\(\s*]=] .. scoreNumber .. [=[\s*\)]=] },
+  -- anchorless labelled pairs, only live inside the post-"score" window
+  { stat = "hp", kind = "curmax", windowed = true, regex = scoreWindowed("hp", slashPair) },
+  { stat = "mp", kind = "curmax", windowed = true, regex = scoreWindowed("mp", slashPair) },
+  { stat = "mv", kind = "curmax", windowed = true, regex = scoreWindowed("mv", slashPair) },
+  { stat = "xp", kind = "curmax", windowed = true, regex = scoreWindowed("xp", slashPair) },
+  { stat = "hp", kind = "curmax", windowed = true, regex = scoreWindowed("hp", parenPair) },
+  { stat = "mp", kind = "curmax", windowed = true, regex = scoreWindowed("mp", parenPair) },
+  { stat = "mv", kind = "curmax", windowed = true, regex = scoreWindowed("mv", parenPair) },
+  { stat = "hp", kind = "curmax", windowed = true, regex = scoreWindowed("hp", ofPair) },
+  { stat = "mp", kind = "curmax", windowed = true, regex = scoreWindowed("mp", ofPair) },
+  { stat = "mv", kind = "curmax", windowed = true, regex = scoreWindowed("mv", ofPair) },
+  -- current-only prompt shapes; the lookarounds keep them off cur/max and
+  -- percentage lines, which belong to the shapes above
+  { stat = "hp", kind = "bare", gated = true,
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*]=] .. shortLabels.hp .. [=[\b(?!\s*[/%])]=] },
+  { stat = "hp", kind = "bare", gated = true,
+    regex = [=[(?i)\b(?:]=] .. promptLabels.hp .. [=[)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
+  { stat = "mp", kind = "bare", gated = true,
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*]=] .. shortLabels.mp .. [=[\b(?!\s*[/%])]=] },
+  { stat = "mp", kind = "bare", gated = true,
+    regex = [=[(?i)\b(?:]=] .. coreLabels.mp .. [=[)[:=]\s*(\d+)\b(?!\s*[/%.])]=] },
+  { stat = "mv", kind = "bare", gated = true,
+    regex = [=[(?i)(?&lt;![\d/.,:%])(\d+)\s*(?:]=] .. shortLabels.mv .. [=[)\b(?!\s*[/%])]=] },
+}
+
+-- rex.match given a pattern STRING compiles it afresh on every call, and a line
+-- reaching this layer is tested against up to 77 shapes. Never pass .regex to
+-- rex.match directly.
+local compiledPattern = setmetatable({}, {
+  __index = function(cache, regex)
+    local ok, compiled = pcall(rex.new, regex)
+    if not ok then
+      -- keep the string so rex.match still raises on it rather than the shape
+      -- vanishing; the error is only precise here, not once per line
+      debugc("[ Mudlet UI ] a vitals/chat shape would not compile, falling back to per-line compilation: "
+        .. tostring(compiled) .. " in: " .. regex)
+    end
+    local value = ok and compiled or regex
+    rawset(cache, regex, value)
+    return value
+  end,
+})
+
+-- for the test suite: how many shapes parseVitalsLine walks
+function BaseUI.vitalsShapeCount()
+  return #vitalsLinePatterns
+end
+
+-- for the test suite: the shapes chatLikeLine() walks, so a corpus can be held
+-- to cover them all
+function BaseUI.chatShapeRegexes()
+  local regexes = {}
+  for _, pattern in ipairs(chatPatterns) do
+    regexes[#regexes + 1] = pattern.regex
+  end
+  return regexes
+end
+
+-- for the test suite: the fallback above still works, so only an explicit check
+-- notices a shape that fell back to per-line compilation
+function BaseUI.shapesArePrecompiled()
+  for _, list in ipairs({ chatPatterns, vitalsLinePatterns }) do
+    for _, pattern in ipairs(list) do
+      if type(compiledPattern[pattern.regex]) ~= "userdata" then
+        return false
+      end
+    end
+  end
+  return true
+end
+
+-- lines the chat layer would route are never harvested for vitals - a tell
+-- saying "I am on 100/120 hp" is conversation, not a prompt
+function BaseUI.chatLikeLine(text)
+  for _, pattern in ipairs(chatPatterns) do
+    local capture = rex.match(text, compiledPattern[pattern.regex])
+    if capture then
+      if not pattern.tagged then
+        return true
+      end
+      local tag = type(capture) == "string" and capture:match("(%S+)")
+      if tag and BaseUI.chatChannelNames[tag:lower()] then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+-- score screens write numbers with thousands separators; strip them before
+-- converting
+local function parseVitalsNumber(text)
+  if not text then
+    return nil
+  end
+  return tonumber((text:gsub(",", "")))
+end
+
+-- readings above this are ids, timestamps or garbage, never vitals
+local maxSaneVital = 1e10
+-- overhealing exists, so current may exceed max - but not tenfold
+local maxOverhealFactor = 10
+
+-- pure so the test suite can drive it: turns one plain-text line into a list
+-- of { stat, kind, current, max, percent, pattern, gated, windowed }
+-- readings (kind "bare" means a current with no maximum; gated rows need
+-- the recurrence gate in BaseUI.onVitalsLine before they may drive a gauge,
+-- windowed rows the post-"score" window). Chat-shaped lines yield nothing.
+-- Nonsense readings - a max of zero, a wildly overhealed current, absurd
+-- magnitudes - are dropped here so a score-screen misread can never paint a
+-- broken gauge.
+function BaseUI.parseVitalsLine(text)
+  local readings = {}
+  if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
+    return readings
+  end
+  for index, pattern in ipairs(vitalsLinePatterns) do
+    local first, second = rex.match(text, compiledPattern[pattern.regex])
+    local reading
+    if pattern.kind == "curmax" and first then
+      local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
+      if current and max and max &gt; 0 and max &lt; maxSaneVital
+         and current &lt;= max * maxOverhealFactor then
+        reading = { stat = pattern.stat, kind = pattern.kind, current = current, max = max }
+      end
+    elseif pattern.kind == "percent" and first then
+      local percent = tonumber(first)
+      if percent and percent &lt;= 100 then
+        reading = { stat = pattern.stat, kind = pattern.kind, percent = percent }
+      end
+    elseif pattern.kind == "bare" and first then
+      local current = tonumber(first)
+      if current and current &lt; maxSaneVital then
+        reading = { stat = pattern.stat, kind = pattern.kind, current = current }
+      end
+    end
+    if reading then
+      reading.pattern = index
+      reading.gated = pattern.gated
+      reading.windowed = pattern.windowed
+      table.insert(readings, reading)
+    end
+  end
+  return readings
+end
+
+function BaseUI.scoreWindowOpen()
+  return BaseUI.scoreWindowUntil ~= nil and getEpoch() &lt; BaseUI.scoreWindowUntil
+end
+
+-- lastChatLine keeps a line the chat layer routed out of the vitals layer; the
+-- refresh after applyVitals is because building the dock rewraps the buffer and
+-- renumbers lines, which would otherwise leave the marker on an unrelated line
+function BaseUI.onVitalsLine()
+  local lineNumber = getLineNumber()
+  if lineNumber == BaseUI.lastVitalsLine or lineNumber == BaseUI.lastChatLine then
+    return
+  end
+  BaseUI.lastVitalsLine = lineNumber
+  local updates = {}
+  local windowOpen = BaseUI.scoreWindowOpen()
+  for _, reading in ipairs(BaseUI.parseVitalsLine(line)) do
+    local live = true
+    if reading.windowed then
+      live = windowOpen
+    elseif reading.gated then
+      local seen = (BaseUI.shapeSightings[reading.pattern] or 0) + 1
+      BaseUI.shapeSightings[reading.pattern] = seen
+      live = seen &gt;= 3
+    end
+    if live then
+      if reading.kind == "bare" then
+        BaseUI.maybeRequestScore()
+      end
+      local update = updates[reading.stat] or {}
+      update.current = reading.current or update.current
+      update.max = reading.max or update.max
+      update.percent = reading.percent or update.percent
+      updates[reading.stat] = update
+    end
+  end
+  if next(updates) then
+    BaseUI.applyVitals("prompt", updates)
+    -- building the dock resizes the main window, which can renumber lines;
+    -- refresh the marker so other patterns on this same line stay deduplicated
+    BaseUI.lastVitalsLine = getLineNumber()
+  end
+end
+
+-- applyVitals discards prompt readings once a protocol holds the lock, so the
+-- plain-text layer is pure per-line cost from then on
+function BaseUI.structuredVitalsOwnGauges()
+  return BaseUI.vitalsLock &gt;= sourceRanks.msdp
+end
+
+function BaseUI.createVitalsTriggers()
+  if BaseUI.dormant() or BaseUI.structuredVitalsOwnGauges() or next(BaseUI.vitalsTriggerIds) then
+    return
+  end
+  BaseUI.vitalsTriggerIds = { tempRegexTrigger(BaseUI.vitalsPrefilter, BaseUI.onVitalsLine) }
+end
+
+function BaseUI.killVitalsTriggers()
+  for _, id in ipairs(BaseUI.vitalsTriggerIds) do
+    killTrigger(id)
+  end
+  BaseUI.vitalsTriggerIds = {}
+end
+
+-- last rung of the ladder: a game whose prompt only carries currents gets
+-- asked for its score screen - once per session, visibly, and only when no
+-- protocol has offered vitals and no maximum is known yet. The score output
+-- is picked up by the always-on score-screen shapes; if it teaches us
+-- nothing, that is the end of it - no retry, no error.
+function BaseUI.maybeRequestScore()
+  if BaseUI.scoreRequested or BaseUI.sawGmcpVitals or BaseUI.sawMsdpVitals then
+    return
+  end
+  local hp = BaseUI.vitalsData.hp
+  if hp and (hp.max or hp.percent) then
+    return
+  end
+  local _, _, connected = getConnectionInfo()
+  if not connected then
+    return
+  end
+  BaseUI.scoreRequested = true
+  send("score")
+  cecho("\n&lt;cyan&gt;[ Mudlet UI ] Sent \"score\" once to size your gauges - type &lt;yellow&gt;baseui&lt;cyan&gt; to adjust.&lt;reset&gt;\n")
+end
+
+-- whenever a "score" command actually goes to the game - ours above, or the
+-- player typing it - the next few seconds of output ARE the score screen,
+-- so the anchorless windowed shapes may be trusted for that long. This is
+-- what reads layouts with nothing structural to anchor on.
+function BaseUI.noteCommandSent(_, command)
+  if type(command) ~= "string" then
+    return
+  end
+  command = command:trim():lower()
+  if command == "score" or command == "sc" then
+    BaseUI.scoreWindowUntil = getEpoch() + 10
+  end
+end
+
+function BaseUI.loadSettings()
+  BaseUI.settings = {}
+  if io.exists(settingsFile) and not pcall(table.load, settingsFile, BaseUI.settings) then
+    -- corrupted settings file - start over with the defaults, but say so
+    BaseUI.settings = {}
+    cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not read the saved settings - using the defaults.&lt;reset&gt;\n")
+  end
+  -- where a section was left is Geyser's to remember, in a file of its own, so
+  -- any position the settings file carries is ignored
+  BaseUI.settings.gaugePanel = nil
+end
+
+function BaseUI.saveSettings()
+  -- table.save reports a path it cannot write by returning nil and a message
+  -- rather than by raising, so pcall on its own would never see that happen.
+  -- A full disk or a read-only profile fails every save from here on, so say
+  -- so once rather than on every drag.
+  local ok, _, message = pcall(table.save, settingsFile, BaseUI.settings)
+  if ok and message == nil then
+    return
+  end
+  if not BaseUI.warnedSaveFailed then
+    BaseUI.warnedSaveFailed = true
+    cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not save your settings, so this will not be remembered.&lt;reset&gt;\n")
+  end
+end
+
+-- the UI keeps out of the way either when the user hid it or when the game
+-- installed an interface of its own ("standing aside")
+function BaseUI.dormant()
+  return BaseUI.settings.hidden or BaseUI.settings.standingAside ~= nil
+end
+
+-- a game that supplies its own interface wins: the moment Mudlet installs a
+-- Client.GUI package the starter UI stands aside - capture triggers retired,
+-- dock hidden - and stays aside in later sessions. Deliberately silent: the
+-- game's own install is announcement enough, and "baseui show" (surfaced by
+-- the "baseui" status alias) is the way back for players who prefer this UI.
+function BaseUI.standAside(_, packageName)
+  BaseUI.settings.standingAside = packageName or "the game's interface"
+  BaseUI.saveSettings()
+  BaseUI.disarmChatTriggers()
+  BaseUI.killVitalsTriggers()
+  if BaseUI.container then
+    BaseUI.container:hide()
+    BaseUI.container:adjustBorder()
+  end
+  -- a section dragged out of the dock is no longer its child to hide
+  BaseUI.layoutDock()
+end
+
+-- if the game's interface is later uninstalled, quietly return to duty. Not
+-- straight away though: a version upgrade uninstalls only to reinstall a
+-- moment later, so look again once the dust has settled
+function BaseUI.serverGuiRemoved(_, packageName)
+  if not BaseUI.settings.standingAside or packageName ~= BaseUI.settings.standingAside then
+    return
+  end
+  tempTimer(10, function()
+    local aside = BaseUI.settings.standingAside
+    if not aside or table.contains(getPackages(), aside) then
+      return
+    end
+    BaseUI.settings.standingAside = nil
+    BaseUI.saveSettings()
+    BaseUI.armChatTriggers()
+    BaseUI.createVitalsTriggers()
+    BaseUI.renderVitals()
+    -- standing aside hid the dock, and a section is a window in its own right
+    -- rather than a child widget of it, so showing the sections alone would
+    -- leave them over the game's text with no dock behind them
+    if BaseUI.container then
+      BaseUI.container:show()
+      BaseUI.container:adjustBorder()
+    end
+    BaseUI.layoutDock()
+  end)
+end
+
+function BaseUI.mapHasData()
+  return next(getRooms()) ~= nil
+end
+
+function BaseUI.createMapper()
+  BaseUI.map = Geyser.Mapper:new({
+    name = "BaseUI_map",
+    x = "0%", y = "0%", width = "100%", height = "100%",
+  }, BaseUI.sections.map)
+end
+
+-- the embedded mapper shows a clipped "load or create a map" widget while the
+-- profile has no map data, so a placeholder holds its spot until the first
+-- room exists (made by a mapping script, a map download or a manual load).
+-- Cheap to poll: getRooms() stays empty right up until the swap happens.
+function BaseUI.checkMapData()
+  if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
+    return
+  end
+  if not BaseUI.mapHasData() then
+    return
+  end
+  if BaseUI.mapPlaceholder then
+    BaseUI.mapPlaceholder:hide()
+  end
+  BaseUI.createMapper()
+end
+
+function BaseUI.build()
+  if BaseUI.container then
+    return
+  end
+  BaseUI.container = Adjustable.Container:new({
+    name = "BaseUI",
+    x = "75%", y = "0%",
+    width = "25%", height = "100%",
+    attached = "right",
+    titleText = "Mudlet UI",
+    titleTxtColor = theme.text,
+    adjLabelstyle = string.format("background-color: %s; border: 1px solid %s;", theme.bg, theme.border),
+    buttonstyle = string.format(
+      [[QLabel{ border-color: %s; background-color: %s; } QLabel::hover{ background-color: rgba(90,100,110,50%%); }]],
+      theme.border, theme.bg),
+    -- the container's own session persistence can restore a hidden, detached
+    -- state that is impossible to bring back reliably - we persist the only
+    -- choice that matters (hidden or not) ourselves
+    autoLoad = false,
+    autoSave = false,
+  })
+  BaseUI.createSection("map")
+  if BaseUI.mapHasData() then
+    BaseUI.createMapper()
+  else
+    BaseUI.mapPlaceholder = Geyser.Label:new({
+      name = "BaseUI_map_placeholder",
+      x = "0%", y = "0%", width = "100%", height = "100%",
+      font = theme.font, fontSize = 10, fgColor = theme.textDim,
+      format = "c",
+    }, BaseUI.sections.map)
+    BaseUI.mapPlaceholder:setStyleSheet(placeholderCss)
+    BaseUI.mapPlaceholder:echo("Your map will appear&lt;br&gt;here as you explore")
+  end
+  BaseUI.createSection("chat")
+  BaseUI.chats = {}
+  BaseUI.chatTabLabels = {}
+  BaseUI.unread = { all = 0, tells = 0, channels = 0 }
+  BaseUI.activeChatTab = "all"
+  local tabX = { "0%", "34%", "68%" }
+  local belowTabs = layout.tabs + layout.tabGap
+  for i, tab in ipairs(chatTabs) do
+    local label = Geyser.Label:new({
+      name = "BaseUI_tab_" .. tab.key,
+      x = tabX[i], y = 0, width = "32%", height = layout.tabs,
+      font = theme.font, fontSize = 9, format = "c",
+    }, BaseUI.sections.chat)
+    label:setClickCallback(BaseUI.selectChatTab, tab.key)
+    BaseUI.chatTabLabels[tab.key] = label
+    local console = Geyser.MiniConsole:new({
+      name = "BaseUI_chat_" .. tab.key,
+      x = "0%", y = belowTabs, width = "100%", height = "100%-" .. belowTabs,
+      autoWrap = true,
+      -- plain black so trigger-captured lines (which keep the main console's
+      -- background colour) blend in seamlessly
+      color = "black",
+      fontSize = 10,
+    }, BaseUI.sections.chat)
+    BaseUI.chats[tab.key] = console
+    if tab.key ~= "all" then
+      console:hide()
+    end
+  end
+  BaseUI.chat = BaseUI.chats.all
+  BaseUI.refreshChatTabs()
+  BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
+  -- last, so the bars are above the chat window where the two overlap
+  BaseUI.createSection("vitals")
+  -- the container remembers its own hidden/detached state from the previous
+  -- session (it saves on exit) - our setting says it should be visible, so
+  -- override whatever it restored
+  if not BaseUI.dormant() then
+    BaseUI.container:show()
+    if not BaseUI.container.attached then
+      BaseUI.container:attachToBorder("right")
+    end
+  end
+  BaseUI.layoutDock()
+  BaseUI.maybeAnnounce()
+end
+
+function BaseUI.refreshChatTabs()
+  for _, tab in ipairs(chatTabs) do
+    local label = BaseUI.chatTabLabels and BaseUI.chatTabLabels[tab.key]
+    if label then
+      local active = BaseUI.activeChatTab == tab.key
+      label:setStyleSheet(active and tabCss.active or tabCss.inactive)
+      local text = tab.label
+      local unread = BaseUI.unread[tab.key]
+      if unread &gt; 0 and not active then
+        text = string.format("%s (%d)", tab.label, math.min(unread, 99))
+      end
+      label:echo(text, active and theme.text or theme.textDim)
+    end
+  end
+end
+
+function BaseUI.selectChatTab(key)
+  if not BaseUI.chats or not BaseUI.chats[key] then
+    return
+  end
+  BaseUI.activeChatTab = key
+  BaseUI.unread[key] = 0
+  for _, tab in ipairs(chatTabs) do
+    local console = BaseUI.chats[tab.key]
+    if tab.key == key then
+      console:show()
+    else
+      console:hide()
+    end
+  end
+  BaseUI.refreshChatTabs()
+end
+
+function BaseUI.noteChatActivity(key)
+  if key == BaseUI.activeChatTab then
+    return
+  end
+  BaseUI.unread[key] = (BaseUI.unread[key] or 0) + 1
+  BaseUI.refreshChatTabs()
+end
+
+-- Each section of the dock lives in an adjustable container of its own.
+-- Dragging its header row moves it inside the dock; dragging it clear of the
+-- dock floats it over the game's text, which is what the dragOut constraint
+-- gives us. Geyser remembers both where a section was left and which of the two
+-- it was in, so what is left here is sharing the dock out between the sections
+-- still in it, fitting the vitals panel to its bars, and the dock's lifecycle.
+
+-- how tall the bars are, as shares of the dock: the pitch from one bar's top
+-- to the next, and the bar itself
+local gaugePitch, gaugeSpan = 0.055, 0.045
+-- a game with more stats than this loses the last of them - see vitalsStats
+local maxGaugeSlots = 4
+local function asPercent(fraction)
+  return string.format("%.4f%%", fraction * 100)
+end
+
+local function gaugePanelHeight(slots)
+  -- no bars, no height: the trailing gap the pitch carries would make it
+  -- negative, and Geyser reads a negative percentage as one off the far edge
+  return math.max(0, gaugePitch * slots - (gaugePitch - gaugeSpan))
+end
+
+function BaseUI.sectionFloating(key)
+  local section = BaseUI.sections[key]
+  return section ~= nil and section.draggedOut == true
+end
+
+-- the bars are shares of the panel, so a panel out of the dock is given the
+-- number of pixels they had in it, as a share of whatever it is in now
+local function floatingVitalsHeight()
+  local panel = BaseUI.sections.vitals
+  local parent = panel and panel.container
+  local within = parent and parent.get_height and parent.get_height() or 0
+  if BaseUI.usedGaugeSlots == 0 or within &lt;= 0 or not BaseUI.container then
+    return nil
+  end
+  local bars = gaugePanelHeight(BaseUI.usedGaugeSlots) * BaseUI.container.Inside:get_height()
+  return asPercent(bars / within) .. "+" .. layout.header
+end
+
+-- Where the dock's sections go. They stack from the top in a fixed order, each
+-- with the gap under it separating it from the next one still in the dock. The
+-- vitals panel is only as tall as its bars need; the map and the chat window
+-- divide what is left between them in the ratio they have when all three are
+-- docked. So a section dragged out leaves its space to the ones still in the
+-- dock, and putting it back gives that space straight back.
+-- Returns the place each docked section stacks into, keyed by section. That is
+-- the section's own geometry except for the vitals panel, whose header row sits
+-- above its place rather than in it - see placeSection.
+local function dockPlaces()
+  local docked, gaps, flexible = {}, 0, 0
+  for _, key in ipairs(sectionOrder) do
+    if BaseUI.sections[key] and not BaseUI.sectionFloating(key) then
+      if #docked &gt; 0 then
+        gaps = gaps + layout[docked[#docked]].gap
+      end
+      docked[#docked + 1] = key
+      flexible = flexible + (layout[key].height or 0)
+    end
+  end
+  -- with the bars in the dock the sections end where the bars start; without
+  -- them there is the rest of the dock to fill. The bars' height is no part of
+  -- the pool either way (layout.vitals has no share of its own), so the map and
+  -- the chat window keep the same place whatever the bar count.
+  local pool = (BaseUI.sectionFloating("vitals") and layout.floor or layout.barsTop) - gaps
+  local places, y = {}, 0
+  for _, key in ipairs(docked) do
+    local height = layout[key].height and pool * layout[key].height / flexible
+      or gaugePanelHeight(BaseUI.usedGaugeSlots)
+    places[key] = { y = y, height = height }
+    y = y + height + layout[key].gap
+  end
+  return places
+end
+
+-- Adjustable's own buttons and most of its menu would let the player put a
+-- section somewhere with no obvious way back - closed, collapsed, or locked in
+-- place. Locking is no alternative to hiding it: whichever lockStyle it uses, a
+-- locked container cannot be dragged either.
+-- Called again after a load, which applies whatever a save file says about all
+-- three and puts the buttons and the inside container back the way the
+-- constructor had them - so this has to undo them rather than only refuse to
+-- offer them, or a file naming a state the menu no longer reaches would stick.
+function BaseUI.trimSectionChrome(key)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  if section.locked then
+    section:unlockContainer()
+  end
+  if section.minimized then
+    section:restore()
+  end
+  section.exitLabel:hide()
+  section.minimizeLabel:hide()
+  for _, item in ipairs({ "lockLabel", "minLabel", "saveLabel", "loadLabel", "lockStylesLabel" }) do
+    section.adjLabel:hideMenuLabel(item)
+  end
+  section.Inside:move(0, layout.header)
+  section.Inside:resize("100%", "100%-" .. layout.header)
+end
+
+-- Adjustable keeps its own geometry, and whether it was dragged out of the
+-- dock, in a file of its own. A saved value Geyser cannot parse raises while it
+-- is being applied, which here would be in the middle of building the interface
+-- - so a file that cannot be read is dropped rather than obeyed.
+-- The two ways it can fail need catching separately: a value Geyser cannot
+-- apply raises, while a file it cannot parse at all only makes load() return
+-- false, which a pcall on its own reports as a success.
+-- A load also puts back the buttons and the inside container the constructor
+-- was given, hence the trim afterwards.
+function BaseUI.loadSection(key)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  BaseUI.trimSectionChrome(key)
+  -- a missing file is no failure: load() reports that by returning its message
+  local ok, applied = pcall(section.load, section)
+  if not ok or applied == false then
+    section:deleteSaveFile()
+    section:changeContainer(BaseUI.container.Inside)
+    -- the player put this somewhere on purpose and it is not there any more, so
+    -- say why rather than let them think it is simply never remembered
+    cecho(string.format(
+      "\n&lt;dim_grey&gt;[ Mudlet UI ] Could not restore where you left the %s, so it is back in the dock.&lt;reset&gt;\n",
+      sectionNames[key]))
+  end
+  BaseUI.trimSectionChrome(key)
+end
+
+function BaseUI.styleSection(key)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  local floating = BaseUI.sectionFloating(key)
+  section.adjLabelstyle = floating and sectionCss.floating or sectionCss.docked
+  section.adjLabel:setStyleSheet(section.adjLabelstyle)
+  section:setTitle(sectionTitle(key), theme.accent, "l8")
+  -- Geyser sets the hand from the first move event inside the header row, so a
+  -- pointer that comes to rest on it without moving again would otherwise be
+  -- left showing the default cursor
+  section.adjLabel:setCursor("OpenHand")
+  section.adjLabel:setToolTip(floating
+    and string.format("Drag to move the %s - right-click to put it back in the dock", sectionNames[key])
+    or string.format("Drag this header out of the dock to put the %s anywhere", sectionNames[key]), 0)
+end
+
+-- Puts one section where dockPlaces() says it goes. Where a floating section
+-- sits and how big it is are the player's business and Geyser's, so nothing is
+-- set on one but the height the bars need.
+function BaseUI.placeSection(key, place)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  if BaseUI.sectionFloating(key) then
+    local height = key == "vitals" and floatingVitalsHeight()
+    if height then
+      section:resize(nil, height)
+    end
+  elseif place then
+    -- the vitals panel's header row hangs up into the gap above it, which is
+    -- what puts its bars at the top of its share rather than a header lower
+    -- down. There is nothing to hang into when it is the topmost section left.
+    local overhang = key == "vitals" and place.y * BaseUI.container.Inside:get_height() &gt; layout.header
+    section:move("0%", overhang and asPercent(place.y) .. "-" .. layout.header or asPercent(place.y))
+    section:resize("100%", key == "vitals" and asPercent(place.height) .. "+" .. layout.header
+      or asPercent(place.height))
+  end
+  BaseUI.styleSection(key)
+  -- everything goes while the UI is dormant; a vitals panel with no bars has
+  -- nothing to show but its own header row
+  if BaseUI.dormant() or (key == "vitals" and BaseUI.usedGaugeSlots == 0) then
+    section:hide()
+  else
+    section:show()
+  end
+  -- a section attached to a main window border keeps that border reserved for
+  -- itself, and a hidden one has no business doing that
+  section:adjustBorder()
+end
+
+-- Shares the dock out between the sections still in it. Deliberately not called
+-- while a drag is going on: Adjustable owns a section's position from the moment
+-- it is picked up, and the drop is when the dock has its answer.
+function BaseUI.layoutDock()
+  if not BaseUI.container then
+    return
+  end
+  BaseUI.placedGaugeSlots = BaseUI.usedGaugeSlots
+  local places = dockPlaces()
+  for _, key in ipairs(sectionOrder) do
+    BaseUI.placeSection(key, places[key])
+  end
+end
+
+-- Geyser has no dragging back into a parent, so this is the way back. It is
+-- the dock's inside container that holds its children, not the dock itself.
+-- changeContainer turns down a container it does not like by returning rather
+-- than by raising, and it is the only thing that clears draggedOut - so that
+-- flag is what says whether the section really came back.
+function BaseUI.dockSection(key)
+  local section = BaseUI.sections[key]
+  if not section or not BaseUI.sectionFloating(key) then
+    return false
+  end
+  if section.attached then
+    section:detach()
+  end
+  section:changeContainer(BaseUI.container.Inside)
+  if BaseUI.sectionFloating(key) then
+    return false
+  end
+  BaseUI.layoutDock()
+  section:save()
+  return true
+end
+
+-- returns how many sections came back and how many would not, which is what
+-- keeps "baseui dock" from reporting a success it never had
+function BaseUI.dockAll()
+  local docked, stuck = 0, 0
+  for _, key in ipairs(sectionOrder) do
+    if BaseUI.sectionFloating(key) then
+      if BaseUI.dockSection(key) then
+        docked = docked + 1
+      else
+        stuck = stuck + 1
+      end
+    end
+  end
+  return docked, stuck
+end
+
+-- The drop is where a section has finished leaving the dock or coming back to
+-- it, so it is where the sections still in the dock take over the space it left
+-- (a docked section a drag only shuffled about is put back in its own place,
+-- since the dock stacks its sections rather than letting them be arranged).
+-- Adjustable saves on exit by itself; saving here as well means a session that
+-- ends badly still remembers where a section was put.
+function BaseUI.sectionDropped(_, name)
+  for _, key in ipairs(sectionOrder) do
+    local section = BaseUI.sections[key]
+    if section and name == section.name then
+      BaseUI.layoutDock()
+      section:save()
+      return
+    end
+  end
+end
+
+-- A section's header row is the container's own title bar, which is why the
+-- title carries the grip rather than there being a label to hold.
+function BaseUI.createSection(key)
+  local section = Adjustable.Container:new({
+    -- not "BaseUI_" .. key: a container hides and shows itself by its name as a
+    -- Mudlet window, and the map section would then share one with the mapper
+    -- inside it
+    name = "BaseUI_" .. key .. "_section",
+    -- layoutDock gives it its place
+    x = "0%", y = "0%", width = "100%", height = "0%",
+    dragOut = true,
+    padding = layout.header / 2,
+    titleText = sectionTitle(key),
+    titleTxtColor = theme.accent,
+    titleFormat = "l8",
+    adjLabelstyle = sectionCss.docked,
+    buttonstyle = sectionButtonCss,
+    -- loaded by hand below instead, and saved on the drop as well as on exit
+    autoLoad = false,
+    autoSave = true,
+  }, BaseUI.container)
+  BaseUI.sections[key] = section
+  section:newCustomItem("Back to the dock", function()
+    BaseUI.dockSection(key)
+  end)
+  -- the rule belongs to the header row rather than to the section's contents,
+  -- so it goes beside the container Adjustable keeps those in
+  section.goInside = false
+  local rule = Geyser.Label:new({
+    name = section.name .. "_rule",
+    x = 0, y = layout.header - 1, width = "100%", height = 1,
+    clickthrough = true,
+  }, section)
+  section.goInside = true
+  rule:setStyleSheet(headerRuleCss)
+  BaseUI.loadSection(key)
+  return section
+end
+
+-- keep the created gauges in vitalsStats order and packed from the top,
+-- whatever order their data completed in (a percentage can be ready before
+-- the hp maxima have arrived). A slot is a share of the panel, and the panel
+-- is only as tall as the bars in it, so the shares depend on how many there are
+function BaseUI.layoutGauges()
+  local slots = BaseUI.usedGaugeSlots
+  if slots == 0 then
+    return
+  end
+  local height = gaugePanelHeight(slots)
+  local index = 0
+  for _, stat in ipairs(vitalsStats) do
+    local gauge = BaseUI.gauges[stat.key]
+    if gauge then
+      gauge:move("0%", asPercent(index * gaugePitch / height))
+      gauge:resize("100%", asPercent(gaugeSpan / height))
+      index = index + 1
+    end
+  end
+  -- the panel grows with the bars, wherever it is
+  BaseUI.layoutDock()
+end
+
+function BaseUI.ensureGauge(key)
+  local gauge = BaseUI.gauges[key]
+  if gauge then
+    return gauge
+  end
+  local def = gaugeDefs[key]
+  -- without the panel a gauge would parent to the main window instead, where
+  -- its panel-relative size would stretch it across the top of the screen
+  if not def or not BaseUI.sections.vitals or BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
+    return nil
+  end
+  BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots + 1
+  gauge = Geyser.Gauge:new({
+    name = "BaseUI_" .. key .. "_gauge",
+    -- layoutGauges gives it its slot
+    x = "0%", y = "0%", width = "100%", height = "100%",
+    strict = true,
+    font = theme.font,
+    fontSize = 9,
+  }, BaseUI.sections.vitals)
+  gauge:setStyleSheet(def.front, gaugeBack, gaugeText)
+  gauge:setFgColor("white")
+  gauge:setAlignment("l")
+  gauge:setBold(true)
+  BaseUI.gauges[key] = gauge
+  BaseUI.layoutGauges()
+  return gauge
+end
+
+local function completeReading(data)
+  if not data then
+    return false
+  end
+  if data.percent then
+    return true
+  end
+  return data.current ~= nil and data.max ~= nil and data.max &gt; 0
+end
+
+-- the single entry point every vitals source feeds. snapshot sources (GMCP,
+-- MSDP) resend everything they know each time, so their stats replace what
+-- is stored and a transient stat they no longer mention is gone; the prompt
+-- layer sees one line at a time and merges instead, letting a score screen's
+-- maxima complete a prompt's bare currents. A source ranked lower than the
+-- lock's owner is ignored outright.
+function BaseUI.applyVitals(source, readings, snapshot)
+  local rank = sourceRanks[source]
+  if BaseUI.dormant() or rank &lt; BaseUI.vitalsLock then
+    return
+  end
+  if rank &gt; BaseUI.vitalsLock and completeReading(readings.hp) then
+    -- a better source proved itself with a full hp reading: it takes over
+    -- the lock and everything the previous source reported is dropped
+    BaseUI.vitalsData = {}
+    BaseUI.vitalsLock = rank
+    -- handleDisconnect re-arms these: the next connection may have no protocol
+    if BaseUI.structuredVitalsOwnGauges() then
+      BaseUI.killVitalsTriggers()
+    end
+  end
+  for _, stat in ipairs(vitalsStats) do
+    local reading = readings[stat.key]
+    if snapshot then
+      BaseUI.vitalsData[stat.key] = reading
+    elseif reading and not stat.transient then
+      local data = BaseUI.vitalsData[stat.key] or {}
+      data.current = reading.current or data.current
+      data.max = reading.max or data.max
+      data.percent = reading.percent or data.percent
+      BaseUI.vitalsData[stat.key] = data
+    end
+  end
+  BaseUI.renderVitals()
+end
+
+function BaseUI.renderVitals()
+  if BaseUI.dormant() then
+    return
+  end
+  local paintable = false
+  for _, stat in ipairs(vitalsStats) do
+    if completeReading(BaseUI.vitalsData[stat.key]) then
+      paintable = true
+      break
+    end
+  end
+  if not paintable and not BaseUI.container then
+    return
+  end
+  BaseUI.build()
+  BaseUI.checkMapData()
+  for _, stat in ipairs(vitalsStats) do
+    -- a gauge is only painted once a full reading is known: either a ready
+    -- percentage, or both a current and a max (maxima are never assumed, so
+    -- a stat may wait for a Maxstats message or a score screen)
+    local data = BaseUI.vitalsData[stat.key] or {}
+    if data.percent then
+      local gauge = BaseUI.ensureGauge(stat.key)
+      if gauge then
+        gauge:setValue(data.percent, 100, string.format("%s %d%%", stat.label, math.floor(data.percent + 0.5)))
+        if gauge.hidden then
+          gauge:show()
+        end
+      end
+    elseif data.current and data.max and data.max &gt; 0 then
+      local gauge = BaseUI.ensureGauge(stat.key)
+      if gauge then
+        gauge:setValue(data.current, data.max, string.format("%s %d/%d", stat.label, data.current, data.max))
+        if gauge.hidden then
+          gauge:show()
+        end
+      end
+    elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
+      BaseUI.gauges[stat.key]:hide()
+    end
+  end
+  -- The panel is built before there are any bars to put in it, so it starts
+  -- hidden; fitting it here rather than only where a bar is created is what
+  -- brings it back for a session that already has its bars - a reinstall keeps
+  -- them, so nothing would create one again.
+  -- Only when something it decides has changed, though: doing it on every line
+  -- would put a section being dragged back where the dock says it belongs, and
+  -- laying the dock out is three containers' worth of work now. A panel with no
+  -- bars is hidden on purpose and is not waiting to be brought back.
+  if BaseUI.usedGaugeSlots ~= BaseUI.placedGaugeSlots
+    or (BaseUI.usedGaugeSlots &gt; 0 and BaseUI.sections.vitals and BaseUI.sections.vitals.hidden) then
+    BaseUI.layoutDock()
+  end
+end
+
+function BaseUI.updateVitals()
+  local sources = {}
+  for _, path in ipairs(vitalsNodes) do
+    local node = gmcpNode(path)
+    if node then
+      sources[#sources + 1] = node
+    end
+  end
+  if not sources[1] then
+    return
+  end
+  BaseUI.sawGmcpVitals = true
+  if BaseUI.dormant() then
+    return
+  end
+  BaseUI.build()
+  BaseUI.checkMapData()
+  local readings = {}
+  for _, stat in ipairs(vitalsStats) do
+    local current, max, percent = statReading(sources, stat)
+    if percent and (percent &lt; 0 or percent &gt; 100) then
+      percent = nil
+    end
+    if current or max or percent then
+      readings[stat.key] = { current = current, max = max, percent = percent }
+    end
+  end
+  BaseUI.applyVitals("gmcp", readings, true)
+end
+
+function BaseUI.updateMsdpVitals()
+  if type(msdp) ~= "table" then
+    return
+  end
+  local readings = {}
+  for _, stat in ipairs(msdpStats) do
+    -- MSDP delivers numbers as strings more often than not
+    local current = tonumber(msdp[stat.current])
+    local max = tonumber(msdp[stat.max])
+    if stat.transient then
+      -- an opponent at zero health (or one no longer reported) is gone
+      if current and current &gt; 0 and max and max &gt; 0 then
+        readings[stat.key] = { current = current, max = max }
+      end
+    elseif current or max then
+      readings[stat.key] = { current = current, max = max }
+    end
+  end
+  if not next(readings) then
+    return
+  end
+  BaseUI.sawMsdpVitals = true
+  BaseUI.applyVitals("msdp", readings, true)
+end
+
+-- ask the game to keep our vitals variables reported; servers simply ignore
+-- the ones they do not know
+function BaseUI.requestMsdpVitals()
+  local variables = {}
+  for _, stat in ipairs(msdpStats) do
+    table.insert(variables, stat.current)
+    table.insert(variables, stat.max)
+  end
+  table.insert(variables, "OPPONENT_NAME")
+  table.insert(variables, "LEVEL")
+  sendMSDP("REPORT", unpack(variables))
+end
+
+function BaseUI.enableMsdpVitals(_, protocol)
+  if protocol ~= "MSDP" then
+    return
+  end
+  BaseUI.msdpReady = true
+  if not BaseUI.dormant() then
+    BaseUI.requestMsdpVitals()
+  end
+end
+
+-- a reconnect (possibly to a different game or character) starts the ladder
+-- fresh: recurrence counters, the source lock and the one-time score request
+-- are all per-connection state. Painted gauges keep their last values until
+-- fresh data arrives.
+function BaseUI.handleDisconnect()
+  BaseUI.vitalsData = {}
+  BaseUI.vitalsLock = 0
+  BaseUI.shapeSightings = {}
+  BaseUI.scoreRequested = false
+  BaseUI.scoreWindowUntil = nil
+  BaseUI.sawGmcpVitals = false
+  BaseUI.sawMsdpVitals = false
+  BaseUI.msdpReady = false
+  -- the chat trigger layer retires itself once GMCP chat shows up; the next
+  -- connection may be to a game without it, so re-arm the triggers (the
+  -- first GMCP chat message will retire them again, and the recentCaptures
+  -- ring already covers the echo race that comes with that)
+  BaseUI.gmcpChat = false
+  BaseUI.armChatTriggers()
+  -- only re-arms because the lock was cleared above
+  BaseUI.createVitalsTriggers()
+end
+
+function BaseUI.addChatMessage()
+  local message = gmcp and gmcp.Comm and gmcp.Comm.Channel and gmcp.Comm.Channel.Text
+  if type(message) ~= "table" or type(message.text) ~= "string" then
+    return
+  end
+  -- the game sends chat over GMCP and usually echoes it as plain text too -
+  -- retire the generic triggers for this session so lines are not captured twice
+  BaseUI.gmcpChat = true
+  BaseUI.disarmChatTriggers()
+  if BaseUI.dormant() then
+    return
+  end
+  BaseUI.build()
+  -- the first GMCP messages race their own plain-text echoes: an echo can be
+  -- trigger-captured moments before this handler learns the game speaks GMCP
+  -- chat, so drop a message whose text was just captured as a line
+  if next(BaseUI.recentCaptures) then
+    local plain = message.text:gsub("\27%[[0-9;:]*m", "")
+    local now = getEpoch()
+    for i = #BaseUI.recentCaptures, 1, -1 do
+      local capture = BaseUI.recentCaptures[i]
+      if now - capture.time &gt; 2 then
+        table.remove(BaseUI.recentCaptures, i)
+      elseif capture.text == plain then
+        table.remove(BaseUI.recentCaptures, i)
+        return
+      end
+    end
+  end
+  local text = ansi2decho(message.text) .. "\n"
+  BaseUI.chats.all:decho(text)
+  BaseUI.noteChatActivity("all")
+  local channel = type(message.channel) == "string" and message.channel:lower() or ""
+  local family = channel:find("tell", 1, true) and "tells" or "channels"
+  BaseUI.chats[family]:decho(text)
+  BaseUI.noteChatActivity(family)
+end
+
+-- ask the game to send channel text over GMCP (not all games do so unprompted)
+function BaseUI.enableChannelCapture(_, protocol)
+  if protocol ~= "GMCP" or BaseUI.dormant() then
+    return
+  end
+  gmod.enableModule("BaseUI", "Comm.Channel")
+end
+
+function BaseUI.maybeAnnounce()
+  if BaseUI.settings.announced then
+    return
+  end
+  -- respect the first-run UI tour: hold the introduction until it is done
+  if mudlet and mudlet.uiTourPending then
+    registerAnonymousEventHandler("sysUiTourFinished", "BaseUI.announce", true)
+    return
+  end
+  BaseUI.announce()
+end
+
+function BaseUI.announce()
+  -- dormant covers the tour-finished callback arriving after the UI has
+  -- already stepped aside or been hidden - no point introducing it then
+  if BaseUI.settings.announced or BaseUI.dormant() then
+    return
+  end
+  BaseUI.settings.announced = true
+  BaseUI.saveSettings()
+  cecho("\n&lt;cyan&gt;[ Mudlet UI ] Built you a starter interface from what your game supports - health bars, map and chat.\n")
+  cecho("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, or any section's header out of it to put that section anywhere - type &lt;yellow&gt;baseui&lt;cyan&gt; for options.&lt;reset&gt;\n")
+end
+
+function BaseUI.hide()
+  BaseUI.settings.hidden = true
+  BaseUI.saveSettings()
+  BaseUI.disarmChatTriggers()
+  BaseUI.killVitalsTriggers()
+  if BaseUI.container then
+    BaseUI.container:hide()
+    BaseUI.container:adjustBorder()
+  end
+  BaseUI.layoutDock()
+  cecho("\n&lt;cyan&gt;[ Mudlet UI ] Hidden - type &lt;yellow&gt;baseui show&lt;cyan&gt; to bring it back.&lt;reset&gt;\n")
+end
+
+function BaseUI.show()
+  BaseUI.settings.hidden = false
+  BaseUI.settings.standingAside = nil
+  BaseUI.saveSettings()
+  if type(gmcp) == "table" and next(gmcp) then
+    gmod.enableModule("BaseUI", "Comm.Channel")
+  end
+  if BaseUI.msdpReady then
+    BaseUI.requestMsdpVitals()
+  end
+  BaseUI.updateVitals()
+  BaseUI.updateMsdpVitals()
+  BaseUI.armChatTriggers()
+  BaseUI.createVitalsTriggers()
+  BaseUI.renderVitals()
+  if BaseUI.container then
+    BaseUI.container:show()
+    if not BaseUI.container.attached then
+      BaseUI.container:attachToBorder("right")
+    end
+    -- after the dock is back, not before: showing it shows every section in it,
+    -- including one with nothing in it to show
+    BaseUI.layoutDock()
+    BaseUI.checkMapData()
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] Shown.&lt;reset&gt;\n")
+  else
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] It will appear as soon as the game sends chat or character data.&lt;reset&gt;\n")
+  end
+end
+
+function BaseUI.alias(input)
+  input = (input or ""):trim():lower()
+  if input == "hide" then
+    BaseUI.hide()
+  elseif input == "show" then
+    BaseUI.show()
+  elseif input == "dock" then
+    local docked, stuck = BaseUI.dockAll()
+    if stuck &gt; 0 then
+      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not put everything back in the dock - reconnecting will rebuild it where it belongs.&lt;reset&gt;\n")
+    elseif docked &gt; 0 then
+      cecho("\n&lt;cyan&gt;[ Mudlet UI ] Everything is back in the dock.&lt;reset&gt;\n")
+    else
+      cecho("\n&lt;cyan&gt;[ Mudlet UI ] Everything is in the dock already - drag a section's header out to put it anywhere.&lt;reset&gt;\n")
+    end
+  else
+    local state
+    if BaseUI.settings.hidden then
+      state = "hidden"
+    elseif BaseUI.settings.standingAside then
+      state = "standing aside for the game's own interface"
+    elseif BaseUI.container then
+      state = "shown"
+    else
+      state = "waiting for game data"
+    end
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] A starter interface built from your game's data (currently " .. state .. ").\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it (remembered between sessions)\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui show&lt;cyan&gt; - bring it back\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui dock&lt;cyan&gt; - put every section back in the dock, if you dragged any out&lt;reset&gt;\n")
+  end
+end
+
+BaseUI.loadSettings()
+-- the chat gates are live from the start (unless the UI is dormant) so the
+-- interface can appear on the first chat line even on games without GMCP.
+-- Their tree is imported ahead of this script, and the vitals trigger is
+-- created after it, so a chat line is routed (and marked as chat) before the
+-- vitals layer gets a look at it
+BaseUI.armChatTriggers()
+BaseUI.createVitalsTriggers()
+-- negotiate MSDP up front: it costs nothing on servers without it and gives
+-- gauges to games that have it but lack GMCP
+setConfig("enableMSDP", true)
+
+registerAnonymousEventHandler("gmcp.Char.Vitals", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.char.vitals", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.Char.Maxstats", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.char.maxstats", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.Char.Status", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.char.status", "BaseUI.updateVitals")
+registerAnonymousEventHandler("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
+registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture")
+registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
+registerAnonymousEventHandler("sysDisconnectionEvent", "BaseUI.handleDisconnect")
+registerAnonymousEventHandler("sysDataSendRequest", "BaseUI.noteCommandSent")
+registerAnonymousEventHandler("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
+registerAnonymousEventHandler("sysServerGuiInstalled", "BaseUI.standAside")
+registerAnonymousEventHandler("sysUninstallPackage", "BaseUI.serverGuiRemoved")
+for _, stat in ipairs(msdpStats) do
+  registerAnonymousEventHandler("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
+  registerAnonymousEventHandler("msdp." .. stat.max, "BaseUI.updateMsdpVitals")
+end
+registerAnonymousEventHandler("mapOpenEvent", "BaseUI.checkMapData")
+registerAnonymousEventHandler("sysMapDownloadEvent", "BaseUI.checkMapData")
+registerAnonymousEventHandler("sysMapAreaChanged", "BaseUI.checkMapData")
+registerAnonymousEventHandler("gmcp.Room.Info", "BaseUI.checkMapData")
+registerAnonymousEventHandler("gmcp.room.info", "BaseUI.checkMapData")</script>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<HelpPackage>
+		<helpURL></helpURL>
+	</HelpPackage>
+</MudletPackage>

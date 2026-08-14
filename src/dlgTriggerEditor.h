@@ -105,8 +105,10 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow QTest-based test class to access private members
+    // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorBannerViewSwitchTest;
+    friend class ScriptEventHandlerLifetimeTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -173,6 +175,7 @@ public:
 
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
+    ~dlgTriggerEditor();
 
     Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
@@ -185,6 +188,7 @@ public:
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* e) override;
+    void updateExtraControlsToggleIcon();
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&, bool announce = true);
@@ -333,6 +337,7 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
+    void slot_refreshBannerLinkColors();
     void slot_itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
 
     // Per-property immediate save slots for triggers (create individual undo entries)
@@ -372,6 +377,7 @@ private slots:
     void slot_saveProperty_ActionCommandUp();
     void slot_saveProperty_ActionIsPushDown();
     void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarFillerOffset();
     void slot_saveProperty_ActionBarOrientation();
     void slot_saveProperty_ActionBarLocation();
     void slot_saveProperty_ActionButtonRotation();
@@ -393,6 +399,12 @@ private:
     EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
+    void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
+    void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT);
+    bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
     void saveScript();
@@ -452,6 +464,8 @@ private:
     void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
     void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
     void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
+
+    void placePastedItems(EditorViewType itemType, const QList<int>& itemIDs);
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
@@ -632,6 +646,8 @@ private:
     dlgSystemMessageArea* mpSystemMessageArea = nullptr;
 
     bool mIsScriptsMainAreaEditHandler = false;
+    // Not owned, and does not outlive a
+    // listWidget_script_registered_event_handlers->clear()
     QListWidgetItem* mpScriptsMainAreaEditHandlerItem = nullptr;
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;
@@ -718,6 +734,11 @@ private:
     // determined the first time the area is shrunk down by the user:
     int mTriggerMainAreaMinimumHeightToShowAll = 0;
 
+    // Persisted preference for showing the extra trigger controls; only
+    // changed by explicit clicks on the toggle button, not by the transient
+    // space-driven auto-collapse:
+    bool mShowAllTriggerControls = false;
+
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;
     QByteArray mAliasEditorSplitterState;
@@ -776,6 +797,7 @@ private:
 
     // Banner methods
     void handleBannerDismiss();
+    void cancelBannerUndoTimer();
     void showBannerUndoToast();
     void undoBannerDismiss();
     void handlePermanentBannerDismiss();

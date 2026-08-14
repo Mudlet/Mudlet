@@ -220,13 +220,6 @@ public:
     int mTargetRoomId = 0;
     bool mStartSpeedWalk = false;
 
-
-    // string list: 0 is event name, 1 is menu it is under if it is
-    QMap<QString, QStringList> mUserActions;
-
-    // unique name, List:parent name ("" if null), display name
-    QMap<QString, QStringList> mUserMenus;
-
     bool mRoomBeingMoved = false;
     QPointF mRoomMoveLastMapPoint;
     bool mHasRoomMoveLastMapPoint = false;
@@ -328,6 +321,7 @@ public slots:
     void slot_editLabel();
     void slot_setPlayerLocation();
     void slot_toggleMapViewOnly();
+    void slot_configureAreas();
     void slot_createLabel();
     void slot_customLineColor();
     void slot_shiftZup();

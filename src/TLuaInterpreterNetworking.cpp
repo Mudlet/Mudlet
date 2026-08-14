@@ -55,15 +55,13 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <algorithm>
 #include <limits>
 #include <math.h>
 
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -79,7 +77,9 @@ int TLuaInterpreter::connectToServer(lua_State* L)
     bool isToSaveToProfile = false;
 
     Host& host = getHostFromLua(L);
-    const QString url = getVerifiedString(L, __func__, 1, "url");
+    if (!checkStringArg(L, __func__, 1, "url")) {
+        return lua_error(L);
+    }
 
     if (!lua_isnoneornil(L, 2)) {
         port = getVerifiedInt(L, __func__, 2, "port number {default = 23}", true);
@@ -92,6 +92,8 @@ int TLuaInterpreter::connectToServer(lua_State* L)
     if (!lua_isnoneornil(L, 3)) {
         isToSaveToProfile = getVerifiedBool(L, __func__, 3, "save host name and port number", true);
     }
+
+    const QString url{lua_tostring(L, 1)};
 
     if (isToSaveToProfile) {
         QPair<bool, QString> result = host.writeProfileData(QLatin1String("url"), url);
@@ -123,8 +125,12 @@ int TLuaInterpreter::disconnect(lua_State* L)
 int TLuaInterpreter::downloadFile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString localFile = getVerifiedString(L, __func__, 1, "local filename");
-    const QString urlString = getVerifiedString(L, __func__, 2, "remote url");
+    if (!checkStringArg(L, __func__, 1, "local filename") || !checkStringArg(L, __func__, 2, "remote url")) {
+        return lua_error(L);
+    }
+
+    const QString localFile{lua_tostring(L, 1)};
+    const QString urlString{lua_tostring(L, 2)};
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
@@ -212,11 +218,11 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 
     if (cHostName.isEmpty()) {
         return warnArgumentValue(L, __func__, error, true);
-    } else {
-        lua_pushboolean(L, true);
-        lua_pushstring(L, cHostName.toUtf8().constData());
     }
-    return 1;
+    lua_pushboolean(L, true);
+    lua_pushstring(L, cHostName.toUtf8().constData());
+
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcNick
@@ -300,17 +306,19 @@ int TLuaInterpreter::sendATCP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
+    const bool hasWhat = lua_gettop(L) > 1;
+    if (hasWhat && !lua_isstring(L, 2)) {
+        lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
     const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string what;
-    if (lua_gettop(L) > 1) {
-        if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
+    if (hasWhat) {
         what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
     }
 
@@ -349,17 +357,19 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
+    const bool hasWhat = lua_gettop(L) > 1;
+    if (hasWhat && !lua_isstring(L, 2)) {
+        lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
     const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string what;
-    if (lua_gettop(L) > 1) {
-        if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
+    if (hasWhat) {
         what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
     }
 
@@ -396,8 +406,12 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendIrc
 int TLuaInterpreter::sendIrc(lua_State* L)
 {
-    const QString target = getVerifiedString(L, __func__, 1, "target");
-    const QString msg = getVerifiedString(L, __func__, 2, "message");
+    if (!checkStringArg(L, __func__, 1, "target") || !checkStringArg(L, __func__, 2, "message")) {
+        return lua_error(L);
+    }
+
+    const QString target{lua_tostring(L, 1)};
+    const QString msg{lua_tostring(L, 2)};
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mpDlgIRC) {
@@ -474,9 +488,22 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
+    // Check connection status first (most common issue)
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending MSDP"));
+    }
+
+    if (!host.mTelnet.isMSDPEnabled()) {
+        return warnArgumentValue(L, __func__, qsl("MSDP is not currently enabled"));
+    }
+
     // output is in Mud Server Encoding form here:
-    host.mTelnet.socketOutRaw(output);
-    return 0;
+    if (!host.mTelnet.socketOutRaw(output)) {
+        return warnArgumentValue(L, __func__, qsl("failed to send MSDP message - connection may have been lost or a socket write error occurred"));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendTelnetChannel102
@@ -517,6 +544,18 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     return 1;
 }
 
+// An IRC channel name holds neither of the two characters its list is taken apart
+// on: the stored list is space-joined (dlgIRC::writeIrcChannels) and the JOIN
+// command is comma-joined, so a name carrying either would come back as two
+// channels. Every kind of whitespace is refused rather than only the space it is
+// joined on, because an IRC channel name may hold none of it.
+static bool ircChannelNameHasSeparator(const QString& channel)
+{
+    return std::any_of(channel.cbegin(), channel.cend(), [](const QChar character) {
+        return character.isSpace() || character == QLatin1Char(',');
+    });
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcChannels
 int TLuaInterpreter::setIrcChannels(lua_State* L)
 {
@@ -530,7 +569,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
         // key at index -2 and value at index -1
         if (lua_type(L, -1) == LUA_TSTRING) {
             const QString c = lua_tostring(L, -1);
-            if (!c.isEmpty() && (c.startsWith(QLatin1String("#")) || c.startsWith(QLatin1String("&")) || c.startsWith(QLatin1String("+")))) {
+            if (!c.isEmpty() && (c.startsWith(QLatin1String("#")) || c.startsWith(QLatin1String("&")) || c.startsWith(QLatin1String("+"))) && !ircChannelNameHasSeparator(c)) {
                 newchannels << c;
             }
         }
@@ -572,12 +611,13 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcServer
 int TLuaInterpreter::setIrcServer(lua_State* L)
 {
-    const int args = lua_gettop(L);
     int secure = false;
     int port = 6667;
-    QString password;
-    const std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
-    if (addr.empty()) {
+    if (!checkStringArg(L, __func__, 1, "hostname")) {
+        return lua_error(L);
+    }
+    const char* hostName = lua_tostring(L, 1);
+    if (*hostName == '\0') {
         return warnArgumentValue(L, __func__, "hostname must not be empty");
     }
     if (!lua_isnoneornil(L, 2)) {
@@ -586,15 +626,26 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
             return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
     }
-    if (args > 2) {
+    if (!lua_isnoneornil(L, 3)) {
         secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
     }
-    if (args > 3) {
-        password = getVerifiedString(L, __func__, 4, "server password", true);
+
+    // An omitted password - and a nil one, which every optional argument here
+    // treats the same way - leaves the stored password alone: a call that only
+    // changes the host or the port must not drop a credential it was never
+    // given. Clearing one is asking for it, by passing an empty string.
+    const bool passwordGiven = !lua_isnoneornil(L, 4);
+    if (passwordGiven && !checkStringArg(L, __func__, 4, "server password", true)) {
+        return lua_error(L);
+    }
+
+    QString password;
+    if (passwordGiven) {
+        password = lua_tostring(L, 4);
     }
 
     Host* pHost = &getHostFromLua(L);
-    QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromStdString(addr));
+    QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromUtf8(hostName));
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save hostname, reason: %1").arg(result.second));
     }
@@ -609,9 +660,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("unable to save secure, reason: %1").arg(result.second));
     }
 
-    result = dlgIRC::writeIrcPassword(pHost, password);
-    if (!result.first) {
-        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
+    if (passwordGiven) {
+        result = dlgIRC::writeIrcPassword(pHost, password);
+        if (!result.first) {
+            return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
+        }
     }
 
     lua_pushboolean(L, true);
@@ -619,40 +672,69 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     return 2;
 }
 
+// Validates the optional headers table at Lua stack index `index`: it must be
+// absent/nil, or a table whose keys and values are all strings, otherwise a Lua
+// error is raised. This has to run before any QUrl or QNetworkRequest is
+// constructed, because lua_error() longjmps past C++ destructors and would
+// otherwise leak those heap-owning Qt objects.
+/*static*/ void TLuaInterpreter::validateHttpHeaders(lua_State* L, const int index, const char* functionName)
+{
+    if (!lua_istable(L, index)) {
+        if (!lua_isnoneornil(L, index)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, index, luaL_typename(L, index));
+            lua_error(L);
+        }
+        return;
+    }
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushfstring(L,
+                            "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                            functionName,
+                            index,
+                            luaL_typename(L, -2),
+                            luaL_typename(L, -1));
+            lua_error(L);
+        }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+}
+
+// Applies the already-validated headers table at `index` to `request`. Call
+// validateHttpHeaders() first: this assumes every key/value is a string and
+// never raises a Lua error, so it is safe to run with a live QNetworkRequest.
+/*static*/ void TLuaInterpreter::applyHttpHeaders(lua_State* L, const int index, QNetworkRequest& request)
+{
+    if (!lua_istable(L, index)) {
+        return;
+    }
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0) {
+        request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+        lua_pop(L, 1);
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTTP
 int TLuaInterpreter::getHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
-    const QUrl url = QUrl::fromUserInput(urlString);
+    if (!checkStringArg(L, __func__, 1, "remote url")) {
+        return lua_error(L);
+    }
+    validateHttpHeaders(L, 2, __func__);
+
+    const QUrl url = QUrl::fromUserInput(QString{lua_tostring(L, 1)});
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "getHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    if (lua_istable(L, 2)) {
-        lua_pushnil(L);
-        while (lua_next(L, 2) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "getHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
+    applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
@@ -669,49 +751,32 @@ int TLuaInterpreter::getHTTP(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
 int TLuaInterpreter::postHTTP(lua_State* L)
 {
-    return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PostOperation, qsl("post"));
+    return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PostOperation, "post");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#putHTTP
 int TLuaInterpreter::putHTTP(lua_State* L)
 {
-    return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PutOperation, qsl("put"));
+    return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PutOperation, "put");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#deleteHTTP
 int TLuaInterpreter::deleteHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
-    const QUrl url = QUrl::fromUserInput(urlString);
+    if (!checkStringArg(L, __func__, 1, "remote url")) {
+        return lua_error(L);
+    }
+    validateHttpHeaders(L, 2, __func__);
+
+    const QUrl url = QUrl::fromUserInput(QString{lua_tostring(L, 1)});
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "deleteHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    if (lua_istable(L, 2)) {
-        lua_pushnil(L);
-        while (lua_next(L, 2) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "deleteHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
+    applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);
@@ -728,6 +793,9 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#customHTTP
 int TLuaInterpreter::customHTTP(lua_State* L)
 {
-    auto customMethod = getVerifiedString(L, __func__, 1, "http method");
-    return performHttpRequest(L, __func__, 1, QNetworkAccessManager::CustomOperation, customMethod);
+    if (!checkStringArg(L, __func__, 1, "http method")) {
+        return lua_error(L);
+    }
+
+    return performHttpRequest(L, __func__, 1, QNetworkAccessManager::CustomOperation, lua_tostring(L, 1));
 }

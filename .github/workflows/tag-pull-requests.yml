@@ -3,15 +3,23 @@ name: Pull request
 on:
   pull_request_target:
 
+# issues covers reading the milestone list and setting the milestone on the
+# pull request, which the REST API treats as an issue; pull-requests is granted
+# as well because GitHub gates issue endpoints on it when the target is a PR
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   add-milestone:
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
 
     - name: Get next milestone
       id: next-milestone-string
@@ -20,30 +28,54 @@ jobs:
         cmd: yq eval '.milestones.next-milestone' '.github/repo-metadata.yml'
 
     - name: 'Convert milestone to Github #'
-      id: next-milestone-number
+      env:
+        # authenticated so this does not share the per-IP anonymous rate limit
+        # with every other job on the runner's address
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        NEXT_MILESTONE: ${{ steps.next-milestone-string.outputs.result }}
       run: |
-        MILESTONE_NUMBER=$(curl --silent --request GET                \
-          --url https://api.github.com/repos/Mudlet/Mudlet/milestones \
-          -H "Accept: application/vnd.github.v3+json" |               \
-          jq '.[] | select(.title == "${{ steps.next-milestone-string.outputs.result }}").number')
+        set -euo pipefail
 
-        echo "MILESTONE_NUMBER=$MILESTONE_NUMBER" >> "$GITHUB_ENV"
+        # Plain assignment, not a process substitution, so a failure to resolve
+        # the milestone stops the job instead of being read as an empty answer
+        if ! resolved=$(.github/scripts/resolve-milestone.sh); then
+          exit 1
+        fi
+
+        read -r number title <<< "${resolved}"
+        echo "Milestone: ${title}"
+        echo "MILESTONE_NUMBER=${number}" >> "$GITHUB_ENV"
+        echo "MILESTONE_TITLE=${title}" >> "$GITHUB_ENV"
 
     - name: Assign PR to milestone
       env:
-        TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
+        # The built-in token has write access here because pull_request_target
+        # runs in the base repository; the fine-grained PAT this replaces was
+        # blocked by the organisation's 366-day token lifetime policy
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
-        # Fetch pull request details
-        PR_DETAILS=$(curl -s --request GET \
-          -H "Accept: application/vnd.github.v3+json"      \
-          --url ${{ github.event.pull_request.issue_url }} \
-          --header "authorization: token $TOKEN")
+        set -euo pipefail
 
-        # Check if the pull request has a milestone already
-        if [ $(echo "$PR_DETAILS" | jq '.milestone == null') == "true" ]; then
-            curl -s --request PATCH \
-              -H "Accept: application/vnd.github.v3+json"      \
-              --url ${{ github.event.pull_request.issue_url }} \
-              --header "authorization: token $TOKEN"           \
-              --data '{"milestone": '"$MILESTONE_NUMBER"'}'
+        if [ -z "${MILESTONE_NUMBER:-}" ]; then
+          echo "::error::No milestone number was resolved by the previous step"
+          exit 1
         fi
+
+        # Captured rather than tested inline, because a failed read inside the
+        # test would look identical to "has no milestone" and overwrite one that
+        # somebody set on purpose
+        if ! existing=$(gh api "repos/${REPO}/issues/${PR_NUMBER}" --jq '.milestone.number // empty'); then
+          echo "::error::Could not read the current milestone of #${PR_NUMBER}"
+          exit 1
+        fi
+
+        if [ -n "${existing}" ]; then
+          echo "#${PR_NUMBER} is already on milestone ${existing}, leaving it as it is"
+          exit 0
+        fi
+
+        gh api --method PATCH "repos/${REPO}/issues/${PR_NUMBER}" -F "milestone=${MILESTONE_NUMBER}" --silent
+        echo "Assigned #${PR_NUMBER} to milestone ${MILESTONE_TITLE}"

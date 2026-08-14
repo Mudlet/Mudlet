@@ -39,6 +39,7 @@ extern const QString ROOM_UI_SHOWNAME;
 extern const QString ROOM_UI_NAMEPOS;
 extern const QString ROOM_UI_NAMEFONT;  // global only
 extern const QString ROOM_UI_NAMESIZE;  // TODO
+extern const QString ROOM_UI_NAMECOLOR;
 extern const QString ROOM_UI_BORDERCOLOR;
 extern const QString ROOM_UI_BORDERTHICKNESS;
 
@@ -71,6 +72,7 @@ public:
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
     const QMap<int, TArea*>& getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
+    bool hasRoom(int id) const { return rooms.contains(id); }
     QList<int> getAreaIDList();
     const QMap<int, QString>& getAreaNamesMap() const { return areaNamesMap; }
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
@@ -104,6 +106,7 @@ private:
     TRoomDB() = default;
 
     int createNewAreaID();
+    void deleteDisplacedArea(int, TArea*);
     bool __removeRoom(int id);
     void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
 

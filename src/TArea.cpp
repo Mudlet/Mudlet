@@ -31,8 +31,9 @@
 #include "TRoomDB.h"
 
 #include <QBuffer>
-#include <QElapsedTimer>
 #include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonValue>
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -69,10 +70,9 @@ int TArea::getAreaID()
 {
     if (mpRoomDB) {
         return mpRoomDB->getAreaID(this);
-    } else {
-        qDebug() << "ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
-        return -1;
     }
+    qDebug() << "ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
+    return -1;
 }
 
 QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
@@ -227,15 +227,37 @@ void TArea::determineAreaExitsOfRoom(int id)
         QPair<int, int> const p = QPair<int, int>(exitId, DIR_OUT);
         mAreaExits.insert(id, p);
     }
-    QMapIterator<QString, int> it(pR->getSpecialExits());
+    const QMap<QString, int>& specialExits = pR->getSpecialExits();
+    if (specialExits.isEmpty()) {
+        return;
+    }
+
+    const int areaId = getAreaID();
+    QMapIterator<QString, int> it(specialExits);
     while (it.hasNext()) {
         it.next();
         TRoom* pO = mpRoomDB->getRoom(it.value());
         if (pO) {
-            if (pO->getArea() != getAreaID()) {
+            if (pO->getArea() != areaId) {
                 QPair<int, int> const p = QPair<int, int>(pO->getId(), DIR_OTHER);
                 mAreaExits.insert(id, p);
             }
+        }
+    }
+}
+
+void TArea::refreshAreaExitsToRoom(int id)
+{
+    if (!mpRoomDB) {
+        return;
+    }
+
+    // Rooms with an exit to this one are the only ones whose area exit records
+    // can have changed; the map-wide entrance hash finds them without a scan.
+    const QList<int> enteringRoomIds = mpRoomDB->getEntranceHash().values(id);
+    for (const int enteringRoomId : enteringRoomIds) {
+        if (enteringRoomId != id && rooms.contains(enteringRoomId)) {
+            determineAreaExitsOfRoom(enteringRoomId);
         }
     }
 }
@@ -326,36 +348,6 @@ void TArea::determineAreaExits()
     }
 }
 
-void TArea::fast_calcSpan(int id)
-{
-    TRoom* pR = mpRoomDB->getRoom(id);
-    if (!pR) {
-        return;
-    }
-
-    const int x = pR->x();
-    const int y = pR->y();
-    const int z = pR->z();
-    if (x > max_x) {
-        max_x = x;
-    }
-    if (x < min_x) {
-        min_x = x;
-    }
-    if (y > max_y) {
-        max_y = y;
-    }
-    if (y < min_y) {
-        min_y = y;
-    }
-    if (z > max_z) {
-        max_z = z;
-    }
-    if (z < min_z) {
-        min_z = z;
-    }
-}
-
 void TArea::addRoom(int id)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
@@ -364,6 +356,9 @@ void TArea::addRoom(int id)
             rooms.insert(id);
             mZLevelIndex.addRoom(id, pR->z());
             mGridIndex.addRoom(id, pR->z(), pR->x(), pR->y());
+            if (mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z())) {
+                publishSpanForZ(pR->z());
+            }
         } else {
             qDebug() << "TArea::addRoom(" << id << ") No creation! room already exists";
         }
@@ -373,13 +368,87 @@ void TArea::addRoom(int id)
     }
 }
 
-void TArea::calcSpan()
+void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY)
+{
+    if (!rooms.contains(id)) {
+        // A room that is not in this area has no entries here to move, and
+        // adding them would leave the indexes claiming a room they will never
+        // be told to drop:
+        return;
+    }
+
+    mZLevelIndex.moveRoom(id, fromZ, toZ);
+    mGridIndex.moveRoom(id, fromZ, fromX, fromY, toZ, toX, toY);
+    const bool fromExtremesMoved = mSpanIndex.removeRoom(fromX, -1 * fromY, fromZ);
+    const bool toExtremesMoved = mSpanIndex.addRoom(toX, -1 * toY, toZ);
+    if (fromExtremesMoved) {
+        publishSpanForZ(fromZ);
+    }
+    if (toExtremesMoved) {
+        publishSpanForZ(toZ);
+    }
+}
+
+void TArea::publishSpan()
 {
     xminForZ.clear();
-    yminForZ.clear();
     xmaxForZ.clear();
+    yminForZ.clear();
     ymaxForZ.clear();
-    zLevels.clear();
+    zLevels = mSpanIndex.zLevels();
+    for (const int z : zLevels) {
+        const TAreaSpanIndex::Extremes extremes = mSpanIndex.extremesForZ(z);
+        xminForZ.insert(z, extremes.minX);
+        xmaxForZ.insert(z, extremes.maxX);
+        yminForZ.insert(z, extremes.minY);
+        ymaxForZ.insert(z, extremes.maxY);
+    }
+    publishOverallSpan();
+}
+
+void TArea::publishSpanForZ(int z)
+{
+    if (mSpanIndex.hasZ(z)) {
+        const TAreaSpanIndex::Extremes extremes = mSpanIndex.extremesForZ(z);
+        xminForZ.insert(z, extremes.minX);
+        xmaxForZ.insert(z, extremes.maxX);
+        yminForZ.insert(z, extremes.minY);
+        ymaxForZ.insert(z, extremes.maxY);
+        if (!zLevels.contains(z)) {
+            zLevels.insert(std::lower_bound(zLevels.cbegin(), zLevels.cend(), z), z);
+        }
+    } else {
+        xminForZ.remove(z);
+        xmaxForZ.remove(z);
+        yminForZ.remove(z);
+        ymaxForZ.remove(z);
+        zLevels.removeOne(z);
+    }
+    publishOverallSpan();
+}
+
+void TArea::publishOverallSpan()
+{
+    if (mSpanIndex.empty()) {
+        // With no rooms to derive them from, an emptied area keeps whatever
+        // extremes it last had:
+        return;
+    }
+
+    const TAreaSpanIndex::Extremes extremes = mSpanIndex.overallExtremes();
+    min_x = extremes.minX;
+    max_x = extremes.maxX;
+    min_y = extremes.minY;
+    max_y = extremes.maxY;
+    min_z = mSpanIndex.minZ();
+    max_z = mSpanIndex.maxZ();
+}
+
+// Rebuilds every index from the area's room set, which is what callers that
+// change TArea::rooms wholesale (map loading, the map auditor) rely on.
+void TArea::calcSpan()
+{
+    mSpanIndex.clear();
 
     // Collect the room-to-Z mapping in a single pass so mZLevelIndex can be
     // rebuilt without a second iteration. Also collect the full z/x/y data
@@ -388,7 +457,6 @@ void TArea::calcSpan()
     roomIdToZ.reserve(rooms.size());
     QHash<int, QHash<int, QPair<int, int>>> zToRoomXY;
 
-    bool isFirstDone = false;
     QSetIterator<int> itRoom(rooms);
     while (itRoom.hasNext()) {
         const int id = itRoom.next();
@@ -399,143 +467,31 @@ void TArea::calcSpan()
 
         roomIdToZ.insert(id, pR->z());
         zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
-
-        if (!isFirstDone) {
-            // Only do this initialization for the first valid room
-            min_x = pR->x();
-            max_x = min_x;
-            min_y = pR->y() * -1;
-            max_y = min_y;
-            min_z = pR->z();
-            max_z = min_z;
-            zLevels.push_back(pR->z());
-            xminForZ.insert(pR->z(), pR->x());
-            xmaxForZ.insert(pR->z(), pR->x());
-            yminForZ.insert(pR->z(), (-1 * pR->y()));
-            ymaxForZ.insert(pR->z(), (-1 * pR->y()));
-            isFirstDone = true;
-            continue;
-        } else {
-            // Already had one valid room so now must check more things
-
-            if (!zLevels.contains(pR->z())) {
-                zLevels.push_back(pR->z());
-            }
-
-            if (!xminForZ.contains(pR->z())) {
-                xminForZ.insert(pR->z(), pR->x());
-            } else if (pR->x() < xminForZ.value(pR->z())) {
-                xminForZ.insert(pR->z(), pR->x());
-            }
-
-            if (pR->x() < min_x) {
-                min_x = pR->x();
-            }
-
-            if (!xmaxForZ.contains(pR->z())) {
-                xmaxForZ.insert(pR->z(), pR->x());
-            } else if (pR->x() > xmaxForZ.value(pR->z())) {
-                xmaxForZ.insert(pR->z(), pR->x());
-            }
-
-            if (pR->x() > max_x) {
-                max_x = pR->x();
-            }
-
-            if (!yminForZ.contains(pR->z())) {
-                yminForZ.insert(pR->z(), (-1 * pR->y()));
-            } else if ((-1 * pR->y()) < yminForZ.value(pR->z())) {
-                yminForZ.insert(pR->z(), (-1 * pR->y()));
-            }
-
-            if ((-1 * pR->y()) < min_y) {
-                min_y = (-1 * pR->y());
-            }
-
-            if ((-1 * pR->y()) > max_y) {
-                max_y = (-1 * pR->y());
-            }
-
-            if (!ymaxForZ.contains(pR->z())) {
-                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
-            } else if ((-1 * pR->y()) > ymaxForZ.value(pR->z())) {
-                ymaxForZ.insert(pR->z(), (-1 * pR->y()));
-            }
-
-            if (pR->z() < min_z) {
-                min_z = pR->z();
-            }
-
-            if (pR->z() > max_z) {
-                max_z = pR->z();
-            }
-        }
+        mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z());
     }
 
-    if (zLevels.size() > 1) {
-        // Not essential but it makes debugging a bit clearer if they are sorted
-        // The {x|y}{min|max}ForZ are, by definition!
-        std::sort(zLevels.begin(), zLevels.end());
-    }
+    publishSpan();
 
-    // Rebuild the Z-level room index from the authoritative room set.
     mZLevelIndex.rebuild(roomIdToZ);
     mGridIndex.rebuild(zToRoomXY);
 }
 
-// Added a second argument to cut-out extremes recalculation if not required
-// Currently called from:
-// bool TRoom::setArea( int, bool )  -- the second arg there can be used for this
-// bool TRoomDB::__removeRoom( int ) -- automatically skipped for area deletion
-//                                      (when this would not be needed)
-void TArea::removeRoom(int room, bool deferAreaRecalculations)
+void TArea::removeRoom(int room)
 {
-    static double cumulativeMean = 0.0;
-    static quint64 runCount = 0;
-    QElapsedTimer timer;
-    timer.start();
-
-    // Will use to flag whether some things have to be recalculated.
-    bool isOnExtreme = false;
     TRoom* pR = mpRoomDB->getRoom(room);
-    if (pR) {
-        // Always keep the Z-level index consistent regardless of whether area
-        // recalculations are deferred.  The incremental removal is O(1) and
-        // ensures getRoomsForZ() returns correct results until calcSpan() next
-        // runs (which rebuilds the index authoritatively).
-        if (rooms.contains(room)) {
-            mZLevelIndex.removeRoom(room, pR->z());
-            mGridIndex.removeRoom(room, pR->z(), pR->x(), pR->y());
+    if (pR && rooms.contains(room)) {
+        mZLevelIndex.removeRoom(room, pR->z());
+        mGridIndex.removeRoom(room, pR->z(), pR->x(), pR->y());
+        if (mSpanIndex.removeRoom(pR->x(), -1 * pR->y(), pR->z())) {
+            publishSpanForZ(pR->z());
         }
-
-        if (rooms.contains(room) && !deferAreaRecalculations) {
-            // just a check, if the area DOESN'T have the room then it is not wise
-            // to behave as if it did
-            // Now see if the room is on an extreme - if it the only room on a
-            // particular z-coordinate it will be on all four
-            if (xminForZ.contains(pR->z()) && xminForZ.value(pR->z()) >= pR->x()) {
-                isOnExtreme = true;
-            } else if (xmaxForZ.contains(pR->z()) && xmaxForZ.value(pR->z()) <= pR->x()) {
-                isOnExtreme = true;
-            } else if (yminForZ.contains(pR->z()) && yminForZ.value(pR->z()) >= (-1 * pR->y())) {
-                isOnExtreme = true;
-            } else if (ymaxForZ.contains(pR->z()) && ymaxForZ.value(pR->z()) <= (-1 * pR->y())) {
-                isOnExtreme = true;
-            } else if (min_x >= pR->x() || min_y >= (-1 * pR->y()) || max_x <= pR->x() || max_y <= (-1 * pR->y())) {
-                isOnExtreme = true;
-            }
-        }
+    } else if (!pR && rooms.contains(room)) {
+        // The indexes are keyed on the room's coordinates, so without the room
+        // its entries are stuck here until something calls calcSpan():
+        qWarning() << "TArea::removeRoom(" << room << ") the room is no longer in the map, so this area's indexes cannot be updated";
     }
     rooms.remove(room);
     mAreaExits.remove(room);
-    if (isOnExtreme) {
-        calcSpan();
-    }
-    quint64 const thisTime = timer.nsecsElapsed();
-    cumulativeMean += (((thisTime * 1.0e-9) - cumulativeMean) / ++runCount);
-    if (runCount % 1000 == 0) {
-        qDebug() << "TArea::removeRoom(" << room << ") from Area took" << thisTime * 1.0e-9 << "sec. this time and after" << runCount << "times the average is" << cumulativeMean << "sec.";
-    }
 }
 
 // Reconstruct the area exit data in a format that actually makes sense - only

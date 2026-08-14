@@ -20,6 +20,7 @@
 #ifndef TELNET_SERVER_STUB_H
 #define TELNET_SERVER_STUB_H
 
+#include <QPointer>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QTimer>
@@ -30,12 +31,23 @@ class TelnetServerStub : public QTcpServer
     Q_OBJECT
 
     QString mpWelcomeMessage = "";
+    QPointer<QTcpSocket> mpClient;
+    QByteArray mPendingData;
+    bool mHadClient = false;
 
 public:
     explicit TelnetServerStub(QObject* parent = nullptr);
+    ~TelnetServerStub() override;
 
-    void start(const QString& host, quint16 port);
+    // Bind to a caller-chosen port, or to an ephemeral OS-assigned port when port is 0 (the default).
+    // Binding 0 lets concurrent test runs avoid colliding on a shared fixed port; the caller reads the
+    // actual bound port back via serverPort() (inherited from QTcpServer) once start() has succeeded.
+    void start(const QString& host, quint16 port = 0);
     void setWelcomeMessage(const QString& message) { mpWelcomeMessage = message; }
+    // Sends bytes verbatim to the connected client - allows telnet control
+    // bytes like IAC GA to be included:
+    void sendRaw(const QByteArray& data);
+    bool clientConnected() const { return !mpClient.isNull(); }
 
 private slots:
     void onNewConnection();

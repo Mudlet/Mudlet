@@ -33,6 +33,7 @@
 #include <QElapsedTimer>
 #include <QFont>
 #include <QIcon>
+#include <QPixmap>
 #include <QPointer>
 #include <QSaveFile>
 #include <QWidget>
@@ -76,6 +77,7 @@ struct TFontAttributes
     bool operator==(const TFontAttributes& other) const = default;
     bool operator!=(const TFontAttributes& other) const = default;
 
+    TFontAttributes(const TFontAttributes& other) = default;
     TFontAttributes& operator=(const TFontAttributes& other) = default;
 
     QFont makeFont() const
@@ -250,6 +252,7 @@ public:
     void setCommandFgColor(const QColor&);
     void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
+    bool getScrollBarVisible() const;
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
@@ -290,6 +293,15 @@ public:
     void setFontName(const QString& fontName);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
+    bool setWindowBackgroundImage(const QString&, int);
+    bool resetWindowBackgroundImage();
+    void updateMainFrameTransparency();
+    // False only when a scale failed; no source or an unsized widget defers to the next resize
+    bool updateWindowBackgroundCoverPixmap();
+    static QRect coverSourceRect(const QSize& sourceSize, const QSize& targetSize);
+    void setBorderColor(const QColor&);
+    QColor borderColor() const { return mBorderColor; }
+    void lowerMainDisplay();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -382,6 +394,7 @@ public:
     QWidget* mpMainFrame = nullptr;
     QWidget* mpRightToolBar = nullptr;
     QWidget* mpMainDisplay = nullptr;
+    QWidget* mpWindowBackground = nullptr;
 
     QPointer<dlgMapper> mpMapper;
 
@@ -421,7 +434,11 @@ public:
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
     QString mBgImagePath;
+    int mWindowBgImageMode = 0;
+    QString mWindowBgImagePath;
+    QPixmap mWindowBgSourcePixmap;
     bool mHScrollBarEnabled = false;
+    bool mScrollBarEnabled = true;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
     QVideoWidget* mpVideoWidget = nullptr;
     QSplitter* commandSplitter = nullptr;
@@ -486,6 +503,10 @@ private:
     // Whether to show (a 13 character by default) timestamp to the left of
     // each line of text:
     bool mShowTimeStamps = false;
+    // mpMainFrame's palette cannot hold this - it is rebuilt from scratch on every colour change
+    QColor mBorderColor = Qt::black;
+    // latches the 'cover' scale failure so a resize drag does not repeat the warning
+    bool mWindowBgCoverScaleFailed = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

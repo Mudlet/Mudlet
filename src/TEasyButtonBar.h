@@ -41,6 +41,7 @@ public:
     Q_DISABLE_COPY(TEasyButtonBar)
     TEasyButtonBar(TAction*, QString, QWidget* pW = nullptr);
     void addButton(TFlipButton* pW);
+    void resetItemCount(const int initialOffset) { mItemCount = initialOffset; }
     void setVerticalOrientation() { mVerticalOrientation = true; }
     void setHorizontalOrientation() { mVerticalOrientation = false; }
     void clear();

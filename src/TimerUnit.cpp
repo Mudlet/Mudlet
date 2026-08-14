@@ -84,7 +84,21 @@ void TimerUnit::uninstall(const QString& packageName)
             uninstallList.append(rootTimer);
         }
     }
+    // Re-entrant uninstall (#9337): a timer's own script (e.g. a package
+    // auto-updater calling uninstallPackage()) is removing its package while
+    // TTimer::execute() is still on the call stack for that timer. Deleting now
+    // would be a use-after-free, so defer to doCleanup() at depth 0.
+    if (mProcessingDepth > 0) {
+        for (auto timer : uninstallList) {
+            timer->setIsActive(false);
+            mCleanupSet.remove(timer); // keep the two deferred-delete paths disjoint
+        }
+        return;
+    }
     for (auto& timer : uninstallList) {
+        // in case the timer was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(timer);
         delete timer;
     }
     uninstallList.clear();
@@ -196,13 +210,13 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
     if (!pT) {
         return;
     }
-    // temp timers do not need to check for names referring to multiple different
-    // objects as names=ID -> much faster tempTimer creation
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // timer's entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary timers on the
+    // grounds that their name is their id, but a permanent timer named after
+    // that id was evicted with it and left unreachable by name for the rest of
+    // the session
+    mLookupTable.remove(pT->getName(), pT);
     mTimerMap.remove(pT->getID());
     mTimerRootNodeList.remove(pT);
 }
@@ -282,13 +296,8 @@ void TimerUnit::_removeTimer(TTimer* pT)
         return;
     }
 
-    // temp timers do not need to check for names referring to multiple different
-    // objects as names=ID -> much faster tempTimer creation
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see _removeTimerRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
     mTimerMap.remove(pT->getID());
 }
 
@@ -296,8 +305,10 @@ void TimerUnit::_removeTimer(TTimer* pT)
 bool TimerUnit::enableTimer(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named timer; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TTimer* pT = it.value();
 
         if (!pT->isOffsetTimer()) {
@@ -326,7 +337,6 @@ bool TimerUnit::enableTimer(const QString& name)
             }
         }
 
-        ++it;
         found = true;
     }
     return found;
@@ -335,8 +345,10 @@ bool TimerUnit::enableTimer(const QString& name)
 bool TimerUnit::disableTimer(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named timer; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TTimer* pT = it.value();
         if (pT->isOffsetTimer()) {
             pT->setShouldBeActive(false);
@@ -345,7 +357,6 @@ bool TimerUnit::disableTimer(const QString& name)
         }
 
         pT->disableTimer();
-        ++it;
         found = true;
     }
     return found;
@@ -381,15 +392,27 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
 bool TimerUnit::killTimer(const QString& name)
 {
     for (auto timer : mTimerRootNodeList) {
-        if (timer->getName() == name) {
-            // only temporary timers can be killed
-            if (!timer->isTemporary()) {
-                return false;
-            }
-            timer->killTimer();
-            markCleanup(timer);
-            return true;
+        if (timer->getName() != name) {
+            continue;
         }
+        // Names are not unique, so keep looking rather than give up on the first
+        // same-named timer that cannot be killed - a permanent timer loaded from
+        // the profile precedes this session's temporaries in this list, and
+        // reporting a failure over it would strand a killable timer
+        if (!timer->isTemporary()) {
+            // only temporary timers can be killed
+            continue;
+        }
+        // An already killed timer is only unlinked from this list once doCleanup()
+        // gets to free it, which cannot happen while a timer script is on the call
+        // stack - so until then it is still findable by name. Killing it a second
+        // time achieves nothing:
+        if (mCleanupSet.contains(timer)) {
+            continue;
+        }
+        timer->killTimer();
+        markCleanup(timer);
+        return true;
     }
     return false;
 }
@@ -421,14 +444,35 @@ int TimerUnit::getNewID()
 
 void TimerUnit::doCleanup()
 {
+    if (mProcessingDepth > 0) {
+        return;
+    }
+
+    QSet<TTimer*> deletedTimers;
     QMutableSetIterator<TTimer*> itTimer(mCleanupSet);
     while (itTimer.hasNext()) {
         auto pTimer = itTimer.next();
         // It is important to take the item OUT of the set before you delete
         // (and thus invalidate this pointer to) it...!
         itTimer.remove();
+        deletedTimers.insert(pTimer);
         delete pTimer;
     }
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that ended up in both containers is
+    // freed once. It matches on pointer identity only: a node freed indirectly, as
+    // a child of a queued parent, is not in the set (not reachable today - only
+    // temporary root nodes are ever queued, and those have no children).
+    for (auto timer : uninstallList) {
+        if (!deletedTimers.contains(timer)) {
+            deletedTimers.insert(timer);
+            delete timer;
+        }
+    }
+    uninstallList.clear();
 }
 
 void TimerUnit::markCleanup(TTimer* pT)

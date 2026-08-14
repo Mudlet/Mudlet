@@ -53,13 +53,16 @@
 #else
 #include <qt6keychain/keychain.h>
 #endif
+#include <array>
 #include <optional>
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
 class QAction;
 class QCloseEvent;
+class QDateTime;
 class QDir;
+class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
@@ -98,6 +101,7 @@ class TScrollBox;
 class TTabBar;
 class TTimer;
 class TToolBar;
+class TUiTour;
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -197,6 +201,8 @@ public:
     void init();
     void setupConfig();
     void activateProfile(Host*);
+    void switchToProfileTab(int index);
+    bool profileSwitchShortcutMatches(const QKeyEvent*) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
@@ -235,6 +241,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
@@ -302,8 +309,8 @@ public:
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Brings up the preferences dialog and selects the tab whos objectName is
-    // supplied:
-    void showOptionsDialog(const QString&);
+    // supplied, for the given Host - or the active one if none is given:
+    void showOptionsDialog(const QString&, Host* = nullptr);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
     void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
@@ -324,7 +331,12 @@ public:
     void showedMuteAllMediaTutorial();
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
+    // True if the player has used Mudlet long enough not to need the tutorial
+    // tips, the interface tour or the starter UI. Memoised.
     bool experiencedMudletPlayer();
+    // The two below are public only so they can be tested
+    static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);
+    static bool evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now);
 
     // Telnet URI handling
     void handleTelnetUri(const QString& uri);
@@ -357,6 +369,9 @@ public:
     QStringList mOnlyShownPredefinedProfiles;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
+    // Test-only: PipelineBenchmark sets this so its profile measures the
+    // pipeline rather than the shipped default packages.
+    bool mSkipDefaultPackageInstall = false;
     QPointer<dlgConnectionProfiles> mpConnectionDialog;
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
@@ -462,6 +477,8 @@ public slots:
     void slot_showHelpDialogForum();
     void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
+    void slot_nextProfile();
+    void slot_previousProfile();
     void slot_tabChanged(int);
     void slot_timerFires();
     void slot_toggleFullScreenView();
@@ -486,6 +503,8 @@ public slots:
     void slot_showKeyDialog();
     void slot_showPreferencesDialog();
     void slot_showScriptDialog();
+    void slot_showUiTour();
+    void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
@@ -558,6 +577,7 @@ private slots:
 private:
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+    void showUiTour(const bool skipIntroStep);
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString& dictionaryPath);
@@ -575,6 +595,7 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
+    static void showEditorRestoringWindowState(QWidget* editor);
 
     // Profile detachment helper methods
     void moveProfileFromMainToDetachedWindow(const QString& profileName, int tabIndex, TDetachedWindow* targetWindow);
@@ -617,6 +638,9 @@ private:
     QKeySequence mKeySequenceToggleReplay;
     QKeySequence mKeySequenceToggleLogging;
     QKeySequence mKeySequenceToggleEmergencyStop;
+    QKeySequence mKeySequenceNextProfile;
+    QKeySequence mKeySequencePreviousProfile;
+    std::array<QKeySequence, 9> mKeySequencesSwitchToProfile;
     bool mIsGoingDown = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
@@ -699,12 +723,16 @@ private:
     QPointer<QShortcut> mpShortcutToggleReplay;
     QPointer<QShortcut> mpShortcutToggleLogging;
     QPointer<QShortcut> mpShortcutToggleEmergencyStop;
+    QPointer<QShortcut> mpShortcutNextProfile;
+    QPointer<QShortcut> mpShortcutPreviousProfile;
+    std::array<QPointer<QShortcut>, 9> mpShortcutsSwitchToProfile;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QTimer> mpBlinkTimer;
     QElapsedTimer mBlinkElapsedTimer;
     qreal mBlinkTimeMs = 0.0;
     int mBlinkClientCount = 0;
     QPointer<QToolBar> mpToolBarReplay;
+    QPointer<TUiTour> mpUiTour;
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
@@ -763,6 +791,7 @@ private:
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
+    void closeHostOfClosedDetachedWindow(const QString& profileName);
     void detachTab(int tabIndex, const QPoint& position);
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);
