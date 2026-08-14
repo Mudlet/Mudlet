@@ -37,6 +37,7 @@
 #include "utils.h"
 
 #include <QtConcurrentRun>
+#include <QtMath>
 #include <QtUiTools>
 #include <QApplication>
 #include <QColorDialog>
@@ -1686,8 +1687,36 @@ void dlgConnectionProfiles::fillout_form()
         connect_button->hide();
         offline_button->hide();
         mpSkipToGamesButton->show();
-        adjustSize();
+        if (isVisible()) {
+            fitWelcomeMessageToContents();
+        } else {
+            mFitWelcomeMessagePending = true;
+        }
     }
+}
+
+// A dialog that has not been up yet has no laid-out widgets to measure, so a
+// first launch takes its invitation sizing from here instead. It has to happen
+// before QDialog::showEvent(), which centres the dialog on its parent for the
+// size it has at that moment.
+void dlgConnectionProfiles::showEvent(QShowEvent* pEvent)
+{
+    if (mFitWelcomeMessagePending) {
+        mFitWelcomeMessagePending = false;
+        fitWelcomeMessageToContents();
+    }
+    QDialog::showEvent(pEvent);
+}
+
+// A QTextBrowser reports the same size hint whatever it holds, so shrinking the
+// dialog around the invitation with adjustSize() alone cuts off its last line
+// and leaves a scrollbar. Give it a floor its own text fits into first.
+void dlgConnectionProfiles::fitWelcomeMessageToContents()
+{
+    auto* pDocument = welcome_message->document();
+    pDocument->setTextWidth(welcome_message->viewport()->width());
+    welcome_message->setMinimumHeight(qCeil(pDocument->size().height()) + 2 * welcome_message->frameWidth());
+    adjustSize();
 }
 
 void dlgConnectionProfiles::setProfileIcon() const

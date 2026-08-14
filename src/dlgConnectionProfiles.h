@@ -98,6 +98,7 @@ public slots:
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
+    void showEvent(QShowEvent*) override;
     void loadPasswordFromSettings(const QString& profile_name);
     void ensurePasswordLoadedThenConnect(bool alsoConnect);
     bool hasPendingKeychainOperation(const QString& profile_name) const;
@@ -144,6 +145,7 @@ private:
     void showRemovalProblem(const QString& message);
     void showRemovalNotice(const QString& message);
     void showNotification(const QString& message, QLabel* pIcon);
+    void fitWelcomeMessageToContents();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
@@ -190,6 +192,7 @@ private:
     QTimer* mPasswordSaveTimer = nullptr;
     QPushButton* mpSkipToGamesButton = nullptr;
     bool mTutorialDismissed = false;
+    bool mFitWelcomeMessagePending = false;
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
