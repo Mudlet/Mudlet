@@ -4981,45 +4981,23 @@ TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
     return slice;
 }
 
-// This only copies the first line of chunk's contents:
+// Only the first line of chunk is pasted, and it goes in at P:
 void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 {
-    const bool needAppend = false;
-    bool hasAppended = false;
-    int y = P.y();
     const int x = P.x();
-    if (chunk.buffer.empty()) {
+    if (chunk.buffer.empty() || x < 0) {
         return;
     }
+    int y = P.y();
     if (y < 0 || y > getLastLineNumber()) {
         y = getLastLineNumber();
     }
-    // FIXME: RISK OF EXCEPTION getLastLineNumber() returns zero (not -1) if
-    // the buffer is empty, so y can never be less than zero here - however that
-    // will cause an exception with std::deque::at(size_t) - previously
-    // std::deque::operator[size_t] was used and that exhibits UNDEFINED
-    // BEHAVIOUR in the same situation:
-    if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
-        return;
-    }
 
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
-        // This is rather inefficient as s is only ever one QChar long
-        QPoint P_current(cx, y);
-        if ((y < getLastLineNumber()) && (!needAppend)) {
-            const TChar& format = chunk.buffer.at(0).at(cx);
-            const QString s = QString(chunk.lineBuffer.at(0).at(cx));
-            insertInLine(P_current, s, format);
-        } else {
-            hasAppended = true;
-            const QString s(chunk.lineBuffer.at(0).at(cx));
-            append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
-        }
-    }
-
-    if (hasAppended && y != -1) {
-        TChar format(mpConsole);
-        wrapLine(y, mWrapAt, mWrapIndent, mWrapHangingIndent);
+        // Character at a time because insertInLine() applies a single TChar to
+        // the whole run it is given, and every character here can differ
+        QPoint P_current(x + cx, y);
+        insertInLine(P_current, QString(chunk.lineBuffer.at(0).at(cx)), chunk.buffer.at(0).at(cx));
     }
 }
 
