@@ -69,8 +69,10 @@ public:
     QSet<QString> savedRootsHoldingUnsaveableValues() const { return mSavedRootsHoldingUnsaveableValues; }
     QStringList varName(TVar* var);
     QList<TVar*> varOrder(TVar* var);
+    // leaves the Lua stack as it found it, whatever the outcome
     QString getValue(TVar*);
     bool loadKey(lua_State*, TVar*);
+    // pushes the value on success, and nothing on any failure
     bool loadValue(lua_State*, TVar*, int);
     bool setCValue(QList<TVar*>);
     bool setValue(TVar*);

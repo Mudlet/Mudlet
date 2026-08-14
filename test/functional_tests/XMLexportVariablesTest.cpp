@@ -662,6 +662,37 @@ private slots:
         QCOMPARE(luaL_dostring(L, "stackCheckTable = nil"), 0);
     }
 
+    // A member whose key the walk can name but cannot look back up takes the
+    // export's read of its value out through a failure exit, which has to unwind
+    // the profile's live stack like every other one. One save's worth of these
+    // left behind is already past the room the C API guarantees, so it overruns
+    // that stack rather than merely growing it; the repeated saves are what
+    // would catch a smaller leak (#9885).
+    void test_exportOfUnlookupableKeysLeavesTheLuaStackAsItFoundIt()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "unlookupableKeyTable = {plain = 'plain member value'} "
+                               "unlookupableKeyTable[string.char(0xff)] = 'byte keyed value' "
+                               "for i = 1, 200 do unlookupableKeyTable[i + 1/3] = 'fractional key value ' .. i end"),
+                 0);
+        vu->savedVars.insert(qsl("unlookupableKeyTable"));
+
+        const int stackBefore = lua_gettop(L);
+        for (int i = 0; i < 6; ++i) {
+            const QString xml = exportProfileXml();
+            // the members that can be read still have to export, or an
+            // over-eager unwind would pass this test by exporting nothing
+            QVERIFY2(xml.contains(qsl("plain member value")), "a member the export can read must still be written out alongside the ones it cannot");
+            QCOMPARE(lua_gettop(L), stackBefore);
+        }
+
+        vu->savedVars.remove(qsl("unlookupableKeyTable"));
+        QCOMPARE(luaL_dostring(L, "unlookupableKeyTable = nil"), 0);
+    }
+
     // A table-keyed entry costs a Lua registry reference to name at all, and the
     // walk takes that reference before it knows whether the global is saved. The
     // ones it then skips still have to be handed back.
