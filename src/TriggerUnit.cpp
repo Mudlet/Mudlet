@@ -401,9 +401,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
-    // utf8Data has to outlive every match() call below, which reads through
-    // subject. Perl patterns see the line only as far as its first NUL byte,
-    // so this is qstrnlen() rather than the byte count.
+    // subject points into utf8Data, so utf8Data has to outlive every match()
+    // call below. Perl patterns see the line only as far as its first NUL
+    // byte, so this is qstrnlen() rather than the byte count.
     const QByteArray utf8Data = data.toUtf8();
     const char* subject = utf8Data.constData();
     const int subjectLength = static_cast<int>(qstrnlen(subject, utf8Data.size()));

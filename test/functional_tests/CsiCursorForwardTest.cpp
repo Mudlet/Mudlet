@@ -22,19 +22,20 @@
  * argument out of: CUF (ESC[nC, emulated as n spaces) and ED (ESC[nJ, reported
  * and ignored). Both are live on mud.durismud.com.
  *
- * The long_* rows pad the argument past std::string's small-string
- * optimisation on purpose. The parser built its QByteArray over a substr()
- * temporary with QByteArray::fromRawData(), so it parsed bytes that had already
- * been freed; only an argument long enough to have been heap allocated makes
- * that read land somewhere the allocator has really taken back, and the
- * sequence then fails to parse at all. AddressSanitizer stays silent on it
- * either way, because QByteArray::toInt() reads those bytes inside Qt rather
- * than inside instrumented Mudlet code.
+ * Both handlers point a QByteArray at the argument's bytes without copying
+ * them, so the rows here guard against those bytes being gone by the time the
+ * argument is parsed and logged. Keep the long_* arguments long: a short one is
+ * inside whatever holds it, so a stale read of it can quietly succeed. Assert on
+ * what Mudlet does with the argument rather than on AddressSanitizer, which
+ * stays silent here - QByteArray::toInt() reads the bytes inside Qt, which is
+ * not instrumented.
  *
  * Run with: ctest -R CsiCursorForwardTest -V
  */
 
 #include <QtTest/QtTest>
+
+#include <QRegularExpression>
 
 #include "MudletInstanceCoordinator.h"
 #include "TBuffer.h"
@@ -61,6 +62,21 @@ private:
     const QString mHostname = qsl("CSI-Cursor-Forward-Test-Host");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
+
+    // Leading zeros do not change the value parsed out of an argument, but they
+    // do carry it past the small-string optimisation of every standard library
+    // the project builds against - libstdc++ inlines up to 15 bytes, libc++ up
+    // to 22 - so a stale read lands in memory the allocator really has taken back
+    static QByteArray padded(const char* digits) { return QByteArray("000000000000000000000000") + digits; }
+
+    // Every branch that rejects a sequence logs the argument it parsed, as
+    // "<argument><final byte> received". For the sequences Mudlet does not act
+    // on that log is the only visible read of those bytes, so a stale one
+    // reports something else and leaves this expectation unfulfilled.
+    static void expectTheArgumentIsReadBack(const QByteArray& argument, char finalByte)
+    {
+        QTest::ignoreMessage(QtDebugMsg, QRegularExpression(QRegularExpression::escape(QString::fromUtf8(argument) + QLatin1Char(finalByte) + qsl(" received"))));
+    }
 
     void injectData(const QByteArray& payload)
     {
@@ -155,10 +171,8 @@ private slots:
 
         QTest::newRow("short_5") << QByteArray("5") << 5;
         QTest::newRow("short_1") << QByteArray("1") << 1;
-        // Leading zeros only pad the argument past the small-string optimisation;
-        // they do not change the value parsed out of it
-        QTest::newRow("long_5") << QByteArray("0000000000000000005") << 5;
-        QTest::newRow("long_12") << QByteArray("000000000000000000000000012") << 12;
+        QTest::newRow("long_5") << padded("5") << 5;
+        QTest::newRow("long_12") << padded("12") << 12;
     }
 
     void test_cursorForwardInsertsSpaces()
@@ -171,32 +185,36 @@ private slots:
         QCOMPARE(injectedLine(), qsl("AB%1CD").arg(QString(expectedSpaces, QChar::Space)));
     }
 
-    // A CUF argument that makes no sense leaves the line untouched. The parser
-    // reports it, which is what reads the argument a second time.
+    // A CUF argument that makes no sense leaves the line alone, so only the
+    // diagnostic can tell a good read from a bad one here.
     void test_nonsenseCursorForwardIsIgnored()
     {
-        injectData(QByteArray("AB\x1b[00000000000000000009999999999999999999CCD"));
+        const QByteArray argument = padded("9999999999999999999");
+
+        expectTheArgumentIsReadBack(argument, 'C');
+        injectData(QByteArray("AB\x1b[") + argument + QByteArray("CCD"));
 
         QCOMPARE(injectedLine(), qsl("ABCD"));
     }
 
-    // Every ED variant is incompatible with a scrollback buffer, so all Mudlet
-    // does is report the argument - and reporting it is the whole exposure.
+    // Mudlet acts on no ED variant, it only logs the argument, so as with the
+    // nonsense CUF above the diagnostic is the only thing that can discriminate.
     void test_eraseInDisplayIsIgnored_data()
     {
         QTest::addColumn<QByteArray>("argument");
 
         QTest::newRow("short_0") << QByteArray("0");
         QTest::newRow("short_2") << QByteArray("2");
-        QTest::newRow("long_2") << QByteArray("0000000000000000002");
-        QTest::newRow("long_out_of_range") << QByteArray("0000000000000000009");
-        QTest::newRow("long_nonsense") << QByteArray("00000000000000000099999999999999999999");
+        QTest::newRow("long_2") << padded("2");
+        QTest::newRow("long_out_of_range") << padded("9");
+        QTest::newRow("long_nonsense") << padded("9999999999999999999");
     }
 
     void test_eraseInDisplayIsIgnored()
     {
         QFETCH(QByteArray, argument);
 
+        expectTheArgumentIsReadBack(argument, 'J');
         injectData(QByteArray("AB\x1b[") + argument + QByteArray("JCD"));
 
         QCOMPARE(injectedLine(), qsl("ABCD"));

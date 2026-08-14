@@ -90,7 +90,7 @@ inline uint getBaseCharacter(QStringView str)
         }
 
         if (Q_UNLIKELY(first.isLowSurrogate() && second.isHighSurrogate())) {
-            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will "
+            qDebug().noquote().nospace() << "graphemeInfo::getBaseCharacter() INFO - passed a grapheme comprising a Low followed by a High surrogate QChar, this is not expected, they will "
                                             "be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
             return QChar::surrogateToUcs4(second, first);
         }

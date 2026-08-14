@@ -559,7 +559,8 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
         return;
     }
     const QString text = QString::fromStdString(capture);
-    // Perl patterns see the capture only as far as its first NUL byte
+    // pcre2 takes an explicit subject length: cut it at the first NUL, so perl
+    // patterns stop there while the QString-based ones still see the whole capture
     const int captureLength = static_cast<int>(qstrnlen(capture.data(), capture.size()));
     for (auto& trigger : *mpMyChildrenList) {
         trigger->match(capture.data(), captureLength, text, lineNumber, posOffset);
@@ -916,7 +917,9 @@ void TTrigger::processExactMatch(const QString& needle, int patternNumber, int p
 }
 
 // haystackC: string to match as a char*, UTF-8 encoded
-// haystackCLength: how much of haystackC perl patterns are offered, in bytes
+// haystackCLength: bytes of haystackC offered to perl patterns; it stops at the
+//   first NUL, so it can be shorter than the buffer. Nothing here copies
+//   haystackC, so it has to stay alive for the whole call
 // haystack: string to match as a QString
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
