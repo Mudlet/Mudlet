@@ -220,7 +220,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     return state;
 }
 
-bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
+bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
 {
     assert(mRegexMap.contains(patternNumber));
 
@@ -235,8 +235,6 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
         }
         return false; //regex compile error
     }
-
-    const int haystackCLength = strlen(haystackC);
 
     QSharedPointer<pcre2_match_data>& matchData = mMatchDataMap[patternNumber];
     if (!matchData) {
@@ -561,8 +559,10 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
         return;
     }
     const QString text = QString::fromStdString(capture);
+    // Perl patterns see the capture only as far as its first NUL byte
+    const int captureLength = static_cast<int>(qstrnlen(capture.data(), capture.size()));
     for (auto& trigger : *mpMyChildrenList) {
-        trigger->match(capture.data(), text, lineNumber, posOffset);
+        trigger->match(capture.data(), captureLength, text, lineNumber, posOffset);
     }
 }
 
@@ -915,11 +915,12 @@ void TTrigger::processExactMatch(const QString& needle, int patternNumber, int p
     }
 }
 
-// haystackC: string to match as a char*
+// haystackC: string to match as a char*, UTF-8 encoded
+// haystackCLength: how much of haystackC perl patterns are offered, in bytes
 // haystack: string to match as a QString
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
-bool TTrigger::match(char* haystackC, const QString& haystack, int line, int posOffset)
+bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
     // match() was still on the call stack
@@ -971,7 +972,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 break;
 
             case REGEX_PERL:
-                ret = match_perl(haystackC, haystack, patternNumber, posOffset, line);
+                ret = match_perl(haystackC, haystackCLength, haystack, patternNumber, posOffset, line);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
@@ -1083,7 +1084,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
         if (!mFilterTrigger) {
             if (conditionMet || (mPatterns.empty())) {
                 for (auto trigger : *mpMyChildrenList) {
-                    ret = trigger->match(haystackC, haystack, line, posOffset);
+                    ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
                     if (ret) {
                         conditionMet = true;
                     }
@@ -1097,7 +1098,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 execute();
             }
             for (auto trigger : *mpMyChildrenList) {
-                ret = trigger->match(haystackC, haystack, line, posOffset);
+                ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
                 if (ret) {
                     conditionMet = true;
                 }

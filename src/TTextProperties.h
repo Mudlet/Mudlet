@@ -27,6 +27,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QStringView>
+
 #include <string>
 #include "widechar_width.h"
 
@@ -70,12 +72,11 @@ inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
 }
 
 
-
 // Extract the base (first) part which will be one or two QChars
 // and if they ARE a surrogate pair convert them back to the single
 // Unicode codepoint (needs around 21 bits, can be contained in a
 // 32bit unsigned integer) value:
-inline uint getBaseCharacter(const QString& str)
+inline uint getBaseCharacter(QStringView str)
 {
     if (str.isEmpty()) {
         return 0;
@@ -89,7 +90,8 @@ inline uint getBaseCharacter(const QString& str)
         }
 
         if (Q_UNLIKELY(first.isLowSurrogate() && second.isHighSurrogate())) {
-            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
+            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will "
+                                            "be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
             return QChar::surrogateToUcs4(second, first);
         }
 

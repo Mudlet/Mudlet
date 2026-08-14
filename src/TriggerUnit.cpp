@@ -401,16 +401,12 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    // utf8Data has to outlive every match() call below, which reads through
+    // subject. Perl patterns see the line only as far as its first NUL byte,
+    // so this is qstrnlen() rather than the byte count.
     const QByteArray utf8Data = data.toUtf8();
-    const char* utf8Ptr = utf8Data.constData();
-    const size_t utf8Length = utf8Data.size();
-
-    char* subject = static_cast<char*>(malloc(utf8Length + 1));
-    if (!subject) {
-        return;
-    }
-    memcpy(subject, utf8Ptr, utf8Length);
-    subject[utf8Length] = '\0';
+    const char* subject = utf8Data.constData();
+    const int subjectLength = static_cast<int>(qstrnlen(subject, utf8Data.size()));
 
     mProcessingDepth++;
     const auto processingGuard = qScopeGuard([this] {
@@ -450,7 +446,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         if (!trigger->isActive()) {
             continue;
         }
-        trigger->match(subject, data, line);
+        trigger->match(subject, subjectLength, data, line);
     }
     // A match here can register more triggers, which also get a shot at the
     // current line - so the list grows in front of the loop, and a trigger that
@@ -475,9 +471,8 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
-        trigger->match(subject, data, line);
+        trigger->match(subject, subjectLength, data, line);
     }
-    free(subject);
 }
 
 void TriggerUnit::compileAll()
