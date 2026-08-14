@@ -20,6 +20,7 @@
 #include <LuaInterface.h>
 #include <TVar.h>
 #include <VarUnit.h>
+#include <utils.h>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -748,6 +749,181 @@ private slots:
         QVERIFY(var);
         execLua(QStringLiteral("testVar = 'after'"));
         QCOMPARE(interface->getValue(var), QStringLiteral("after"));
+    }
+
+    // ========================================================================
+    // writableByName - can a variable be written back under the name it is shown with?
+    // ========================================================================
+
+    void testWritableByNameForAGlobal()
+    {
+        execLua(qsl("testVar = 'hello'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
+        QVERIFY(var);
+        QVERIFY(interface->writableByName(var));
+    }
+
+    void testWritableByNameForANestedMember()
+    {
+        execLua(qsl("testTbl = {sub = {deep = 'value'}}"));
+        interface->getVars(false);
+        TVar* deep = findChild(findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("sub")), qsl("deep"));
+        QVERIFY(deep);
+        QVERIFY(interface->writableByName(deep));
+    }
+
+    // Lua names a number key with "%.14g", which is exact for an index
+    void testWritableByNameForAnIntegerKeyedMember()
+    {
+        execLua(qsl("testTbl = {[2] = 'value'}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("2"));
+        QVERIFY(member);
+        QVERIFY(interface->writableByName(member));
+    }
+
+    // ...but not for one that needs more digits than that: the name is a
+    // different key, and a write through it would add a member (#9903)
+    void testNotWritableByNameForAFractionKeyedMember()
+    {
+        execLua(qsl("testTbl = {[1/3] = 'value'}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("0.33333333333333"));
+        QVERIFY2(member, "the walk did not name the member the way Lua names its key");
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    // a key is named through a C string, so it ends at an embedded NUL
+    void testNotWritableByNameForAMemberWithANulInItsKey()
+    {
+        execLua(qsl("testTbl = {['before\\0after'] = 'value'}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("before"));
+        QVERIFY2(member, "the walk did not name the member the way Lua names its key");
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    // the name of a member is only as good as the names above it
+    void testNotWritableByNameUnderAFractionKeyedTable()
+    {
+        execLua(qsl("testTbl = {[1/3] = {member = 'value'}}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("0.33333333333333")), qsl("member"));
+        QVERIFY(member);
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    void testNotWritableByNameForAGlobalAScriptRemoved()
+    {
+        execLua(qsl("testVar = 'hello'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
+        QVERIFY(var);
+        execLua(qsl("testVar = nil"));
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    // What it holds is the script's business: the tree may be showing a value
+    // that is a type out of date, and the name still reaches the variable.
+    void testWritableByNameAfterAScriptChangedTheType()
+    {
+        execLua(qsl("testVar = 'hello'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
+        QVERIFY(var);
+        execLua(qsl("testVar = 42"));
+        QVERIFY(interface->writableByName(var));
+    }
+
+    // Both are shown as "before", so neither name says which member it means -
+    // and the one a write would reach is the other one.
+    void testNotWritableByNameWhenTwoMembersAreShownUnderOneName()
+    {
+        execLua(qsl("testTbl = {} testTbl['before\\0after'] = 'first' testTbl['before'] = 'second'"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        int shownAsBefore = 0;
+        for (TVar* member : table->getChildren(false)) {
+            if (member->getName() == qsl("before")) {
+                ++shownAsBefore;
+                QVERIFY(!interface->writableByName(member));
+            }
+        }
+        QCOMPARE(shownAsBefore, 2);
+    }
+
+    // ...while a number key and a string key that read alike are different
+    // lookups, so both stay writable
+    void testWritableByNameForAStringKeyThatReadsLikeItsNumberSibling()
+    {
+        execLua(qsl("testTbl = {} testTbl[42] = 'number keyed' testTbl['42'] = 'string keyed'"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        int shownAs42 = 0;
+        for (TVar* member : table->getChildren(false)) {
+            if (member->getName() == qsl("42")) {
+                ++shownAs42;
+                QVERIFY(interface->writableByName(member));
+            }
+        }
+        QCOMPARE(shownAs42, 2);
+    }
+
+    // The write paths put a string key into a quoted Lua literal, where a
+    // backslash starts an escape and reaches a key of its own instead.
+    void testNotWritableByNameForAMemberWithABackslashInItsKey()
+    {
+        execLua(qsl("testTbl = {} testTbl['C:\\\\temp'] = 'value'"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("C:\\temp"));
+        QVERIFY2(member, "the walk did not name the member after its key");
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    // ...and a global goes into that source bare, so only an identifier gets
+    // there. One with a dot in it would parse as an index into another global.
+    void testNotWritableByNameForAGlobalWithADotInItsName()
+    {
+        execLua(qsl("_G['dotted.global'] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("dotted.global"));
+        QVERIFY(var);
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    void testNotWritableByNameForANumberKeyedGlobal()
+    {
+        execLua(qsl("_G[7] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("7"));
+        QVERIFY(var);
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    // it walks down to the variable a push at a time, and in the editor that is
+    // the profile's own stack, where a slot left behind stays for the session
+    void testWritableByNameLeavesTheStackAsItFoundIt()
+    {
+        execLua(qsl("testTbl = {writable = 'value', [1/3] = 'value'}"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        TVar* writable = findChild(table, qsl("writable"));
+        TVar* unwritable = findChild(table, qsl("0.33333333333333"));
+        QVERIFY(writable);
+        QVERIFY(unwritable);
+
+        lua_pushstring(L, "sentinel");
+        const int stackBefore = lua_gettop(L);
+        QVERIFY(interface->writableByName(writable));
+        QCOMPARE(lua_gettop(L), stackBefore);
+        QVERIFY(!interface->writableByName(unwritable));
+        QCOMPARE(lua_gettop(L), stackBefore);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), qsl("sentinel"));
+        lua_pop(L, 1);
     }
 
     // ========================================================================

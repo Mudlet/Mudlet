@@ -38,6 +38,7 @@ set(FUNCTIONAL_TEST_SOURCES
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
+    VariableEditorWriteBackTest.cpp
     InsertTextCapTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
