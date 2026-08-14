@@ -210,6 +210,7 @@ private:
 
     QList<int> mPatternKinds;
     QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
+    QMap<int, QSharedPointer<pcre2_match_data>> mMatchDataMap;
 
     // Lua code as a string to run
     QString mScript;

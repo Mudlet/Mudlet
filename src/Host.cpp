@@ -64,6 +64,8 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDirIterator>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -77,6 +79,7 @@
 #include <QSettings>
 #include <QTemporaryFile>
 #include <QTextStream>
+#include <QThread>
 #include <zip.h>
 #include <memory>
 
@@ -463,6 +466,24 @@ Host::~Host()
     if (auto* pEditor = mpEditorDialog.data()) {
         mpEditorDialog = nullptr;
         delete pEditor;
+    }
+
+    if (auto* pNotePad = mpNotePad.data()) {
+        if (mudlet::self()) {
+            pNotePad->save();
+            pNotePad->close();
+        }
+        mpNotePad = nullptr;
+        delete pNotePad;
+    }
+
+    if (auto* pDlgIRC = mpDlgIRC.data()) {
+        mpDlgIRC = nullptr;
+        delete pDlgIRC;
+    }
+
+    for (const auto& pToolBar : mActionUnit.getToolBarList()) {
+        delete pToolBar.data();
     }
 
     // This needs to be cleared here while the Host object is still valid,
@@ -1065,18 +1086,17 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     const bool backupModules = saveName != qsl("autosave");
     const QList<ModuleWriteJob> moduleJobs = prepareModuleSaves(backupModules);
 
+    // Nothing between here and watcher->setFuture() below may pump the event loop: the
+    // save is marked as started, but the watcher that retires that mark does not exist
+    // yet, so a waitForProfileSave() reached from a pump waits for an end it can never
+    // be told about, then lets its caller carry on - into a teardown that destroys the
+    // profile the rest of this function goes on to use (#9807).
     mWritingHostAndModules = true;
 
     // emit signal to notify the UI that the save button should get disabled momentarily
     // this needs to run after `writers` and `mWritingHostAndModules` have been set
     // so that the currentlySavingProfile() check can run properly
     emit profileSaveStarted();
-
-    // Only process events if we're not in the middle of closing down
-    // This prevents recursive closure scenarios that can lead to heap-use-after-free
-    if (!mIsClosingDown) {
-        qApp->processEvents();
-    }
 
     // Snapshot the pending profile-save futures on the main thread - see
     // pendingXmlSaveFutures(): the background task must not read `writers`/`saveFutures`
@@ -1128,15 +1148,16 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 // exports without the host settings for some reason
 std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 {
-    emit profileSaveStarted();
-    qApp->processEvents();
-
     if (currentlySavingProfile()) {
         return {false, QString(), qsl("a save is already in progress")};
     }
 
     auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
+    // Registered before the signal so currentlySavingProfile() answers correctly for
+    // whatever that reaches, and only emitted for a save this call really makes: the
+    // matching profileSaveFinished() only ever comes from xmlSaved().
+    emit profileSaveStarted();
     writer->exportProfile(file);
     return {true, file, QString()};
 }
@@ -1159,18 +1180,44 @@ bool Host::currentlySavingProfile()
 
 void Host::waitForProfileSave()
 {
-    waitForAsyncXmlSave();
-    if (mModuleFuture.isRunning()) {
-        mModuleFuture.waitForFinished();
+    if (!currentlySavingProfile()) {
+        return;
     }
-    int iterations = 0;
+
+    // Only the notification below is on a clock - in wall-clock time, because a cap on
+    // event loop passes is no wait at all on a fast machine (#9807) - and only because
+    // a save that has written everything and still says it is running cannot be waited
+    // out. Long enough that reaching it means something is wrong, not that a disk is
+    // busy.
+    constexpr auto notificationTimeout = 30s;
+    QElapsedTimer waitedForNotification;
+    // A QEventLoop's processEvents() rather than qApp's only for its "did anything
+    // happen" answer - nothing is exec()ed here. No user input either: this runs on the
+    // way out of a profile, and all it is here to deliver is that notification.
+    QEventLoop pump;
     while (currentlySavingProfile()) {
-        if (++iterations > 1000) {
-            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. " << "State: mWritingHostAndModules=" << mWritingHostAndModules
-                                 << ", writers pending=" << writers.size() << ". Continuing without waiting.";
+        // Every pass rather than once up front: a save that starts while this is
+        // waiting brings background work of its own that nothing has waited for yet.
+        // Unbounded, deliberately - how long a write takes is the disk's business.
+        waitForAsyncXmlSave();
+        if (mModuleFuture.isRunning()) {
+            mModuleFuture.waitForFinished();
+        }
+        if (!currentlySavingProfile()) {
             break;
         }
-        qApp->processEvents();
+        if (!waitedForNotification.isValid()) {
+            waitedForNotification.start();
+        }
+        if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
+            QThread::msleep(1);
+        }
+        if (waitedForNotification.hasExpired(duration_cast<milliseconds>(notificationTimeout).count())) {
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << notificationTimeout.count()
+                                 << " seconds of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
+                                 << ", module write still running=" << mModuleFuture.isRunning() << ".";
+            break;
+        }
     }
 }
 

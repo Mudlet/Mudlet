@@ -54,7 +54,7 @@
  * QTEST_APPLESS_MAIN is used because the test itself must own the
  * QApplication lifetime to walk it through quit and destruction.
  */
-class UpdaterTeardownTest : public QObject
+class NewReleaseDialogTeardownTest : public QObject
 {
     Q_OBJECT
 
@@ -62,7 +62,7 @@ private slots:
     void updateDialogDestroyedBeforeApplicationTeardown();
 };
 
-void UpdaterTeardownTest::updateDialogDestroyedBeforeApplicationTeardown()
+void NewReleaseDialogTeardownTest::updateDialogDestroyedBeforeApplicationTeardown()
 {
     // Keeps checkUpdatesOnStart() away from real user data - on Windows it
     // deletes stale installer files from the genuine GenericDataLocation
@@ -73,7 +73,7 @@ void UpdaterTeardownTest::updateDialogDestroyedBeforeApplicationTeardown()
     QSettings settings(settingsDir.filePath(qsl("updater-test.ini")), QSettings::IniFormat);
 
     int argc = 1;
-    char appName[] = "UpdaterTeardownTest";
+    char appName[] = "NewReleaseDialogTeardownTest";
     char* argv[] = {appName, nullptr};
     const auto app = std::make_unique<QApplication>(argc, argv);
 
@@ -118,5 +118,5 @@ void UpdaterTeardownTest::updateDialogDestroyedBeforeApplicationTeardown()
     QVERIFY2(dialog.isNull(), "UpdateDialog must be destroyed when the application quits: deleting it any later (from ~Updater, inside the application's destructor) corrupts the heap - see #9122");
 }
 
-QTEST_APPLESS_MAIN(UpdaterTeardownTest)
-#include "UpdaterTeardownTest.moc"
+QTEST_APPLESS_MAIN(NewReleaseDialogTeardownTest)
+#include "NewReleaseDialogTeardownTest.moc"

@@ -489,3 +489,96 @@ describe("Tests functionality of Geyser.UserWindow", function()
     end)
   end)
 end)
+
+-- set_uwconstr is what move() and resize() call before they touch the dock: it
+-- re-reads the window's own x/y/width/height against the main window rather
+-- than against the user window's insides, which is what every other Geyser
+-- object's set_constraints does. resetWindow() puts the usual behaviour back,
+-- so the two are specced against each other here.
+describe("Tests Geyser.UserWindow:set_uwconstr", function()
+  local created
+
+  local function track(object)
+    created[#created + 1] = object
+    return object
+  end
+
+  local function alive(object)
+    if not object or not object.container or not object.container.windowList then
+      return false
+    end
+    return object.container.windowList[object.name] == object
+  end
+
+  before_each(function()
+    created = {}
+  end)
+
+  after_each(function()
+    for _, object in ipairs(created) do
+      if alive(object) then
+        object:delete()
+      end
+    end
+    created = {}
+  end)
+
+  it("resolves percentages against the main window", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstr", x = 10, y = 20, width = 200, height = 150}))
+    local mainWidth, mainHeight = getMainWindowSize()
+
+    userWindow.x, userWindow.y = "50%", "25%"
+    userWindow.width, userWindow.height = "20%", "10%"
+    userWindow:set_uwconstr()
+
+    assert.are.equal(mainWidth * 0.5, userWindow:get_x())
+    assert.are.equal(mainHeight * 0.25, userWindow:get_y())
+    assert.are.equal(mainWidth * 0.2, userWindow:get_width())
+    assert.are.equal(mainHeight * 0.1, userWindow:get_height())
+  end)
+
+  it("resolves pixels as pixels", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstrPixels", x = 10, y = 20, width = 200, height = 150}))
+
+    userWindow.x, userWindow.y = 120, 130
+    userWindow.width, userWindow.height = 240, 260
+    userWindow:set_uwconstr()
+
+    assert.are.equal(120, userWindow:get_x())
+    assert.are.equal(130, userWindow:get_y())
+    assert.are.equal(240, userWindow:get_width())
+    assert.are.equal(260, userWindow:get_height())
+  end)
+
+  it("is undone by resetWindow, which sizes the window against itself again", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstrReset", x = 10, y = 20, width = 200, height = 150}))
+    local mainWidth = getMainWindowSize()
+
+    userWindow.width = "100%"
+    userWindow:set_uwconstr()
+    assert.are.equal(mainWidth, userWindow:get_width())
+
+    userWindow:resetWindow()
+    -- back to filling itself: "100%" now means the usable area inside the dock,
+    -- which is nothing like the main window's width
+    local usableWidth = getUserWindowSize("guwConstrReset")
+    assert.are.equal(usableWidth, userWindow:get_width())
+    assert.is_true(usableWidth < mainWidth)
+  end)
+
+  it("is what move and resize position the dock with", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstrMove", x = 10, y = 20, width = 200, height = 150}))
+
+    -- move()/resize() hand their arguments to set_uwconstr and then move the
+    -- real dock to what it worked out, so a percentage has to land on the same
+    -- pixel that set_uwconstr resolves it to
+    userWindow.x, userWindow.y = "10%", "10%"
+    userWindow:set_uwconstr()
+    local expectedX, expectedY = userWindow:get_x(), userWindow:get_y()
+
+    userWindow:move("10%", "10%")
+    local x, y = getWindowGeometry("guwConstrMove")
+    assert.are.equal(math.floor(expectedX), x)
+    assert.are.equal(math.floor(expectedY), y)
+  end)
+end)

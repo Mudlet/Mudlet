@@ -750,6 +750,15 @@ QString LuaInterface::getValue(TVar* var)
     return {};
 }
 
+// The value types a variable can survive a save as: XMLimport hands every element
+// it reads to setValue(), which can rebuild nothing else. A value of any other
+// type is lost across the save, so a saved global holding one anywhere inside it
+// cannot be exported whole (#9857).
+static bool serializableValueType(const int valueType)
+{
+    return valueType == LUA_TTABLE || valueType == LUA_TSTRING || valueType == LUA_TNUMBER || valueType == LUA_TBOOLEAN;
+}
+
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 {
     depth++;
@@ -759,11 +768,11 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         lua_pushvalue(L, -2); //we do this because extracting the key with tostring changes it
         QString keyName;
         QString valueName;
-        auto var = new TVar();
+        bool keyIsReference = false;
         if (kType == LUA_TTABLE) {
             keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX)); //this function pops the top item
             lrefs.append(keyName.toInt());
-            var->setReference(true);
+            keyIsReference = true;
         } else if (kType == LUA_TBOOLEAN) {
             //lua_tostring() returns NULL for booleans, name the key ourselves
             keyName = lua_toboolean(L, -1) ? qsl("true") : qsl("false");
@@ -774,17 +783,34 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
                 //we lost the reference
                 keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
                 lrefs.append(keyName.toInt());
-                var->setReference(true);
+                keyIsReference = true;
             } else {
                 lua_pop(L, 1);
             }
         }
         if (keyName == "package" && depth == 1) { //don't load in the 'package' table
             lua_pop(L, 1);
-            tVar->removeChild(var);
-            delete var;
             continue;
         }
+        if (mSavedVarsOnly) {
+            if (depth == 1) {
+                if (!mSavedRootNames.contains(keyName)) {
+                    lua_pop(L, 1);
+                    continue;
+                }
+                // each saved global is walked in its own dedup scope, so two of them
+                // that reference the same table both get a complete subtree
+                varUnit->clearPointers();
+                mCurrentSavedRootName = keyName;
+            } else if (!serializableValueType(vType)) {
+                // the whole global, not just the table this value sits in: a
+                // script gets the global back as one object, so one member the
+                // save cannot carry makes all of it untrustworthy
+                mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
+            }
+        }
+        auto var = new TVar();
+        var->setReference(keyIsReference);
         var->setName(keyName, kType);
         var->setValueType(vType);
         var->setParent(tVar);
@@ -794,7 +820,11 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->pKey = pKey;
         const void* pValue = lua_topointer(L, -2);
         var->pValue = pValue;
-        if (varUnit->varExists(var) || keyName == qsl("_G")) {
+        // A table two names reach is walked only under the first, which suits
+        // Mudlet's own API - but a saved variable reached second would be left
+        // with no node to export from, so it is exempt (#9755). _G reaches
+        // itself, hence the name test.
+        if (keyName == qsl("_G") || (varUnit->varExists(var) && !varUnit->isSaved(var))) {
             lua_pop(L, 1);
             tVar->removeChild(var);
             delete var;
@@ -806,12 +836,21 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 
         varUnit->addPointer(pValue);
         if (vType == LUA_TTABLE) {
-            if (depth <= 99 && lua_checkstack(L, 3)) { //depth is historical now
+            var->setValue("{}", LUA_TTABLE);
+            const bool tooDeep = depth > scmMaxTableDepth;
+            if (!tooDeep && lua_checkstack(L, 3)) {
                 //put the table on top
                 lua_pushnil(L);
-                var->setValue("{}", LUA_TTABLE);
                 iterateTable(L, -2, var, hide);
                 depth--;
+            } else {
+                const QString variableName = varUnit->shortVarName(var).join(qsl("."));
+                qWarning().noquote().nospace() << "LuaInterface::iterateTable() WARNING - not reading the contents of the table \"" << variableName
+                                               << "\": " << (tooDeep ? qsl("it is nested more than %1 tables deep").arg(scmMaxTableDepth) : qsl("the Lua stack could not be grown"))
+                                               << ". It is being treated as an empty table.";
+                if (mSavedVarsOnly) {
+                    mTruncatedSavedTables.append(variableName);
+                }
             }
         } else if (vType == LUA_TSTRING || vType == LUA_TNUMBER) {
             lua_pushvalue(L, -1);
@@ -843,19 +882,75 @@ void LuaInterface::getVars(bool hide)
     // onPanic() longjmp()s to the shared buf, so without a setjmp of our own
     // that jump lands in whichever frame set it last - usually one that has
     // already returned, taking the caller's scope down with it.
+    const int stackTop = lua_gettop(mL);
     if (setjmp(buf) != 0) {
+        // the panic jumped out of iterateTable() with its working values still
+        // on the stack of the profile's live interpreter
+        lua_settop(mL, stackTop);
         qWarning() << "LuaInterface::getVars() WARNING - Lua panicked while reading the variables in; the variable tree is incomplete.";
         return;
     }
     lua_pushnil(mL);
+    TVar* global = resetVariableTree();
+    iterateTable(mL, LUA_GLOBALSINDEX, global, hide);
+    // FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
+}
+
+// The tree a profile save needs: the globals the profile saves, read fresh out
+// of Lua. Reading all of _G instead costs the size of _G on every save, and the
+// dedup in iterateTable() then only spares a saved table itself - table members
+// riding along with it under #9517 have no savedVars entry to be spared by, so
+// whichever unrelated global reached them first would keep them (#9755). Walking
+// each saved global in its own dedup scope is what avoids that.
+void LuaInterface::getSavedVars()
+{
+    const int stackTop = lua_gettop(mL);
+    if (setjmp(buf) != 0) {
+        lua_settop(mL, stackTop);
+        // getVars() does not clear this itself, so a later walk on this same
+        // interface would inherit the filter
+        mSavedVarsOnly = false;
+        // the global the walk died inside was not read to the end, so nothing
+        // says it is one the save can carry whole
+        if (!mCurrentSavedRootName.isEmpty()) {
+            mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
+        }
+        qWarning() << "LuaInterface::getSavedVars() WARNING - Lua panicked while reading the saved variables in; the variable tree is incomplete.";
+        return;
+    }
+    mSavedRootNames.clear();
+    mTruncatedSavedTables.clear();
+    mSavedRootsHoldingUnsaveableValues.clear();
+    mCurrentSavedRootName.clear();
+    for (const QString& savedVarName : std::as_const(varUnit->savedVars)) {
+        // savedVars holds dotted paths, but a global's own name may contain a
+        // dot as well, so both readings count as a name to walk
+        mSavedRootNames.insert(savedVarName);
+        mSavedRootNames.insert(savedVarName.section(QChar('.'), 0, 0));
+    }
+
+    TVar* global = resetVariableTree();
+    if (mSavedRootNames.isEmpty()) {
+        return;
+    }
+
+    mSavedVarsOnly = true;
+    lua_pushnil(mL);
+    iterateTable(mL, LUA_GLOBALSINDEX, global, false);
+    mSavedVarsOnly = false;
+}
+
+// Throws away whatever tree there was, along with the Lua registry references it
+// held, and returns the _G node a fresh walk hangs off.
+TVar* LuaInterface::resetVariableTree()
+{
     depth = 0;
     auto global = new TVar();
-    global->setName("_G", LUA_TSTRING);
-    global->setValue("{}", LUA_TTABLE);
+    global->setName(qsl("_G"), LUA_TSTRING);
+    global->setValue(qsl("{}"), LUA_TTABLE);
     releaseVariableReferences();
     varUnit->clear();
     varUnit->setBase(global);
     varUnit->addVariable(global);
-    iterateTable(mL, LUA_GLOBALSINDEX, global, hide);
-    // FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
+    return global;
 }

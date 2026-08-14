@@ -1,0 +1,228 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 1
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "variant",
+      "hidden": true,
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build-${presetName}"
+    },
+    {
+      "name": "macos-debug",
+      "displayName": "macOS Debug (Ninja, AddressSanitizer)",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-debug-nosan",
+      "displayName": "macOS Debug, no sanitizers (fastest build and run)",
+      "inherits": ["variant", "macos-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": ""
+      }
+    },
+    {
+      "name": "macos-debug-tsan",
+      "displayName": "macOS Debug, ThreadSanitizer",
+      "inherits": ["variant", "macos-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": "Thread"
+      }
+    },
+    {
+      "name": "macos-debug-ubsan",
+      "displayName": "macOS Debug, UndefinedBehaviorSanitizer",
+      "inherits": ["variant", "macos-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": "Undefined"
+      }
+    },
+    {
+      "name": "macos-static-analysis",
+      "displayName": "macOS Debug with clang-tidy and cppcheck",
+      "inherits": ["variant", "macos-debug"],
+      "cacheVariables": {
+        "ENABLE_STATIC_ANALYSIS": "ON"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug (Ninja, AddressSanitizer)",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-debug-nosan",
+      "displayName": "Linux Debug, no sanitizers (fastest build and run)",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": ""
+      }
+    },
+    {
+      "name": "linux-debug-tsan",
+      "displayName": "Linux Debug, ThreadSanitizer",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": "Thread"
+      }
+    },
+    {
+      "name": "linux-debug-ubsan",
+      "displayName": "Linux Debug, UndefinedBehaviorSanitizer",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": "Undefined"
+      }
+    },
+    {
+      "name": "linux-static-analysis",
+      "displayName": "Linux Debug with clang-tidy and cppcheck",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "ENABLE_STATIC_ANALYSIS": "ON"
+      }
+    },
+    {
+      "name": "linux-lowspec",
+      "displayName": "Linux Debug for low-memory machines (Raspberry Pi and similar)",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": "",
+        "USE_UPDATER": "OFF",
+        "USE_3DMAPPER": "OFF"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Windows Debug (MSYS2, Ninja)",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "$env{MSYSTEM_PREFIX}"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "on-macos",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "on-linux",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    { "name": "macos-debug", "inherits": "on-macos", "configurePreset": "macos-debug" },
+    { "name": "macos-debug-nosan", "inherits": "on-macos", "configurePreset": "macos-debug-nosan" },
+    { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
+    { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
+    { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
+    { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
+    { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
+    { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
+    { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
+    {
+      "name": "linux-lowspec",
+      "inherits": "on-linux",
+      "configurePreset": "linux-lowspec",
+      "jobs": 2
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-defaults",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "on-macos",
+      "hidden": true,
+      "inherits": "test-defaults",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "on-linux",
+      "hidden": true,
+      "inherits": "test-defaults",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    { "name": "macos-debug", "inherits": "on-macos", "configurePreset": "macos-debug" },
+    { "name": "macos-debug-nosan", "inherits": "on-macos", "configurePreset": "macos-debug-nosan" },
+    { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
+    { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
+    { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
+    { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
+    { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
+    { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
+    { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
+    { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec" },
+    {
+      "name": "windows-debug",
+      "inherits": "test-defaults",
+      "configurePreset": "windows-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ]
+}

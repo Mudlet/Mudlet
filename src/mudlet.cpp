@@ -174,9 +174,11 @@ mudlet::mudlet()
     // Initialisation happens later in setupConfig() and init()
 }
 
+static bool anyProfilesExist(const QString& profilesPath);
+
 void mudlet::init()
 {
-    smFirstLaunch = !QFile::exists(mudlet::getMudletPath(enums::profilesPath));
+    smFirstLaunch = !anyProfilesExist(mudlet::getMudletPath(enums::profilesPath));
     // Must be after setupConfig() created mpSettings and before anything of this run is written
     rememberFirstLaunch(*mpSettings, mudlet::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
@@ -899,28 +901,6 @@ static bool validateConfDir(QString& path)
     return true;
 }
 
-static void migrateConfig(QSettings& settings)
-{
-    if (settings.contains(qsl("pos"))) {
-        return;
-    }
-    // Old default configs, stored in NativeFormat
-    const QSettings settings_old2(qsl("mudlet"), qsl("Mudlet"));
-    if (settings_old2.contains(qsl("pos"))) {
-        for (auto& key : settings_old2.allKeys()) {
-            settings.setValue(key, settings_old2.value(key));
-        }
-        return;
-    }
-    const QSettings settings_old1(qsl("Mudlet"), qsl("Mudlet 1.0"));
-    if (settings_old1.contains(qsl("pos"))) {
-        for (auto& key : settings_old1.allKeys()) {
-            settings.setValue(key, settings_old1.value(key));
-        }
-        return;
-    }
-}
-
 void mudlet::setupConfig()
 {
     QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
@@ -948,8 +928,12 @@ void mudlet::setupConfig()
         const auto resolution = utils::xdgConfigDir(confDirDefault);
         confPath = resolution.path;
         if (resolution.migrationPending) {
-            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet is not a Mudlet config directory yet, so the existing " << confPath
-                              << " is still in use. Move it to $XDG_CONFIG_HOME/mudlet to migrate.";
+            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
+                              << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
+        }
+        if (!resolution.shadowedProfilesPath.isEmpty()) {
+            qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
+                                 << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
         }
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
@@ -960,7 +944,6 @@ void mudlet::setupConfig()
     // created the Updater - the delete below would dangle its pointer.
     delete mpSettings;
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat, qApp);
-    migrateConfig(*mpSettings);
 }
 
 // This is a static wrapper for singleton instance method

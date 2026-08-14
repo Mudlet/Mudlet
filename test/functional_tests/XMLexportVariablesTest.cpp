@@ -26,6 +26,10 @@
  * profile saves. Also covers members a script adds to a saved table at
  * runtime: they have no savedVars entry of their own but must be saved with
  * the table (issue #9517), while hidden and unsaveable members must not be.
+ * Also covers a saved table that other globals reference, which must export in
+ * full under every saved name that reaches it (issue #9755), and the boundary of
+ * the fence that stops a table holding a function exporting in part (issue
+ * #9857) - SavedVariableFenceTest covers that one in full.
  *
  * Run with: ctest -R XMLexportVariablesTest -V
  */
@@ -38,11 +42,13 @@
 #include "TelnetServerStub.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
+#include "XMLimport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
+#include <QRegularExpression>
 #include <QTreeWidget>
 
 extern "C" {
@@ -363,8 +369,11 @@ private slots:
         QCOMPARE(luaL_dostring(L, "explicitHiddenTable = nil"), 0);
     }
 
-    // Function members cannot be saved, so they must not ride along either.
-    void test_functionMemberOfSavedTableIsNotExported()
+    // Function members cannot be saved, and a table holding one therefore cannot
+    // be written out as it stands: the ride-along is off for the whole variable,
+    // which for a table ticked while empty leaves an empty group (#9857).
+    // SavedVariableFenceTest covers that in full.
+    void test_functionMemberBlocksTheRideAlong()
     {
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
@@ -375,7 +384,8 @@ private slots:
 
         const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
-        QVERIFY2(xml.contains(qsl("data member value")), "a plain member of a saved table must be exported");
+        QVERIFY2(xml.contains(qsl("<name>callableHolderTable</name>")), "the saved table itself must still be exported, or the next session sees nil rather than an empty table");
+        QVERIFY2(!xml.contains(qsl("dataMember")), "a table holding a function exports the members registered in savedVars and no others");
         QVERIFY2(!xml.contains(qsl("callableMember")), "a function member must not ride along with its saved table");
 
         vu->savedVars.remove(qsl("callableHolderTable"));
@@ -424,9 +434,13 @@ private slots:
     // registry would grow by that many slots on every save.
     void test_exportDoesNotLeakLuaRegistryReferences()
     {
+        VarUnit* vu = mpHost->getLuaInterface()->getVarUnit();
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        // several reference-keyed members, so a leak grows the registry visibly
+        // several reference-keyed members, so a leak grows the registry visibly.
+        // The table has to be saved for the export to read it at all, and each
+        // of those keys costs a registry reference while it does
         QCOMPARE(luaL_dostring(L, "refKeyLeakTable = {} for i = 1, 20 do refKeyLeakTable[{}] = i end"), 0);
+        vu->savedVars.insert(qsl("refKeyLeakTable"));
 
         // freed slots go on a free list and come straight back out, so the
         // number stops climbing once the registry fits one pass's worth.
@@ -448,7 +462,262 @@ private slots:
         QVERIFY2(refAfterSix < refAfterOne + 20,
                  qPrintable(qsl("the exports pinned Lua registry slots: a reference taken after one export was %1, one taken after six was %2").arg(refAfterOne).arg(refAfterSix)));
 
+        vu->savedVars.remove(qsl("refKeyLeakTable"));
         QCOMPARE(luaL_dostring(L, "refKeyLeakTable = nil"), 0);
+    }
+
+    // A saved table other globals also reference exports in full, whichever of
+    // the names anything else happens to reach it by (issue #9755).
+    void test_savedTableReachedByAnotherGlobalIsExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "aliasedSavedTable = {member = 'aliased member value'}"), 0);
+        vu->savedVars.insert(qsl("aliasedSavedTable"));
+        vu->savedVars.insert(qsl("aliasedSavedTable.member"));
+        // seven aliases, not one: should the export ever go back to walking all
+        // of _G, hash order picks which name wins, and one alias would then only
+        // fail this test some of the time
+        QCOMPARE(luaL_dostring(L,
+                               "aaaAliasOfSaved = aliasedSavedTable bAliasOfSaved = aliasedSavedTable m1AliasOfSaved = aliasedSavedTable "
+                               "xyzzyAliasOfSaved = aliasedSavedTable alphaAliasOfSaved = aliasedSavedTable ref1AliasOfSaved = aliasedSavedTable "
+                               "A_1AliasOfSaved = aliasedSavedTable"),
+                 0);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("aliasedSavedTable")), "a saved table must be exported however many other globals also reference it");
+        QVERIFY2(xml.contains(qsl("aliased member value")), "the members of a saved table other globals reference must be exported too");
+        QVERIFY2(!xml.contains(qsl("AliasOfSaved")), "the other globals are not saved themselves, so they must not be exported");
+
+        vu->savedVars.remove(qsl("aliasedSavedTable"));
+        vu->savedVars.remove(qsl("aliasedSavedTable.member"));
+        QCOMPARE(luaL_dostring(L, "aliasedSavedTable, aaaAliasOfSaved, bAliasOfSaved, m1AliasOfSaved, xyzzyAliasOfSaved, alphaAliasOfSaved, ref1AliasOfSaved, A_1AliasOfSaved = nil"), 0);
+    }
+
+    // Two saved globals that are the same table. Neither may be reduced to an
+    // empty group by the other having been read first.
+    void test_twoSavedGlobalsSharingATableBothExport()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "sharedFirstTable = {member = 'shared member value'} sharedSecondTable = sharedFirstTable"), 0);
+        for (const auto& name : {qsl("sharedFirstTable"), qsl("sharedFirstTable.member"), qsl("sharedSecondTable"), qsl("sharedSecondTable.member")}) {
+            vu->savedVars.insert(name);
+        }
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("sharedFirstTable")), "the first of two saved globals sharing a table must be exported");
+        QVERIFY2(xml.contains(qsl("sharedSecondTable")), "the second of two saved globals sharing a table must be exported");
+        QCOMPARE(xml.count(qsl("shared member value")), 2);
+
+        for (const auto& name : {qsl("sharedFirstTable"), qsl("sharedFirstTable.member"), qsl("sharedSecondTable"), qsl("sharedSecondTable.member")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "sharedFirstTable, sharedSecondTable = nil"), 0);
+    }
+
+    // The shape a stock profile hits without anyone aliasing anything: a saved
+    // table that a second saved table holds as a member, which is how the EMCO
+    // and AdjustableContainer packages reach each other's tables.
+    void test_savedTableHeldByAnotherSavedTableIsExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "innerSavedTable = {member = 'inner member value'} holderSavedTable = {inner = innerSavedTable}"), 0);
+        for (const auto& name : {qsl("innerSavedTable"), qsl("innerSavedTable.member"), qsl("holderSavedTable"), qsl("holderSavedTable.inner")}) {
+            vu->savedVars.insert(name);
+        }
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("innerSavedTable")), "a saved table another saved table holds must still be exported in its own right");
+        QCOMPARE(xml.count(qsl("inner member value")), 2);
+
+        for (const auto& name : {qsl("innerSavedTable"), qsl("innerSavedTable.member"), qsl("holderSavedTable"), qsl("holderSavedTable.inner")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "innerSavedTable, holderSavedTable = nil"), 0);
+    }
+
+    // Design pin. Two members of one saved table that are the same Lua table
+    // are not both exported: the profile XML has no way to say "these two names
+    // are one table", so the export would have to write the subtree once per
+    // name. On a profile whose saved table holds a UI object that multiplies
+    // out - measured at 5.5x the file, and big enough for the 10,000-item limit
+    // to then drop whole branches - so the walk keeps one copy per saved name
+    // and no more. Members the user ticks individually are exported in full.
+    void test_twoMembersOfASavedTableSharingATableExportOnce()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "memberShareTable = {} memberShareTable.first = {member = 'member share value'} memberShareTable.second = memberShareTable.first"), 0);
+        vu->savedVars.insert(qsl("memberShareTable"));
+
+        QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QCOMPARE(xml.count(qsl("member share value")), 1);
+
+        // ticking a member in the Variables view (which is what savedVars holds)
+        // is what asks for it to be written under its own name as well
+        vu->savedVars.insert(qsl("memberShareTable.first"));
+        vu->savedVars.insert(qsl("memberShareTable.second"));
+        xml = exportProfileXml();
+        QCOMPARE(xml.count(qsl("member share value")), 2);
+
+        for (const auto& name : {qsl("memberShareTable"), qsl("memberShareTable.first"), qsl("memberShareTable.second")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "memberShareTable = nil"), 0);
+    }
+
+    // A table that holds itself must not send the walk round for ever.
+    void test_selfReferencingSavedTableIsExported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "cyclicSavedTable = {member = 'cyclic member value'} cyclicSavedTable.self = cyclicSavedTable"), 0);
+        vu->savedVars.insert(qsl("cyclicSavedTable"));
+        vu->savedVars.insert(qsl("cyclicSavedTable.self"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("cyclic member value")), "a table that references itself must still export its other members");
+
+        vu->savedVars.remove(qsl("cyclicSavedTable"));
+        vu->savedVars.remove(qsl("cyclicSavedTable.self"));
+        QCOMPARE(luaL_dostring(L, "cyclicSavedTable = nil"), 0);
+    }
+
+    // What keeps a save off the size of _G: the tree it builds holds the saved
+    // globals and nothing else, so a global a profile does not save costs a key
+    // conversion and a hash lookup instead of a walk of everything it reaches.
+    void test_saveTimeTreeHoldsOnlyTheSavedGlobals()
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "for i = 1, 500 do _G['walkNoiseTable' .. i] = {nested = {deeper = i}} end "
+                               "walkSavedRootTable = {member = 'walk member value'}"),
+                 0);
+
+        LuaInterface saveTimeInterface(L);
+        saveTimeInterface.getVarUnit()->savedVars.insert(qsl("walkSavedRootTable"));
+        saveTimeInterface.getSavedVars();
+
+        TVar* pBase = saveTimeInterface.getVarUnit()->getBase();
+        QVERIFY(pBase);
+        const QList<TVar*> roots = pBase->getChildren(false);
+        QCOMPARE(roots.size(), 1);
+        QCOMPARE(roots.constFirst()->getName(), qsl("walkSavedRootTable"));
+        QCOMPARE(roots.constFirst()->getChildren(false).size(), 1);
+
+        // the saved-globals-only mode must not outlive the call that asked for
+        // it, or the Variables view built from this interface would show almost
+        // nothing
+        saveTimeInterface.getVars(false);
+        QVERIFY2(saveTimeInterface.getVarUnit()->getBase()->getChildren(false).size() > 1, "a getVars() after getSavedVars() must go back to reading the whole of _G");
+        saveTimeInterface.releaseVariableReferences();
+
+        QCOMPARE(luaL_dostring(L, "for i = 1, 500 do _G['walkNoiseTable' .. i] = nil end walkSavedRootTable = nil"), 0);
+    }
+
+    // The export borrows the profile's live Lua state, so anything it leaves on
+    // the stack is charged to every trigger, alias and timer for the rest of the
+    // session. Covers the three ways out of the walk: nothing saved at all, a
+    // normal walk, and one cut short by the nesting limit.
+    void test_exportLeavesTheLuaStackAsItFoundIt()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+
+        const QSet<QString> savedVarsBefore = vu->savedVars;
+        vu->savedVars.clear();
+        const int stackWithNothingSaved = lua_gettop(L);
+        const QString emptyXml = exportProfileXml();
+        QVERIFY(!emptyXml.isEmpty());
+        QVERIFY2(!emptyXml.contains(qsl("<Variable>")), "with nothing marked as saved the VariablePackage must come out empty");
+        QCOMPARE(lua_gettop(L), stackWithNothingSaved);
+        vu->savedVars = savedVarsBefore;
+
+        QCOMPARE(luaL_dostring(L,
+                               "stackCheckTable = {member = 'stack check value', nested = {deeper = 'deeper stack value'}} "
+                               "local t = stackCheckTable "
+                               "for i = 1, 120 do t.nested = {} t = t.nested end"),
+                 0);
+        vu->savedVars.insert(qsl("stackCheckTable"));
+
+        const int stackBefore = lua_gettop(L);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("nested more than 99 tables deep")));
+        QVERIFY(!exportProfileXml().isEmpty());
+        QCOMPARE(lua_gettop(L), stackBefore);
+
+        vu->savedVars.remove(qsl("stackCheckTable"));
+        QCOMPARE(luaL_dostring(L, "stackCheckTable = nil"), 0);
+    }
+
+    // A table-keyed entry costs a Lua registry reference to name at all, and the
+    // walk takes that reference before it knows whether the global is saved. The
+    // ones it then skips still have to be handed back.
+    void test_skippedGlobalsDoNotPinLuaRegistryReferences()
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "for i = 1, 20 do _G[{}] = 'unsaved table-keyed global' end"), 0);
+
+        QVERIFY(!exportProfileXml().isEmpty());
+        lua_pushboolean(L, 1);
+        const int refAfterOne = luaL_ref(L, LUA_REGISTRYINDEX);
+        luaL_unref(L, LUA_REGISTRYINDEX, refAfterOne);
+
+        for (int i = 0; i < 5; ++i) {
+            QVERIFY(!exportProfileXml().isEmpty());
+        }
+
+        lua_pushboolean(L, 1);
+        const int refAfterSix = luaL_ref(L, LUA_REGISTRYINDEX);
+        luaL_unref(L, LUA_REGISTRYINDEX, refAfterSix);
+
+        QVERIFY2(refAfterSix < refAfterOne + 20,
+                 qPrintable(qsl("the exports pinned Lua registry slots for globals they skipped: a reference taken after one export was %1, one taken after six was %2")
+                                    .arg(refAfterOne)
+                                    .arg(refAfterSix)));
+
+        QCOMPARE(luaL_dostring(L,
+                               "local deadKeys = {} for k in pairs(_G) do if type(k) == 'table' then deadKeys[#deadKeys + 1] = k end end "
+                               "for _, k in ipairs(deadKeys) do _G[k] = nil end"),
+                 0);
+    }
+
+    // The walk stops at 99 levels of nesting and hands back an empty table,
+    // which for a saved variable means its contents are not in the save. That
+    // has to be said out loud rather than left to be discovered.
+    void test_tableNestedPastTheWalkLimitIsReportedNotSilentlyEmptied()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "deeplyNestedSavedTable = {shallow = 'shallow member value'} "
+                               "local t = deeplyNestedSavedTable "
+                               "for i = 1, 120 do t.nested = {} t = t.nested end "
+                               "t.deepest = 'past the limit value'"),
+                 0);
+        vu->savedVars.insert(qsl("deeplyNestedSavedTable"));
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("nested more than 99 tables deep")));
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("shallow member value")), "the members the walk did reach must still be exported");
+        QVERIFY2(!xml.contains(qsl("past the limit value")), "a member past the nesting limit is not exported - the warning above is what tells the user");
+
+        vu->savedVars.remove(qsl("deeplyNestedSavedTable"));
+        QCOMPARE(luaL_dostring(L, "deeplyNestedSavedTable = nil"), 0);
     }
 
     // A script adds to a saved table while the editor sits on the Variables
@@ -531,6 +800,50 @@ private slots:
         QVERIFY(!exportProfileXml().isEmpty());
 
         QVERIFY2(vu->getWVar(pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
+    }
+
+    // What the user actually cares about: the data is there again next session.
+    // Declared last because importing puts the whole package back into the live
+    // profile, which the other tests would then be sharing.
+    void test_savedTableReachedByAnotherGlobalSurvivesAReload()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        // as many aliases as test_savedTableReachedByAnotherGlobalIsExported
+        // uses, and for the same reason
+        QCOMPARE(luaL_dostring(L,
+                               "reloadSavedTable = {member = 'reload member value', nest = {deep = 'reload deep value'}} "
+                               "aaaAliasOfReload = reloadSavedTable bAliasOfReload = reloadSavedTable m1AliasOfReload = reloadSavedTable "
+                               "xyzzyAliasOfReload = reloadSavedTable alphaAliasOfReload = reloadSavedTable ref1AliasOfReload = reloadSavedTable "
+                               "A_1AliasOfReload = reloadSavedTable"),
+                 0);
+        for (const auto& name : {qsl("reloadSavedTable"), qsl("reloadSavedTable.member"), qsl("reloadSavedTable.nest"), qsl("reloadSavedTable.nest.deep")}) {
+            vu->savedVars.insert(name);
+        }
+
+        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/reload-test.xml");
+        auto writer = std::make_shared<XMLexport>(mpHost);
+        QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
+
+        QCOMPARE(luaL_dostring(L, "reloadSavedTable, aaaAliasOfReload, bAliasOfReload, m1AliasOfReload, xyzzyAliasOfReload, alphaAliasOfReload, ref1AliasOfReload, A_1AliasOfReload = nil"), 0);
+        QCOMPARE(luaL_dostring(L, "assert(reloadSavedTable == nil)"), 0);
+
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(luaL_dostring(L, "assert(reloadSavedTable.member == 'reload member value')") == 0, "the saved table did not come back with its member after a save and reload");
+        QVERIFY2(luaL_dostring(L, "assert(reloadSavedTable.nest.deep == 'reload deep value')") == 0, "the saved table's nested member did not come back after a save and reload");
+
+        for (const auto& name : {qsl("reloadSavedTable"), qsl("reloadSavedTable.member"), qsl("reloadSavedTable.nest"), qsl("reloadSavedTable.nest.deep")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "reloadSavedTable = nil"), 0);
     }
 
 private:

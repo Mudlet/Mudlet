@@ -118,6 +118,29 @@ local function fileExists(path)
   return lfs.attributes(path, "mode") ~= nil
 end
 
+-- Everything the main console gained since it was at line `mark`, joined up.
+-- The console wraps long lines and a wrap swallows the space it broke at, so
+-- the announcements below are matched with all whitespace removed.
+local function textFrom(mark)
+  return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+end
+
+local function containsWrapped(haystack, needle)
+  return contains((tostring(haystack):gsub("%s+", "")), (needle:gsub("%s+", "")))
+end
+
+-- A file: URL for a local path, in the three-slash form that keeps a Windows
+-- drive letter from being read as the host name. The checkout these fixtures
+-- live in can sit anywhere, so the characters that would otherwise end the path
+-- early - a space, a fragment, a query, a half-written escape - are encoded.
+local function fileUrl(path)
+  local normalised = path:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
+  if normalised:sub(1, 1) ~= "/" then
+    normalised = "/" .. normalised
+  end
+  return "file://" .. normalised
+end
+
 local function copyFile(from, to)
   local source = io.open(from, "rb")
   assert.is_not_nil(source, "could not read the fixture " .. from)
@@ -923,6 +946,253 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
     assert.is_true(contains(err, "no package found in"), tostring(err))
     assert.is_false(packageInstalled("mudlet-spec-emptyarchive"))
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-emptyarchive"))
+  end)
+end)
+
+describe("Tests the functionality of verbosePackageInstall", function()
+  it("installs the package and says so on the main console", function()
+    defer(function() removeFixturePackage(minimalPackage) end)
+    local path = fixtureDirectory .. "/" .. minimalPackage .. ".mpackage"
+    -- an install asked for while a save is running is postponed, and would be
+    -- announced as a success without anything being installed
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(path)
+
+    assert.is_true(packageInstalled(minimalPackage), "the package was not installed")
+    assert.is_true(containsWrapped(textFrom(mark), "Package '" .. path .. "' installed successfully."), textFrom(mark))
+  end)
+
+  it("says why an install failed", function()
+    -- a path that is not there fails without installing anything, so this spec
+    -- costs none of the profile saves an install-then-reinstall would
+    local path = fixtureDirectory .. "/mudlet-spec-there-is-no-such-package.mpackage"
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
+    assert.is_true(containsWrapped(text, "could not open file"), text)
+    assert.is_false(packageInstalled("mudlet-spec-there-is-no-such-package"))
+  end)
+
+  it("names the file, not the whole path, when the install fails", function()
+    -- the announcement is trimmed on both branches, and only the success one is
+    -- reached from installPackageFromUrl's spec
+    local name = "mudlet-spec-there-is-no-such-package.mpackage"
+    -- an install asked for while a save is running is postponed and answered
+    -- with a bare true, so the failure under test would be announced a success
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(getMudletHomeDir() .. "/" .. name)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Installing '" .. name .. "' failed:"), text)
+    -- the reason installPackage() gives does name the whole path, so only the
+    -- announcement's own name is checked for having been trimmed
+    assert.is_false(containsWrapped(text, "Installing '" .. getMudletHomeDir()), text)
+  end)
+end)
+
+describe("Tests the functionality of verboseModuleInstall", function()
+  -- A module is installed from a copy inside the profile for the same reason
+  -- installFixtureModule() does it: a save rewrites a synced module's own
+  -- .mpackage, which must not be the committed fixture.
+  local function stageModule()
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. moduleName .. ".mpackage"
+    copyFile(fixtureDirectory .. "/" .. moduleName .. ".mpackage", path)
+    return path
+  end
+
+  it("installs the module and says so on the main console", function()
+    defer(function() removeFixtureModule(moduleName) end)
+    local path = stageModule()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verboseModuleInstall(path)
+
+    assert.is_true(moduleInstalled(moduleName), "the module was not installed")
+    assert.is_true(containsWrapped(textFrom(mark), "Module '" .. path .. "' installed successfully."), textFrom(mark))
+  end)
+
+  it("says why an install failed", function()
+    local path = fixtureDirectory .. "/mudlet-spec-there-is-no-such-module.mpackage"
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verboseModuleInstall(path)
+
+    local text = textFrom(mark)
+    -- the module and package failures are announced in the same words, so it is
+    -- the spec above, not this one, that tells the two functions apart
+    assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
+    assert.is_true(containsWrapped(text, "could not open file"), text)
+    assert.is_false(moduleInstalled("mudlet-spec-there-is-no-such-module"))
+  end)
+end)
+
+describe("Tests the functionality of installPackageFromUrl", function()
+  local downloadedName = minimalPackage .. ".mpackage"
+
+  it("downloads the package, installs it and tidies the download away", function()
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(getMudletHomeDir() .. "/" .. downloadedName)
+    end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    -- a file: URL keeps this off the network while still going through
+    -- downloadFile() and the sysDownloadDone handler the function registers
+    local url = fileUrl(fixtureDirectory .. "/" .. downloadedName)
+
+    installPackageFromUrl(downloadedName, url)
+
+    local event, installedName = waitForEvent("sysInstallPackage", 10000)
+    assert.equals("sysInstallPackage", event)
+    assert.equals(minimalPackage, installedName)
+    assert.is_true(packageInstalled(minimalPackage))
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Downloading package from " .. url), text)
+    assert.is_true(containsWrapped(text, "installed successfully."), text)
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. downloadedName), "the downloaded copy was left in the profile")
+  end)
+
+  it("names the file, not the whole path, in the announcement", function()
+    -- this only bites while the profile name holds a Lua pattern magic
+    -- character ("Mudlet self-test" holds a "-"): a pattern-based strip finds
+    -- nothing to match there and announces the whole path
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(getMudletHomeDir() .. "/" .. downloadedName)
+    end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    installPackageFromUrl(downloadedName, fileUrl(fixtureDirectory .. "/" .. downloadedName))
+
+    waitForEvent("sysInstallPackage", 10000)
+    assert.is_true(containsWrapped(textFrom(mark), "Package '" .. downloadedName .. "' installed successfully."), textFrom(mark))
+  end)
+
+  it("reports a download that failed and installs nothing", function()
+    local missingName = "mudlet-spec-never-downloadable.mpackage"
+    defer(function() os.remove(getMudletHomeDir() .. "/" .. missingName) end)
+    local mark = getLastLineNumber("main")
+
+    installPackageFromUrl(missingName, fileUrl(fixtureDirectory .. "/" .. missingName))
+
+    local event = waitForEvent("sysDownloadError", 10000)
+    assert.equals("sysDownloadError", event)
+    pumpEvents(200)
+    assert.is_false(packageInstalled("mudlet-spec-never-downloadable"))
+    local text = textFrom(mark)
+    -- the warning only means something paired with the download it reports on
+    assert.is_true(containsWrapped(text, "Downloading package from"), text)
+    assert.is_true(containsWrapped(text, "[ WARN ]"), text)
+  end)
+end)
+
+describe("Tests the functionality of packageDrop", function()
+  it("hands a dropped package file to the installer", function()
+    -- The file is one that is not there: what this is about is that dropping
+    -- reaches the installer with the path that was dropped, and installing for
+    -- real costs two profile saves that verbosePackageInstall's own spec has
+    -- already paid for.
+    local path = fixtureDirectory .. "/mudlet-spec-there-is-no-such-drop.mpackage"
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    -- raised rather than called so that the handler registration in Other.lua
+    -- is what is being tested as well
+    raiseEvent("sysDropEvent", path, "mpackage", 10, 10, "main")
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
+    assert.is_false(packageInstalled("mudlet-spec-there-is-no-such-drop"))
+  end)
+
+  it("hands on every kind of file Mudlet installs", function()
+    -- same trick as above, so that narrowing the list of suffixes Mudlet
+    -- accepts cannot go unnoticed
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    for _, suffix in ipairs({"xml", "zip", "trigger"}) do
+      local path = fixtureDirectory .. "/mudlet-spec-there-is-no-such-drop." .. suffix
+      local mark = getLastLineNumber("main")
+
+      packageDrop("sysDropEvent", path, suffix)
+
+      local text = textFrom(mark)
+      assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), suffix .. ": " .. text)
+    end
+  end)
+
+  it("ignores a file whose type Mudlet does not install", function()
+    -- an install that arrives while a save is running is postponed and would
+    -- land after this spec rather than in it
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    assert.equals(0, select('#', packageDrop("sysDropEvent", fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", "exe")))
+
+    assert.is_false(packageInstalled(minimalPackage))
+    -- an install that was attempted says so either way round, so neither
+    -- announcement having been made is what proves the drop was turned away
+    local text = textFrom(mark)
+    assert.is_false(containsWrapped(text, "installed successfully."), text)
+    assert.is_false(containsWrapped(text, "failed:"), text)
+  end)
+end)
+
+describe("Tests the functionality of packageUrlDrop", function()
+  -- installPackageFromUrl() announces the download while the call is still on
+  -- the stack, so that line on the console separates a drop that was passed on
+  -- from one that was turned away without any waiting. Nothing listens on the
+  -- port below, so the download a passed-on drop starts cannot leave the
+  -- machine.
+  local droppedUrl = "http://127.0.0.1:1/mudlet-spec-dropped.mpackage"
+
+  local function announcedADownload(mark)
+    return containsWrapped(textFrom(mark), "Downloading package from")
+  end
+
+  it("hands a dropped package URL to the downloader", function()
+    defer(function() os.remove(getMudletHomeDir() .. "/mudlet-spec-dropped.mpackage") end)
+    local mark = getLastLineNumber("main")
+
+    packageUrlDrop("sysDropUrlEvent", droppedUrl, "http")
+
+    assert.is_true(containsWrapped(textFrom(mark), "Downloading package from " .. droppedUrl), textFrom(mark))
+    -- let the refused connection be reported here rather than in a later spec
+    waitForEvent("sysDownloadError", 5000)
+    assert.is_false(packageInstalled("mudlet-spec-dropped"))
+  end)
+
+  it("ignores a URL whose scheme it does not handle", function()
+    -- the scheme is a separate argument from the URL, so the URL is one the
+    -- spec above proved would otherwise be downloaded
+    local mark = getLastLineNumber("main")
+
+    assert.equals(0, select('#', packageUrlDrop("sysDropUrlEvent", droppedUrl, "ftp")))
+
+    assert.is_false(announcedADownload(mark))
+  end)
+
+  it("does not download a URL that is not a package file", function()
+    -- no save to wait for: a URL with the wrong suffix is handed to the plain
+    -- installer, which gives up on opening it as a file before installing
+    -- anything
+    local mark = getLastLineNumber("main")
+
+    packageUrlDrop("sysDropUrlEvent", "http://127.0.0.1:1/mudlet-spec-not-a-package.txt", "http")
+
+    assert.is_false(announcedADownload(mark))
   end)
 end)
 

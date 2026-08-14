@@ -9,6 +9,19 @@ endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Widgets)
 
+# On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
+# stderr has a console attached, which an MSYS2 shell or a CI runner does not give
+# it, so a failing test reports an exit code and nothing else (#9747). Deferred so
+# that tests registered further down the file are covered too; TESTS does not
+# descend into subdirectories, hence the second call in functional_tests.
+function(restore_windows_test_output)
+    get_property(registeredTests DIRECTORY PROPERTY TESTS)
+    foreach(testName ${registeredTests})
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "QT_ASSUME_STDERR_HAS_CONSOLE=1")
+    endforeach()
+endfunction()
+cmake_language(DEFER CALL restore_windows_test_output)
+
 set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
@@ -90,30 +103,40 @@ set_tests_properties(CMakeListsConsistencyTest PROPERTIES
 # Pairing of a release's assets with its SHA256SUMS.txt. Built from the updater
 # sources rather than linked against the Mudlet library, because the library only
 # contains them when configured with USE_UPDATER.
-add_executable(UpdaterChecksumTest
-    UpdaterChecksumTest.cpp
+add_executable(ReleaseChecksumPairingTest
+    ReleaseChecksumPairingTest.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/Feed.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/Release.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
 )
-target_link_libraries(UpdaterChecksumTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
-add_test(NAME UpdaterChecksumTest COMMAND $<TARGET_FILE:UpdaterChecksumTest>)
-set_tests_properties(UpdaterChecksumTest PROPERTIES
+target_link_libraries(ReleaseChecksumPairingTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME ReleaseChecksumPairingTest COMMAND $<TARGET_FILE:ReleaseChecksumPairingTest>)
+set_tests_properties(ReleaseChecksumPairingTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
 # Which releases the updater offers as an update. Built from the updater sources
 # rather than linked against the Mudlet library, because the library only
 # contains them when configured with USE_UPDATER.
-add_executable(UpdaterPlatformAssetTest
-    UpdaterPlatformAssetTest.cpp
+add_executable(ReleasePlatformAssetTest
+    ReleasePlatformAssetTest.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/Feed.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/Release.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
 )
-target_link_libraries(UpdaterPlatformAssetTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
-add_test(NAME UpdaterPlatformAssetTest COMMAND $<TARGET_FILE:UpdaterPlatformAssetTest>)
-set_tests_properties(UpdaterPlatformAssetTest PROPERTIES
+target_link_libraries(ReleasePlatformAssetTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME ReleasePlatformAssetTest COMMAND $<TARGET_FILE:ReleasePlatformAssetTest>)
+set_tests_properties(ReleasePlatformAssetTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
+# The $XDG_CONFIG_HOME opt-in recipe the tests isolate themselves with. Reads the
+# test sources at runtime, so like CMakeListsConsistencyTest it links nothing.
+add_executable(XdgRecipeConsistencyTest XdgRecipeConsistencyTest.cpp)
+target_link_libraries(XdgRecipeConsistencyTest PRIVATE Qt6::Test)
+target_compile_definitions(XdgRecipeConsistencyTest PRIVATE MUDLET_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME XdgRecipeConsistencyTest COMMAND $<TARGET_FILE:XdgRecipeConsistencyTest>)
+set_tests_properties(XdgRecipeConsistencyTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
@@ -142,4 +165,75 @@ if(NOT WIN32)
     )
 endif()
 
+# Checks that the LeakSanitizer tracer-crash launcher reruns only that one
+# signature
+if(NOT WIN32)
+    add_test(NAME LsanTracerRetryTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/lsan-tracer-retry-test.sh
+    )
+endif()
+
 add_subdirectory(functional_tests)
+
+# CI runners are elevated, so nothing there catches a test executable Windows
+# refuses to launch for looking like an installer (#9748) - hence this gate,
+# whose message spells the heuristic out.
+function(mudlet_reject_uac_installer_name name)
+    string(TOLOWER "${name}" lowercaseName)
+    if(lowercaseName MATCHES "install|setup|update|patch")
+        message(FATAL_ERROR
+            "'${name}' cannot be used as a test name: Windows takes an unsigned executable whose name "
+            "contains '${CMAKE_MATCH_0}' for an installer and refuses to launch it without elevation "
+            "(#9748), so ctest reports BAD_COMMAND for it in an ordinary developer shell. Rename the "
+            "source file and its target to describe what the test asserts, watching for install, setup, "
+            "update and patch as substrings - Dispatch carries one.")
+    endif()
+endfunction()
+
+function(mudlet_reject_uac_installer_target_names directory)
+    get_property(targets DIRECTORY "${directory}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(target ${targets})
+        get_target_property(targetType ${target} TYPE)
+        if(NOT targetType STREQUAL "EXECUTABLE")
+            continue()
+        endif()
+        set_property(GLOBAL APPEND PROPERTY mudletUacCheckedExecutables "${target}")
+        get_target_property(executableName ${target} OUTPUT_NAME)
+        if(NOT executableName)
+            set(executableName ${target})
+        endif()
+        mudlet_reject_uac_installer_name("${executableName}")
+    endforeach()
+
+    get_property(subdirectories DIRECTORY "${directory}" PROPERTY SUBDIRECTORIES)
+    foreach(subdirectory ${subdirectories})
+        mudlet_reject_uac_installer_target_names("${subdirectory}")
+    endforeach()
+endfunction()
+
+# Both passes are needed. Targets carry the name that actually reaches disk,
+# OUTPUT_NAME included, but only for the tests this configuration builds:
+# NewReleaseDialogTeardownTest, for one, is registered only under USE_UPDATER.
+# Source names are what the registration loops derive executable names from,
+# and are present whatever the configuration.
+function(mudlet_check_test_executable_names directory)
+    mudlet_reject_uac_installer_target_names("${directory}")
+
+    get_property(checkedExecutables GLOBAL PROPERTY mudletUacCheckedExecutables)
+    if(NOT checkedExecutables)
+        message(FATAL_ERROR "The test executable name check found no executables under ${directory}, so it is checking nothing.")
+    endif()
+
+    file(GLOB_RECURSE testSources "${directory}/*.cpp")
+    if(NOT testSources)
+        message(FATAL_ERROR "The test executable name check found no sources under ${directory}, so it is checking nothing.")
+    endif()
+    foreach(testSource ${testSources})
+        get_filename_component(sourceName "${testSource}" NAME_WE)
+        mudlet_reject_uac_installer_name("${sourceName}")
+    endforeach()
+endfunction()
+
+# Deferred rather than called outright, so that targets registered below this
+# line, and in subdirectories added below it, are checked as well
+cmake_language(DEFER CALL mudlet_check_test_executable_names "${CMAKE_CURRENT_SOURCE_DIR}")
