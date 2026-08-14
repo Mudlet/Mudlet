@@ -1095,6 +1095,10 @@ function STT.UI._downloadModel(model)
       killAnonymousEventHandler(STT.UI._progressHandlerId)
       STT.UI._progressHandlerId = nil
     end
+    if STT.UI._errorHandlerId then
+      killAnonymousEventHandler(STT.UI._errorHandlerId)
+      STT.UI._errorHandlerId = nil
+    end
 
     STT.UI._setDialogStatus("Extracting model...", "cyan")
 
@@ -1228,20 +1232,28 @@ end
 function STT.UI._installExtractedLibrary(libDir, build)
   -- Collect the listings before moving anything: renaming into a directory that
   -- lfs.dir() is still iterating is a readdir-during-mutation.
+  -- Wrapped as in _removePath: lfs.dir raises on a directory it cannot open, and
+  -- this runs from the sysUnzipDone handler, where a raise would stop the dialog
+  -- ever being told how the install ended.
   local nestedDirs = {}
-  for entry in lfs.dir(libDir) do
-    if entry ~= "." and entry ~= ".." then
-      local nested = libDir .. "/" .. entry
-      if lfs.attributes(nested, "mode") == "directory" then
-        local contents = {}
-        for inner in lfs.dir(nested) do
-          if inner ~= "." and inner ~= ".." then
-            contents[#contents + 1] = inner
+  local listed, listError = pcall(function()
+    for entry in lfs.dir(libDir) do
+      if entry ~= "." and entry ~= ".." then
+        local nested = libDir .. "/" .. entry
+        if lfs.attributes(nested, "mode") == "directory" then
+          local contents = {}
+          for inner in lfs.dir(nested) do
+            if inner ~= "." and inner ~= ".." then
+              contents[#contents + 1] = inner
+            end
           end
+          nestedDirs[#nestedDirs + 1] = {path = nested, contents = contents}
         end
-        nestedDirs[#nestedDirs + 1] = {path = nested, contents = contents}
       end
     end
+  end)
+  if not listed then
+    return false, "could not read " .. libDir .. ": " .. tostring(listError)
   end
 
   local moved = false
@@ -1269,7 +1281,10 @@ function STT.UI._installExtractedLibrary(libDir, build)
   -- and the now-empty versioned directories, so the install leaves no residue.
   for _, nested in ipairs(nestedDirs) do
     for _, inner in ipairs(nested.contents) do
-      os.remove(nested.path .. "/" .. inner)
+      -- _removePath, not os.remove: the archives ship directories alongside the
+      -- library, and os.remove cannot take a directory, which would then leave
+      -- the versioned directory non-empty and undeletable.
+      STT.UI._removePath(nested.path .. "/" .. inner)
     end
     lfs.rmdir(nested.path)
   end

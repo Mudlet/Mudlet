@@ -60,23 +60,12 @@ VoskRecognizer::vosk_recognizer_set_words_fn VoskRecognizer::s_vosk_recognizer_s
 static constexpr int VOSK_SAMPLE_RATE = 16000;
 
 // Common hallucination words that Vosk models generate during silence or speech onset
-static const QStringList kHallucinationWords = {
-        qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")};
+Q_GLOBAL_STATIC_WITH_ARGS(QStringList,
+                          kHallucinationWords,
+                          ({qsl("the"), qsl("a"), qsl("an"), qsl("to"), qsl("of"), qsl("and"), qsl("in"), qsl("is"), qsl("it"), qsl("i"), qsl("that"), qsl("for"), qsl("you"), qsl("on"), qsl("be")}))
 
 // Regex to strip leading hallucination words from multi-word results
 Q_GLOBAL_STATIC_WITH_ARGS(QRegularExpression, kLeadingHallucinationRx, (qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption))
-
-// AudioInputBuffer implementation
-qint64 AudioInputBuffer::writeData(const char* data, qint64 len)
-{
-    if (!data && len > 0) {
-        return 0;
-    }
-    QByteArray newData(data, len);
-    mTotalBytesWritten += len;
-    emit dataAvailable(newData);
-    return len;
-}
 
 VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
@@ -90,8 +79,30 @@ VoskRecognizer::VoskRecognizer(QObject* parent)
     connect(&mProcessTimer, &QTimer::timeout, this, &VoskRecognizer::processAudioData);
 }
 
+// Human-readable description of a QAudio::Error, for messages a player sees
+static QString audioErrorText(const QAudio::Error error)
+{
+    switch (error) {
+    case QAudio::NoError:
+        return QCoreApplication::translate("VoskRecognizer", "no error");
+    case QAudio::OpenError:
+        return QCoreApplication::translate("VoskRecognizer", "the microphone could not be opened");
+    case QAudio::IOError:
+        return QCoreApplication::translate("VoskRecognizer", "reading from the microphone failed");
+    case QAudio::UnderrunError:
+        return QCoreApplication::translate("VoskRecognizer", "the microphone stopped supplying audio");
+    case QAudio::FatalError:
+        return QCoreApplication::translate("VoskRecognizer", "the microphone became unusable");
+    }
+    return QCoreApplication::translate("VoskRecognizer", "unknown error");
+}
+
 VoskRecognizer::~VoskRecognizer()
 {
+    // cancel() ends with setState(), which emits stateChanged(). Connections are
+    // still live until ~QObject runs, so that would deliver a state change from a
+    // half-destroyed object to slots that go on to query it.
+    blockSignals(true);
     cancel();
     releaseVoskResources();
 }
@@ -148,7 +159,12 @@ bool VoskRecognizer::loadVoskLibrary()
     if (!s_vosk_model_new || !s_vosk_model_free || !s_vosk_recognizer_new || !s_vosk_recognizer_free || !s_vosk_recognizer_accept_waveform || !s_vosk_recognizer_result
         || !s_vosk_recognizer_partial_result || !s_vosk_recognizer_final_result) {
         qWarning() << "VoskRecognizer: Failed to resolve required Vosk functions";
-        sVoskLibrary.unload();
+        // Unloading on its own would leave the pointers that did resolve aiming
+        // into a library that is no longer mapped
+        resetLibraryLoadState();
+        // resetLibraryLoadState() clears this to allow a fresh probe; a library
+        // whose symbols are missing is not worth re-probing on every call
+        sLibraryLoadAttempted = true;
         return false;
     }
 
@@ -164,10 +180,8 @@ bool VoskRecognizer::loadVoskLibrary()
 
 bool VoskRecognizer::isVoskAvailable()
 {
-    // Use a temporary instance to check library availability
     if (!sLibraryLoadAttempted) {
-        VoskRecognizer temp;
-        temp.loadVoskLibrary();
+        loadVoskLibrary();
     }
     return sLibraryLoaded;
 }
@@ -324,6 +338,23 @@ bool VoskRecognizer::setupAudioInput()
     // We'll resample/convert to Vosk's format (16kHz mono Int16) later
     QAudioFormat formatToUse = inputDevice.preferredFormat();
 
+    // ...but only Float and Int16 samples can be converted; anything else would
+    // capture happily and then be discarded frame by frame, leaving the
+    // recognizer Listening and permanently deaf. Keep the device's rate and
+    // channel count and ask for Int16 instead.
+    if (formatToUse.sampleFormat() != QAudioFormat::Float && formatToUse.sampleFormat() != QAudioFormat::Int16) {
+        QAudioFormat fallbackFormat = formatToUse;
+        fallbackFormat.setSampleFormat(QAudioFormat::Int16);
+        if (!inputDevice.isFormatSupported(fallbackFormat)) {
+            fallbackFormat = mAudioFormat; // Vosk's own 16kHz mono Int16
+        }
+        if (!inputDevice.isFormatSupported(fallbackFormat)) {
+            emit errorOccurred(tr("The microphone does not offer an audio format speech recognition can use"));
+            return false;
+        }
+        formatToUse = fallbackFormat;
+    }
+
     // Store the format we're actually using for later conversion
     mActualAudioFormat = formatToUse;
 
@@ -339,10 +370,14 @@ bool VoskRecognizer::setupAudioInput()
 void VoskRecognizer::startListening()
 {
     if (mState != State::Ready) {
+        // Every refusal but "already listening" reports why: startListening()
+        // returns void, so silence here reads to the caller as a successful start
         if (mState == State::Uninitialized) {
             emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
-        } else if (mState == State::Listening) {
-            return; // Already listening
+        } else if (mState == State::Error) {
+            emit errorOccurred(tr("Speech recognition is in an error state - reload the model before listening again."));
+        } else if (mState == State::Processing) {
+            emit errorOccurred(tr("Speech recognition is still processing the previous phrase."));
         }
         return;
     }
@@ -355,24 +390,21 @@ void VoskRecognizer::startListening()
 
     switch (status) {
     case MacMicrophonePermission::AuthorizationStatus::NotDetermined: {
-        // Request permission - callback is called on background thread
-        // Use QPointer to safely handle the case where VoskRecognizer is destroyed
-        // before the permission callback or timer fires
+        // requestAccess() dispatches its callback to the main queue, so this runs
+        // on the main thread already. Use QPointer to safely handle the case where
+        // VoskRecognizer is destroyed before the permission callback arrives.
         QPointer<VoskRecognizer> weakThis = this;
         MacMicrophonePermission::requestAccess([weakThis](bool granted) {
-            // Need to dispatch back to main thread
-            QTimer::singleShot(0, [weakThis, granted]() {
-                if (!weakThis) {
-                    return; // VoskRecognizer was destroyed
-                }
-                if (granted) {
-                    weakThis->startListeningInternal();
-                } else {
-                    qWarning() << "VoskRecognizer: Microphone permission denied by user";
-                    emit weakThis->errorOccurred(QObject::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-                    weakThis->setState(State::Error);
-                }
-            });
+            if (!weakThis) {
+                return; // VoskRecognizer was destroyed
+            }
+            if (granted) {
+                weakThis->startListeningInternal();
+            } else {
+                qWarning() << "VoskRecognizer: Microphone permission denied by user";
+                emit weakThis->errorOccurred(QObject::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
+                weakThis->setState(State::Error);
+            }
         });
         return;
     }
@@ -392,11 +424,10 @@ void VoskRecognizer::startListening()
 
 void VoskRecognizer::startListeningInternal()
 {
-    if (!setupAudioInput()) {
-        setState(State::Error);
-        return;
-    }
-
+    // The recognizer is rebuilt before any audio device is opened: every failure
+    // below returns early, and doing this first means none of them can leave a
+    // QAudioSource allocated for a session that never starts.
+    //
     // Recreate the recognizer for a new session to ensure clean state
     // Note: vosk_recognizer_reset() can leave the decoder in an inconsistent state
     // after vosk_recognizer_final_result() has been called, causing crashes
@@ -420,6 +451,11 @@ void VoskRecognizer::startListeningInternal()
         return;
     }
 
+    if (!setupAudioInput()) {
+        setState(State::Error);
+        return;
+    }
+
     // Reapply settings to the new recognizer
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
@@ -431,12 +467,7 @@ void VoskRecognizer::startListeningInternal()
 
     // Clear any buffered audio
     mAudioBuffer.clear();
-
-    // Clean up any previous audio input buffer
-    if (mAudioInputBuffer) {
-        delete mAudioInputBuffer;
-        mAudioInputBuffer = nullptr;
-    }
+    mResamplePhase = 0.0;
 
     // Set volume to maximum
     mAudioSource->setVolume(1.0);
@@ -479,13 +510,6 @@ void VoskRecognizer::stopListening()
     }
     mAudioDevice = nullptr;
 
-    // Clean up the push-mode buffer
-    if (mAudioInputBuffer) {
-        mAudioInputBuffer->close();
-        delete mAudioInputBuffer;
-        mAudioInputBuffer = nullptr;
-    }
-
     // Get final result from Vosk
     if (mVoskRecognizer) {
         const char* resultJson = s_vosk_recognizer_final_result(mVoskRecognizer);
@@ -496,7 +520,7 @@ void VoskRecognizer::stopListening()
             if (!text.isEmpty()) {
                 // Apply same hallucination filtering as in processAudioData
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = kHallucinationWords.contains(text.toLower());
+                const bool isHallucinationWord = kHallucinationWords->contains(text.toLower());
 
                 // Check confidence if word-level results are available
                 bool hasHighConfidence = false;
@@ -530,6 +554,7 @@ void VoskRecognizer::stopListening()
     }
 
     mAudioBuffer.clear();
+    mResamplePhase = 0.0;
     setState(State::Ready);
 }
 
@@ -550,19 +575,13 @@ void VoskRecognizer::cancel()
     }
     mAudioDevice = nullptr;
 
-    // Clean up the push-mode buffer
-    if (mAudioInputBuffer) {
-        mAudioInputBuffer->close();
-        delete mAudioInputBuffer;
-        mAudioInputBuffer = nullptr;
-    }
-
     // Reset the recognizer
     if (s_vosk_recognizer_reset && mVoskRecognizer) {
         s_vosk_recognizer_reset(mVoskRecognizer);
     }
 
     mAudioBuffer.clear();
+    mResamplePhase = 0.0;
     setState(State::Ready);
 }
 
@@ -597,89 +616,69 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
     }
 
     // Convert from device format to Vosk format (16kHz mono Int16)
-    QByteArray convertedData;
-
     const int srcRate = mActualAudioFormat.sampleRate();
     const int srcChannels = mActualAudioFormat.channelCount();
     const int dstRate = VOSK_SAMPLE_RATE; // 16000
+    const QAudioFormat::SampleFormat srcFormat = mActualAudioFormat.sampleFormat();
 
-    if (mActualAudioFormat.sampleFormat() == QAudioFormat::Float) {
-        // Convert Float32 to Int16 with proper resampling
-        const float* src = reinterpret_cast<const float*>(audioData.constData());
-        const int srcSamples = audioData.size() / (sizeof(float) * srcChannels);
+    if (srcFormat != QAudioFormat::Float && srcFormat != QAudioFormat::Int16) {
+        qWarning() << "VoskRecognizer: Unsupported audio format:" << srcFormat;
+        return;
+    }
 
-        // Early return if no source samples
-        if (srcSamples <= 0) {
-            return;
+    if (srcRate <= 0 || srcChannels <= 0) {
+        return;
+    }
+
+    const int bytesPerSample = (srcFormat == QAudioFormat::Float) ? static_cast<int>(sizeof(float)) : static_cast<int>(sizeof(qint16));
+    const int frameBytes = bytesPerSample * srcChannels;
+
+    // Carry over what the previous call could not consume, so a frame split
+    // across two reads is resampled rather than discarded
+    mAudioBuffer.append(audioData);
+    const int availableFrames = mAudioBuffer.size() / frameBytes;
+
+    // Interpolation reads the frame after the one it sits on, so the last frame
+    // has to wait for the next call to supply its partner
+    if (availableFrames < 2) {
+        return;
+    }
+
+    const double ratio = static_cast<double>(srcRate) / dstRate;
+    const char* const bufferData = mAudioBuffer.constData();
+
+    // First channel only - Vosk wants mono
+    const auto frameValue = [bufferData, srcChannels, srcFormat](const int frame) -> double {
+        if (srcFormat == QAudioFormat::Float) {
+            return static_cast<double>(reinterpret_cast<const float*>(bufferData)[frame * srcChannels]) * 32767.0;
         }
+        return static_cast<double>(reinterpret_cast<const qint16*>(bufferData)[frame * srcChannels]);
+    };
 
-        // Calculate output samples using proper ratio
-        const int dstSamples = static_cast<int>(static_cast<double>(srcSamples) * dstRate / srcRate);
+    QByteArray convertedData;
+    convertedData.reserve(static_cast<int>(availableFrames / ratio + 1) * static_cast<int>(sizeof(qint16)));
 
-        if (dstSamples <= 0) {
-            return;
-        }
+    double phase = mResamplePhase;
+    while (phase + 1.0 < availableFrames) {
+        const int frame = static_cast<int>(phase);
+        const double frac = phase - frame;
+        // Linear interpolation, applied the same way whatever the source format
+        const double sample = frameValue(frame) + frac * (frameValue(frame + 1) - frameValue(frame));
+        const qint16 converted = static_cast<qint16>(qBound(-32768.0, qRound(sample) * 1.0, 32767.0));
+        convertedData.append(reinterpret_cast<const char*>(&converted), sizeof(qint16));
+        phase += ratio;
+    }
 
-        convertedData.resize(dstSamples * sizeof(qint16));
-        qint16* dst = reinterpret_cast<qint16*>(convertedData.data());
+    // Drop only the frames no longer needed: the frame the phase now sits on is
+    // the next interpolation's left-hand sample, and any partial frame's bytes
+    // stay put for the read that completes them
+    const int consumedFrames = static_cast<int>(phase);
+    if (consumedFrames > 0) {
+        mAudioBuffer.remove(0, consumedFrames * frameBytes);
+    }
+    mResamplePhase = phase - consumedFrames;
 
-        // Linear interpolation resampling
-        const double ratio = static_cast<double>(srcRate) / dstRate;
-        for (int i = 0; i < dstSamples; ++i) {
-            double srcPos = i * ratio;
-            int srcIdx = static_cast<int>(srcPos);
-            double frac = srcPos - srcIdx;
-
-            float sample;
-            if (srcSamples == 1) {
-                // Only one sample available, can't interpolate
-                sample = src[0];
-            } else {
-                // Ensure we don't read past the end
-                if (srcIdx >= srcSamples - 1) {
-                    srcIdx = srcSamples - 2;
-                    frac = 1.0;
-                }
-
-                // Take first channel only, interpolate between samples
-                float sample1 = src[srcIdx * srcChannels];
-                float sample2 = src[(srcIdx + 1) * srcChannels];
-                sample = sample1 + frac * (sample2 - sample1);
-            }
-
-            // Clamp and convert to int16
-            sample = qBound(-1.0f, sample, 1.0f);
-            dst[i] = static_cast<qint16>(sample * 32767.0f);
-        }
-    } else if (mActualAudioFormat.sampleFormat() == QAudioFormat::Int16) {
-        // Already Int16, just resample and take first channel
-        const qint16* src = reinterpret_cast<const qint16*>(audioData.constData());
-        const int srcSamples = audioData.size() / (sizeof(qint16) * srcChannels);
-
-        // Early return if no source samples
-        if (srcSamples <= 0) {
-            return;
-        }
-
-        const int dstSamples = static_cast<int>(static_cast<double>(srcSamples) * dstRate / srcRate);
-
-        if (dstSamples <= 0) {
-            return;
-        }
-
-        convertedData.resize(dstSamples * sizeof(qint16));
-        qint16* dst = reinterpret_cast<qint16*>(convertedData.data());
-
-        const double ratio = static_cast<double>(srcRate) / dstRate;
-        for (int i = 0; i < dstSamples; ++i) {
-            double srcPos = i * ratio;
-            int srcIdx = static_cast<int>(srcPos);
-            if (srcIdx >= srcSamples)
-                srcIdx = srcSamples - 1;
-            dst[i] = src[srcIdx * srcChannels];
-        }
-    } else {
-        qWarning() << "VoskRecognizer: Unsupported audio format:" << mActualAudioFormat.sampleFormat();
+    if (convertedData.isEmpty()) {
         return;
     }
 
@@ -711,7 +710,7 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
             if (!text.isEmpty()) {
                 // Filter single-word hallucination results
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = kHallucinationWords.contains(text.toLower());
+                const bool isHallucinationWord = kHallucinationWords->contains(text.toLower());
 
                 // Check confidence if word-level results are available
                 bool hasLowConfidence = false;
@@ -774,7 +773,7 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                 // Check if this is a single-word hallucination during silence or speech onset
                 const bool isOnsetPhase = mSpeechOnsetFrames < SPEECH_ONSET_FRAMES;
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = kHallucinationWords.contains(text.toLower());
+                const bool isHallucinationWord = kHallucinationWords->contains(text.toLower());
                 const bool shouldFilter = (isSilent || isOnsetPhase) && isSingleWord && isHallucinationWord;
 
                 // Also filter if the result is stuck on the same hallucination word
@@ -806,10 +805,23 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
 void VoskRecognizer::handleAudioStateChanged(QAudio::State newState)
 {
     if (newState == QAudio::StoppedState && mAudioSource) {
-        if (mAudioSource->error() != QAudio::NoError) {
-            qWarning() << "VoskRecognizer: Audio error:" << mAudioSource->error();
-            emit errorOccurred(tr("Audio input error occurred: %1").arg(static_cast<int>(mAudioSource->error())));
-            cancel();
+        const QAudio::Error audioError = mAudioSource->error();
+        if (audioError != QAudio::NoError) {
+            qWarning() << "VoskRecognizer: Audio error:" << audioError;
+            emit errorOccurred(tr("Audio input error occurred: %1").arg(audioErrorText(audioError)));
+
+            // cancel() returns early unless Listening or Processing, so the audio
+            // device is torn down here rather than left open in any other state
+            mProcessTimer.stop();
+            if (mAudioSource) {
+                mAudioSource->stop();
+                mAudioSource->deleteLater();
+                mAudioSource = nullptr;
+            }
+            mAudioDevice = nullptr;
+            mAudioBuffer.clear();
+            mResamplePhase = 0.0;
+
             setState(State::Error);
         }
     }
@@ -917,6 +929,9 @@ QString VoskRecognizer::findModelPathForLanguage(const QString& languageCode) co
     QString bestMatch;
     int bestScore = -1;
 
+    // Built once rather than recompiled for every model examined
+    const QRegularExpression versionRx(qsl("(\\d+)\\.(\\d+)"));
+
     for (const QString& model : installed) {
         // Check if model name contains the language code pattern (e.g., "-en-" or "-en_")
         if (!model.contains(QLatin1Char('-') + langPart + QLatin1Char('-'), Qt::CaseInsensitive) && !model.contains(QLatin1Char('-') + langPart + QLatin1Char('_'), Qt::CaseInsensitive)) {
@@ -930,8 +945,7 @@ QString VoskRecognizer::findModelPathForLanguage(const QString& languageCode) co
         }
 
         // Extract version number if present and add to score
-        QRegularExpression versionRx(qsl("(\\d+)\\.(\\d+)"));
-        QRegularExpressionMatch match = versionRx.match(model);
+        const QRegularExpressionMatch match = versionRx.match(model);
         if (match.hasMatch()) {
             score += match.captured(1).toInt() * 10 + match.captured(2).toInt();
         }
@@ -1019,6 +1033,9 @@ QString VoskRecognizer::getBestAvailableModel()
     QString bestModel;
     int bestScore = -1;
 
+    // Built once rather than recompiled for every model examined
+    const QRegularExpression versionRx(qsl("(\\d+)\\.(\\d+)"));
+
     for (const QString& model : installed) {
         int score = 0;
 
@@ -1033,8 +1050,7 @@ QString VoskRecognizer::getBestAvailableModel()
         }
 
         // Extract version number if present and add to score
-        QRegularExpression versionRx(qsl("(\\d+)\\.(\\d+)"));
-        QRegularExpressionMatch match = versionRx.match(model);
+        const QRegularExpressionMatch match = versionRx.match(model);
         if (match.hasMatch()) {
             score += match.captured(1).toInt() * 10 + match.captured(2).toInt();
         }

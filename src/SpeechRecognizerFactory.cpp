@@ -93,22 +93,22 @@ QString SpeechRecognizerFactory::backendDisplayName(Backend backend)
 {
     switch (backend) {
     case Backend::Vosk:
-        return QObject::tr("Vosk (Offline)");
+        return tr("Vosk (Offline)");
     case Backend::Whisper:
-        return QObject::tr("Whisper (Offline)");
+        return tr("Whisper (Offline)");
     case Backend::Platform:
 #if defined(Q_OS_MACOS)
-        return QObject::tr("macOS Speech Recognition");
+        return tr("macOS Speech Recognition");
 #elif defined(Q_OS_WIN)
-        return QObject::tr("Windows Speech Recognition");
+        return tr("Windows Speech Recognition");
 #else
-        return QObject::tr("Platform Speech Recognition");
+        return tr("Platform Speech Recognition");
 #endif
     case Backend::Auto:
-        return QObject::tr("Automatic");
+        return tr("Automatic");
     }
 
-    return QObject::tr("Unknown");
+    return tr("Unknown");
 }
 
 QString SpeechRecognizerFactory::backendIdentifier(Backend backend)

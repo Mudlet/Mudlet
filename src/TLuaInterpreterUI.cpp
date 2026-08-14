@@ -4275,6 +4275,9 @@ int TLuaInterpreter::setToolbarButtonPulse(lua_State* L)
     }
     if (lua_gettop(L) >= 5 && !lua_isnil(L, 5)) {
         interval = getVerifiedInt(L, __func__, 5, "interval");
+        if (interval < 1) {
+            return warnArgumentValue(L, __func__, qsl("interval must be greater than zero, got %1").arg(interval));
+        }
     }
 
     mudlet* pMudlet = mudlet::self();

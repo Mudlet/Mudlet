@@ -190,6 +190,10 @@ int TLuaInterpreter::sttToggle(lua_State* L)
 // stt.isListening()
 // Check if speech recognition is currently active.
 // Returns true if listening, false otherwise.
+// Reports the recognizer's own state rather than mudlet's active flag: that flag
+// tracks what the user asked for and is only cleared on State::Error, so it stays
+// set when the recognizer stops for any other reason. Reading the recognizer keeps
+// this in step with stt.getInfo().listening.
 int TLuaInterpreter::sttIsListening(lua_State* L)
 {
     auto* pMudlet = mudlet::self();
@@ -198,7 +202,8 @@ int TLuaInterpreter::sttIsListening(lua_State* L)
         return 1;
     }
 
-    lua_pushboolean(L, pMudlet->isSpeechRecognitionActive());
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    lua_pushboolean(L, pRecognizer && pRecognizer->isListening());
     return 1;
 }
 

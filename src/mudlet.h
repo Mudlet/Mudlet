@@ -314,9 +314,21 @@ public:
     void setSpeechRecognitionActive(bool active) { mSpeechRecognitionActive = active; }
     SpeechRecognizer* speechRecognizer() const;
     int speechDetectionTiming() const { return static_cast<int>(mSpeechDetectionTiming); }
-    void setSpeechDetectionTiming(int timing) { mSpeechDetectionTiming = (timing >= 0 && timing <= 2) ? static_cast<SpeechDetectionTiming>(timing) : SpeechDetectionTiming::Default; }
+    // Bounds come from the enumerators rather than literals, so the range stays
+    // correct as SpeechDetectionTiming gains values
+    void setSpeechDetectionTiming(int timing)
+    {
+        mSpeechDetectionTiming = (timing >= static_cast<int>(SpeechDetectionTiming::Default) && timing <= static_cast<int>(SpeechDetectionTiming::Long)) ? static_cast<SpeechDetectionTiming>(timing)
+                                                                                                                                                         : SpeechDetectionTiming::Default;
+    }
     bool highlightLowConfidenceWords() const { return mHighlightLowConfidenceWords; }
     void setHighlightLowConfidenceWords(bool enabled) { mHighlightLowConfidenceWords = enabled; }
+    void updateSpeechButton();
+    void updateAllSpeechButtons();
+    void initSpeechRecognition();
+    void setSpeechNeedsReset(bool reset) { mSpeechNeedsReset = reset; }
+    void setFocusedCommandLine(TCommandLine* pCommandLine);
+    TCommandLine* focusedCommandLine() const;
 
     // Addon toolbar button management
     int addAddonToolbarButton(const QString& name, const QString& icon, const QString& tooltip, Host* pHost);
@@ -476,12 +488,6 @@ public slots:
     void slot_muteAPI(const bool);
     void slot_muteGame(const bool);
     void slot_toggleSpeechRecognition();
-    void updateSpeechButton();
-    void updateAllSpeechButtons();
-    void initSpeechRecognition();
-    void setSpeechNeedsReset(bool reset) { mSpeechNeedsReset = reset; }
-    void setFocusedCommandLine(TCommandLine* pCommandLine);
-    TCommandLine* focusedCommandLine() const;
     void slot_handlePartialSpeechResult(const QString& text);
     void slot_handleFinalSpeechResult(const QString& text);
     void slot_handleSpeechError(const QString& errorMessage);
@@ -741,6 +747,10 @@ private:
     QPointer<SpeechRecognizer> mpSpeechRecognizer;
     bool mSpeechRecognitionActive = false;
     QString mPreSpeechSnapshot; // Complete text snapshot before speech started (for error recovery)
+    // The command line mPreSpeechSnapshot was taken from - focus can move to
+    // another profile's command line before an error arrives, and that one must
+    // not be overwritten with this snapshot
+    QPointer<TCommandLine> mpPreSpeechCommandLine;
     QString mTextBeforeSpeech;
     QString mTextAfterSpeech;
     QString mCurrentPartialResult;
@@ -812,14 +822,17 @@ private:
     QList<QAction*> mWindowListActions;
     QAction* mWindowListSeparator = nullptr;
 
-    // Addon toolbar button management
+    // Addon toolbar button management. closeHost() removes every button and menu
+    // item belonging to a profile before the Host is deleted, so no entry should
+    // outlive its owner - the QPointers are what keeps a missed path from turning
+    // into a dangling read in the click handlers, which resolve pHost lazily.
     struct AddonButton
     {
         QPointer<QToolButton> button;
         QPointer<QAction> toolbarAction;
         QPointer<QTimer> pulseTimer;
         QString name;
-        Host* pHost = nullptr;
+        QPointer<Host> pHost;
         bool pulseState = false;
         QString pulseColor1;
         QString pulseColor2;
@@ -834,7 +847,7 @@ private:
         QPointer<QAction> action;
         QString menuPath;
         QString name;
-        Host* pHost = nullptr;
+        QPointer<Host> pHost;
     };
     QMap<int, AddonMenuItem> mAddonMenuItems;
     int mNextAddonMenuItemId = 1;

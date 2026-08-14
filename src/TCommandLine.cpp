@@ -270,8 +270,12 @@ bool TCommandLine::event(QEvent* event)
             return true;
         }
 
-        // Ctrl+Shift+M for speech-to-text toggle
-        if (ke->key() == Qt::Key_M && (ke->modifiers() & Qt::ControlModifier) && (ke->modifiers() & Qt::ShiftModifier)) {
+        // Ctrl+Shift+M for speech-to-text toggle. Gated on the menu action's
+        // enabled state: that action carries the same shortcut and is disabled
+        // whenever speech-to-text is unavailable, so toggling unconditionally
+        // here would drive the feature from a shortcut the UI reports as off.
+        auto* pSpeechAction = mudlet::self()->dactionSpeechToText;
+        if (pSpeechAction && pSpeechAction->isEnabled() && ke->key() == Qt::Key_M && (ke->modifiers() & Qt::ControlModifier) && (ke->modifiers() & Qt::ShiftModifier)) {
             mudlet::self()->slot_toggleSpeechRecognition();
             ke->accept();
             return true;
@@ -650,12 +654,16 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // Guard against text changes by validating bounds and content
     if (!mSelectedText.isEmpty()) {
         const QString currentText = toPlainText();
-        const int safeLength = qMin(mSelectedText.length(), currentText.length());
-        // Only restore selection if text still matches what was selected
-        if (safeLength > 0 && currentText.left(safeLength) == mSelectedText.left(safeLength)) {
+        // selectedText() reports line breaks as U+2029, where toPlainText() uses
+        // '\n', so a multi-line selection would never compare equal untranslated
+        QString selectedText = mSelectedText;
+        selectedText.replace(QChar::ParagraphSeparator, QChar::LineFeed);
+        const int selectionEnd = mSelectionStart + selectedText.length();
+        // Only restore the selection if the text at its recorded offset is unchanged
+        if (mSelectionStart >= 0 && selectionEnd <= currentText.length() && currentText.mid(mSelectionStart, selectedText.length()) == selectedText) {
             QTextCursor cursor = textCursor();
-            cursor.movePosition(QTextCursor::Start);
-            cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, safeLength);
+            cursor.setPosition(mSelectionStart);
+            cursor.setPosition(selectionEnd, QTextCursor::KeepAnchor);
             setTextCursor(cursor);
         }
     }

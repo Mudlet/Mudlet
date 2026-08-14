@@ -20,6 +20,7 @@
 #ifndef MUDLET_SPEECHRECOGNIZERFACTORY_H
 #define MUDLET_SPEECHRECOGNIZERFACTORY_H
 
+#include <QCoreApplication>
 #include <QList>
 #include <QObject>
 #include <QString>
@@ -32,6 +33,8 @@ class SpeechRecognizer;
 
 class SpeechRecognizerFactory
 {
+    Q_DECLARE_TR_FUNCTIONS(SpeechRecognizerFactory) // Needed so we can use tr() even though SpeechRecognizerFactory is NOT derived from QObject
+
 public:
     // Available speech recognition backends
     enum class Backend {

@@ -3281,8 +3281,13 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
 
 void dlgProfilePreferences::slot_openSpeechRecognitionSetup()
 {
-    // Raise sysSTTSetupNeeded event for Lua UI to show setup dialog
     Host* pHost = mpHost;
+
+    // Apply and close, so edits made before pressing the setup button - the speech
+    // settings among them - are not discarded, and so the setup dialog is visible
+    slot_saveAndClose();
+
+    // Raise sysSTTSetupNeeded event for Lua UI to show setup dialog
     if (pHost) {
         TEvent event{};
         event.mArgumentList.append(qsl("sysSTTSetupNeeded"));
@@ -3291,9 +3296,6 @@ void dlgProfilePreferences::slot_openSpeechRecognitionSetup()
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         pHost->raiseEvent(event);
     }
-
-    // Close the preferences dialog so the setup dialog is visible
-    close();
 }
 
 void dlgProfilePreferences::slot_saveAndClose()

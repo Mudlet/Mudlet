@@ -88,7 +88,8 @@ function STT.close()
 end
 
 --- Get information about the speech recognizer.
--- @return table with keys: backend, modelPath, sensitivity, state, wordsEnabled
+-- @return table with keys: backend, available, initialized, listening, state, modelPath, searchPaths,
+-- plus version and language once a recognizer has been created
 function STT.getInfo()
   if not STT.isAvailable() then
     return nil

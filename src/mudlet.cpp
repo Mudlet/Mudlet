@@ -5512,10 +5512,12 @@ bool mudlet::removeAddonToolbarButton(int buttonId)
     }
 
     if (addonButton.toolbarAction) {
+        // removeAction() only detaches the QWidgetAction that addWidget() created,
+        // leaving it parented to the toolbar; deleting it here stops one accruing
+        // per add/remove cycle, and takes the button with it since a QWidgetAction
+        // owns its default widget.
         mpMainToolBar->removeAction(addonButton.toolbarAction);
-    }
-    if (addonButton.button) {
-        delete addonButton.button;
+        delete addonButton.toolbarAction;
     }
 
     mAddonButtons.remove(buttonId);
@@ -5645,24 +5647,15 @@ bool mudlet::setAddonToolbarButtonPulse(int buttonId, bool enabled, const QStrin
 
 int mudlet::addAddonMenuItem(const QString& menuPath, const QString& name, const QString& shortcut, Host* pHost)
 {
-    // Find or create the Addons menu
+    // Find or create the Addons menu. menuOptions comes from the generated UI,
+    // so it is used directly rather than hunting the menu bar for an action whose
+    // translated text happens to contain "Options"
     if (!mpAddonsMenu) {
-        // Find Options menu to add Addons submenu
-        QMenuBar* menuBar = this->menuBar();
-        QMenu* optionsMenu = nullptr;
-
-        for (QAction* action : menuBar->actions()) {
-            if (action->menu() && action->text().contains(tr("Options"))) {
-                optionsMenu = action->menu();
-                break;
-            }
-        }
-
-        if (optionsMenu) {
-            mpAddonsMenu = optionsMenu->addMenu(tr("Addons"));
+        if (menuOptions) {
+            mpAddonsMenu = menuOptions->addMenu(tr("Addons"));
         } else {
             // Create as top-level menu
-            mpAddonsMenu = menuBar->addMenu(tr("Addons"));
+            mpAddonsMenu = menuBar()->addMenu(tr("Addons"));
         }
     }
 
@@ -5729,8 +5722,20 @@ bool mudlet::removeAddonMenuItem(int itemId)
     }
 
     AddonMenuItem& menuItem = mAddonMenuItems[itemId];
+    // Captured before the action goes: addAction() parents it to the menu it was
+    // added to, which is the submenu chain addAddonMenuItem() built for menuPath
+    QMenu* parentMenu = menuItem.action ? qobject_cast<QMenu*>(menuItem.action->parent()) : nullptr;
     if (menuItem.action) {
         delete menuItem.action;
+    }
+
+    // Discard the menuPath submenus once their last item is gone, otherwise
+    // repeated add/remove cycles leave a trail of empty menus behind. Deleting a
+    // QMenu takes its menuAction() with it, unlinking it from its parent menu.
+    while (parentMenu && parentMenu != mpAddonsMenu && parentMenu->isEmpty()) {
+        QMenu* grandParentMenu = qobject_cast<QMenu*>(parentMenu->parent());
+        delete parentMenu;
+        parentMenu = grandParentMenu;
     }
 
     mAddonMenuItems.remove(itemId);
@@ -5792,7 +5797,12 @@ void mudlet::initSpeechRecognition()
     const QString modelPath = SpeechRecognizerFactory::defaultModelPath();
 
     if (!modelPath.isEmpty() && QFileInfo::exists(modelPath)) {
-        mpSpeechRecognizer->initialize(modelPath);
+        if (!mpSpeechRecognizer->initialize(modelPath)) {
+            // Settings are not applied to a recognizer that has no model: it is
+            // left in Error, and startListening() will report that when asked
+            qWarning() << "mudlet::initSpeechRecognition() WARNING - failed to initialize speech recognition with the model at" << modelPath;
+            return;
+        }
 
         // Apply global settings to the recognizer using the abstract interface
         SpeechRecognizer::Sensitivity sensitivity = SpeechRecognizer::Sensitivity::Default;
@@ -5873,9 +5883,11 @@ void mudlet::slot_toggleSpeechRecognition()
         mSpeechRecognitionActive = false;
         mCurrentPartialResult.clear();
         mPreSpeechSnapshot.clear();
+        mpPreSpeechCommandLine = nullptr;
     } else {
         // Save current text from focused command line before starting speech recognition
         TCommandLine* pCommandLine = focusedCommandLine();
+        mpPreSpeechCommandLine = pCommandLine;
         if (pCommandLine) {
             mPreSpeechSnapshot = pCommandLine->toPlainText();
             mTextBeforeSpeech = mPreSpeechSnapshot;
@@ -5889,9 +5901,12 @@ void mudlet::slot_toggleSpeechRecognition()
         mTextAfterSpeech.clear();
         mSpeechNeedsReset = false;
 
-        // Start listening
-        mpSpeechRecognizer->startListening();
+        // Set before starting: startListening() can emit errorOccurred or a first
+        // partial result synchronously, and those handlers drop anything that
+        // arrives while this is false. A synchronous failure clears it again
+        // through slot_handleSpeechError(), before the button update below.
         mSpeechRecognitionActive = true;
+        mpSpeechRecognizer->startListening();
     }
 
     updateAllSpeechButtons();
@@ -6087,7 +6102,10 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
     // Restore original text if there was a partial result in progress
     TCommandLine* pCommandLine = focusedCommandLine();
 
-    if (pCommandLine) {
+    // Only the command line the snapshot was taken from: focus can have moved to
+    // another profile since speech started, and that command line's own text is
+    // not ours to replace
+    if (pCommandLine && pCommandLine == mpPreSpeechCommandLine) {
         // Restore the complete original text from before speech recognition started
         pCommandLine->setPlainText(mPreSpeechSnapshot);
         QTextCursor cursor = pCommandLine->textCursor();
@@ -6097,6 +6115,7 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
 
     // Clear the snapshot after restoring
     mPreSpeechSnapshot.clear();
+    mpPreSpeechCommandLine = nullptr;
 
     // Get the host from the focused command line for the error message
     Host* pHost = (pCommandLine && pCommandLine->console()) ? pCommandLine->console()->getHost() : getActiveHost();
@@ -6109,9 +6128,6 @@ void mudlet::slot_handleSpeechError(const QString& errorMessage)
         event.mArgumentList.append(errorMessage);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         pHost->raiseEvent(event);
-    }
-
-    if (pHost) {
         pHost->postMessage(tr("[Speech Recognition] Error: %1").arg(errorMessage));
     }
 }

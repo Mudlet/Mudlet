@@ -31,64 +31,11 @@
 #include <QTimer>
 #include <QVariantList>
 
-// Forward declarations for Vosk types (opaque pointers)
+// Forward declarations for Vosk types (opaque pointers). The recognizer handle is
+// not called VoskRecognizer because that is this file's Qt class, which would hide
+// the struct inside the class scope and force a ::-qualification on every use.
 struct VoskModel;
-struct VoskRecognizer;
-
-// Helper class for audio input buffering in push mode
-class AudioInputBuffer : public QIODevice
-{
-    Q_OBJECT
-public:
-    explicit AudioInputBuffer(QObject* parent = nullptr)
-    : QIODevice(parent)
-    {
-    }
-
-    bool open(OpenMode mode) override
-    {
-        setOpenMode(mode);
-        mBuffer.clear();
-        mTotalBytesWritten = 0;
-        return true;
-    }
-
-    void close() override
-    {
-        mBuffer.clear();
-        QIODevice::close();
-    }
-
-    // Sequential device - audio is a stream
-    bool isSequential() const override { return true; }
-
-    qint64 readData(char* data, qint64 maxlen) override
-    {
-        Q_UNUSED(data);
-        Q_UNUSED(maxlen);
-        return 0; // Push mode - we don't read from here
-    }
-
-    qint64 writeData(const char* data, qint64 len) override;
-
-    QByteArray takeAll()
-    {
-        QByteArray result = mBuffer;
-        mBuffer.clear();
-        return result;
-    }
-
-    qint64 bytesAvailable() const override { return mBuffer.size(); }
-
-    qint64 totalBytesWritten() const { return mTotalBytesWritten; }
-
-signals:
-    void dataAvailable(const QByteArray& data);
-
-private:
-    QByteArray mBuffer;
-    qint64 mTotalBytesWritten = 0;
-};
+struct VoskRecognizerHandle;
 
 // Vosk-based implementation of SpeechRecognizer.
 // Uses the Vosk offline speech recognition library (https://alphacephei.com/vosk/).
@@ -186,8 +133,9 @@ private slots:
     void handleAudioStateChanged(QAudio::State newState);
 
 private:
-    // Load the Vosk library dynamically
-    bool loadVoskLibrary();
+    // Load the Vosk library dynamically. Static: it touches only the shared
+    // library handle and function pointers, so no instance is needed to probe.
+    static bool loadVoskLibrary();
 
     // Release Vosk resources
     void releaseVoskResources();
@@ -214,20 +162,24 @@ private:
 
     // Vosk handles (opaque pointers)
     VoskModel* mVoskModel = nullptr;
-    ::VoskRecognizer* mVoskRecognizer = nullptr;
+    VoskRecognizerHandle* mVoskRecognizer = nullptr;
 
     // Audio capture
     QPointer<QAudioSource> mAudioSource;
     QPointer<QIODevice> mAudioDevice;
-    QAudioFormat mAudioFormat;                     // Vosk's expected format (16kHz mono Int16)
-    QAudioFormat mActualAudioFormat;               // Device's actual capture format
-    AudioInputBuffer* mAudioInputBuffer = nullptr; // For push mode
+    QAudioFormat mAudioFormat;       // Vosk's expected format (16kHz mono Int16)
+    QAudioFormat mActualAudioFormat; // Device's actual capture format
 
     // Timer for periodic audio processing
     QTimer mProcessTimer;
 
-    // Audio buffer
+    // Source audio that has not been resampled yet: whole frames still needed as
+    // interpolation input, plus any trailing bytes of an incomplete frame
     QByteArray mAudioBuffer;
+    // Position within mAudioBuffer, in source frames, that the next output sample
+    // reads from. Carried across calls so resampling does not restart its phase
+    // at every buffer boundary.
+    double mResamplePhase = 0.0;
 
     // Track audio level for silence detection (filter hallucinations)
     float mRecentAudioLevel = 0.0f;
@@ -246,16 +198,16 @@ private:
     // Vosk API function pointers
     using vosk_model_new_fn = VoskModel* (*)(const char*);
     using vosk_model_free_fn = void (*)(VoskModel*);
-    using vosk_recognizer_new_fn = ::VoskRecognizer* (*)(VoskModel*, float);
-    using vosk_recognizer_free_fn = void (*)(::VoskRecognizer*);
-    using vosk_recognizer_accept_waveform_fn = int (*)(::VoskRecognizer*, const char*, int);
-    using vosk_recognizer_result_fn = const char* (*)(::VoskRecognizer*);
-    using vosk_recognizer_partial_result_fn = const char* (*)(::VoskRecognizer*);
-    using vosk_recognizer_final_result_fn = const char* (*)(::VoskRecognizer*);
-    using vosk_recognizer_reset_fn = void (*)(::VoskRecognizer*);
+    using vosk_recognizer_new_fn = VoskRecognizerHandle* (*)(VoskModel*, float);
+    using vosk_recognizer_free_fn = void (*)(VoskRecognizerHandle*);
+    using vosk_recognizer_accept_waveform_fn = int (*)(VoskRecognizerHandle*, const char*, int);
+    using vosk_recognizer_result_fn = const char* (*)(VoskRecognizerHandle*);
+    using vosk_recognizer_partial_result_fn = const char* (*)(VoskRecognizerHandle*);
+    using vosk_recognizer_final_result_fn = const char* (*)(VoskRecognizerHandle*);
+    using vosk_recognizer_reset_fn = void (*)(VoskRecognizerHandle*);
     using vosk_set_log_level_fn = void (*)(int);
-    using vosk_recognizer_set_endpointer_mode_fn = void (*)(::VoskRecognizer*, int);
-    using vosk_recognizer_set_words_fn = void (*)(::VoskRecognizer*, int);
+    using vosk_recognizer_set_endpointer_mode_fn = void (*)(VoskRecognizerHandle*, int);
+    using vosk_recognizer_set_words_fn = void (*)(VoskRecognizerHandle*, int);
 
     static vosk_model_new_fn s_vosk_model_new;
     static vosk_model_free_fn s_vosk_model_free;

@@ -959,7 +959,7 @@ void TDetachedWindow::createToolBar()
     mpButtonSpeechToText->setText(tr("Speech"));
     mpButtonSpeechToText->setObjectName(qsl("speech"));
     mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
-    mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+    mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(resolveShortcut(qsl("Speech to text"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M)).toString(QKeySequence::NativeText))));
     mpButtonSpeechToText->setAutoRaise(true);
     mpButtonSpeechToText->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     // Initialize disabled; updateSpeechButton() will enable it when the backend
@@ -3210,9 +3210,11 @@ void TDetachedWindow::updateSpeechButton()
         mpMenuSpeechToTextAction->setChecked(isActive);
     }
 
+    const QString shortcutText = resolveShortcut(qsl("Speech to text"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M)).toString(QKeySequence::NativeText);
+
     if (isActive) {
         mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
-        mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+        mpButtonSpeechToText->setToolTip(utils::richText(tr("Stop listening (%1)").arg(shortcutText)));
 
         if (mpSpeechPulseTimer && !mpSpeechPulseTimer->isActive()) {
             mSpeechPulseState = true;
@@ -3221,7 +3223,7 @@ void TDetachedWindow::updateSpeechButton()
         }
     } else {
         mpButtonSpeechToText->setIcon(QIcon(qsl(":/icons/microphone.png")));
-        mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M).toString(QKeySequence::NativeText))));
+        mpButtonSpeechToText->setToolTip(utils::richText(tr("Speech to text (%1)").arg(shortcutText)));
 
         if (mpSpeechPulseTimer) {
             mpSpeechPulseTimer->stop();
