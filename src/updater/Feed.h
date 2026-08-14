@@ -46,7 +46,7 @@ public:
     QUrl getUrl() const;
 
     void load();
-    void downloadRelease(const Release& release, bool requireChecksums = false);
+    void downloadRelease(const Release& release, bool requireChecksums = true);
 
     // Returns the SHA256 that sha256sum-style output lists for downloadFilename,
     // comparing the whole filename case-insensitively, or an empty string when no
