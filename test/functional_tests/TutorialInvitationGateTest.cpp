@@ -104,6 +104,10 @@ private slots:
         // isHidden() false on the list itself - so ask about visibility
         QVERIFY2(dlg->listWidget_profiles->isVisibleTo(dlg), "a returning player has to be given the games list");
         QVERIFY2(dlg->listWidget_profiles->count() > 0, "the games list has to be filled");
+        // having no saved profiles puts the welcome message up on its way
+        // through fillout_form(); picking a game takes it back down again
+        QVERIFY2(!dlg->welcome_message->isVisibleTo(dlg), "the invitation must not be left over next to the games list");
+        QVERIFY2(dlg->tabWidget_connectionInfo->isVisibleTo(dlg), "the connection details belong on screen for the selected game");
 
         dlg->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
