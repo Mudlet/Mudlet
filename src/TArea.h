@@ -58,8 +58,10 @@ public:
     const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
     // Keeps the Z-level index, the grid index and the area extremes in step
-    // when a room moves; callers must use this rather than updating any of
-    // them on their own.
+    // when a room this area already holds moves to new coordinates; callers
+    // must use this rather than updating any of them on their own.  A room
+    // joining or leaving the area, including one being deleted, goes through
+    // addRoom()/removeRoom() instead.
     void moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY);
     // Returns the set of room IDs on the given Z level.  The returned reference
     // is stable for the lifetime of the index (an internal empty set is used
