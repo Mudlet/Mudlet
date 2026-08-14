@@ -243,6 +243,74 @@ describe("Trigger processing", function()
             assert.is_true(outerMatched, "Outer pass should still match its original colors after the nested pass")
         end)
 
+        -- A trigger script that calls feedTriggers() re-enters trigger processing.
+        -- The outer and inner lines are deliberately different lengths: an equal
+        -- length lets the colour scan window line up by luck, which is why the
+        -- spec above passes even without the fix.
+        local outerLine = "OuterMarkerLineIsLonger"
+        local innerLine = "InnerShort"
+
+        it("should still match later triggers against the outer line after a nested feedTriggers", function()
+            _G.reentrancySubstring = false
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- a substring trigger reads the haystack string itself, so it is the
+            -- kind the aliasing silenced; "Marker" is only in the outer line
+            local watcher = tempTrigger("Marker", function()
+                _G.reentrancySubstring = true
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local fired = _G.reentrancySubstring
+            killTrigger(feeder)
+            killTrigger(watcher)
+            _G.reentrancySubstring = nil
+
+            assert.is_true(fired, "A substring trigger should still see the outer line after an earlier trigger fed text")
+        end)
+
+        it("should leave the outer line selectable after a nested feedTriggers", function()
+            _G.reentrancySelect = -1
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- a regex trigger matches whatever the haystack is, so what this pins
+            -- is which line the cursor is left pointing at
+            local selector = tempRegexTrigger("Marker", function()
+                _G.reentrancySelect = selectString("Marker", 1)
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local selected = _G.reentrancySelect
+            killTrigger(feeder)
+            killTrigger(selector)
+            _G.reentrancySelect = nil
+
+            assert.is_true(selected > -1, "selectString should still find the outer line, not the line that was fed")
+        end)
+
+        it("should restore the line variable after a nested feedTriggers", function()
+            _G.reentrancyLine = nil
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            local reader = tempRegexTrigger("Marker", function()
+                _G.reentrancyLine = line
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local seen = _G.reentrancyLine
+            killTrigger(feeder)
+            killTrigger(reader)
+            _G.reentrancyLine = nil
+
+            assert.are.equal(outerLine, seen)
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()
