@@ -342,7 +342,7 @@ private slots:
              {Qt::KeyboardModifiers(Qt::NoModifier), Qt::KeyboardModifiers(Qt::KeypadModifier), Qt::KeyboardModifiers(Qt::ShiftModifier), Qt::ShiftModifier | Qt::KeypadModifier}) {
             const QKeyEvent unnamedPress(QEvent::ShortcutOverride, unnamedKey, modifiers);
             if (mudlet::self()->profileSwitchShortcutMatches(&unnamedPress)) {
-                matchedModifiers << qsl("0x%1").arg(static_cast<int>(modifiers.toInt()), 0, 16);
+                matchedModifiers << qsl("0x%1").arg(modifiers.toInt(), 0, 16);
             }
         }
         *sequence = saved;
