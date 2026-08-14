@@ -87,6 +87,21 @@ endif()
 # somebody running the binary by hand on a bare X server is allowed the skip.
 set_property(TEST TKeySequenceEditTest APPEND PROPERTY ENVIRONMENT "MUDLET_REQUIRE_WINDOW_ACTIVATION=1")
 
+# Which releases' notes the update offer shows. Built from the updater sources
+# rather than linked against the Mudlet library, because the library only
+# contains them when configured with USE_UPDATER.
+add_executable(ReleaseChangelogSpanTest
+    ReleaseChangelogSpanTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/updater/Feed.cpp
+    ${CMAKE_SOURCE_DIR}/src/updater/Release.cpp
+    ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
+)
+target_link_libraries(ReleaseChangelogSpanTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME ReleaseChangelogSpanTest COMMAND $<TARGET_FILE:ReleaseChangelogSpanTest>)
+set_tests_properties(ReleaseChangelogSpanTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
