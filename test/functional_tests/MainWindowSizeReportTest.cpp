@@ -24,6 +24,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TDockWidget.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -75,6 +76,14 @@ private:
                 pConsole->height() - (pConsole->mpCommandLine->height() + pConsole->mpTopToolBar->height())};
     }
 
+    void runLua(const QString& script) { QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script)); }
+
+    QSize dockSize(const QString& name) const
+    {
+        TDockWidget* pDock = mpHost->mpConsole->mDockWidgetMap.value(name);
+        return (pDock && pDock->widget()) ? pDock->widget()->size() : QSize();
+    }
+
     int luaInt(const QString& global) const
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -86,7 +95,7 @@ private:
 
     QString mismatch(const QSize& reported, const QSize& measured) const
     {
-        return qsl("getMainWindowSize() reports %1x%2 for a console that measures %3x%4")
+        return qsl("reported as %1x%2 for a widget that measures %3x%4")
                 .arg(QString::number(reported.width()), QString::number(reported.height()), QString::number(measured.width()), QString::number(measured.height()));
     }
 
@@ -193,6 +202,50 @@ private slots:
             resizeWindow(size.width(), size.height());
             QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize())));
         }
+    }
+
+    // user windows are reported through a cache of their own, which used to keep
+    // the same "not less than half" rule and so kept the same way of getting stuck
+    void test_aUserWindowShrunkByMoreThanHalfIsReported()
+    {
+        const QString userWindow = qsl("mwsrUserWindow");
+        runLua(qsl("openUserWindow('%1', false)").arg(userWindow));
+        settle();
+        QVERIFY2(mpHost->mpConsole->mDockWidgetMap.contains(userWindow), "the user window was not created");
+
+        runLua(qsl("resizeWindow('%1', 600, 400)").arg(userWindow));
+        settle();
+        QCOMPARE(mpHost->mpConsole->getUserWindowSize(userWindow), dockSize(userWindow));
+
+        runLua(qsl("resizeWindow('%1', 200, 150)").arg(userWindow));
+        settle();
+        QVERIFY2(mpHost->mpConsole->getUserWindowSize(userWindow) == dockSize(userWindow), qPrintable(mismatch(mpHost->mpConsole->getUserWindowSize(userWindow), dockSize(userWindow))));
+
+        // a script may ask for a user window this short and Mudlet gives it one,
+        // so a size below any "too small to be real" bar is still the size to
+        // report - refusing it would leave the cache answering for it instead
+        runLua(qsl("resizeWindow('%1', 300, 40)").arg(userWindow));
+        settle();
+        // how much of the 40 the dock keeps is up to the window manager, so only
+        // that it ended up under the bar is pinned, not the exact height
+        const QSize shortDock = dockSize(userWindow);
+        QVERIFY2(shortDock.height() > 0 && shortDock.height() < 50, qPrintable(qsl("expected a positive height under 50 to test with, got %1").arg(shortDock.height())));
+        QVERIFY2(mpHost->mpConsole->getUserWindowSize(userWindow) == shortDock, qPrintable(mismatch(mpHost->mpConsole->getUserWindowSize(userWindow), shortDock)));
+
+        runLua(qsl("hideWindow('%1')").arg(userWindow));
+    }
+
+    // the same for the main window: 800x100 is a window a player can drag Mudlet
+    // down to, and what is left inside it after the command line and toolbars is
+    // under 50 pixels. Small is not the same as not settled yet.
+    void test_aMainWindowTooShortToBeUsefulIsStillReported()
+    {
+        resizeWindow(800, 200);
+        resizeWindow(800, 100);
+
+        const QSize measured = measuredMainWindowSize();
+        QVERIFY2(measured.height() > 0 && measured.height() < 50, qPrintable(qsl("expected a positive height under 50 to test with, got %1").arg(measured.height())));
+        QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measured, qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measured)));
     }
 
     // the shrink a player performs rather than one the test dials in: restoring a
