@@ -291,16 +291,20 @@ private slots:
         QVERIFY2(!overrideClaimed(key, modifiers), "A key binding claimed the script editor shortcut, which is outside the profile switching set");
     }
 
+    // These keys build non-empty candidate sequences, which cannot compare equal
+    // to a cleared shortcut whether or not profileSwitchShortcutMatches() guards
+    // against empty ones - the press that can is covered by
+    // test_aClearedProfileShortcutDoesNotMatchAnUnnamedKeyPress()
     void test_aClearedProfileShortcutDoesNotClaimEveryKey()
     {
+        auto [key, modifiers] = scriptEditorShortcut();
+        QVERIFY(createCountingKey(qsl("Script editor shortcut binding"), key, modifiers, qsl("_testEditorCleared")) > 0);
+        QVERIFY(createCountingKey(qsl("F5 binding"), Qt::Key_F5, Qt::NoModifier, qsl("_testF5")) > 0);
+
         auto* sequence = mudlet::self()->shortcutsManager()->getSequence(qsl("Switch to profile 1"));
         QVERIFY2(sequence, "'Switch to profile 1' is not registered with the shortcuts manager");
         const QKeySequence saved = *sequence;
         *sequence = QKeySequence();
-
-        auto [key, modifiers] = scriptEditorShortcut();
-        QVERIFY(createCountingKey(qsl("Script editor shortcut binding"), key, modifiers, qsl("_testEditorCleared")) > 0);
-        QVERIFY(createCountingKey(qsl("F5 binding"), Qt::Key_F5, Qt::NoModifier, qsl("_testF5")) > 0);
 
         const bool editorClaimed = overrideClaimed(key, modifiers);
         const bool f5Claimed = overrideClaimed(Qt::Key_F5, Qt::NoModifier);
@@ -308,6 +312,44 @@ private slots:
 
         QVERIFY2(!editorClaimed, "A cleared profile switching shortcut made an unrelated bound key claim the override");
         QVERIFY2(!f5Claimed, "A cleared profile switching shortcut made an unrelated bound key claim the override");
+    }
+
+    // Qt spells a press it cannot name as either key() == 0 or Qt::Key_unknown,
+    // and only the 0 spelling builds an empty candidate sequence. A shortcut
+    // cleared in the preferences is empty too, and two empty sequences compare
+    // equal, so for as long as any one profile switching shortcut is cleared an
+    // unnamed press matches it unless profileSwitchShortcutMatches() rejects
+    // empty sequences. Every modifier that function strips reaches that point,
+    // so a guard applied to only some of the candidates is caught too.
+    //
+    // Asserted on profileSwitchShortcutMatches() rather than through
+    // overrideClaimed() because QPlainTextEdit's own ShortcutOverride handling
+    // (QWidgetTextControl) accepts any unmodified key below Qt::Key_Escape as a
+    // text editing shortcut, so the command line claims an unnamed press either
+    // way and the end-to-end path cannot tell the two apart.
+    void test_aClearedProfileShortcutDoesNotMatchAnUnnamedKeyPress()
+    {
+        constexpr int unnamedKey = 0;
+
+        auto* sequence = mudlet::self()->shortcutsManager()->getSequence(qsl("Switch to profile 1"));
+        QVERIFY2(sequence, "'Switch to profile 1' is not registered with the shortcuts manager");
+        const QKeySequence saved = *sequence;
+        *sequence = QKeySequence();
+
+        const bool clearedShortcutIsEmpty = sequence->isEmpty();
+        QStringList matchedModifiers;
+        for (const auto modifiers :
+             {Qt::KeyboardModifiers(Qt::NoModifier), Qt::KeyboardModifiers(Qt::KeypadModifier), Qt::KeyboardModifiers(Qt::ShiftModifier), Qt::ShiftModifier | Qt::KeypadModifier}) {
+            const QKeyEvent unnamedPress(QEvent::ShortcutOverride, unnamedKey, modifiers);
+            if (mudlet::self()->profileSwitchShortcutMatches(&unnamedPress)) {
+                matchedModifiers << qsl("0x%1").arg(static_cast<int>(modifiers.toInt()), 0, 16);
+            }
+        }
+        *sequence = saved;
+
+        QVERIFY2(clearedShortcutIsEmpty, "Clearing the shortcut did not leave it empty, so this test proves nothing");
+        QVERIFY2(QKeySequence(QKeyCombination(Qt::NoModifier, static_cast<Qt::Key>(unnamedKey))).isEmpty(), "An unnamed key no longer builds an empty sequence, so this test proves nothing");
+        QVERIFY2(matchedModifiers.isEmpty(), qPrintable(qsl("A cleared profile switching shortcut matched a key press Qt could not name, with modifiers %1").arg(matchedModifiers.join(qsl(", ")))));
     }
 
     // QShortcutMap retries with the keypad modifier stripped, so Ctrl and a
