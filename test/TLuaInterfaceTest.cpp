@@ -256,28 +256,28 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     // plain allocator the very first one does.
     void testRecycledHiddenTableAddressDoesNotHideAFreshVariable()
     {
-        execLua("hiddenT = {'payload'}");
+        execLua("hiddenGroup = {} for i = 1, 512 do hiddenGroup[i] = {'payload'} end");
         interface->getVars(true); // the hiding walk Mudlet runs at profile load
         VarUnit* vu = interface->getVarUnit();
-        TVar* hiddenVar = findGlobal("hiddenT");
-        QVERIFY(hiddenVar);
-        QVERIFY2(vu->isHidden(hiddenVar), "the hiding walk is supposed to hide what it finds");
-        const void* oldAddress = hiddenVar->pValue;
-        QVERIFY(oldAddress);
+        QVERIFY2(vu->hiddenTables.size() > 512, "the hiding walk is supposed to remember every table it finds");
+        const QSet<const void*> oldAddresses = vu->hiddenTables;
 
-        execLua("hiddenT = nil");
+        execLua("hiddenGroup = nil");
         lua_gc(L, LUA_GCCOLLECT, 0);
 
-        bool recycled = false;
-        for (int i = 0; i < 64 && !recycled; ++i) {
+        for (int i = 0; i < 64; ++i) {
             execLua(qsl("fresh%1 = {'payload'}").arg(i));
-            interface->getVars(false);
+        }
+        interface->getVars(false);
+
+        bool recycled = false;
+        for (int i = 0; i < 64; ++i) {
             TVar* fresh = findGlobal(qsl("fresh%1").arg(i));
             QVERIFY(fresh);
-            recycled = fresh->pValue == oldAddress;
+            recycled = recycled || oldAddresses.contains(fresh->pValue);
             QVERIFY2(!vu->isHidden(fresh), "a fresh variable must not inherit hiddenness from a collected table whose address it landed on");
         }
-        qDebug() << "the collected table's address was" << (recycled ? "recycled and checked" : "not handed out again, so identity decay went unexercised");
+        qDebug() << "a collected table's address was" << (recycled ? "recycled and checked" : "not handed out again, so identity decay went unexercised");
     }
 
     // What the identity is for (#9769): a saved variable of the user's holding
