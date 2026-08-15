@@ -21,6 +21,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
+    MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
@@ -193,6 +194,8 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
 # into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
 # again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
+set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
+
 set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
     TIMEOUT 300)
