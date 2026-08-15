@@ -1,5 +1,7 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
-# Changes here likely need to be mirrored there as well.
+# Changes here likely need to be mirrored there as well, apart from the ccache
+# handling: caches here are scoped to their own pull request ref and keyed per
+# commit, so there is never a key to delete before saving one.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
@@ -293,6 +295,24 @@ jobs:
         # Update library cache so linker finds new version
         sudo ldconfig
 
+    - name: (Linux) Install mold linker
+      timeout-minutes: 5
+      if: runner.os == 'Linux'
+      env:
+        MOLD_VERSION: '2.41.0'
+        # mold publishes no checksum manifest, so this is the hash of the
+        # pinned asset as downloaded - re-verify it by hand when bumping
+        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+      run: |
+        # Ubuntu 22.04 only packages mold 1.0.3, so take it from upstream
+        curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
+          "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+        echo "${MOLD_SHA256}  mold.tar.gz" | sha256sum -c
+        sudo tar xf mold.tar.gz -C /usr/local --strip-components=1
+        rm mold.tar.gz
+        # not bin/mold: this is the GNU ld drop-in that -B has to resolve to
+        /usr/local/libexec/mold/ld --version
+
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -357,6 +377,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
           -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
+          -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
@@ -375,6 +396,12 @@ jobs:
 
     - name: check ccache stats post build
       run: ccache --show-stats
+
+    # a mold that never got installed just makes the compiler fall back to the
+    # system ld, which builds fine and quietly costs three minutes a run
+    - name: (Linux) Confirm the build used mold
+      if: runner.os == 'Linux'
+      run: readelf -p .comment ${{runner.workspace}}/b/ninja/src/mudlet | grep -q mold
 
     - name: install dependencies for packaging/tests
       run: |
@@ -584,9 +611,10 @@ jobs:
 
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      # This leg drives the real discord-rpc library, whose reconnects
-      # happen in wall-clock time.
-      timeout-minutes: 3
+      # This leg drives the real discord-rpc library, whose reconnects happen in
+      # wall-clock time, so the suite needs a budget of its own: the run itself
+      # takes ~75s, and the rest is headroom for a slow runner stretching those.
+      timeout-minutes: 6
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -619,8 +647,16 @@ jobs:
         DBUS_SESSION_BUS_ADDRESS: 'disabled:'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
-        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
-        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1', github.workspace) || '' }}
+        # intercept_tls_get_addr=0 keeps gcc-10's sanitizer runtime from
+        # recording a bogus dynamic-TLS range for LeakSanitizer's tracer to crash
+        # on (#9809); test/functional_tests/CMakeLists.txt explains it in full
+        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1:intercept_tls_get_addr=0' || '' }}
+        # log_threads is insurance rather than an expectation: if the flag above
+        # ever proves incomplete, it names the stack and TLS range of every
+        # thread the tracer walks, so the last one printed before a crash is the
+        # range it died on (#9809). Seven lines a run, and the only way to see
+        # that from CI.
+        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1:log_threads=1', github.workspace) || '' }}
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'

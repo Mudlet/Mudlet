@@ -33,9 +33,11 @@ class TelnetServerStub : public QTcpServer
     QString mpWelcomeMessage = "";
     QPointer<QTcpSocket> mpClient;
     QByteArray mPendingData;
+    bool mHadClient = false;
 
 public:
     explicit TelnetServerStub(QObject* parent = nullptr);
+    ~TelnetServerStub() override;
 
     // Bind to a caller-chosen port, or to an ephemeral OS-assigned port when port is 0 (the default).
     // Binding 0 lets concurrent test runs avoid colliding on a shared fixed port; the caller reads the

@@ -132,6 +132,14 @@ Don't add comments for obvious code as that increases cognitive load on the read
 - Follow Qt's Model-View pattern
 - Use Qt's signal/slot mechanism for communication
 
+## Tests
+
+Two harnesses: Lua specs in `src/mudlet-lua/tests/*_spec.lua` (busted, run in the self-test profile), and C++ functional tests in `test/functional_tests/` (ctest).
+
+Prefer a spec. Each functional test is its own executable statically linking `mudlet_core`, so it adds ~290MB to every build tree plus a link step, while a spec is ~30KB and needs no rebuild at all because `mudlet-lua` loads from disk. Write a functional test when a spec genuinely cannot reach the behaviour: private C++ state, a path with no Lua entry point, or something that happens before Lua exists. Sanitiser coverage is not one of those reasons, as the spec run exercises the same instrumented binary.
+
+Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it.
+
 ## Demo videos
 
 To demonstrate a bug fix or UI change with a screen recording, follow the before & after video workflow in `docs/demo-videos.md` (Linux/Xvfb; records headlessly, then trims and labels the result for attaching to a PR).

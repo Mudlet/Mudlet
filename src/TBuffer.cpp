@@ -979,7 +979,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     // Needed for mud.durismud.com see forum message topic:
                     // https://forums.mudlet.org/viewtopic.php?f=9&t=22887
                     const int dataLength = spanEnd - spanStart;
-                    const QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    // fromRawData() does not copy, so the bytes have to outlive temp:
+                    // point it into localBuffer rather than at any temporary
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
                     bool isOk = false;
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
@@ -1011,7 +1013,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                      *   scrollback buffer - which is again a NWIH for us...!
                      */
                     const int dataLength = spanEnd - spanStart;
-                    const QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    // fromRawData() does not copy, so the bytes have to outlive temp:
+                    // point it into localBuffer rather than at any temporary
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
                     bool isOk = false;
                     const int argValue = temp.toInt(&isOk);
                     if (isOk) {
@@ -1317,7 +1321,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 mMudLine.append(encodingLookupTable.at(index - 128));
             }
         } else if (mEncoding == "ISO 8859-1") {
-            mMudLine.append(QString(QChar::fromLatin1(ch)));
+            mMudLine.append(QChar::fromLatin1(ch));
         } else if (mEncoding == "GBK") {
             if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
@@ -1595,13 +1599,15 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // prompts ('\xff' from GA/EOR), timer-flushed fragments ('\r'),
         // MXP <br> breaks and blank lines - is a real line boundary.
         const bool proseSegment = looksLikeWrappedProse(mMudLine);
-        if (!mServerWrapPendingLine.isEmpty() && ((mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace()) || !proseSegment)) {
+        if (!mServerWrapPendingLine.isEmpty()) {
             // A continuation of wrapped prose starts with a word - or with
             // the single space some games move the break to instead of
-            // swallowing it. Deeper indentation or a symbol-heavy line
-            // instead belongs to centered ASCII art, menu columns, dividers
-            // and the like, so the held line was complete after all:
-            flushPendingServerWrapJoin();
+            // swallowing it. Anything else means the held line was complete
+            // after all:
+            const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine)) {
+                flushPendingServerWrapJoin();
+            }
         }
         // Deliberately judged before the pending line is joined on: ending at
         // the game's wrap column is a property of the segment as the game
@@ -1798,6 +1804,45 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
     return nonSpace > 0 && letters * 10 >= nonSpace * 6;
 }
 
+// A list entry reads exactly like wrapped prose: a sentence that can end
+// right at the wrap column. Only its marker tells the list apart from a
+// paragraph, so every form accepted here has to be one that word wrap would
+// not itself produce at the start of a continuation. The ambiguous ones are
+// left out on purpose: a spaced dash opens a continuation whenever the wrap
+// lands on it, and a parenthesised number is as often an aside as a label,
+// so it is capped like a bare one.
+bool TBuffer::startsWithListMarker(const QString& line)
+{
+    qsizetype start = 0;
+    while (start < line.size() && line.at(start).isSpace()) {
+        ++start;
+    }
+    if (start >= line.size()) {
+        return false;
+    }
+
+    static const QString bullets = qsl("*+•·●◦");
+    if (bullets.contains(line.at(start))) {
+        return start + 1 < line.size() && line.at(start + 1) == QChar::Space;
+    }
+
+    static const QString openers = qsl("[(");
+    static const QString closers = qsl("])");
+    const qsizetype bracket = openers.indexOf(line.at(start));
+    const qsizetype numberStart = (bracket < 0) ? start : start + 1;
+    qsizetype numberEnd = numberStart;
+    while (numberEnd < line.size() && line.at(numberEnd).isDigit()) {
+        ++numberEnd;
+    }
+    const qsizetype digits = numberEnd - numberStart;
+    if (!digits || numberEnd >= line.size()) {
+        return false;
+    }
+    const bool numberFitsAList = digits <= csmMaxListNumberDigits || line.at(start) == QChar('[');
+    const bool closed = (bracket >= 0) ? line.at(numberEnd) == closers.at(bracket) : (line.at(numberEnd) == QChar('.') || line.at(numberEnd) == QChar(')'));
+    return numberFitsAList && closed && numberEnd + 1 < line.size() && line.at(numberEnd + 1) == QChar::Space;
+}
+
 void TBuffer::joinPendingServerWrapOntoCurrent()
 {
     if (mServerWrapPendingLine.isEmpty()) {
@@ -1833,6 +1878,11 @@ void TBuffer::startServerWrapFlushTimer()
             return;
         }
         mpServerWrapFlushTimer = new QTimer(mpConsole);
+        // Named so that a test can find it on the console and observe the state
+        // it leaves behind, which no polling assertion can catch: the posting
+        // timer in cTelnet::slot_timerPosting() calls finalize() too and hides
+        // an unpainted line within a tick of it being committed
+        mpServerWrapFlushTimer->setObjectName(qsl("serverWrapFlushTimer"));
         mpServerWrapFlushTimer->setSingleShot(true);
         mpServerWrapFlushTimer->setInterval(csmServerWrapFlushDelayMs);
         QObject::connect(mpServerWrapFlushTimer, &QTimer::timeout, mpConsole, [this]() {
@@ -1844,6 +1894,7 @@ void TBuffer::startServerWrapFlushTimer()
             mpHost->mpConsole->mTriggerEngineMode = true;
             flushPendingServerWrapJoin();
             mpHost->mpConsole->mTriggerEngineMode = false;
+            mpHost->mpConsole->finalize();
         });
     }
     mpServerWrapFlushTimer->start();
@@ -4718,7 +4769,9 @@ void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& form
         const int sourceLinkId = srcChar.linkIndex();
         if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
             destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost);
-            mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
+            if (sourceLinkStore.hasStyling(sourceLinkId)) {
+                mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
+            }
             oldSourceLinkId = sourceLinkId;
         } else if (!sourceLinkId) {
             destLinkId = 0;
@@ -4892,9 +4945,9 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
     return true;
 }
 
-// This is very poorly designed as P2 is used to determine the last character to
-// copy BUT no consideration is given to P2.y() != p1.y() i.e. a copy of more
-// than a single line - and it copies a single QChar at a time....
+// P2 is exclusive: P2.x() is one past the last character copied, matching every
+// other consumer of a P_begin/P_end pair. Still poorly designed in that no
+// consideration is given to P2.y() != P1.y(), i.e. a copy of more than one line.
 TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
     TBuffer slice(mpHost);
@@ -4909,24 +4962,11 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
         x = 0; // Reset x to start of line if out of bounds
     }
-    int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size()) - 1); // Correct P2.x() to prevent out-of-bounds
+    int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size())); // Correct P2.x() to prevent out-of-bounds
 
-    int oldLinkId{}, id{};
-    for (; x <= P2x_corrected; ++x) {
-        const int linkId = buffer.at(y).at(x).linkIndex();
-        if (linkId && (linkId != oldLinkId)) {
-            id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
-            if (mLinkStore.hasStyling(linkId)) {
-                slice.mLinkStore.setStyling(id, mLinkStore.getStyling(linkId));
-            }
-            oldLinkId = linkId;
-        }
-
-        if (!linkId) {
-            id = 0;
-        }
-        const QString s(lineBuffer.at(y).at(x));
-        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags, id);
+    if (x < P2x_corrected) {
+        const std::deque<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
+        slice.appendFormatted(lineBuffer.at(y).mid(x, P2x_corrected - x), formatting, mLinkStore);
     }
     return slice;
 }
@@ -4940,45 +4980,23 @@ TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
     return slice;
 }
 
-// This only copies the first line of chunk's contents:
+// Only the first line of chunk is pasted, and it goes in at P:
 void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 {
-    const bool needAppend = false;
-    bool hasAppended = false;
-    int y = P.y();
     const int x = P.x();
-    if (chunk.buffer.empty()) {
+    if (chunk.buffer.empty() || x < 0) {
         return;
     }
+    int y = P.y();
     if (y < 0 || y > getLastLineNumber()) {
         y = getLastLineNumber();
     }
-    // FIXME: RISK OF EXCEPTION getLastLineNumber() returns zero (not -1) if
-    // the buffer is empty, so y can never be less than zero here - however that
-    // will cause an exception with std::deque::at(size_t) - previously
-    // std::deque::operator[size_t] was used and that exhibits UNDEFINED
-    // BEHAVIOUR in the same situation:
-    if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
-        return;
-    }
 
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
-        // This is rather inefficient as s is only ever one QChar long
-        QPoint P_current(cx, y);
-        if ((y < getLastLineNumber()) && (!needAppend)) {
-            const TChar& format = chunk.buffer.at(0).at(cx);
-            const QString s = QString(chunk.lineBuffer.at(0).at(cx));
-            insertInLine(P_current, s, format);
-        } else {
-            hasAppended = true;
-            const QString s(chunk.lineBuffer.at(0).at(cx));
-            append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
-        }
-    }
-
-    if (hasAppended && y != -1) {
-        TChar format(mpConsole);
-        wrapLine(y, mWrapAt, mWrapIndent, mWrapHangingIndent);
+        // Character at a time because insertInLine() applies a single TChar to
+        // the whole run it is given, and every character here can differ
+        QPoint P_current(x + cx, y);
+        insertInLine(P_current, QString(chunk.lineBuffer.at(0).at(cx)), chunk.buffer.at(0).at(cx));
     }
 }
 
@@ -4988,24 +5006,13 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     if (chunk.buffer.empty()) {
         return;
     }
-    int oldLinkId{}, id{};
-    for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
-        const int linkId = chunk.buffer.at(0).at(cx).linkIndex();
-        if (linkId && (oldLinkId != linkId)) {
-            id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
-            if (chunk.mLinkStore.hasStyling(linkId)) {
-                mLinkStore.setStyling(id, chunk.mLinkStore.getStyling(linkId));
-            }
-            oldLinkId = linkId;
-        }
-        if (!linkId) {
-            id = 0;
-        }
-        const QString s(chunk.lineBuffer.at(0).at(cx));
-        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags, id);
+    if (chunk.lineBuffer.at(0).isEmpty()) {
+        // appendFormatted() ignores empty text, but a chunk holding one empty
+        // line still has to terminate the destination's current line
+        append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
+        return;
     }
-
-    append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
+    appendFormatted(chunk.lineBuffer.at(0), chunk.buffer.at(0), chunk.mLinkStore);
 }
 
 int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
@@ -5093,8 +5100,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             continue;
         }
         const int nextBoundary = boundaryFinder.toNextBoundary();
-        const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
-        const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+        const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
         // Safety check: during destruction, mpHost might be null
         const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs()) : graphemeInfo::getWidth(unicode, false);
         const int indentationHere = isNewline ? indent : hangingIndent;
@@ -6631,10 +6637,10 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 
         QString codePoint;
         if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, gbSequenceLength).c_str(), gbSequenceLength), mEncoding);
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, gbSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or gbSequenceLength wrong
                 qWarning().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " sequence accepted, and it encoded to "
                                      << codePoint.size() << " QChars which does not make sense!!!";
                 isValid = false;
@@ -6745,10 +6751,10 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
 
         QString codePoint;
         if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, big5SequenceLength).c_str(), big5SequenceLength), mEncoding);
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, big5SequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or big5SequenceLength wrong
                 qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to " << codePoint.size()
                                      << " QChars which does not make sense!!!";
                 isValid = false;
@@ -6866,10 +6872,10 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
 
         QString codePoint;
         if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, eucSequenceLength).c_str(), eucSequenceLength), mEncoding);
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, eucSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or eucSequenceLength wrong
                 qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, and it encoded to " << codePoint.size()
                                      << " QChars which does not make sense!!!";
                 isValid = false;

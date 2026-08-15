@@ -780,21 +780,45 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     LuaInterface saveTimeInterface(lI->getState());
     VarUnit* saveTimeUnit = saveTimeInterface.getVarUnit();
     // A fresh tree carries no per-variable saved/hidden flags, so isSaved() and
-    // isHidden() have to answer from these name-keyed sets. savedVars has to be
-    // in place before the call below: it is what tells getSavedVars() which
-    // globals to read, so an empty one exports nothing.
+    // isHidden() have to answer from the bookkeeping the live unit holds.
+    // savedVars has to be in place before the call below: it is what tells
+    // getSavedVars() which globals to read, so an empty one exports nothing.
     saveTimeUnit->savedVars = vu->savedVars;
     saveTimeUnit->hidden = vu->hidden;
     saveTimeUnit->hiddenByUser = vu->hiddenByUser;
+    saveTimeUnit->hiddenTables = vu->hiddenTables;
     saveTimeInterface.getSavedVars();
 
+    // A saved global with a value anywhere inside it that no save can carry (see
+    // serializableValueType() in LuaInterface.cpp) cannot come back whole, and
+    // writing out the parts that can be saved hands the next session a table its
+    // own scripts no longer recognise - a cron job without its command, say. Such
+    // a global therefore exports only the members registered in savedVars, which
+    // for a table registered while it was empty is an empty group: the state the
+    // "it is empty, so rebuild it" guard packages carry needs to see (#9857).
+    // The same fence goes up around a global the walk died inside, which was
+    // not read to the end either. A member dropped for its size, for being a
+    // second name for a table already written, or for being hidden still rides
+    // along with its siblings, because those are limits on how much of a table
+    // to write rather than on what a table can hold, and fencing the whole
+    // variable on one of them would lose more than it saved.
+    const QSet<QString> unsaveableRoots = saveTimeInterface.savedRootsHoldingUnsaveableValues();
     if (TVar* base = saveTimeUnit->getBase()) {
         QListIterator<TVar*> itVariable(base->getChildren(false));
         while (itVariable.hasNext()) {
-            writeVariable(itVariable.next(), &saveTimeInterface, saveTimeUnit, variablePackage);
+            TVar* pVariable = itVariable.next();
+            writeVariable(pVariable, saveTimeUnit, variablePackage, false, !unsaveableRoots.contains(pVariable->getName()));
         }
     }
     saveTimeInterface.releaseVariableReferences();
+
+    const QStringList unreadableRoots = saveTimeInterface.unreadableSavedRoots();
+    if (!unreadableRoots.isEmpty()) {
+        //: %1 is a comma separated list of Lua variable names
+        pHost->postMessage(tr("[ ALERT ] - Lua could not be read while these saved variables were being saved, so this save leaves them out: %1. "
+                              "Everything else in the profile was saved. An earlier save that still has them is under 'Connect - Options - Profile history'.")
+                                   .arg(unreadableRoots.join(qsl(", "))));
+    }
 
     const QStringList truncatedTables = saveTimeInterface.truncatedSavedTables();
     if (!truncatedTables.isEmpty()) {
@@ -881,35 +905,54 @@ void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPac
     }
 }
 
-void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* pVariableUnit, pugi::xml_node xmlParent, bool insideSavedTable)
+// The value the walk that built this node read out of Lua, rather than a second
+// read of it: LuaInterface::getValue() answers an empty string for a variable it
+// cannot read, which is also a value a variable can genuinely have, so a read
+// that fails here would blank the variable in the save with nothing to show for
+// it (#9769). Only these three types carry a value into the XML - a table's
+// members are written as its child nodes, and no other type survives a save.
+static QString exportedValue(const TVar* pVar)
+{
+    switch (pVar->getValueType()) {
+    case LUA_TSTRING:
+    case LUA_TNUMBER:
+    case LUA_TBOOLEAN:
+        return pVar->getValue();
+    default:
+        return {};
+    }
+}
+
+void XMLexport::writeVariable(TVar* pVar, VarUnit* pVariableUnit, pugi::xml_node xmlParent, bool insideSavedTable, bool rideAlongAllowed)
 {
     // a member of a saved table is saved with it even without its own
     // savedVars entry: a missing entry cannot be told apart from a member a
     // script added after the table was marked saved, and those must not be
     // silently dropped (#9517). The ride-along skips hidden variables
     // (Mudlet's internals and ones the user hid) and unsaveable ones
-    // (functions, references, oversized tables); an explicitly saved
-    // variable exports as it always has.
-    const bool exportable = pVariableUnit->isSaved(pVar) || (insideSavedTable && pVariableUnit->shouldSave(pVar) && !pVariableUnit->isHidden(pVar));
+    // (functions, references, oversized tables), and it is off altogether for a
+    // variable the save cannot carry whole, see writeVariablePackage(). A
+    // variable with its own savedVars entry exports either way.
+    const bool exportable = pVariableUnit->isSaved(pVar) || (insideSavedTable && rideAlongAllowed && pVariableUnit->shouldSave(pVar) && !pVariableUnit->isHidden(pVar));
     if (exportable) {
         if (pVar->getValueType() == LUA_TTABLE) {
             auto variableGroup = xmlParent.append_child("VariableGroup");
 
             variableGroup.append_child("name").text().set(pVar->getName().toUtf8().constData());
             variableGroup.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
-            variableGroup.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
+            variableGroup.append_child("value").text().set(exportedValue(pVar).toUtf8().constData());
             variableGroup.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
 
             QListIterator<TVar*> itNestedVariable(pVar->getChildren(false));
             while (itNestedVariable.hasNext()) {
-                writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup, true);
+                writeVariable(itNestedVariable.next(), pVariableUnit, variableGroup, true, rideAlongAllowed);
             }
         } else {
             auto variable = xmlParent.append_child("Variable");
 
             variable.append_child("name").text().set(pVar->getName().toUtf8().constData());
             variable.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
-            variable.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
+            variable.append_child("value").text().set(exportedValue(pVar).toUtf8().constData());
             variable.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
         }
     }

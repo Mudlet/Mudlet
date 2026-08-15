@@ -374,18 +374,24 @@ void TMedia::stopMedia(TMediaData& mediaData)
             const int fadeOut = pPlayer->mediaData().mediaFadeOut() ? pPlayer->mediaData().mediaFadeOut() : mediaData.mediaFadeOut();
             const int remainingDuration = (finishPosition != TMediaData::MediaFinishNotSet ? finishPosition : duration) - currentPosition;
             const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? std::min(remainingDuration, fadeOut) : std::min(remainingDuration, 5000);
-            const int endPosition = currentPosition + endDuration;
 
-            //: This word is part of a sentence like "Music fades" when the music is about to stop.
-            printClosedCaption(pPlayer->mediaData(), tr("fades"));
+            // Only a playing track can be faded out: the position changes a fade is applied from
+            // do not come for a player that is still loading or paused, and a track already past
+            // its finish position has no stretch left to fade over, which is what a non-positive
+            // endDuration says. Either way the stop is performed outright below, as a stop
+            // without a fade-away is, and there is nothing to announce as fading.
+            if (endDuration > 0 && pPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
+                //: This word is part of a sentence like "Music fades" when the music is about to stop.
+                printClosedCaption(pPlayer->mediaData(), tr("fades"));
 
-            TMediaData updateMediaData = pPlayer->mediaData();
-            updateMediaData.setMediaFadeOut(endDuration);
-            updateMediaData.setMediaEnd(endPosition);
-            pPlayer->setMediaData(updateMediaData);
-            TMedia::updateMediaPlayerList(std::move(pPlayer));
+                TMediaData updateMediaData = pPlayer->mediaData();
+                updateMediaData.setMediaFadeOut(endDuration);
+                updateMediaData.setMediaEnd(currentPosition + endDuration);
+                pPlayer->setMediaData(updateMediaData);
+                TMedia::updateMediaPlayerList(std::move(pPlayer));
 
-            continue;
+                continue;
+            }
         }
 
         // **Stop the player but keep it for reuse**

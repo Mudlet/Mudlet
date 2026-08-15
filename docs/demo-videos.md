@@ -113,6 +113,13 @@ session() { # $1 = mudlet binary, $2 = tag ("before"/"after"), $3 = extra Mudlet
     # sleep 4       # hold each money shot ~4 s: the raw hold caps what the edit can keep
     # mark "$2 print output"; import -window root "$OUT/shots/$2-02-step.png"
 
+    # When scripting a mouse drag as many small `xdotool mousemove --sync` steps,
+    # skip any waypoint whose rounded coordinates equal the previous one. --sync
+    # does not wait for arrival - it polls for the pointer to move away from where
+    # it was, so a no-op warp silently burns the full retry budget (500 x 30 ms =
+    # 15 s of frozen video per duplicate). Eased paths (smoothstep etc.) rounded
+    # to integers produce exactly such duplicates at both ends of short drags.
+
     kill $MUDLET_PID 2>/dev/null
     sleep 2
 }

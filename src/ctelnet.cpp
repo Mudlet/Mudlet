@@ -180,6 +180,24 @@ void cTelnet::reset()
 
     mNegotiationOrder.clear();
 
+    // Negotiated with one game, so none of it may outlive that connection: left standing these
+    // claim a protocol the next game never offered, and Mudlet goes on speaking it at that game.
+    // Which protocols the player is willing to accept is a different thing entirely, lives on the
+    // Host (mpHost->mEnableGMCP and friends), and deliberately does not belong here.
+    enableNewEnviron = false;
+    enableCHARSET = false;
+    enableATCP = false;
+    enableGMCP = false;
+    enableMSSP = false;
+    enableMSDP = false;
+    enableMSP = false;
+    enableMXP = false;
+    enableChannel102 = false;
+    // Likewise MCCP, where the cost of a stale flag is that the scan for a compression start
+    // sequence stays armed and the next game can trip it with bytes it means as a subnegotiation.
+    mMCCP_version_1 = false;
+    mMCCP_version_2 = false;
+
     // Half of an ANSI sequence left over from the previous connection can only
     // ever be completed by bytes that will never arrive, so drop it instead of
     // letting it consume the new connection's output. There is nothing to drop
@@ -191,6 +209,24 @@ void cTelnet::reset()
     // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
     // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
     mpHost->setUserSentInputThisConnection(false);
+}
+
+// The same forgetting, for the parts of a game's story about itself that are kept on the Host.
+// Kept out of reset() because the cTelnet constructor calls that, and cTelnet is declared ahead of
+// these members, so at that point they have not been constructed yet.
+void cTelnet::forgetGameSuppliedHostState()
+{
+    // Every other place that turns enableMXP off does this too. Without it the processor is left
+    // enabled holding a half-built tag from the last game, and TBuffer's tag watchdog answers to
+    // the processor alone, so the next escape code spills that tag into the next game's output.
+    if (!mpHost->getForceMXPProcessorOn()) {
+        mpHost->mMxpProcessor.disable();
+    }
+
+    // The secure port a game advertised over MSSP. Left standing it is offered for the next game
+    // as though that game had advertised it, and accepting writes the port into the profile.
+    mpHost->mMSSPTlsPort = 0;
+    mpHost->mMSSPHostName.clear();
 }
 
 
@@ -486,12 +522,27 @@ void cTelnet::sendGMCPSupportsRemove(const QString& package)
     socketOutRaw(data);
 }
 
+// Stops waiting on the name lookup in progress, if there is one. Aborting does
+// not always stop a result that is already on its way, so the id is cleared as
+// well and slot_socketHostFound() drops anything that does not match it.
+void cTelnet::abandonHostLookup()
+{
+    if (mHostLookupId != -1) {
+        QHostInfo::abortHostLookup(mHostLookupId);
+        mHostLookupId = -1;
+    }
+}
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     // Set early - before the recursion-on-busy-socket block below - so the
     // QCoreApplication::processEvents() call there cannot leave the indicator
     // briefly showing Disconnected during a reconnect.
     mLookingUpHost = true;
+
+    // Done before the processEvents() below so that call cannot deliver a
+    // result for a server this one has already replaced.
+    abandonHostLookup();
 
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
@@ -561,7 +612,7 @@ void cTelnet::connectIt(const QString& address, int port)
     // We can now use a compile-time slot for this as:
     // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
     // Qt 5.12.5:
-    QHostInfo::lookupHost(address, this, &cTelnet::slot_socketHostFound);
+    mHostLookupId = QHostInfo::lookupHost(address, this, &cTelnet::slot_socketHostFound);
 }
 
 void cTelnet::reconnect()
@@ -579,6 +630,10 @@ void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
     mLookingUpHost = false;
+    // There is no socket yet while the name lookup is outstanding, so without
+    // this a Disconnect during the lookup is followed by the connection being
+    // made anyway when the result arrives.
+    abandonHostLookup();
     if (mpSocket) {
         // This will write out any pending data before it disconnects...
         mpSocket->disconnectFromHost();
@@ -593,6 +648,7 @@ void cTelnet::abortConnection()
     // lingering until the (asynchronous) disconnect signal arrives.
     mLookingUpHost = false;
     mDontReconnect = true;
+    abandonHostLookup();
     if (mpSocket) {
         // One socket is probably active - and has signals connected - but will
         // close immediately, dropping any pending output:
@@ -699,6 +755,7 @@ void cTelnet::slot_socketConnected()
 
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     reset();
+    forgetGameSuppliedHostState();
     setKeepAlive(mpSocket->socketDescriptor());
 
 #if !defined(QT_NO_SSL)
@@ -785,6 +842,7 @@ void cTelnet::slot_socketDisconnected()
     }
     mNeedDecompression = false;
     reset();
+    forgetGameSuppliedHostState();
 
     if (!mpHost->isClosingDown()) {
 #if !defined(QT_NO_SSL)
@@ -973,7 +1031,23 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - called.";
 #endif
+    // A result for a connect that has been replaced or called off: its address
+    // belongs with a port that has already been overwritten, so acting on it
+    // would dial the old host on the new port and leave the wanted connection
+    // unmade. mLookingUpHost is deliberately left alone - the lookup that is
+    // being waited on is still outstanding.
+    if (hostInfo.lookupId() != mHostLookupId) {
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+        qDebug().noquote().nospace() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - ignoring the result of lookup " << hostInfo.lookupId() << " for \"" << hostInfo.hostName()
+                                     << "\", waiting on lookup " << mHostLookupId << ".";
+#endif
+        return;
+    }
+    mHostLookupId = -1;
     mLookingUpHost = false;
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
     QStringList addressList_ipV4;
     QStringList addressList_ipV6;
     for (const QHostAddress& address : hostInfo.addresses()) {
@@ -4410,8 +4484,19 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
     }
 
     if (accepted) {
+        // Read before disconnecting: a socket with nothing pending can emit disconnected() from
+        // inside disconnectFromHost(), and forgetGameSuppliedHostState() drops the advertised port.
+        const int securePort = mpHost->mMSSPTlsPort;
+        // The socket test above passes for a connection made *after* the one that advertised, so
+        // it does not catch an answer that outlived its offer - but the port is forgotten with the
+        // connection, and moving the profile to a port this game never mentioned is worse than
+        // ignoring the click.
+        if (securePort <= 0) {
+            qWarning() << "cTelnet::slot_tlsUpgradeResponse() WARNING - the connection that advertised a secure port has been replaced, so there is no port to move to; discarding the user's answer.";
+            return;
+        }
         disconnectIt();
-        mHostPort = mpHost->mMSSPTlsPort;
+        mHostPort = securePort;
         mpHost->setPort(mHostPort);
         mpHost->mSslTsl = true;
         mpHost->writeProfileData(QLatin1String("port"), QString::number(mHostPort));
@@ -5404,6 +5489,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
                 cleandata = "";
             } else {
                 cleandata.push_back('\n');
+                recvdGA = false;
             }
         }
     } //for
