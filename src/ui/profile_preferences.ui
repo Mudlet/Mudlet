@@ -1355,7 +1355,7 @@ you can use it but there could be issues with aligning columns of text</string>
                <string>&lt;p&gt;Some games wrap their own lines and offer no way to turn that off, which makes triggers awkward to write: the text a trigger sees can be split mid-sentence. This option joins those wrapped lines back together before triggers run, so triggers always see whole lines and the wrapping above applies for display instead.&lt;/p&gt;&lt;p&gt;Set the column to the width the game wraps at (very often 80). Only lines from the game are affected.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This feature is experimental: it tells wrapped prose apart from prompts, tables and ASCII art by their shape, so the occasional line may still be joined or left split when it should not be.&lt;/i&gt;&lt;/p&gt;</string>
               </property>
               <property name="text">
-               <string>Undo the game's own wrapping at:</string>
+               <string>Undo the game's own wrapping (experimental) at:</string>
               </property>
              </widget>
             </item>
@@ -1396,6 +1396,22 @@ you can use it but there could be issues with aligning columns of text</string>
              </spacer>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_undo_server_wrap_experimental">
+            <property name="text">
+             <string>&lt;i&gt;Experimental: the odd line can still be joined or left split when it should not be. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Tell us how it works for you&lt;/a&gt; - your feedback is what will make this better.&lt;/i&gt;</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="indent">
+             <number>20</number>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

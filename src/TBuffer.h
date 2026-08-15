@@ -338,7 +338,6 @@ public:
     // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
     // - public so that the connection teardown can flush it:
     void flushPendingServerWrapJoin();
-    void announceUndoServerWrapChange(const bool enabled);
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
     // Drops any half-received ANSI sequence or multi-byte character, on both
@@ -423,7 +422,6 @@ private:
     static bool startsWithListMarker(const QString& line);
     void joinPendingServerWrapOntoCurrent();
     void startServerWrapFlushTimer();
-    void recordLineLengthForWrapDetection(qsizetype length);
     void processMxpWatchdogCallback();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
@@ -533,11 +531,6 @@ private:
     // Commits a held line if the game goes quiet without completing it - a
     // full-width line that really was the end of the output:
     QPointer<QTimer> mpServerWrapFlushTimer;
-    // Line length statistics used to detect that a game wraps its own output
-    // even though Host::mUndoServerWrap is off, to hint the option exists;
-    // keyed by line length, value is how often that length was seen:
-    QMap<qsizetype, int> mWrapDetectCounts;
-    int mWrapDetectSamples = 0;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
     // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
@@ -621,9 +614,6 @@ private:
     // A longer number opening a line is likelier a year or a price ending a
     // wrapped sentence than a list number; only "[...]" is trusted past it:
     static constexpr qsizetype csmMaxListNumberDigits = 3;
-    // Wrap detection hint: how many lines ending within 8 characters of a
-    // stable ceiling column are needed before suggesting mUndoServerWrap:
-    static constexpr int csmWrapDetectThreshold = 40;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;
