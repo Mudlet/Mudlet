@@ -111,7 +111,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     mColorPatternList.clear();
     mTriggerContainsPerlRegex = false;
 
-    if (patternKinds.size() != patterns.size()) {
+    if (Q_UNLIKELY(patternKinds.size() != patterns.size())) {
         // A corrupt or hand-edited save can hold lists of different lengths.
         // The loop below is bounded by the pattern list but indexes the kind
         // list, so a pattern with no kind of its own reads past the end of the
