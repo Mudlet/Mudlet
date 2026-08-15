@@ -45,6 +45,9 @@ VarUnit::VarUnit()
 {
 }
 
+// Never releases mHiddenTableAnchors: the profile's lua_State is closed before
+// the LuaInterface owning this unit is replaced (see ~LuaInterface()), and an
+// unref into a freed state would crash. The registry entry dies with the state.
 VarUnit::~VarUnit() = default;
 
 bool VarUnit::isHidden(TVar* var)
@@ -60,11 +63,11 @@ bool VarUnit::isHidden(TVar* var)
         if (hiddenTableStillAlive(var->pValue)) {
             return true;
         }
-        // The table behind this address has been collected and Lua has handed
-        // the address to a new one - a fresh variable of the user's, not a
-        // hidden table. Forget the identity so it is not asked about again.
-        hiddenTables.remove(var->pValue);
-        mHiddenTableSlots.remove(var->pValue);
+        // The table behind this address has been collected, so the address no
+        // longer names a hidden table - typically it now names a fresh variable
+        // of the user's. Forget the identity so it is not asked about again.
+        qDebug() << "VarUnit::isHidden() INFO - dropping the identity of a collected hidden table: address" << var->pValue << "no longer names it.";
+        forgetHiddenTableAddress(var->pValue);
     }
     const QString fullName = shortVarName(var).join(qsl("."));
     if (hidden.contains(fullName)) {
@@ -73,18 +76,18 @@ bool VarUnit::isHidden(TVar* var)
     return hiddenByUser.contains(fullName);
 }
 
-// Thrown away at the start of every hiding walk, which is the only thing that
-// fills it: a Lua table's address is only an identity while that table is alive,
-// and Lua hands a freed one's address straight back out to the next table.
+// A hiding walk re-records every identity it finds, so the walk starts by
+// dropping the stale ones - and the anchor table backing them - wholesale here,
+// rather than pruning them one at a time as isHidden() queries them.
 void VarUnit::clearHiddenTables()
 {
     hiddenTables.clear();
     mHiddenTableByName.clear();
     mHiddenTableSlots.clear();
-    if (mpAnchorState && mHiddenTableAnchors) {
+    if (mpAnchorState && mHiddenTableAnchors && mOwnsAnchors) {
         luaL_unref(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
-        mHiddenTableAnchors = 0;
     }
+    mHiddenTableAnchors = 0;
 }
 
 // Holds the table at valueIndex in a weak-valued registry table, so that
@@ -96,8 +99,19 @@ void VarUnit::anchorHiddenTable(lua_State* L, int valueIndex, const void* table)
     if (!table) {
         return;
     }
-    const int valueAt = valueIndex < 0 ? lua_gettop(L) + valueIndex + 1 : valueIndex;
+    if (!lua_checkstack(L, 3)) {
+        // Unanchored, the address would still be trusted long after the table
+        // is gone, so the identity goes with the anchor - name-keyed hiding
+        // still applies.
+        qWarning() << "VarUnit::anchorHiddenTable() WARNING - the Lua stack could not be grown; this table is hidden by name only.";
+        forgetHiddenTableAddress(table);
+        return;
+    }
+    const int valueAt = (valueIndex > 0 || valueIndex <= LUA_REGISTRYINDEX) ? valueIndex : lua_gettop(L) + valueIndex + 1;
     mpAnchorState = L;
+    // a table two hidden names reach is anchored under each; free the first
+    // name's slot rather than stranding it until the next walk
+    releaseAnchorSlot(mHiddenTableSlots.take(table));
     if (!mHiddenTableAnchors) {
         lua_newtable(L);
         lua_newtable(L);
@@ -112,25 +126,41 @@ void VarUnit::anchorHiddenTable(lua_State* L, int valueIndex, const void* table)
     lua_pop(L, 1);
 }
 
-// What the save-time copy needs alongside the hiddenTables it assigns: the
-// anchors to answer liveness from. Borrowed, not owned - the copy never clears
-// or un-hides, so it never releases them.
+// The whole identity handoff for the save-time copy: which addresses are hidden
+// and the anchors to answer liveness from. The anchors are borrowed, not owned -
+// mOwnsAnchors keeps the copy from releasing the live unit's registry entries
+// out from under it.
 void VarUnit::shareHiddenTableAnchors(const VarUnit& source)
 {
+    hiddenTables = source.hiddenTables;
     mpAnchorState = source.mpAnchorState;
     mHiddenTableAnchors = source.mHiddenTableAnchors;
     mHiddenTableSlots = source.mHiddenTableSlots;
+    mOwnsAnchors = false;
 }
 
-bool VarUnit::hiddenTableStillAlive(const void* table)
+bool VarUnit::hiddenTableStillAlive(const void* table) const
 {
     const int slot = mHiddenTableSlots.value(table, 0);
     if (!mpAnchorState || !mHiddenTableAnchors || !slot) {
-        // Remembered without an anchor (addHidden() outside a walk): there is
-        // nothing to disprove the identity with, so it stands as it did.
-        return true;
+        // Anchoring failed or never ran, so nothing can tell this address apart
+        // from a recycled one. Not trusting it only costs hiding by identity -
+        // hiding by name still stands - while trusting it can swallow a fresh
+        // variable of the user's.
+        qWarning() << "VarUnit::hiddenTableStillAlive() WARNING - a hidden table was never anchored; it is hidden by name only.";
+        return false;
+    }
+    if (!lua_checkstack(mpAnchorState, 2)) {
+        return true; // cannot look, so the identity stands as it did
     }
     lua_rawgeti(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    if (!lua_istable(mpAnchorState, -1)) {
+        // a lifecycle bug (released or clobbered registry ref), not a collected
+        // table - do not start un-hiding over it
+        qWarning() << "VarUnit::hiddenTableStillAlive() WARNING - the anchor table is gone; the identity stands as it did.";
+        lua_pop(mpAnchorState, 1);
+        return true;
+    }
     lua_rawgeti(mpAnchorState, -1, slot);
     const bool alive = lua_istable(mpAnchorState, -1) && lua_topointer(mpAnchorState, -1) == table;
     lua_pop(mpAnchorState, 2);
@@ -154,14 +184,30 @@ void VarUnit::forgetHiddenTable(const QString& fullName)
     if (it == mHiddenTableByName.constEnd()) {
         return;
     }
-    const int slot = mHiddenTableSlots.take(it.value());
-    if (slot && mpAnchorState && mHiddenTableAnchors) {
-        lua_rawgeti(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
-        luaL_unref(mpAnchorState, -1, slot);
-        lua_pop(mpAnchorState, 1);
+    forgetHiddenTableAddress(it.value());
+}
+
+// Drops every trace of one remembered identity: the address, its anchor slot,
+// and the names that would hand it back.
+void VarUnit::forgetHiddenTableAddress(const void* table)
+{
+    hiddenTables.remove(table);
+    releaseAnchorSlot(mHiddenTableSlots.take(table));
+    mHiddenTableByName.removeIf([table](const auto& it) {
+        return it.value() == table;
+    });
+}
+
+void VarUnit::releaseAnchorSlot(int slot)
+{
+    if (!slot || !mOwnsAnchors || !mpAnchorState || !mHiddenTableAnchors) {
+        return;
     }
-    hiddenTables.remove(it.value());
-    mHiddenTableByName.erase(it);
+    lua_rawgeti(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    if (lua_istable(mpAnchorState, -1)) {
+        luaL_unref(mpAnchorState, -1, slot);
+    }
+    lua_pop(mpAnchorState, 1);
 }
 
 

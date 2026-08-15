@@ -259,11 +259,20 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         execLua("hiddenGroup = {} for i = 1, 512 do hiddenGroup[i] = {'payload'} end");
         interface->getVars(true); // the hiding walk Mudlet runs at profile load
         VarUnit* vu = interface->getVarUnit();
-        QVERIFY2(vu->hiddenTables.size() > 512, "the hiding walk is supposed to remember every table it finds");
+        // hiddenGroup itself plus its 512 members
+        QVERIFY2(vu->hiddenTables.size() >= 513, "the hiding walk is supposed to remember every table it finds");
         const QSet<const void*> oldAddresses = vu->hiddenTables;
 
         execLua("hiddenGroup = nil");
         lua_gc(L, LUA_GCCOLLECT, 0);
+
+        // Deterministic on every allocator: an address the collector has
+        // certainly reclaimed must be disproved as an identity when asked.
+        TVar probe;
+        probe.setName(qsl("probeVar"), LUA_TSTRING);
+        probe.pValue = *oldAddresses.constBegin();
+        QVERIFY2(!vu->isHidden(&probe), "a collected table's address must stop counting as a hidden identity");
+        QVERIFY(!vu->hiddenTables.contains(probe.pValue));
 
         for (int i = 0; i < 64; ++i) {
             execLua(qsl("fresh%1 = {'payload'}").arg(i));
@@ -277,7 +286,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
             recycled = recycled || oldAddresses.contains(fresh->pValue);
             QVERIFY2(!vu->isHidden(fresh), "a fresh variable must not inherit hiddenness from a collected table whose address it landed on");
         }
-        qDebug() << "a collected table's address was" << (recycled ? "recycled and checked" : "not handed out again, so identity decay went unexercised");
+        qDebug() << "a collected table's address was" << (recycled ? "recycled and checked" : "not handed out again, so end-to-end decay went unexercised");
     }
 
     // What the identity is for (#9769): a saved variable of the user's holding
@@ -293,7 +302,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         execLua("userAlias = apiT");
         interface->getVars(false);
 
-        TVar* alias = findGlobal("userAlias");
+        TVar* alias = findGlobal(qsl("userAlias"));
         QVERIFY(alias);
         QVERIFY2(vu->isHidden(alias), "a saved alias of a live hidden table has to be recognised by identity");
     }

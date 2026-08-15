@@ -89,9 +89,9 @@ public:
     // isHidden() therefore checks the address against a weak anchor of the
     // table (anchorHiddenTable()) before trusting it, which asks Lua whether
     // that table is still alive without keeping it alive.
-    // Travels with the private name map: assigning it alone (as the save-time
-    // copy does, which never un-hides anything) leaves un-hiding a no-op - the
-    // copy takes the anchors through shareHiddenTableAnchors() instead.
+    // Never assign this on its own - an identity is only usable alongside its
+    // anchor, so the save-time copy takes both at once through
+    // shareHiddenTableAnchors().
     QSet<const void*> hiddenTables;
     QSet<QString> savedVars;
 
@@ -99,7 +99,9 @@ private:
     int countTableItems(TVar*);
     void rememberHiddenTable(TVar*, const QString& fullName);
     void forgetHiddenTable(const QString& fullName);
-    bool hiddenTableStillAlive(const void* table);
+    void forgetHiddenTableAddress(const void* table);
+    void releaseAnchorSlot(int slot);
+    bool hiddenTableStillAlive(const void* table) const;
     std::unique_ptr<TVar> base;
     QSet<QString> variableSet;
     // ?? variables
@@ -112,10 +114,15 @@ private:
     // The weak anchors behind hiddenTables: the interpreter they live in, the
     // registry reference of a weak-valued table holding each hidden table, and
     // which of its slots holds the table behind each address. 0 is not a value
-    // luaL_ref() hands out, so it stands for "no anchor" in both.
+    // luaL_ref() hands out, so it stands for "no anchor" in mHiddenTableAnchors
+    // and in the slot values alike.
     lua_State* mpAnchorState = nullptr;
     int mHiddenTableAnchors = 0;
     QHash<const void*, int> mHiddenTableSlots;
+    // false on a save-time copy, whose anchors are borrowed from the live unit
+    // (shareHiddenTableAnchors()): releasing them would pull the live unit's
+    // registry entries out from under it, so every luaL_unref is gated on this.
+    bool mOwnsAnchors = true;
 };
 
 #endif // MUDLET_VARUNIT_H

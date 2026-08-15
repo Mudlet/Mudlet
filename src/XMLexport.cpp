@@ -786,7 +786,6 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     saveTimeUnit->savedVars = vu->savedVars;
     saveTimeUnit->hidden = vu->hidden;
     saveTimeUnit->hiddenByUser = vu->hiddenByUser;
-    saveTimeUnit->hiddenTables = vu->hiddenTables;
     saveTimeUnit->shareHiddenTableAnchors(*vu);
     saveTimeInterface.getSavedVars();
 
