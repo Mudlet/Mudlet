@@ -34,7 +34,6 @@
 
 class QFile;
 class Host;
-class LuaInterface;
 class TAction;
 class TAlias;
 class TKey;
@@ -65,7 +64,7 @@ public:
     void writeAction(TAction*, pugi::xml_node xmlParent);
     void writeScript(TScript*, pugi::xml_node xmlParent);
     void writeKey(TKey*, pugi::xml_node xmlParent);
-    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false, bool rideAlongAllowed = true);
+    void writeVariable(TVar*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false, bool rideAlongAllowed = true);
     void writeModuleXML(const QString& moduleName);
     std::shared_ptr<pugi::xml_document> takeExportDocument();
     static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);

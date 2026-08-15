@@ -60,13 +60,18 @@ public:
     void getVars(bool);
     void getSavedVars();
     // the saved variables the last getSavedVars() had to cut short, for the
-    // caller to tell the user about - they are in no profile save it takes
+    // caller to tell the user about - a save holds them as empty tables
     QStringList truncatedSavedTables() const { return mTruncatedSavedTables; }
-    // the saved globals the last getSavedVars() found a value inside, at any
-    // depth, that a save cannot carry: anything but a table, string, number or
-    // boolean. A walk cut short by a panic or by scmMaxTableDepth answers only
-    // for what it reached.
+    // the saved globals the last getSavedVars() cannot vouch for having read
+    // whole: it found a value inside, at any depth, that a save cannot carry
+    // (anything but a table, string, number or boolean), or a Lua panic stopped
+    // it part way through one. A walk cut short answers only for what it reached.
     QSet<QString> savedRootsHoldingUnsaveableValues() const { return mSavedRootsHoldingUnsaveableValues; }
+    // the saved globals missing from the tree the last getSavedVars() built,
+    // because a Lua panic had to be got past by dropping them or stopped the
+    // walk reaching them at all - they are in no profile save taken from that
+    // tree, which is the caller's to tell the user about
+    QStringList unreadableSavedRoots() const { return mUnreadableSavedRoots; }
     QStringList varName(TVar* var);
     QList<TVar*> varOrder(TVar* var);
     QString getValue(TVar*);
@@ -92,6 +97,8 @@ public:
 
 private:
     TVar* resetVariableTree();
+    bool readSavedVars();
+    void addSavedRootsMissingFromTheTree();
 
     int depth = 0;
     lua_State* mL;
@@ -105,8 +112,13 @@ private:
     QSet<QString> mSavedRootNames;
     // which of those keys the walk is inside, meaningful only while one is running
     QString mCurrentSavedRootName;
+    // ...and the one a panic ended the last attempt inside, which outlives that
+    // attempt because it is what the next one has to leave out
+    QString mPanickedSavedRootName;
     // the keys it found a value under that the save cannot carry
     QSet<QString> mSavedRootsHoldingUnsaveableValues;
+    // ...and the ones missing from the tree it ended up with
+    QStringList mUnreadableSavedRoots;
     QStringList mTruncatedSavedTables;
 };
 
