@@ -89,9 +89,12 @@ The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubu
 apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
 than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug-nosan`
 preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
-commands work unchanged. On a warm container the hook is a sub-second no-op and a full build is
+commands work unchanged. On a warm container the hook finishes in seconds and a full build is
 mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
 versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
+The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
+linking is the bulk of a warm rebuild and mold shrinks it dramatically (PR #9927 measured a CI
+link tail of 4m13s → 29s). Keep that flag if you reconfigure the tree from scratch.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 
 Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted

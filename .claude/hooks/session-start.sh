@@ -54,6 +54,7 @@ if ! dpkg -s qtkeychain-qt6-dev >/dev/null 2>&1; then
     lua5.1 \
     luarocks \
     mesa-common-dev \
+    mold \
     pkg-config \
     qtkeychain-qt6-dev
 fi
@@ -156,6 +157,14 @@ fi
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   git -C "${CLAUDE_PROJECT_DIR}" submodule update --init --recursive
 
+  # Configure the default tree every session (cheap) so it already exists
+  # with Qt and the mold linker wired in - linking dominates a warm rebuild,
+  # and mold cuts the link tail dramatically (see PR #9927; until its
+  # top-level set_alternate_linker() move merges, the flag only reaches the
+  # main mudlet binary, afterwards every target).
+  cd "${CLAUDE_PROJECT_DIR}"
+  cmake --preset linux-debug-nosan -DCMAKE_PREFIX_PATH="${QT_DIR}" -DUSE_ALTERNATE_LINKER=mold
+
   # Warm the compiler cache once per container image. CMakeLists.txt wires
   # ccache in automatically, so this one cold build (~20 min) makes every
   # later session's build mostly cache hits (a few minutes including linking).
@@ -164,8 +173,6 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   CACHE_KB="$(du -sk "${CCACHE_DIR_PATH}" 2>/dev/null | cut -f1 || echo 0)"
   if [ "${CACHE_KB:-0}" -lt 102400 ]; then
     echo "Cold ccache - running warm-up build..."
-    cd "${CLAUDE_PROJECT_DIR}"
-    cmake --preset linux-debug-nosan -DCMAKE_PREFIX_PATH="${QT_DIR}"
     cmake --build --preset linux-debug-nosan
   fi
 fi
