@@ -71,9 +71,68 @@ if [ ! -d "${QT_DIR}" ]; then
     linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
 fi
 
-# Let every shell in the session find the aqt-installed Qt without extra flags.
+# Test-suite dependencies: xvfb and xcb libraries for the busted run (the aqt
+# Qt's xcb platform needs libxcb-cursor0 and libxcb-shape0, which Ubuntu's own
+# Qt would have pulled in), gstreamer for Qt Multimedia.
+if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
+  echo "Installing test-suite apt dependencies..."
+  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends \
+    xvfb \
+    libgstreamer-plugins-base1.0-0 \
+    libxcb-cursor0 \
+    libxcb-icccm4 \
+    libxcb-image0 \
+    libxcb-keysyms1 \
+    libxcb-render-util0 \
+    libxcb-shape0 \
+    libxcb-xinerama0
+fi
+
+# Lua rocks that LuaGlobal.lua and the test harnesses load, mirroring the CI
+# list in .github/workflows/build-mudlet.yml. The egress proxy blocks GitHub
+# codeload tarballs (403) while git clones are allowed, so rocks whose
+# rockspecs point at tarballs are built from a git checkout instead.
+rock_from_git() {
+  local spec=$1 repo=$2 ref=$3 dir
+  dir="$(mktemp -d)"
+  git clone -q --depth 1 --branch "${ref}" "${repo}" "${dir}" || return 1
+  (cd "${dir}" && curl -fsS -O "https://luarocks.org/${spec}.rockspec" \
+    && luarocks --lua-version 5.1 make --local "${spec}.rockspec" >/dev/null)
+}
+
+ensure_rock() {
+  local rock=$1 version=${2:-}
+  luarocks --lua-version 5.1 show "${rock}" >/dev/null 2>&1 && return 0
+  local out url spec repo ref
+  for _ in 1 2 3 4 5; do
+    # shellcheck disable=SC2086
+    out=$(luarocks --lua-version 5.1 install --local "${rock}" ${version} 2>&1) && return 0
+    url=$(grep -oE 'https://github.com/[^ ]+/archive/[^ ]+\.tar\.gz' <<<"${out}" | head -1)
+    [ -n "${url}" ] || { echo "${out}" | tail -3; return 1; }
+    spec=$(grep -oE 'https://luarocks.org/[A-Za-z0-9_.-]+\.rockspec' <<<"${out}" | head -1 | sed 's|.*/||; s|\.rockspec$||')
+    repo="$(sed -E 's|(https://github.com/[^/]+/[^/]+)/archive/.*|\1|' <<<"${url}").git"
+    ref=$(sed -E 's|.*/archive/(.*)\.tar\.gz|\1|; s|^refs/tags/||' <<<"${url}")
+    rock_from_git "${spec:-${rock}}" "${repo}" "${ref}" || return 1
+  done
+  return 1
+}
+
+for rock in LuaFileSystem lpeg lua-zip lrexlib-pcre2 luautf8 lua-yajl argparse lunajson busted; do
+  ensure_rock "${rock}" || echo "WARNING: could not install rock ${rock}"
+done
+# CI pins this version; 2.8.0 breaks DB.lua's PRAGMA table_info handling
+ensure_rock LuaSQL-SQLite3 2.6.1 || echo "WARNING: could not install rock LuaSQL-SQLite3"
+
+# Let every shell in the session find the aqt-installed Qt without extra
+# flags, and the --local rocks (the C++ functional tests load LuaGlobal.lua,
+# which needs them on the Lua path).
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export CMAKE_PREFIX_PATH=\"${QT_DIR}\${CMAKE_PREFIX_PATH:+:\$CMAKE_PREFIX_PATH}\"" >> "${CLAUDE_ENV_FILE}"
+  eval "$(luarocks path --local --lua-version 5.1)"
+  {
+    echo "export LUA_PATH='${LUA_PATH}'"
+    echo "export LUA_CPATH='${LUA_CPATH}'"
+  } >> "${CLAUDE_ENV_FILE}"
 fi
 
 # The repo is cloned fresh each session, so submodules are always missing even

@@ -91,8 +91,25 @@ than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-de
 preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
 commands work unchanged. On a warm container the hook is a sub-second no-op and a full build is
 mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
-versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once. Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen` and run tests
-with `QT_QPA_PLATFORM=offscreen ctest --preset linux-debug-nosan`.
+versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
+Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
+
+Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted
+successes):
+
+- **C++ tests**: `QT_QPA_PLATFORM=offscreen ctest --preset linux-debug-nosan`. The functional
+  tests load `LuaGlobal.lua`, which needs the `--local` Lua rocks on `LUA_PATH`/`LUA_CPATH` —
+  the hook exports both; without them ~12 tests fail with `attempt to index global 'yajl'` or
+  `'rex'` errors.
+- **Lua specs (busted)**: `.claude/scripts/run-lua-tests.sh` — starts the HTTP/Discord/MMCP
+  fixtures from `CI/` and runs the self-test profile under xvfb exactly like the
+  "(Linux) Run Lua tests" CI step. Always let it kill leftover fixture processes: stale MMCP
+  peers from an aborted run answer on old ports and fail ~38 Networking specs with
+  "Expected objects to be the same" at the `ensurePeer` assertion.
+- The egress proxy blocks GitHub codeload tarballs (403), so `luarocks install` of rocks whose
+  rockspecs point at tarballs fails; the hook falls back to `git clone` + `luarocks make`
+  (git-protocol GitHub access is allowed). `LuaSQL-SQLite3` must stay pinned at 2.6.1 — 2.8.0
+  breaks `DB.lua`'s `PRAGMA table_info` handling and errors 8 DB specs.
 
 The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
 Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
