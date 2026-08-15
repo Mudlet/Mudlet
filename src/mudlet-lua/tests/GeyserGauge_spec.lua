@@ -64,6 +64,18 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_true(gauge.useAdd2)
       assert.are.equal("gauge", gauge.type)
     end)
+
+    it("starts out hidden when the constraints ask for it, and shows again", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsHiddenNew", x = 0, y = 0, width = 100, height = 20, hidden = true}))
+      assert.is_true(gauge.hidden)
+      for _, name in ipairs({"ggsHiddenNew_back", "ggsHiddenNew_front", "ggsHiddenNew_text"}) do
+        assert.is_false(windowVisible(name))
+      end
+      gauge:show()
+      for _, name in ipairs({"ggsHiddenNew_back", "ggsHiddenNew_front", "ggsHiddenNew_text"}) do
+        assert.is_true(windowVisible(name))
+      end
+    end)
   end)
 
   describe("Geyser.Gauge:setValue", function()

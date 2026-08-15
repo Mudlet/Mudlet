@@ -78,7 +78,7 @@ private:
         for (const int areaId : {areaA, areaB}) {
             for (int i = 0; i < 3; ++i, ++id) {
                 QVERIFY(pMap->addRoom(id));
-                QVERIFY(pMap->setRoomArea(id, areaId, false));
+                QVERIFY(pMap->setRoomArea(id, areaId));
                 QVERIFY(pMap->setRoomCoordinates(id, i, i, 0));
             }
         }

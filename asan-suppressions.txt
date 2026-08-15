@@ -59,21 +59,22 @@ leak:_dri.so
 # match) - keep the GL context from being created/destroyed under the sanitizer
 # test-side instead, as PR #9534 did for the show3dMapView test.
 #
-# A second un-suppressible flake lives on the same CI job: LeakSanitizer's
-# stop-the-world tracer - the helper process that ptrace-attaches at exit to
-# scan memory for live pointers - itself segfaults during exit-time teardown,
-# apparently racing driver/X cleanup. The job log then ends with
+# A second un-suppressible flake lives on the same CI job (#9809): LeakSanitizer's
+# stop-the-world tracer - the helper process that ptrace-attaches at exit to scan
+# memory for live pointers - takes SIGSEGV, and the run ends with
 #   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
 #   ==NNNNN==LeakSanitizer has encountered a fatal error.
-# right after "mudlet::~mudlet() INFO - uninstalling translation...", with no
-# leak report at all, and the busted summary line goes missing too (LSan's
-# Die() skips the stdio flush - the Lua tests themselves passed). Since
-# exitcode=1 the job fails. Suppressions filter leak *reports*, and this
-# aborts before reporting begins, so nothing in this file can help; it is
-# also unrelated to the change under test (the same faulting instruction was
-# observed on development-branch runs 26705214438 and 28641460889 and on PR
-# run 30744002320, at a rate of roughly 1 in 250-500 leak-job runs). If a
-# leak job fails with this signature, just re-run it.
+# straight after the test body reported itself green, and with no leak report at
+# all (run 31428353403, on TelnetTextDisplayedTest).
+#
+# Nothing in this file can reach it: suppressions filter leak *reports*, and this
+# aborts before reporting begins. So the test definitions rerun instead, locally
+# as well as on CI - leak-checked tests and the Lua suite go through
+# test/lsan-tracer-retry.cmake, which reruns exactly once and only for that
+# signature. A leak report, a failing test and a second tracer crash all still
+# fail; test/ci/lsan-tracer-retry-test.sh is the full list of what does and does
+# not qualify. Each rerun prints a line and adds one to the job summary, which is
+# the only measure of how often this fires.
 
 # ==============================================================================
 # Fontconfig library leaks
