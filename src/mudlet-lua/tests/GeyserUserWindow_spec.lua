@@ -205,6 +205,15 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal("userwindow", windowType("guwNew2"))
     end)
 
+    it("starts out hidden when the constraints ask for it, and shows again", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwHiddenNew", x = 10, y = 10, width = 200, height = 150, hidden = true}))
+      assert.is_true(userWindow.hidden)
+      assert.is_false(windowVisible("guwHiddenNew"))
+      userWindow:show()
+      assert.is_false(userWindow.hidden)
+      assert.is_true(windowVisible("guwHiddenNew"))
+    end)
+
     it("reopens a user window that was opened under the same name before", function()
       local first = track(Geyser.UserWindow:new({name = "guwReused", x = 10, y = 10, width = 200, height = 150}))
       local trackedWindows = #Geyser.windows
