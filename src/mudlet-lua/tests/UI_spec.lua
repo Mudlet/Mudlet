@@ -2793,9 +2793,9 @@ describe("Tests UI functions", function()
       assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
     end)
 
-    -- copy() and appendBuffer() carry a run of same-format characters per
-    -- append() call, and a run carried past its colour change would show up
-    -- here and nowhere else
+    -- copy() and appendBuffer() carry the line's per-character formatting
+    -- through appendFormatted(), and a character given its neighbour's colour
+    -- would show up here and nowhere else
     it("appendBuffer keeps every colour run of a multi-coloured line", function()
       decho(src, "<255,0,0:0,0,0>red<0,255,0:0,0,0>green<0,0,255:0,0,0>blue\n")
       moveCursor(src, 0, 0)
@@ -2811,7 +2811,8 @@ describe("Tests UI functions", function()
       assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
       selectSection(dst, 8, 1)
       assert.are.same({0, 0, 255}, getTextFormat(dst).foreground)
-      -- the last character of each run, where a run carried one too far shows
+      -- the last character before each colour change, where an off-by-one in
+      -- the carried formatting shows
       selectSection(dst, 2, 1)
       assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
       selectSection(dst, 7, 1)
@@ -2845,9 +2846,7 @@ describe("Tests UI functions", function()
       copy(src)
       appendBuffer(dst)
       local lines = getLines(dst, 0, getLineCount(dst))
-      -- seven characters for a six-character selection: copy() takes the
-      -- character at the selection's end column as well
-      assert.are.equal("artgree", lines[1])
+      assert.are.equal("artgre", lines[1])
       moveCursor(dst, 0, 0)
       selectSection(dst, 2, 1)
       assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
@@ -2855,8 +2854,8 @@ describe("Tests UI functions", function()
       assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
     end)
 
-    -- append() re-wraps the destination on every call, so a line carried as one
-    -- run wraps once - it has to land laid out exactly as echoing the same text
+    -- appendBuffer() wraps the destination once per line it lands, so the
+    -- appended line has to lay out exactly as echoing the same text does
     it("appendBuffer wraps a long line the same way echoing it does", function()
       local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
       -- the source keeps the line whole so copy() takes all of it; the
@@ -2876,16 +2875,15 @@ describe("Tests UI functions", function()
       assert.are.same(echoed, appended)
     end)
 
-    -- each colour run is a separate append(), so the second one lands on the
-    -- tail the first one wrapped - where the colours change must not be able to
-    -- move a wrap point
+    -- the formatting carried along with the text must not be able to move a
+    -- wrap point
     it("wraps a multi-coloured line where the same text uncoloured wraps", function()
       local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
       setWindowWrap(src, 500)
       setWindowWrap(dst, 40)
-      -- the colour changes mid-word, so the run boundary is nowhere a wrap
-      -- point could legitimately be
-      local split = math.floor(#long / 2)
+      -- the colour changes mid-word, so the boundary between the colours is
+      -- nowhere a wrap point could legitimately be
+      local split = math.floor(#long / 2) + 2
       decho(src, "<255,0,0:0,0,0>" .. long:sub(1, split) .. "<0,255,0:0,0,0>" .. long:sub(split + 1) .. "\n")
       moveCursor(src, 0, 0)
       selectCurrentLine(src)
