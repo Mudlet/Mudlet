@@ -103,9 +103,12 @@ successes):
   `'rex'` errors.
 - **Lua specs (busted)**: `.claude/scripts/run-lua-tests.sh` — starts the HTTP/Discord/MMCP
   fixtures from `CI/` and runs the self-test profile under xvfb exactly like the
-  "(Linux) Run Lua tests" CI step. Always let it kill leftover fixture processes: stale MMCP
-  peers from an aborted run answer on old ports and fail ~38 Networking specs with
-  "Expected objects to be the same" at the `ensurePeer` assertion.
+  "(Linux) Run Lua tests" CI step. Concurrent runs are safe (one per worktree, or even the
+  same tree): fixtures bind ephemeral ports handed over via a per-run temp directory, cleanup
+  kills only that run's fixture PIDs, and each run gets a private HOME so no two Mudlets — nor
+  leftovers of an aborted run — share the self-test profile's saved state. Sharing a profile
+  tree is not survivable: stale state fails ~38 Networking specs with "Expected objects to be
+  the same" at the `ensurePeer` assertion.
 - The egress proxy blocks GitHub codeload tarballs (403), so `luarocks install` of rocks whose
   rockspecs point at tarballs fails; the hook falls back to `git clone` + `luarocks make`
   (git-protocol GitHub access is allowed). `LuaSQL-SQLite3` must stay pinned at 2.6.1 — 2.8.0
