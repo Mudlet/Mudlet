@@ -25,6 +25,7 @@
 
 #include <QRegularExpression>
 
+#include <cstdlib>
 #include <memory>
 
 extern "C" {
@@ -37,6 +38,28 @@ extern "C" {
 #include <lua.h>
 #include <lualib.h>
 #endif
+}
+
+// A Lua allocator that can be told to fail one allocation. Lua turns that into
+// the panic an out-of-memory raises, which is how a test written in C++ can stop
+// the variable walk part way through without the walk knowing it is a test.
+struct AllocationBudget
+{
+    qint64 allocations = 0;
+    qint64 failAt = -1;
+};
+
+static void* budgetedAllocator(void* userData, void* pointer, size_t /*oldSize*/, size_t newSize)
+{
+    auto* budget = static_cast<AllocationBudget*>(userData);
+    if (!newSize) {
+        free(pointer);
+        return nullptr;
+    }
+    if (++budget->allocations == budget->failAt) {
+        return nullptr;
+    }
+    return realloc(pointer, newSize);
 }
 
 
@@ -248,6 +271,149 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(interface->getValue(node), qsl("deep value"));
         QCOMPARE(lua_gettop(L), stackBefore);
         QVERIFY2(sentinelsIntact(), "the read unwound past the top it was handed");
+    }
+
+    // getValue() walks down to the variable a push at a time, so a variable it
+    // cannot reach leaves those pushes on the Lua stack of the profile's live
+    // interpreter, where every trigger, alias and timer is then charged for them.
+    void testGetValueOnAVariableThatIsGoneLeavesTheStackAsItFoundIt()
+    {
+        execLua("goneVar = 'here for now'");
+        interface->getVars(false);
+        TVar* goneVar = interface->getVarUnit()->getBase()->getChildren().first();
+        QCOMPARE(goneVar->getName(), "goneVar");
+        execLua("goneVar = nil");
+
+        const int stackBefore = lua_gettop(L);
+        for (int i = 0; i < 10; ++i) {
+            QCOMPARE(interface->getValue(goneVar), QString());
+        }
+        QCOMPARE(lua_gettop(L), stackBefore);
+    }
+
+    // ...and the same for the descent into a table, which pushes once per level
+    // and so leaves more behind the deeper the variable sits.
+    void testGetValueOnAMemberThatIsGoneLeavesTheStackAsItFoundIt()
+    {
+        execLua("goneTable = {inner = {member = 'here for now'}}");
+        interface->getVars(false);
+        TVar* goneTable = interface->getVarUnit()->getBase()->getChildren().first();
+        QCOMPARE(goneTable->getName(), "goneTable");
+        TVar* innerTable = goneTable->getChildren().first();
+        QCOMPARE(innerTable->getName(), "inner");
+        TVar* member = innerTable->getChildren().first();
+        QCOMPARE(member->getName(), "member");
+        execLua("goneTable.inner = nil");
+
+        const int stackBefore = lua_gettop(L);
+        for (int i = 0; i < 10; ++i) {
+            QCOMPARE(interface->getValue(member), QString());
+        }
+        QCOMPARE(lua_gettop(L), stackBefore);
+    }
+
+    // Which of the two pointers a variable node carries is which: the value's,
+    // which is what identity-based hiding matches on, and the key's.
+    void testVariableNodesCarryTheirValuesIdentity()
+    {
+        execLua("identityTable = {} aliasOfIdentityTable = identityTable");
+        // both, or the walk keeps only the name that reached the table first
+        interface->getVarUnit()->savedVars.insert(qsl("identityTable"));
+        interface->getVarUnit()->savedVars.insert(qsl("aliasOfIdentityTable"));
+        interface->getVars(false);
+
+        const QList<TVar*> globals = interface->getVarUnit()->getBase()->getChildren();
+        QCOMPARE(globals.size(), 2);
+        QVERIFY2(globals.at(0)->pValue == globals.at(1)->pValue, "two globals holding one table must carry that table as their value identity");
+        QVERIFY2(globals.at(0)->pValue, "a table has an address, so a node holding one has a value identity");
+        // lua_topointer() has none to give for a string, which is what a global's key is
+        QVERIFY2(!globals.at(0)->pKey, "a string-keyed node has no key identity");
+    }
+
+    // A Lua panic while the saved variables are being read cannot be resumed
+    // from, so the walk has to go round again without the global it died inside.
+    // Ending the walk there instead leaves a profile save holding the saved
+    // globals it had reached and quietly short of the rest.
+    void testAPanicInOneSavedGlobalStillLeavesTheOthersInTheTree()
+    {
+        // Six globals of number-keyed members, each key unique across the lot:
+        // naming one costs a fresh Lua string, and those are the allocations the
+        // failure below is aimed at, so it lands inside a global rather than
+        // between two of them.
+        const char* buildSavedGlobals = "for i = 1, 6 do "
+                                        "  local t = {} "
+                                        "  for j = 1, 60 do t[i * 1000 + j] = 'saved value ' .. i end "
+                                        "  _G['savedRoot' .. i] = t "
+                                        "end";
+
+        AllocationBudget budget;
+        lua_State* countingState = lua_newstate(&budgetedAllocator, &budget);
+        QVERIFY(countingState);
+        qint64 walkAllocations = 0;
+        {
+            luaL_openlibs(countingState);
+            LuaInterface countingInterface(countingState);
+            QCOMPARE(luaL_dostring(countingState, buildSavedGlobals), 0);
+            markSavedRoots(countingInterface);
+
+            const qint64 before = budget.allocations;
+            countingInterface.getSavedVars();
+            walkAllocations = budget.allocations - before;
+
+            QVERIFY2(countingInterface.unreadableSavedRoots().isEmpty(), "the walk with nothing failing must read every saved global");
+            QCOMPARE(savedRootsRead(countingInterface), 6);
+            QVERIFY2(walkAllocations > 100, "the walk is supposed to name a few hundred number keys, each of which costs an allocation");
+            countingInterface.releaseVariableReferences();
+        }
+        lua_close(countingState);
+
+        AllocationBudget failingBudget;
+        lua_State* failingState = lua_newstate(&budgetedAllocator, &failingBudget);
+        QVERIFY(failingState);
+        {
+            luaL_openlibs(failingState);
+            LuaInterface failingInterface(failingState);
+            QCOMPARE(luaL_dostring(failingState, buildSavedGlobals), 0);
+            markSavedRoots(failingInterface);
+
+            // half way through the walk: far enough in to be inside a global,
+            // far enough from the end that giving up there loses several more
+            failingBudget.failAt = failingBudget.allocations + walkAllocations / 2;
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("Lua panicked")));
+            failingInterface.getSavedVars();
+
+            // every saved global is either in the tree or named as missing from
+            // it - which of the six the failure lands in is Lua's business
+            const QStringList unreadable = failingInterface.unreadableSavedRoots();
+            QVERIFY2(!unreadable.isEmpty(), "a walk a panic cut short has to say what the save will be short of");
+            QCOMPARE(savedRootsRead(failingInterface), 6 - unreadable.size());
+            const QList<TVar*> readRoots = failingInterface.getVarUnit()->getBase()->getChildren(false);
+            for (TVar* root : readRoots) {
+                QVERIFY2(!unreadable.contains(root->getName()), "a global in the tree must not also be reported as missing from it");
+                QCOMPARE(root->getChildren(false).size(), 60);
+            }
+
+            // the saved-globals-only filter must not outlive the failed walk
+            // either, or the Variables view shows almost nothing afterwards
+            failingInterface.getVars(false);
+            QVERIFY2(savedRootsRead(failingInterface) > 6, "a getVars() after a panicked getSavedVars() must go back to reading the whole of _G");
+            failingInterface.releaseVariableReferences();
+        }
+        lua_close(failingState);
+    }
+
+private:
+    static void markSavedRoots(LuaInterface& luaInterface)
+    {
+        for (int i = 1; i <= 6; ++i) {
+            luaInterface.getVarUnit()->savedVars.insert(qsl("savedRoot%1").arg(i));
+        }
+    }
+
+    static int savedRootsRead(LuaInterface& luaInterface)
+    {
+        TVar* base = luaInterface.getVarUnit()->getBase();
+        return base ? base->getChildren(false).size() : 0;
     }
 };
 

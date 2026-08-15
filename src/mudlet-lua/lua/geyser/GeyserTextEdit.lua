@@ -66,7 +66,7 @@ function Geyser.TextEdit:new (cons, container)
   if me.stylesheet then
     me:setStyleSheet()
   end
-  -- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end

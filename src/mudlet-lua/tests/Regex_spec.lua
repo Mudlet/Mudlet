@@ -297,6 +297,48 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- The subject handed to PCRE is measured in UTF-8 bytes, not in the UTF-16
+    -- code units a QString counts: a length taken from the wrong one cuts a
+    -- multibyte line short and the end anchor then matches in the wrong place
+    it("matches a multibyte line right through to its end anchor", function()
+        local send = spy.on(_G, "send")
+        local snapshot = {}
+        local pattern = "^(\\w+) (\\w+) (\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            send("match")
+            snapshot = matches
+        end, 1)
+
+        feedTriggers("\nЗдравствуй уважаемый Mudlet\n")
+
+        assert.spy(send).was.called(1)
+        assert.are.equal("Здравствуй уважаемый Mudlet", snapshot[1])
+        assert.are.equal("Здравствуй", snapshot[2])
+        assert.are.equal("уважаемый", snapshot[3])
+        assert.are.equal("Mudlet", snapshot[4])
+        killTrigger(id)
+    end)
+
+    -- A capture's position comes back from PCRE as a byte offset and has to be
+    -- converted to the character position the console selects by. The dragon is
+    -- outside the BMP, so it is four UTF-8 bytes but two of those characters
+    it("selectCaptureGroup lands on the right characters after multibyte text", function()
+        local selection
+        local pattern = "^Цель: (\\S+) Оружие: (?<wpn>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("wpn")
+            selection = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nЦель: 🐉 Оружие: меч\n")
+
+        assert.are.equal("меч", selection)
+        killTrigger(id)
+    end)
+
     -- selectCaptureGroup by name selects correct text
     it("selectCaptureGroup by name selects the right text", function()
         local selection_first, selection_second
