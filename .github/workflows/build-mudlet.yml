@@ -287,6 +287,20 @@ jobs:
         # Update library cache so linker finds new version
         sudo ldconfig
 
+    - name: (Linux) Install mold linker
+      if: runner.os == 'Linux'
+      env:
+        MOLD_VERSION: '2.41.0'
+        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+      run: |
+        # Ubuntu 22.04 only packages mold 1.0.3, so take it from upstream
+        curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 -o mold.tar.gz \
+          "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+        echo "${MOLD_SHA256}  mold.tar.gz" | sha256sum -c
+        sudo tar xf mold.tar.gz -C /usr/local --strip-components=1
+        rm mold.tar.gz
+        /usr/local/bin/mold --version
+
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -359,6 +373,11 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        # Link with mold: half of this build is linking, most of it the ~50
+        # sanitizer-instrumented test executables, and ccache cannot help there.
+        # -fuse-ld=mold needs GCC 12.1 and the oldest leg is on GCC 10, so point
+        # the compiler driver at mold's own ld instead - that works everywhere.
+        LDFLAGS: ${{ runner.os == 'Linux' && '-B/usr/local/libexec/mold' || '' }}
 
     # Cache keys are immutable, so the save below is refused while the branch's
     # previous entry still holds the key, and the branch cache only ever
