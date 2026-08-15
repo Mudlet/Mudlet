@@ -29,6 +29,16 @@
 #include <QLocale>
 #include <QTreeWidgetItem>
 
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
+
 
 VarUnit::VarUnit()
 : base(nullptr)
@@ -47,7 +57,14 @@ bool VarUnit::isHidden(TVar* var)
     // name-keyed lookup matches, and a profile save would then write out that
     // table's contents (#9769).
     if (var->pValue && hiddenTables.contains(var->pValue)) {
-        return true;
+        if (hiddenTableStillAlive(var->pValue)) {
+            return true;
+        }
+        // The table behind this address has been collected and Lua has handed
+        // the address to a new one - a fresh variable of the user's, not a
+        // hidden table. Forget the identity so it is not asked about again.
+        hiddenTables.remove(var->pValue);
+        mHiddenTableSlots.remove(var->pValue);
     }
     const QString fullName = shortVarName(var).join(qsl("."));
     if (hidden.contains(fullName)) {
@@ -63,6 +80,61 @@ void VarUnit::clearHiddenTables()
 {
     hiddenTables.clear();
     mHiddenTableByName.clear();
+    mHiddenTableSlots.clear();
+    if (mpAnchorState && mHiddenTableAnchors) {
+        luaL_unref(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+        mHiddenTableAnchors = 0;
+    }
+}
+
+// Holds the table at valueIndex in a weak-valued registry table, so that
+// isHidden() can later ask whether its address still names it. Weak, so the
+// anchor never keeps the table alive: its slot reads nil from the moment the
+// table is collected, which is before Lua can hand the address to a new one.
+void VarUnit::anchorHiddenTable(lua_State* L, int valueIndex, const void* table)
+{
+    if (!table) {
+        return;
+    }
+    const int valueAt = valueIndex < 0 ? lua_gettop(L) + valueIndex + 1 : valueIndex;
+    mpAnchorState = L;
+    if (!mHiddenTableAnchors) {
+        lua_newtable(L);
+        lua_newtable(L);
+        lua_pushstring(L, "v");
+        lua_setfield(L, -2, "__mode");
+        lua_setmetatable(L, -2);
+        mHiddenTableAnchors = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    lua_pushvalue(L, valueAt);
+    mHiddenTableSlots.insert(table, luaL_ref(L, -2));
+    lua_pop(L, 1);
+}
+
+// What the save-time copy needs alongside the hiddenTables it assigns: the
+// anchors to answer liveness from. Borrowed, not owned - the copy never clears
+// or un-hides, so it never releases them.
+void VarUnit::shareHiddenTableAnchors(const VarUnit& source)
+{
+    mpAnchorState = source.mpAnchorState;
+    mHiddenTableAnchors = source.mHiddenTableAnchors;
+    mHiddenTableSlots = source.mHiddenTableSlots;
+}
+
+bool VarUnit::hiddenTableStillAlive(const void* table)
+{
+    const int slot = mHiddenTableSlots.value(table, 0);
+    if (!mpAnchorState || !mHiddenTableAnchors || !slot) {
+        // Remembered without an anchor (addHidden() outside a walk): there is
+        // nothing to disprove the identity with, so it stands as it did.
+        return true;
+    }
+    lua_rawgeti(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    lua_rawgeti(mpAnchorState, -1, slot);
+    const bool alive = lua_istable(mpAnchorState, -1) && lua_topointer(mpAnchorState, -1) == table;
+    lua_pop(mpAnchorState, 2);
+    return alive;
 }
 
 // Only tables are worth an identity: nothing else has contents for a saved
@@ -81,6 +153,12 @@ void VarUnit::forgetHiddenTable(const QString& fullName)
     const auto it = mHiddenTableByName.constFind(fullName);
     if (it == mHiddenTableByName.constEnd()) {
         return;
+    }
+    const int slot = mHiddenTableSlots.take(it.value());
+    if (slot && mpAnchorState && mHiddenTableAnchors) {
+        lua_rawgeti(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+        luaL_unref(mpAnchorState, -1, slot);
+        lua_pop(mpAnchorState, 1);
     }
     hiddenTables.remove(it.value());
     mHiddenTableByName.erase(it);

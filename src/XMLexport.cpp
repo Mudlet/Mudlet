@@ -787,6 +787,7 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     saveTimeUnit->hidden = vu->hidden;
     saveTimeUnit->hiddenByUser = vu->hiddenByUser;
     saveTimeUnit->hiddenTables = vu->hiddenTables;
+    saveTimeUnit->shareHiddenTableAnchors(*vu);
     saveTimeInterface.getSavedVars();
 
     // A saved global with a value anywhere inside it that no save can carry (see
