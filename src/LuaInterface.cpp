@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include <QDebug>
+#include <QRegularExpression>
 
 #include "LuaInterface.h"
 #include "VarUnit.h"
@@ -351,6 +352,111 @@ QList<TVar*> LuaInterface::varOrder(TVar* var)
         pParent = pParent->getParent();
     }
     return vars;
+}
+
+// A name two members of the same table are both shown under says nothing about
+// which of them is meant, and whichever one a write reaches may well be the
+// other. Two keys can share a name: "%.14g" gives 1/3 and 0.33333333333333 the
+// same text, and a key ending at an embedded NUL is named by the part before it.
+static bool nameSharedWithASibling(TVar* var)
+{
+    TVar* parent = var->getParent();
+    if (!parent) {
+        return false;
+    }
+    // a number key and a string key that read the same are still distinct
+    // lookups, so the key type is part of the name here
+    const QString name = var->getName();
+    const int keyType = var->getKeyType();
+    int matches = 0;
+    for (const TVar* sibling : parent->getChildren(false)) {
+        if (sibling->getName() == name && sibling->getKeyType() == keyType && ++matches > 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The write paths build Lua source out of these names - see setValue() - where a
+// string key goes inside a quoted literal and a root goes in bare. So a key
+// holding a backslash comes back out as an escape sequence, and a root that is
+// not an identifier either fails to parse or, with a dot in it, parses as an
+// index into some other global.
+static bool nameSurvivesGeneratedCode(TVar* var, const bool asRoot)
+{
+    const QString name = var->getName();
+    if (asRoot) {
+        static const QRegularExpression identifier(qsl("^[A-Za-z_][A-Za-z0-9_]*$"));
+        static const QSet<QString> luaKeywords{qsl("and"),   qsl("break"), qsl("do"),  qsl("else"), qsl("elseif"), qsl("end"),    qsl("false"), qsl("for"),  qsl("function"), qsl("if"),   qsl("in"),
+                                               qsl("local"), qsl("nil"),   qsl("not"), qsl("or"),   qsl("repeat"), qsl("return"), qsl("then"),  qsl("true"), qsl("until"),    qsl("while")};
+        // a keyword reads as an identifier but parses as itself
+        return var->getKeyType() == LUA_TSTRING && identifier.match(name).hasMatch() && !luaKeywords.contains(name);
+    }
+    if (var->getKeyType() != LUA_TSTRING) {
+        return true;
+    }
+    return !name.contains(QLatin1Char('\\')) && !name.contains(QLatin1Char('"')) && !name.contains(QLatin1Char('\n')) && !name.contains(QLatin1Char('\r'));
+}
+
+// Whether a variable can be written back through the name the variable tree gave
+// it, which is what every write path has to reach it by. Three things have to
+// hold, and for the tables above the variable as much as for the variable:
+//  - the name finds that same variable again. Lua names a number key with
+//    "%.14g", which a key of 1/3 does not survive, and names a string key
+//    through a C string, which ends at an embedded NUL - so the name is a key of
+//    its own, and writing through it leaves a second variable beside the real
+//    one (#9903). A variable a script has deleted since the tree was built is
+//    not found either.
+//  - no other member of the same table is shown under that name too.
+//  - the name is one the generated Lua source can carry back, which is a
+//    narrower thing than the C API can look up.
+// What the variable holds is not part of the question: a script is free to have
+// changed that since the tree was built, and the name still finds it.
+bool LuaInterface::writableByName(TVar* var)
+{
+    const QList<TVar*> vars = varOrder(var);
+    if (vars.isEmpty()) {
+        // _G, which nothing writes through a name
+        return false;
+    }
+    for (int i = 0; i < vars.size(); ++i) {
+        if (nameSharedWithASibling(vars.at(i)) || !nameSurvivesGeneratedCode(vars.at(i), i == 0)) {
+            return false;
+        }
+    }
+
+    const int stackTop = lua_gettop(mL);
+    if (setjmp(buf) == 0) {
+        // the table of the level being looked at, plus the key pushed into it,
+        // for as many levels as there are names
+        if (!lua_checkstack(mL, static_cast<int>(vars.size()) + 2)) {
+            qWarning().noquote().nospace() << "LuaInterface::writableByName() WARNING - could not grow the Lua stack to reach \"" << var->getName() << "\", so it is being treated as unwritable.";
+            return false;
+        }
+        lua_pushvalue(mL, LUA_GLOBALSINDEX);
+        for (TVar* level : vars) {
+            const int topWithTable = lua_gettop(mL);
+            // Raw, because the tree was built by iterating the tables, which is
+            // raw as well: a value an __index metamethod stands in with is not
+            // the variable the tree is showing. loadKey() also pushes nothing
+            // for a key type it does not handle, and says so only by leaving the
+            // top where it was.
+            if (!lua_istable(mL, -1) || !loadKey(mL, level) || lua_gettop(mL) != topWithTable + 1) {
+                lua_settop(mL, stackTop);
+                return false;
+            }
+            lua_rawget(mL, -2);
+            if (lua_isnoneornil(mL, -1)) {
+                lua_settop(mL, stackTop);
+                return false;
+            }
+        }
+        lua_settop(mL, stackTop);
+        return true;
+    }
+    lua_settop(mL, stackTop);
+    qWarning().noquote().nospace() << "LuaInterface::writableByName() WARNING - Lua panicked while looking \"" << var->getName() << "\" up, so it is being treated as unwritable.";
+    return false;
 }
 
 void LuaInterface::createVar(TVar* var)

@@ -83,6 +83,9 @@ public:
     void renameCVar(QList<TVar*>);
     void renameVar(TVar*);
     void createVar(TVar*);
+    // whether a variable can be written back through the name the tree gave it,
+    // which the editor asks before writing - the write paths themselves do not
+    bool writableByName(TVar*);
     VarUnit* getVarUnit();
     // Anything that builds a variable tree and throws it away owes this call:
     // ~LuaInterface cannot make it, see there.
