@@ -161,15 +161,7 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
         # run; LeakSanitizer's own hint also suggests verbosity=1, which adds
         # ~2400 lines of allocator poisoning traffic and no extra diagnosis.
         set(leakLog "LSAN_OPTIONS=log_threads=1;")
-        # Every leak-checked exit is another chance to hit LeakSanitizer's tracer
-        # crash, which fails the run without reporting a leak (#9809), so these
-        # go through a launcher that reruns that one signature once. The rerun
-        # shares the test's TIMEOUT rather than widening it: overrunning the
-        # budget is the right outcome for a hang, and the crash is rare enough
-        # that blunting every test's hang detection to make room costs more.
-        add_test(NAME ${test_name} COMMAND ${CMAKE_COMMAND} -P
-            ${CMAKE_SOURCE_DIR}/test/lsan-tracer-retry.cmake --
-            $<TARGET_FILE:${test_name}>)
+        add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     else()
         set(leakCheck "detect_leaks=0")
         set(leakLog "")

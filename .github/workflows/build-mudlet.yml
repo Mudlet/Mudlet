@@ -628,13 +628,9 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
-      # wall-clock time, so the suite needs a budget of its own - and one wide
-      # enough that the launcher's single rerun still fits inside it (#9809).
+      # wall-clock time, so the suite needs a budget of its own.
       timeout-minutes: 6
-      run: >
-        cmake -P ${{github.workspace}}/test/lsan-tracer-retry.cmake --
-        --failure-marker=/tmp/busted-tests-failed
-        xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1

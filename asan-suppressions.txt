@@ -68,13 +68,14 @@ leak:_dri.so
 # all (run 31428353403, on TelnetTextDisplayedTest).
 #
 # Nothing in this file can reach it: suppressions filter leak *reports*, and this
-# aborts before reporting begins. So the test definitions rerun instead, locally
-# as well as on CI - leak-checked tests and the Lua suite go through
-# test/lsan-tracer-retry.cmake, which reruns exactly once and only for that
-# signature. A leak report, a failing test and a second tracer crash all still
-# fail; test/ci/lsan-tracer-retry-test.sh is the full list of what does and does
-# not qualify. Each rerun prints a line and adds one to the job summary, which is
-# the only measure of how often this fires.
+# aborts before reporting begins. The cause is not a leak either - gcc-10's
+# LeakSanitizer guesses how glibc allocated a dynamic TLS block from
+# (tls_beg % 4096) == 16, true for any malloc'd block at that alignment since
+# glibc 2.25, then reads two words of unrelated memory as that block's address
+# and length and scans the result (google/sanitizers#1322). So the leak-checked
+# test definitions set intercept_tls_get_addr=0, which skips the recording that
+# produces the bogus range. GCC 14 and LLVM 17 fixed the guess; this leg pins
+# gcc-10 for the AppImage's glibc floor, so the flag stays until that moves.
 
 # ==============================================================================
 # Fontconfig library leaks
