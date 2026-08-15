@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include <QDebug>
+#include <QRegularExpression>
 
 #include "LuaInterface.h"
 #include "VarUnit.h"
@@ -351,6 +352,111 @@ QList<TVar*> LuaInterface::varOrder(TVar* var)
         pParent = pParent->getParent();
     }
     return vars;
+}
+
+// A name two members of the same table are both shown under says nothing about
+// which of them is meant, and whichever one a write reaches may well be the
+// other. Two keys can share a name: "%.14g" gives 1/3 and 0.33333333333333 the
+// same text, and a key ending at an embedded NUL is named by the part before it.
+static bool nameSharedWithASibling(TVar* var)
+{
+    TVar* parent = var->getParent();
+    if (!parent) {
+        return false;
+    }
+    // a number key and a string key that read the same are still distinct
+    // lookups, so the key type is part of the name here
+    const QString name = var->getName();
+    const int keyType = var->getKeyType();
+    int matches = 0;
+    for (const TVar* sibling : parent->getChildren(false)) {
+        if (sibling->getName() == name && sibling->getKeyType() == keyType && ++matches > 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The write paths build Lua source out of these names - see setValue() - where a
+// string key goes inside a quoted literal and a root goes in bare. So a key
+// holding a backslash comes back out as an escape sequence, and a root that is
+// not an identifier either fails to parse or, with a dot in it, parses as an
+// index into some other global.
+static bool nameSurvivesGeneratedCode(TVar* var, const bool asRoot)
+{
+    const QString name = var->getName();
+    if (asRoot) {
+        static const QRegularExpression identifier(qsl("^[A-Za-z_][A-Za-z0-9_]*$"));
+        static const QSet<QString> luaKeywords{qsl("and"),   qsl("break"), qsl("do"),  qsl("else"), qsl("elseif"), qsl("end"),    qsl("false"), qsl("for"),  qsl("function"), qsl("if"),   qsl("in"),
+                                               qsl("local"), qsl("nil"),   qsl("not"), qsl("or"),   qsl("repeat"), qsl("return"), qsl("then"),  qsl("true"), qsl("until"),    qsl("while")};
+        // a keyword reads as an identifier but parses as itself
+        return var->getKeyType() == LUA_TSTRING && identifier.match(name).hasMatch() && !luaKeywords.contains(name);
+    }
+    if (var->getKeyType() != LUA_TSTRING) {
+        return true;
+    }
+    return !name.contains(QLatin1Char('\\')) && !name.contains(QLatin1Char('"')) && !name.contains(QLatin1Char('\n')) && !name.contains(QLatin1Char('\r'));
+}
+
+// Whether a variable can be written back through the name the variable tree gave
+// it, which is what every write path has to reach it by. Three things have to
+// hold, and for the tables above the variable as much as for the variable:
+//  - the name finds that same variable again. Lua names a number key with
+//    "%.14g", which a key of 1/3 does not survive, and names a string key
+//    through a C string, which ends at an embedded NUL - so the name is a key of
+//    its own, and writing through it leaves a second variable beside the real
+//    one (#9903). A variable a script has deleted since the tree was built is
+//    not found either.
+//  - no other member of the same table is shown under that name too.
+//  - the name is one the generated Lua source can carry back, which is a
+//    narrower thing than the C API can look up.
+// What the variable holds is not part of the question: a script is free to have
+// changed that since the tree was built, and the name still finds it.
+bool LuaInterface::writableByName(TVar* var)
+{
+    const QList<TVar*> vars = varOrder(var);
+    if (vars.isEmpty()) {
+        // _G, which nothing writes through a name
+        return false;
+    }
+    for (int i = 0; i < vars.size(); ++i) {
+        if (nameSharedWithASibling(vars.at(i)) || !nameSurvivesGeneratedCode(vars.at(i), i == 0)) {
+            return false;
+        }
+    }
+
+    const int stackTop = lua_gettop(mL);
+    if (setjmp(buf) == 0) {
+        // the table of the level being looked at, plus the key pushed into it,
+        // for as many levels as there are names
+        if (!lua_checkstack(mL, static_cast<int>(vars.size()) + 2)) {
+            qWarning().noquote().nospace() << "LuaInterface::writableByName() WARNING - could not grow the Lua stack to reach \"" << var->getName() << "\", so it is being treated as unwritable.";
+            return false;
+        }
+        lua_pushvalue(mL, LUA_GLOBALSINDEX);
+        for (TVar* level : vars) {
+            const int topWithTable = lua_gettop(mL);
+            // Raw, because the tree was built by iterating the tables, which is
+            // raw as well: a value an __index metamethod stands in with is not
+            // the variable the tree is showing. loadKey() also pushes nothing
+            // for a key type it does not handle, and says so only by leaving the
+            // top where it was.
+            if (!lua_istable(mL, -1) || !loadKey(mL, level) || lua_gettop(mL) != topWithTable + 1) {
+                lua_settop(mL, stackTop);
+                return false;
+            }
+            lua_rawget(mL, -2);
+            if (lua_isnoneornil(mL, -1)) {
+                lua_settop(mL, stackTop);
+                return false;
+            }
+        }
+        lua_settop(mL, stackTop);
+        return true;
+    }
+    lua_settop(mL, stackTop);
+    qWarning().noquote().nospace() << "LuaInterface::writableByName() WARNING - Lua panicked while looking \"" << var->getName() << "\" up, so it is being treated as unwritable.";
+    return false;
 }
 
 void LuaInterface::createVar(TVar* var)
@@ -707,15 +813,21 @@ void LuaInterface::renameVar(TVar* var)
     var->clearNewName();
 }
 
-// returns the value for a string/number/boolean datatype, or an empty string otherwise
+// Returns the value for a string/number/boolean datatype, and an empty string for
+// everything else - including for a variable it cannot read, which it has no way
+// to report. Nothing that commits the answer where an empty string cannot be told
+// apart from a variable that really is empty may use it (#9769); the save reads
+// its values off the tree the walk built, see exportedValue() in XMLexport.cpp.
 QString LuaInterface::getValue(TVar* var)
 {
+    // this walks down to the variable a push at a time, so every way out owes
+    // the caller's Lua stack back
+    const int stackTop = lua_gettop(mL);
     if (setjmp(buf) == 0) {
         QList<TVar*> const vars = varOrder(var);
         if (vars.empty()) {
             return {};
         }
-        const int pCount = vars.size(); //how many things we need to pop from the stack at the end
         //load from _G first
         auto firstVariable = vars.constFirst();
         if (firstVariable->getKeyType() == LUA_TSTRING) {
@@ -730,10 +842,12 @@ QString LuaInterface::getValue(TVar* var)
         if (lua_isnoneornil(mL, lua_gettop(mL))) {
             qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() << "onto the Lua stack in order to get value of" << var->getName()
                      << ", perhaps the key type isn't supported?";
+            lua_settop(mL, stackTop);
             return {};
         }
         for (int i = 1; i < vars.size(); i++) {
             if (!loadValue(mL, vars.at(i), -2)) {
+                lua_settop(mL, stackTop);
                 return {};
             }
         }
@@ -744,9 +858,10 @@ QString LuaInterface::getValue(TVar* var)
         } else if (valueType == LUA_TNUMBER || valueType == LUA_TSTRING) {
             value = lua_tostring(mL, -1);
         }
-        lua_pop(mL, pCount);
+        lua_settop(mL, stackTop);
         return value;
     }
+    lua_settop(mL, stackTop);
     return {};
 }
 
@@ -816,9 +931,11 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->setParent(tVar);
         var->hidden = hide;
         tVar->addChild(var);
-        const void* pKey = lua_topointer(L, -1);
+        // whatever branch named the key above left the stack as lua_next did,
+        // with the key at -2 and the value at -1
+        const void* pKey = lua_topointer(L, -2);
         var->pKey = pKey;
-        const void* pValue = lua_topointer(L, -2);
+        const void* pValue = lua_topointer(L, -1);
         var->pValue = pValue;
         // A table two names reach is walked only under the first, which suits
         // Mudlet's own API - but a saved variable reached second would be left
@@ -892,6 +1009,11 @@ void LuaInterface::getVars(bool hide)
     }
     lua_pushnil(mL);
     TVar* global = resetVariableTree();
+    if (hide) {
+        // this walk is about to hide everything it finds, so it is also where
+        // the identities of what was hidden last time stop being worth keeping
+        varUnit->clearHiddenTables();
+    }
     iterateTable(mL, LUA_GLOBALSINDEX, global, hide);
     // FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }
@@ -904,24 +1026,9 @@ void LuaInterface::getVars(bool hide)
 // each saved global in its own dedup scope is what avoids that.
 void LuaInterface::getSavedVars()
 {
-    const int stackTop = lua_gettop(mL);
-    if (setjmp(buf) != 0) {
-        lua_settop(mL, stackTop);
-        // getVars() does not clear this itself, so a later walk on this same
-        // interface would inherit the filter
-        mSavedVarsOnly = false;
-        // the global the walk died inside was not read to the end, so nothing
-        // says it is one the save can carry whole
-        if (!mCurrentSavedRootName.isEmpty()) {
-            mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
-        }
-        qWarning() << "LuaInterface::getSavedVars() WARNING - Lua panicked while reading the saved variables in; the variable tree is incomplete.";
-        return;
-    }
     mSavedRootNames.clear();
-    mTruncatedSavedTables.clear();
-    mSavedRootsHoldingUnsaveableValues.clear();
-    mCurrentSavedRootName.clear();
+    mUnreadableSavedRoots.clear();
+    mPanickedSavedRootName.clear();
     for (const QString& savedVarName : std::as_const(varUnit->savedVars)) {
         // savedVars holds dotted paths, but a global's own name may contain a
         // dot as well, so both readings count as a name to walk
@@ -929,15 +1036,91 @@ void LuaInterface::getSavedVars()
         mSavedRootNames.insert(savedVarName.section(QChar('.'), 0, 0));
     }
 
-    TVar* global = resetVariableTree();
     if (mSavedRootNames.isEmpty()) {
+        resetVariableTree();
         return;
     }
 
     mSavedVarsOnly = true;
-    lua_pushnil(mL);
-    iterateTable(mL, LUA_GLOBALSINDEX, global, false);
+    bool gaveUp = false;
+    // A panic cannot be resumed from where it happened, so the global the walk
+    // died inside is dropped and the rest are read again from the top: an
+    // unreadable global then costs the save that one variable instead of every
+    // variable the walk had still to reach (#9769). Each pass drops one global,
+    // so this is bounded by how many the profile saves.
+    while (!readSavedVars()) {
+        const QString unreadableRoot = mPanickedSavedRootName;
+        mPanickedSavedRootName.clear();
+        // Without a global to point at, the next attempt would only die in the
+        // same place, so the walk stops and reports what it is short of instead.
+        if (unreadableRoot.isEmpty() || !mSavedRootNames.remove(unreadableRoot)) {
+            gaveUp = true;
+            break;
+        }
+        mUnreadableSavedRoots.append(unreadableRoot);
+    }
+    // getVars() does not clear this itself, so a later walk on this same
+    // interface would inherit the filter
     mSavedVarsOnly = false;
+
+    if (gaveUp) {
+        addSavedRootsMissingFromTheTree();
+    }
+    mUnreadableSavedRoots.sort();
+}
+
+// What a walk that stopped without naming its culprit is short of: every saved
+// global with no node in the tree. One the user has since deleted reads as
+// missing too, and it is just as true of that one that this save has not got it.
+void LuaInterface::addSavedRootsMissingFromTheTree()
+{
+    QSet<QString> readRoots;
+    TVar* base = varUnit->getBase();
+    const QList<TVar*> roots = base ? base->getChildren(false) : QList<TVar*>();
+    for (const TVar* root : roots) {
+        readRoots.insert(root->getName());
+    }
+
+    for (const QString& savedVarName : std::as_const(varUnit->savedVars)) {
+        const QString rootName = savedVarName.section(QChar('.'), 0, 0);
+        if (!readRoots.contains(rootName) && !mUnreadableSavedRoots.contains(rootName)) {
+            mUnreadableSavedRoots.append(rootName);
+        }
+    }
+}
+
+// One attempt at the walk. False means a Lua panic cut it short, leaving the
+// tree holding however much of it had been read - and each attempt starts from
+// an empty tree and empty findings, so nothing a failed one saw carries over.
+bool LuaInterface::readSavedVars()
+{
+    const int stackTop = lua_gettop(mL);
+    if (setjmp(buf) != 0) {
+        lua_settop(mL, stackTop);
+        // Past depth 1 the walk is inside the global it entered last, so that
+        // global is the one that died; at depth 1 it could equally have been
+        // naming a key of a global it has no interest in, and blaming the last
+        // one entered would drop a variable that reads perfectly well.
+        if (depth > 1) {
+            mPanickedSavedRootName = mCurrentSavedRootName;
+            // should the caller give up rather than go round again, this global
+            // stays in the tree holding however much of it was read, which must
+            // not be written out as if it were all of it
+            mSavedRootsHoldingUnsaveableValues.insert(mCurrentSavedRootName);
+        }
+        qWarning().noquote().nospace() << "LuaInterface::readSavedVars() WARNING - Lua panicked "
+                                       << (depth > 1 ? qsl("while reading the saved variable \"%1\"").arg(mCurrentSavedRootName) : qsl("before or between the saved variables"))
+                                       << "; the variable tree is incomplete.";
+        return false;
+    }
+
+    mTruncatedSavedTables.clear();
+    mSavedRootsHoldingUnsaveableValues.clear();
+    mCurrentSavedRootName.clear();
+    resetVariableTree();
+    lua_pushnil(mL);
+    iterateTable(mL, LUA_GLOBALSINDEX, varUnit->getBase(), false);
+    return true;
 }
 
 // Throws away whatever tree there was, along with the Lua registry references it
