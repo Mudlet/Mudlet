@@ -350,6 +350,8 @@ private:
     void abortLosingSocket(QSslSocket* losingSocket);
 #endif
 
+    void abandonHostLookup();
+
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
@@ -467,6 +469,10 @@ private:
     // Connects that failed in a row, which is how long the wait before the next automatic retry
     // is. Reset by a connection being made and by the user connecting or disconnecting.
     int mFailedConnectionCount = 0;
+    // The lookup connectIt() is waiting on, or -1. mHostUrl and mHostPort move
+    // on with every connectIt(), so a callback from a lookup a later call
+    // superseded would pair its own host name with the newer port.
+    int mHostLookupId = -1;
     int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 
