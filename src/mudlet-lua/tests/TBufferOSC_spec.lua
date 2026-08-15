@@ -128,7 +128,10 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("APCBEL1()APCBEL1", findRecentLine("APCBEL1"))
     end)
 
-    it("should swallow an APC sequence split across two packets", function()
+    -- As with the private-CSI case below, two feedTriggers() calls cannot express
+    -- a packet split; what carries between local feeds is the mGotString latch,
+    -- not the pending bytes.
+    it("should swallow an APC sequence whose bytes arrive across two local feeds", function()
       assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
       assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
       assert.equals("APCSPLIT1()APCSPLIT1", findRecentLine("APCSPLIT1"))
