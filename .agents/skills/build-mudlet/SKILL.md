@@ -83,6 +83,21 @@ Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 Mudlet is a graphical desktop application; launching it opens a window. Variant presets put the
 binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build.
 
+## Claude Code on the web (remote sessions)
+
+The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
+apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
+than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug-nosan`
+preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
+commands work unchanged. On a warm container the hook is a fast no-op and a full build is
+mostly ccache hits (~2-4 minutes); if the container cache is cold the hook itself takes
+~25 minutes, once. Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen` and run tests
+with `QT_QPA_PLATFORM=offscreen ctest --preset linux-debug-nosan`.
+
+The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
+Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
+modernised — do not reach for it in remote sessions.
+
 ## Pitfalls
 
 **Never pass `--parallel` without a job count on a Makefiles build.** `cmake --build . --parallel`
