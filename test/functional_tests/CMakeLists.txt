@@ -59,6 +59,7 @@ set(FUNCTIONAL_TEST_SOURCES
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
+    TelnetConnectLookupRaceTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfRemovalTest.cpp
@@ -194,6 +195,10 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
+
+# TelnetConnectLookupRaceTest creates a fresh profile per test method and waits out a connect to
+# an address nothing answers on, so it needs a longer timeout
+set_tests_properties(TelnetConnectLookupRaceTest PROPERTIES TIMEOUT 300)
 
 # GlyphOverflowTest creates a fresh profile per test method and sweeps two font
 # families across 22 sizes, so it needs a longer timeout
