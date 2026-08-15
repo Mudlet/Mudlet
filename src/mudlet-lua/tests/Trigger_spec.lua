@@ -311,6 +311,39 @@ describe("Trigger processing", function()
             assert.are.equal(outerLine, seen)
         end)
 
+        -- printOnDisplay() is where a nested feed lands, so clearing its trigger
+        -- flag outright leaves the rest of the outer pass outside trigger context.
+        -- What that flag gates is not whether inserted text lands inline - the
+        -- ordinary path inserts inline too whenever the cursor is not at the end
+        -- of the buffer - but whether the capture positions are shifted to follow
+        -- it. Without that, a capture selected after an insert is off by the
+        -- length inserted.
+        it("should keep captures selectable after an insert across a nested feedTriggers", function()
+            _G.reentrancyCapture = nil
+            -- unanchored: this line carries the marker text after the outer line
+            local feeder = tempRegexTrigger("^" .. outerLine, function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- selectCaptureGroup(1) selects the whole match, so that is what the
+            -- insert has to leave correctly positioned
+            local inserter = tempRegexTrigger("Marker (\\w+)$", function()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+                selectCaptureGroup(1)
+                _G.reentrancyCapture = getSelection()
+            end)
+
+            feedTriggers("\n" .. outerLine .. " Marker payload\n")
+
+            local selected = _G.reentrancyCapture
+            killTrigger(feeder)
+            killTrigger(inserter)
+            _G.reentrancyCapture = nil
+
+            assert.are.equal("Marker payload", selected,
+                "the match should still be selectable after text was inserted before it")
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()
