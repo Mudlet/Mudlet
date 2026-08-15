@@ -113,12 +113,22 @@ successes):
   rockspecs point at tarballs fails; the hook falls back to `git clone` + `luarocks make`
   (git-protocol GitHub access is allowed). `LuaSQL-SQLite3` must stay pinned at 2.6.1 — 2.8.0
   breaks `DB.lua`'s `PRAGMA table_info` handling and errors 8 DB specs.
-- **GUI automation without Mudlet changes**: the busted run's Xvfb is a real X server, so
-  `xdotool` (installed by the hook) can drive Mudlet from outside — a spec launches it in the
-  background with `os.execute("(xdotool mousemove --window $(xdotool search --class mudlet | head -1) X Y; xdotool click 1) &")`
-  and pumps `pumpEvents()` until the effect lands; `xdotool key`/`type` reach the focused
-  widget. Validated: a real XTEST click fires a `Geyser.Label` click callback. Linux/X11 only —
-  a repo spec using this needs a gate, since CI's macOS busted legs have no xdotool or X11.
+- **Seeing and driving the real UI**: to verify a feature or fix visually, run Mudlet on a
+  virtual display and work it like a user — the hook installs the whole toolchain from
+  `docs/demo-videos.md` (xvfb, openbox, xdotool, imagemagick, ffmpeg):
+
+  ```bash
+  export DISPLAY=:78
+  Xvfb :78 -screen 0 1280x800x24 & sleep 2; openbox & sleep 1
+  HOME=$(mktemp -d) ./build-linux-debug-nosan/src/mudlet & sleep 8
+  xdotool mousemove <x> <y> click 1        # or: xdotool key Return, xdotool type "text"
+  import -window root /tmp/shot.png        # screenshot; read it to verify, then iterate
+  ```
+
+  A throwaway `HOME` keeps the real profile tree untouched. Screenshot after every
+  interaction — coordinates come from looking at the previous shot, not from guessing. The
+  same display serves `docs/demo-videos.md`'s before/after recording workflow via ffmpeg.
+  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only.
 
 The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
 Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is

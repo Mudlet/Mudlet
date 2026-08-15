@@ -71,9 +71,11 @@ if [ ! -d "${QT_DIR}" ]; then
     linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
 fi
 
-# Test-suite dependencies: xvfb and xcb libraries for the busted run (the aqt
-# Qt's xcb platform needs libxcb-cursor0 and libxcb-shape0, which Ubuntu's own
-# Qt would have pulled in), gstreamer for Qt Multimedia.
+# Test-suite and UI-driving dependencies: xvfb and xcb libraries for the
+# busted run (the aqt Qt's xcb platform needs libxcb-cursor0 and
+# libxcb-shape0, which Ubuntu's own Qt would have pulled in), gstreamer for
+# Qt Multimedia, and the docs/demo-videos.md toolchain (openbox, xdotool,
+# imagemagick, ffmpeg) for driving and recording the real UI headlessly.
 if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
   echo "Installing test-suite apt dependencies..."
   DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends \
@@ -86,7 +88,10 @@ if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
     libxcb-render-util0 \
     libxcb-shape0 \
     libxcb-xinerama0 \
-    xdotool
+    xdotool \
+    openbox \
+    imagemagick \
+    ffmpeg
 fi
 
 # Lua rocks that LuaGlobal.lua and the test harnesses load, mirroring the CI
@@ -134,6 +139,16 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
     echo "export LUA_PATH='${LUA_PATH}'"
     echo "export LUA_CPATH='${LUA_CPATH}'"
   } >> "${CLAUDE_ENV_FILE}"
+fi
+
+# PR-review tooling for the agent. Installed at user scope, so it lands in
+# the cached container state like everything else. Non-fatal: a marketplace
+# outage must not block the session.
+if command -v claude >/dev/null 2>&1; then
+  if ! claude plugin list 2>/dev/null | grep -q 'pr-review-toolkit'; then
+    claude plugin marketplace add anthropics/claude-plugins-official || true
+    claude plugin install pr-review-toolkit@claude-plugins-official || true
+  fi
 fi
 
 # The repo is cloned fresh each session, so submodules are always missing even
