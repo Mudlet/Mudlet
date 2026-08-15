@@ -35,6 +35,7 @@
 
 #include <cassert>
 #include <sstream>
+#include <vector>
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger

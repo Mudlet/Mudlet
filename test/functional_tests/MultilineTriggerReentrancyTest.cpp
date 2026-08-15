@@ -43,9 +43,11 @@ void initializeQRCResources();
 // state. Against the unfixed code the first case here does not merely fail, it
 // takes the process down with SIGSEGV.
 //
-// tempComplexRegexTrigger() is the only Lua route to this: called twice under
-// one name it accumulates patterns into a single trigger, and it is the only
-// function that also sets the multiline flag and the condition line delta.
+// tempComplexRegexTrigger() is the only Lua function that can set the condition
+// line delta, which conditions arriving on separate lines need. The perm*Trigger
+// variants do make a multiline trigger - they pass (patterns.size() > 1) as the
+// flag - but leave the delta at 0, so their conditions must all match one line.
+// Called twice under one name it also accumulates patterns into a single trigger.
 class MultilineTriggerReentrancyTest : public QObject
 {
     Q_OBJECT
@@ -53,7 +55,7 @@ class MultilineTriggerReentrancyTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-MultilineTriggerReentrancy";
-    const QString mpPort = "4003";
+    QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
 private slots:
@@ -62,7 +64,8 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mpPort.toUShort());
+        mpServer->start(mpLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
@@ -155,7 +158,8 @@ private slots:
 
     // A state whose window closes without completing must still be dropped, so
     // the same lines arriving later start a fresh state rather than completing
-    // the stale one.
+    // the stale one. Both sides are asserted: a count of zero alone would also be
+    // what a silently broken setup produces.
     void test_expiredStateIsStillDiscarded()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -163,19 +167,23 @@ private slots:
         QVERIFY(host);
         host->mEchoLuaErrors = true;
 
-        // A delta of 0 keeps the state alive only for the line that created it,
-        // so the second condition arriving later must not complete it:
+        // A delta of 1 lets the state survive exactly one further line, so the
+        // consecutive pair completes it and the padded pair must not:
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("expiredFires = 0\n"
                                                                "local code = [=[expiredFires = expiredFires + 1]=]\n"
-                                                               "tempComplexRegexTrigger('MLE', [[^first$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"
-                                                               "tempComplexRegexTrigger('MLE', [[^second$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"
+                                                               "tempComplexRegexTrigger('MLE', [[^first$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
+                                                               "tempComplexRegexTrigger('MLE', [[^second$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
+                                                               "feedTriggers('first\\n')\n"
+                                                               "feedTriggers('second\\n')\n"
+                                                               "echo('CONSECUTIVE=' .. expiredFires .. '#\\n')\n"
                                                                "feedTriggers('first\\n')\n"
                                                                "feedTriggers('padding\\n')\n"
                                                                "feedTriggers('second\\n')\n"
-                                                               "echo('EXPIRED=' .. expiredFires .. '#\\n')\n"));
+                                                               "echo('PADDED=' .. expiredFires .. '#\\n')\n"));
 
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        QVERIFY2(bufferContains(qsl("EXPIRED=0#")), "a match state outlived its line delta, so a much later line completed it");
+        QVERIFY2(bufferContains(qsl("CONSECUTIVE=1#")), "a multiline state within its line delta did not complete, so the case proves nothing about expiry");
+        QVERIFY2(bufferContains(qsl("PADDED=1#")), "a match state outlived its line delta, so a padded second condition completed it");
     }
 
     void cleanup()
