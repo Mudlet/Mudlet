@@ -838,6 +838,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     undo_server_wrap_width_spinBox->setValue(pHost->mUndoServerWrapWidth);
     undo_server_wrap_width_spinBox->setEnabled(pHost->mUndoServerWrap);
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, undo_server_wrap_width_spinBox, &QWidget::setEnabled);
+    // The note is only worth its space to someone actually running the option:
+    label_undo_server_wrap_experimental->setVisible(pHost->mUndoServerWrap);
+    connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());

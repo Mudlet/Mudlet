@@ -1399,6 +1399,9 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item>
            <widget class="QLabel" name="label_undo_server_wrap_experimental">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>&lt;i&gt;Experimental: the odd line can still be joined or left split when it should not be. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Tell us how it works for you&lt;/a&gt; - your feedback is what will make this better.&lt;/i&gt;</string>
             </property>
