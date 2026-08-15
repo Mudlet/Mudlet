@@ -213,10 +213,18 @@ bool KeyUnit::enableKey(const QString& name)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TKey* pT = it.value();
-        // Unlike the TTriggerUnit version of this code we directly set
-        // the mActive flag (and it shows up in the editor) rather than the
-        // mUserActiveState one (which does not)
-        // So do not use pT->setIsActive(true) here:
+        // A key queued for deletion stays in the lookup table until doCleanup()
+        // frees it - re-activating one resurrects a killKey()ed key, or one
+        // whose package a script uninstalled mid-pass, and it matches the next
+        // key press.
+        if (mCleanupSet.contains(pT) || uninstallList.contains(pT)) {
+            continue;
+        }
+        // enableKey() sets pT active and then walks pT's children for the same
+        // name without re-checking the skip above. That is only safe while no
+        // child key is ever queued for deletion under a live parent: killKey()
+        // and removeAllTempKeys() take root nodes only, and _uninstall() queues
+        // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
     }
@@ -231,10 +239,7 @@ bool KeyUnit::disableKey(const QString& name)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TKey* pT = it.value();
-        // Unlike the TTriggerUnit version of this code we directly clear
-        // the mActive flag (and it shows up in the editor) rather than the
-        // mUserActiveState one (which does not)
-        // So do not use pT->setIsActive(false) here:
+        // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
     }
