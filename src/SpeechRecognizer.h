@@ -73,6 +73,13 @@ public:
     // No finalResult() will be emitted.
     virtual void cancel() = 0;
 
+    // Abandon the phrase currently being decoded and begin a new one, while
+    // staying in Listening. Used when the text recognised so far has been
+    // committed elsewhere - without it the backend keeps reporting that phrase,
+    // and those results arrive as if they were newly spoken.
+    // No finalResult() is emitted for the abandoned phrase.
+    virtual void resetUtterance() {}
+
     // === State Queries ===
 
     // Get current state of the recognizer

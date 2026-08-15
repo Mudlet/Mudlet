@@ -270,10 +270,12 @@ bool TCommandLine::event(QEvent* event)
             return true;
         }
 
-        // Ctrl+Shift+M for speech-to-text toggle. Gated on the menu action's
-        // enabled state: that action carries the same shortcut and is disabled
-        // whenever speech-to-text is unavailable, so toggling unconditionally
-        // here would drive the feature from a shortcut the UI reports as off.
+        // Ctrl+Shift+M for speech-to-text toggle. dactionSpeechToText carries the
+        // same shortcut, and Qt resolves an enabled action's shortcut before the
+        // key press reaches a widget, so this only runs when that action is
+        // disabled - which disableToolbarButtons() does whenever no profile is
+        // loaded. Toggling then would drive the feature from a shortcut the rest
+        // of the UI is presenting as unavailable.
         auto* pSpeechAction = mudlet::self()->dactionSpeechToText;
         if (pSpeechAction && pSpeechAction->isEnabled() && ke->key() == Qt::Key_M && (ke->modifiers() & Qt::ControlModifier) && (ke->modifiers() & Qt::ShiftModifier)) {
             mudlet::self()->slot_toggleSpeechRecognition();

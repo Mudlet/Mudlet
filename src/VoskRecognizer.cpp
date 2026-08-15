@@ -67,6 +67,30 @@ Q_GLOBAL_STATIC_WITH_ARGS(QStringList,
 // Regex to strip leading hallucination words from multi-word results
 Q_GLOBAL_STATIC_WITH_ARGS(QRegularExpression, kLeadingHallucinationRx, (qsl("^(the|a|an|to)\\s+"), QRegularExpression::CaseInsensitiveOption))
 
+// A leading filler word this long was not spoken: the decoder assigns the silence
+// preceding an utterance to its first word, so a phantom "the" carries the whole
+// pause with it. Measured durations were 2.2-4.3s for phantoms against 0.12-0.48s
+// for every genuinely spoken word, so the boundary sits in an empty gap.
+static constexpr double MIN_PHANTOM_LEADING_WORD_SECONDS = 1.0;
+
+// Whether the leading word of a result spans enough silence to be a decoder
+// artifact rather than speech. Without word timings there is nothing to judge by,
+// and the historical behaviour - strip it - is kept.
+static bool leadingWordIsPhantom(const QJsonArray& words)
+{
+    if (words.isEmpty()) {
+        return true;
+    }
+
+    const QJsonObject first = words.first().toObject();
+    if (!first.contains(QLatin1String("start")) || !first.contains(QLatin1String("end"))) {
+        return true;
+    }
+
+    const double duration = first.value(QLatin1String("end")).toDouble() - first.value(QLatin1String("start")).toDouble();
+    return duration >= MIN_PHANTOM_LEADING_WORD_SECONDS;
+}
+
 VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 {
@@ -79,21 +103,29 @@ VoskRecognizer::VoskRecognizer(QObject* parent)
     connect(&mProcessTimer, &QTimer::timeout, this, &VoskRecognizer::processAudioData);
 }
 
-// Human-readable description of a QAudio::Error, for messages a player sees
+// Human-readable description of a QAudio::Error, for messages a player sees.
+// Each of these is substituted into "Audio input error occurred: %1", so they
+// read as the tail of that sentence rather than as standalone messages.
 static QString audioErrorText(const QAudio::Error error)
 {
     switch (error) {
     case QAudio::NoError:
+        //: Completes "Audio input error occurred: %1" - no fault was reported
         return QCoreApplication::translate("VoskRecognizer", "no error");
     case QAudio::OpenError:
+        //: Completes "Audio input error occurred: %1" - the microphone could not be opened
         return QCoreApplication::translate("VoskRecognizer", "the microphone could not be opened");
     case QAudio::IOError:
+        //: Completes "Audio input error occurred: %1" - reading from the microphone failed
         return QCoreApplication::translate("VoskRecognizer", "reading from the microphone failed");
     case QAudio::UnderrunError:
+        //: Completes "Audio input error occurred: %1" - the microphone went silent mid-capture
         return QCoreApplication::translate("VoskRecognizer", "the microphone stopped supplying audio");
     case QAudio::FatalError:
+        //: Completes "Audio input error occurred: %1" - the microphone can no longer be used
         return QCoreApplication::translate("VoskRecognizer", "the microphone became unusable");
     }
+    //: Completes "Audio input error occurred: %1" - the fault could not be identified
     return QCoreApplication::translate("VoskRecognizer", "unknown error");
 }
 
@@ -300,7 +332,9 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         qDebug() << "VoskRecognizer: Applied endpointer mode" << static_cast<int>(mEndpointerMode);
 #endif
     }
-    if (s_vosk_recognizer_set_words && mWordsEnabled) {
+    // Not conditional on mWordsEnabled: the word timings are needed to tell a
+    // phantom leading word from a spoken one, whatever the display preference is
+    if (s_vosk_recognizer_set_words) {
         s_vosk_recognizer_set_words(mVoskRecognizer, 1);
 #ifdef DEBUG_STT
         qDebug() << "VoskRecognizer: Enabled word-level results";
@@ -340,8 +374,8 @@ bool VoskRecognizer::setupAudioInput()
 
     // ...but only Float and Int16 samples can be converted; anything else would
     // capture happily and then be discarded frame by frame, leaving the
-    // recognizer Listening and permanently deaf. Keep the device's rate and
-    // channel count and ask for Int16 instead.
+    // recognizer Listening and permanently deaf. Ask for Int16 at the device's
+    // own rate and channel count, and failing that at Vosk's 16kHz mono.
     if (formatToUse.sampleFormat() != QAudioFormat::Float && formatToUse.sampleFormat() != QAudioFormat::Int16) {
         QAudioFormat fallbackFormat = formatToUse;
         fallbackFormat.setSampleFormat(QAudioFormat::Int16);
@@ -349,6 +383,7 @@ bool VoskRecognizer::setupAudioInput()
             fallbackFormat = mAudioFormat; // Vosk's own 16kHz mono Int16
         }
         if (!inputDevice.isFormatSupported(fallbackFormat)) {
+            //: Shown when the microphone offers no audio format speech recognition can convert
             emit errorOccurred(tr("The microphone does not offer an audio format speech recognition can use"));
             return false;
         }
@@ -357,6 +392,15 @@ bool VoskRecognizer::setupAudioInput()
 
     // Store the format we're actually using for later conversion
     mActualAudioFormat = formatToUse;
+
+    // A source left behind by an attempt that failed after allocating one would
+    // otherwise linger, holding the capture device and still connected to
+    // handleAudioStateChanged(), which reads the member rather than sender()
+    if (mAudioSource) {
+        mAudioSource->stop();
+        delete mAudioSource;
+        mAudioSource = nullptr;
+    }
 
     // Create the audio source with the device's preferred format
     mAudioSource = new QAudioSource(inputDevice, formatToUse, this);
@@ -373,10 +417,13 @@ void VoskRecognizer::startListening()
         // Every refusal but "already listening" reports why: startListening()
         // returns void, so silence here reads to the caller as a successful start
         if (mState == State::Uninitialized) {
+            //: Shown when speech recognition is asked to listen before a language model is loaded
             emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
         } else if (mState == State::Error) {
+            //: Shown when speech recognition is asked to listen while it is in an error state
             emit errorOccurred(tr("Speech recognition is in an error state - reload the model before listening again."));
         } else if (mState == State::Processing) {
+            //: Shown when speech recognition is asked to listen while still transcribing the previous phrase
             emit errorOccurred(tr("Speech recognition is still processing the previous phrase."));
         }
         return;
@@ -424,9 +471,10 @@ void VoskRecognizer::startListening()
 
 void VoskRecognizer::startListeningInternal()
 {
-    // The recognizer is rebuilt before any audio device is opened: every failure
-    // below returns early, and doing this first means none of them can leave a
-    // QAudioSource allocated for a session that never starts.
+    // The recognizer is rebuilt before any audio device is opened, so the two
+    // failures below cannot leave a QAudioSource allocated for a session that
+    // never starts. setupAudioInput() and the start() check after it can still
+    // fail with one allocated, which is why both clean up after themselves.
     //
     // Recreate the recognizer for a new session to ensure clean state
     // Note: vosk_recognizer_reset() can leave the decoder in an inconsistent state
@@ -461,7 +509,10 @@ void VoskRecognizer::startListeningInternal()
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
     }
 
-    if (s_vosk_recognizer_set_words && mWordsEnabled) {
+    // Always on, whatever the user's confidence-highlighting preference: the word
+    // timings are what tell a phantom leading word from a spoken one. The
+    // preference governs whether that detail is shown, not whether it is asked for.
+    if (s_vosk_recognizer_set_words) {
         s_vosk_recognizer_set_words(mVoskRecognizer, 1);
     }
 
@@ -480,6 +531,12 @@ void VoskRecognizer::startListeningInternal()
 
     if (!mAudioDevice) {
         qWarning() << "VoskRecognizer: Failed to start audio source - start() returned null";
+        // Released here rather than left for the next attempt to trip over: it
+        // may still hold the capture device open
+        mAudioSource->stop();
+        mAudioSource->deleteLater();
+        mAudioSource = nullptr;
+        //: Shown when the microphone could not be opened for speech recognition
         emit errorOccurred(tr("Failed to start audio capture"));
         setState(State::Error);
         return;
@@ -541,9 +598,13 @@ void VoskRecognizer::stopListening()
                     qDebug() << "VoskRecognizer: Filtered hallucination on stop:" << text;
 #endif
                 } else {
-                    // Strip leading hallucination words from multi-word results
-                    text.replace(*kLeadingHallucinationRx, QString());
-                    text = text.trimmed();
+                    // Strip a leading hallucination word only when its timing says it
+                    // was never spoken - otherwise a phrase genuinely beginning "a",
+                    // "an" or "to" loses its first word
+                    if (leadingWordIsPhantom(obj.value(QLatin1String("result")).toArray())) {
+                        text.replace(*kLeadingHallucinationRx, QString());
+                        text = text.trimmed();
+                    }
 
                     if (!text.isEmpty()) {
                         emit finalResult(text);
@@ -556,6 +617,26 @@ void VoskRecognizer::stopListening()
     mAudioBuffer.clear();
     mResamplePhase = 0.0;
     setState(State::Ready);
+}
+
+void VoskRecognizer::resetUtterance()
+{
+    // Only while listening: vosk_recognizer_reset() after a final result has been
+    // taken can leave the decoder inconsistent, which is why startListeningInternal()
+    // rebuilds the recognizer rather than resetting it. Mid-phrase, as here and in
+    // cancel(), there is no final result outstanding and the reset is safe.
+    if (mState != State::Listening) {
+        return;
+    }
+
+    if (s_vosk_recognizer_reset && mVoskRecognizer) {
+        s_vosk_recognizer_reset(mVoskRecognizer);
+    }
+
+    // The phrase this was tracking is gone, so nothing should be compared against
+    // it, and the next words are a fresh onset rather than a continuation
+    mLastPartialResult.clear();
+    mSpeechOnsetFrames = 0;
 }
 
 void VoskRecognizer::cancel()
@@ -621,12 +702,22 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
     const int dstRate = VOSK_SAMPLE_RATE; // 16000
     const QAudioFormat::SampleFormat srcFormat = mActualAudioFormat.sampleFormat();
 
+    // setupAudioInput() settles on a format this can convert, so reaching either
+    // of these means the device gave QAudioSource something else. Report once and
+    // stop, rather than warning 20 times a second while appearing to listen.
     if (srcFormat != QAudioFormat::Float && srcFormat != QAudioFormat::Int16) {
         qWarning() << "VoskRecognizer: Unsupported audio format:" << srcFormat;
+        //: %1 is a technical audio sample format name, e.g. "Int32"
+        emit errorOccurred(tr("The microphone is supplying audio in a format speech recognition cannot read (%1).").arg(QString::number(static_cast<int>(srcFormat))));
+        setState(State::Error);
         return;
     }
 
     if (srcRate <= 0 || srcChannels <= 0) {
+        qWarning() << "VoskRecognizer: capture format has no usable sample rate or channel count:" << mActualAudioFormat;
+        //: Shown when the microphone reports an audio format speech recognition cannot work with
+        emit errorOccurred(tr("The microphone reported an unusable audio format - try selecting a different input device."));
+        setState(State::Error);
         return;
     }
 
@@ -662,17 +753,23 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
     while (phase + 1.0 < availableFrames) {
         const int frame = static_cast<int>(phase);
         const double frac = phase - frame;
-        // Linear interpolation, applied the same way whatever the source format
         const double sample = frameValue(frame) + frac * (frameValue(frame + 1) - frameValue(frame));
-        const qint16 converted = static_cast<qint16>(qBound(-32768.0, qRound(sample) * 1.0, 32767.0));
+        // Clamped before rounding: qRound() returns int, so an out-of-range float
+        // sample would overflow the conversion before a later clamp could help
+        const qint16 converted = static_cast<qint16>(qRound(qBound(-32768.0, sample, 32767.0)));
         convertedData.append(reinterpret_cast<const char*>(&converted), sizeof(qint16));
         phase += ratio;
     }
 
     // Drop only the frames no longer needed: the frame the phase now sits on is
     // the next interpolation's left-hand sample, and any partial frame's bytes
-    // stay put for the read that completes them
-    const int consumedFrames = static_cast<int>(phase);
+    // stay put for the read that completes them.
+    // The phase can end up past the last whole frame when downsampling, and
+    // removing more bytes than the buffer holds would take the partial frame with
+    // them - which desynchronises every read that follows, since what is left no
+    // longer starts on a frame boundary. Any phase beyond the buffer is carried
+    // instead, and the loop condition consumes it against the next read.
+    const int consumedFrames = qMin(static_cast<int>(phase), availableFrames);
     if (consumedFrames > 0) {
         mAudioBuffer.remove(0, consumedFrames * frameBytes);
     }
@@ -731,9 +828,13 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
                     qDebug() << "VoskRecognizer: Filtered hallucination (final):" << text << "(level:" << mRecentAudioLevel << ", lowConf:" << hasLowConfidence << ")";
 #endif
                 } else {
-                    // Strip leading hallucination words from multi-word results
-                    text.replace(*kLeadingHallucinationRx, QString());
-                    text = text.trimmed();
+                    // Strip a leading hallucination word only when its timing says it
+                    // was never spoken - otherwise a phrase genuinely beginning "a",
+                    // "an" or "to" loses its first word
+                    if (leadingWordIsPhantom(obj.value(QLatin1String("result")).toArray())) {
+                        text.replace(*kLeadingHallucinationRx, QString());
+                        text = text.trimmed();
+                    }
 
                     if (!text.isEmpty()) {
 #ifdef DEBUG_STT
@@ -804,24 +905,30 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
 
 void VoskRecognizer::handleAudioStateChanged(QAudio::State newState)
 {
-    if (newState == QAudio::StoppedState && mAudioSource) {
+    // IdleState is included: a device that stops supplying audio reports the fault
+    // there as readily as it does on StoppedState, and leaving it unhandled means
+    // the timer keeps polling a dead microphone while the UI still says Listening
+    if ((newState == QAudio::StoppedState || newState == QAudio::IdleState) && mAudioSource) {
         const QAudio::Error audioError = mAudioSource->error();
         if (audioError != QAudio::NoError) {
             qWarning() << "VoskRecognizer: Audio error:" << audioError;
-            emit errorOccurred(tr("Audio input error occurred: %1").arg(audioErrorText(audioError)));
 
             // cancel() returns early unless Listening or Processing, so the audio
-            // device is torn down here rather than left open in any other state
+            // device is torn down here rather than left open in any other state.
+            // The member is cleared before stop() is called, so that a stateChanged
+            // emitted from within stop() re-enters to a null source and returns
+            // rather than reporting the same fault twice.
             mProcessTimer.stop();
-            if (mAudioSource) {
-                mAudioSource->stop();
-                mAudioSource->deleteLater();
-                mAudioSource = nullptr;
-            }
+            QAudioSource* pDyingSource = mAudioSource;
+            mAudioSource = nullptr;
             mAudioDevice = nullptr;
+            pDyingSource->stop();
+            pDyingSource->deleteLater();
             mAudioBuffer.clear();
             mResamplePhase = 0.0;
 
+            //: %1 is a description of what went wrong with the microphone
+            emit errorOccurred(tr("Audio input error occurred: %1").arg(audioErrorText(audioError)));
             setState(State::Error);
         }
     }
@@ -929,7 +1036,6 @@ QString VoskRecognizer::findModelPathForLanguage(const QString& languageCode) co
     QString bestMatch;
     int bestScore = -1;
 
-    // Built once rather than recompiled for every model examined
     const QRegularExpression versionRx(qsl("(\\d+)\\.(\\d+)"));
 
     for (const QString& model : installed) {
@@ -1033,7 +1139,6 @@ QString VoskRecognizer::getBestAvailableModel()
     QString bestModel;
     int bestScore = -1;
 
-    // Built once rather than recompiled for every model examined
     const QRegularExpression versionRx(qsl("(\\d+)\\.(\\d+)"));
 
     for (const QString& model : installed) {
@@ -1125,15 +1230,11 @@ void VoskRecognizer::setEndpointerMode(EndpointerMode mode)
 
 void VoskRecognizer::setWordsEnabled(bool enabled)
 {
+    // Records whether word detail is surfaced to the user. The backend is left
+    // reporting words either way, because the leading-word filter depends on
+    // their timings - turning them off would silently restore the old behaviour
+    // of eating a spoken "a", "an" or "to".
     mWordsEnabled = enabled;
-
-    // Apply to recognizer if it exists
-    if (mVoskRecognizer && s_vosk_recognizer_set_words) {
-        s_vosk_recognizer_set_words(mVoskRecognizer, mWordsEnabled ? 1 : 0);
-#ifdef DEBUG_STT
-        qDebug() << "VoskRecognizer: Set words enabled to" << mWordsEnabled;
-#endif
-    }
 }
 
 void VoskRecognizer::setSensitivity(Sensitivity sensitivity)

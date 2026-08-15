@@ -64,6 +64,7 @@ public:
     void startListening() override;
     void stopListening() override;
     void cancel() override;
+    void resetUtterance() override;
 
     State state() const override { return mState; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }

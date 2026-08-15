@@ -5516,15 +5516,21 @@ bool mudlet::removeAddonToolbarButton(int buttonId)
         // leaving it parented to the toolbar; deleting it here stops one accruing
         // per add/remove cycle, and takes the button with it since a QWidgetAction
         // owns its default widget.
+        // deleteLater(), because the usual caller is a Lua handler running from
+        // this very button's clicked signal, with Qt still inside the button's
+        // event handling.
         mpMainToolBar->removeAction(addonButton.toolbarAction);
-        delete addonButton.toolbarAction;
+        addonButton.toolbarAction->deleteLater();
     }
 
     mAddonButtons.remove(buttonId);
 
-    // Remove separator if no more addon buttons
+    // Remove separator if no more addon buttons. addSeparator() parents its
+    // QAction to the toolbar and removeAction() only detaches it, so it needs
+    // deleting too or one accumulates per empty-to-occupied cycle.
     if (mAddonButtons.isEmpty() && mpAddonToolbarSeparator) {
         mpMainToolBar->removeAction(mpAddonToolbarSeparator);
+        mpAddonToolbarSeparator->deleteLater();
         mpAddonToolbarSeparator = nullptr;
     }
 
@@ -5726,15 +5732,26 @@ bool mudlet::removeAddonMenuItem(int itemId)
     // added to, which is the submenu chain addAddonMenuItem() built for menuPath
     QMenu* parentMenu = menuItem.action ? qobject_cast<QMenu*>(menuItem.action->parent()) : nullptr;
     if (menuItem.action) {
-        delete menuItem.action;
+        // Detached now so the emptiness test below sees the menu without it,
+        // but destroyed later - see the comment on the loop
+        if (parentMenu) {
+            parentMenu->removeAction(menuItem.action);
+        }
+        menuItem.action->deleteLater();
     }
 
-    // Discard the menuPath submenus once their last item is gone, otherwise
-    // repeated add/remove cycles leave a trail of empty menus behind. Deleting a
-    // QMenu takes its menuAction() with it, unlinking it from its parent menu.
+    // Discard the menuPath submenus once they hold no visible items, otherwise
+    // repeated add/remove cycles leave a trail of empty menus behind.
+    // Everything here is deleteLater(), not delete: the usual caller is a Lua
+    // handler running from the item's own triggered signal, and Qt is still
+    // inside QMenu's activation machinery, which touches the menu after the
+    // handler returns. The menu action is hidden immediately so the empty
+    // submenu does not linger visibly until the event loop runs, and deleting
+    // the menu later takes that action with it.
     while (parentMenu && parentMenu != mpAddonsMenu && parentMenu->isEmpty()) {
         QMenu* grandParentMenu = qobject_cast<QMenu*>(parentMenu->parent());
-        delete parentMenu;
+        parentMenu->menuAction()->setVisible(false);
+        parentMenu->deleteLater();
         parentMenu = grandParentMenu;
     }
 
@@ -5901,15 +5918,33 @@ void mudlet::slot_toggleSpeechRecognition()
         mTextAfterSpeech.clear();
         mSpeechNeedsReset = false;
 
-        // Set before starting: startListening() can emit errorOccurred or a first
-        // partial result synchronously, and those handlers drop anything that
-        // arrives while this is false. A synchronous failure clears it again
-        // through slot_handleSpeechError(), before the button update below.
+        // Set before starting so that the state-change handling startListening()
+        // can trigger synchronously sees a session in progress. A synchronous
+        // failure clears it again through slot_handleSpeechError(), before the
+        // button update below.
         mSpeechRecognitionActive = true;
         mpSpeechRecognizer->startListening();
     }
 
     updateAllSpeechButtons();
+}
+
+void mudlet::setSpeechNeedsReset(bool reset)
+{
+    mSpeechNeedsReset = reset;
+
+    if (!reset) {
+        return;
+    }
+
+    // The phrase recognised so far has been dealt with - submitted as a command,
+    // or abandoned on a profile switch - so the recognizer is told to start a new
+    // one. Without this it keeps decoding and reporting that same phrase, and
+    // those results arrive looking like fresh speech: they overwrite the command
+    // line, taking with them the selection that submitting a command leaves behind.
+    if (mpSpeechRecognizer) {
+        mpSpeechRecognizer->resetUtterance();
+    }
 }
 
 void mudlet::setFocusedCommandLine(TCommandLine* pCommandLine)
@@ -5960,12 +5995,18 @@ void mudlet::slot_handlePartialSpeechResult(const QString& text)
     // Check if we need to start fresh (command was submitted while listening)
     // or if the command line was manually cleared
     if (mSpeechNeedsReset) {
-        pCommandLine->clear();
+        // Discarded rather than displayed, as the final-result handler does with
+        // its own late arrivals: this partial was decoded before the command was
+        // submitted, so rendering it would overwrite the command line - and the
+        // selection submitting leaves on it - with words already sent.
         mTextBeforeSpeech.clear();
         mTextAfterSpeech.clear();
         mCurrentPartialResult.clear();
         mSpeechNeedsReset = false;
-    } else {
+        return;
+    }
+
+    {
         const QString currentText = pCommandLine->toPlainText();
 
         if (currentText.isEmpty() && !mTextBeforeSpeech.isEmpty()) {
@@ -6095,29 +6136,34 @@ void mudlet::slot_handleFinalSpeechResult(const QString& text)
 
 void mudlet::slot_handleSpeechError(const QString& errorMessage)
 {
+    // Logged unconditionally: these arrive asynchronously, so the profile the
+    // error belongs to may already be gone and the reporting below finds no Host
+    qWarning() << "mudlet::slot_handleSpeechError() WARNING -" << errorMessage;
+
     mSpeechRecognitionActive = false;
     mCurrentPartialResult.clear();
     updateAllSpeechButtons();
 
-    // Restore original text if there was a partial result in progress
-    TCommandLine* pCommandLine = focusedCommandLine();
-
-    // Only the command line the snapshot was taken from: focus can have moved to
-    // another profile since speech started, and that command line's own text is
-    // not ours to replace
-    if (pCommandLine && pCommandLine == mpPreSpeechCommandLine) {
+    // Restored into the command line the snapshot was taken from, not whichever
+    // has focus now: focus can have moved to another profile since speech
+    // started, and that command line's own text is not ours to replace. The
+    // QPointer is null if it has since been destroyed.
+    if (mpPreSpeechCommandLine && mpPreSpeechCommandLine->toPlainText() != mPreSpeechSnapshot) {
         // Restore the complete original text from before speech recognition started
-        pCommandLine->setPlainText(mPreSpeechSnapshot);
-        QTextCursor cursor = pCommandLine->textCursor();
+        mpPreSpeechCommandLine->setPlainText(mPreSpeechSnapshot);
+        QTextCursor cursor = mpPreSpeechCommandLine->textCursor();
         cursor.movePosition(QTextCursor::End);
-        pCommandLine->setTextCursor(cursor);
+        mpPreSpeechCommandLine->setTextCursor(cursor);
     }
+
+    // Reported to the profile the speech session belonged to, falling back to
+    // whatever is active if that command line is already gone
+    TCommandLine* pCommandLine = mpPreSpeechCommandLine ? mpPreSpeechCommandLine.data() : focusedCommandLine();
 
     // Clear the snapshot after restoring
     mPreSpeechSnapshot.clear();
     mpPreSpeechCommandLine = nullptr;
 
-    // Get the host from the focused command line for the error message
     Host* pHost = (pCommandLine && pCommandLine->console()) ? pCommandLine->console()->getHost() : getActiveHost();
 
     // Raise sysSTTError event for Lua scripts to handle

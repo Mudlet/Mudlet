@@ -314,8 +314,8 @@ public:
     void setSpeechRecognitionActive(bool active) { mSpeechRecognitionActive = active; }
     SpeechRecognizer* speechRecognizer() const;
     int speechDetectionTiming() const { return static_cast<int>(mSpeechDetectionTiming); }
-    // Bounds come from the enumerators rather than literals, so the range stays
-    // correct as SpeechDetectionTiming gains values
+    // Reject out-of-range values, which reach this from Lua and the preferences.
+    // Update the upper bound if an enumerator is added after Long.
     void setSpeechDetectionTiming(int timing)
     {
         mSpeechDetectionTiming = (timing >= static_cast<int>(SpeechDetectionTiming::Default) && timing <= static_cast<int>(SpeechDetectionTiming::Long)) ? static_cast<SpeechDetectionTiming>(timing)
@@ -326,7 +326,7 @@ public:
     void updateSpeechButton();
     void updateAllSpeechButtons();
     void initSpeechRecognition();
-    void setSpeechNeedsReset(bool reset) { mSpeechNeedsReset = reset; }
+    void setSpeechNeedsReset(bool reset);
     void setFocusedCommandLine(TCommandLine* pCommandLine);
     TCommandLine* focusedCommandLine() const;
 

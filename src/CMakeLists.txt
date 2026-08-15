@@ -241,7 +241,7 @@ if(APPLE)
   list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
   list(APPEND mudlet_HDRS MacMicrophonePermission.h)
   # Only the .mm is compiled, so only it carries the language and ARC settings -
-  # the header is listed in mudlet_HDRS above for IDE visibility and AUTOMOC
+  # the header is listed in mudlet_HDRS above for IDE visibility
   set_source_files_properties(
     MacMicrophonePermission.mm
     PROPERTIES

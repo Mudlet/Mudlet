@@ -89,7 +89,7 @@ end
 
 --- Get information about the speech recognizer.
 -- @return table with keys: backend, available, initialized, listening, state, modelPath, searchPaths,
--- plus version and language once a recognizer has been created
+-- plus version and language once a recognizer has been created; nil when speech-to-text is unavailable
 function STT.getInfo()
   if not STT.isAvailable() then
     return nil

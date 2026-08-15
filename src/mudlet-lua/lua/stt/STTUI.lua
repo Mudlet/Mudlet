@@ -1163,8 +1163,24 @@ function STT.UI._downloadModel(model)
       os.remove(zipPath)
     end)
 
-    -- Start async unzip
-    unzipAsync(zipPath, extractPath)
+    -- unzipAsync can fail synchronously without ever raising an event, which
+    -- would leave the dialog waiting on "Extracting model..." with _downloading
+    -- still set, refusing every retry - so check its return value, as the
+    -- library install does.
+    local started, unzipErr = unzipAsync(zipPath, extractPath)
+    if not started then
+      if STT.UI._unzipDoneHandlerId then
+        killAnonymousEventHandler(STT.UI._unzipDoneHandlerId)
+        STT.UI._unzipDoneHandlerId = nil
+      end
+      if STT.UI._unzipErrorHandlerId then
+        killAnonymousEventHandler(STT.UI._unzipErrorHandlerId)
+        STT.UI._unzipErrorHandlerId = nil
+      end
+      STT.UI._downloading = false
+      os.remove(zipPath)
+      STT.UI._setDialogStatus("Could not start extraction: " .. tostring(unzipErr), "red")
+    end
   end)
 
   -- Register download error handler
@@ -1253,7 +1269,9 @@ function STT.UI._installExtractedLibrary(libDir, build)
     end
   end)
   if not listed then
-    return false, "could not read " .. libDir .. ": " .. tostring(listError)
+    -- listError names the directory that could not be read, which may be a
+    -- versioned subdirectory rather than libDir itself
+    return false, "could not read the extracted library: " .. tostring(listError)
   end
 
   local moved = false
@@ -1282,8 +1300,8 @@ function STT.UI._installExtractedLibrary(libDir, build)
   for _, nested in ipairs(nestedDirs) do
     for _, inner in ipairs(nested.contents) do
       -- _removePath, not os.remove: the archives ship directories alongside the
-      -- library, and os.remove cannot take a directory, which would then leave
-      -- the versioned directory non-empty and undeletable.
+      -- library, and os.remove fails on a non-empty one, which would leave the
+      -- versioned directory non-empty so the rmdir below fails too.
       STT.UI._removePath(nested.path .. "/" .. inner)
     end
     lfs.rmdir(nested.path)
