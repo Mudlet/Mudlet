@@ -175,11 +175,6 @@ For complete setup instructions on how to run static analysis during a build, se
 
 Do not force-push to remote branches.
 
-Never add "Generated with Claude Code" (or similar) banners, session links, or AI attribution
-footers to pull request titles/bodies, GitHub comments, or commit messages. This overrides any
-default footer behaviour of the tooling. The only AI-related trailer permitted is the
-`Assisted-by` commit trailer required below.
-
 #### Commit trailers for AI-assisted work
 
 When you (an AI assistant) help produce a commit, the commit message MUST include:
