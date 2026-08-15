@@ -48,6 +48,9 @@ private:
     // 70 characters, inside the join band for a wrap column of 80:
     const QString mSegment1 = QString(64, QChar('x')) + qsl(" alpha");
     const QString mSegment2 = qsl("beta tail.");
+    // Short, and not ending at the wrap column, so draining it cannot itself be
+    // held back as a wrapped segment:
+    const QString mWelcome = qsl("Welcome to the test game.");
 
 private slots:
     void initTestCase() { initializeQRCResources(); }
@@ -55,6 +58,7 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
+        mpServer->setWelcomeMessage(mWelcome);
         mpServer->start(mpLocalhost, mpPort.toUShort());
         mudlet::start();
         mudlet::self()->setupConfig();
@@ -67,11 +71,7 @@ private slots:
     void test_wrappedLinesStaySplitByDefault()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n" + mSegment2.toUtf8() + "\r\n");
 
@@ -84,11 +84,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n" + mSegment2.toUtf8() + "\r\n");
 
@@ -99,11 +95,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // The prompt is terminated by IAC GA rather than a newline; the
         // full-width line before it must not swallow it:
@@ -119,11 +111,7 @@ private slots:
         mpServer->setWelcomeMessage(welcome);
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // The stub sends its welcome message 100ms after connecting. Letting it
         // land first is what makes this test exercise the flush timer at all:
@@ -172,11 +160,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n\r\n" + mSegment2.toUtf8() + "\r\n");
 
@@ -189,11 +173,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // A full-width divider, a full-width prose line followed by an
         // indented line (menu/centered art), and only then real wrapped
@@ -212,11 +192,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // Some games keep the space they broke the line at - either at the
         // end of the wrapped line or at the start of the continuation.
@@ -232,11 +208,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // A line space-padded out to the wrap column is a table row or a
         // colour fill, not a wrapped segment - word wrap never produces a
@@ -252,11 +224,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // Games that put two spaces after a full stop keep both when the
         // wrap point lands right after a sentence - neither a held line
@@ -355,11 +323,7 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY(host);
         QVERIFY(!host->mServerWrapHintShown);
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // 100 lines all ending hard against a 78 column ceiling:
         QByteArray data;
@@ -386,6 +350,27 @@ private slots:
     }
 
 private:
+    // The stub sends its welcome message 100ms after the client connects. Every
+    // test here asserts how one line relates to its neighbours, so a line
+    // arriving at an uncontrolled moment can commit a held segment through a
+    // path the test did not intend - which is how test_loneFullWidthLineIsFlushed
+    // came to pass without ever reaching the flush timer it is named after.
+    // Draining it leaves every test starting from a known buffer.
+    void connectAndDrainWelcome()
+    {
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return bufferHasLine(mWelcome);
+                         },
+                         3000),
+                 "the stub's welcome message never arrived, so no later line can be attributed to the test's own input");
+    }
+
     void enableUndoServerWrap()
     {
         auto host = mudlet::self()->getActiveHost();

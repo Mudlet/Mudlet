@@ -350,6 +350,8 @@ private:
     void abortLosingSocket(QSslSocket* losingSocket);
 #endif
 
+    void abandonHostLookup();
+
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
@@ -460,6 +462,10 @@ private:
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
     bool mLookingUpHost = false;
+    // The lookup connectIt() is waiting on, or -1. mHostUrl and mHostPort move
+    // on with every connectIt(), so a callback from a lookup a later call
+    // superseded would pair its own host name with the newer port.
+    int mHostLookupId = -1;
     int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 

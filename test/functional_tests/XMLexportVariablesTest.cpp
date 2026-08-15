@@ -29,7 +29,9 @@
  * Also covers a saved table that other globals reference, which must export in
  * full under every saved name that reaches it (issue #9755), and the boundary of
  * the fence that stops a table holding a function exporting in part (issue
- * #9857) - SavedVariableFenceTest covers that one in full.
+ * #9857) - SavedVariableFenceTest covers that one in full. Then the two halves
+ * of issue #9769 a save can show: a value the export cannot read a second time,
+ * and a saved table holding one of Mudlet's own.
  *
  * Run with: ctest -R XMLexportVariablesTest -V
  */
@@ -720,6 +722,96 @@ private slots:
         QCOMPARE(luaL_dostring(L, "deeplyNestedSavedTable = nil"), 0);
     }
 
+    // The walk names a number-keyed member by converting the key to text, and
+    // %.14g does not name every double exactly, so looking such a member up
+    // again by that name finds nothing. A member must be saved with the value
+    // the walk read rather than with what a second read makes of it: an empty
+    // value is one a member can genuinely have (#9769).
+    void test_memberWithAnImpreciseNumberKeyIsNotExportedBlank()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "impreciseKeyTable = {} impreciseKeyTable[1/3] = 'imprecise member value'"), 0);
+        vu->savedVars.insert(qsl("impreciseKeyTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("impreciseKeyTable")), "the saved table itself must be exported");
+        QVERIFY2(xml.contains(qsl("imprecise member value")), "a member the export cannot look up again must still be saved with the value the walk read");
+
+        vu->savedVars.remove(qsl("impreciseKeyTable"));
+        QCOMPARE(luaL_dostring(L, "impreciseKeyTable = nil"), 0);
+    }
+
+    // Mudlet's own tables are hidden by name at profile load, so a saved table
+    // holding one of them reaches it under a name of the user's own that
+    // nothing has hidden. Recognising it has to be by identity, or the whole of
+    // Mudlet's table goes into the profile save behind it (#9769).
+    void test_savedTableHoldingAHiddenTableDoesNotExportItsContents()
+    {
+        QVERIFY2(!mpEditor, "this test rebuilds the shared variable tree, so it must run before the Variables-view tests");
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "internalApiTable = {internalField = 'internal field value'}"), 0);
+
+        const QSet<QString> hiddenBefore = vu->hidden;
+        const QSet<const void*> hiddenTablesBefore = vu->hiddenTables;
+        // the hiding half of what Host::hideMudletsVariables() does at profile
+        // load: everything in _G at that moment is Mudlet's or a package's
+        lI->getVars(true);
+
+        QCOMPARE(luaL_dostring(L, "apiHolderTable = {plainMember = 'plain member value', api = internalApiTable}"), 0);
+        vu->savedVars.insert(qsl("apiHolderTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("plain member value")), "a plain member of a saved table must be exported");
+        QVERIFY2(!xml.contains(qsl("internal field value")), "a saved table holding a hidden table must not export that table's contents");
+
+        vu->savedVars.remove(qsl("apiHolderTable"));
+        vu->hidden = hiddenBefore;
+        vu->hiddenTables = hiddenTablesBefore;
+        QCOMPARE(luaL_dostring(L, "apiHolderTable, internalApiTable = nil"), 0);
+    }
+
+    // The other side of that: profile load hides every table in _G, the user's
+    // own included, and then un-hides the ones the profile saves. Un-hiding has
+    // to give a table its identity back as well as its name, or a saved table
+    // that another one holds stops being written out with it.
+    void test_unhiddenSavedTableStillRidesAlongInsideAnotherSavedTable()
+    {
+        QVERIFY2(!mpEditor, "this test rebuilds the shared variable tree, so it must run before the Variables-view tests");
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "unhiddenInnerTable = {member = 'unhidden member value'}"), 0);
+        // both names, as a restored profile has them: XMLimport registers every
+        // variable it reads back, members included
+        vu->savedVars.insert(qsl("unhiddenInnerTable"));
+        vu->savedVars.insert(qsl("unhiddenInnerTable.member"));
+
+        const QSet<QString> hiddenBefore = vu->hidden;
+        const QSet<const void*> hiddenTablesBefore = vu->hiddenTables;
+        mpHost->hideMudletsVariables();
+
+        // the holder comes after the hiding, as a package's would when it runs
+        QCOMPARE(luaL_dostring(L, "unhiddenHolderTable = {inner = unhiddenInnerTable}"), 0);
+        vu->savedVars.insert(qsl("unhiddenHolderTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QCOMPARE(xml.count(qsl("unhidden member value")), 2);
+
+        vu->savedVars.remove(qsl("unhiddenInnerTable"));
+        vu->savedVars.remove(qsl("unhiddenInnerTable.member"));
+        vu->savedVars.remove(qsl("unhiddenHolderTable"));
+        vu->hidden = hiddenBefore;
+        vu->hiddenTables = hiddenTablesBefore;
+        QCOMPARE(luaL_dostring(L, "unhiddenHolderTable, unhiddenInnerTable = nil"), 0);
+    }
+
     // A script adds to a saved table while the editor sits on the Variables
     // view. A session's last save is taken with whatever view was left on
     // screen, so quitting from there is enough to reach this.
@@ -742,8 +834,8 @@ private slots:
         const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
         QVERIFY2(xml.contains(qsl("late member value")), "a member added while the Variables view was open must still be saved");
-        // secondary: writeVariable() re-reads values from Lua, so a stale tree
-        // writes this one out empty rather than with its old value
+        // secondary: the save reads a fresh tree, so a member that is gone by
+        // then has no node in it to be written from
         QVERIFY2(!xml.contains(qsl("seed member value")), "a member a script removed while the Variables view was open must not be saved back");
 
         auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
@@ -844,6 +936,51 @@ private slots:
             vu->savedVars.remove(name);
         }
         QCOMPARE(luaL_dostring(L, "reloadSavedTable = nil"), 0);
+    }
+
+    // The session after the one test_savedTableReachedByAnotherGlobalSurvivesAReload
+    // covers. Profile load hides everything in _G once the variables are back in
+    // it, so the user's own tables go through the hiding as well, and the save
+    // that follows only holds them because loading un-hides every name the
+    // profile saves. Declared after the Variables-view tests because the hiding
+    // walk rebuilds the tree their items point into.
+    void test_savedTableSurvivesTheSaveAfterALoad()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "secondSessionTable = {member = 'second session value', nest = {deep = 'second session deep value'}}"), 0);
+        vu->savedVars.insert(qsl("secondSessionTable"));
+
+        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/second-session-test.xml");
+        auto writer = std::make_shared<XMLexport>(mpHost);
+        QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
+        QCOMPARE(luaL_dostring(L, "secondSessionTable = nil"), 0);
+
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        const QSet<QString> hiddenBefore = vu->hidden;
+        const QSet<const void*> hiddenTablesBefore = vu->hiddenTables;
+        // where profile load runs it: after the import has put the variables back
+        mpHost->hideMudletsVariables();
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("second session value")), "a saved table's member must still be in the save the session after it was loaded");
+        QVERIFY2(xml.contains(qsl("second session deep value")), "a saved table's nested member must still be in the save the session after it was loaded");
+
+        vu->hidden = hiddenBefore;
+        vu->hiddenTables = hiddenTablesBefore;
+        for (const auto& name : {qsl("secondSessionTable"), qsl("secondSessionTable.member"), qsl("secondSessionTable.nest"), qsl("secondSessionTable.nest.deep")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "secondSessionTable = nil"), 0);
     }
 
 private:
