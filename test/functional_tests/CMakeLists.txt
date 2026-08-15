@@ -144,29 +144,34 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
-        # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, and
-        # it costs the scanning of dynamic TLS blocks. gcc-10's LeakSanitizer -
-        # which this leg pins for the AppImage's glibc floor - guesses how glibc
-        # allocated such a block from `(tls_beg % 4096) == 16`, true for any
-        # malloc'd block at that alignment since glibc 2.25, and then reads two
-        # words of unrelated memory as its address and length. The tracer scans
-        # that and dies. google/sanitizers#1322; fixed in GCC 14 and LLVM 17, so
-        # this line can go when the leg moves to a runtime that has the fix.
-        # Turning the interception off skips the recording entirely, so nothing
-        # bogus is ever handed to the tracer.
+        # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, at
+        # the cost of not scanning dynamic TLS blocks for roots. Up to GCC 13 and
+        # LLVM 16, the sanitizer runtime's __tls_get_addr interceptor - not
+        # LeakSanitizer itself, which is why this is an ASAN_OPTIONS flag -
+        # decides such a block carries a pre-2.25 glibc header when
+        # `tls_beg % 4096` equals sizeof(Glibc_2_19_tls_header), 16 on 64-bit,
+        # and reads the two words before it as the block's address and length.
+        # Since glibc 2.25 there is no header there and a malloc'd block lands on
+        # that offset by coincidence - roughly 1 in 256, always for the
+        # mmap-backed ones - so the range recorded is garbage and the tracer dies
+        # scanning it. That coincidence is why #9809 reads as a flake.
+        # google/sanitizers#1322; GCC 14 and LLVM 17 replaced the guess with an
+        # allocator lookup, so all four copies of this flag - here, the two
+        # build-mudlet workflows, and src/LsanHooks.cpp - can go once the legs
+        # that need them build with one of those.
         set(leakCheck "detect_leaks=1:intercept_tls_get_addr=0")
-        # The tracer prints the stack and TLS range of each thread as it reaches
-        # it, so the last one before a crash names the range it died scanning -
-        # the one thing the crash line alone does not say (#9809). Seven lines a
-        # run; LeakSanitizer's own hint also suggests verbosity=1, which adds
-        # ~2400 lines of allocator poisoning traffic and no extra diagnosis.
+        # Kept as insurance rather than for a crash we still expect: if the flag
+        # above ever proves incomplete, the tracer prints the stack and TLS range
+        # of each thread as it reaches one, so the last line before a crash names
+        # the range it died scanning - the one thing the crash line alone does
+        # not say (#9809). Seven lines a run, and only on a failing test, since
+        # ctest hides the output of one that passes.
         set(leakLog "LSAN_OPTIONS=log_threads=1;")
-        add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     else()
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
-        add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     endif()
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
