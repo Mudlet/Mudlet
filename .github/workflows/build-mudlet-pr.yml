@@ -625,7 +625,10 @@ jobs:
         DBUS_SESSION_BUS_ADDRESS: 'disabled:'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
-        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
+        # intercept_tls_get_addr=0 keeps gcc-10's LeakSanitizer from recording a
+        # bogus dynamic-TLS range and then crashing its tracer on it (#9809);
+        # test/functional_tests/CMakeLists.txt carries the full explanation
+        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1:intercept_tls_get_addr=0' || '' }}
         # log_threads names the stack and TLS range of every thread the tracer
         # walks, so the last one printed before a crash is the range it died on
         # (#9809). Seven lines a run, and the only way to see that from CI.

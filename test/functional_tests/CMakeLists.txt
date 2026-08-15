@@ -144,7 +144,17 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
-        set(leakCheck "detect_leaks=1")
+        # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, and
+        # it costs the scanning of dynamic TLS blocks. gcc-10's LeakSanitizer -
+        # which this leg pins for the AppImage's glibc floor - guesses how glibc
+        # allocated such a block from `(tls_beg % 4096) == 16`, true for any
+        # malloc'd block at that alignment since glibc 2.25, and then reads two
+        # words of unrelated memory as its address and length. The tracer scans
+        # that and dies. google/sanitizers#1322; fixed in GCC 14 and LLVM 17, so
+        # this line can go when the leg moves to a runtime that has the fix.
+        # Turning the interception off skips the recording entirely, so nothing
+        # bogus is ever handed to the tracer.
+        set(leakCheck "detect_leaks=1:intercept_tls_get_addr=0")
         # The tracer prints the stack and TLS range of each thread as it reaches
         # it, so the last one before a crash names the range it died scanning -
         # the one thing the crash line alone does not say (#9809). Seven lines a
