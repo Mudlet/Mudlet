@@ -979,7 +979,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     // Needed for mud.durismud.com see forum message topic:
                     // https://forums.mudlet.org/viewtopic.php?f=9&t=22887
                     const int dataLength = spanEnd - spanStart;
-                    const QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    // fromRawData() does not copy, so the bytes have to outlive temp:
+                    // point it into localBuffer rather than at any temporary
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
                     bool isOk = false;
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
@@ -1011,7 +1013,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                      *   scrollback buffer - which is again a NWIH for us...!
                      */
                     const int dataLength = spanEnd - spanStart;
-                    const QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    // fromRawData() does not copy, so the bytes have to outlive temp:
+                    // point it into localBuffer rather than at any temporary
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
                     bool isOk = false;
                     const int argValue = temp.toInt(&isOk);
                     if (isOk) {
@@ -5096,8 +5100,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             continue;
         }
         const int nextBoundary = boundaryFinder.toNextBoundary();
-        const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
-        const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+        const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
         // Safety check: during destruction, mpHost might be null
         const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs()) : graphemeInfo::getWidth(unicode, false);
         const int indentationHere = isNewline ? indent : hangingIndent;
@@ -6634,10 +6637,10 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 
         QString codePoint;
         if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, gbSequenceLength).c_str(), gbSequenceLength), mEncoding);
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, gbSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or gbSequenceLength wrong
                 qWarning().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " sequence accepted, and it encoded to "
                                      << codePoint.size() << " QChars which does not make sense!!!";
                 isValid = false;
@@ -6748,10 +6751,10 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
 
         QString codePoint;
         if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, big5SequenceLength).c_str(), big5SequenceLength), mEncoding);
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, big5SequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or big5SequenceLength wrong
                 qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to " << codePoint.size()
                                      << " QChars which does not make sense!!!";
                 isValid = false;
@@ -6869,10 +6872,10 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
 
         QString codePoint;
         if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.substr(pos, eucSequenceLength).c_str(), eucSequenceLength), mEncoding);
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, eucSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or eucSequenceLength wrong
                 qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, and it encoded to " << codePoint.size()
                                      << " QChars which does not make sense!!!";
                 isValid = false;

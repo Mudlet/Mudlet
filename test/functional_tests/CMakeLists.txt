@@ -35,6 +35,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
