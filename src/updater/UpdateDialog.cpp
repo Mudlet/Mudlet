@@ -554,7 +554,13 @@ QString UpdateDialog::generateChangelogDocument()
     QString changelog;
     QList<Release> changelogReleases;
     if (mMinVersion.isEmpty() && mMaxVersion.isEmpty()) {
-        changelogReleases = mUpdates;
+        // Everything the offered release brings with it, off the unfiltered
+        // list: a release left out of mUpdates because it published no asset
+        // for this platform still ships its changes inside the one being
+        // offered, so the user is about to receive them either way. Bounded by
+        // the same release getUpdates() measures against, so what is listed and
+        // what is offered cannot disagree.
+        changelogReleases = Feed::selectReleasesBetween(mReleases, Release::getCurrentRelease(), mLatestRelease);
     } else {
         Release minRelease(mMinVersion.isEmpty() ? QApplication::applicationVersion() : mMinVersion);
         Release maxRelease(mMaxVersion);
