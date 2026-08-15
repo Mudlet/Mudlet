@@ -94,5 +94,3 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
     cmake --build --preset linux-debug-nosan
   fi
 fi
-
-echo "Mudlet build environment ready (Qt ${QT_VERSION} at ${QT_DIR})"
