@@ -32,9 +32,19 @@ extern "C" const char* __lsan_default_suppressions()
     return mudletLsanSuppressions;
 }
 
-// Without this, LeakSanitizer appends a "Suppressions used" summary to every
-// clean exit, which reads like an error to users:
+// print_suppressions=0: without it, LeakSanitizer appends a "Suppressions used"
+// summary to every clean exit, which reads like an error to users.
+//
+// intercept_tls_get_addr=0: sanitizer-enabled builds run LeakSanitizer when the
+// user quits, and gcc-10's - the compiler this AppImage is built with - guesses
+// how glibc allocated a dynamic TLS block from `(tls_beg % 4096) == 16`, true
+// for any malloc'd block at that alignment since glibc 2.25. It then reads two
+// words of unrelated memory as that block's address and length, and the tracer
+// segfaults scanning them (google/sanitizers#1322, #9809), so quitting ends in
+// "LeakSanitizer has encountered a fatal error" and a non-zero exit. Turning the
+// interception off skips the recording, at the cost of not scanning dynamic TLS
+// for roots. GCC 14 and LLVM 17 fixed the guess.
 extern "C" const char* __lsan_default_options()
 {
-    return "print_suppressions=0";
+    return "print_suppressions=0:intercept_tls_get_addr=0";
 }
