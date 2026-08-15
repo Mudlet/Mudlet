@@ -41,10 +41,13 @@ function installReady(event, file)
   cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Installing... &lt;gray&gt;(this will take a few seconds.)\r\n")
   installRequested = true
   tempTimer(2, function()
+    local installedBefore = #getPackages()
     local ok, err = installPackage(getMudletHomeDir().."/CFGUI.zip")
     if not ok then
       installRequested = false
       cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Installing your Carrion Fields client failed: &lt;gray&gt;"..tostring(err).."\r\n")
+    elseif #getPackages() == installedBefore then
+      installRequested = false
     end
   end)
   uninstallPackage("CF_Loader")

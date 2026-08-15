@@ -253,34 +253,39 @@ private slots:
             const QString destination = qsl("%1/").arg(unpacked.path());
             QVERIFY(mudlet::unzip(onDisk.fileName(), destination, QDir(unpacked.path())));
 
+            // the installer imports every *.xml and *.trigger it finds in an
+            // archive, so compile the scripts in all of them rather than assuming
+            // a package carries one document
             const QDir contents(unpacked.path());
-            const QStringList xmls = contents.entryList(QStringList{qsl("*.xml")}, QDir::Files);
-            QCOMPARE(xmls.count(), 1);
+            const QStringList documents = contents.entryList(QStringList{qsl("*.xml"), qsl("*.trigger")}, QDir::Files);
+            QVERIFY2(!documents.isEmpty(), qPrintable(qsl("%1 carries nothing the installer would import").arg(package)));
 
-            QFile xml(contents.absoluteFilePath(xmls.first()));
-            QVERIFY(xml.open(QIODevice::ReadOnly));
-            QXmlStreamReader reader(&xml);
-            while (!reader.atEnd()) {
-                if (reader.readNext() != QXmlStreamReader::StartElement || reader.name() != QLatin1String("script")) {
-                    continue;
+            for (const QString& document : documents) {
+                QFile xml(contents.absoluteFilePath(document));
+                QVERIFY(xml.open(QIODevice::ReadOnly));
+                QXmlStreamReader reader(&xml);
+                while (!reader.atEnd()) {
+                    if (reader.readNext() != QXmlStreamReader::StartElement || reader.name() != QLatin1String("script")) {
+                        continue;
+                    }
+                    // a folder's own script element is empty, which compiles to nothing
+                    const QString code = reader.readElementText();
+                    if (code.trimmed().isEmpty()) {
+                        continue;
+                    }
+                    // load only: running these would register handlers and start
+                    // downloads, and a package script is not written to survive
+                    // being executed outside the profile that installed it
+                    const QByteArray chunk = code.toUtf8();
+                    const QByteArray name = qsl("@%1/%2").arg(package, document).toUtf8();
+                    const int loaded = luaL_loadbuffer(L, chunk.constData(), chunk.size(), name.constData());
+                    const QString error = loaded ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+                    lua_settop(L, 0);
+                    QVERIFY2(loaded == 0, qPrintable(qsl("%1 carries a script that does not compile: %2").arg(document, error)));
+                    ++compiled;
                 }
-                // a folder's own script element is empty, which compiles to nothing
-                const QString code = reader.readElementText();
-                if (code.trimmed().isEmpty()) {
-                    continue;
-                }
-                // load only: running these would register handlers and start
-                // downloads, and a package script is not written to survive
-                // being executed outside the profile that installed it
-                const QByteArray chunk = code.toUtf8();
-                const QByteArray name = qsl("@%1").arg(package).toUtf8();
-                const int loaded = luaL_loadbuffer(L, chunk.constData(), chunk.size(), name.constData());
-                const QString error = loaded ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
-                lua_settop(L, 0);
-                QVERIFY2(loaded == 0, qPrintable(qsl("%1 carries a script that does not compile: %2").arg(package, error)));
-                ++compiled;
+                QVERIFY2(!reader.hasError(), qPrintable(qsl("%1 is not well-formed XML: %2").arg(document, reader.errorString())));
             }
-            QVERIFY2(!reader.hasError(), qPrintable(qsl("%1 is not well-formed XML: %2").arg(package, reader.errorString())));
         }
         QVERIFY2(compiled > 0, "no package scripts were found to compile, so this test proved nothing");
     }
