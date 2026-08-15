@@ -33,6 +33,7 @@ set(FUNCTIONAL_TEST_SOURCES
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
+    MxpWatchdogBufferLifetimeTest.cpp
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
