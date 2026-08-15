@@ -293,7 +293,13 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSIPRIV3()CSIPRIV3", findRecentLine("CSIPRIV3"))
     end)
 
-    it("should carry a private sequence split across two packets", function()
+    -- Two feedTriggers() calls cannot express a packet split: a local feed keeps
+    -- its own mGotCSI latch between calls but drops the incomplete bytes, since
+    -- the carry is gated on isFromServer. So the latch swallows the "l" rather
+    -- than "?25" surviving. This still fails without the fix - the "25l" leaks -
+    -- but it does not guard the private branch's ordering against the
+    -- incomplete-packet check, which needs a real split from the socket.
+    it("should not leak a private sequence whose bytes arrive across two local feeds", function()
       assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
       assert.is_true(feedTriggers("l)CSISPLIT1\n"))
       assert.equals("CSISPLIT1()CSISPLIT1", findRecentLine("CSISPLIT1"))
