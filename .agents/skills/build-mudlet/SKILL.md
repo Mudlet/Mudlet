@@ -113,6 +113,12 @@ successes):
   rockspecs point at tarballs fails; the hook falls back to `git clone` + `luarocks make`
   (git-protocol GitHub access is allowed). `LuaSQL-SQLite3` must stay pinned at 2.6.1 — 2.8.0
   breaks `DB.lua`'s `PRAGMA table_info` handling and errors 8 DB specs.
+- **GUI automation without Mudlet changes**: the busted run's Xvfb is a real X server, so
+  `xdotool` (installed by the hook) can drive Mudlet from outside — a spec launches it in the
+  background with `os.execute("(xdotool mousemove --window $(xdotool search --class mudlet | head -1) X Y; xdotool click 1) &")`
+  and pumps `pumpEvents()` until the effect lands; `xdotool key`/`type` reach the focused
+  widget. Validated: a real XTEST click fires a `Geyser.Label` click callback. Linux/X11 only —
+  a repo spec using this needs a gate, since CI's macOS busted legs have no xdotool or X11.
 
 The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
 Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is

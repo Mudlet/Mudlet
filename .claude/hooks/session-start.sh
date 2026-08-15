@@ -85,7 +85,8 @@ if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
     libxcb-keysyms1 \
     libxcb-render-util0 \
     libxcb-shape0 \
-    libxcb-xinerama0
+    libxcb-xinerama0 \
+    xdotool
 fi
 
 # Lua rocks that LuaGlobal.lua and the test harnesses load, mirroring the CI
