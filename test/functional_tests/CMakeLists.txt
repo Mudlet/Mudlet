@@ -22,6 +22,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
     MultilineTriggerReentrancyTest.cpp
+    ReviewProbeTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
