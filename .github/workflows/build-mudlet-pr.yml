@@ -587,13 +587,10 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
-      # wall-clock time, so the suite needs a budget of its own - and one wide
-      # enough that the launcher's single rerun still fits inside it (#9809).
+      # wall-clock time, so the suite needs a budget of its own: the run itself
+      # takes ~75s, and the rest is headroom for a slow runner stretching those.
       timeout-minutes: 6
-      run: >
-        cmake -P ${{github.workspace}}/test/lsan-tracer-retry.cmake --
-        --failure-marker=/tmp/busted-tests-failed
-        xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
@@ -625,10 +622,15 @@ jobs:
         DBUS_SESSION_BUS_ADDRESS: 'disabled:'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
-        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
-        # log_threads names the stack and TLS range of every thread the tracer
-        # walks, so the last one printed before a crash is the range it died on
-        # (#9809). Seven lines a run, and the only way to see that from CI.
+        # intercept_tls_get_addr=0 keeps gcc-10's sanitizer runtime from
+        # recording a bogus dynamic-TLS range for LeakSanitizer's tracer to crash
+        # on (#9809); test/functional_tests/CMakeLists.txt explains it in full
+        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1:intercept_tls_get_addr=0' || '' }}
+        # log_threads is insurance rather than an expectation: if the flag above
+        # ever proves incomplete, it names the stack and TLS range of every
+        # thread the tracer walks, so the last one printed before a crash is the
+        # range it died on (#9809). Seven lines a run, and the only way to see
+        # that from CI.
         LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1:log_threads=1', github.workspace) || '' }}
 
     - name: (macOS) Run Lua tests
