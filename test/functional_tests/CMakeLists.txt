@@ -39,6 +39,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
