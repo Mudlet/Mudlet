@@ -166,7 +166,7 @@ private:
 
         for (const int id : {scmRoom1, scmRoom2, scmRoom3, scmRoom4}) {
             QVERIFY(pMap->addRoom(id));
-            QVERIFY(pMap->setRoomArea(id, id == scmRoom4 ? mAreaB : mAreaA, false));
+            QVERIFY(pMap->setRoomArea(id, id == scmRoom4 ? mAreaB : mAreaA));
         }
         QVERIFY(pMap->setRoomCoordinates(scmRoom1, 0, 0, 0));
         QVERIFY(pMap->setRoomCoordinates(scmRoom2, -3, 7, 0));

@@ -102,6 +102,14 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
+        // Sized before the profile, so before there is a TMainConsole to resize:
+        // getMainWindowSize() ignores a shrink of more than half and goes on
+        // reporting the size from before it, and every later report is measured
+        // against that kept size, so it never catches up. Whatever the platform
+        // picks for a main window nobody has sized is not ours to rely on - under
+        // the offscreen plugin it is over 16000 pixels wide on some machines, and
+        // coming down from that to 1200 is exactly the drop that gets ignored.
+        mudlet::self()->resize(1200, 800);
 
         QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
@@ -139,6 +147,17 @@ private slots:
 
         mudlet::self()->resize(1200, 800);
         QTest::qWait(100ms);
+
+        // Frames are placed against getMainWindowSize(), so a run where that has
+        // stopped tracking the window would fail every placement assertion with
+        // numbers that say nothing about frame placement. It only ever subtracts
+        // from the console's own size, so anything bigger means it is reporting a
+        // size the window no longer has - say so here instead.
+        const QSize reported = mpHost->mpConsole->getMainWindowSize();
+        const QSize consoleSize = mpHost->mpConsole->size();
+        QVERIFY2(reported.width() <= consoleSize.width() && reported.height() <= consoleSize.height(),
+                 qPrintable(qsl("getMainWindowSize() reports %1x%2 inside a console that is only %3x%4")
+                                    .arg(QString::number(reported.width()), QString::number(reported.height()), QString::number(consoleSize.width()), QString::number(consoleSize.height()))));
     }
 
     void cleanupTestCase()

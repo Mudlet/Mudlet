@@ -27,7 +27,7 @@ end
 local function assertArgError(fn, needle)
   local ok, err = pcall(fn)
   assert.is_false(ok)
-  assert.is_true(contains(err, needle))
+  assert.is_true(contains(err, needle), tostring(err))
 end
 
 describe("Networking send functions honour their disconnected/offline contracts", function()
@@ -1744,16 +1744,14 @@ describe("The IRC configuration functions round-trip through the profile", funct
   -- connection anywhere in sight.
   --
   -- The profile's own IRC configuration is put back afterwards, because the
-  -- self-test profile is reused between runs. Two things the restore cannot
-  -- reach, both of which matter to a developer running the suite against a
-  -- config root that is not a throwaway one:
-  --
-  -- - the IRC password. setIrcServer() writes it on every call and blanks it
-  --   when none is passed, and no getter reads it back, so any password the
-  --   profile had is gone either way.
-  -- - the last-used nick, which setIrcNick() also writes to a file shared by
-  --   every profile (mudlet's data directory, not the profile's). Putting the
-  --   profile's nick back writes that file again rather than restoring it.
+  -- self-test profile is reused between runs. One thing the restore cannot
+  -- reach, which matters to a developer running the suite against a config root
+  -- that is not a throwaway one: the last-used nick, which setIrcNick() also
+  -- writes to a file shared by every profile (mudlet's data directory, not the
+  -- profile's). Putting the profile's nick back writes that file again rather
+  -- than restoring it. The password is left alone by every call below that does
+  -- not pass one, and the specs that do pass one put the profile's own back
+  -- through setConfig().
   local function restoreIrcConfiguration()
     local nick = getIrcNick()
     local hostName, port, secure = getIrcServer()
@@ -1762,6 +1760,22 @@ describe("The IRC configuration functions round-trip through the profile", funct
       setIrcNick(nick)
       setIrcServer(hostName, port, secure)
       setIrcChannels(channels)
+    end)
+  end
+
+  -- setIrcServer takes a password but no getter of its own reads one back, so
+  -- the specs for it go through the configuration option the same file is
+  -- behind: getConfig("ircPassword") and setConfig("ircPassword", ...).
+  local function restoreIrcConfigurationWithPassword()
+    local nick = getIrcNick()
+    local hostName, port, secure = getIrcServer()
+    local channels = getIrcChannels()
+    local password = getConfig("ircPassword")
+    finally(function()
+      setIrcNick(nick)
+      setIrcServer(hostName, port, secure)
+      setIrcChannels(channels)
+      setConfig("ircPassword", password)
     end)
   end
 
@@ -1867,6 +1881,30 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.is_false(secure)
     end)
 
+    it("leaves the stored password alone when it is not passed", function()
+      -- #9786: every call rewrote the password, so a script that changed the
+      -- host or the port destroyed a credential it was never given.
+      restoreIrcConfigurationWithPassword()
+
+      assert.is_true(setIrcServer("irc.busted-password.invalid", 6667, false, "BustedSecret"))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
+
+      -- the same server on another port, with the password argument left off
+      assert.is_true(setIrcServer("irc.busted-password.invalid", 6668))
+      assert.equals(6668, select(2, getIrcServer()))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
+
+      -- and it is kept across a change of server too, because an argument that
+      -- was not passed says nothing about the credential
+      assert.is_true(setIrcServer("irc.busted-other.invalid", 6667))
+      assert.equals("irc.busted-other.invalid", (getIrcServer()))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
+
+      -- an empty string is how a script asks for the password to go
+      assert.is_true(setIrcServer("irc.busted-other.invalid", 6667, false, ""))
+      assert.equals("", getConfig("ircPassword"))
+    end)
+
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
       restoreIrcConfiguration()
       assert.is_true(setIrcServer("irc.busted-secure.invalid", 6697, true))
@@ -1876,6 +1914,24 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("irc.busted-default.invalid", hostName)
       assert.equals(6667, port)
       assert.is_false(secure)
+    end)
+
+    it("takes an explicit nil for any optional argument, as leaving it off does", function()
+      -- #9787: a script forwarding optional variables passes nil for the ones
+      -- it has no value for, and only the port accepted that
+      restoreIrcConfigurationWithPassword()
+
+      assert.is_true(setIrcServer("irc.busted-nil.invalid", 6697, true, "BustedNilSecret"))
+      assert.equals("BustedNilSecret", getConfig("ircPassword"))
+
+      assert.is_true(setIrcServer("irc.busted-nil.invalid", nil, nil, nil))
+      local storedHost, storedPort, storedSecure = getIrcServer()
+      assert.equals("irc.busted-nil.invalid", storedHost)
+      -- a nil optional is the default, the same as leaving it off
+      assert.equals(6667, storedPort)
+      assert.is_false(storedSecure)
+      -- except for the password, which a nil argument keeps as it is
+      assert.equals("BustedNilSecret", getConfig("ircPassword"))
     end)
   end)
 
@@ -1911,16 +1967,41 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.is_true(setIrcChannels({"#busted-good", "busted-bad", "&busted-also-good"}))
       assert.same({"#busted-good", "&busted-also-good"}, getIrcChannels())
     end)
+
+    it("drops a channel name carrying a space or a comma rather than storing two", function()
+      -- #9789: the stored list is space-joined and the JOIN command is
+      -- comma-joined, so a name holding either came back as two channels. An
+      -- IRC channel name can hold neither, which puts them with the other
+      -- unusable names above: dropped, and refused outright when nothing is
+      -- left.
+      restoreIrcConfiguration()
+      assert.is_true(setIrcChannels({"#busted-spaced one", "#busted-plain"}))
+      assert.same({"#busted-plain"}, getIrcChannels())
+
+      assert.is_true(setIrcChannels({"#busted-a,#busted-b", "#busted-tabbed\tname", "#busted-plain-two"}))
+      assert.same({"#busted-plain-two"}, getIrcChannels())
+
+      local ok, err = setIrcChannels({"#busted only spaced"})
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
+      assert.same({"#busted-plain-two"}, getIrcChannels())
+    end)
   end)
 
   describe("getIrcConnectedHost and restartIrc without a client", function()
     -- Both of these read whether the profile has an IRC dialog, and nothing in
     -- the suite creates one - see the openIRC spec below for why. Should
     -- something start doing so, these are where it shows up first.
+    --
+    -- Which is also why only the failure half of getIrcConnectedHost's pair is
+    -- checked here, arity included: the other half needs a client connected far
+    -- enough for the server's RPL_YOURHOST, which is where #9788 was - it pushed
+    -- true and the host name but returned only one of them.
     it("getIrcConnectedHost returns false and says there is no client", function()
       local ok, err = getIrcConnectedHost()
       assert.is_false(ok)
       assert.equals("no client active", err)
+      assert.equals(2, select("#", getIrcConnectedHost()))
     end)
 
     it("restartIrc returns false", function()
