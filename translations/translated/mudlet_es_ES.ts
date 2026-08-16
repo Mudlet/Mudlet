@@ -1199,25 +1199,25 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
 makes triggers awkward to write. Mudlet can undo that, so that triggers
 always see whole lines and wrapping follows your window size instead:</source>
       <extracomment>%1 is the screen column that the game appears to wrap its lines at</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Este juego parece ajustar sus propias líneas a %1 caracteres, lo que dificulta la escritura de disparadores. Mudlet puede deshacer eso para que los disparadores siempre vean líneas completas y el ajuste se adapte al tamaño de tu ventana:</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="1945"/>
       <source>Done - Mudlet now undoes the game&apos;s wrapping, and triggers see whole lines.</source>
       <extracomment>Confirmation shown after the player clicks the link that enables undoing the game&apos;s own line wrapping</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hecho - Mudlet ahora deshace el ajuste de línea del juego y los disparadores ven líneas completas.</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="1951"/>
       <source>Turn on &quot;Undo the game&apos;s own wrapping&quot; - also found in the settings under Main display</source>
       <extracomment>Tooltip on the link that enables the option to undo the game&apos;s own line wrapping</extracomment>
-      <translation type="unfinished"/>
+      <translation>Activar "Deshacer el propio ajuste de línea del juego", que también se encuentra en los ajustes bajo Pantalla principal</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="1953"/>
       <source>  ➜ Click here to turn that on now</source>
       <extracomment>Clickable link shown in the main window when a game that wraps its own lines is detected</extracomment>
-      <translation type="unfinished"/>
+      <translation>  ➜ Haz clic aquí para activar ahora</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="3551"/>
@@ -1494,7 +1494,7 @@ always see whole lines and wrapping follows your window size instead:</source>
       <location filename="../src/EditorModifyPropertyCommand.cpp" line="284"/>
       <source>modify button/menu/toolbar &quot;%1&quot;</source>
       <extracomment>Undo/redo menu text for modifying a button&apos;s properties</extracomment>
-      <translation type="unfinished"/>
+      <translation>modificar el botón/menú/barra de herramientas &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/EditorModifyPropertyCommand.cpp" line="287"/>
@@ -1638,19 +1638,19 @@ always see whole lines and wrapping follows your window size instead:</source>
       <location filename="../src/TKey.cpp" line="225"/>
       <source>No key binding set. Click &quot;Grab New Key&quot; to assign one.</source>
       <extracomment>Error shown in the editor when a key item has no key binding assigned</extracomment>
-      <translation type="unfinished"/>
+      <translation>No hay ninguna combinación de teclas asignada. Haga clic en &quot;Capturar nueva tecla&quot; para asignar una.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="913"/>
       <source>Telnet Protocol Handler</source>
       <extracomment>Title for the dialog asking if Mudlet should handle telnet:// and telnets:// links</extracomment>
-      <translation type="unfinished"/>
+      <translation>Gestor del Protocolo Telnet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="915"/>
       <source>Another application is set to handle telnet:// and telnets:// links.</source>
       <extracomment>Text shown when another application is already handling telnet:// and telnets:// links</extracomment>
-      <translation type="unfinished"/>
+      <translation>Otra aplicación está configurada para gestionar enlaces telnet:// y telnets:// .</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="917"/>
@@ -1660,13 +1660,18 @@ This will allow you to click on telnet:// and telnets:// links in your browser t
 
 You can change this later in Settings &gt; General.</source>
       <extracomment>Detailed explanation for telnet handler override prompt</extracomment>
-      <translation type="unfinished"/>
+      <translation>Otra aplicación está configurada para gestionar los enlaces telnet:// y telnets://.
+
+Esto te permitirá hacer clic en los enlaces telnet:// y telnets:// de tu navegador para abrirlos automáticamente en Mudlet.
+
+Puedes cambiar esto más tarde en Ajustes &gt; General.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="926"/>
       <source>Don&apos;t ask again</source>
       <extracomment>Checkbox on the telnet handler prompt that suppresses future prompts</extracomment>
-      <translation type="unfinished"/>
+      <translation>No volver a preguntar</translation>
     </message>
   </context>
   <context>
@@ -1896,13 +1901,13 @@ You can change this later in Settings &gt; General.</source>
       <location filename="../src/RoomContextMenuHandler.cpp" line="272"/>
       <source>Configure areas...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Configurar áreas...</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="274"/>
       <source>Modify and create new areas.</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Modificar y crear nuevas áreas.</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="279"/>
@@ -1950,7 +1955,7 @@ You can change this later in Settings &gt; General.</source>
       <location filename="../src/RoomContextMenuHandler.cpp" line="83"/>
       <source>Download from game</source>
       <extracomment>2D Mapper context menu (no map found) item. Downloads the shared map offered by the game server via MMP.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Descargar desde el juego</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="97"/>
@@ -2010,7 +2015,7 @@ You can change this later in Settings &gt; General.</source>
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="106"/>
       <source>Select a point first, then remove it</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</extracomment>
-      <translation>Seleccione un punto primero, luego eliminelo</translation>
+      <translation>Seleccione un punto primero, luego elimínelo</translation>
     </message>
     <message>
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="133"/>
@@ -2056,7 +2061,7 @@ You can change this later in Settings &gt; General.</source>
       <location filename="../src/T2DMap.cpp" line="4233"/>
       <location filename="../src/T2DMap.cpp" line="5926"/>
       <source>Dot line</source>
-      <translation>Linea de puntos</translation>
+      <translation>Línea de puntos</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4234"/>
@@ -2131,19 +2136,19 @@ Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="5278"/>
       <source>Configure Areas</source>
-      <translation type="unfinished"/>
+      <translation>Configurar Áreas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5314"/>
       <source>Create</source>
       <extracomment>&quot;Configure Areas&quot; buttons: create new area</extracomment>
-      <translation type="unfinished"/>
+      <translation>Crear</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5316"/>
       <source>Rename</source>
       <extracomment>&quot;Configure Areas&quot; buttons: rename existing area</extracomment>
-      <translation type="unfinished"/>
+      <translation>Renombrar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5320"/>
@@ -2155,29 +2160,29 @@ Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
       <location filename="../src/T2DMap.cpp" line="5362"/>
       <source>Rename area</source>
       <extracomment>Dialog title for renaming an area</extracomment>
-      <translation type="unfinished"/>
+      <translation>Renombrar área</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5362"/>
       <source>New name:</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo nombre:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5370"/>
       <source>Rename failed</source>
       <extracomment>Warning message shown when renaming an area fails.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al renombrar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5370"/>
       <source>Unable to rename area. Name may be invalid or already in use.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede renombrar el área. El nombre puede ser inválido o ya está en uso.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5395"/>
       <source>Create area</source>
       <extracomment>Dialog title for creating a new area</extracomment>
-      <translation type="unfinished"/>
+      <translation>Crear área</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5395"/>
@@ -2188,12 +2193,12 @@ Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
       <location filename="../src/T2DMap.cpp" line="5407"/>
       <source>Create failed</source>
       <extracomment>Warning message shown when creating a new area fails.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al crear</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5407"/>
       <source>Unable to create area. Name may be invalid or already in use.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede crear el área. El nombre puede ser inválido o ya está en uso.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5442"/>
@@ -2202,17 +2207,17 @@ Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
       <extracomment>Warning message shown when trying to delete the default area.
 ----------
 Warning message shown when trying to delete an area fails.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al borrar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5442"/>
       <source>The default area cannot be deleted.</source>
-      <translation type="unfinished"/>
+      <translation>El área por defecto no puede ser eliminada.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5450"/>
       <source>Unable to delete area.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede eliminar el área.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6077"/>
@@ -2261,7 +2266,7 @@ Warning message shown when trying to delete an area fails.</extracomment>
       <location filename="../src/T2DMap.cpp" line="500"/>
       <source>Click to select/deselect rooms. Click headers to sort. Name column shows only if rooms are named.</source>
       <extracomment>Tooltip for multi-room selection widget in mapper</extracomment>
-      <translation type="unfinished"/>
+      <translation>Haz clic para seleccionar o desmarcar salas. Haz clic en los encabezados para ordenar. La columna nombre solo se muestra si las salas tienen nombre.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2462"/>
@@ -2471,7 +2476,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TCommandLine.cpp" line="1554"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
-      <translation>Línea de entrada de &quot;%1&quot; ventana de perfil &quot;%2&quot;.</translation>
+      <translation>Línea de entrada de la ventana &quot;%1&quot; del perfil &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1569"/>
@@ -2546,13 +2551,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2591"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>Ventana de error del editor&apos; para el perfil &quot;%1&quot;, contenido anterior.</translation>
+      <translation>Ventana de errores del editor para el perfil &quot;%1&quot;, contenido anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2593"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>Ventana de error del editor &apos; para el perfil &quot;%1&quot;, contenido en vivo.</translation>
+      <translation>Ventana de errores del editor para el perfil &quot;%1&quot;, contenido en tiempo real.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2596"/>
@@ -2605,7 +2610,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="427"/>
       <source>&lt;i&gt;N:&lt;/i&gt; network latency in seconds (ping),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; system processing time (triggers).</source>
       <extracomment>Tooltip for N and S network latency indicators</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; latencia de red en segundos (ping),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; tiempo de procesamiento del sistema (disparadores).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="488"/>
@@ -2665,7 +2670,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="1029"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
       <extracomment>Informational message displayed when replay recording is stopped but could not be saved</extracomment>
-      <translation>La grabación ha sido detenida, pero no se pudo guardar&apos;.</translation>
+      <translation>La grabación de la reproducción se ha detenido, pero no se ha podido guardar.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1032"/>
@@ -2968,7 +2973,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="561"/>
       <source>Show &amp;Toolbar</source>
       <extracomment>This is an item for the toolbar visibility toggle in a detached Mudlet window.</extracomment>
-      <translation>Mostrar &amp;barra_de_herramientas</translation>
+      <translation>Mostrar &amp;barra de herramientas</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="565"/>
@@ -3268,7 +3273,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="378"/>
       <source>Toggle logging facilities.</source>
       <extracomment>This explains the &quot;Record log&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Activar/desactivar el registro de eventos.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="383"/>
@@ -3398,7 +3403,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="493"/>
       <source>Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.</source>
       <extracomment>This explains the &quot;Video tutorials&quot; item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Abre una colección (en línea) de "videotutoriales educativos de Mudlet" en el navegador web de su sistema.</translation>
+      <translation>Abre una colección (en línea) de &quot;videotutoriales educativos de Mudlet&quot; en el navegador web de su sistema.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="498"/>
@@ -3467,7 +3472,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <extracomment>Tooltip for About Mudlet sub-menu item (Used in multiple places - please ensure all have the same translation).
 ----------
 Tooltip for About Mudlet toolbar button (Used in multiple places - please ensure all have the same translation).</extracomment>
-      <translation type="unfinished"/>
+      <translation>Acerca de la versión, los creadores y la licencia de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="538"/>
@@ -3689,7 +3694,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/TFeatureCallout.cpp" line="85"/>
       <source>Got it</source>
       <extracomment>Button that dismisses a balloon pointing out a newly added feature</extracomment>
-      <translation type="unfinished"/>
+      <translation>Listo</translation>
     </message>
   </context>
   <context>
@@ -3698,19 +3703,22 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/THyperlinkVisibilityManager.cpp" line="758"/>
       <source>Link hidden</source>
       <extracomment>Screen-reader announcement when an OSC 8 hyperlink is hidden by the visibility manager</extracomment>
-      <translation type="unfinished"/>
+      <translation>Enlace oculto</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/THyperlinkVisibilityManager.cpp" line="761"/>
       <source>%n link(s) hidden</source>
       <extracomment>Screen-reader announcement when multiple OSC 8 hyperlinks are hidden at once; %n is the count</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n enlace oculto</numerusform>
+        <numerusform>%n enlaces ocultos</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/THyperlinkVisibilityManager.cpp" line="794"/>
       <source>Link revealed: %1</source>
       <extracomment>Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Enlace revelado: %1</translation>
     </message>
   </context>
   <context>
@@ -3719,7 +3727,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/TKeySequenceEdit.cpp" line="125"/>
       <source>No shortcut set</source>
       <extracomment>Accessibility description of a keyboard shortcut editor in the preferences when no shortcut is assigned</extracomment>
-      <translation type="unfinished"/>
+      <translation>Sin atajo asignado</translation>
     </message>
   </context>
   <context>
@@ -3783,17 +3791,17 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6099"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation>utf8.* Las funciones de Lua ganadas estarán disponibles.</translation>
+      <translation>Las funciones Lua de utf8 no estarán disponibles.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6105"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation>yajl.* Las funciones de Lua ganadas estarán disponibles.</translation>
+      <translation>Las funciones Lua de yajl no estarán disponibles.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6110"/>
       <source>lpeg.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>Las funciones Lua de lpeg no estarán disponibles.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6296"/>
@@ -4041,7 +4049,7 @@ Intentó estas ubicaciones:
       <location filename="../src/TMainConsole.cpp" line="2192"/>
       <source>Telnet Options:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Opciones de Telnet:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="2196"/>
@@ -4082,7 +4090,7 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMainConsole.cpp" line="2272"/>
       <source>Save profile?</source>
-      <translation>Guardar Perfil?</translation>
+      <translation>Guardar perfil?</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="2272"/>
@@ -4157,16 +4165,15 @@ Intentó estas ubicaciones:
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too old
 for this version of Mudlet. Supported are only formats from version %2.</source>
       <extracomment>Shown when a map save asks for a format version older than this Mudlet can write. %1 is the version asked for, %2 the oldest one supported.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - La versión del formato &quot;%1&quot; con la que intentas guardar el mapa es demasiado antigua para esta versión de Mudlet. Solo se admiten formatos a partir de la versión %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1581"/>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[ INFO ] - ¡Es posible que desee donar ESTE archivo del mapa al Museo Mudlet!
-Hay tantos datos que NO tiene que seria
-mejor empezar de nuevo...</translation>
+      <translation>[ INFO ]  - ¡Quizá quieras donar ESTE archivo de mapa al Museo de Mudlet! 
+Le faltan TANTOS datos que te valdría más la pena empezar de nuevo...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1647"/>
@@ -4193,8 +4200,7 @@ area) not found, adding reserved -1 id.</source>
       <location filename="../src/TMap.cpp" line="1922"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[ INFO ] - Área predeterminada (restablecida para salas que no han sido asignadas a un área
-) no encontrada, agregando el reservado id -1.</translation>
+      <translation>[ INFO ]  - Archivo de mapa leído correctamente (%1s), comprobando algunos detalles de coherencia...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2436"/>
@@ -4214,7 +4220,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2451"/>
       <source>Area id: %1</source>
-      <translation>Id de área: %1</translation>
+      <translation>Id del área: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2460"/>
