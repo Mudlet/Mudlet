@@ -118,7 +118,11 @@ jobs:
 
         # Install all required dependencies
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcre2-utils expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+        # No ccache here on purpose: CMake picks it up as a compiler launcher
+        # wherever it is installed, and a cache hit would hide the compilation
+        # from CodeQL's tracer. The runner images do not ship ccache, so leaving
+        # it out of this list is enough to keep it out of the build.
+        sudo apt-get install libsecret-1-dev pkg-config pcre2-utils expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libonig-dev libboost-dev qtkeychain-qt6-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
@@ -126,8 +130,6 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
-
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks install --local lua-yajl

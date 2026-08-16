@@ -655,15 +655,27 @@ function replaceAll(word, what, keepColor)
   assert(type(word) == 'string', 'replaceAll: bad argument #1 type (expected string, got '..type(word)..'!)')
   assert(type(what) == 'string', 'replaceAll: bad argument #2 type (expected string, got '..type(what)..'!)')
   local getCurrentLine, selectSection, replace = getCurrentLine, selectSection, replace
-  local startp, endp = 1, 1
+  local whatLength = utf8.len(what)
+  local resumeAt = 1
   while true do
-    startp, endp = getCurrentLine():find(word, endp)
+    -- utf8.find() reports character offsets, which is what selectSection() indexes by;
+    -- string.find() reported bytes, which any non-ASCII earlier in the line then shifted
+    local startp, endp = utf8.find(getCurrentLine(), word, resumeAt)
     if not startp then
       break
     end
-    selectSection(startp - 1, endp - startp + 1)
-    replace(what, keepColor)
-    endp = endp + (#what - #word) + 1 -- recalculate the new word ending to start search from there
+    if endp < startp then
+      -- an empty match replaces nothing, so stepping over it is the only way to advance
+      resumeAt = startp + 1
+    elseif not selectSection(startp - 1, endp - startp + 1) then
+      -- a refused selection would leave replace() splicing into line 0 column 0
+      break
+    else
+      replace(what, keepColor)
+      -- resume past what was written: advancing by the pattern's length instead can
+      -- land back inside the replacement and match it forever
+      resumeAt = startp + whatLength
+    end
   end
 end
 
