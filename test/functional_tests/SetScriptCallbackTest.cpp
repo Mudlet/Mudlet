@@ -288,7 +288,7 @@ private slots:
         QCOMPARE(luaInt(qsl("plainA")), 1);
     }
 
-    // Helpers (reused from the EnableDisableByNameTest/TFeedTriggersRecursionTest pattern)
+    // Helpers (reused from the TFeedTriggersRecursionTest pattern)
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
