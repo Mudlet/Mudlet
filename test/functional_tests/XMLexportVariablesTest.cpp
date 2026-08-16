@@ -812,6 +812,59 @@ private slots:
         QCOMPARE(luaL_dostring(L, "unhiddenHolderTable, unhiddenInnerTable = nil"), 0);
     }
 
+    // The save-time copy answers hiding from identities borrowed off the live
+    // unit, and those decay the same way. A top-level saved global is safe
+    // regardless - its savedVars name is honoured before hiding is - so the
+    // exposed shape is a member riding along inside a saved table: one landing
+    // on a collected hidden table's address must still be written out with its
+    // table, not silently dropped from the save. This is the save half of the
+    // recycled-address bug; the TLuaInterfaceTest unit tests cover the view
+    // half. Whether an address is really handed out again is the allocator's
+    // business, so the freed batch is opportunistic - the identity injected
+    // behind the 'injected' member stands in for the allocator
+    // deterministically, putting a fresh table's address in the state a
+    // collected identity decays to: remembered, with nothing left to vouch
+    // for it.
+    void test_rideAlongMemberOnACollectedHiddenTableAddressIsStillExported()
+    {
+        QVERIFY2(!mpEditor, "this test rebuilds the shared variable tree, so it must run before the Variables-view tests");
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "recycledGroup = {} for i = 1, 512 do recycledGroup[i] = {'batch filler'} end"), 0);
+
+        const QSet<QString> hiddenBefore = vu->hidden;
+        const QSet<const void*> hiddenTablesBefore = vu->hiddenTables;
+        mpHost->hideMudletsVariables();
+
+        // one chunk, so nothing else allocates between the collect and the
+        // fresh member tables that could take the freed blocks first
+        QCOMPARE(luaL_dostring(L,
+                               "recycledGroup = nil collectgarbage('collect') "
+                               "freshHolderTable = {} "
+                               "for i = 0, 63 do freshHolderTable['m' .. i] = {'fresh member value ' .. i} end "
+                               "freshHolderTable.injected = {'injected member value'}"),
+                 0);
+        vu->savedVars.insert(qsl("freshHolderTable"));
+
+        lua_getglobal(L, "freshHolderTable");
+        lua_getfield(L, -1, "injected");
+        vu->hiddenTables.insert(lua_topointer(L, -1));
+        lua_pop(L, 2);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        for (int i = 0; i < 64; ++i) {
+            QVERIFY2(xml.contains(qsl("fresh member value %1").arg(i)), "a fresh member of a saved table must ride along even when it lands on a collected hidden table's address");
+        }
+        QVERIFY2(xml.contains(qsl("injected member value")), "an identity nothing vouches for must not swallow the member now on that address");
+
+        vu->savedVars.remove(qsl("freshHolderTable"));
+        vu->hidden = hiddenBefore;
+        vu->hiddenTables = hiddenTablesBefore;
+        QCOMPARE(luaL_dostring(L, "freshHolderTable = nil"), 0);
+    }
+
     // A script adds to a saved table while the editor sits on the Variables
     // view. A session's last save is taken with whatever view was left on
     // screen, so quitting from there is enough to reach this.
