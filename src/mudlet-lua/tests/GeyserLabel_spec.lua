@@ -164,6 +164,29 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_true(label.useAdd2)
       assert.are.equal("label", windowType("glsNew2"))
     end)
+
+    it("starts out hidden when the constraints ask for it", function()
+      local label = track(Geyser.Label:new({name = "glsHiddenNew", x = 0, y = 0, width = 40, height = 20, hidden = true}))
+      assert.is_true(label.hidden)
+      assert.is_false(windowVisible("glsHiddenNew"))
+      label:show()
+      assert.is_false(label.hidden)
+      assert.is_true(windowVisible("glsHiddenNew"))
+    end)
+
+    it("starts out hidden when new2 constraints ask for it", function()
+      local label = track(Geyser.Label:new2({name = "glsHiddenNew2", x = 0, y = 0, width = 40, height = 20, hidden = true}))
+      assert.is_true(label.hidden)
+      assert.is_false(windowVisible("glsHiddenNew2"))
+      label:show()
+      assert.is_true(windowVisible("glsHiddenNew2"))
+    end)
+
+    it("starts out hidden when the constraints ask for auto_hidden", function()
+      local label = track(Geyser.Label:new({name = "glsAutoHiddenNew", x = 0, y = 0, width = 40, height = 20, auto_hidden = true}))
+      assert.is_true(label.auto_hidden)
+      assert.is_false(windowVisible("glsAutoHiddenNew"))
+    end)
   end)
 
   describe("Geyser.Label geometry and visibility", function()
@@ -762,22 +785,21 @@ describe("Tests Geyser.Label movies, callbacks and nesting", function()
       assert.are.same({}, label.clickArgs)
     end)
 
-    -- setDoubleClickCallback is missing from the readback below on purpose: it
-    -- stores self.doubleclickCallback/doubleclickArgs while the constructor and
-    -- every other setter use the doubleClickCallback/doubleClickArgs spelling,
-    -- so there is nothing here worth freezing until that is settled
     it("remembers what the other callbacks registered too", function()
       local handler = function() end
+      label:setDoubleClickCallback(handler, "d")
       label:setReleaseCallback(handler, "r")
       label:setMoveCallback(handler, "m")
       label:setWheelCallback(handler, "w")
       label:setOnEnter(handler, "e")
       label:setOnLeave(handler, "l")
+      assert.are.same({"d"}, label.doubleClickArgs)
       assert.are.same({"r"}, label.releaseArgs)
       assert.are.same({"m"}, label.moveArgs)
       assert.are.same({"w"}, label.wheelArgs)
       assert.are.same({"e"}, label.onEnterArgs)
       assert.are.same({"l"}, label.onLeaveArgs)
+      assert.are.equal(handler, label.doubleClickCallback)
       assert.are.equal(handler, label.releaseCallback)
       assert.are.equal(handler, label.moveCallback)
       assert.are.equal(handler, label.wheelCallback)
@@ -794,12 +816,27 @@ describe("Tests Geyser.Label movies, callbacks and nesting", function()
       local built = track(Geyser.Label:new({
         name = "glnConsCallback", x = 0, y = 0, width = 60, height = 40,
         clickCallback = "echo", clickArgs = {"hello"},
+        doubleClickCallback = "echo", doubleClickArgs = "hello",
         onEnter = "echo", onEnterArgs = "hello",
       }, container))
       assert.are.equal("echo", built.clickCallback)
       assert.are.same({"hello"}, built.clickArgs)
+      assert.are.equal("echo", built.doubleClickCallback)
+      assert.are.same({"hello"}, built.doubleClickArgs)
       assert.are.equal("echo", built.onEnter)
       assert.are.same({"hello"}, built.onEnterArgs)
+    end)
+
+    it("hands a double-click callback back to the constructor's spelling", function()
+      -- the constructor and Geyser.Label:new's re-registration only look at
+      -- doubleClickCallback, so a setter that stored any other key would leave
+      -- a label that forgets its handler the moment it is rebuilt
+      local handler = function() end
+      label:setDoubleClickCallback(handler, "a", 2)
+      assert.are.equal(handler, label.doubleClickCallback)
+      assert.are.same({"a", 2}, label.doubleClickArgs)
+      assert.is_nil(label.doubleclickCallback)
+      assert.is_nil(label.doubleclickArgs)
     end)
   end)
 

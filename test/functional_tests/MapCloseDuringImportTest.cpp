@@ -96,7 +96,7 @@ private:
             QVERIFY(areaId > 0);
             for (int room = 0; room < 5; ++room, ++roomId) {
                 QVERIFY(pMap->addRoom(roomId));
-                QVERIFY(pMap->setRoomArea(roomId, areaId, false));
+                QVERIFY(pMap->setRoomArea(roomId, areaId));
                 QVERIFY(pMap->setRoomCoordinates(roomId, room, area, 0));
             }
         }

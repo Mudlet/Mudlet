@@ -854,8 +854,8 @@ private:
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     static void pushMapLabelPropertiesToLua(lua_State*, const TMapLabel& label);
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
-    static int loadMediaFileAsOrderedArguments(lua_State*, const char*);
-    static int loadMediaFileAsTableArgument(lua_State*, const char*);
+    static int loadMediaFileAsOrderedArguments(lua_State*, const char*, const TMediaData::MediaType);
+    static int loadMediaFileAsTableArgument(lua_State*, const char*, const TMediaData::MediaType);
     static int playMusicFileAsOrderedArguments(lua_State*, const char*);
     static int playMusicFileAsTableArgument(lua_State*, const char*);
     static int playSoundFileAsOrderedArguments(lua_State*, const char*);

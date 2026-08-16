@@ -29,6 +29,11 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
+static void pcre2_match_data_deleter(pcre2_match_data* pointer)
+{
+    pcre2_match_data_free(pointer);
+}
+
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>(parent)
 , mpHost(pHost)
@@ -124,7 +129,10 @@ bool TAlias::match(const QString& haystack)
         goto MUD_ERROR;
     }
 
-    match_data = pcre2_match_data_create_from_pattern(re.data(), nullptr);
+    if (!mpMatchData) {
+        mpMatchData.reset(pcre2_match_data_create_from_pattern(re.data(), nullptr), pcre2_match_data_deleter);
+    }
+    match_data = mpMatchData.data();
     if (!match_data) {
         goto MUD_ERROR;
     }
@@ -132,7 +140,6 @@ bool TAlias::match(const QString& haystack)
     rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
     if (rc < 0) {
-        pcre2_match_data_free(match_data);
         goto MUD_ERROR;
     }
 
@@ -237,10 +244,6 @@ END: {
     pL->clearCaptureGroups();
 }
 
-    if (match_data) {
-        pcre2_match_data_free(match_data);
-    }
-
 MUD_ERROR:
     for (auto childAlias : *mpMyChildrenList) {
         if (childAlias->match(haystack)) {
@@ -289,6 +292,7 @@ void TAlias::compileRegex()
     }
 
     mpRegex = re;
+    mpMatchData.reset();
 }
 
 bool TAlias::registerAlias()

@@ -361,7 +361,15 @@ bool AliasUnit::enableAlias(const QString& name)
     // mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
-        it.value()->setIsActive(true);
+        TAlias* pT = it.value();
+        // An alias queued for deletion stays in the lookup table until
+        // doCleanup() frees it - re-activating one resurrects a killAlias()ed
+        // alias, or one whose package a script uninstalled mid-pass, and it
+        // matches commands again.
+        if (mCleanupSet.contains(pT) || uninstallList.contains(pT)) {
+            continue;
+        }
+        pT->setIsActive(true);
         found = true;
     }
     return found;

@@ -902,28 +902,6 @@ static bool validateConfDir(QString& path)
     return true;
 }
 
-static void migrateConfig(QSettings& settings)
-{
-    if (settings.contains(qsl("pos"))) {
-        return;
-    }
-    // Old default configs, stored in NativeFormat
-    const QSettings settings_old2(qsl("mudlet"), qsl("Mudlet"));
-    if (settings_old2.contains(qsl("pos"))) {
-        for (auto& key : settings_old2.allKeys()) {
-            settings.setValue(key, settings_old2.value(key));
-        }
-        return;
-    }
-    const QSettings settings_old1(qsl("Mudlet"), qsl("Mudlet 1.0"));
-    if (settings_old1.contains(qsl("pos"))) {
-        for (auto& key : settings_old1.allKeys()) {
-            settings.setValue(key, settings_old1.value(key));
-        }
-        return;
-    }
-}
-
 void mudlet::setupConfig()
 {
     QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
@@ -967,7 +945,6 @@ void mudlet::setupConfig()
     // created the Updater - the delete below would dangle its pointer.
     delete mpSettings;
     mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat, qApp);
-    migrateConfig(*mpSettings);
 }
 
 // This is a static wrapper for singleton instance method

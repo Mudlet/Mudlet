@@ -126,6 +126,7 @@ set(mudlet_SRCS
     TAlias.cpp
     TArea.cpp
     TAreaGridIndex.cpp
+    TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
@@ -359,6 +360,7 @@ set(mudlet_HDRS
     TAlias.h
     TArea.h
     TAreaGridIndex.h
+    TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
@@ -496,28 +498,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS glwidget_integration.h)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
-
-# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
-macro(set_alternate_linker linker)
-  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
-  if(LINKER_EXECUTABLE)
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
-      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
-      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
-      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
-      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
-    else()
-      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
-    endif()
-  else()
-    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
-  endif()
-endmacro()
-
-set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
-if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
-  set_alternate_linker(${USE_ALTERNATE_LINKER})
-endif()
 
 if(NOT WIN32)
   include(cmake/EnableSanitizers.cmake)

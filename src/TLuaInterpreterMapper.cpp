@@ -614,12 +614,11 @@ int TLuaInterpreter::addRoom(lua_State* L)
             areaID = getVerifiedInt(L, __func__, 2, "areaID");
         }
         const int requestedAreaID = areaID;
-        // defer area calculations as all new rooms are initialised at 0,0,0 anyway
-        if (!host.mpMap->setRoomArea(id, areaID, true)) {
+        if (!host.mpMap->setRoomArea(id, areaID)) {
             // The above will fail if the areaID does not exist (given that
             // "added" is true then the room now exists - so that isn't the
             // failure reason) so stuff the room in the "Default Area" instead
-            host.mpMap->setRoomArea(id, -1, true);
+            host.mpMap->setRoomArea(id, -1);
             issueBadAreaWarning = true;
             areaID = -1;
         }
@@ -3065,10 +3064,10 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
-    if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
+    if (!host.mpMap->mpRoomDB->hasRoom(id)) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
-    const bool result = host.mpMap->setRoomArea(id, -1, false);
+    const bool result = host.mpMap->setRoomArea(id, -1);
     if (result) {
         host.mpMap->updateArea(-1);
     }
@@ -4032,14 +4031,14 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
 
     if (lua_isnumber(L, 1)) {
         const int id = getVerifiedInt(L, __func__, 1, "roomID");
-        if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
+        if (!host.mpMap->mpRoomDB->hasRoom(id)) {
             return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
         }
     } else if (lua_istable(L, 1)) {
         lua_pushnil(L);
         while (lua_next(L, 1) != 0) {
             const int id = getVerifiedInt(L, __func__, -1, "roomID");
-            if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
+            if (!host.mpMap->mpRoomDB->hasRoom(id)) {
                 return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
             }
             lua_pop(L, 1);
@@ -4095,8 +4094,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     }
 
     const bool result = std::all_of(roomIds.begin(), roomIds.end(), [&](int id) {
-        // defer area recalculation on all rooms until the last room (.back())
-        return host.mpMap->setRoomArea(id, areaId, id != roomIds.back());
+        return host.mpMap->setRoomArea(id, areaId);
     });
 
     if (result) {

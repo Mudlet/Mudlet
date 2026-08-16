@@ -32,9 +32,26 @@ extern "C" const char* __lsan_default_suppressions()
     return mudletLsanSuppressions;
 }
 
-// Without this, LeakSanitizer appends a "Suppressions used" summary to every
-// clean exit, which reads like an error to users:
+// print_suppressions=0: without it, LeakSanitizer appends a "Suppressions used"
+// summary to every clean exit, which reads like an error to users.
+//
+// intercept_tls_get_addr=0: sanitizer-enabled builds - the testing and PTB ones
+// users download - run LeakSanitizer when the user quits. Up to GCC 13 and LLVM
+// 16, the sanitizer runtime's __tls_get_addr interceptor decides a dynamic TLS
+// block carries a pre-2.25 glibc header when `tls_beg % 4096` equals
+// sizeof(Glibc_2_19_tls_header) (16 on 64-bit), and reads the two words before
+// it as that block's address and length. Since glibc 2.25 there is no such
+// header, and a malloc'd block lands on that offset by coincidence, so the
+// recorded range is garbage; LeakSanitizer's tracer then segfaults scanning it
+// and quitting ends in "LeakSanitizer has encountered a fatal error" and a
+// non-zero exit (google/sanitizers#1322, #9809). Turning the interception off
+// skips the recording, at the cost of not scanning dynamic TLS for roots.
+//
+// Set unconditionally rather than only for the affected runtimes: there is no
+// macro that names the sanitizer runtime here (see above), and on a fixed one
+// the flag costs only that scanning. The CI leak leg sets it through
+// ASAN_OPTIONS as well - see test/functional_tests/CMakeLists.txt.
 extern "C" const char* __lsan_default_options()
 {
-    return "print_suppressions=0";
+    return "print_suppressions=0:intercept_tls_get_addr=0";
 }
