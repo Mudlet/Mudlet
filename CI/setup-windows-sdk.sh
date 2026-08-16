@@ -19,7 +19,10 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.4.0    Add Python, needed by the fixture HTTP server the Lua
+# Version: 2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
+#                   hardlinks bsdunzip over "unzip" and it mangles line
+#                   endings when it unpacks a rock
+#          2.4.0    Add Python, needed by the fixture HTTP server the Lua
 #                   tests run against
 #          2.3.0    Switch from MINGW64 to CLANG64
 #          2.2.0    Add CMake package for CMake-based builds
