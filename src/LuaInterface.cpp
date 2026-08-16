@@ -886,7 +886,7 @@ bool LuaInterface::renameVar(TVar* var)
             if (renameCVar(vars)) {
                 // where it goes, and why the bookkeeping moves here rather than
                 // once the rename is over: see the copying stage below
-                varUnit->renameVariableBookkeeping(oldFullName, newFullName);
+                varUnit->renameVariableBookkeeping(var, oldFullName, newFullName);
                 return true;
             }
             var->abandonNewName();
@@ -929,7 +929,7 @@ bool LuaInterface::renameVar(TVar* var)
     }
     // here rather than at the end: the variable is under its new name from this
     // point on, whatever the deleting stage below goes on to do
-    varUnit->renameVariableBookkeeping(oldFullName, newFullName);
+    varUnit->renameVariableBookkeeping(var, oldFullName, newFullName);
 
     //delete it
     error = luaL_loadstring(mL, oldVariable.append(QLatin1String(" = nil")).toUtf8().constData());

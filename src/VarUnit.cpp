@@ -86,7 +86,6 @@ bool VarUnit::isHidden(TVar* var)
         // The table behind this address has been collected, so the address no
         // longer names a hidden table - typically it now names a fresh variable
         // of the user's. Forget the identity so it is not asked about again.
-        qDebug() << "VarUnit::isHidden() INFO - dropping the identity of a collected hidden table: address" << var->pValue << "no longer names it.";
         forgetHiddenTableAddress(var->pValue);
     }
     const QString fullName = shortVarName(var).join(qsl("."));
@@ -503,33 +502,25 @@ void VarUnit::removeHidden(const QString& name)
     // does not remove the reference from TVar, similar to addHidden()
 }
 
-// Whether a name-keyed entry is about the variable being renamed, or about
-// something inside it - a member of a renamed table is remembered by a name
-// beginning with the table's, so it moves too. The dot is what makes this a
-// path rather than a string prefix: "renHolderOther" begins with "renHolder"
-// and is a variable of its own that no rename of "renHolder" touches.
-static bool nameIsTheVariableOrInsideIt(const QString& name, const QString& fullName)
+// The exact names the rename moves: the variable's own and its real
+// descendants', read off the tree rather than matched as string prefixes. A
+// sibling whose own key holds a dot ("a.b" beside member "a") joins to the very
+// path a descendant of "a" would have, and a prefix rule would drag that
+// sibling's marks onto a name nothing has.
+static void collectRenamedPaths(TVar* var, const QString& oldPath, const QString& newPath, QHash<QString, QString>& renames)
 {
-    return name == fullName || name.startsWith(fullName + QLatin1Char('.'));
-}
-
-// ...and where such an entry ends up: the same tail, hung off the new name.
-static QString nameAfterTheRename(const QString& name, const QString& oldFullName, const QString& newFullName)
-{
-    return newFullName + name.mid(oldFullName.size());
-}
-
-static void renameNameKeyedEntries(QSet<QString>& names, const QString& oldFullName, const QString& newFullName)
-{
-    QStringList moving;
-    for (const QString& name : names) {
-        if (nameIsTheVariableOrInsideIt(name, oldFullName)) {
-            moving.append(name);
-        }
+    renames.insert(oldPath, newPath);
+    for (TVar* child : var->getChildren(false)) {
+        collectRenamedPaths(child, oldPath + QLatin1Char('.') + child->getName(), newPath + QLatin1Char('.') + child->getName(), renames);
     }
-    for (const QString& name : moving) {
-        names.remove(name);
-        names.insert(nameAfterTheRename(name, oldFullName, newFullName));
+}
+
+static void renameNameKeyedEntries(QSet<QString>& names, const QHash<QString, QString>& renames)
+{
+    for (auto it = renames.constBegin(); it != renames.constEnd(); ++it) {
+        if (names.remove(it.key())) {
+            names.insert(it.value());
+        }
     }
 }
 
@@ -538,28 +529,29 @@ static void renameNameKeyedEntries(QSet<QString>& names, const QString& oldFullN
 // it. Left behind, a saved or hidden mark keeps answering for the old name, and
 // catches whichever unrelated variable is born under it next; the renamed
 // variable meanwhile loses the mark the user put on it. Renaming a table moves
-// what is remembered about its members as well, whose names all begin with it.
-void VarUnit::renameVariableBookkeeping(const QString& oldFullName, const QString& newFullName)
+// what is remembered about its members as well - exactly its members, walked
+// from the tree, so an entry that merely reads like a member's path stays put.
+void VarUnit::renameVariableBookkeeping(TVar* var, const QString& oldFullName, const QString& newFullName)
 {
-    if (oldFullName == newFullName || oldFullName.isEmpty() || newFullName.isEmpty()) {
+    if (!var || oldFullName == newFullName || oldFullName.isEmpty() || newFullName.isEmpty()) {
         return;
     }
-    renameNameKeyedEntries(savedVars, oldFullName, newFullName);
-    renameNameKeyedEntries(hidden, oldFullName, newFullName);
-    renameNameKeyedEntries(hiddenByUser, oldFullName, newFullName);
+    QHash<QString, QString> renames;
+    collectRenamedPaths(var, oldFullName, newFullName, renames);
+    renameNameKeyedEntries(savedVars, renames);
+    renameNameKeyedEntries(hidden, renames);
+    renameNameKeyedEntries(hiddenByUser, renames);
     // Only the name has changed: the tables are the same tables, so their
     // addresses are still identities and their anchors still answer for them.
     // Forgetting the identities here instead would leave them hidden by name
     // alone.
-    QHash<QString, const void*> movingTables;
-    for (auto it = mHiddenTableByName.constBegin(); it != mHiddenTableByName.constEnd(); ++it) {
-        if (nameIsTheVariableOrInsideIt(it.key(), oldFullName)) {
-            movingTables.insert(it.key(), it.value());
+    for (auto it = renames.constBegin(); it != renames.constEnd(); ++it) {
+        const auto found = mHiddenTableByName.constFind(it.key());
+        if (found != mHiddenTableByName.constEnd()) {
+            const void* table = found.value();
+            mHiddenTableByName.erase(found);
+            mHiddenTableByName.insert(it.value(), table);
         }
-    }
-    for (auto it = movingTables.constBegin(); it != movingTables.constEnd(); ++it) {
-        mHiddenTableByName.remove(it.key());
-        mHiddenTableByName.insert(nameAfterTheRename(it.key(), oldFullName, newFullName), it.value());
     }
 }
 

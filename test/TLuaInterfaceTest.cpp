@@ -929,6 +929,38 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY(vu->savedVars.contains(qsl("dotHolder.a.b")));
     }
 
+    // A member's key can itself hold a dot, so "gt.a.b" names both a member
+    // "a.b" of gt and a member b of gt.a - the rename must move marks for what
+    // is really inside the renamed variable, not for whatever path reads as if
+    // it were.
+    void testRenameDoesNotMoveADottedKeySiblingsMark()
+    {
+        defineGlobalsTable();
+        execLua("gt = {a = 5} gt['a.b'] = 'sibling with a dotted key'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+        TVar* holder = findGlobal(qsl("gt"));
+        QVERIFY(holder);
+        TVar* dottedSibling = nullptr;
+        TVar* plainA = nullptr;
+        for (TVar* kid : holder->getChildren(false)) {
+            if (kid->getName() == qsl("a.b")) {
+                dottedSibling = kid;
+            } else if (kid->getName() == qsl("a")) {
+                plainA = kid;
+            }
+        }
+        QVERIFY(dottedSibling && plainA);
+        vu->addSavedVar(dottedSibling); // savedVars = {"gt.a.b"} - the sibling's mark
+        QVERIFY(vu->savedVars.contains(qsl("gt.a.b")));
+
+        plainA->setNewName(qsl("x"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(plainA));
+        qDebug() << "savedVars after renaming gt.a:" << vu->savedVars;
+        QVERIFY2(vu->savedVars.contains(qsl("gt.a.b")), "the dotted-key sibling's mark must not be dragged along by a rename of gt.a");
+        QVERIFY2(!vu->savedVars.contains(qsl("gt.x.b")), "no mark may be invented for a name nothing has");
+    }
+
 private:
     static std::unique_ptr<TVar> namedVar(const QString& name)
     {
