@@ -596,6 +596,8 @@ describe("Trigger processing", function()
             disableTrigger("SpecPermSubstring")
             disableTrigger("SpecPermBeginOfLine")
             disableTrigger("SpecPermExact")
+            disableTrigger("SpecPermBlankPattern")
+            disableTrigger("SpecPermTwoBlankPatterns")
             _G.TrigSpec = nil
         end)
 
@@ -657,6 +659,39 @@ describe("Trigger processing", function()
             assert.is_false(ok, "a non-table pattern argument should error")
             assert.is_truthy(tostring(err):find("permBeginOfLineStringTrigger", 1, true),
                 "the error should name permBeginOfLineStringTrigger, got: " .. tostring(err))
+        end)
+
+        -- Blank patterns are skipped when the pattern list is stored, so the stored
+        -- list is compacted while the list passed in is not, and a pattern following
+        -- a blank one must still be matched with its own regex. A pattern table with
+        -- more than one entry makes the trigger multiline, so its captures arrive in
+        -- multimatches rather than matches even though only one pattern survives.
+        -- A permanent trigger saved by an earlier run reloads with its blank pattern
+        -- already stripped, i.e. healed, so it has to be cleared out first or it
+        -- fires and masks the result.
+        it("a blank pattern before a real one does not stop the real one matching", function()
+            _G.TrigSpec = {capture = nil}
+            killTrigger("SpecPermBlankPattern")
+            disableTrigger("SpecPermBlankPattern")
+            local id = permRegexTrigger("SpecPermBlankPattern", "", {"", "^You see (\\w+)$"},
+                                        [==[_G.TrigSpec.capture = multimatches[1][2]]==])
+            assert.is_number(id)
+            assert.is_true(id > 0)
+            feedTriggers("\nYou see sword\n")
+            assert.is_equal("sword", _G.TrigSpec.capture,
+                "a pattern after a blank one should match and report its own capture")
+        end)
+
+        it("two blank patterns before a real one do not shift its regex", function()
+            _G.TrigSpec = {capture = nil}
+            killTrigger("SpecPermTwoBlankPatterns")
+            disableTrigger("SpecPermTwoBlankPatterns")
+            local id = permRegexTrigger("SpecPermTwoBlankPatterns", "", {"", "", "^probe (\\w+)$"},
+                                        [==[_G.TrigSpec.capture = multimatches[1][2]]==])
+            assert.is_number(id)
+            feedTriggers("\nprobe alpha\n")
+            assert.is_equal("alpha", _G.TrigSpec.capture,
+                "the shift should be corrected for any number of leading blank patterns")
         end)
 
         it("killTrigger returns false for a permanent trigger (they cannot be killed)", function()

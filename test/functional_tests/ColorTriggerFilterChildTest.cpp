@@ -26,6 +26,10 @@
  * the filter-child case, and that the child only scans the parent's capture
  * rather than the whole line.
  *
+ * A perl child of a filter parent is measured rather than scanned - it is
+ * handed the capture as UTF-8 bytes plus a length - so there is a case for that
+ * here too, over text where a byte count and a character count differ.
+ *
  * Run with: ctest -R ColorTriggerFilterChildTest -V
  */
 
@@ -97,6 +101,28 @@ private:
         pT->mFilterTrigger = true;
         pT->registerTrigger();
         pT->setScript(QString());
+        pT->setName(name);
+        pT->setIsActive(true);
+        return pT;
+    }
+
+    QString luaGlobalString(const char* name)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_getglobal(L, name);
+        const QString value = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    TTrigger* makePerlChild(TTrigger* pParent, const QString& name, const QString& pattern, const QString& script)
+    {
+        auto* pT = new TTrigger(pParent, mpHost);
+        pT->setIsFolder(false);
+        pT->setTemporary(true);
+        pT->setRegexCodeList({pattern}, {REGEX_PERL});
+        pT->registerTrigger();
+        pT->setScript(script);
         pT->setName(name);
         pT->setIsActive(true);
         return pT;
@@ -180,6 +206,23 @@ private slots:
 
         runLua(qsl("feedTriggers('hello \\27[33mworld\\27[0m\\n')"));
         QVERIFY2(luaGlobalTrue("captureChildFired"), "color child should fire when the parent's capture is yellow");
+
+        pParent->setIsActive(false);
+        pChild->setIsActive(false);
+    }
+
+    // The child's pattern is anchored at both ends, so it only matches if the
+    // capture it is offered runs to the end. The dragon is four UTF-8 bytes but
+    // two characters, and the Cyrillic two bytes each, so a length taken in
+    // characters would stop the child short of its own end anchor.
+    void test_perlChildUnderFilterParentIsOfferedTheWholeCapture()
+    {
+        auto* pParent = makeFilterParent(qsl("multibyte filter parent"), qsl("^Цель: (.+)$"));
+        auto* pChild = makePerlChild(pParent, qsl("perl filter child"), qsl("^(\\S+) Оружие: (\\w+)$"), qsl("perlChildWeapon = matches[3]"));
+
+        runLua(qsl("perlChildWeapon = ''"));
+        runLua(qsl("feedTriggers('Цель: 🐉 Оружие: меч\\n')"));
+        QCOMPARE(luaGlobalString("perlChildWeapon"), qsl("меч"));
 
         pParent->setIsActive(false);
         pChild->setIsActive(false);

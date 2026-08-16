@@ -109,6 +109,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorBannerViewSwitchTest;
     friend class ScriptEventHandlerLifetimeTest;
+    friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid

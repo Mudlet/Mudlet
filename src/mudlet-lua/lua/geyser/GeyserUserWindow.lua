@@ -203,6 +203,11 @@ function Geyser.UserWindow:new(cons)
   me:resetWindow()
   if me.stylesheet then me:setStyleSheet() end
 
+  -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
+  if me.hidden or me.auto_hidden then
+    hideWindow(me.name)
+  end
+
   Geyser.parentWindows = Geyser.parentWindows or {}
   Geyser.parentWindows[me.name] = me
 
