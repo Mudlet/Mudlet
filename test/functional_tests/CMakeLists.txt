@@ -21,11 +21,13 @@ set(FUNCTIONAL_TEST_SOURCES
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
+    MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
+    TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     EnableDisableByNameTest.cpp
@@ -193,6 +195,8 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
 # into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
 # again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
+set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
+
 set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
     TIMEOUT 300)
@@ -214,6 +218,10 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
+
+# TelnetCharsetNegotiationTest creates a fresh profile per test case, each of which
+# also reconnects, so it needs a longer timeout
+set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
