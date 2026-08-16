@@ -539,10 +539,15 @@ if false then
 
 
 
-  --- Deletes an alias with the given name. If several aliases have this name, they'll all be deleted.
+  --- Deletes a tempAlias. Use the alias ID returned by tempAlias() as the name parameter.
+  --- This function returns true on success and false if the alias has already been killed
+  --- or is not a temporary alias. Note that non-temporary aliases that you have set up in
+  --- the GUI cannot be deleted with this function. Use disableAlias() to turn them on or off.
   ---
   --- @see killTimer
   --- @see killTrigger
+  ---
+  --- @return true or false
   function killAlias(name)
   end
 
@@ -563,6 +568,10 @@ if false then
 
 
   --- Deletes a tempTrigger according to trigger ID. ID is a string value, not a number.
+  --- This function returns true on success and false if the trigger has already been killed
+  --- (or has used up its last firing) or is not a temporary trigger. Note that non-temporary
+  --- triggers that you have set up in the GUI cannot be deleted with this function.
+  --- Use disableTrigger() to turn them on or off.
   ---
   --- @see killAlias
   --- @see killTimer

@@ -23,6 +23,8 @@
 #include "Host.h"
 
 #include <functional>
+#include <map>
+#include <memory>
 #include <utility>
 #include <QDebug>
 #include <QTimer>
@@ -113,20 +115,30 @@ public:
     int8_t getInstance() const { return mInstance; }
 
 private:
-    char mState[128];
-    char mDetails[128];
+    // The limits Discord documents for each field, in bytes (see the struct
+    // comment above). The buffers are one byte larger than the limit they hold:
+    // sized at exactly the limit, the null terminator would take the last byte
+    // and a field of the full documented length would always lose its final
+    // character. Named in the 'k' form the rest of the codebase gives an array
+    // size (TArea.cpp's kPixmapDataLineSize) rather than the 'scm' one it gives
+    // other static class members.
+    static constexpr size_t kTextByteLimit = 128;
+    static constexpr size_t kImageKeyByteLimit = 32;
+
+    char mState[kTextByteLimit + 1];
+    char mDetails[kTextByteLimit + 1];
     int64_t mStartTimestamp = 0;
     int64_t mEndTimestamp = 0;
-    char mLargeImageKey[32];
-    char mLargeImageText[128];
-    char mSmallImageKey[32];
-    char mSmallImageText[128];
-    char mPartyId[128];
+    char mLargeImageKey[kImageKeyByteLimit + 1];
+    char mLargeImageText[kTextByteLimit + 1];
+    char mSmallImageKey[kImageKeyByteLimit + 1];
+    char mSmallImageText[kTextByteLimit + 1];
+    char mPartyId[kTextByteLimit + 1];
     int mPartySize = 0;
     int mPartyMax = 0;
-    char mMatchSecret[128];
-    char mJoinSecret[128];
-    char mSpectateSecret[128];
+    char mMatchSecret[kTextByteLimit + 1];
+    char mJoinSecret[kTextByteLimit + 1];
+    char mSpectateSecret[kTextByteLimit + 1];
     int8_t mInstance = 1;
 };
 
@@ -161,6 +173,9 @@ inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
 class Discord : public QObject
 {
     Q_OBJECT
+
+    // Allows the functional test to simulate the logged-in Discord user:
+    friend class TDiscordModeTest;
 
 public:
     explicit Discord(QObject *parent = nullptr);
@@ -222,7 +237,7 @@ private:
 
     void timerEvent(QTimerEvent *event) override;
 
-    DiscordEventHandlers* mpHandlers = nullptr;
+    std::unique_ptr<DiscordEventHandlers> mpHandlers;
 
     // These are function pointers to functions located in the Discord RPC library:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -243,7 +258,7 @@ private:
 
     // Key is a Application Id, Value is a pointer to a local copy of the data
     // currently held for that presence:
-    QMap<QString, localDiscordPresence*> mPresencePtrs;
+    std::map<QString, std::unique_ptr<localDiscordPresence>> mPresencePtrs;
 
     // Used to tie a profile to a particular Discord presence - multiple
     // profiles can have the same presence but defaults to the nullptr one for

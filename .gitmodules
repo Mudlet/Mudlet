@@ -4,9 +4,6 @@
 [submodule "3rdparty/lua_code_formatter"]
 	path = 3rdparty/lcf
 	url = https://github.com/martin-eden/lua_code_formatter.git
-[submodule "3rdparty/dblsqd"]
-	path = 3rdparty/dblsqd
-	url = https://github.com/Mudlet/dblsqd-sdk-qt.git
 [submodule "3rdparty/qt-tags-widget"]
 	path = 3rdparty/qt-tags-widget
 	url = https://github.com/julian-go/qt-tags-widget.git

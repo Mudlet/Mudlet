@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -598,7 +599,7 @@ void EditorDeleteItemCommand::redo()
     mLastOperationWasValid = false;
 
     // First pass: validate that items still exist and have the expected names
-    for (const auto& info : mDeletedItems) {
+    for (const auto& info : std::as_const(mDeletedItems)) {
         switch (mViewType) {
         case EditorViewType::cmTriggerView: {
             TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(info.itemID);
@@ -724,7 +725,7 @@ void EditorDeleteItemCommand::redo()
     // trying to unregister. Only delete items whose parent is not also being deleted
     // (parent deletion handles children), and only if they still match the recorded
     // name to avoid deleting unrelated items.
-    for (const auto& info : mDeletedItems) {
+    for (const auto& info : std::as_const(mDeletedItems)) {
         // Skip items whose parent is also in the deletion list
         // (they will be automatically deleted when the parent is deleted)
         if (info.parentID != -1) {

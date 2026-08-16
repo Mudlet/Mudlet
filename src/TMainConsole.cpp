@@ -32,6 +32,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
@@ -39,15 +40,23 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QDialog>
+#include <QDockWidget>
+#include <QIcon>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProgressDialog>
+#include <QUiLoader>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSizePolicy>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QTextStream>
 #include <QPainter>
+#include <QVideoWidget>
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -78,6 +87,30 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
+    // There is one window in which a command line's destroyed() handler is unsafe:
+    // after this console's members - mSubCommandLineMap among them - have been
+    // destroyed, but before ~QObject severs incoming connections. The only command
+    // lines that can be destroyed inside it are the ones QWidget::~QWidget deletes,
+    // i.e. this console's own children, so sweeping those is enough. Command lines
+    // created into a user window belong to a TDockWidget reparented onto the main
+    // window instead, and can only die after ~QObject has already dropped the
+    // connection. Children rather than map entries, because deleteCommandLine() and
+    // resetMainConsole() drop the entry while the widget lives on until its
+    // deferred delete is delivered.
+    for (auto commandLine : findChildren<TCommandLine*>()) {
+        disconnect(commandLine, &QObject::destroyed, this, nullptr);
+    }
+    mSubCommandLineMap.clear();
+
+    // Neither is a child of this console: the map dock is reparented onto the main
+    // window by addDockWidget(), and the unpacking dialog is parentless. So neither
+    // dies with the console automatically.
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->deleteLater();
+    }
+    if (mpUnpackingDialog) {
+        mpUnpackingDialog->deleteLater();
+    }
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
         mpHunspell_system = nullptr;
@@ -127,6 +160,16 @@ std::optional<QSize> TMainConsole::getLabelSizeHint(const QString& name) const
     return {};
 }
 
+std::optional<QString> TMainConsole::getLabelToolTip(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+
+    return {pL->toolTip()};
+}
+
 // NOLINTNEXTLINE(readability-make-member-function-const)
 std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet)
 {
@@ -142,6 +185,16 @@ std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& na
     return {false, qsl("userwindow name '%1' not found").arg(name)};
 }
 
+std::optional<QString> TMainConsole::getUserWindowStyleSheet(const QString& name) const
+{
+    auto pW = mDockWidgetMap.value(name);
+    if (!pW) {
+        return {};
+    }
+
+    return {pW->styleSheet()};
+}
+
 std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
     if (name.isEmpty() || !name.compare(qsl("main"))) {
@@ -155,6 +208,23 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
         return {true, QString()};
     }
     return {false, qsl("command-line name '%1' not found").arg(name)};
+}
+
+std::optional<QString> TMainConsole::getCmdLineStyleSheet(const QString& name) const
+{
+    if (name.isEmpty() || !name.compare(qsl("main"))) {
+        if (auto pMain = mpHost->mpConsole->mpCommandLine) {
+            return {pMain->styleSheet()};
+        }
+        return {};
+    }
+
+    auto pN = mSubCommandLineMap.value(name);
+    if (!pN) {
+        return {};
+    }
+
+    return {pN->styleSheet()};
 }
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
@@ -454,32 +524,37 @@ TConsole* TMainConsole::createBuffer(const QString& name)
 
 void TMainConsole::resetMainConsole()
 {
-    //resetProfile should reset also UserWindows
+    // Delete DockWidgets first — their child UserWindow TConsoles will be
+    // cascade-deleted by Qt's parent-child ownership. Remove the corresponding
+    // TConsole entries from mSubConsoleMap to avoid dangling pointers.
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
     while (itDockWidget.hasNext()) {
         itDockWidget.next();
+        mSubConsoleMap.remove(itDockWidget.key());
         itDockWidget.value()->deleteLater();
         itDockWidget.remove();
     }
 
-    QMutableMapIterator<QString, TCommandLine*> itCommandLine(mSubCommandLineMap);
-    while (itCommandLine.hasNext()) {
-        itCommandLine.next();
-        itCommandLine.value()->deleteLater();
-        itCommandLine.remove();
+    const QList<TCommandLine*> commandLines = mSubCommandLineMap.values();
+    for (auto commandLine : commandLines) {
+        deregisterSubCommandLine(commandLine);
+        commandLine->deleteLater();
     }
 
+    // Remaining SubConsole/Buffer entries (UserWindow ones were already removed above)
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
-        // CHECK: Do we need to handle the float/dockable widgets here:
-        itSubConsole.value()->close();
+        itSubConsole.value()->deleteLater();
         itSubConsole.remove();
     }
 
     QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
     while (itLabel.hasNext()) {
         itLabel.next();
+        if (itLabel.value()->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(itLabel.value()->mpMovie);
+        }
         itLabel.value()->deleteLater();
         itLabel.remove();
     }
@@ -634,10 +709,28 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
     if (pConsole) {
         mCachedWindowSizes.remove(name);
 
-        // Using deleteLater() rather than delete as it seems a safer option
-        // given that this item is likely to be linked to some events and
-        // suchlike:
-        pConsole->deleteLater();
+        // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
+        // console (as for an ordinary miniconsole) leaves the dock orphaned in
+        // mDockWidgetMap with a now-null widget(), which later crashes - e.g. in
+        // getUserWindowSize() - when a window of the same name is recreated. Tear
+        // the dock down too; it owns the console as its child widget and deletes
+        // it along with itself (mirrors the shutdown path in TConsole::closeEvent).
+        if (pConsole->getType() == TConsole::UserWindow) {
+            if (auto pDock = mDockWidgetMap.take(name)) {
+                // deleteLater() alone is sufficient: the console is the dock's
+                // child widget, so destroying the dock destroys the console with
+                // it. (No WA_DeleteOnClose - we delete programmatically here, not
+                // in response to a close event.)
+                pDock->deleteLater();
+            } else {
+                pConsole->deleteLater();
+            }
+        } else {
+            // Using deleteLater() rather than delete as it seems a safer option
+            // given that this item is likely to be linked to some events and
+            // suchlike:
+            pConsole->deleteLater();
+        }
 
         // It remains to be seen if the miniconsole has "gone" as a result of the
         // above by the time the Lua subsystem processes the following:
@@ -660,8 +753,12 @@ std::pair<bool, QString> TMainConsole::deleteCommandLine(const QString& name)
         return {false, QLatin1String("a command line cannot have an empty string as its name")};
     }
 
-    auto pCmdLine = mSubCommandLineMap.take(name);
+    auto pCmdLine = mSubCommandLineMap.value(name);
     if (pCmdLine) {
+        // Deregister rather than just take() the entry: the widget outlives this
+        // call until its deferred delete is delivered, and its destroyed() handler
+        // must not be left armed for a console that may be gone by then.
+        deregisterSubCommandLine(pCmdLine);
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -800,7 +897,7 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
-    auto pM = mpHost->mpDockableMapWidget;
+    auto pM = mpDockableMapWidget;
     if (pM) {
         return {false, qsl("cannot create mapper. Do you already use a map window?")};
     }
@@ -819,19 +916,26 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         }
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
-        qDebug() << "TConsole::createMapper() - restore map case 2.";
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
-        const QDateTime now(QDateTime::currentDateTime());
 
-        if (mpHost->mpMap->restore(QString())) {
-            mpHost->mpMap->audit();
-            mpMapper->mp2dMap->init();
+        if (mpHost->mpMap->mpRoomDB->isEmpty()) {
+            // Don't load a map if we already have one around!
+            qDebug() << "TConsole::createMapper() - restore map case 2.";
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
+            const QDateTime now(QDateTime::currentDateTime());
+
+            if (mpHost->mpMap->restore(QString())) {
+                mpHost->mpMap->audit();
+                mpMapper->mp2dMap->init();
+                mpMapper->updateAreaComboBox();
+                mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMapper->show();
+            }
+
+            mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
+        } else {
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            mpMapper->show();
         }
-
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
         TEvent mapOpenEvent{};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
@@ -877,13 +981,44 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         } else {
             pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
         }
-        mSubCommandLineMap[name] = pN;
+        registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
         pN->show();
         return {true, QString()};
     }
     return {false, QLatin1String("couldn't create commandLine")};
+}
+
+void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCommandLine)
+{
+    if (auto pDisplaced = mSubCommandLineMap.value(name); pDisplaced && pDisplaced != pCommandLine) {
+        // Would otherwise be left connected but unreachable by name
+        deregisterSubCommandLine(pDisplaced);
+    }
+    mSubCommandLineMap[name] = pCommandLine;
+
+    // A TCommandLine is always a child widget of something else - the miniconsole
+    // it is embedded in, or the user window / scroll box it was created into - so
+    // it can be destroyed without deleteCommandLine() ever being called, and this
+    // map does not hold QPointers. Without this the entry outlives the widget and
+    // every later lookup of the name reads freed memory; TConsole::setFont() walks
+    // the whole map, so even changing the display font in Preferences hits it.
+    connect(pCommandLine, &QObject::destroyed, this, [this, pCommandLine]() {
+        deregisterSubCommandLine(pCommandLine);
+    });
+}
+
+void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
+{
+    // This is the only destroyed() connection made from a command line to this
+    // console, so severing all of them is severing just that one.
+    disconnect(pCommandLine, &QObject::destroyed, this, nullptr);
+    // Erase by value rather than by name: a replacement command line may have been
+    // registered under the same name in the meantime and must be left in place.
+    mSubCommandLineMap.removeIf([pCommandLine](const auto& it) {
+        return it.value() == pCommandLine;
+    });
 }
 
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
@@ -1002,32 +1137,32 @@ bool TMainConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pL) {
         pL->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pS) {
         pS->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pN) {
         pN->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     if (pT) {
         pT->lower();
-        mpMainDisplay->lower();
+        lowerMainDisplay();
         return true;
     }
     return false;
@@ -1075,7 +1210,8 @@ bool TMainConsole::printWindow(const QString& name, const QString& text)
     if (pC) {
         pC->print(text);
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->setText(text);
         return true;
     }
@@ -1087,7 +1223,10 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
     auto pW = mDockWidgetMap.value(windowname);
 
-    if (pW) {
+    // Guard pW->widget(): a dock can briefly outlive its console (the console is
+    // deleted via deleteLater()), during which widget() is null - dereferencing
+    // it segfaults. Fall back to the main window size until the dock is gone.
+    if (pW && pW->widget()) {
         const QSize windowSize = pW->widget()->size();
         const int minValidWidth = 50;
 
@@ -1325,6 +1464,32 @@ std::pair<bool, QString> TMainConsole::setUserWindowTitle(const QString& name, c
     return {false, qsl("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
 }
 
+// The title is in .second when .first is true, otherwise .second is why there
+// is none. Mirrors setUserWindowTitle's checks in the same order and words, so
+// that a miniconsole sharing the name is not reported as a missing window.
+std::pair<bool, QString> TMainConsole::getUserWindowTitle(const QString& name) const
+{
+    if (name.isEmpty()) {
+        return {false, qsl("a user window cannot have an empty string as its name")};
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (!pC) {
+        return {false, qsl("user window name '%1' not found").arg(name)};
+    }
+
+    if (pC->getType() != UserWindow) {
+        return {false, qsl("\"%1\" is not a user window").arg(name)};
+    }
+
+    auto pD = mDockWidgetMap.value(name);
+    if (!pD) {
+        return {false, qsl("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
+    }
+
+    return {true, pD->windowTitle()};
+}
+
 bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
 {
     if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
@@ -1428,16 +1593,27 @@ void TMainConsole::finalize()
 // to the TMap class...?
 bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
-    const QString filename_map =
-            location.isEmpty() ? mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))) : location;
+    QString filename_map = location;
+    if (filename_map.isEmpty()) {
+        filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
+        // Resolve the name relative to the profile home directory the way
+        // TMainConsole::importMap does, rather than against whatever directory
+        // Mudlet happens to have been started in:
+        filename_map = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+    }
 
     const QDir dir_map(mudlet::getMudletPath(enums::profileMapsPath, mProfileName));
     if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
         return false;
     }
 
     QSaveFile file_map(filename_map);
     if (!file_map.open(QIODevice::WriteOnly)) {
+        // Naming the file matters more than usual: a relative location is not
+        // the path the caller typed
+        qDebug().noquote() << "Error saving map to" << filename_map << ":" << file_map.errorString();
         return false;
     }
 
@@ -1486,12 +1662,19 @@ bool TMainConsole::loadMap(const QString& location)
 
     pHost->mpMap->mapClear();
 
+    // The same resolution saveMap and importMap use, so that a map written
+    // under a bare name is looked for where it was written:
+    QString filePathName = location;
+    if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
+        filePathName = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+    }
+
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
     pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
     const QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
-    if (pHost->mpMap->restore(location)) {
+    if (pHost->mpMap->restore(filePathName)) {
         pHost->mpMap->audit();
         pHost->mpMap->mpMapper->mp2dMap->init();
         pHost->mpMap->mpMapper->updateAreaComboBox();
@@ -1504,10 +1687,10 @@ bool TMainConsole::loadMap(const QString& location)
         pHost->mpMap->mpMapper->show();
     }
 
-    if (location.isEmpty()) {
+    if (filePathName.isEmpty()) {
         pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
     } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
+        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(filePathName, now.toString(Qt::ISODate)), true);
     }
 
     pHost->mpMap->updateArea(-1);
@@ -1653,6 +1836,303 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
     pHost->updateDisplayDimensions();
 }
 
+void TMainConsole::showPackageDownloadProgress(const QString& title, const QString& cancelText)
+{
+    auto pHost = getHost();
+    if (!pHost) {
+        qWarning() << "TMainConsole::showPackageDownloadProgress() WARNING - called with no host; ignoring the download-progress request.";
+        return;
+    }
+    // A second server-triggered download can arrive mid-download (e.g. a
+    // reconnect re-sends Client.GUI). QProgressDialog::close() emits canceled(),
+    // so closing the superseded dialog while it is still wired to
+    // slot_cancelPackageDownload() would abort the download this new dialog is
+    // about to track; detach it before closing.
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->disconnect();
+        mpPackageDownloadProgressDialog->close();
+    }
+    // placeholder range; reset by the first download-progress update
+    mpPackageDownloadProgressDialog = new QProgressDialog(title, cancelText, 0, 4000000, this);
+    connect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
+    mpPackageDownloadProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpPackageDownloadProgressDialog->show();
+}
+
+void TMainConsole::updatePackageDownloadProgress(qint64 got, qint64 total)
+{
+    if (mpPackageDownloadProgressDialog) {
+        // total is -1 for chunked HTTP responses of unknown length; a (0, 0)
+        // range turns the dialog into a busy indicator
+        mpPackageDownloadProgressDialog->setRange(0, total > 0 ? static_cast<int>(total) : 0);
+        mpPackageDownloadProgressDialog->setValue(static_cast<int>(got));
+    }
+}
+
+void TMainConsole::closePackageDownloadProgress()
+{
+    if (mpPackageDownloadProgressDialog) {
+        mpPackageDownloadProgressDialog->close();
+    }
+}
+
+void TMainConsole::createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->hide();
+        mpMapProgressDialog->deleteLater();
+    }
+    auto pHost = getHost();
+    // If canceled() cannot be wired to the map, omit the cancel button rather
+    // than show one that does nothing.
+    const bool cancelWirable = pHost && !pHost->mpMap.isNull();
+    // Deliberately not WA_DeleteOnClose: the JSON import keeps updating this
+    // dialog from a processEvents loop, so it must outlive a mid-operation
+    // dismissal; we delete it explicitly instead.
+    mpMapProgressDialog = new QProgressDialog(label, cancelWirable ? cancelButtonText : QString(), minimum, maximum, this);
+    mpMapProgressDialog->setWindowTitle(title);
+    mpMapProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
+    mpMapProgressDialog->setAutoClose(false);
+    mpMapProgressDialog->setAutoReset(false);
+    // QProgressDialog still emits canceled() on Escape or window-close even with
+    // no cancel button, so only connect it when the operation is cancelable;
+    // otherwise a non-cancelable import could be aborted by a spurious cancel.
+    if (cancelWirable && !cancelButtonText.isEmpty()) {
+        connect(mpMapProgressDialog, &QProgressDialog::canceled, pHost->mpMap.data(), &TMap::slot_mapProgressDialogCancelled);
+    }
+}
+
+void TMainConsole::showMapTransferProgress(const QString& title, const QString& label, const QString& cancelButtonText)
+{
+    createMapProgressDialog(title, label, cancelButtonText, 0, 0);
+    mpMapProgressDialog->setMinimumWidth(300);
+    mpMapProgressDialog->setMinimumDuration(0);
+    mpMapProgressDialog->show();
+}
+
+void TMainConsole::showMapJsonProgress(const QString& title, const QString& label, const QString& cancelButtonText, int maximum)
+{
+    createMapProgressDialog(title, label, cancelButtonText, 0, maximum);
+    mpMapProgressDialog->setWindowModality(Qt::NonModal);
+    mpMapProgressDialog->setMinimumWidth(500);
+    mpMapProgressDialog->setMinimumDuration(1);
+}
+
+void TMainConsole::setMapProgressDialogLabel(const QString& text)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setLabelText(text);
+    }
+}
+
+void TMainConsole::setMapProgressDialogRange(int minimum, int maximum)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setRange(minimum, maximum);
+    }
+}
+
+void TMainConsole::setMapProgressDialogValue(int value)
+{
+    if (mpMapProgressDialog) {
+        mpMapProgressDialog->setValue(value);
+    }
+}
+
+void TMainConsole::disableMapProgressDialogCancel()
+{
+    if (mpMapProgressDialog) {
+        // Taking the button away does not stop a window-close from emitting
+        // canceled(), so drop the connection as well - by this point the
+        // operation can no longer be stopped. Only ours goes, leaving
+        // QProgressDialog's own canceled() -> cancel() wiring intact.
+        if (auto pHost = getHost(); pHost && !pHost->mpMap.isNull()) {
+            disconnect(mpMapProgressDialog, &QProgressDialog::canceled, pHost->mpMap.data(), &TMap::slot_mapProgressDialogCancelled);
+        }
+        mpMapProgressDialog->setCancelButton(nullptr);
+    }
+}
+
+void TMainConsole::closeMapProgressDialog()
+{
+    if (mpMapProgressDialog) {
+        // hide() rather than close() so we don't re-enter QProgressDialog's
+        // closeEvent -> cancel() while a cancel is already being handled.
+        mpMapProgressDialog->hide();
+        mpMapProgressDialog->deleteLater();
+        // deleteLater() leaves the QPointer set until the event loop gets to
+        // run, which a synchronous JSON operation will not let it do, so forget
+        // the dialog now and make any late writes to it no-ops.
+        mpMapProgressDialog = nullptr;
+    }
+}
+
+void TMainConsole::createMapperDock(const QString& title, const QString& objectName)
+{
+    mpDockableMapWidget = new QDockWidget(title);
+    mpDockableMapWidget->setObjectName(objectName);
+}
+
+void TMainConsole::showMapperScriptReminder()
+{
+    QUiLoader loader;
+    QFile file(qsl(":/ui/lacking_mapper_script.ui"));
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "TMainConsole::showMapperScriptReminder() WARNING - failed to open lacking_mapper_script.ui for reading:" << file.errorString();
+        return;
+    }
+
+    auto dialog = qobject_cast<QDialog*>(loader.load(&file, mudlet::self()));
+    file.close();
+    if (!dialog) {
+        qWarning() << "TMainConsole::showMapperScriptReminder() WARNING - could not load the mapping-script reminder dialog.";
+        return;
+    }
+
+    connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_openMappingScriptsPage);
+
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+}
+
+void TMainConsole::showUnpackingProgress(const QString& message, const QString& title)
+{
+    // deleteLater() not close(): the dialog is parentless with no WA_DeleteOnClose,
+    // so closing it would leak it once we overwrite the pointer below.
+    if (mpUnpackingDialog) {
+        mpUnpackingDialog->deleteLater();
+    }
+
+    QUiLoader loader;
+    QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
+    if (!uiFile.open(QFile::ReadOnly)) {
+        qWarning() << "TMainConsole::showUnpackingProgress() WARNING - failed to open package_manager_unpack.ui for reading:" << uiFile.errorString();
+        return;
+    }
+    auto* pDialog = qobject_cast<QDialog*>(loader.load(&uiFile, nullptr));
+    uiFile.close();
+    if (!pDialog) {
+        qWarning() << "TMainConsole::showUnpackingProgress() WARNING - could not load the unpacking progress dialog.";
+        return;
+    }
+    mpUnpackingDialog = pDialog;
+
+    // Trap: processEvents() below can deliver a re-entrant install (or its
+    // matching hide) that replaces or clears mpUnpackingDialog and disposes of
+    // this frame's dialog. Drive a local pointer, never the member, and bail if
+    // our dialog is taken out from under us.
+    QPointer<QDialog> dialog = pDialog;
+
+    if (auto* pLabel = dialog->findChild<QLabel*>(qsl("label"))) {
+        pLabel->setText(message);
+    }
+    dialog->hide(); // Must hide to change WindowModality
+    dialog->setWindowTitle(title);
+    dialog->setWindowModality(Qt::ApplicationModal);
+    dialog->show();
+    QCoreApplication::processEvents();
+    if (!dialog) {
+        return;
+    }
+    dialog->raise();
+    dialog->repaint();                 // Force a redraw
+    QCoreApplication::processEvents(); // Try to ensure we are on top of any other dialogs and freshly drawn
+}
+
+void TMainConsole::closeUnpackingProgress()
+{
+    if (mpUnpackingDialog) {
+        mpUnpackingDialog->deleteLater();
+        mpUnpackingDialog = nullptr;
+    }
+}
+
+void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
+{
+    setupSucceeded = false;
+
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    const QString target = player->mediaData().mediaKey();
+
+    if (target.isEmpty()) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - 'key' not specified for video.");
+        return;
+    }
+
+    QString widgetType = TMediaData::MediaWidgetLabel;
+    QWidget* targetWidget = mLabelMap.value(target);
+
+    if (!targetWidget) {
+        targetWidget = mSubConsoleMap.value(target);
+        if (targetWidget) {
+            widgetType = TMediaData::MediaWidgetWindow;
+        }
+    }
+
+    if (!targetWidget) {
+        qWarning() << qsl("TMainConsole::setupVideoOutput() ERROR - No matching widget for 'key' = %1 to present video.").arg(target);
+        return;
+    }
+
+    player->mediaData().setMediaWidget(widgetType);
+
+    QVideoWidget* myVideoWidget = nullptr;
+    if (widgetType == TMediaData::MediaWidgetLabel) {
+        myVideoWidget = qobject_cast<TLabel*>(targetWidget)->mpVideoWidget;
+    } else if (widgetType == TMediaData::MediaWidgetWindow) {
+        myVideoWidget = qobject_cast<TConsole*>(targetWidget)->mpVideoWidget;
+    }
+
+    if (!myVideoWidget) {
+        myVideoWidget = new QVideoWidget();
+        myVideoWidget->setParent(targetWidget);
+        myVideoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        if (widgetType == TMediaData::MediaWidgetLabel) {
+            QObject::connect(qobject_cast<TLabel*>(targetWidget), &TLabel::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        } else if (widgetType == TMediaData::MediaWidgetWindow) {
+            QObject::connect(qobject_cast<TConsole*>(targetWidget), &TConsole::resized, myVideoWidget, [targetWidget, myVideoWidget]() {
+                myVideoWidget->resize(targetWidget->size());
+            });
+        }
+    }
+
+    if (targetWidget->isHidden()) {
+        targetWidget->show();
+    }
+
+    myVideoWidget->resize(targetWidget->size());
+    player->mediaPlayer()->setVideoOutput(myVideoWidget);
+    myVideoWidget->show();
+
+    setupSucceeded = true;
+}
+
+void TMainConsole::hideVideoOutput(TMediaPlayer* player)
+{
+    if (!player || !player->mediaPlayer()) {
+        return;
+    }
+
+    auto* videoOutput = qobject_cast<QVideoWidget*>(player->mediaPlayer()->videoOutput());
+
+    if (!videoOutput) {
+        return;
+    }
+
+    QWidget* parent = videoOutput->parentWidget();
+
+    if (parent && parent->isVisible()) {
+        parent->hide();
+    }
+}
+
 void TMainConsole::showStatistics()
 {
     auto pHost = getHost();
@@ -1707,6 +2187,11 @@ void TMainConsole::showStatistics()
     }
 
     const QString itemScript = "setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Telnet Options:")));
+    print(pHost->mTelnet.assembleTelnetOptionsReport(), QColor(150, 120, 0), Qt::black);
+
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:")));
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());

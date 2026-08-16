@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2022-2023 by Stephen Lyons                        *
+ *   Copyright (C) 2017, 2022-2023, 2026 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -43,9 +43,7 @@ class ActionUnit
     friend class XMLimport;
 
 public:
-    explicit ActionUnit(Host* pHost)
-    : mpHost(pHost)
-    {}
+    explicit ActionUnit(Host*);
     ~ActionUnit();
 
     std::list<TAction*> getActionRootNodeList()
@@ -69,7 +67,16 @@ public:
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);
-    void updateToolbar();
+    void doCleanup();
+    void beginProcessing() { ++mProcessingDepth; }
+    // Only decrements the depth - deliberately no doCleanup() here: that would
+    // delete `this` (and other deferred actions) while a caller of
+    // TAction::execute() may still hold the pointer. Deferred deletes are
+    // flushed once no button script is executing - by the dispatchers right
+    // after execute() returns and by Host's catch-all doCleanup() calls.
+    void endProcessing();
+    int processingDepth() const { return mProcessingDepth; }
+    void updateAllToolbars();
     std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
     TAction* getHeadAction(TToolBar*);
     TAction* getHeadAction(TEasyButtonBar*);
@@ -94,6 +101,9 @@ private:
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
     int mMaxID = 0;
+    // > 0 whilst a TAction::execute() is on the call stack; uninstall() and
+    // doCleanup() must not delete actions then - see ActionUnit::uninstall():
+    int mProcessingDepth = 0;
     bool mModuleMember = false;
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;

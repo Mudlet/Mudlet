@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2018, 2020 by Stephen Lyons                       *
+ *   Copyright (C) 2015, 2018, 2020, 2026 by Stephen Lyons                 *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -28,14 +28,20 @@
  ***************************************************************************/
 
 
+#include <QColor>
 #include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
+#include <QImage>
+#include <QRect>
 #include <QTimer>
 #include <QWidget>
 
 #include <chrono>
 #include <string>
+#include <vector>
+
+#include "THyperlinkStyling.h"
 
 
 class Host;
@@ -60,10 +66,6 @@ public:
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int* offset = nullptr) const;
-    int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
-    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar&) const;
-    void drawCustomDecorations(QPainter&, const QColor&, const QRect&, TChar&) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -106,6 +108,9 @@ public:
     void initializeCaret();
     void setCaretPosition(int line, int column);
     void updateCaret();
+    void showLinkContextMenu();
+    void announceLinkFocus(int linkIndex);
+    void applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext);
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
@@ -119,6 +124,10 @@ public:
     // previous column value so that we can return to it if the next line is
     // long enough again.
     int mOldCaretColumn = 0;
+
+    friend class CopyAsImageTest;
+    friend class TTextEditBlinkTest;
+    static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
 
     QColor mFgColor;
     bool mIsCommandPopup = false;
@@ -134,6 +143,10 @@ public:
     // problems with duplicate texts:
     // Value: is the lua code as a string (first) or the lua function reference number (second)
     QMap<int, std::pair<QString, int>> mPopupCommands;
+    // The link index that the currently-displayed popup belongs to, or 0 if
+    // none. Used so that selection-group state is applied to the right link
+    // when a multi-command popup item is activated via slot_popupMenu().
+    int mPopupLinkIndex = 0;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
@@ -158,6 +171,8 @@ public slots:
     void slot_mouseAction(const QString&);
 
 protected:
+    bool focusNextPrevChild(bool next) override;
+    bool event(QEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
 
@@ -166,7 +181,7 @@ private slots:
 
 private:
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
-    static QString htmlCenter(const QString&);
+    inline static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
@@ -175,12 +190,50 @@ private:
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
+    bool hasSelectedText() const;
+    std::pair<int, int> visibleLines();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
-    inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
-    inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
+    inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QString&, int&) const;
+    inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QString&, int&) const;
     int offsetForPosition(int line, int column) const;
+    bool hasBufferLine(int lineNumber) const;
+    static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
+    TChar timeStampCharStyle() const;
 
+    // One grapheme's painted cell (or cells, for a wide glyph): where it goes,
+    // the colours resolved for it, and the style they were resolved from.
+    struct GraphemeRun
+    {
+        QRect textRect;
+        QColor fgColor;
+        QColor bgColor;
+        QString grapheme;
+        // Borrowed from TBuffer::buffer, or from the caller's timestamp style.
+        // Only valid for the duration of one paint, during which the buffer must
+        // not be modified. A null pointer marks a background-only run, such as
+        // the caret block on an empty line.
+        const TChar* style = nullptr;
+        bool fillsBackground = false;
+    };
+    using LineLayout = std::vector<GraphemeRun>;
+
+    // Laying a line out without painting it lets the callers put line N's
+    // backgrounds down before line N-1's glyphs, so that ink overflowing out of
+    // the bottom of a cell cannot be erased by the line below it. Both callers
+    // depend on that order, which is why none of this is reachable from outside.
+    void layoutLine(int lineNumber, int lineOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset = nullptr) const;
+    void paintBackgrounds(QPainter&, const LineLayout&) const;
+    void paintForegrounds(QPainter&, const LineLayout&, const QRect& clip = QRect()) const;
+    void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
+    int layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QString& grapheme, const int column, const int line, const TChar& charStyle) const;
+    void paintGraphemeForeground(QPainter&, const GraphemeRun&) const;
+
+    // Reused between paints to keep their capacity rather than reallocating a
+    // line's worth of graphemes on every repaint.
+    mutable LineLayout mPreviousLineLayout;
+    mutable LineLayout mCurrentLineLayout;
+    mutable LineLayout mOverflowLineLayout;
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate = false;

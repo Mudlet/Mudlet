@@ -41,8 +41,9 @@ private:
       return true;
     }
 
-    TMxpTagHandlerResult tagHandled(MxpTag *tag,
-                                    TMxpTagHandlerResult result) override {
+    TMxpTagHandlerResult tagHandled(MxpTag *tag, TMxpTagHandlerResult result,
+                                    TMxpContext &context) override {
+      Q_UNUSED(context)
       if (result == MXP_TAG_NOT_HANDLED) {
         unhandledTagNames.append(tag->getName());
       }

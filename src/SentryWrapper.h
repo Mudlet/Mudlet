@@ -27,9 +27,9 @@
 
 #include <string>
 
-void        initSentry();
+void initSentry();
 std::string makeExecutablePath(const std::string& dir, const std::string& name);
 std::string getExeDir();
-void        crashIfRequested();
+void crashIfRequested();
 
 #endif // SENTRY_WRAPPER_H

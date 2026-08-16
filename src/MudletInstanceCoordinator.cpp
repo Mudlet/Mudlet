@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,6 +22,9 @@
 #include "Host.h"
 #include "mudlet.h"
 #include <QLocalSocket>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
@@ -78,7 +82,7 @@ bool MudletInstanceCoordinator::tryToStart()
 void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
-    for (const QString& path : mQueuedPackagePaths) {
+    for (const QString& path : std::as_const(mQueuedPackagePaths)) {
         auto ret = activeProfile->installPackage(path, enums::PackageModuleType::Package);
     }
     mQueuedPackagePaths.clear();
@@ -112,7 +116,7 @@ void MudletInstanceCoordinator::handleReadyRead()
         if (message.startsWith(qsl("TELNET_URI:"))) {
             const QString uri = message.mid(11);
 
-            QTimer::singleShot(0, this, [uri]() {
+            QTimer::singleShot(0ms, this, [uri]() {
                 mudlet* app = mudlet::self();
                 if (app) {
                     app->handleTelnetUri(uri);
@@ -133,7 +137,7 @@ void MudletInstanceCoordinator::handleReadyRead()
 // Find the active host and install queued packages to it
 void MudletInstanceCoordinator::installPackagesLocally()
 {
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         mudlet* mudletApp = mudlet::self();
         Q_ASSERT(mudletApp);
         Host* activeHost = mudletApp->getActiveHost();

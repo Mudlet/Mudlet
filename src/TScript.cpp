@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,8 +25,11 @@
 
 
 #include "Host.h"
+#include "ScriptUnit.h"
 #include "TDebug.h"
 #include "mudlet.h"
+
+#include <QScopeGuard>
 
 TScript::TScript(TScript* parent, Host* pHost)
 : Tree<TScript>(parent)
@@ -46,7 +49,7 @@ TScript::~TScript()
     if (!mpHost) {
         return;
     }
-    for (const auto& handler : mEventHandlerList) {
+    for (const auto& handler : std::as_const(mEventHandlerList)) {
         mpHost->unregisterEventHandler(handler, this);
     }
     mpHost->getScriptUnit()->unregisterScript(this);
@@ -63,7 +66,7 @@ bool TScript::registerScript()
 
 void TScript::setEventHandlerList(QStringList handlerList)
 {
-    for (const QString& handler : mEventHandlerList) {
+    for (const QString& handler : std::as_const(mEventHandlerList)) {
         mpHost->unregisterEventHandler(handler, this);
     }
     mEventHandlerList.clear();
@@ -120,6 +123,26 @@ bool TScript::setScript(const QString& script)
 
 bool TScript::compileScript(bool saveLoadingError)
 {
+    // Whilst this frame is on the stack ScriptUnit::uninstall() must defer deleting
+    // this profile's scripts: the top-level Lua body run below (the lua_pcall inside
+    // TLuaInterpreter::compile()) can uninstall its own package - a common package
+    // auto-updater pattern - and freeing this script mid-compile, or writing to it
+    // after compile() returns (see mNeedsToBeCompiled/mOK_code below and in
+    // setScript()), is a use-after-free. See ScriptUnit::mProcessingDepth.
+    ScriptUnit* pUnit = mpHost->getScriptUnit();
+    pUnit->beginProcessing();
+    // NB: deliberately decrement-only - do NOT add a doCleanup() call here. setScript()
+    // writes mOK_code AFTER this returns and ScriptUnit::compileAll()'s loop is still
+    // iterating the root list, so deleting `this` now would be a use-after-free. The
+    // deferred deletes are flushed at a safe point once the pointer is no longer in
+    // use: after ScriptUnit::compileAll()'s loop, at the end of the editor's
+    // saveScript(), in Host::raiseEvent()'s scope guard, and by the catch-all
+    // doCleanup() in Host::incomingStreamProcessor()/slot_purgeTemps() and the queued
+    // save in Host::uninstallPackage().
+    const auto processingGuard = qScopeGuard([pUnit] {
+        pUnit->endProcessing();
+    });
+
     QString error;
     if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
         mNeedsToBeCompiled = false;
@@ -128,14 +151,13 @@ bool TScript::compileScript(bool saveLoadingError)
             setEventHandlerList(getEventHandlerList());
         }
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        if (saveLoadingError) {
-            setLoadingError(error);
-        }
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    if (saveLoadingError) {
+        setLoadingError(error);
+    }
+    return false;
 }
 
 void TScript::execute()
@@ -184,7 +206,7 @@ QString TScript::packageName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return !mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return !mpHost->mInstalledModules.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {
@@ -201,7 +223,7 @@ QString TScript::moduleName(TScript* pScript)
     }
 
     if (!pScript->mPackageName.isEmpty()) {
-        return mpHost->mModuleInfo.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
+        return mpHost->mInstalledModules.contains(pScript->mPackageName) ? pScript->mPackageName : QString();
     }
 
     if (pScript->getParent()) {

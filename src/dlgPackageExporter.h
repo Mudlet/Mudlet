@@ -30,6 +30,8 @@
 #include <QTextEdit>
 #include <zip.h>
 
+#include <memory>
+
 class Host;
 class QCloseEvent;
 class QGroupBox;
@@ -139,6 +141,7 @@ private:
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment);
     static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
+    QString normalizedHelpUrl() const;
     void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription);
     void exportXml(bool& isOk,
                    QList<QTreeWidgetItem*>& trigList,
@@ -158,7 +161,7 @@ private:
     void checkToEnableExportButton();
     void populateDependencies();
 
-    Ui::dlgPackageExporter* ui = nullptr;
+    std::unique_ptr<Ui::dlgPackageExporter> ui;
     QPointer<Host> mpHost;
     QTreeWidget* mpExportSelection = nullptr;
     QPointer<QPushButton> mExportButton;

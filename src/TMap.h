@@ -39,6 +39,7 @@
 #include <QSet>
 #include <QVector3D>
 #include <stdlib.h>
+#include <memory>
 #include <optional>
 
 #define DIR_NORTH 1
@@ -66,7 +67,6 @@ class TRoom;
 class TRoomDB;
 class QFile;
 class QNetworkAccessManager;
-class QProgressDialog;
 class MapInfoContributorManager;
 
 class TMap : public QObject
@@ -76,6 +76,19 @@ class TMap : public QObject
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
+    void signal_mmpMapLocationChanged();
+
+    // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
+    // must stay free of Qt Widgets, so it emits these pre-translated payloads for
+    // the frontend (TMainConsole) to render as a QProgressDialog. Cancellation
+    // returns through slot_mapProgressDialogCancelled().
+    void signal_mapTransferProgressStart(const QString& title, const QString& label, const QString& cancelButtonText);
+    void signal_mapJsonProgressStart(const QString& title, const QString& label, const QString& cancelButtonText, int maximum);
+    void signal_mapProgressSetLabel(const QString& text);
+    void signal_mapProgressSetRange(int minimum, int maximum);
+    void signal_mapProgressSetValue(int value);
+    void signal_mapProgressDisableCancel();
+    void signal_mapProgressClose();
 
 private:
     QString mDefaultAreaName;
@@ -86,16 +99,7 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
-    int createMapImageLabel(int area,
-                            QString filePath,
-                            float x,
-                            float y,
-                            float z,
-                            float width,
-                            float height,
-                            float zoom,
-                            bool showOnTop,
-                            bool temporary);
+    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -112,10 +116,10 @@ public:
                        QColor outline = Qt::black);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
-    bool setRoomArea(int id, int area, bool deferAreaRecalculations = false);
+    bool setRoomArea(int id, int area);
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
-    void logError(QString& msg);
+    void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
     void updateArea(int areaId);
@@ -128,7 +132,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
-    bool restore(QString location, bool downloadIfNotFound = true);
+    bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
@@ -166,10 +170,38 @@ public:
     // Use progress dialog for post-download operations.
     void reportProgressToProgressDialog(int, int);
 
+    // Download/import progress helpers. Use the inline progress widget in the
+    // mapper when it is visible, otherwise ask the frontend for a standalone
+    // progress dialog via signal_mapTransferProgressStart(). Do NOT use these
+    // from the JSON export/import paths - those drive their own frontend dialog
+    // through signal_mapJsonProgressStart().
+    void createTransferProgress(const QString& title, const QString& label, bool cancelable);
+    void updateTransferProgressLabel(const QString& text);
+    void updateTransferProgressRange(int minimum, int maximum);
+    void updateTransferProgressValue(int value);
+    int transferProgressMaximum() const;
+    bool hasActiveTransferProgress() const;
+    void disableTransferProgressCancel();
+    void clearTransferProgress();
+
+    // True while a map import, export or download is on the stack. Those pump
+    // qApp->processEvents() to keep their progress display alive, so anything
+    // delivered from an event loop can find itself running nested inside one -
+    // and destroying this map's Host from there would free the operation's own
+    // "this" (#9520). Whoever would do that has to wait for this to go false.
+    bool mapOperationInProgress() const { return mMapOperationDepth > 0; }
+    // Ask an operation that is in progress to stop at its next opportunity, so
+    // that a caller waiting on the above does not wait for a whole map. Only the
+    // JSON import and export poll this; an XML import or a download runs to its
+    // own end. Asking twice does nothing, which mapOperationAbortRequested()
+    // also lets a caller polling in a loop see.
+    void requestMapOperationAbort();
+    bool mapOperationAbortRequested() const { return mMapOperationAbortRequested; }
+
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
-    void setMmpMapLocation(const QString &location);
+    void setMmpMapLocation(const QString& location);
     QString getMmpMapLocation() const;
 
     // has setRoomNamesShown ever been called on this map?
@@ -179,7 +211,7 @@ public:
     void setRoomNamesShown(bool shown);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
-    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
+    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
@@ -203,7 +235,8 @@ public:
     bool getDefaultAreaShown() { return mShowDefaultArea; }
 
 
-    TRoomDB* mpRoomDB = nullptr;
+    std::unique_ptr<TRoomDB> mpRoomDB;
+    // Non-owning: Qt parent-child system (TMap as parent) handles lifetime.
     TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;
@@ -223,38 +256,43 @@ public:
     QList<QString> mDirList;
     QList<int> mWeightList;
     QMap<int, QColor> mCustomEnvColors;
-    inline static const QMap<int, QVector3D> scmUnitVectors = {
-        {DIR_NORTH, {0, -1, 0}},
-        {DIR_NORTHEAST, {1, -1, 0}},
-        {DIR_NORTHWEST, {-1, -1, 0}},
-        {DIR_EAST, {1, 0, 0}},
-        {DIR_WEST, {-1, 0, 0}},
-        {DIR_SOUTH, {0, 1, 0}},
-        {DIR_SOUTHEAST, {1, 1, 0}},
-        {DIR_SOUTHWEST, {-1, 1, 0}},
-        {DIR_UP, {0, 0, 1}},
-        {DIR_DOWN, {0, 0, -1}}};
+    inline static const QMap<int, QVector3D> scmUnitVectors = {{DIR_NORTH, {0, -1, 0}},
+                                                               {DIR_NORTHEAST, {1, -1, 0}},
+                                                               {DIR_NORTHWEST, {-1, -1, 0}},
+                                                               {DIR_EAST, {1, 0, 0}},
+                                                               {DIR_WEST, {-1, 0, 0}},
+                                                               {DIR_SOUTH, {0, 1, 0}},
+                                                               {DIR_SOUTHEAST, {1, 1, 0}},
+                                                               {DIR_SOUTHWEST, {-1, 1, 0}},
+                                                               {DIR_UP, {0, 0, 1}},
+                                                               {DIR_DOWN, {0, 0, -1}}};
 
     // contains complementary directions of DIR_XXXX
-    inline static const QMap<int, int> scmReverseDirections = {
-        {DIR_NORTH, DIR_SOUTH},
-        {DIR_NORTHEAST, DIR_SOUTHWEST},
-        {DIR_NORTHWEST, DIR_SOUTHEAST},
-        {DIR_EAST, DIR_WEST},
-        {DIR_WEST, DIR_EAST},
-        {DIR_SOUTH, DIR_NORTH},
-        {DIR_SOUTHEAST, DIR_NORTHWEST},
-        {DIR_SOUTHWEST, DIR_NORTHEAST},
-        {DIR_UP, DIR_DOWN},
-        {DIR_DOWN, DIR_UP},
-        {DIR_IN, DIR_OUT},
-        {DIR_OUT, DIR_IN}};
+    inline static const QMap<int, int> scmReverseDirections = {{DIR_NORTH, DIR_SOUTH},
+                                                               {DIR_NORTHEAST, DIR_SOUTHWEST},
+                                                               {DIR_NORTHWEST, DIR_SOUTHEAST},
+                                                               {DIR_EAST, DIR_WEST},
+                                                               {DIR_WEST, DIR_EAST},
+                                                               {DIR_SOUTH, DIR_NORTH},
+                                                               {DIR_SOUTHEAST, DIR_NORTHWEST},
+                                                               {DIR_SOUTHWEST, DIR_NORTHEAST},
+                                                               {DIR_UP, DIR_DOWN},
+                                                               {DIR_DOWN, DIR_UP},
+                                                               {DIR_IN, DIR_OUT},
+                                                               {DIR_OUT, DIR_IN}};
 
 #if defined(INCLUDE_3DMAPPER)
     QPointer<QOpenGLWidget> mpM;
 #endif
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
+
+    // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
+    // session-only state, never saved with the map.
+    // string list: 0 is event name, 1 is menu it is under if it is
+    QMap<QString, QStringList> mUserActions;
+    // unique name, List:parent name ("" if null), display name
+    QMap<QString, QStringList> mUserMenus;
 
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
@@ -351,9 +389,40 @@ public slots:
     void slot_downloadCancel();
     void slot_downloadError(QNetworkReply::NetworkError);
     void slot_replyFinished(QNetworkReply*);
+    // Called by the frontend when the user cancels the standalone map-progress
+    // dialog it owns on our behalf.
+    void slot_mapProgressDialogCancelled();
 
 
 private:
+    // Held for the whole of a map operation that pumps the event loop, so that
+    // mapOperationInProgress() can tell anything re-entered from that pump that
+    // this map is on the stack. Nested operations are counted, not flagged: an
+    // XML import can start from inside a download's pump.
+    class MapOperationScope
+    {
+    public:
+        explicit MapOperationScope(TMap* pMap)
+        : mpMap(pMap)
+        {
+            if (!mpMap->mMapOperationDepth) {
+                mpMap->mMapOperationAbortRequested = false;
+            }
+            ++mpMap->mMapOperationDepth;
+        }
+        ~MapOperationScope() { --mpMap->mMapOperationDepth; }
+        MapOperationScope(const MapOperationScope&) = delete;
+        MapOperationScope& operator=(const MapOperationScope&) = delete;
+
+    private:
+        TMap* mpMap = nullptr;
+    };
+
+    int mMapOperationDepth = 0;
+    // requestMapOperationAbort() is asked again on every retry of a deferred
+    // profile close, and asking twice would abort a network reply twice over.
+    bool mMapOperationAbortRequested = false;
+
     void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
                              unsigned int source,
@@ -363,6 +432,7 @@ private:
                              const QString& exitKey,
                              const QSet<unsigned int>& unUsableRoomSet);
     const QString createFileHeaderLine(QString, QChar);
+    void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
@@ -389,7 +459,13 @@ private:
     int mExpectedFileSize = 0;
     bool mImportRunning = false;
 
-    QProgressDialog* mpProgressDialog = nullptr;
+    // Engine-side mirror of the frontend-owned dialog, which the engine can't
+    // read back. mMapProgressStandalone also serves as the "import/export already
+    // running" guard (see writeJsonMapFile()/readJsonMapFile()).
+    bool mMapProgressStandalone = false;
+    bool mMapProgressIsTransfer = false;
+    bool mMapProgressCancelRequested = false;
+    int mMapProgressStandaloneMaximum = 0;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;

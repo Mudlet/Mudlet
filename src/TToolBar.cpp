@@ -29,6 +29,8 @@
 #include "TFlipButton.h"
 #include "mudlet.h"
 
+#include <QScopeGuard>
+
 
 TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget(pW)
@@ -113,11 +115,11 @@ void TToolBar::addButton(TFlipButton* pB)
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
     } else {
-        const QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        const QSize size = pB->mpTAction->getSize();
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
         pB->setParent(mpWidget);
-        pB->setGeometry(pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        pB->setGeometry(pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->getSizeX(), pB->mpTAction->getSizeY());
     }
 
     pB->setStyleSheet(pB->mpTAction->css);
@@ -139,12 +141,8 @@ void TToolBar::addButton(TFlipButton* pB)
     if (!mpTAction->mUseCustomLayout) {
         // tool bar mButtonColumns > 0 -> autolayout
         // case == 0: use individual button placement for user defined layouts
-        int columns = mpTAction->getButtonColumns();
-        if (columns <= 0) {
-            columns = 1;
-        }
-        mItemCount++;
-        const int row = mItemCount / columns;
+        int columns = std::max(1, mpTAction->getButtonColumns());
+        const int row = ++mItemCount / columns;
         const int col = mItemCount % columns;
         if (mVerticalOrientation) {
             mpLayout->addWidget(pB, row, col);
@@ -162,22 +160,24 @@ void TToolBar::addButton(TFlipButton* pB)
 
 void TToolBar::finalize()
 {
-    if (mpTAction->mUseCustomLayout) {
+    if (mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
         return;
     }
-    auto fillerWidget = new QWidget;
-    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    fillerWidget->setSizePolicy(sizePolicy);
-    int columns = mpTAction->getButtonColumns();
-    if (columns <= 0) {
-        columns = 1;
+    auto fillerWidget = new QWidget(this);
+    QPushButton dummy;
+    fillerWidget->setMinimumSize(dummy.minimumSizeHint());
+    fillerWidget->setMaximumSize(dummy.minimumSizeHint());
+    if (mpLayout) {
+        if (mpTAction->mOrientation == 1) {
+            // The toolbar is to be filled with rows of mpTAction->getButtonColumns() wide
+            // The filler widget is to be one or more columns wide
+            mpLayout->addWidget(fillerWidget, 0, 0, mpTAction->getButtonFillerOffset(), 1);
+        } else {
+            // The toolbar is to be filled with columns of mpTAction->getButtonColumns() tall
+            // The filler widget is to be one or more rows tall
+            mpLayout->addWidget(fillerWidget, 0, 0, 1, mpTAction->getButtonFillerOffset());
+        }
     }
-    const int row = (++mItemCount) / columns;
-    const int column = (mItemCount - 1) % columns;
-    mpLayout->addWidget(fillerWidget, row, column);
-    // 3 lines above are to avoid order of operations problem of original line
-    // (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:
-    //    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
 }
 
 // Used by buttons directly on a TToolBar instance but NOT on sub-menu item - we
@@ -190,6 +190,19 @@ void TToolBar::slot_pressed(const bool isChecked)
     }
 
     TAction* pA = pB->mpTAction;
+
+    // Hold off ActionUnit deletes for this whole slot so a self-uninstall (the
+    // button's own script removing its package) cannot free pA out from under the
+    // dereferences below, even if a Host catch-all doCleanup() fires at depth 0
+    // mid-slot. The scope guard flushes once at the end, after pA's last use (see
+    // ActionUnit::uninstall()):
+    ActionUnit* pActionUnit = mpHost->getActionUnit();
+    pActionUnit->beginProcessing();
+    const auto processingGuard = qScopeGuard([pActionUnit] {
+        pActionUnit->endProcessing();
+        pActionUnit->doCleanup();
+    });
+
     // NOTE: This function blocks until an item is selected from the menu, and,
     // as the action to "pop-up" the menu is the same as "buttons" use to
     // perform their command/scripts is why "commands" are (no longer) permitted
@@ -198,7 +211,7 @@ void TToolBar::slot_pressed(const bool isChecked)
     // entries...
     pB->menu();
 
-    if (pA->mIsPushDownButton) {
+    if (pA->isPushDownButton()) {
         pA->mButtonState = isChecked;
         mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
     } else {

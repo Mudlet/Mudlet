@@ -1,14 +1,44 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
-# Changes here likely need to be mirrored there as well.
+# Changes here likely need to be mirrored there as well, apart from the ccache
+# handling: caches here are scoped to their own pull request ref and keyed per
+# commit, so there is never a key to delete before saving one.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
 
 jobs:
+  changes:
+    name: detect buildable changes
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    outputs:
+      build: ${{steps.filter.outputs.build}}
+    steps:
+    - name: Check whether anything affecting the build changed
+      id: filter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
+        # all affect the build. Anything unexpected falls through to building.
+        files=$(gh api --paginate \
+          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
+          -q '.[].filename')
+        echo "Changed files:"
+        printf '%s\n' "$files"
+
+        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
+          echo "build=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "build=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Documentation-only change - skipping the build matrix"
+        fi
+
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    needs: changes
+    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -22,6 +52,9 @@ jobs:
           # Note: using / in the "buildname" has significance - replacing the
           # ',' in some of the following with a '/' seemed to cause extra
           # spurious steps in the build and broke things! - SlySven
+          # Smaller than build-mudlet.yml's on purpose - only builds that produce
+          # an artifact. 'ubuntu (x86_64)' and 'ubuntu / clang' still run there on
+          # every push to development and nightly.
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests + leak detection'
@@ -33,17 +66,6 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
-          - os: ubuntu-22.04
-            # Another try to use GCC12
-            buildname: 'ubuntu (x86_64)'
-            compiler: gcc_64
-            gcc_compiler_version: 12
-            qt: '6.9.0'
-          - os: ubuntu-latest
-            buildname: 'ubuntu / clang'
-            compiler: clang_64
-            gcc_compiler_version: 10
-            qt: '6.9.0'
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
             compiler: clang_64
@@ -59,7 +81,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
@@ -72,12 +94,19 @@ jobs:
         cache: true
         modules: qt5compat qtmultimedia qtspeech
 
-    - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.1
+    - name: Cache Lua build
+      uses: actions/cache@v6
+      with:
+        path: .lua
+        # Not gh-actions-lua's own buildCache: that shares one key across
+        # runner images, and a .lua built on ubuntu-latest cannot run on
+        # ubuntu-22.04 (newer glibc). The action skips its lua.org download
+        # whenever .lua already exists.
+        key: lua-${{ env.LUA_VERSION }}-${{ matrix.os }}-${{ runner.arch }}
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: ${{ env.LUA_VERSION }}
         buildCache: false
@@ -150,7 +179,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Install Lua via GitHub Actions
-      uses: leafo/gh-actions-lua@v12
+      uses: leafo/gh-actions-lua@v13
       if: runner.os == 'Linux'
       with:
         luaVersion: ${{ env.LUA_VERSION }}
@@ -215,14 +244,38 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
+    - name: (Linux) Cache xcb-util-cursor 0.1.5
+      id: cache-xcb-cursor
+      if: runner.os == 'Linux'
+      uses: actions/cache@v6
+      with:
+        path: ${{runner.workspace}}/xcb-util-cursor-stage
+        key: xcb-util-cursor-0.1.5-${{matrix.os}}-${{runner.arch}}
+
     - name: (Linux) Build xcb-util-cursor 0.1.5
       timeout-minutes: 5
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && steps.cache-xcb-cursor.outputs.cache-hit != 'true'
       run: |
-        # Download and extract xcb-util-cursor 0.1.5
         # This version fixes the off-by-one heap buffer overflow in _XcursorThemeInherits
         # that causes PTB builds to crash with AddressSanitizer
-        wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz
+        # Several mirrors, each retried: xorg.freedesktop.org served an expired
+        # TLS certificate on 2026-07-28, breaking every CI run
+        for url in \
+          https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
+          https://www.x.org/releases/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
+          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz
+        do
+          for attempt in 1 2 3; do
+            if wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.5.tar.xz "$url"; then
+              break 2
+            fi
+            echo "::warning::download attempt $attempt from $url failed, retrying..."
+            sleep $((attempt * 5))
+          done
+        done
+        # Checksum from https://lists.x.org/archives/xorg-announce/2023-October/003428.html
+        # also fails the step if every mirror was unreachable
+        echo "0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57  xcb-util-cursor-0.1.5.tar.xz" | sha256sum -c
         tar xf xcb-util-cursor-0.1.5.tar.xz
         cd xcb-util-cursor-0.1.5
 
@@ -230,11 +283,35 @@ jobs:
         ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
         make -j$(nproc)
 
+        # staged rather than installed directly so the result can be cached
+        make DESTDIR="${{runner.workspace}}/xcb-util-cursor-stage" install
+
+    - name: (Linux) Install xcb-util-cursor 0.1.5
+      if: runner.os == 'Linux'
+      run: |
         # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
-        sudo make install
+        sudo cp -a "${{runner.workspace}}/xcb-util-cursor-stage/." /
 
         # Update library cache so linker finds new version
         sudo ldconfig
+
+    - name: (Linux) Install mold linker
+      timeout-minutes: 5
+      if: runner.os == 'Linux'
+      env:
+        MOLD_VERSION: '2.41.0'
+        # mold publishes no checksum manifest, so this is the hash of the
+        # pinned asset as downloaded - re-verify it by hand when bumping
+        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+      run: |
+        # Ubuntu 22.04 only packages mold 1.0.3, so take it from upstream
+        curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
+          "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+        echo "${MOLD_SHA256}  mold.tar.gz" | sha256sum -c
+        sudo tar xf mold.tar.gz -C /usr/local --strip-components=1
+        rm mold.tar.gz
+        # not bin/mold: this is the GNU ld drop-in that -B has to resolve to
+        /usr/local/libexec/mold/ld --version
 
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
@@ -247,7 +324,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.sha }}
@@ -283,7 +360,7 @@ jobs:
 
     - name: Cache sentry-native
       id: cache-sentry
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -300,6 +377,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
           -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
+          -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
@@ -311,7 +389,7 @@ jobs:
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -319,12 +397,19 @@ jobs:
     - name: check ccache stats post build
       run: ccache --show-stats
 
+    # a mold that never got installed just makes the compiler fall back to the
+    # system ld, which builds fine and quietly costs three minutes a run
+    - name: (Linux) Confirm the build used mold
+      if: runner.os == 'Linux'
+      run: readelf -p .comment ${{runner.workspace}}/b/ninja/src/mudlet | grep -q mold
+
     - name: install dependencies for packaging/tests
       run: |
         LUAROCKS="luarocks --lua-version 5.1 install --local"
 
         $LUAROCKS LuaFileSystem
         $LUAROCKS luautf8
+        $LUAROCKS lpeg
 
         if [ "$RUNNER_OS" = "macOS" ]; then
           $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
@@ -359,16 +444,21 @@ jobs:
       run: ctest --output-on-failure
       env:
         QT_QPA_PLATFORM: offscreen
+        # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
+        # demonstrate every media behaviour rather than skip any of them. Without a floor
+        # somewhere, a lost codec or a changed default backend would turn the whole file
+        # green-by-skip on every platform and say nothing about it.
+        MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+    # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
+      if: matrix.run_tests != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
@@ -405,6 +495,8 @@ jobs:
         APPLE_TEAM_ID: ${{secrets.APPLE_TEAM_ID}}
         WITH_SENTRY: "ON"
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
+        # needed so CI/*.after_success.sh can query existing releases to skip duplicate PTBs
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v7
@@ -437,28 +529,160 @@ jobs:
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app
 
+    - name: (Linux/macOS) Start fixture HTTP server for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        port_file="${{runner.temp}}/mudlet-http-fixture-port"
+        rm -f "${port_file}"
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" nohup python3 "${{github.workspace}}/CI/http-fixture-server.py" > "${{runner.temp}}/http-fixture-server.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${port_file}")"
+        if ! curl -fsS "http://127.0.0.1:${port}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          cat "${{runner.temp}}/http-fixture-server.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_HTTP_PORT=${port}" >> "${GITHUB_ENV}"
+        echo "fixture HTTP server ready on 127.0.0.1:${port}"
+
+    - name: (Linux) Start fake Discord IPC server for Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        # A short runtime directory of its own: the whole discord-ipc-0 socket
+        # path has to fit into sockaddr_un's 108 character sun_path, and
+        # runner.temp does not leave room for it.
+        runtime_dir="$(mktemp -d /tmp/mdxdg-XXXX)"
+        ready_file="${{runner.temp}}/mudlet-discord-fixture-ready"
+        rm -f "${ready_file}"
+        nohup python3 "${{github.workspace}}/CI/discord-ipc-fixture.py" \
+          --runtime-dir "${runtime_dir}" \
+          --capture-file "${{runner.temp}}/mudlet-discord-frames.jsonl" \
+          --ready-file "${ready_file}" > "${{runner.temp}}/discord-ipc-fixture.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${ready_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${ready_file}" ] || [ ! -S "${runtime_dir}/discord-ipc-0" ]; then
+          echo "fake Discord IPC server failed to start" >&2
+          cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
+          exit 1
+        fi
+        cat "${ready_file}" >> "${GITHUB_ENV}"
+        # Prepended rather than replacing: the Qt install action puts Qt's own
+        # libraries on this path.
+        echo "MUDLET_TEST_DISCORD_LIB_PATH=${{github.workspace}}/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
+        echo "fake Discord IPC server ready in ${runtime_dir}"
+
+    - name: (Linux/macOS) Start MMCP peer fixture for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        peer_dir="${{runner.temp}}/mudlet-mmcp-peer"
+        rm -rf "${peer_dir}"
+        mkdir -p "${peer_dir}"
+        MUDLET_TEST_MMCP_DIR="${peer_dir}" nohup python3 "${{github.workspace}}/CI/mmcp-peer.py" > "${{runner.temp}}/mmcp-peer.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${peer_dir}/port" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${peer_dir}/port" ]; then
+          echo "MMCP peer fixture failed to start" >&2
+          cat "${{runner.temp}}/mmcp-peer.log" 2>/dev/null || true
+          exit 1
+        fi
+        port="$(cat "${peer_dir}/port")"
+        if ! python3 -c "import socket, sys; socket.create_connection(('127.0.0.1', int(sys.argv[1])), 5).close()" "${port}"; then
+          echo "MMCP peer fixture is not accepting connections" >&2
+          cat "${{runner.temp}}/mmcp-peer.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_MMCP_DIR=${peer_dir}" >> "${GITHUB_ENV}"
+        echo "MMCP peer fixture ready on 127.0.0.1:$(cat "${peer_dir}/port")"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 1
+      # This leg drives the real discord-rpc library, whose reconnects happen in
+      # wall-clock time, so the suite needs a budget of its own: the run itself
+      # takes ~75s, and the rest is headroom for a slow runner stretching those.
+      timeout-minutes: 6
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        MUDLET_TEST_REQUIRE_MMCP_PEER: 1
+        # Qt Multimedia runs a player here even without an audio device, so a
+        # media effect spec that cannot play is a regression rather than an
+        # environment quirk. macOS runners start no player at all, so the gate
+        # stays off there.
+        MUDLET_TEST_REQUIRE_MEDIA: 1
+        # Xvfb has no window manager to overrule a resize request, so the main
+        # window here follows setMainWindowSize exactly and one that stops
+        # following it is a regression rather than an environment quirk. The
+        # macOS runners are not gated: their window server can refuse a resize.
+        MUDLET_TEST_REQUIRE_WINDOW_RESIZE: 1
+        # The fake Discord IPC server's socket lives in this runtime directory,
+        # and the bundled discord-rpc library is only reachable through this
+        # library path - without both the Discord specs have nothing to talk to.
+        MUDLET_TEST_REQUIRE_DISCORD: 1
+        XDG_RUNTIME_DIR: ${{env.MUDLET_TEST_DISCORD_RUNTIME_DIR}}
+        LD_LIBRARY_PATH: ${{env.MUDLET_TEST_DISCORD_LIB_PATH}}
+        # The session bus socket lives in the runtime directory replaced above,
+        # so Qt's D-Bus platform theme can no longer find it and would fall back
+        # to spawning dbus-launch. Point it at nothing instead: libdbus leaks
+        # the buffer it reads the autolaunch reply into (1032 bytes, reported
+        # against this job by LeakSanitizer with no Mudlet frames in the stack),
+        # and no spec needs a session bus.
+        DBUS_SESSION_BUS_ADDRESS: 'disabled:'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
-        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
-        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=0', github.workspace) || '' }}
+        # intercept_tls_get_addr=0 keeps gcc-10's sanitizer runtime from
+        # recording a bogus dynamic-TLS range for LeakSanitizer's tracer to crash
+        # on (#9809); test/functional_tests/CMakeLists.txt explains it in full
+        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1:intercept_tls_get_addr=0' || '' }}
+        # log_threads is insurance rather than an expectation: if the flag above
+        # ever proves incomplete, it names the stack and TLS range of every
+        # thread the tracer walks, so the last one printed before a crash is the
+        # range it died on (#9809). Seven lines a run, and the only way to see
+        # that from CI.
+        LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1:log_threads=1', github.workspace) || '' }}
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 1
+      # The suite alone can run past a minute on the slower Intel runners
+      timeout-minutes: 3
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
+        MUDLET_TEST_REQUIRE_MMCP_PEER: 1
+        # No MUDLET_TEST_REQUIRE_MEDIA: Qt Multimedia starts no player on the
+        # macOS runners, so the media effect specs pend here by design.
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
         ASAN_OPTIONS: detect_leaks=0
+
+    - name: (Linux) Show the captured Discord frames on failure
+      if: failure() && matrix.run_tests == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "--- fake Discord IPC server log ---"
+        cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
+        echo "--- frames it captured ---"
+        cat "${{runner.temp}}/mudlet-discord-frames.jsonl" 2>/dev/null || true
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'
@@ -466,30 +690,5 @@ jobs:
         if [ -e /tmp/busted-tests-failed ]
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
-          exit 1
-        fi
-
-    - name: (Linux) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'Linux'
-      timeout-minutes: 5
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: (macOS) Run C++ undo/redo tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      timeout-minutes: 5
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --run-undo-tests
-      env:
-        ASAN_OPTIONS: detect_leaks=0
-        MUDLET_TEST_MODE: 1
-
-    - name: Passed C++ undo/redo tests
-      if: matrix.run_tests == 'true'
-      run: |
-        if [ -e /tmp/undo-tests-failed ]
-        then
-          echo "C++ undo/redo tests failed - see the action called 'Run C++ undo/redo tests' above for detailed output."
           exit 1
         fi

@@ -1,4 +1,7 @@
 /***************************************************************************
+ *   Copyright (C) 2024 by Zooka                                           *
+ *   Copyright (C) 2026 by Stephen Lyons - slysven@virginmedia.com         *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -39,7 +42,7 @@ void TriggerHighlighter::highlightBlock(const QString& text)
         return;
     }
 
-    for (const HighlightingRule& rule : highlightingRules) {
+    for (const HighlightingRule& rule : std::as_const(highlightingRules)) {
         QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
         while (matchIterator.hasNext()) {
             QRegularExpressionMatch match = matchIterator.next();

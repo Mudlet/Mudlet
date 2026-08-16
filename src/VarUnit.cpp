@@ -29,27 +29,184 @@
 #include <QLocale>
 #include <QTreeWidgetItem>
 
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
+
 
 VarUnit::VarUnit()
 : base(nullptr)
 {
 }
 
-VarUnit::~VarUnit()
-{
-    // Delete the base TVar and all its children (recursively via TVar destructor)
-    delete base;
-}
+// Never releases mHiddenTableAnchors: the profile's lua_State is closed before
+// the LuaInterface owning this unit is replaced (see ~LuaInterface()), and an
+// unref into a freed state would crash. The registry entry dies with the state.
+VarUnit::~VarUnit() = default;
 
 bool VarUnit::isHidden(TVar* var)
 {
     if (var->getName() == qsl("_G")) { // we never hide global
         return false;
     }
-    if (hidden.contains(shortVarName(var).join(qsl(".")))) {
+    // By identity as well as by name: a saved variable holding one of Mudlet's
+    // or a package's tables reaches it under a name of the user's own, which no
+    // name-keyed lookup matches, and a profile save would then write out that
+    // table's contents (#9769).
+    if (var->pValue && hiddenTables.contains(var->pValue)) {
+        if (hiddenTableStillAlive(var->pValue)) {
+            return true;
+        }
+        // The table behind this address has been collected, so the address no
+        // longer names a hidden table - typically it now names a fresh variable
+        // of the user's. Forget the identity so it is not asked about again.
+        forgetHiddenTableAddress(var->pValue);
+    }
+    const QString fullName = shortVarName(var).join(qsl("."));
+    if (hidden.contains(fullName)) {
         return true;
     }
-    return hiddenByUser.contains(shortVarName(var).join(qsl(".")));
+    return hiddenByUser.contains(fullName);
+}
+
+// A hiding walk re-records every identity it finds, so the walk starts by
+// dropping the stale ones - and the anchor table backing them - wholesale here,
+// rather than pruning them one at a time as isHidden() queries them.
+void VarUnit::clearHiddenTables()
+{
+    hiddenTables.clear();
+    mHiddenTableByName.clear();
+    mHiddenTableSlots.clear();
+    if (mpAnchorState && mHiddenTableAnchors && mOwnsAnchors) {
+        luaL_unref(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    }
+    mHiddenTableAnchors = 0;
+}
+
+// Holds the table at valueIndex in a weak-valued registry table, so that
+// isHidden() can later ask whether its address still names it. Weak, so the
+// anchor never keeps the table alive: its slot reads nil from the moment the
+// table is collected, which is before Lua can hand the address to a new one.
+void VarUnit::anchorHiddenTable(lua_State* L, int valueIndex, const void* table)
+{
+    if (!table) {
+        return;
+    }
+    if (!lua_checkstack(L, 3)) {
+        // Unanchored, the address would still be trusted long after the table
+        // is gone, so the identity goes with the anchor - name-keyed hiding
+        // still applies.
+        qWarning() << "VarUnit::anchorHiddenTable() WARNING - the Lua stack could not be grown; this table is hidden by name only.";
+        forgetHiddenTableAddress(table);
+        return;
+    }
+    const int valueAt = (valueIndex > 0 || valueIndex <= LUA_REGISTRYINDEX) ? valueIndex : lua_gettop(L) + valueIndex + 1;
+    mpAnchorState = L;
+    // a table two hidden names reach is anchored under each; free the first
+    // name's slot rather than stranding it until the next walk
+    releaseAnchorSlot(mHiddenTableSlots.take(table));
+    if (!mHiddenTableAnchors) {
+        lua_newtable(L);
+        lua_newtable(L);
+        lua_pushstring(L, "v");
+        lua_setfield(L, -2, "__mode");
+        lua_setmetatable(L, -2);
+        mHiddenTableAnchors = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    lua_pushvalue(L, valueAt);
+    mHiddenTableSlots.insert(table, luaL_ref(L, -2));
+    lua_pop(L, 1);
+}
+
+// The whole identity handoff for the save-time copy: which addresses are hidden
+// and the anchors to answer liveness from. The anchors are borrowed, not owned -
+// mOwnsAnchors keeps the copy from releasing the live unit's registry entries
+// out from under it.
+void VarUnit::shareHiddenTableAnchors(const VarUnit& source)
+{
+    hiddenTables = source.hiddenTables;
+    mpAnchorState = source.mpAnchorState;
+    mHiddenTableAnchors = source.mHiddenTableAnchors;
+    mHiddenTableSlots = source.mHiddenTableSlots;
+    mOwnsAnchors = false;
+}
+
+bool VarUnit::hiddenTableStillAlive(const void* table) const
+{
+    const int slot = mHiddenTableSlots.value(table, 0);
+    if (!mpAnchorState || !mHiddenTableAnchors || !slot) {
+        // Anchoring failed or never ran, so nothing can tell this address apart
+        // from a recycled one. Not trusting it only costs hiding by identity -
+        // hiding by name still stands - while trusting it can swallow a fresh
+        // variable of the user's.
+        qWarning() << "VarUnit::hiddenTableStillAlive() WARNING - a hidden table was never anchored; it is hidden by name only.";
+        return false;
+    }
+    if (!lua_checkstack(mpAnchorState, 2)) {
+        return true; // cannot look, so the identity stands as it did
+    }
+    lua_rawgeti(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    if (!lua_istable(mpAnchorState, -1)) {
+        // a lifecycle bug (released or clobbered registry ref), not a collected
+        // table - do not start un-hiding over it
+        qWarning() << "VarUnit::hiddenTableStillAlive() WARNING - the anchor table is gone; the identity stands as it did.";
+        lua_pop(mpAnchorState, 1);
+        return true;
+    }
+    lua_rawgeti(mpAnchorState, -1, slot);
+    const bool alive = lua_istable(mpAnchorState, -1) && lua_topointer(mpAnchorState, -1) == table;
+    lua_pop(mpAnchorState, 2);
+    return alive;
+}
+
+// Only tables are worth an identity: nothing else has contents for a saved
+// variable to drag into a profile save by holding it.
+void VarUnit::rememberHiddenTable(TVar* var, const QString& fullName)
+{
+    if (var->getValueType() != LUA_TTABLE || !var->pValue) {
+        return;
+    }
+    mHiddenTableByName.insert(fullName, var->pValue);
+    hiddenTables.insert(var->pValue);
+}
+
+void VarUnit::forgetHiddenTable(const QString& fullName)
+{
+    const auto it = mHiddenTableByName.constFind(fullName);
+    if (it == mHiddenTableByName.constEnd()) {
+        return;
+    }
+    forgetHiddenTableAddress(it.value());
+}
+
+// Drops every trace of one remembered identity: the address, its anchor slot,
+// and the names that would hand it back.
+void VarUnit::forgetHiddenTableAddress(const void* table)
+{
+    hiddenTables.remove(table);
+    releaseAnchorSlot(mHiddenTableSlots.take(table));
+    mHiddenTableByName.removeIf([table](const auto& it) {
+        return it.value() == table;
+    });
+}
+
+void VarUnit::releaseAnchorSlot(int slot)
+{
+    if (!slot || !mOwnsAnchors || !mpAnchorState || !mHiddenTableAnchors) {
+        return;
+    }
+    lua_rawgeti(mpAnchorState, LUA_REGISTRYINDEX, mHiddenTableAnchors);
+    if (lua_istable(mpAnchorState, -1)) {
+        luaL_unref(mpAnchorState, -1, slot);
+    }
+    lua_pop(mpAnchorState, 1);
 }
 
 
@@ -67,6 +224,14 @@ bool VarUnit::isHidden(const QString& fullname)
 void VarUnit::addPointer(const void* pointer)
 {
     mPointers.insert(pointer);
+}
+
+// Resets the seen-pointer set varExists() answers from. iterateTable() does this
+// per saved root so a table two roots share is walked in full under each; within
+// one walk that set is the cycle guard, with the depth cap as the backstop.
+void VarUnit::clearPointers()
+{
+    mPointers.clear();
 }
 
 bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
@@ -186,6 +351,12 @@ void VarUnit::addTreeItem(QTreeWidgetItem* p, TVar* var)
     wVars.insert(p, var);
 }
 
+void VarUnit::removeTreeItem(QTreeWidgetItem* p)
+{
+    wVars.remove(p);
+    tVars.remove(p);
+}
+
 void VarUnit::addTempVar(QTreeWidgetItem* p, TVar* var)
 {
     tVars.insert(p, var);
@@ -216,14 +387,14 @@ QStringList VarUnit::varName(TVar* var)
 {
     QStringList names;
     names << "_G";
-    if (var == base || !var) {
+    if (var == base.get() || !var) {
         return names;
     }
     names << var->getName();
     TVar* p = var->getParent();
-    while (p && p != base) {
+    while (p && p != base.get()) {
         names.insert(1, p->getName());
-        if (p == base) {
+        if (p == base.get()) {
             break;
         }
         p = p->getParent();
@@ -249,21 +420,23 @@ QStringList VarUnit::shortVarName(TVar* var)
 
 void VarUnit::addVariable(TVar* var)
 {
-    const QString fullName = varName(var).join(qsl("."));
-    // pointers.insert(var->pointer);
-    variableSet.insert(fullName);
+    variableSet.insert(varName(var).join(qsl(".")));
     if (var->hidden) {
-        hidden.insert(shortVarName(var).join(qsl(".")));
+        const QString shortName = shortVarName(var).join(qsl("."));
+        hidden.insert(shortName);
+        rememberHiddenTable(var, shortName);
     }
 }
 
 void VarUnit::addHidden(TVar* var, int user)
 {
     var->hidden = true;
+    const QString shortName = shortVarName(var).join(qsl("."));
     if (user) {
-        hiddenByUser.insert(shortVarName(var).join(qsl(".")));
+        hiddenByUser.insert(shortName);
     } else {
-        hidden.insert(shortVarName(var).join(qsl(".")));
+        hidden.insert(shortName);
+        rememberHiddenTable(var, shortName);
     }
 }
 
@@ -277,6 +450,7 @@ void VarUnit::removeHidden(TVar* var)
     const QString fullName = shortVarName(var).join(qsl("."));
     hidden.remove(fullName);
     hiddenByUser.remove(fullName);
+    forgetHiddenTable(fullName);
     var->hidden = false;
 }
 
@@ -284,6 +458,7 @@ void VarUnit::removeHidden(const QString& name)
 {
     hidden.remove(name);
     hiddenByUser.remove(name);
+    forgetHiddenTable(name);
     // does not remove the reference from TVar, similar to addHidden()
 }
 
@@ -319,19 +494,17 @@ bool VarUnit::varExists(TVar* var)
 
 TVar* VarUnit::getBase()
 {
-    return base;
+    return base.get();
 }
 
 void VarUnit::setBase(TVar* pVariable)
 {
-    base = pVariable;
+    base.reset(pVariable);
 }
 
 void VarUnit::clear()
 {
-    // Delete the base TVar and all its children (recursively via TVar destructor)
-    delete base;
-    base = nullptr;
+    base.reset();
     tVars.clear();
     wVars.clear();
     variableSet.clear();

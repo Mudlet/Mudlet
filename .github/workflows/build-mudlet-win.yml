@@ -1,5 +1,7 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win-pr.yml
-# Changes here likely need to be mirrored there as well.
+# Changes here likely need to be mirrored there as well, apart from the ccache
+# deletion below: pull request caches are scoped to their own ref and keyed per
+# commit, so nothing there ever holds a key it needs to reuse.
 name: 🔨 Build Mudlet (windows)
 on:
   push:
@@ -14,7 +16,9 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
-# Permissions required for SignPath trusted build verification
+# id-token and contents are what SignPath's trusted build verification needs;
+# actions: write is for deleting the branch's previous ccache entry before
+# saving the new one.
 permissions:
   id-token: write
   contents: read
@@ -37,7 +41,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
@@ -60,7 +64,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.ref_name }}
@@ -79,7 +83,7 @@ jobs:
 
     - name: Cache sentry-native
       id: cache-sentry
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -109,28 +113,65 @@ jobs:
     - name: (Windows) Run QTest
       shell: msys2 {0}
       run: |
-        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
-        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
         ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 1
+      # The suite alone can run past two minutes on a slow runner, as on the other platforms.
+      timeout-minutes: 3
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
-        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
-        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
+
+        # Linux and macOS start the fixture HTTP server in a step of their own,
+        # but each msys2 step here is its own shell and a process backgrounded
+        # in one is not guaranteed to still be around in the next, so start the
+        # server in the very shell that runs the tests and stop it on the way
+        # out. Paths are handed over in mixed form (C:/...) because bash and
+        # the native Windows python both understand that.
+        temp_dir="$(cygpath -m "${RUNNER_TEMP}")"
+        port_file="${temp_dir}/mudlet-http-fixture-port"
+        fixture_log="${temp_dir}/http-fixture-server.log"
+        rm -f "${port_file}"
+        python_bin=python3
+        command -v "${python_bin}" > /dev/null 2>&1 || python_bin=python
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" "${python_bin}" "$GITHUB_WORKSPACE/CI/http-fixture-server.py" > "${fixture_log}" 2>&1 &
+        fixture_pid=$!
+        # Disowned so that stopping it is not reported as a job crash, and -9
+        # because a plain SIGTERM does not reach a native Windows process from
+        # msys2. The server's log is one line when all is well, so print it
+        # either way rather than only where trouble is expected.
+        disown "${fixture_pid}" 2>/dev/null || true
+        trap 'kill -9 "${fixture_pid}" > /dev/null 2>&1 || true; cat "${fixture_log}" 2>/dev/null || true' EXIT
+        for _ in $(seq 1 100); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          exit 1
+        fi
+        MUDLET_TEST_HTTP_PORT="$(cat "${port_file}")"
+        export MUDLET_TEST_HTTP_PORT
+        if ! curl -fsS --max-time 10 "http://127.0.0.1:${MUDLET_TEST_HTTP_PORT}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          exit 1
+        fi
+        echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
 
         $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
 
@@ -143,9 +184,35 @@ jobs:
           exit 1
         fi
 
+    # Cache keys are immutable, so the save below is refused while the branch's
+    # previous entry still holds the key, and the branch cache only ever
+    # refreshes when GitHub's eviction happens to drop it first. Deleting by key
+    # rather than by id covers a key held by several entries at once, which is
+    # what cache version drift leaves behind. Two pushes overlapping here is
+    # fine - the loser's save is refused and the next push heals it - but the
+    # branch has no cache at all between this step and the save, so a run
+    # cancelled in between leaves the next build cold.
+    # Git bash rather than the msys2 shell the build steps use: gh ships with
+    # the runner image and is on the native PATH.
+    - name: Delete the previous ccache entry
+      if: always() && steps.restore-ccache.outputs.cache-primary-key != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CACHE_KEY: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+      run: |
+        key="$(jq -rn --arg key "${CACHE_KEY}" '$key|@uri')"
+        if response="$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${key}" 2>&1)"; then
+          echo "deleted the previous ${CACHE_KEY} entry"
+        elif [[ "${response}" == *"HTTP 404"* ]]; then
+          echo "no ${CACHE_KEY} entry to delete yet"
+        else
+          echo "::warning::could not delete ${CACHE_KEY}, so the save below will be refused and this branch's ccache will go stale: ${response}"
+        fi
+
     - name: Save ccache
       if: always()
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
@@ -237,6 +304,8 @@ jobs:
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # needed so deploy-mudlet-for-windows.sh can query existing releases to skip duplicate PTBs
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
     - name: (Windows) Upload unsigned installer for signing
@@ -316,6 +385,41 @@ jobs:
           exit 1
         fi
 
+    - name: (Windows) Re-upload signed installer to mudlet.org
+      # The deploy step scp'd the installer before signing existed for tag
+      # builds, so overwrite it with the signed version. Non-fatal: the GitHub
+      # release (primary distribution) gets the signed installer either way.
+      if: steps.sign-installer.outcome == 'success' && startsWith(github.ref, 'refs/tags/')
+      shell: msys2 {0}
+      env:
+        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
+      run: |
+        SIGNED_PATH=$(cygpath -au "${ARTIFACT_WINPATHORFILE}")
+        if [ ! -f "${SIGNED_PATH}" ]; then
+          echo "::warning::signed installer not found at ${SIGNED_PATH} - mudlet.org keeps the unsigned installer"
+          exit 0
+        fi
+
+        echo "${DEPLOY_SSH_KEY}" > temp_key_file_signed
+        powershell.exe -Command "icacls.exe temp_key_file_signed /inheritance:r"
+
+        powershell.exe <<EOF
+        \$installerExePath = "${ARTIFACT_WINPATHORFILE}"
+        \$DEPLOY_PATH = "${DEPLOY_PATH}"
+        scp.exe -i temp_key_file_signed -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@make.mudlet.org:\${DEPLOY_PATH}
+        if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }
+        EOF
+        scp_rc=$?
+
+        shred -u temp_key_file_signed
+
+        if [ "$scp_rc" -ne 0 ]; then
+          echo "::warning::failed to re-upload signed installer to make.mudlet.org (scp exit ${scp_rc}) - mudlet.org keeps the unsigned installer"
+          exit 0
+        fi
+        echo "Signed installer re-uploaded over the unsigned one on make.mudlet.org."
+
     - name: Create intermediate artifact for debugging
       uses: actions/upload-artifact@v7
       if: env.INTERMEDIATE_ARTIFACT_NAME
@@ -328,9 +432,10 @@ jobs:
     - name: Create artifact for later uploading
       # Uploads the zipped contents of ARTIFACT_WINPATHORFILE as an "artifact" with
       # the given name - the Environmental variables are created by the
-      # deploy-mudlet-for-windows.sh script:
+      # deploy-mudlet-for-windows.sh script. PTB-only: on tag builds the installer
+      # reaches mudlet.org via scp in the deploy script instead:
       uses: actions/upload-artifact@v7
-      if: env.ARTIFACT_NAME
+      if: env.ARTIFACT_NAME != '' && !startsWith(github.ref, 'refs/tags/')
       with:
         name: ${{env.ARTIFACT_NAME}}
         path: ${{env.ARTIFACT_WINPATHORFILE}}
@@ -338,7 +443,7 @@ jobs:
 
     - name: Upload artifact to make.mudlet.org
       shell: msys2 {0}
-      if: env.ARTIFACT_NAME
+      if: env.ARTIFACT_NAME != '' && !startsWith(github.ref, 'refs/tags/')
       run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Upload release asset for GitHub Release
