@@ -979,6 +979,12 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         varUnit->addPointer(pValue);
         if (vType == LUA_TTABLE) {
             var->setValue("{}", LUA_TTABLE);
+            if (hide) {
+                // The identity addVariable() just remembered is only exact
+                // while this table is alive - anchor it weakly so isHidden()
+                // can tell a recycled address from the table itself.
+                varUnit->anchorHiddenTable(L, -1, pValue);
+            }
             const bool tooDeep = depth > scmMaxTableDepth;
             if (!tooDeep && lua_checkstack(L, 3)) {
                 //put the table on top
