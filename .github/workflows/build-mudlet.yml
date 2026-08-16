@@ -1,5 +1,7 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
-# Changes here likely need to be mirrored there as well.
+# Changes here likely need to be mirrored there as well, apart from the ccache
+# deletion below: pull request caches are scoped to their own ref and keyed per
+# commit, so nothing there ever holds a key it needs to reuse.
 name: 🔨 Build Mudlet
 on:
   push:
@@ -13,6 +15,12 @@ on:
         default: 'false'
   schedule:
     - cron: '0 2 * * *'
+
+# actions: write is for deleting the branch's previous ccache entry before
+# saving the new one; nothing here writes to the repository itself.
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   compile-mudlet:
@@ -279,6 +287,24 @@ jobs:
         # Update library cache so linker finds new version
         sudo ldconfig
 
+    - name: (Linux) Install mold linker
+      timeout-minutes: 5
+      if: runner.os == 'Linux'
+      env:
+        MOLD_VERSION: '2.41.0'
+        # mold publishes no checksum manifest, so this is the hash of the
+        # pinned asset as downloaded - re-verify it by hand when bumping
+        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+      run: |
+        # Ubuntu 22.04 only packages mold 1.0.3, so take it from upstream
+        curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
+          "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+        echo "${MOLD_SHA256}  mold.tar.gz" | sha256sum -c
+        sudo tar xf mold.tar.gz -C /usr/local --strip-components=1
+        rm mold.tar.gz
+        # not bin/mold: this is the GNU ld drop-in that -B has to resolve to
+        /usr/local/libexec/mold/ld --version
+
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -343,6 +369,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
           -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
+          -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
@@ -352,15 +379,45 @@ jobs:
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
+    # Cache keys are immutable, so the save below is refused while the branch's
+    # previous entry still holds the key, and the branch cache only ever
+    # refreshes when GitHub's eviction happens to drop it first. Deleting by key
+    # rather than by id covers a key held by several entries at once, which is
+    # what cache version drift leaves behind. Two pushes overlapping here is
+    # fine - the loser's save is refused and the next push heals it - but the
+    # branch has no cache at all between this step and the save, so a run
+    # cancelled in between leaves the next build cold.
+    - name: Delete the previous ccache entry
+      if: always() && steps.restore-ccache.outputs.cache-primary-key != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CACHE_KEY: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+      run: |
+        key="$(jq -rn --arg key "${CACHE_KEY}" '$key|@uri')"
+        if response="$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${key}" 2>&1)"; then
+          echo "deleted the previous ${CACHE_KEY} entry"
+        elif [[ "${response}" == *"HTTP 404"* ]]; then
+          echo "no ${CACHE_KEY} entry to delete yet"
+        else
+          echo "::warning::could not delete ${CACHE_KEY}, so the save below will be refused and this branch's ccache will go stale: ${response}"
+        fi
+
     - name: Save ccache
       if: always()
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-  
+
     - name: check ccache stats post build
       run: ccache --show-stats
+
+    # a mold that never got installed just makes the compiler fall back to the
+    # system ld, which builds fine and quietly costs three minutes a run
+    - name: (Linux) Confirm the build used mold
+      if: runner.os == 'Linux'
+      run: readelf -p .comment ${{runner.workspace}}/b/ninja/src/mudlet | grep -q mold
 
     - name: install dependencies for packaging/tests
       run: |
@@ -596,13 +653,10 @@ jobs:
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
-      # wall-clock time, so the suite needs a budget of its own - and one wide
-      # enough that the launcher's single rerun still fits inside it (#9809).
+      # wall-clock time, so the suite needs a budget of its own: the run itself
+      # takes ~75s, and the rest is headroom for a slow runner stretching those.
       timeout-minutes: 6
-      run: >
-        cmake -P ${{github.workspace}}/test/lsan-tracer-retry.cmake --
-        --failure-marker=/tmp/busted-tests-failed
-        xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
@@ -629,10 +683,15 @@ jobs:
         DBUS_SESSION_BUS_ADDRESS: 'disabled:'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
-        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1' || '' }}
-        # log_threads names the stack and TLS range of every thread the tracer
-        # walks, so the last one printed before a crash is the range it died on
-        # (#9809). Seven lines a run, and the only way to see that from CI.
+        # intercept_tls_get_addr=0 keeps gcc-10's sanitizer runtime from
+        # recording a bogus dynamic-TLS range for LeakSanitizer's tracer to crash
+        # on (#9809); test/functional_tests/CMakeLists.txt explains it in full
+        ASAN_OPTIONS: ${{ matrix.enable_asan == 'true' && 'detect_leaks=1:intercept_tls_get_addr=0' || '' }}
+        # log_threads is insurance rather than an expectation: if the flag above
+        # ever proves incomplete, it names the stack and TLS range of every
+        # thread the tracer walks, so the last one printed before a crash is the
+        # range it died on (#9809). Seven lines a run, and the only way to see
+        # that from CI.
         LSAN_OPTIONS: ${{ matrix.enable_asan == 'true' && format('suppressions={0}/asan-suppressions.txt:exitcode=1:log_threads=1', github.workspace) || '' }}
 
     - name: (macOS) Run Lua tests

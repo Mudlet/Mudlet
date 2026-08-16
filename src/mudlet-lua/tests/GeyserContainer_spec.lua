@@ -82,6 +82,30 @@ describe("Tests functionality of Geyser.Container", function()
       assert.is_false(container.auto_hidden)
     end)
 
+    it("keeps a hidden constraint and passes it on to a child", function()
+      local container = track(Geyser.Container:new({name = "gcsHiddenNew", x = 0, y = 0, width = 100, height = 100, hidden = true}))
+      assert.is_true(container.hidden)
+      local label = track(Geyser.Label:new({name = "gcsHiddenNewChild", x = 0, y = 0, width = "100%", height = "100%"}, container))
+      -- hidden by its container rather than in its own right, so it comes back with it
+      assert.is_false(label.hidden)
+      assert.is_true(label.auto_hidden)
+      assert.is_false(windowVisible("gcsHiddenNewChild"))
+      container:show()
+      assert.is_false(container.hidden)
+      assert.is_true(windowVisible("gcsHiddenNewChild"))
+    end)
+
+    it("keeps a hidden child hidden across its container being shown", function()
+      local container = track(Geyser.Container:new({name = "gcsHiddenKeep", x = 0, y = 0, width = 100, height = 100}))
+      track(Geyser.Label:new({name = "gcsHiddenKeepShy", x = 0, y = 0, width = "100%", height = "50%", hidden = true}, container))
+      track(Geyser.Label:new({name = "gcsHiddenKeepSeen", x = 0, y = "50%", width = "100%", height = "50%"}, container))
+      assert.is_false(windowVisible("gcsHiddenKeepShy"))
+      container:hide()
+      container:show()
+      assert.is_false(windowVisible("gcsHiddenKeepShy"))
+      assert.is_true(windowVisible("gcsHiddenKeepSeen"))
+    end)
+
     it("raises an error when the container argument is not a container", function()
       local ok, message = pcall(function()
         return Geyser.Container:new({name = "gcsBadParent"}, "notacontainer")
@@ -203,6 +227,107 @@ describe("Tests functionality of Geyser.Container", function()
       track(Geyser.Label:new({name = "gcsLeaf", x = "50%", y = "50%", width = "50%", height = "50%"}, middle))
       -- middle spans x 300..500, y 50..250, so the leaf starts halfway into it
       assert.are.same({x = 400, y = 150, width = 100, height = 100}, geometry("gcsLeaf"))
+    end)
+
+    -- set_constraints walks every descendant itself, and reposition() walks them
+    -- again, so each window used to be placed once per ancestor it had. The three
+    -- specs below pin the single pass and the two kinds of child that only the
+    -- walk reaches, which a top-down reposition on its own would leave behind.
+    -- Geyser looks moveWindow up in the globals of the file it lives in, which are
+    -- not the globals a spec file writes to, so the counter has to go into its
+    -- environment rather than ours
+    local function countPlacements(work)
+      local geyser = getfenv(Geyser.Container.reposition)
+      local placements = 0
+      local realMoveWindow = geyser.moveWindow
+      geyser.moveWindow = function(...)
+        placements = placements + 1
+        return realMoveWindow(...)
+      end
+      local ok, err = pcall(work)
+      geyser.moveWindow = realMoveWindow
+      assert.is_true(ok, tostring(err))
+      -- a count of zero would make every comparison below trivially true
+      assert.is_true(placements > 0, "nothing was placed, so the counter is not hooked up")
+      return placements
+    end
+
+    -- every class that overrides reposition has to hand skipChildren on, or its
+    -- subtree keeps being placed once per ancestor. Boxes inside an adjustable
+    -- container is what a real layout is built from, so each class is covered
+    -- rather than only the plain container the base implementation serves.
+    for _, class in ipairs({"Container", "HBox", "VBox", "ScrollBox"}) do
+      it(("places each window once for one set_constraints, for a %s"):format(class), function()
+        local constructor = Geyser[class]
+        local root = track(constructor:new({name = "gcsOnce" .. class, x = 0, y = 0, width = "60%", height = "60%"}))
+        local parents = {root}
+        for depth = 1, 3 do
+          local nextParents = {}
+          for index, parent in ipairs(parents) do
+            for child = 1, 2 do
+              nextParents[#nextParents + 1] = track(constructor:new({
+                name = ("gcsOnce%s_%d_%d_%d"):format(class, depth, index, child),
+                x = 0, y = 0, width = "100%", height = "100%"}, parent))
+            end
+          end
+          parents = nextParents
+        end
+
+        -- reposition() reaches every window in the tree exactly once, so it is the
+        -- count set_constraints has to match rather than a hardcoded total
+        local onePass = countPlacements(function() root:reposition() end)
+        local viaConstraints = countPlacements(function() root:set_constraints(root) end)
+        assert.are.equal(onePass, viaConstraints)
+      end)
+    end
+
+    it("places each window once for one set_constraints, for an adjustable container", function()
+      local root = Adjustable.Container:new({name = "gcsOnceAdj", x = 20, y = 20,
+        width = 300, height = 200, autoLoad = false, autoSave = false})
+      finally(function()
+        if Adjustable.Container.all[root.name] == root then
+          root:deleteSaveFile()
+          root:delete()
+        end
+      end)
+      local box = track(Geyser.VBox:new({name = "gcsOnceAdjBox", x = 0, y = 0,
+        width = "100%", height = "100%"}, root.Inside or root))
+      track(Geyser.MiniConsole:new({name = "gcsOnceAdjConsole", autoWrap = true}, box))
+      track(Geyser.Label:new({name = "gcsOnceAdjLabel"}, box))
+
+      local onePass = countPlacements(function() root:reposition() end)
+      local viaConstraints = countPlacements(function() root:set_constraints(root) end)
+      assert.are.equal(onePass, viaConstraints)
+    end)
+
+    it("lays out a child of a container whose reposition does not recurse", function()
+      local root = track(Geyser.Container:new({name = "gcsMapRoot", x = 0, y = 0, width = "60%", height = "60%"}))
+      -- Geyser.Mapper:reposition places the map widget and stops, so its children
+      -- are laid out only because set_constraints visits them
+      local mapper = track(Geyser.Mapper:new({name = "gcsMapper", x = 0, y = 0,
+        width = "100%", height = "50%", embedded = false}, root))
+      track(Geyser.Label:new({name = "gcsMapLabel", x = 0, y = 0, width = "50%", height = "50%"}, mapper))
+
+      local before = geometry("gcsMapLabel")
+      root:move(root:get_x() + 40, root:get_y() + 30)
+      local after = geometry("gcsMapLabel")
+      assert.are.equal(before.x + 40, after.x)
+      assert.are.equal(before.y + 30, after.y)
+    end)
+
+    it("lays out the children of a container that nests its labels", function()
+      local root = track(Geyser.Container:new({name = "gcsNestRoot", x = 0, y = 0, width = "60%", height = "60%"}))
+      local nester = track(Geyser.Container:new({name = "gcsNester", x = 0, y = 0, width = "100%", height = "100%"}, root))
+      -- reposition() skips a child that nests its labels, so again only the
+      -- set_constraints walk reaches what is under it
+      nester.nestLabels = true
+      track(Geyser.Label:new({name = "gcsNestLabel", x = 0, y = 0, width = "50%", height = "50%"}, nester))
+
+      local before = geometry("gcsNestLabel")
+      root:move(root:get_x() + 40, root:get_y() + 30)
+      local after = geometry("gcsNestLabel")
+      assert.are.equal(before.x + 40, after.x)
+      assert.are.equal(before.y + 30, after.y)
     end)
   end)
 
@@ -516,6 +641,17 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({}, first.windows)
       assert.are.equal(label, second.windowList.gcsAddMoved)
       assert.are.equal(200, geometry("gcsAddMoved").x)
+    end)
+
+    it("keeps a new child of a hidden container hidden", function()
+      local container = track(Geyser.Container:new({name = "gcsAddHiddenBox", x = 0, y = 0, width = 100, height = 100}))
+      container:hide()
+      local label = track(Geyser.Label:new({name = "gcsAddHiddenChild"}, container))
+      assert.is_true(label.auto_hidden)
+      assert.is_false(windowVisible("gcsAddHiddenChild"))
+      container:show()
+      assert.is_false(label.auto_hidden)
+      assert.is_true(windowVisible("gcsAddHiddenChild"))
     end)
 
     it("keeps a new child of a hidden add2 container hidden", function()
