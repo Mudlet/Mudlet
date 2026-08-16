@@ -74,21 +74,38 @@ QString TVar::getName() const
     return name;
 }
 
+// std::sort() may walk off the ends of the range it is given unless this is a
+// strict weak ordering, so every pair of names has to be placed the same way
+// whichever other names are around. Only the out-parameter of toInt() says
+// whether a name is a number: its return value cannot, since "0" and a name
+// that is no number at all both convert to zero. Deciding it by the value put
+// the names into groups that contradicted each other - "2" < "10" < "11a" <
+// "2" was a cycle a table of mixed names really produced (#9956).
 bool TVarLessThan(TVar* varA, TVar* varB)
 {
     const QString a = varA->getName();
     const QString b = varB->getName();
-    bool isAOk = false;
-    bool isBOk = false;
+    bool isANumber = false;
+    bool isBNumber = false;
+    const int aNumber = a.toInt(&isANumber);
+    const int bNumber = b.toInt(&isBNumber);
 
-    // Previously we do not check the result of a toInt() call on the QStrings
-    // but they would happly return a zero value for a QString that can not be
-    // converted to a number and then the IF branch would be taken regardless
-    // of whether one or both of the QStrings was NOT actually a number
-    if (a.toInt(&isAOk) && b.toInt(&isBOk) && isAOk && isBOk) {
-        return a.toInt() < b.toInt();
+    if (isANumber != isBNumber) {
+        // numbers ahead of names, which is how a table of nothing but numbers
+        // already sorted
+        return isANumber;
     }
-    return a.toLower() < b.toLower();
+    if (isANumber) {
+        return aNumber < bNumber;
+    }
+    const QString aFolded = a.toLower();
+    const QString bFolded = b.toLower();
+    if (aFolded != bFolded) {
+        return aFolded < bFolded;
+    }
+    // "A" and "a" fold together, and leaving them equivalent would leave their
+    // order down to whatever the sort happened to do with them
+    return a < b;
 }
 
 QList<TVar*> TVar::getChildren(const bool isToSort)

@@ -27,6 +27,7 @@
 
 #include <cstdlib>
 #include <memory>
+#include <vector>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -61,6 +62,11 @@ static void* budgetedAllocator(void* userData, void* pointer, size_t /*oldSize*/
     }
     return realloc(pointer, newSize);
 }
+
+
+// The comparator TVar::getChildren() sorts the members of a table with. It is a
+// free function in TVar.cpp that TVar.h does not declare, so it is named here.
+bool TVarLessThan(TVar*, TVar*);
 
 
 class TVarTest : public QObject
@@ -543,7 +549,92 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(!vu->savedVars.contains(qsl("savedRenamed")), "the name the variable no longer has must stop being saved");
     }
 
+    // The three names below are the cycle a real table of mixed names produced:
+    // every one of the three comparisons answered true, so TVar::getChildren()
+    // handed std::sort() an ordering that contradicted itself (#9956).
+    void testTVarLessThanPlacesNumbersAndNamesWithoutACycle()
+    {
+        const auto two = namedVar(qsl("2"));
+        const auto ten = namedVar(qsl("10"));
+        const auto elevenA = namedVar(qsl("11a"));
+
+        QVERIFY2(TVarLessThan(two.get(), ten.get()), "two numbers compare by value, so 2 comes before 10");
+        QVERIFY2(TVarLessThan(ten.get(), elevenA.get()), "a number comes before a name that is not one");
+        QVERIFY2(!TVarLessThan(elevenA.get(), two.get()), "so that name cannot also come before a number - that closes a cycle");
+    }
+
+    void testTVarLessThanIsAntisymmetric()
+    {
+        const QStringList names{qsl("0"), qsl("2"), qsl("10"), qsl("-1"), qsl("11a"), qsl("0abc"), qsl("a"), qsl("A"), qsl("zebra"), QString()};
+        for (const QString& first : names) {
+            const auto firstVar = namedVar(first);
+            QVERIFY2(!TVarLessThan(firstVar.get(), firstVar.get()), qPrintable(qsl("\"%1\" must not come before itself").arg(first)));
+            for (const QString& second : names) {
+                if (first == second) {
+                    continue;
+                }
+                const auto secondVar = namedVar(second);
+                const bool firstFirst = TVarLessThan(firstVar.get(), secondVar.get());
+                const bool secondFirst = TVarLessThan(secondVar.get(), firstVar.get());
+                QVERIFY2(!(firstFirst && secondFirst), qPrintable(qsl("\"%1\" and \"%2\" each came before the other").arg(first, second)));
+            }
+        }
+    }
+
+    // Folding the case leaves "A" and "a" equivalent, and equivalent names are
+    // left wherever the sort happens to put them - which is not the same place
+    // every time, so the view would reorder them for no reason the user made.
+    void testTVarLessThanSeparatesNamesThatOnlyDifferInCase()
+    {
+        const auto upper = namedVar(qsl("A"));
+        const auto lower = namedVar(qsl("a"));
+
+        QCOMPARE(TVarLessThan(upper.get(), lower.get()), true);
+        QCOMPARE(TVarLessThan(lower.get(), upper.get()), false);
+    }
+
+    // A strict weak ordering in full: both "comes before" and "neither comes
+    // before the other" have to carry across a third name, or std::sort() is
+    // free to read past the ends of the list it is sorting.
+    void testTVarLessThanIsTransitiveOverEveryTripleOfMixedNames()
+    {
+        const QStringList names{
+                qsl("0"), qsl("2"), qsl("10"), qsl("11"), qsl("-1"), qsl("-10"), qsl("2b"), qsl("11a"), qsl("a"), qsl("A"), qsl("_G"), qsl("zebra"), QString(), qsl("99999999999999999999")};
+        std::vector<std::unique_ptr<TVar>> vars;
+        vars.reserve(names.size());
+        for (const QString& name : names) {
+            vars.push_back(namedVar(name));
+        }
+
+        for (int i = 0; i < names.size(); ++i) {
+            for (int j = 0; j < names.size(); ++j) {
+                for (int k = 0; k < names.size(); ++k) {
+                    TVar* first = vars.at(i).get();
+                    TVar* second = vars.at(j).get();
+                    TVar* third = vars.at(k).get();
+                    const QString trio = qsl("\"%1\", \"%2\", \"%3\"").arg(names.at(i), names.at(j), names.at(k));
+                    if (TVarLessThan(first, second) && TVarLessThan(second, third)) {
+                        QVERIFY2(TVarLessThan(first, third), qPrintable(qsl("%1: the first must come before the third").arg(trio)));
+                    }
+                    const bool firstTwoTie = !TVarLessThan(first, second) && !TVarLessThan(second, first);
+                    const bool lastTwoTie = !TVarLessThan(second, third) && !TVarLessThan(third, second);
+                    if (firstTwoTie && lastTwoTie) {
+                        const bool endsTie = !TVarLessThan(first, third) && !TVarLessThan(third, first);
+                        QVERIFY2(endsTie, qPrintable(qsl("%1: names that tie with a third have to tie with each other").arg(trio)));
+                    }
+                }
+            }
+        }
+    }
+
 private:
+    static std::unique_ptr<TVar> namedVar(const QString& name)
+    {
+        auto var = std::make_unique<TVar>();
+        var->setName(name, LUA_TSTRING);
+        return var;
+    }
+
     // The base library, which these tests do without, is what usually puts the
     // globals table in _G - and a rename of a global is written as _G["new"].
     void defineGlobalsTable()
