@@ -1672,6 +1672,25 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_pushboolean(L, result.second.isUnderlined());
     lua_settable(L, -3);
 
+    lua_pushstring(L, "underlineStyle");
+    // This says what is drawn, not what the cell remembers - a hyperlink's own
+    // styling can OR a second style flag onto a cell that SGR already styled,
+    // and setUnderline(false) leaves a style flag behind. So resolve in the
+    // order the screen does: TTextEdit::drawCustomDecorations tries wavy, then
+    // dotted, then dashed, and Qt draws the plain underline when none is set.
+    if (!result.second.isUnderlined()) {
+        lua_pushstring(L, "none");
+    } else if (result.second.isUnderlineWavy()) {
+        lua_pushstring(L, "wavy");
+    } else if (result.second.isUnderlineDotted()) {
+        lua_pushstring(L, "dotted");
+    } else if (result.second.isUnderlineDashed()) {
+        lua_pushstring(L, "dashed");
+    } else {
+        lua_pushstring(L, "solid");
+    }
+    lua_settable(L, -3);
+
     lua_pushstring(L, "blinking");
     if (Q_UNLIKELY(result.second.isFastBlinking())) {
         lua_pushstring(L, "fast");

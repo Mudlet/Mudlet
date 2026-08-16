@@ -158,9 +158,7 @@ public:
         mFgColor = newForeGroundColor;
         mBgColor = newBackGroundColor;
     }
-    // Only considers the following flags: AltFont#, Bold, Conceal,
-    // FastBlink/Blink, Italic, Overline, Reverse, Strikeout, Underline,
-    // - does not consider Echo or Found:
+    // Only considers the flags within TestMask - so not Echo or Found:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }

@@ -54,7 +54,6 @@ set(FUNCTIONAL_TEST_SOURCES
     ClearWindowLogTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
-    SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp

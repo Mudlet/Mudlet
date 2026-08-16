@@ -1219,7 +1219,7 @@ describe("Tests UI functions", function()
       -- Check for any unexpected fields
       local expectedFields = {
         bold = true, italic = true, overline = true, reverse = true,
-        strikeout = true, underline = true, concealed = true,
+        strikeout = true, underline = true, underlineStyle = true, concealed = true,
         blinking = true, alternateFont = true, foreground = true, background = true
       }
       
@@ -2261,6 +2261,121 @@ describe("Tests UI functions", function()
       local format = getTextFormat(win)
       assert.is_false(format.bold)
       assert.is_false(format.underline)
+    end)
+  end)
+
+  -- The colon form of SGR 4 carries the underline style in a sub-parameter, in
+  -- the kitty/VTE mapping TBuffer::decodeSGR documents - where the curly style
+  -- of 4:3 is the one Mudlet calls wavy. feedTelnet runs the bytes through
+  -- cTelnet::processSocketData, the decoder game data goes through, but only
+  -- while the profile's socket is unconnected: hence the disconnect below, and
+  -- CI starting Mudlet with --offline. Plain data lands in the main console,
+  -- which is what the reads rely on.
+  describe("getTextFormat underline styles", function()
+    local feedCount = 0
+
+    setup(function()
+      disconnect()
+    end)
+
+    -- Each call mints its own marker so a stale line from an earlier feed can
+    -- never be matched in its place.
+    local function formatAfter(sequence, trailer)
+      feedCount = feedCount + 1
+      local needle = string.format("USTYLE%03d", feedCount)
+      local fed, refusal = feedTelnet("\27[0m" .. sequence .. needle .. (trailer or "") .. "\r\n")
+      assert.is_true(fed, tostring(refusal) .. " - this block needs Mudlet started with --offline")
+
+      local lastLine = getLastLineNumber("main")
+      local firstLine = math.max(0, lastLine - 15)
+      local lines = getLines("main", firstLine, lastLine + 1)
+      for i = #lines, 1, -1 do
+        if lines[i]:find(needle, 1, true) then
+          assert.is_true(moveCursor("main", 0, firstLine + i - 1))
+          assert.is_true(selectString("main", needle, 1) >= 0)
+          -- getTextAttributes silently falls back to the cursor when nothing is
+          -- selected, so confirm the marker really is what is being read
+          assert.are.equal(needle, (getSelection("main")))
+          local format = getTextFormat("main")
+          deselect("main")
+          return format
+        end
+      end
+      error(needle .. " never reached the main console")
+    end
+
+    local rows = {
+      {what = "4:0 leaves the text without an underline", sequence = "\27[4:0m", underline = false, expected = "none"},
+      {what = "4:1 is a single underline", sequence = "\27[4:1m", underline = true, expected = "solid"},
+      -- Mudlet has no double underline of its own, so 4:2 renders as a single one
+      {what = "4:2 falls back to a single underline", sequence = "\27[4:2m", underline = true, expected = "solid"},
+      {what = "4:3 is a curly underline", sequence = "\27[4:3m", underline = true, expected = "wavy"},
+      {what = "4:4 is a dotted underline", sequence = "\27[4:4m", underline = true, expected = "dotted"},
+      {what = "4:5 is a dashed underline", sequence = "\27[4:5m", underline = true, expected = "dashed"},
+    }
+
+    for _, row in ipairs(rows) do
+      it("reports that " .. row.what, function()
+        local format = formatAfter(row.sequence)
+        assert.are.equal(row.underline, format.underline)
+        assert.are.equal(row.expected, format.underlineStyle)
+      end)
+    end
+
+    -- Applying a style over a curly underline has to clear the sibling flags,
+    -- otherwise the old style carries over into the new one
+    local transitions = {
+      {what = "4:0 after a curly underline turns the underline off", sequence = "\27[4:0m", underline = false, expected = "none"},
+      {what = "4:4 after a curly underline replaces it with a dotted one", sequence = "\27[4:4m", underline = true, expected = "dotted"},
+      {what = "4:5 after a curly underline replaces it with a dashed one", sequence = "\27[4:5m", underline = true, expected = "dashed"},
+      {what = "an out-of-range 4:6 after a curly underline turns the underline off", sequence = "\27[4:6m", underline = false, expected = "none"},
+    }
+
+    for _, row in ipairs(transitions) do
+      it("reports that " .. row.what, function()
+        local format = formatAfter("\27[4:3m" .. row.sequence)
+        assert.are.equal(row.underline, format.underline)
+        assert.are.equal(row.expected, format.underlineStyle)
+      end)
+    end
+
+    it("reports that the plain SGR 4 is still a solid underline", function()
+      local format = formatAfter("\27[4m")
+      assert.is_true(format.underline)
+      assert.are.equal("solid", format.underlineStyle)
+    end)
+
+    it("reports no style at all on text the game never underlined", function()
+      local format = formatAfter("")
+      assert.is_false(format.underline)
+      assert.are.equal("none", format.underlineStyle)
+    end)
+
+    -- "none" cannot show whether the style flags were cleared along with the
+    -- underline, and the plain SGR 4 leaves them alone - so a style that
+    -- survived being turned off would come back on the next plain underline
+    for _, clearingSequence in ipairs({"\27[4:0m", "\27[4:6m"}) do
+      it("reports that a curly underline cleared by " .. clearingSequence:sub(3, -2) .. " does not come back", function()
+        local format = formatAfter("\27[4:3m" .. clearingSequence .. "\27[4m")
+        assert.is_true(format.underline)
+        assert.are.equal("solid", format.underlineStyle)
+      end)
+    end
+
+    -- A styled OSC 8 hyperlink adds its underline to the one SGR already put on
+    -- the cell without clearing it, so both flags are set at once and only the
+    -- painter's precedence decides which one is drawn
+    it("reports the style that wins on screen when a hyperlink adds a second one", function()
+      local link = "\27]8;;https://example.com/?config={\"style\":{\"underline\":\"wavy\"}}\27\\"
+      local format = formatAfter(link .. "\27[4:4m", "\27]8;;\27\\")
+      assert.is_true(format.underline)
+      assert.are.equal("wavy", format.underlineStyle)
+    end)
+
+    -- leave the telnet parser's pen and the main console's cursor as found
+    teardown(function()
+      feedTelnet("\27[0m\r\n")
+      moveCursorEnd("main")
     end)
   end)
 
