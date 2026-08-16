@@ -549,6 +549,51 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(!vu->savedVars.contains(qsl("savedRenamed")), "the name the variable no longer has must stop being saved");
     }
 
+    // A hidden table is remembered by address as well as by name, and the name
+    // half is what un-hiding is asked by. Left on the old name, the address goes
+    // on answering for the table under a name nothing can give it back from - so
+    // the table can no longer be un-hidden at all.
+    void testRenameTakesAHiddenTablesIdentityToTheNewName()
+    {
+        defineGlobalsTable();
+        execLua("hiddenTableRenamed = {member = 'value'}");
+        interface->getVars(true); // the hiding walk Mudlet runs at profile load
+        VarUnit* vu = interface->getVarUnit();
+        TVar* var = findGlobal(qsl("hiddenTableRenamed"));
+        QVERIFY(var);
+        QVERIFY2(vu->isHidden(var), "the hiding walk is supposed to have hidden the table");
+
+        var->setNewName(qsl("hiddenTableRenamedNew"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(var));
+
+        QVERIFY2(vu->isHidden(var), "a rename does not change the table, so its identity still answers for it");
+        vu->removeHidden(qsl("hiddenTableRenamedNew"));
+        QVERIFY2(!vu->isHidden(var), "un-hiding the name the table now has has to give its identity up as well");
+    }
+
+    // ...and a member of a renamed table is remembered by a name beginning with
+    // the table's, so a rename of the table has to take those with it too - the
+    // saved mark was left pointing at a path with no variable at the end of it.
+    void testRenamingATableTakesItsMembersSavedMarksWithIt()
+    {
+        defineGlobalsTable();
+        execLua("renHolder = {a = 'aval'} renHolderOther = 'unrelated'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+        TVar* holder = findGlobal(qsl("renHolder"));
+        QVERIFY(holder);
+        vu->addSavedVar(holder->getChildren(false).first());
+        vu->addSavedVar(findGlobal(qsl("renHolderOther")));
+        QVERIFY(vu->savedVars.contains(qsl("renHolder.a")));
+
+        holder->setNewName(qsl("renHolderNew"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(holder));
+
+        QVERIFY2(vu->savedVars.contains(qsl("renHolderNew.a")), "what is saved inside a renamed table has to be saved under the name the table now has");
+        QVERIFY2(!vu->savedVars.contains(qsl("renHolder.a")), "and must stop being saved under a path that now names nothing");
+        QVERIFY2(vu->savedVars.contains(qsl("renHolderOther")), "a variable that merely starts with the same text is a variable of its own");
+    }
+
     // A member whose key is a table of its own is named in the tree by the
     // number of the registry reference holding that key, and that number is not
     // a name a rename can write: renaming such a member deleted it outright.

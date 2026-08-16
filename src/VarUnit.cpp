@@ -503,33 +503,63 @@ void VarUnit::removeHidden(const QString& name)
     // does not remove the reference from TVar, similar to addHidden()
 }
 
-// Everything this unit remembers about a variable it remembers by the dotted
-// name the tree gave it, so a rename has to take those memberships with it. Left
-// behind, a saved or hidden mark keeps answering for the old name, and catches
-// whichever unrelated variable is born under it next; the renamed variable
-// meanwhile loses the mark the user put on it.
+// Whether a name-keyed entry is about the variable being renamed, or about
+// something inside it - a member of a renamed table is remembered by a name
+// beginning with the table's, so it moves too. The dot is what makes this a
+// path rather than a string prefix: "renHolderOther" begins with "renHolder"
+// and is a variable of its own that no rename of "renHolder" touches.
+static bool nameIsTheVariableOrInsideIt(const QString& name, const QString& fullName)
+{
+    return name == fullName || name.startsWith(fullName + QLatin1Char('.'));
+}
+
+// ...and where such an entry ends up: the same tail, hung off the new name.
+static QString nameAfterTheRename(const QString& name, const QString& oldFullName, const QString& newFullName)
+{
+    return newFullName + name.mid(oldFullName.size());
+}
+
+static void renameNameKeyedEntries(QSet<QString>& names, const QString& oldFullName, const QString& newFullName)
+{
+    QStringList moving;
+    for (const QString& name : names) {
+        if (nameIsTheVariableOrInsideIt(name, oldFullName)) {
+            moving.append(name);
+        }
+    }
+    for (const QString& name : moving) {
+        names.remove(name);
+        names.insert(nameAfterTheRename(name, oldFullName, newFullName));
+    }
+}
+
+// Everything name-keyed this unit remembers about a variable it remembers by the
+// dotted name the tree gave it, so a rename has to take those memberships with
+// it. Left behind, a saved or hidden mark keeps answering for the old name, and
+// catches whichever unrelated variable is born under it next; the renamed
+// variable meanwhile loses the mark the user put on it. Renaming a table moves
+// what is remembered about its members as well, whose names all begin with it.
 void VarUnit::renameVariableBookkeeping(const QString& oldFullName, const QString& newFullName)
 {
     if (oldFullName == newFullName || oldFullName.isEmpty() || newFullName.isEmpty()) {
         return;
     }
-    if (savedVars.remove(oldFullName)) {
-        savedVars.insert(newFullName);
+    renameNameKeyedEntries(savedVars, oldFullName, newFullName);
+    renameNameKeyedEntries(hidden, oldFullName, newFullName);
+    renameNameKeyedEntries(hiddenByUser, oldFullName, newFullName);
+    // Only the name has changed: the tables are the same tables, so their
+    // addresses are still identities and their anchors still answer for them.
+    // Forgetting the identities here instead would leave them hidden by name
+    // alone.
+    QHash<QString, const void*> movingTables;
+    for (auto it = mHiddenTableByName.constBegin(); it != mHiddenTableByName.constEnd(); ++it) {
+        if (nameIsTheVariableOrInsideIt(it.key(), oldFullName)) {
+            movingTables.insert(it.key(), it.value());
+        }
     }
-    if (hidden.remove(oldFullName)) {
-        hidden.insert(newFullName);
-    }
-    if (hiddenByUser.remove(oldFullName)) {
-        hiddenByUser.insert(newFullName);
-    }
-    // Only the name has changed: the table is the same table, so its address is
-    // still an identity and its anchor still answers for it. Forgetting the
-    // identity here instead would leave the table hidden by name alone.
-    const auto it = mHiddenTableByName.constFind(oldFullName);
-    if (it != mHiddenTableByName.constEnd()) {
-        const void* const table = it.value();
-        mHiddenTableByName.remove(oldFullName);
-        mHiddenTableByName.insert(newFullName, table);
+    for (auto it = movingTables.constBegin(); it != movingTables.constEnd(); ++it) {
+        mHiddenTableByName.remove(it.key());
+        mHiddenTableByName.insert(nameAfterTheRename(it.key(), oldFullName, newFullName), it.value());
     }
 }
 
