@@ -93,6 +93,11 @@ if(USE_UPDATER AND NOT APPLE)
     list(APPEND FUNCTIONAL_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
 endif()
 
+# dblsqd::Feed itself is built on every platform that has the updater
+if(USE_UPDATER)
+    list(APPEND FUNCTIONAL_TEST_SOURCES FeedChecksumRaceTest.cpp)
+endif()
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
