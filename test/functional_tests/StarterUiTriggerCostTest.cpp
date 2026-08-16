@@ -248,9 +248,31 @@ private slots:
 
         // BaseUI.chatChannelNames has the last word on a captured tag, so this
         // line reaches no tab at all rather than only missing Channels.
-        QVERIFY(runLua(host, qsl("__starterUiCaptures = #BaseUI.recentCaptures")));
+        // recentCaptures is capped at ten and the corpus above has already
+        // filled it, so its length would hold whatever happened - what the All
+        // tab holds is what says the line stayed out.
+        QVERIFY(runLua(host, qsl("__starterUiAllLines = getLineCount('BaseUI_chat_all')")));
         feedLine(host, qsl("[inventory] a rusty sword"));
-        QVERIFY2(luaTrue(host, qsl("#BaseUI.recentCaptures == __starterUiCaptures")), "an unknown tag was captured as chat");
+        QVERIFY2(luaTrue(host, qsl("getLineCount('BaseUI_chat_all') == __starterUiAllLines")), "an unknown tag was captured as chat");
+
+        // No line above matches two shapes, so none of them reaches
+        // routeChatLine's dedup on lastChatLine. "You tell the group, 'go now'"
+        // matches both the "You tell <someone>" and the "You tell the group"
+        // shapes, so the tree fires twice on it and only the dedup keeps it from
+        // being copied twice. recentCaptures is capped at ten and the corpus
+        // above has already filled it, so what the tab holds is what can show
+        // this - measured against a line matching one shape rather than assumed,
+        // since a copied line need not be one line in the tab.
+        QVERIFY(runLua(host, qsl("__starterUiTellLines = getLineCount('BaseUI_chat_tells')")));
+        feedLine(host, qsl("Bob tells you, 'once'"));
+        QVERIFY(runLua(host, qsl("__starterUiOneCapture = getLineCount('BaseUI_chat_tells') - __starterUiTellLines")));
+        QVERIFY2(luaTrue(host, qsl("__starterUiOneCapture > 0")), "a line matching one chat shape did not reach the Tells tab, so the comparison below proves nothing");
+
+        const int tellsBefore = expectedUnread.value(qsl("tells")) + 1;
+        QVERIFY(runLua(host, qsl("__starterUiTellLines = getLineCount('BaseUI_chat_tells')")));
+        feedLine(host, qsl("You tell the group, 'go now'"));
+        QVERIFY2(luaTrue(host, qsl("getLineCount('BaseUI_chat_tells') - __starterUiTellLines == __starterUiOneCapture")), "a line matching two chat shapes was copied into the Tells tab twice");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == %1").arg(QString::number(tellsBefore + 1))), "a line matching two chat shapes counted twice against the Tells tab");
 
         QVERIFY(runLua(host, chatShapeCoverageScript(corpus)));
         QVERIFY2(luaTrue(host, qsl("__starterUi.uncoveredShapes == 0")),
@@ -300,9 +322,12 @@ private slots:
                  "line the tree routes, and the vitals layer would read it as a prompt. The first difference is in the error console");
     }
 
-    // Repainting all three tabs for every captured line was the whole of what
-    // #9767 measured, and nothing else here would notice the guard in
-    // refreshChatTabs() going away: the counters below all stay correct.
+    // Repainting all three tabs for every captured line was the noteChatActivity
+    // share of what #9767 measured - a third of the cost of a captured line, the
+    // rest being appendBuffer and copy(). No other test here would notice the
+    // guard in refreshChatTabs() going away, because BaseUI.unread and the tab
+    // text stay correct either way: what moves is the number of repaints, and
+    // what the labels are left showing.
     void test_aCapturedLineRepaintsOnlyTheTabItChanged()
     {
         Host* host = startProfileWithStarterUi();
@@ -310,6 +335,13 @@ private slots:
         feedLine(host, qsl("Bob tells you, 'hello there'"));
         QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels ~= nil and BaseUI.chatTabLabels.tells ~= nil")), "a captured chat line did not build the chat dock");
         QVERIFY(runLua(host, chatTabRepaintCounterScript()));
+
+        // A count of zero is also what wrappers that never took would report, so
+        // make one move before reading any of the counts below as evidence.
+        QVERIFY(runLua(host, qsl("BaseUI.chatTabLabels.all:echo('probe')")));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 1")), "the repaint counters never reached the labels, so every count below would read zero whatever happened");
+        // and put the tab back to what it was showing
+        QVERIFY(runLua(host, qsl("BaseUI.refreshChatTabs()")));
 
         QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0\nBaseUI.refreshChatTabs()")));
         QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 0 and __starterUi.styles == 0")), "a refresh with nothing changed still repainted a tab");
@@ -319,13 +351,59 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == 2")), "the second tell did not reach the Tells tab");
         QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 1")), "a captured chat line repainted a tab besides the one whose unread count moved");
         QVERIFY2(luaTrue(host, qsl("__starterUi.styles == 0")), "a captured chat line restyled a tab, though which tab is active had not changed");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_tells'):find('Tells (2)', 1, true) ~= nil")), "the Tells tab is not showing the unread count it counted");
 
-        // Switching tabs does change every tab's styling, so the guard must not
-        // hold any of that back.
+        // The right number of repaints is only half of it - a guard that skips
+        // the right calls can still leave the wrong thing on screen, and only
+        // Qt's own copy of the styling would show that. The accent underline
+        // (theme.accent) is what marks the active tab.
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all'):find('#4fc1e9', 1, true) ~= nil")), "the active tab is not wearing the accent that marks it active");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_tells'):find('#4fc1e9', 1, true) == nil")), "an inactive tab is wearing the active tab's accent");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('#e8eef4', 1, true) ~= nil")), "the active tab is not wearing theme.text");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_tells'):find('#96a0ab', 1, true) ~= nil")), "an inactive tab is not wearing theme.textDim");
+
+        // Switching tabs restyles the tab left behind and the tab taken up - the
+        // third was inactive and stays inactive - so the guard must not hold
+        // those two back. Both also change colour, and the tab left behind keeps
+        // the text it had, so only the colour half of the guard fires for it.
         QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0\nBaseUI.selectChatTab('tells')")));
         QVERIFY2(luaTrue(host, qsl("__starterUi.styles == 2")), "switching tabs did not restyle both the tab left behind and the tab taken up");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 2")), "switching tabs did not re-echo both of them, so one kept the colour of the state it left");
         QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels.tells.message == 'Tells'")), "the tab switched to kept its unread badge");
         QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels.all.message == 'All'")), "the tab switched away from grew an unread badge it had not earned");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_tells'):find('#4fc1e9', 1, true) ~= nil")), "the tab switched to did not take on the active tab's accent");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all'):find('#4fc1e9', 1, true) == nil")), "the tab switched away from kept the active tab's accent");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_tells'):find('#e8eef4', 1, true) ~= nil")), "the tab switched to did not take on theme.text");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('#96a0ab', 1, true) ~= nil")), "the tab switched away from kept theme.text");
+
+        // A line arriving after the switch is the guard reading a cache the
+        // previous refresh wrote, which is where a caching bug lands.
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0")));
+        feedLine(host, qsl("Bob says, 'hello everyone'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.all == 1")), "the line did not reach the All tab");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 1 and __starterUi.styles == 0")), "a line arriving after a tab switch repainted more than the tab whose unread count moved");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('All (1)', 1, true) ~= nil")), "the All tab is not showing the unread count it grew after the switch");
+    }
+
+    // The repaint the guard replaced was unconditional, so it put right anything
+    // that had written these labels behind Geyser's back. Skipping a repaint on
+    // the strength of a cache must not cost that.
+    void test_aTabRestyledBehindGeysersBackIsPutRightAgain()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        feedLine(host, qsl("Bob tells you, 'hello there'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels ~= nil and BaseUI.chatTabLabels.all ~= nil")), "a captured chat line did not build the chat dock");
+
+        // setLabelStyleSheet goes straight to Qt without telling Geyser, which
+        // is how a player script or another package would reach these labels
+        QVERIFY(runLua(host, qsl("setLabelStyleSheet('BaseUI_tab_all', 'background-color: #ff0000;')")));
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all') == 'background-color: #ff0000;'")), "the stylesheet never reached the label, so this proves nothing");
+
+        QVERIFY(runLua(host, qsl("BaseUI.refreshChatTabs()")));
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all'):find('#4fc1e9', 1, true) ~= nil")),
+                 "a tab restyled behind Geyser's back was left that way - the guard trusted a cache that no longer described the label");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('All', 1, true) ~= nil")), "putting the styling back cost the tab its text");
     }
 
     // A game that sends chat over GMCP does not need the gates, but the next
@@ -538,9 +616,11 @@ private:
         }
     }
 
-    // Counts what actually reaches Qt. The wrappers go on the label instances,
-    // which shadow the ones they take from Geyser's class table, so the labels
-    // still paint exactly as they would have.
+    // Counts every repaint that goes through Geyser - a rawEcho or a bare
+    // setLabelStyleSheet would not be seen here, which is why the assertions
+    // that matter read the label back from Qt as well. The wrappers go on the
+    // label instances, which shadow the ones they take from Geyser's class
+    // table, so the labels still paint exactly as they would have.
     static QString chatTabRepaintCounterScript()
     {
         return qsl(R"LUA(

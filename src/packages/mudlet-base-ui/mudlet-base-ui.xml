@@ -1457,19 +1457,25 @@ function BaseUI.build()
   BaseUI.maybeAnnounce()
 end
 
--- A chat line landing in a tab you are not looking at repaints all three tabs,
--- and every setStyleSheet has Qt reparse a stylesheet, while all that moved is
--- one unread count. Geyser paints these labels from .stylesheet, .message and
--- .fgColor and keeps them up to date, so reading them back repaints only what
--- changed - but a label written past Geyser, with rawEcho or a bare
--- setLabelStyleSheet, would go unnoticed here.
+-- A chat line landing in a tab you are not looking at repainted all three tabs,
+-- when all that moved is one unread count: each setStyleSheet makes Qt reparse
+-- a stylesheet and each echo rebuilds the label's rich text, which #9767
+-- measured at a third of what a captured line cost. So repaint only what
+-- changed - but ask Qt what a tab is showing rather than take Geyser's word
+-- for it, because Geyser records the paint whether or not it landed, and an
+-- unconditional repaint used to put right anything that wrote these labels
+-- behind our back. The stylesheet is the readable half; while it is still the
+-- one we set, nothing has been past here and Geyser's cached text and colour
+-- can be trusted too.
 function BaseUI.refreshChatTabs()
   for _, tab in ipairs(chatTabs) do
     local label = BaseUI.chatTabLabels and BaseUI.chatTabLabels[tab.key]
     if label then
       local active = BaseUI.activeChatTab == tab.key
       local css = active and tabCss.active or tabCss.inactive
-      if label.stylesheet ~= css then
+      -- nil once the label has lost its widget, which is a mismatch as well
+      local painted = getLabelStyleSheet(label.name)
+      if painted ~= css then
         label:setStyleSheet(css)
       end
       local text = tab.label
@@ -1478,7 +1484,7 @@ function BaseUI.refreshChatTabs()
         text = string.format("%s (%d)", tab.label, math.min(unread, 99))
       end
       local color = active and theme.text or theme.textDim
-      if label.message ~= text or label.fgColor ~= color then
+      if painted ~= css or label.message ~= text or label.fgColor ~= color then
         label:echo(text, color)
       end
     end
