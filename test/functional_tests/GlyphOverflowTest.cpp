@@ -636,8 +636,8 @@ private:
         return host;
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // TelnetTextDisplayedTest).
+    // Starts a profile the way a user would via the GUI (mirrors the helper the
+    // other functional tests use).
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0, qApp, [hostname, address, port]() {

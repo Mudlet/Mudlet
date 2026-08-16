@@ -432,6 +432,26 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.is_nil(getWindowGeometry("guwDelete"))
       assert.is_nil(Geyser.parentWindows.guwDelete)
     end)
+
+    -- Deleting a user window has to take its dock widget with it, not only the
+    -- console inside it. That the name can be used again is covered by
+    -- "reopens a user window that was opened under the same name before"; what
+    -- is read here is the dock itself, through the size query - which a dock
+    -- left behind answers from a widget the console's deferred deletion frees.
+    it("takes its dock widget with it, so nothing stale answers for the name", function()
+      local mainWidth, mainHeight = getMainWindowSize()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "a user window that reports the main window's size has no dock of its own")
+
+      userWindow:delete()
+      assert.is_nil(windowType("guwReopen"))
+      -- with the dock gone too, the size query falls back to the main window
+      assert.are.same({mainWidth, mainHeight}, {getUserWindowSize("guwReopen")})
+
+      track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
+      assert.are.equal("userwindow", windowType("guwReopen"))
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "the reopened window has no dock of its own")
+    end)
   end)
 
   -- Geyser.Container:new makes the "<name>Container" root container for a user

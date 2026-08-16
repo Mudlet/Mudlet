@@ -34,7 +34,7 @@
  * reached from Host::setDisplayFont(), i.e. from changing the display font in
  * Preferences.
  *
- * Bootstrap mirrors the other functional tests (e.g. TUserWindowTest).
+ * Bootstrap mirrors the other functional tests.
  */
 
 #include <QSignalSpy>
