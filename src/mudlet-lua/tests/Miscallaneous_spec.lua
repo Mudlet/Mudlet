@@ -711,9 +711,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
       end)
 
-      -- A received line is held back from the log until the next one commits,
-      -- so a trigger still has its chance to gag the line with deleteLine().
-      -- These pin down what that deferral must, and must not, swallow.
+      -- A received line is held back from the log until the next one commits.
+      -- That deferral is what duplicate detection needs, and it is also the
+      -- window in which a trigger can still gag the line with deleteLine().
+      -- These pin down what it must, and must not, swallow.
       describe("Tests what the deferred logging of received lines writes out", function()
         local htmlLogging
 
@@ -755,11 +756,15 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           feedTelnet("You are dead.\n")
           assert.is_true(contains(textFrom(mark), "You are dead."), "the fed line did not reach the console buffer - start the suite with --offline, see the tests README")
 
+          -- the main console is shared with every other spec file, so this is
+          -- the one place in the suite that empties it; nothing else reads
+          -- console content it did not put there itself
           clearWindow()
           feedTelnet("You emerge unscathed.\n")
           startLogging(false)
 
           local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
           assert.is_true(contains(log, "You are dead."), "clearing the window dropped the line that was pending for logging")
           assert.is_true(contains(log, "You emerge unscathed."), "the line received after the window was cleared is missing from the log")
         end)
@@ -783,6 +788,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           startLogging(false)
 
           local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
           assert.is_true(contains(log, "You perish"), "a line whose own trigger cleared the window was dropped from the log")
           assert.is_true(contains(log, "A new dawn"), "the line received after the window was cleared is missing from the log")
         end)
@@ -807,6 +813,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           startLogging(false)
 
           local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
           assert.is_true(contains(log, "Before the gag."), "the line before the gagged one is missing from the log")
           assert.is_false(contains(log, "Top secret plans"), "the gagged line leaked into the log")
           assert.is_true(contains(log, "After the gag."), "the line after the gagged one is missing from the log")
@@ -840,11 +847,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           startLogging(false)
 
           local log = readFile(secondPath)
+          assert.is_string(log, "the log file that was closed is not readable")
           -- the log file is named after the second it was opened in and there is
-          -- no Lua setter for that name, so a restart either appends to the same
-          -- file - where the first session's flush is the one copy that belongs
-          -- there - or opens a new one, where that line has no business at all
-          assert.equals(secondPath == firstPath and 1 or 0, occurrences(log, "Session one final line."))
+          -- no Lua setter for that name, so the restart either appends to the
+          -- same file or opens a new one. Either way the first session's last
+          -- line is written exactly once, and only into the log that was open
+          -- when it arrived.
+          if secondPath == firstPath then
+            assert.equals(1, occurrences(log, "Session one final line."))
+          else
+            assert.equals(0, occurrences(log, "Session one final line."))
+            local firstLog = readFile(firstPath)
+            assert.is_string(firstLog, "the first session's log file is not readable")
+            assert.equals(1, occurrences(firstLog, "Session one final line."))
+          end
           assert.is_true(contains(log, "Session two line."), "the second session's own line is missing from its log")
         end)
       end)

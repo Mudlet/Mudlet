@@ -69,10 +69,15 @@ describe("Tests MXP handling", function()
       end
     end)
 
-    -- feedTriggers rather than feedTelnet: the ESC[1z these lines open with is
-    -- what cTelnet auto-detects MXP from, and that latches MXP on for the rest
-    -- of the process with no Lua way back, which every later spec file would
-    -- then inherit. The display path under test is the same either way.
+    -- The payloads are what a game sends, ESC[#z mode switches and all, but
+    -- those bytes are inert here: TBuffer only acts on them for data flagged as
+    -- coming from a server (TBuffer.cpp's isFromServer gate), which feedTriggers
+    -- is not. Secure mode comes from the forced processor this file turns on.
+    -- feedTelnet would flag the data and run the mode switches, but its ESC[1z
+    -- also makes cTelnet auto-enable MXP, and only a new connection clears that
+    -- flag - the teardown's setConfig cannot, so every later spec file would
+    -- inherit an enabled MXP processor. The tag and entity handling under test
+    -- is the same either way.
     local function displayedLines(data)
       local mark = getLastLineNumber("main")
       feedTriggers(data .. "\n")
@@ -90,7 +95,7 @@ describe("Tests MXP handling", function()
       assert.is_true(shown, ("no line reads %q, the console shows:\n%s"):format(expected, table.concat(lines, "\n")))
     end
 
-    it("takes the tags out of a secure-mode line", function()
+    it("takes the tags out of an MXP line", function()
       assertLineShown("\27[1z<B>Greetings < hunters & sorcerers</B>\27[7z", "Greetings < hunters & sorcerers")
     end)
 

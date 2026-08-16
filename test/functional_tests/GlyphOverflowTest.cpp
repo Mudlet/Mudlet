@@ -636,8 +636,7 @@ private:
         return host;
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper the
-    // other functional tests use).
+    // Starts a profile the way a user would via the GUI.
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0, qApp, [hostname, address, port]() {

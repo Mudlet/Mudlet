@@ -118,11 +118,13 @@ describe("Tests insertText and creplaceLine newline regressions", function()
   -- does, or an oversized insertText() grows a line without bound.
   describe("Tests the character cap insertText applies", function()
     local consoleName = "insertTextCapTest"
-    -- TBuffer::MAX_CHARACTERS_PER_ECHO, which has no Lua getter
+    -- MAX_CHARACTERS_PER_ECHO in src/TBuffer.h, which has no Lua getter: change
+    -- it there and this literal has to follow, or both tests here go red
     local maxCharactersPerEcho = 1000000
 
     setup(function()
       createMiniConsole(consoleName, 0, 0, 800, 200)
+      -- wide enough that the line seeded below is not wrapped into pieces
       setWindowWrap(consoleName, 200)
     end)
 
@@ -133,6 +135,8 @@ describe("Tests insertText and creplaceLine newline regressions", function()
     before_each(function()
       clearWindow(consoleName)
       echo(consoleName, "HELLO\n")
+      -- getTextFormat answers for a selection when there is one, so the cursor
+      -- only decides what it reads once nothing is selected
       deselect(consoleName)
       -- mid-line, so the insert goes through insertInLine() rather than the
       -- already capped append path taken when the cursor sits at the buffer end
@@ -142,8 +146,8 @@ describe("Tests insertText and creplaceLine newline regressions", function()
     -- The line's text and its parallel styling container are filled by two
     -- separate inserts and must stay the same length, or the renderer reads
     -- past the end of one of them. getTextFormat is the only Lua readback of
-    -- the styling container: a table for a column it holds, nil for one past
-    -- its end.
+    -- that container at the cursor: a table for a column it holds, nil for one
+    -- past its end.
     local function assertStylingLength(length)
       moveCursor(consoleName, length - 1, 0)
       assert.is_table(getTextFormat(consoleName), "the styling container is shorter than the line")
