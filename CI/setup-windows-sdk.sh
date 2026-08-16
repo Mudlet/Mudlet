@@ -204,6 +204,22 @@ echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
 
+# mingw-w64-libarchive 3.8.9-2 hardlinks bsdunzip to "unzip" in ${MINGW_BASE_DIR}/bin,
+# which shadows Info-ZIP's /usr/bin/unzip on PATH. bsdunzip opens extracted files
+# without O_BINARY, so on Windows every "\n" it writes becomes "\r\n": CRLF sources
+# gain a blank line between every line (breaking "\" macro continuations) and archives
+# nested inside a .src.rock are corrupted outright. Pin luarocks to Info-ZIP instead.
+if [ -x /usr/bin/unzip ]; then
+  echo "  Pinning luarocks to Info-ZIP unzip (bsdunzip mangles line endings)..."
+  echo "    unzip on PATH: $(command -v unzip)"
+  cat >> "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua" <<'EOF'
+
+variables = variables or {}
+variables.UNZIP = "/usr/bin/unzip"
+EOF
+  echo ""
+fi
+
 ROCKCOMMAND="${MINGW_BASE_DIR}/bin/luarocks --lua-version 5.1"
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
