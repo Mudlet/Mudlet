@@ -583,7 +583,16 @@ private slots:
                    "22%3A%22red%22%7D%7D\x1b\\\x1b]8;;\x1b\\"));
 
     TMainConsole *console = mpHost->mpConsole;
-    auto stylingFor = [&](const QString &query) {
+    // Returns 0 when the query produced no link at all. Each caller has to
+    // reject that before asking for styling, because getStyling() answers an
+    // unknown id with a default-constructed styling whose hasCustomStyling is
+    // false - which would let the negative assertion below pass without a link
+    // ever having been created. The buffer is cleared first for the same
+    // reason: the scan runs backwards, so a query that makes no link would
+    // otherwise find the one left by the previous query and be checked against
+    // that instead.
+    auto linkIdFor = [&](const QString &query) {
+      console->buffer.clear();
       injectData(qsl("\x1b]8;;https://example.com/") + query +
                  qsl("\x1b\\Link\x1b]8;;\x1b\\"));
       int linkId = 0;
@@ -591,14 +600,23 @@ private slots:
            line >= 0 && linkId == 0; --line) {
         linkId = console->buffer.getLinkIndexAt(line, 0);
       }
-      return console->getLinkStore().getStyling(linkId);
+      return linkId;
     };
 
-    QVERIFY2(stylingFor(qsl("?preset=danger")).hasCustomStyling,
+    const int rawKeyLink = linkIdFor(qsl("?preset=danger"));
+    QVERIFY2(rawKeyLink > 0, "No link found for ?preset=danger");
+    QVERIFY2(console->getLinkStore().getStyling(rawKeyLink).hasCustomStyling,
              "A registered preset named by its raw key should style the link");
-    QVERIFY2(stylingFor(qsl("?page=1&preset=danger")).hasCustomStyling,
+
+    const int laterParamLink = linkIdFor(qsl("?page=1&preset=danger"));
+    QVERIFY2(laterParamLink > 0, "No link found for ?page=1&preset=danger");
+    QVERIFY2(console->getLinkStore().getStyling(laterParamLink).hasCustomStyling,
              "A preset should resolve when it is not the first parameter");
-    QVERIFY2(!stylingFor(qsl("?%70%72%65%73%65%74=danger")).hasCustomStyling,
+
+    const int encodedNameLink = linkIdFor(qsl("?%70%72%65%73%65%74=danger"));
+    QVERIFY2(encodedNameLink > 0,
+             "No link found for the percent-encoded preset name");
+    QVERIFY2(!console->getLinkStore().getStyling(encodedNameLink).hasCustomStyling,
              "A percent-encoded 'preset' name is URL data, not a preset");
   }
 
