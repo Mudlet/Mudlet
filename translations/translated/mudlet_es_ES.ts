@@ -313,148 +313,148 @@ Por favor, espere...</translation>
       <location filename="../src/MMCPClient.cpp" line="149"/>
       <source>[ CHAT ]  - You are now disconnected from %1 - %2:%3.</source>
       <extracomment>This message is used when a MMCP peer with a name disconnects, * %1 is the peer&apos;s name, %2 is the peer&apos;s IP address (numbers or URL), * %3 is the port they are listening on. Should be similiar to the one when * we do not have a name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ahora está desconectado de %1 - %2:%3.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="171"/>
       <source>[ CHAT ]  - Connection from %1 at %2:%3 timed out (not accepted or denied by you).</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión desde %1 en %2:%3 ha agotado el tiempo de espera (no aceptado o denegado por ti).</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="219"/>
       <source>[ CHAT ]  - Connection from %1 at %2:%3 denied (Peer name too long (64 chars max)).</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión desde %1 en %2:%3 denegada (nombre del par/nodo remoto demasiado largo (64 caracteres máximo)).</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="251"/>
       <source>[ CHAT ]  - Connection from %1 at %2:%3 denied (DoNotDisturb).</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión desde %1 en %2:%3 denegada (NoMolestar).</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="278"/>
       <source>[ CHAT ]  - Connection from %1 at %2:%3 is pending, use mmcp.accept(%4) or mmcp.deny(%4) to accept or deny.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión desde %1 en %2:%3 está pendiente, utiliza mmcp.accept(%4) o mmcp.deny(%4) para aceptar o denegar.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="311"/>
       <source>[ CHAT ]  - Connection to %1:%2 refused.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión a %1:%2 rechazada.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="321"/>
       <source>[ CHAT ]  - Connection to %1 at %2:%3 rejected.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión a %1 en %2:%3 rechazada.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="335"/>
       <source>[ CHAT ]  - Connection to %1 at %2:%3 accepted.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión a %1 en %2:%3 aceptada.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="387"/>
       <source>[ CHAT ]  - Connection from %1 at %2:%3 accepted.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión desde %1 en %2:%3 aceptada.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="409"/>
       <source>[ CHAT ]  - Connection from %1 at %2:%3 denied.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexión desde %1 en %2:%3 denegada.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="426"/>
       <source>[ CHAT ]  - The peer closed or refused the connection.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - El par/nodo remoto cerró o denegó la conexión.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="429"/>
       <source>[ CHAT ]  - The peer was not found. Please check the host name and port settings.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - El par/nodo remoto no fue encontrado. Por favor, compruebe el nombre de host y la configuración del puerto.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="432"/>
       <source>[ CHAT ]  - The connection was refused by the peer.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - La conexión fue rechazada por el par/nodo remoto.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="435"/>
       <source>[ CHAT ]  - The following error occurred: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Se ha producido el siguiente error: %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="471"/>
       <source>[ CHAT ]  - Pinging %1...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Hacer ping %1...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="485"/>
       <source>[ CHAT ]  - Attempting to peek at %1&apos;s public connections...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Intentando echar un vistazo a %1 conexiones públicas...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="499"/>
       <source>[ CHAT ]  - Requested connections from %1</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conexiones solicitadas desde %1</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="688"/>
       <source>[ CHAT ]  - Badly formatted connection list from %1</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Lista de conexiones mal formateada desde %1</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="698"/>
       <source>[ CHAT ]  - Error parsing host value from connection: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Error al analizar el valor del host desde la conexión: %1</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="703"/>
       <source>[ CHAT ]  - Attempting to connect to %1:%2 provided by %3</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Intentando conectar a %1:%2 proporcionado por %3</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="717"/>
       <source>[ CHAT ]  - %1 is trying to request your connections!</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 está intentando solicitar tus conexiones!</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="723"/>
       <source>[ CHAT ]  - %1 has requested your public connections...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 ha solicitado tus conexiones públicas...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="728"/>
       <source>[ CHAT ]  - %1 has requested your public connections, but you&apos;re ignoring connection requests...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 ha solicitado tus conexiones públicas, pero vuelve a ignorar las solicitudes de conexión...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="775"/>
       <source>%1%2%3%4(%5)%1%2%6%1</source>
       <extracomment>Incoming group message, %1, %2 and %4 are ANSI Escape codes</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1%2%3%4(%5)%1%2%6%1</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="791"/>
       <source>[ CHAT ]  - %1 is now known as %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 es ahora conocido como %2.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="803"/>
       <source>[ CHAT ]  - %1 is trying to peek your connections!</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - ¡ %1 está intentando echar un vistazo a tus conexiones!</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="809"/>
       <source>[ CHAT ]  - %1 is peeking at your connections...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 está echando un vistazo a tus conexiones...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="814"/>
       <source>[ CHAT ]  - %1 is trying to peek your connections, but you&apos;re ignoring peek requests...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 está intentando revisar tus conexiones, pero vuelves a ignorar las solicitudes inspeccionadas...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="832"/>
       <source>[ CHAT ]  - Badly formatted peek list from %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ]  - Lista de inspección mal formateada de %1</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="853"/>
@@ -463,32 +463,36 @@ Por favor, espere...</translation>
 %1
 %2==== ==================== =============== =====%3
 </source>
-      <translation type="unfinished"/>
+      <translation>Id  Nombre Dirección Puerto
+==== ==================== =============== =====
+%1
+%2==== ==================== =============== =====%3
+</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="882"/>
       <source>[ CHAT ]  - Ping returned from %1: %2 ms</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ping devuelto desde %1: %2 ms</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="885"/>
       <source>[ CHAT ]  - Bad Ping response from %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Respuesta de Ping errónea de %1: %2</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="903"/>
       <source>[ CHAT ]  - %1 tried to snoop you but doesn&apos;t have permission.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 intentó espiar tu actividad pero no tiene permiso.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="912"/>
       <source>[ CHAT ]  - %1 has stopped snooping you.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 ha dejado de espiarte.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="920"/>
       <source>[ CHAT ]  - %1 has begun snooping you.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 ha comenzado a espiarte.</translation>
     </message>
   </context>
   <context>
@@ -496,52 +500,52 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPServer.cpp" line="170"/>
       <source>[ CHAT ]  - You must specify a host.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Debe especificar un host.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="207"/>
       <source>[ CHAT ]  - Already connected to %1:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ya estás conectado a %1:%2.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="213"/>
       <source>[ CHAT ]  - Connecting to %1:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Conectando a %1:%2...</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="247"/>
       <source>You chat to %1, &apos;%2&apos;</source>
       <extracomment>%1 is the name of the peer receiving the message %2</extracomment>
-      <translation type="unfinished"/>
+      <translation>Chatea con %1, &apos;%2&apos;</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="255"/>
       <location filename="../src/MMCPServer.cpp" line="575"/>
       <source>[ CHAT ]  - Invalid client id &apos;%1&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Id de cliente no válido &apos;%1&apos;.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="290"/>
       <source>You chat to everybody, &apos;%1&apos;</source>
       <extracomment>%1 is message sent to everyone</extracomment>
-      <translation type="unfinished"/>
+      <translation>Chateas con todo el mundo, &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="364"/>
       <source>%1%2You chat to %3&lt;%4&gt;%1, &apos;%5&apos;%6</source>
       <extracomment>%1 and %3 are ASCII ESC color codes that need to be included BEFORE a * portion of text (the main message %5) and (the group name %4) * respectively and %6 is another code at the very end to reset the colors * back to &quot;normal&quot;. %2 is the prefix added to all chat messages display to us. * Please try and reproduce the positioning of those codes around the translation.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1%2Chatea con %3&lt;%4&gt;;%1, %5 %6</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="375"/>
       <source>%1%2You try to chat to &lt;%3%4%1&gt; but it is empty and no-one hears you say: &apos;%5&apos;%6</source>
       <extracomment>%1 and %3 are ASCII ESC color codes that need to be included BEFORE a * portion of text (the main message %5) and (the group name %4) * respectively and %5 is another code at the very end to reset the colors * back to &quot;normal&quot;. %2 is the prefix added to all chat messages display to us. * Please try and reproduce the positioning of those codes around the translation.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1%2Intentas chatear con &lt;%3%4%1&gt;, pero está vacío y nadie oye que dices: &apos;%5&apos; %6</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="388"/>
       <source>Id</source>
-      <translation type="unfinished"/>
+      <translation>Id</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="389"/>
@@ -567,12 +571,12 @@ Por favor, espere...</translation>
       <location filename="../src/MMCPServer.cpp" line="393"/>
       <location filename="../src/MMCPServer.cpp" line="454"/>
       <source>Flags</source>
-      <translation type="unfinished"/>
+      <translation>Banderas</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="394"/>
       <source>ChatClient</source>
-      <translation type="unfinished"/>
+      <translation>Cliente de chat</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="446"/>
