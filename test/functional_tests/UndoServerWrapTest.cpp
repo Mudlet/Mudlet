@@ -19,6 +19,8 @@
 
 #include <QtTest/QtTest>
 
+#include <cmath>
+
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -34,7 +36,8 @@ extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResources();
 
 // Tests Host::mUndoServerWrap: rejoining of lines that the game server
-// hard-wrapped itself, so that triggers see whole logical lines
+// hard-wrapped itself, so that triggers see whole logical lines. The console
+// this sets up also serves the case covering the colour links are echoed in
 class UndoServerWrapTest : public QObject
 {
     Q_OBJECT
@@ -454,28 +457,35 @@ private slots:
         QVERIFY2(!bufferHasLine(opening + QChar::Space + verdict + QChar::Space + armour), "a whole sentence was glued onto a paragraph its first word would have fitted the last line of");
     }
 
-    void test_wrapDetectionRaisesHint()
+    void test_linkColourFollowsTheConsoleBackground()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY(host);
-        QVERIFY(!host->mServerWrapHintShown);
+        host->mpConsole->buffer.mWrapAt = 500;
         connectAndDrainWelcome();
 
-        // 100 lines all ending hard against a 78 column ceiling:
-        QByteArray data;
-        const QByteArray line = QString(QString(72, QChar('y')) + qsl(" hello")).toUtf8();
-        for (int i = 0; i < 100; ++i) {
-            data += line + "\r\n";
-        }
-        mpServer->sendRaw(data);
+        QStringList func(qsl("noop()"));
+        QStringList hint(qsl("a link"));
 
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             return host->mServerWrapHintShown;
-                         },
-                         5000),
-                 "wrap detection did not fire on 100 lines against a stable ceiling");
+        const QString onDark = qsl("a link against a dark background");
+        host->mBgColor = QColor(Qt::black);
+        host->mpConsole->echoLink(onDark, func, hint, false);
+        host->mpConsole->print("\n");
+        QVERIFY2(waitForLineInBuffer(onDark), "the link was not printed against the dark background");
+        const TChar dark = firstCharacterOf(onDark);
+
+        const QString onLight = qsl("a link against a light background");
+        host->mBgColor = QColor(Qt::white);
+        host->mpConsole->echoLink(onLight, func, hint, false);
+        host->mpConsole->print("\n");
+        QVERIFY2(waitForLineInBuffer(onLight), "the link was not printed against the light background");
+        const TChar light = firstCharacterOf(onLight);
+
+        QVERIFY2(dark.foreground() != light.foreground(), "the link colour did not follow the console background at all");
+        QVERIFY2(light.foreground() == QColor(Qt::blue), "a light background did not keep the darker blue that reads best on it");
+        QVERIFY2(contrastRatio(dark.foreground(), dark.background()) > 4.5, "the link does not contrast enough with a dark console background");
+        QVERIFY2(contrastRatio(light.foreground(), light.background()) > 4.5, "the link does not contrast enough with a light console background");
     }
 
     void cleanup()
@@ -584,6 +594,47 @@ private:
         if (!spy2.wait(2000)) {
             QFAIL("Could not connect with the host.");
         }
+    }
+
+    int lineNumberOf(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i) == text) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    TChar firstCharacterOf(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        const int y = lineNumberOf(text);
+        if (y < 0 || console->buffer.buffer.at(y).empty()) {
+            // the caller gets a TChar that fails its own assertions, so say
+            // outright what actually went wrong
+            QTest::qFail(qPrintable(qsl("no buffer line reading \"%1\"").arg(text)), __FILE__, __LINE__);
+            return TChar(nullptr);
+        }
+        return console->buffer.buffer.at(y).front();
+    }
+
+    // WCAG relative luminance, so that "readable" is a measurement rather than
+    // a preference about which blue looks nicer
+    static double relativeLuminance(const QColor& color)
+    {
+        const auto channel = [](const double value) {
+            return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+    }
+
+    static double contrastRatio(const QColor& first, const QColor& second)
+    {
+        const double one = relativeLuminance(first);
+        const double other = relativeLuminance(second);
+        return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
     }
 
     bool bufferHasLine(const QString& text)

@@ -294,8 +294,6 @@ TBuffer::TBuffer(const TBuffer& other)
 , mServerWrapPendingLine(other.mServerWrapPendingLine)
 , mServerWrapPendingBuffer(other.mServerWrapPendingBuffer)
 , mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
-, mWrapDetectCounts(other.mWrapDetectCounts)
-, mWrapDetectSamples(other.mWrapDetectSamples)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotEscCharset(other.mLocalGotEscCharset)
@@ -392,8 +390,6 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mServerWrapPendingLine = other.mServerWrapPendingLine;
         mServerWrapPendingBuffer = other.mServerWrapPendingBuffer;
         mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
-        mWrapDetectCounts = other.mWrapDetectCounts;
-        mWrapDetectSamples = other.mWrapDetectSamples;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotEscCharset = other.mLocalGotEscCharset;
@@ -1638,10 +1634,6 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         flushPendingServerWrapJoin();
     }
 
-    if (isFromServer && ch == '\n' && !forcedLineBreak && !mpHost->mUndoServerWrap && !mpHost->mServerWrapHintShown) {
-        recordLineLengthForWrapDetection(mMudLine.size());
-    }
-
     QString line;
     std::deque<TChar> chars;
     line.swap(mMudLine);
@@ -1939,72 +1931,6 @@ void TBuffer::startServerWrapFlushTimer()
         });
     }
     mpServerWrapFlushTimer->start();
-}
-
-// Called for every genuine game line while mUndoServerWrap is off: when line
-// lengths pile up against a stable ceiling column, the game is most likely
-// wrapping its own output, so - once per profile - point out the option that
-// undoes that:
-void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
-{
-    if (length < 40) {
-        // too short to carry any signal
-        return;
-    }
-    ++mWrapDetectCounts[length];
-    if (++mWrapDetectSamples % 100) {
-        return;
-    }
-
-    // The ceiling is the longest line length seen more than incidentally:
-    qsizetype ceiling = 0;
-    for (auto it = mWrapDetectCounts.constBegin(); it != mWrapDetectCounts.constEnd(); ++it) {
-        if (it.value() >= 3) {
-            ceiling = it.key();
-        }
-    }
-    if (ceiling < 60 || ceiling > 160) {
-        return;
-    }
-    int atCeiling = 0;
-    int beyondCeiling = 0;
-    for (auto it = mWrapDetectCounts.constBegin(); it != mWrapDetectCounts.constEnd(); ++it) {
-        if (it.key() > ceiling) {
-            beyondCeiling += it.value();
-        } else if (it.key() >= ceiling - 8) {
-            atCeiling += it.value();
-        }
-    }
-    if (atCeiling < csmWrapDetectThreshold || beyondCeiling > 2) {
-        return;
-    }
-
-    mpHost->mServerWrapHintShown = true;
-
-    // Deferred so the hint does not interleave with the line being committed:
-    QPointer<Host> hostGuard = mpHost;
-    QTimer::singleShot(0, mpConsole, [hostGuard, ceiling]() {
-        if (!hostGuard || !hostGuard->mpConsole) {
-            return;
-        }
-        //: %1 is the screen column that the game appears to wrap its lines at
-        hostGuard->postMessage(QObject::tr("[ INFO ]  - This game seems to wrap its own lines at %1 characters, which\n"
-                                           "makes triggers awkward to write. Mudlet can undo that, so that triggers\n"
-                                           "always see whole lines and wrapping follows your window size instead:")
-                                       .arg(QString::number(ceiling)));
-        //: Confirmation shown after the player clicks the link that enables undoing the game's own line wrapping
-        QString confirmation = QObject::tr("Done - Mudlet now undoes the game's wrapping, and triggers see whole lines.");
-        // the text is embedded in a double-quoted Lua string:
-        confirmation.replace(QChar('\\'), qsl("\\\\")).replace(QChar('"'), qsl("\\\""));
-        const QString clickAction = qsl("setConfig(\"undoServerWrapWidth\", %1) setConfig(\"undoServerWrap\", true) cecho(\"\\n<green>%2\\n\")").arg(QString::number(ceiling), confirmation);
-        QStringList func(clickAction);
-        //: Tooltip on the link that enables the option to undo the game's own line wrapping
-        QStringList hint(QObject::tr("Turn on \"Undo the game's own wrapping\" - also found in the settings under Main display"));
-        //: Clickable link shown in the main window when a game that wraps its own lines is detected
-        const QString linkText = QObject::tr("  ➜ Click here to turn that on now");
-        hostGuard->mpConsole->echoLink(linkText, func, hint, false);
-        hostGuard->mpConsole->print("\n");
-    });
 }
 
 const std::deque<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const

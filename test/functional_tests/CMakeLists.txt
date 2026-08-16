@@ -43,6 +43,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
+    FeatureCalloutTest.cpp
     WrapLineRewrapTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
@@ -286,6 +287,9 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
+
+# UndoServerWrapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(UndoServerWrapTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
