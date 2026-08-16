@@ -66,60 +66,60 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="256"/>
       <source>[ WARN ]  - Not using your saved sign-in because this connection is not encrypted; please sign in again.</source>
       <extracomment>Shown when a saved password-less sign-in cannot be reused because this connection to the game is not encrypted.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No está usando su inicio de sesión guardado porque esta conexión no está cifrada; por favor inicie sesión de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="326"/>
       <source>[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again.</source>
       <extracomment>Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No se pudo guardar su inicio de sesión para la próxima vez; es posible que tenga que iniciar sesión de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="361"/>
       <source>[ INFO ]  - Resuming your %1 sign-in with the game.</source>
       <extracomment>Shown when Mudlet asks the game to restart the browser sign-in with the remembered provider; %1 is the provider name (e.g. Discord).</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Reanudar el inicio de sesión %1 con el juego.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="452"/>
       <source>[ WARN ]  - The game sent an invalid sign-in link; cannot continue.</source>
       <extracomment>Shown when the game sends a sign-in link with an unsupported or invalid address (not an http/https web link).</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - El juego ha enviado un enlace de inicio de sesión no válido; no se puede continuar.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="472"/>
       <source>[ INFO ]  - To sign in, open this link in your browser: %1</source>
       <extracomment>%1 is the sign-in web address the user should open in their browser to sign in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Para iniciar sesión, abre este enlace en tu navegador: %1</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="479"/>
       <source>[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1</source>
       <extracomment>%1 is the sign-in web address the user should open manually in their browser.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No se pudo abrir el navegador. Abra este enlace manualmente para iniciar sesión: %1</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="490"/>
       <source>[ INFO ]  - Opening your browser to sign in. Complete the login there, then return here.</source>
       <extracomment>Shown after the user&apos;s browser is launched to complete an OAuth/web sign-in. %1 is the provider name (e.g. Discord).</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Abre tu navegador para iniciar sesión. Completa el inicio de sesión allí y vuelve aquí.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="491"/>
       <source>[ INFO ]  - Opening your browser to sign in with %1. Complete the login there, then return here.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Abre tu navegador para iniciar sesión con %1. Completa el inicio de sesión allí y vuelve aquí.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="519"/>
       <source>[ WARN ]  - The browser sign-in could not be completed; reconnect to try again.</source>
       <extracomment>Shown when a browser-based sign-in with the game&apos;s own account could not be completed.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA] - No se ha podido completar el inicio de sesión del navegador; vuelve a conectarte para intentarlo de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="549"/>
       <source>[ WARN ]  - Cannot complete the sign-in because the connection is not encrypted.</source>
       <extracomment>Shown when a browser sign-in finished but the game connection is not encrypted, so completing it would be unsafe.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No se puede completar el inicio de sesión porque la conexión no está cifrada.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="661"/>
@@ -136,7 +136,7 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="800"/>
       <source>[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again.</source>
       <extracomment>Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Su inicio de sesión guardado ha expirado; reconectando para que pueda iniciar sesión de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="895"/>
@@ -260,7 +260,7 @@ Por favor, espere...</translation>
       <location filename="../src/KeyUnit.cpp" line="435"/>
       <source>no key chosen</source>
       <extracomment>Displayed when no key binding has been set</extracomment>
-      <translation type="unfinished"/>
+      <translation>no hay clave seleccionada</translation>
     </message>
     <message>
       <location filename="../src/KeyUnit.cpp" line="442"/>
@@ -301,13 +301,13 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPClient.cpp" line="124"/>
       <source>[ CHAT ]  - Waiting for response from %1:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Esperando la respuesta de %1:%2...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="143"/>
       <source>[ CHAT ]  - You are now disconnected from &lt;unknown&gt; - %1:%2.</source>
       <extracomment>This message is used when a MMCP peer without a name disconnects, * %1 is the peer&apos;s IP address (numbers or URL), %2 is the port they are * listening on. Should be similiar to the one when we do have a name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ahora está desconectado de &lt;unknown&gt; - %1:%2.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="149"/>
