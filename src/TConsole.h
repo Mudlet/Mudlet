@@ -490,12 +490,7 @@ private:
     std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
-    // the size the last resize reported to Lua
     QSize mOldSize;
-    // only ever written from a size that was really measured, so that what
-    // getMainWindowSize() falls back to while the console is hidden or too small
-    // to measure cannot be a size the window never had
-    mutable QSize mLastMeasuredSize;
     SearchOptions mSearchOptions = SearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;

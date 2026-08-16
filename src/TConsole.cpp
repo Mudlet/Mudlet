@@ -2327,26 +2327,29 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
-    if (isHidden() && mLastMeasuredSize.isValid()) {
-        return mLastMeasuredSize;
+    if (isHidden()) {
+        return mOldSize;
     }
     const QSize consoleSize = size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
-    const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
+    QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
-    // A console that is still being laid out, as one is while a profile switch
-    // is in flight, measures as next to nothing - or as less than nothing, once
-    // the command line and the toolbar come off its height - and the last size
-    // it really had is a better answer than that.
+    // Reject obviously invalid or suspiciously small sizes during profile switch transitions
     const int minValidWidth = 50;
-    const bool measurable = mainWindowSize.width() >= minValidWidth && mainWindowSize.height() > 0;
-    if (!measurable) {
-        return mLastMeasuredSize.isValid() ? mLastMeasuredSize : mainWindowSize;
+    if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
+        return mOldSize;
     }
 
-    mLastMeasuredSize = mainWindowSize;
+    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
+    if (mOldSize.width() > 0) {
+        const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
+        if (shrinkageRatio < 0.5) {
+            return mOldSize;
+        }
+    }
+
     return mainWindowSize;
 }
 

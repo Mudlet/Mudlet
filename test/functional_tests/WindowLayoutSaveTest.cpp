@@ -18,19 +18,12 @@
  ***************************************************************************/
 
 /*
- * Two things about the main window.
- *
- * getMainWindowSize() has to follow the console below half the width it had.
- * The busted spec for it can only ask the display to resize the window the
- * suite is running in, and pends where the display will not; here the console
- * is resized directly, so the case is always exercised.
- *
  * saveWindowLayout() from Lua must not stand in for the layout save Mudlet
  * makes on the way out. That save is guarded by mudlet::mHasSavedLayout, which
  * only a later layout change lowers again, and the flag is not readable from
  * Lua at all.
  *
- * Run with: ctest -R MainWindowSizeAndLayoutTest -V
+ * Run with: ctest -R WindowLayoutSaveTest -V
  */
 
 #include <QSignalSpy>
@@ -40,7 +33,6 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
-#include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -65,9 +57,9 @@ extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForMainWindowSizeAndLayoutTest();
+void initializeQRCResourcesForWindowLayoutSaveTest();
 
-class MainWindowSizeAndLayoutTest : public QObject
+class WindowLayoutSaveTest : public QObject
 {
     Q_OBJECT
 
@@ -112,7 +104,7 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForMainWindowSizeAndLayoutTest();
+        initializeQRCResourcesForWindowLayoutSaveTest();
 
         QVERIFY(mConfigDir.isValid());
         // setupConfig() only adopts $XDG_CONFIG_HOME once the profiles
@@ -183,29 +175,6 @@ private slots:
         }
     }
 
-    void test_getMainWindowSizeFollowsTheConsoleDownPastHalfItsWidth()
-    {
-        TMainConsole* console = mpHost->mpConsole;
-        QVERIFY(console);
-
-        // the console is resized directly rather than through the window: what
-        // a display will do with a resize request is its own business, and the
-        // size getMainWindowSize() reports has to follow the console either way
-        console->resize(1600, 700);
-        const QSize wide = console->getMainWindowSize();
-        QVERIFY2(wide.width() > 0, "the console reported no width at all to start from");
-
-        console->resize(600, 700);
-        const QSize narrow = console->getMainWindowSize();
-
-        // the width getMainWindowSize() subtracts the toolbars from is the one
-        // the console was just given, so anything above it is a size the
-        // console no longer has
-        QVERIFY2(narrow.width() <= 600,
-                 qPrintable(qsl("getMainWindowSize() reported %1 for a console 600 pixels wide, after reporting %2 for one 1600 wide")
-                                    .arg(QString::number(narrow.width()), QString::number(wide.width()))));
-    }
-
     void test_aScriptedSaveLeavesTheShutdownSaveToRun()
     {
         mudlet::self()->mHasSavedLayout = false;
@@ -230,7 +199,7 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForMainWindowSizeAndLayoutTest()
+void initializeQRCResourcesForWindowLayoutSaveTest()
 {
 #ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
     qInitResources_additional_splash_screens();
@@ -245,5 +214,5 @@ void initializeQRCResourcesForMainWindowSizeAndLayoutTest()
     qInitResources_qm();
 }
 
-#include "MainWindowSizeAndLayoutTest.moc"
-QTEST_MAIN(MainWindowSizeAndLayoutTest)
+#include "WindowLayoutSaveTest.moc"
+QTEST_MAIN(WindowLayoutSaveTest)

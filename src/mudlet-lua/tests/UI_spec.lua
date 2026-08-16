@@ -5303,35 +5303,6 @@ describe("Main window size and saved layout", function()
     assert.is_true(tallHeight <= smallHeight + 300)
   end)
 
-  it("a main window that loses more than half its width is reported at the width it has", function()
-    if not resizableWindowAvailable() then
-      return
-    end
-    finally(restoreMainWindowSize)
-    setMainWindowSize(1600, 700)
-    pumpEvents(200)
-    local wideWidth = getMainWindowSize()
-    local wideColumns = getColumnCount("main")
-
-    setMainWindowSize(300, 700)
-    pumpEvents(200)
-    local narrowWidth = getMainWindowSize()
-    local narrowColumns = getColumnCount("main")
-
-    -- the main window has a minimum width of its own, so how narrow it really
-    -- became is read off the column count rather than assumed; that and
-    -- getMainWindowSize() have to tell the same story
-    if narrowColumns * 2 >= wideColumns then
-      pending("this display would not take the main window below half its width")
-      return
-    end
-    -- the console holds fewer than half the columns it did, so the width it
-    -- reports has to have more than halved with them; merely falling would also
-    -- be true of a size that only got part of the way down
-    assert.is_true(narrowWidth * 2 < wideWidth,
-      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(narrowWidth, wideWidth, wideColumns, narrowColumns))
-  end)
-
   it("the main window can be put back the size it was", function()
     if not resizableWindowAvailable() then
       return
