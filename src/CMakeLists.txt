@@ -618,6 +618,11 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   the single bytes of pure ASCII text:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_EUC_KR_PROCESSING)
 #
+# * Produce qDebug() messages about private/reserved ANSI CSI sequences that
+#   Mudlet does not interpret, e.g. the `\x1b[?25l` a game may send around each
+#   prompt to hide the cursor - which is frequent enough to be noisy:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_CSI_PROCESSING)
+#
 # * Produce qDebug() messages about the decoding of ANSI SGR sequences:
 #   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #

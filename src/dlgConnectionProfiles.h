@@ -59,6 +59,9 @@ public:
     static const QRegularExpression scmUnusableProfileNameChars;
     // files whose presence alone does not warrant confirming a profile's removal
     static const QStringList scmConnectionDetailFiles;
+    // a testing aid rather than a game, and the one list entry that is offered
+    // without any profile data of its own
+    static const QString scmSelfTestProfile;
 
     QString btn_connect_enabled_accessDesc;
     QString btn_load_enabled_accessDesc;
@@ -95,6 +98,7 @@ public slots:
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
+    void showEvent(QShowEvent*) override;
     void loadPasswordFromSettings(const QString& profile_name);
     void ensurePasswordLoadedThenConnect(bool alsoConnect);
     bool hasPendingKeychainOperation(const QString& profile_name) const;
@@ -136,7 +140,12 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    bool profileRemovable(const QString& profile) const;
+    void updateRemoveButtonState(const QString& profile);
     void showRemovalProblem(const QString& message);
+    void showRemovalNotice(const QString& message);
+    void showNotification(const QString& message, QLabel* pIcon);
+    void fitWelcomeMessageToContents();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
@@ -183,6 +192,7 @@ private:
     QTimer* mPasswordSaveTimer = nullptr;
     QPushButton* mpSkipToGamesButton = nullptr;
     bool mTutorialDismissed = false;
+    bool mFitWelcomeMessagePending = false;
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;

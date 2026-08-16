@@ -1516,11 +1516,15 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
         getHyperlinkVisibilityManager().onDataReceived();
     }
 
+    // feedTriggers() lands here, so this runs nested inside an outer pass that
+    // is itself mid-translate; clearing the flag outright would take trigger
+    // context away from the rest of that pass.
+    const bool wasInTriggerEngineMode = mTriggerEngineMode;
     mTriggerEngineMode = true;
     const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
     const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
     buffer.translateToPlainText(incomingSocketData, isFromServer);
-    mTriggerEngineMode = false;
+    mTriggerEngineMode = wasInTriggerEngineMode;
 
     const int lastLineNumber = buffer.getLastLineNumber();
     const bool bufferChanged = lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine;
@@ -1560,20 +1564,45 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
 
 void TMainConsole::runTriggers(int line)
 {
+    // A trigger script can feed text back through the pipeline, re-entering this
+    // function; the rest of this pass would otherwise inherit whatever the nested
+    // one left behind and act on the fed line instead of its own.
+    const bool nested = mpHost->getTriggerUnit()->processingDepth() > 0;
+    const QPoint previousUserCursor = mUserCursor;
+    const int previousEngineCursor = mEngineCursor;
+    const bool previousIsPromptLine = mIsPromptLine;
+    const QString previousLine = mCurrentLine;
+
     mUserCursor.setY(line);
     mIsPromptLine = buffer.promptBuffer.at(line);
     mEngineCursor = line;
     mUserCursor.setX(0);
     mCurrentLine = buffer.line(line);
     mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
-    mCurrentLine.append('\n');
+    // The matchers take the haystack by reference all the way down, so it must be
+    // a local: a nested pass reassigns mCurrentLine under them.
+    QString haystack = mCurrentLine;
+    haystack.append('\n');
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> mpHost;
     }
-    mpHost->incomingStreamProcessor(mCurrentLine, line);
-    mIsPromptLine = false;
+    mpHost->incomingStreamProcessor(haystack, line);
+
+    if (nested) {
+        // Only a nested pass restores: at the top level a script's moveCursor()
+        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
+        // a saved index can by now point past the end.
+        const int lastLine = buffer.getLastLineNumber();
+        mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
+        mEngineCursor = qMin(previousEngineCursor, lastLine);
+        mIsPromptLine = previousIsPromptLine;
+        mCurrentLine = previousLine;
+        mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, previousLine);
+    } else {
+        mIsPromptLine = false;
+    }
 
     //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
     //       otherwise just delete

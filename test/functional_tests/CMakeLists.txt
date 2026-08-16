@@ -21,22 +21,28 @@ set(FUNCTIONAL_TEST_SOURCES
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
+    MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
+    TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
+    MxpWatchdogBufferLifetimeTest.cpp
+    TelnetConnectFailureTest.cpp
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
+    WrapLineRewrapTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     VariableEditorWriteBackTest.cpp
@@ -53,6 +59,7 @@ set(FUNCTIONAL_TEST_SOURCES
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
     PackageRemovalSaveTeardownTest.cpp
+    TutorialInvitationGateTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
@@ -84,6 +91,11 @@ set(FUNCTIONAL_TEST_SOURCES
 # Updater wraps Sparkle instead of creating an UpdateDialog
 if(USE_UPDATER AND NOT APPLE)
     list(APPEND FUNCTIONAL_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
+endif()
+
+# dblsqd::Feed itself is built on every platform that has the updater
+if(USE_UPDATER)
+    list(APPEND FUNCTIONAL_TEST_SOURCES FeedChecksumRaceTest.cpp)
 endif()
 
 set(FUNCTIONAL_TEST_UTILS
@@ -193,6 +205,8 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
 # into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
 # again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
+set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
+
 set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
     TIMEOUT 300)
@@ -204,6 +218,10 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
 
+# TelnetConnectFailureTest creates a fresh profile per test method and waits out a connection
+# attempt that is refused and then retried, so it needs a longer timeout
+set_tests_properties(TelnetConnectFailureTest PROPERTIES TIMEOUT 300)
+
 # TelnetConnectLookupRaceTest creates a fresh profile per test method and waits out a connect to
 # an address nothing answers on, so it needs a longer timeout
 set_tests_properties(TelnetConnectLookupRaceTest PROPERTIES TIMEOUT 300)
@@ -214,6 +232,10 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
+
+# TelnetCharsetNegotiationTest creates a fresh profile per test case, each of which
+# also reconnects, so it needs a longer timeout
+set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
@@ -263,6 +285,9 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
+
+# WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and
