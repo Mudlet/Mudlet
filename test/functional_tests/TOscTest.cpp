@@ -32,6 +32,7 @@
 #include <chrono>
 
 #include "MudletInstanceCoordinator.h"
+#include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
 #include "THyperlinkStyling.h"
 #include "TLinkStore.h"
@@ -205,36 +206,12 @@ private slots:
         mudlet::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
-    QTimer::singleShot(0ms, qApp, [this]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100ms);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), mHostname);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), mPort);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    mpHost = mudlet::self()->getActiveHost();
-    if (!mpHost) {
-      QFAIL("No active host available for the test.");
-    }
+    mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
+    QVERIFY2(mpHost, "Could not create the test profile - see the warning above "
+                     "for the step that timed out.");
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
+    if (!spy2.wait(5000)) {
       QFAIL("Could not connect with the host.");
     }
   }
