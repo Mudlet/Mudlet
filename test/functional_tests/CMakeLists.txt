@@ -35,11 +35,14 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
+    TelnetConnectFailureTest.cpp
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
+    WrapLineRewrapTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     VariableEditorWriteBackTest.cpp
@@ -56,6 +59,7 @@ set(FUNCTIONAL_TEST_SOURCES
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
     PackageRemovalSaveTeardownTest.cpp
+    TutorialInvitationGateTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
@@ -209,6 +213,10 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
 
+# TelnetConnectFailureTest creates a fresh profile per test method and waits out a connection
+# attempt that is refused and then retried, so it needs a longer timeout
+set_tests_properties(TelnetConnectFailureTest PROPERTIES TIMEOUT 300)
+
 # TelnetConnectLookupRaceTest creates a fresh profile per test method and waits out a connect to
 # an address nothing answers on, so it needs a longer timeout
 set_tests_properties(TelnetConnectLookupRaceTest PROPERTIES TIMEOUT 300)
@@ -272,6 +280,9 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
+
+# WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and

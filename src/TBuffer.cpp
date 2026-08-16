@@ -876,26 +876,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // parameter string will be in the range "0-9:;" only
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
-            while (spanEnd < localBufferLength
-                   && ((((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0)) || ((spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0))) {
+            // Only the first byte may be one of the private/reserved introducers:
+            while (spanEnd < localBufferLength && (spanEnd == spanStart ? cParameterInitial : cParameter).indexOf(localBuffer[spanEnd]) >= 0) {
                 ++spanEnd;
-            }
-
-            // Test whether the first byte is within the usable subset of the
-            // allowed value - or not:
-            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
-                // Oh dear, the CSI parameter string sequence begins with one of
-                // the reserved characters ('<', '=', '>' or '?') which we
-                // can/do not handle
-
-                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
-                                             << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
-                // So skip over it as far as we can - will still possibly have
-                // garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
-                mGotCSI = false;
-                // Go around while loop again:
-                continue;
             }
 
             if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
@@ -911,14 +894,33 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
 
-            if (spanEnd >= localBufferLength || cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
-                // We have gone to the end of the buffer OR the last character
-                // in the buffer is still within a CSI sequence - therefore we
-                // have got a split between data packets and are not in a
-                // position to process the current line further...
+            if (spanEnd >= localBufferLength) {
+                // We ran to the end of the buffer while still inside a CSI
+                // sequence - therefore we have got a split between data packets
+                // and are not in a position to process the current line further...
 
                 mIncompleteSequenceBytes = localBuffer.substr(spanStart);
                 return;
+            }
+
+            // Only now that a complete sequence is in hand, test whether the
+            // first byte is within the usable subset of the allowed value - or
+            // not. Doing this any earlier would consume a sequence split across
+            // packets without leaving the trailing bytes for the next one.
+            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
+                // Oh dear, the CSI parameter string sequence begins with one of
+                // the reserved characters ('<', '=', '>' or '?') which we
+                // can/do not handle
+#if defined(DEBUG_CSI_PROCESSING)
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
+                                             << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
+#endif
+                // So skip over it as far as we can - will still possibly have
+                // garbage beyond the end which will still be shown...
+                localBufferPosition += 1 + spanEnd - spanStart;
+                mGotCSI = false;
+                // Go around while loop again:
+                continue;
             }
 
             // Now we can take a peek at what the next character is, it could
@@ -1732,8 +1734,7 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
     // Suppress new empty line IFF echoes already created a new empty line
     // i.e. add newline if no added lines or the lastline isn't empty
     if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
-        std::deque<TChar> const newLine;
-        buffer.push_back(newLine);
+        buffer.emplace_back();
         lineBuffer.push_back(QString());
         timeBuffer.push_back(QString());
         promptBuffer << false;
@@ -4917,8 +4918,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
 void TBuffer::appendEmptyLine()
 {
-    std::deque<TChar> const newLine;
-    buffer.push_back(newLine);
+    buffer.emplace_back();
     lineBuffer.push_back(QString());
     timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
     promptBuffer << false;
@@ -5239,10 +5239,52 @@ void TBuffer::appendLog(const QString& text)
     mpHost->mpConsole->mLogStream << text;
 }
 
-// returns how many new lines have been inserted by the wrapping action
+// Rewraps everything from startLine to the end of the buffer, and answers where
+// the last line of the result sits relative to startLine: 0 for a single line
+// that needed no wrapping, 2 for one split into three, and for a range of
+// several lines its length less one whether any of them were split or not.
+// TConsole::insertLink() and TConsole::printCommand() add it to startLine to
+// place the cursor and the repaint range.
 int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize)
 {
     if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
+        return 0;
+    }
+
+    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
+    const int indent = (indentSize < maxWidth) ? indentSize : 0;
+    const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    const int total = static_cast<int>(buffer.size());
+
+    // Leading lines that getWrapInfo() finds no break points in stay where they
+    // are. The loop below reproduces such a line unchanged, but only after
+    // moving it out of the buffer into a queue and back again and standing up
+    // four temporary containers to do it - and in libstdc++ even an empty
+    // std::deque costs an allocation for its map and another for its first
+    // node. A line with no TChars or no text is not left alone: the loop turns
+    // that one into appendEmptyLine(), which drops its TChars, restamps it and
+    // clears its prompt flag.
+    int firstRewrappedLine = startLine;
+    QList<WrapInfo> lineBreaks;
+    while (firstRewrappedLine < total) {
+        if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
+            break;
+        }
+        // a blank timestamp indicates a wrapped line
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != mudlet::smBlankTimeStamp, maxWidth, indent, hangingIndent);
+        if (!lineBreaks.isEmpty()) {
+            break;
+        }
+        ++firstRewrappedLine;
+    }
+    const int keptLines = firstRewrappedLine - startLine;
+    if (firstRewrappedLine >= total) {
+        const int lastLineOffset = keptLines - 1;
+        if (lastLineOffset > 0) {
+            // log all lines but the last one (in case further text is appended later)
+            log(startLine, startLine + lastLineOffset - 1);
+            return lastLineOffset;
+        }
         return 0;
     }
 
@@ -5251,10 +5293,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
-    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
-    const int indent = (indentSize < maxWidth) ? indentSize : 0;
-    const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
-    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
+    for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
         std::deque<TChar> newBufferLine;
         QString newLineText;
@@ -5262,7 +5301,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // trivial case
         if (buffer[i].empty()) {
             tempList.append(newLineText);
-            queue.push(newBufferLine);
+            queue.push(std::move(newBufferLine));
             timeList.append(time);
             promptList.append(false);
             continue;
@@ -5274,10 +5313,17 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const QString lineText = lineBuffer[i];
         // a blank timestamp indicates a wrapped line
         const bool isNewline = (time != mudlet::smBlankTimeStamp);
-        QList<WrapInfo> lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
+        // The scan above computed this for the line it stopped on. It can also
+        // stop before computing anything, but only on a line with no TChars
+        // (which never reaches here) or with no text, and getWrapInfo() answers
+        // an empty list for empty text too - so the stale value is the right
+        // one either way.
+        if (i != firstRewrappedLine) {
+            lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
+        }
         if (lineBreaks.isEmpty()) {
             tempList.append(lineText);
-            queue.push(buffer[i]);
+            queue.push(std::move(buffer[i]));
             timeList.append(time);
             promptList.append(isPrompt);
             continue;
@@ -5320,7 +5366,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             } else {
                 timeList.append(mudlet::smBlankTimeStamp);
             }
-            queue.push(newBufferLine);
+            queue.push(std::move(newBufferLine));
             promptList.append(isPrompt);
             newBufferLine.clear();
             newLineText = QString();
@@ -5333,13 +5379,13 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         promptBuffer.pop_back();
     }
 
-    const int insertedLines = queue.size() - 1;
-    for (int i = 0; i <= insertedLines; ++i) {
+    const int rewrappedLines = static_cast<int>(queue.size());
+    for (int i = 0; i < rewrappedLines; ++i) {
         if (tempList[i].isEmpty()) {
             queue.pop();
             appendEmptyLine();
         } else {
-            buffer.push_back(queue.front());
+            buffer.push_back(std::move(queue.front()));
             queue.pop();
             lineBuffer.append(tempList[i]);
             timeBuffer.append(timeList[i]);
@@ -5347,10 +5393,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
-    if (insertedLines > 0) {
+    const int lastLineOffset = keptLines + rewrappedLines - 1;
+    if (lastLineOffset > 0) {
         // log all lines but the last one (in case further text is appended later)
-        log(startLine, startLine + insertedLines - 1);
-        return insertedLines;
+        log(startLine, startLine + lastLineOffset - 1);
+        return lastLineOffset;
     }
     return 0;
 }
@@ -5514,8 +5561,7 @@ void TBuffer::clear()
     // After deleting all lines, clear all links (none are referenced)
     clearLinkState();
 
-    std::deque<TChar> const newLine;
-    buffer.push_back(newLine);
+    buffer.emplace_back();
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
