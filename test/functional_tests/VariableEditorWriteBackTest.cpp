@@ -41,6 +41,8 @@
 #include "dlgVarsMainArea.h"
 #include "mudlet.h"
 
+#include <QDropEvent>
+#include <QMimeData>
 #include <QTreeWidget>
 
 extern "C" {
@@ -292,6 +294,60 @@ private slots:
         QVERIFY2(luaHolds(qsl("stringKeyGlobal"), qsl("edited global value")), "editing the global did not reach Lua");
 
         execLua(qsl("stringKeyGlobal = nil stringKeyDecoy = nil"));
+    }
+
+    // Dropping an item somewhere else in the Variables view rearranges the view
+    // and nothing else - the variable stays in the table Lua has it in - so the
+    // view does not offer the move at all (#9958).
+    void test_theVariablesTreeDoesNotOfferAMoveItCannotMake()
+    {
+        QCOMPARE(mpVariablesTree->dragDropMode(), QAbstractItemView::NoDragDrop);
+        QVERIFY2(!mpVariablesTree->dragEnabled(), "the Variables view still lets an item be picked up, and a move it makes is not made in Lua");
+        QVERIFY2(!mpVariablesTree->acceptDrops(), "the Variables view still takes drops");
+        QVERIFY2(!mpVariablesTree->viewport()->acceptDrops(), "the viewport is what the window system asks about a drop, and it still says yes");
+
+        // the other views do carry a move through to what they are showing, so
+        // this must not have taken the drag away from all of them
+        QTreeWidget* pTriggers = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_triggers"));
+        QVERIFY2(pTriggers, "the editor has no triggers tree widget");
+        QCOMPARE(pTriggers->dragDropMode(), QAbstractItemView::InternalMove);
+        QVERIFY2(pTriggers->dragEnabled(), "the Triggers view lost the drag it can carry through");
+    }
+
+    // ...and a drop that arrives at the widget anyway moves nothing. Note this
+    // stands on its own only so far: QDropEvent takes its source() from the drag
+    // currently in flight, so a synthesised one is sourceless and QTreeWidget
+    // declines to move for it whatever the drop mode is. The widget state above
+    // is what stops a real drag.
+    void test_aDropOnTheVariablesTreeMovesNothing()
+    {
+        execLua(qsl("dropTargetTable = {} droppedGlobal = 'dropped value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pTarget = findVariableItem({qsl("dropTargetTable")});
+        QVERIFY2(pTarget, "the Variables view did not show the table to drop onto");
+        QTreeWidgetItem* pDragged = findVariableItem({qsl("droppedGlobal")});
+        QVERIFY2(pDragged, "the Variables view did not show the variable to drag");
+
+        mpVariablesTree->expandItem(mpVariablesTree->topLevelItem(0));
+        mpVariablesTree->scrollToItem(pTarget);
+        const QRect targetRect = mpVariablesTree->visualItemRect(pTarget);
+        QVERIFY2(!targetRect.isEmpty(), "the tree has not laid the target out, so the drop would land nowhere");
+
+        selectVariable(pDragged);
+        const QModelIndex draggedIndex = mpVariablesTree->currentIndex();
+        QVERIFY2(draggedIndex.isValid(), "the tree has no model index for the variable being dragged");
+        QScopedPointer<QMimeData> mimeData(mpVariablesTree->model()->mimeData({draggedIndex}));
+        QVERIFY2(mimeData, "the tree gave nothing to carry in the drop");
+        QDropEvent dropEvent(targetRect.center(), Qt::MoveAction, mimeData.data(), Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(mpVariablesTree->viewport(), &dropEvent);
+
+        QVERIFY2(!dropEvent.isAccepted(), "the Variables view took a drop it cannot carry through to Lua");
+        QCOMPARE(pTarget->childCount(), 0);
+        QCOMPARE(luaMemberCount(qsl("dropTargetTable")), 0);
+        QVERIFY2(luaHolds(qsl("droppedGlobal"), qsl("dropped value")), "the variable did not stay where Lua has it");
+
+        execLua(qsl("dropTargetTable = nil droppedGlobal = nil"));
     }
 
 private:
