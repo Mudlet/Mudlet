@@ -1,0 +1,88 @@
+name: Detect buildable changes
+description: >
+  Work out whether a change touches anything that can affect the build, so a
+  caller can skip its build matrix for documentation-only changes.
+
+inputs:
+  token:
+    description: Token used to list the changed files over the API.
+    required: true
+
+outputs:
+  build:
+    description: '"true" when the build matrix should run, "false" when only inert files changed.'
+    value: ${{ steps.filter.outputs.build }}
+
+runs:
+  using: composite
+  steps:
+  - name: Check whether anything affecting the build changed
+    id: filter
+    shell: bash
+    env:
+      GH_TOKEN: ${{ inputs.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PUSH_BEFORE: ${{ github.event.before }}
+      PUSH_AFTER: ${{ github.event.after }}
+    run: |
+      # Only genuinely inert paths are listed - CI, CMake and packaging scripts
+      # all affect the build. Anything unexpected falls through to building.
+      inert='(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'
+
+      # Anything we cannot decide confidently ends up here, so an unrecognised
+      # event, a missing base commit or a failed API call all still build.
+      build_everything() {
+        echo "build=true" >> "$GITHUB_OUTPUT"
+        echo "::notice::$1 - running the build matrix"
+        exit 0
+      }
+
+      # grep exits non-zero on no match, which says nothing changed rather than
+      # that the count failed
+      count_files() {
+        printf '%s\n' "$1" | grep -c . || true
+      }
+
+      case "$GITHUB_EVENT_NAME" in
+        pull_request)
+          if ! files=$(gh api --paginate \
+              "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" -q '.[].filename'); then
+            build_everything "Could not list the pull request's files"
+          fi
+          # The endpoint stops at 3000 files, so a list that long may be partial
+          if [ "$(count_files "$files")" -ge 3000 ]; then
+            build_everything "Too many changed files to compare"
+          fi
+          ;;
+        push)
+          case "$GITHUB_REF" in
+            refs/tags/*) build_everything "A tag build always runs" ;;
+          esac
+          # All zeroes means the branch was just created, so nothing to diff against
+          if [ -z "$PUSH_BEFORE" ] || [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            build_everything "No earlier commit to compare against"
+          fi
+          if ! files=$(gh api \
+              "/repos/$GITHUB_REPOSITORY/compare/$PUSH_BEFORE...$PUSH_AFTER" \
+              -q '.files[].filename'); then
+            build_everything "Could not compare $PUSH_BEFORE...$PUSH_AFTER"
+          fi
+          # The compare endpoint stops at 300 files, so a list that long may be partial
+          if [ "$(count_files "$files")" -ge 300 ]; then
+            build_everything "Too many changed files to compare"
+          fi
+          ;;
+        *)
+          build_everything "A $GITHUB_EVENT_NAME run always builds"
+          ;;
+      esac
+
+      echo "Changed files:"
+      printf '%s\n' "$files"
+
+      if printf '%s\n' "$files" | grep -qvE "$inert"; then
+        echo "build=true" >> "$GITHUB_OUTPUT"
+      else
+        echo "build=false" >> "$GITHUB_OUTPUT"
+        echo "::notice::Documentation-only change - skipping the build matrix"
+      fi

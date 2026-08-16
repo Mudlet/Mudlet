@@ -23,10 +23,34 @@ permissions:
   actions: write
 
 jobs:
+  changes:
+    name: detect buildable changes
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    outputs:
+      build: ${{steps.filter.outputs.build}}
+    steps:
+    # Only the action itself is needed, so skip the submodules and the rest of
+    # the tree that the build jobs check out
+    - name: Check out the change detection action
+      uses: actions/checkout@v7
+      with:
+        sparse-checkout: .github/actions
+        submodules: false
+
+    # Tagged, scheduled and manual runs always build - only a push that changes
+    # nothing but documentation is skipped here
+    - name: Check whether anything affecting the build changed
+      id: filter
+      uses: ./.github/actions/detect-buildable-changes
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    needs: changes
+    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
     env:
       LUA_VERSION: '5.1.5'
     strategy:

@@ -21,25 +21,19 @@ jobs:
     outputs:
       build: ${{steps.filter.outputs.build}}
     steps:
+    # Only the action itself is needed, so skip the submodules and the rest of
+    # the tree that the build jobs check out
+    - name: Check out the change detection action
+      uses: actions/checkout@v7
+      with:
+        sparse-checkout: .github/actions
+        submodules: false
+
     - name: Check whether anything affecting the build changed
       id: filter
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
-        # all affect the build. Anything unexpected falls through to building.
-        files=$(gh api --paginate \
-          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
-          -q '.[].filename')
-        echo "Changed files:"
-        printf '%s\n' "$files"
-
-        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
-          echo "build=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "build=false" >> "$GITHUB_OUTPUT"
-          echo "::notice::Documentation-only change - skipping the build matrix"
-        fi
+      uses: ./.github/actions/detect-buildable-changes
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   compile-mudlet:
     name: ${{matrix.buildname}}
