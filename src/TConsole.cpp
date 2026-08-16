@@ -2330,31 +2330,30 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
-    if (isHidden()) {
-        return mOldSize;
+    if (isHidden() && mLastMeasuredSize.isValid()) {
+        return mLastMeasuredSize;
     }
     const QSize consoleSize = size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
-    QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
+    const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
     // A profile being switched to gets its geometry over several events, so in
     // between the console can be a few pixels wide, or so short that the command
     // line and toolbars taken off it come to more than its whole height, which
     // leaves nothing at all. Hand back the last size it really had for those, and
-    // for nothing else: since resizeEvent() stores whatever this returns, refusing
-    // a size for merely having changed a lot would make the refused answer the
-    // yardstick every later size is measured against, and a window shrunk to under
-    // half its width could never be reported again. A window that is genuinely
-    // only 48 pixels tall inside is reported as that, however little use it is.
+    // for nothing else: refusing a size for merely having changed a lot would make
+    // the refused answer the yardstick every later size is measured against, and a
+    // window shrunk to under half its width could never be reported again. A
+    // window that is genuinely only 48 pixels tall inside is reported as that,
+    // however little use it is.
     const int minValidWidth = 50;
-    const bool measurementUsable = mainWindowSize.width() >= minValidWidth && mainWindowSize.height() > 0;
-    const bool oldSizeUsable = mOldSize.width() >= minValidWidth && mOldSize.height() > 0;
-    if (!measurementUsable && oldSizeUsable) {
-        return mOldSize;
+    if (mainWindowSize.width() < minValidWidth || mainWindowSize.height() <= 0) {
+        return mLastMeasuredSize.isValid() ? mLastMeasuredSize : mainWindowSize;
     }
 
+    mLastMeasuredSize = mainWindowSize;
     return mainWindowSize;
 }
 
