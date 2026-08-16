@@ -615,7 +615,7 @@ jobs:
       # wall-clock time, so the suite needs a budget of its own: the run itself
       # takes ~75s, and the rest is headroom for a slow runner stretching those.
       timeout-minutes: 6
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
@@ -662,7 +662,7 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       # The suite alone can run past a minute on the slower Intel runners
       timeout-minutes: 3
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1

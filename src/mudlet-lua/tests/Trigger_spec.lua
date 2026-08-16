@@ -411,14 +411,51 @@ describe("Trigger processing", function()
     end)
 
     -- feedTelnet only performs injection while the telnet socket is unconnected;
-    -- otherwise it refuses with nil + a message. Its successful-injection and
-    -- prompt paths cannot be exercised in busted. The type-check happens before
-    -- the connection check, so the argument-type contract is still verifiable.
+    -- otherwise it refuses with nil + a message. That is the state --offline
+    -- leaves the profile in, so the injection path runs here against the real
+    -- telnet parser.
     describe("feedTelnet contract", function()
+
+        local function feedOrExplain(data)
+            local ok, msg = feedTelnet(data)
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+        end
+
+        -- every injection below leaves the buffer somewhere the specs after it
+        -- read from, and an assert that throws would otherwise skip the restore
+        after_each(function()
+            deselect()
+            feedTelnet("\r\n")
+            setConfig("specialForceGAOff", false)
+        end)
 
         it("raises an error when the data argument is not a string", function()
             -- a table is never string-coercible, unlike a number
             assert.has_error(function() feedTelnet({}) end)
+        end)
+
+        it("runs against a profile that reports no connection", function()
+            local _, _, connected = getConnectionInfo()
+            assert.is_false(connected, "getConnectionInfo() must not report an established connection")
+        end)
+
+        it("injects server data for the telnet parser to decode", function()
+            -- reading the colour back proves the bytes travelled through the
+            -- telnet parser rather than being appended as plain text
+            feedOrExplain("\27[31mSpecFedRedLine\27[0m\r\n")
+            assert.is_true(selectString("SpecFedRedLine", 1) >= 0, "the injected line did not reach the buffer")
+            assert.are.same(color_table.ansi_red, {getFgColor()})
+        end)
+
+        it("treats a line ended by IAC GA as a prompt", function()
+            feedOrExplain("SpecFedPrompt> <T_IAC><T_GA>")
+            assert.is_true(isPrompt(), "IAC GA should have marked the fed line a prompt")
+        end)
+
+        it("stops honouring IAC GA once the profile forces GA off", function()
+            setConfig("specialForceGAOff", true)
+            feedOrExplain("SpecGaForcedOff> <T_IAC><T_GA>")
+            assert.is_false(isPrompt(), "a forced-off GA must not mark the fed line a prompt")
         end)
 
         it("refuses to inject while the socket is not unconnected", function()
@@ -1021,10 +1058,9 @@ describe("Trigger processing", function()
 
     end)
 
-    -- Prompt pipeline. Prompt-line *firing* would need feedTelnet to inject an
-    -- IAC GA, but feedTelnet is refused here because the self-test socket is not
-    -- in the unconnected state (see the feedTelnet note above), so only the
-    -- creation contracts and isPrompt's shape are exercised offline.
+    -- Prompt pipeline. Only the creation contracts are exercised here; a prompt
+    -- trigger *firing* is still untested, and the feedTelnet block above shows
+    -- how to inject the IAC GA that would need.
     describe("prompt triggers and isPrompt", function()
 
         after_each(function()
@@ -1032,9 +1068,7 @@ describe("Trigger processing", function()
             _G.TrigSpec = nil
         end)
 
-        it("isPrompt reports false when no prompt has been marked", function()
-            -- no IAC GA is ever injected in this profile, so the current line is
-            -- never a prompt
+        it("isPrompt reports false when the cursor is not on a prompt line", function()
             assert.is_false(isPrompt())
         end)
 

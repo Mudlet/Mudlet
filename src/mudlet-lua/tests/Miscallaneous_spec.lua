@@ -1182,10 +1182,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("merges the keys it was given into an incoming GMCP table", function()
-        -- The merge only happens as GMCP or MSDP arrives from a server, and
-        -- the self-test profile's socket is never in the unconnected state that
-        -- feedTelnet() needs, so there is no way to deliver one from Lua.
-        pending("delivering GMCP to the profile needs a server connection")
+        -- The merge only happens as GMCP or MSDP arrives from a server. Now
+        -- that specs run offline, feedTelnet() can deliver a GMCP
+        -- subnegotiation itself, so this is writable - just not written yet.
+        pending("feeding the profile a GMCP subnegotiation is not written yet")
       end)
     end)
 
