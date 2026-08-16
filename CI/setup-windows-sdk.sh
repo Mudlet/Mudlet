@@ -209,14 +209,16 @@ echo "- See 'luarocks path --help' for details"
 # without O_BINARY, so on Windows every "\n" it writes becomes "\r\n": CRLF sources
 # gain a blank line between every line (breaking "\" macro continuations) and archives
 # nested inside a .src.rock are corrupted outright. Pin luarocks to Info-ZIP instead.
-if [ -x /usr/bin/unzip ]; then
+# luarocks is a native Windows binary, so it needs a Windows path here rather than
+# the MSYS one - cygpath -m keeps forward slashes so the value needs no Lua escaping.
+INFOZIP_UNZIP="$(/usr/bin/cygpath -m /usr/bin/unzip.exe 2>/dev/null)"
+if [ -x /usr/bin/unzip.exe ] && [ -n "${INFOZIP_UNZIP}" ] \
+   && [ "$(grep -c "variables.UNZIP" "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua")" -eq 0 ]; then
   echo "  Pinning luarocks to Info-ZIP unzip (bsdunzip mangles line endings)..."
   echo "    unzip on PATH: $(command -v unzip)"
-  cat >> "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua" <<'EOF'
-
-variables = variables or {}
-variables.UNZIP = "/usr/bin/unzip"
-EOF
+  echo "    pinning to:    ${INFOZIP_UNZIP}"
+  printf '\nvariables = variables or {}\nvariables.UNZIP = "%s"\n' "${INFOZIP_UNZIP}" \
+    >> "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua"
   echo ""
 fi
 
