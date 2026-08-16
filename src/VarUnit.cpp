@@ -66,7 +66,6 @@ bool VarUnit::isHidden(TVar* var)
         // The table behind this address has been collected, so the address no
         // longer names a hidden table - typically it now names a fresh variable
         // of the user's. Forget the identity so it is not asked about again.
-        qDebug() << "VarUnit::isHidden() INFO - dropping the identity of a collected hidden table: address" << var->pValue << "no longer names it.";
         forgetHiddenTableAddress(var->pValue);
     }
     const QString fullName = shortVarName(var).join(qsl("."));
