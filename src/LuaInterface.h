@@ -77,7 +77,6 @@ public:
     QString getValue(TVar*);
     bool loadKey(lua_State*, TVar*);
     bool loadValue(lua_State*, TVar*, int);
-    bool setCValue(QList<TVar*>);
     bool setValue(TVar*);
     void deleteVar(TVar*);
     void renameCVar(QList<TVar*>);
@@ -102,6 +101,8 @@ private:
     TVar* resetVariableTree();
     bool readSavedVars();
     void addSavedRootsMissingFromTheTree();
+    bool pushKey(TVar*, const QString& name, const int keyType);
+    bool pushOwningTable(const QList<TVar*>&);
 
     int depth = 0;
     lua_State* mL;

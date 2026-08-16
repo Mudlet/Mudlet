@@ -307,7 +307,179 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(vu->isHidden(alias), "a saved alias of a live hidden table has to be recognised by identity");
     }
 
+    // The write used to be a generated line of Lua source with the value spliced
+    // into a [[...]] literal, which a value holding "]]" closes early: the chunk
+    // did not parse, the write was quietly dropped and the parse error was left
+    // on the Lua stack of the profile's live interpreter.
+    void testSetValueWritesAStringHoldingClosingLongBrackets()
+    {
+        execLua("bracketVar = 'placeholder'");
+        interface->getVars(false);
+        TVar* var = findGlobal(qsl("bracketVar"));
+        QVERIFY(var);
+        var->setValue(qsl("a]]b"), LUA_TSTRING);
+
+        const int stackBefore = lua_gettop(L);
+        QVERIFY(interface->setValue(var));
+        QCOMPARE(lua_gettop(L), stackBefore);
+        QCOMPARE(globalAsString(qsl("bracketVar")), qsl("a]]b"));
+    }
+
+    // ...and a value ending in a single "]" closed the literal against the
+    // bracket the generated line ended with.
+    void testSetValueWritesAStringEndingInABracket()
+    {
+        execLua("trailVar = 'placeholder'");
+        interface->getVars(false);
+        TVar* var = findGlobal(qsl("trailVar"));
+        QVERIFY(var);
+        var->setValue(qsl("foo]"), LUA_TSTRING);
+
+        QVERIFY(interface->setValue(var));
+        QCOMPARE(globalAsString(qsl("trailVar")), qsl("foo]"));
+    }
+
+    // A long-bracket literal swallows a newline it starts with, so this write
+    // reported success and stored a different string than it was given.
+    void testSetValueKeepsALeadingNewlineInAString()
+    {
+        execLua("newlineVar = 'placeholder'");
+        interface->getVars(false);
+        TVar* var = findGlobal(qsl("newlineVar"));
+        QVERIFY(var);
+        var->setValue(qsl("\nfoo"), LUA_TSTRING);
+
+        QVERIFY(interface->setValue(var));
+        QCOMPARE(globalAsString(qsl("newlineVar")), qsl("\nfoo"));
+    }
+
+    // The keys went into that generated source as text too, inside a quoted
+    // literal - so a member whose key holds a quote was lost. XMLimport reaches
+    // this directly for every member it reads out of a profile save, which is
+    // where such a key comes from.
+    void testSetValueWritesAMemberWhoseKeyHoldsAQuote()
+    {
+        execLua("importHolder = {}");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("importHolder"));
+        QVERIFY(holder);
+        // what XMLimport::readVariable() builds before calling setValue()
+        TVar member;
+        member.setParent(holder);
+        member.setName(qsl("a\"b"), LUA_TSTRING);
+        member.setValue(qsl("42"), LUA_TNUMBER);
+
+        QVERIFY(interface->setValue(&member));
+        lua_getglobal(L, "importHolder");
+        lua_pushstring(L, "a\"b");
+        lua_gettable(L, -2);
+        QVERIFY2(lua_isnumber(L, -1), "the member has to be written under the key it is named by, quote and all");
+        QCOMPARE(lua_tonumber(L, -1), 42.0);
+        lua_pop(L, 2);
+    }
+
+    // A table already there is the table the editor has just made a node for, so
+    // writing it back must not empty it - the generated source assigned "= {}",
+    // which did.
+    void testSetValueOnATableAlreadyThereKeepsItsContents()
+    {
+        execLua("keepTable = {member = 'still here'}");
+        interface->getVars(false);
+        TVar* var = findGlobal(qsl("keepTable"));
+        QVERIFY(var);
+        QCOMPARE(var->getValueType(), LUA_TTABLE);
+
+        QVERIFY(interface->setValue(var));
+        lua_getglobal(L, "keepTable");
+        QVERIFY(lua_istable(L, -1));
+        lua_pushstring(L, "member");
+        lua_gettable(L, -2);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), qsl("still here"));
+        lua_pop(L, 2);
+    }
+
+    // A write that cannot get to the variable is a write that has to leave the
+    // interpreter as it found it: the generated source failed inside a pcall,
+    // which left the error message behind on the stack every trigger, alias and
+    // timer of the profile then runs on.
+    void testSetValueOnAMemberThatIsGoneLeavesTheStackAsItFoundIt()
+    {
+        execLua("goneHolder = {inner = {member = 'here for now'}}");
+        interface->getVars(false);
+        TVar* member = findGlobal(qsl("goneHolder"))->getChildren().first()->getChildren().first();
+        QCOMPARE(member->getName(), qsl("member"));
+        member->setValue(qsl("written"), LUA_TSTRING);
+        execLua("goneHolder.inner = nil");
+
+        const int stackBefore = lua_gettop(L);
+        for (int i = 0; i < 10; ++i) {
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not reach")));
+            QVERIFY(!interface->setValue(member));
+        }
+        QCOMPARE(lua_gettop(L), stackBefore);
+    }
+
+    // ...and the same when the write itself raises, which a table with a
+    // __newindex of its own can do at any time.
+    void testSetValueThatPanicsLeavesTheStackAsItFoundIt()
+    {
+        execLua("guardedHolder = {}");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("guardedHolder"));
+        QVERIFY(holder);
+        TVar member;
+        member.setParent(holder);
+        member.setName(qsl("blocked"), LUA_TSTRING);
+        member.setValue(qsl("value"), LUA_TSTRING);
+
+        lua_getglobal(L, "guardedHolder");
+        lua_newtable(L);
+        lua_pushcfunction(L, &raiseOnWrite);
+        lua_setfield(L, -2, "__newindex");
+        lua_setmetatable(L, -2);
+        lua_pop(L, 1);
+
+        const int stackBefore = lua_gettop(L);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("Lua panicked while writing")));
+        QVERIFY(!interface->setValue(&member));
+        QCOMPARE(lua_gettop(L), stackBefore);
+    }
+
+    // A member reached by a table key is named in the tree by the number of the
+    // registry reference holding that key. The delete used to put that number
+    // into generated source as a string key, so it nil'ed t["1"] while the
+    // member itself stayed where it was and came back with the next walk.
+    void testDeleteVarRemovesAMemberReachedByATableKey()
+    {
+        execLua("delHolder = {} do local key = {} delHolder[key] = 'keepme' end");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("delHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QVERIFY(members.first()->isReference());
+
+        const int stackBefore = lua_gettop(L);
+        interface->deleteVar(members.first());
+        QCOMPARE(lua_gettop(L), stackBefore);
+
+        lua_getglobal(L, "delHolder");
+        lua_pushnil(L);
+        QVERIFY2(lua_next(L, -2) == 0, "the member reached by a table key has to be the one that is deleted");
+        lua_pop(L, 1);
+    }
+
 private:
+    static int raiseOnWrite(lua_State* state) { return luaL_error(state, "this table cannot be written to"); }
+
+    QString globalAsString(const QString& name)
+    {
+        lua_getglobal(L, name.toUtf8().constData());
+        const QString value = QString::fromUtf8(lua_tostring(L, -1), static_cast<int>(lua_strlen(L, -1)));
+        lua_pop(L, 1);
+        return value;
+    }
+
     TVar* findGlobal(const QString& name)
     {
         TVar* base = interface->getVarUnit()->getBase();
