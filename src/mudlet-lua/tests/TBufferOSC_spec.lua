@@ -128,7 +128,10 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("APCBEL1()APCBEL1", findRecentLine("APCBEL1"))
     end)
 
-    it("should swallow an APC sequence split across two packets", function()
+    -- As with the private-CSI case below, two feedTriggers() calls cannot express
+    -- a packet split; what carries between local feeds is the mGotString latch,
+    -- not the pending bytes.
+    it("should swallow an APC sequence whose bytes arrive across two local feeds", function()
       assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
       assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
       assert.equals("APCSPLIT1()APCSPLIT1", findRecentLine("APCSPLIT1"))
@@ -271,5 +274,53 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
   end)
+
+  -- A CSI parameter string may only carry one of '<', '=', '>' or '?' in its
+  -- FIRST byte, where it marks a private/reserved sequence that Mudlet does not
+  -- interpret; after that only "0-9:;" are allowed. Getting those two sets the
+  -- wrong way round leaves the tail of such a sequence on screen as game text.
+  describe("Tests private/reserved CSI sequences", function()
+
+    it("should consume a private DEC sequence that hides the cursor", function()
+      assert.is_true(feedTriggers("CSIPRIV1(\027[?25l)CSIPRIV1\n"))
+      assert.equals("CSIPRIV1()CSIPRIV1", findRecentLine("CSIPRIV1"))
+    end)
+
+    it("should consume a private DEC sequence with a multi-digit parameter", function()
+      assert.is_true(feedTriggers("CSIPRIV2(\027[?1049h)CSIPRIV2\n"))
+      assert.equals("CSIPRIV2()CSIPRIV2", findRecentLine("CSIPRIV2"))
+    end)
+
+    it("should consume a reserved sequence introduced by '<'", function()
+      assert.is_true(feedTriggers("CSIPRIV3(\027[<0;10;10M)CSIPRIV3\n"))
+      assert.equals("CSIPRIV3()CSIPRIV3", findRecentLine("CSIPRIV3"))
+    end)
+
+    -- Two feedTriggers() calls cannot express a packet split: a local feed keeps
+    -- its own mGotCSI latch between calls but drops the incomplete bytes, since
+    -- the carry is gated on isFromServer. So the latch swallows the "l" rather
+    -- than "?25" surviving. This still fails without the fix - the "25l" leaks -
+    -- but it does not guard the private branch's ordering against the
+    -- incomplete-packet check, which needs a real split from the socket.
+    it("should not leak a private sequence whose bytes arrive across two local feeds", function()
+      assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
+      assert.is_true(feedTriggers("l)CSISPLIT1\n"))
+      assert.equals("CSISPLIT1()CSISPLIT1", findRecentLine("CSISPLIT1"))
+    end)
+
+    -- Guards the other direction: an ordinary digit-initial parameter string and
+    -- an empty one must still reach the SGR handler and leave no text behind.
+    it("should still consume a digit-initial SGR sequence", function()
+      assert.is_true(feedTriggers("CSISGR1(\027[0;32mgreen\027[0m)CSISGR1\n"))
+      assert.equals("CSISGR1(green)CSISGR1", findRecentLine("CSISGR1"))
+    end)
+
+    it("should still consume an SGR sequence with no parameters", function()
+      assert.is_true(feedTriggers("CSISGR2(\027[mplain)CSISGR2\n"))
+      assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
+    end)
+
+  end)
+
 
 end)
