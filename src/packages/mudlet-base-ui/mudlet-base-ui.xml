@@ -1413,7 +1413,6 @@ function BaseUI.build()
   BaseUI.createSection("chat")
   BaseUI.chats = {}
   BaseUI.chatTabLabels = {}
-  -- what echoing last left on each tab, for refreshChatTabs to compare against
   BaseUI.tabPainted = {}
   BaseUI.unread = { all = 0, tells = 0, channels = 0 }
   BaseUI.activeChatTab = "all"
@@ -1459,20 +1458,12 @@ function BaseUI.build()
   BaseUI.maybeAnnounce()
 end
 
--- A chat line landing in a tab you are not looking at repainted all three tabs,
--- when all that moved is one unread count: #9767 measured the three of them at
--- 123.8us of the 335us a captured line cost, each setStyleSheet making Qt
--- reparse a stylesheet and each echo rebuilding the label's rich text. So
--- repaint only what changed - and compare against what Qt is showing rather
--- than against what Geyser last meant to show, because Geyser records a paint
--- whether or not it landed, and because the unconditional repaint this
--- replaced was what quietly put right anything that wrote these labels past
--- Geyser. Both halves read back: the stylesheet as Qt returns it, and the text
--- against what echoing left there last time, since what comes back is the html
--- Geyser wraps the message in rather than the message itself. Guarded, a
--- refresh with nothing to do costs 5.45us against the 116.9us of the three
--- repaints it skips, and 4.30us of that is these six readbacks - so a seventh
--- is not free.
+-- Guarded because a setStyleSheet has Qt reparse a stylesheet and an echo
+-- rebuilds the label's rich text, and a captured chat line moves one unread
+-- count. The comparisons are against Qt, not against Geyser's cache: Geyser
+-- records a paint whether or not it landed, and a write that never went
+-- through it leaves the cache untouched. The readbacks are 4.30us of the
+-- 5.45us a refresh with nothing to do costs, so a third one is not free.
 function BaseUI.refreshChatTabs()
   BaseUI.tabPainted = BaseUI.tabPainted or {}
   for _, tab in ipairs(chatTabs) do
@@ -1480,9 +1471,8 @@ function BaseUI.refreshChatTabs()
     if label then
       local active = BaseUI.activeChatTab == tab.key
       local css = active and tabCss.active or tabCss.inactive
-      -- both readbacks come back nil when no label of that name exists any
-      -- more, which compares unequal and so falls back to repainting every
-      -- time, as this did before
+      -- nil once no label of that name exists, which compares unequal and so
+      -- falls back to repainting every time
       if getLabelStyleSheet(label.name) ~= css then
         label:setStyleSheet(css)
       end
@@ -1492,8 +1482,9 @@ function BaseUI.refreshChatTabs()
         text = string.format("%s (%d)", tab.label, math.min(unread, 99))
       end
       local color = active and theme.text or theme.textDim
-      -- the cached comparisons first, so the readback is only paid for by a tab
-      -- that would otherwise have been left alone
+      -- what comes back is the html Geyser wraps the message in, so it can only
+      -- be compared against itself. Cached comparisons first, so only a tab
+      -- that would have been left alone pays for the readback.
       if label.message ~= text or label.fgColor ~= color
         or getLabelText(label.name) ~= BaseUI.tabPainted[tab.key] then
         label:echo(text, color)

@@ -2794,8 +2794,8 @@ describe("Tests UI functions", function()
     end)
 
     -- copy() and appendBuffer() carry the line's per-character formatting
-    -- through appendFormatted(), and a character given its neighbour's colour
-    -- would show up here and nowhere else
+    -- through appendFormatted(), where a character can be given its
+    -- neighbour's colour
     it("appendBuffer keeps every colour run of a multi-coloured line", function()
       decho(src, "<255,0,0:0,0,0>red<0,255,0:0,0,0>green<0,0,255:0,0,0>blue\n")
       moveCursor(src, 0, 0)
@@ -2820,11 +2820,11 @@ describe("Tests UI functions", function()
     end)
 
     -- "!osc8-docs" in text being echoed or received is an easter egg: it prints
-    -- a documentation banner instead of the line. A line already sitting in a
-    -- buffer is being moved, not written, so copying it must not re-read it -
-    -- the text would be lost and the banner would land in the main console.
-    -- The injection is debounced to once a second, so nothing else may use the
-    -- phrase near this spec or the assertion below would hold for that reason.
+    -- a documentation banner instead of the line. A line already in a buffer is
+    -- being moved, not written, so copying it must not re-read it - the text
+    -- would be lost and the banner would land in the main console. The
+    -- injection is debounced to once a second, so nothing else may use the
+    -- phrase near this spec or the assertion below holds for that reason.
     it("copies a line holding the documentation trigger phrase verbatim", function()
       -- in two pieces, so putting the line into the source does not trip it
       echo(src, "chat: !osc8-")
@@ -2857,12 +2857,12 @@ describe("Tests UI functions", function()
       assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
     end)
 
-    -- appendBuffer() wraps the destination once per line it lands, so the
-    -- appended line has to lay out exactly as echoing the same text does
+    -- appendFormatted() finishes with the same wrapLine() call the echo path
+    -- makes, so an appended line has to lay out exactly as an echoed one
     it("appendBuffer wraps a long line the same way echoing it does", function()
       local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
-      -- the source keeps the line whole so copy() takes all of it; the
-      -- destination is narrow so the appended line has to wrap
+      -- wide source so copy() takes the line whole, narrow destination so the
+      -- appended line has to wrap
       setWindowWrap(src, 500)
       setWindowWrap(dst, 40)
       echo(src, long .. "\n")
@@ -2878,8 +2878,7 @@ describe("Tests UI functions", function()
       assert.are.same(echoed, appended)
     end)
 
-    -- the formatting carried along with the text must not be able to move a
-    -- wrap point
+    -- the carried formatting must not be able to move a wrap point
     it("wraps a multi-coloured line where the same text uncoloured wraps", function()
       local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
       setWindowWrap(src, 500)
