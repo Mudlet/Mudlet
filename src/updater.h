@@ -62,10 +62,11 @@ public:
 
 private:
     std::unique_ptr<dblsqd::Feed> feed;
-    // Owned, but deleted on QCoreApplication::aboutToQuit rather than in
+    // Owned, but destroyed from QCoreApplication::aboutToQuit rather than in
     // ~Updater: the Updater is parented to the application object, so its
     // destructor runs during application teardown - too late to destroy a
-    // QWidget (#9122). QPointer nulls itself once the dialog is destroyed.
+    // QWidget (#9122). The deletion is deferred, so this stays non-null for
+    // the rest of the quit cascade (#9967).
     QPointer<dblsqd::UpdateDialog> updateDialog;
 #if !defined(Q_OS_MACOS)
     QPushButton* mpInstallOrRestart;
