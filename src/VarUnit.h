@@ -72,6 +72,7 @@ public:
     void removeHidden(TVar* var);
     void removeHidden(const QString& name);
     bool isSaved(TVar*);
+    void renameVariableBookkeeping(const QString& oldFullName, const QString& newFullName);
     void addPointer(const void*);
     void clearPointers();
     void clearHiddenTables();

@@ -469,7 +469,89 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         lua_pop(L, 1);
     }
 
+    // A rename copies the value onto the new key and only then nils the old one,
+    // so renaming onto a name a sibling already answers to used to overwrite that
+    // sibling's value without a word about it.
+    void testRenameOntoASiblingThatIsAlreadyThereIsRefused()
+    {
+        execLua("renHolder = {a = 'aval', b = 'bval'}");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("renHolder"));
+        QVERIFY(holder);
+        TVar* memberA = nullptr;
+        for (TVar* member : holder->getChildren(false)) {
+            if (member->getName() == qsl("a")) {
+                memberA = member;
+            }
+        }
+        QVERIFY(memberA);
+
+        memberA->setNewName(qsl("b"), LUA_TSTRING);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("would destroy it")));
+        interface->renameVar(memberA);
+
+        QCOMPARE(memberAsString(qsl("renHolder"), qsl("b")), qsl("bval"));
+        QCOMPARE(memberAsString(qsl("renHolder"), qsl("a")), qsl("aval"));
+        QCOMPARE(memberA->getName(), qsl("a"));
+    }
+
+    // A name a rename has moved off has to stop being the name the user's
+    // hiding decision is remembered by, both so the renamed variable keeps that
+    // decision and so an unrelated variable born under the old name does not
+    // inherit it and vanish from the Variables view.
+    void testRenameTakesTheUserHiddenMarkToTheNewName()
+    {
+        defineGlobalsTable(); // renaming a global is written as _G["new"] = old
+        execLua("hiddenRenamed = 1");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+        TVar* var = findGlobal(qsl("hiddenRenamed"));
+        QVERIFY(var);
+        vu->addHidden(var, 1); // the user's own hide, rather than a hiding walk's
+        QVERIFY(vu->isHidden(qsl("hiddenRenamed")));
+
+        var->setNewName(qsl("hiddenRenamedNew"), LUA_TSTRING);
+        interface->renameVar(var);
+
+        QVERIFY2(vu->isHidden(qsl("hiddenRenamedNew")), "the user's hiding decision has to follow the variable it was made about");
+        QVERIFY2(!vu->isHidden(qsl("hiddenRenamed")), "the name the variable no longer has must stop being hidden");
+
+        // ...which is what stops the next variable born there from inheriting it
+        execLua("hiddenRenamed = 2");
+        interface->getVars(false);
+        TVar* fresh = findGlobal(qsl("hiddenRenamed"));
+        QVERIFY(fresh);
+        QVERIFY2(!vu->isHidden(fresh), "a fresh variable must not be born hidden under a name a rename left behind");
+    }
+
+    // ...and the same for a saved variable: the profile saves it by name, so a
+    // mark left on the old name saves whatever turns up there instead.
+    void testRenameTakesTheSavedMarkToTheNewName()
+    {
+        defineGlobalsTable();
+        execLua("savedRenamed = 'value'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+        TVar* var = findGlobal(qsl("savedRenamed"));
+        QVERIFY(var);
+        vu->addSavedVar(var);
+
+        var->setNewName(qsl("savedRenamedNew"), LUA_TSTRING);
+        interface->renameVar(var);
+
+        QVERIFY(vu->savedVars.contains(qsl("savedRenamedNew")));
+        QVERIFY2(!vu->savedVars.contains(qsl("savedRenamed")), "the name the variable no longer has must stop being saved");
+    }
+
 private:
+    // The base library, which these tests do without, is what usually puts the
+    // globals table in _G - and a rename of a global is written as _G["new"].
+    void defineGlobalsTable()
+    {
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        lua_setglobal(L, "_G");
+    }
+
     static int raiseOnWrite(lua_State* state) { return luaL_error(state, "this table cannot be written to"); }
 
     QString globalAsString(const QString& name)
@@ -477,6 +559,16 @@ private:
         lua_getglobal(L, name.toUtf8().constData());
         const QString value = QString::fromUtf8(lua_tostring(L, -1), static_cast<int>(lua_strlen(L, -1)));
         lua_pop(L, 1);
+        return value;
+    }
+
+    QString memberAsString(const QString& tableName, const QString& memberName)
+    {
+        lua_getglobal(L, tableName.toUtf8().constData());
+        lua_pushstring(L, memberName.toUtf8().constData());
+        lua_gettable(L, -2);
+        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 2);
         return value;
     }
 

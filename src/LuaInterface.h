@@ -79,7 +79,7 @@ public:
     bool loadValue(lua_State*, TVar*, int);
     bool setValue(TVar*);
     void deleteVar(TVar*);
-    void renameCVar(QList<TVar*>);
+    bool renameCVar(QList<TVar*>);
     void renameVar(TVar*);
     void createVar(TVar*);
     // whether a variable can be written back through the name the tree gave it,
@@ -103,6 +103,7 @@ private:
     void addSavedRootsMissingFromTheTree();
     bool pushKey(TVar*, const QString& name, const int keyType);
     bool pushOwningTable(const QList<TVar*>&);
+    bool newNameIsFree(TVar*);
 
     int depth = 0;
     lua_State* mL;

@@ -463,6 +463,36 @@ void VarUnit::removeHidden(const QString& name)
     // does not remove the reference from TVar, similar to addHidden()
 }
 
+// Everything this unit remembers about a variable it remembers by the dotted
+// name the tree gave it, so a rename has to take those memberships with it. Left
+// behind, a saved or hidden mark keeps answering for the old name, and catches
+// whichever unrelated variable is born under it next; the renamed variable
+// meanwhile loses the mark the user put on it.
+void VarUnit::renameVariableBookkeeping(const QString& oldFullName, const QString& newFullName)
+{
+    if (oldFullName == newFullName || oldFullName.isEmpty() || newFullName.isEmpty()) {
+        return;
+    }
+    if (savedVars.remove(oldFullName)) {
+        savedVars.insert(newFullName);
+    }
+    if (hidden.remove(oldFullName)) {
+        hidden.insert(newFullName);
+    }
+    if (hiddenByUser.remove(oldFullName)) {
+        hiddenByUser.insert(newFullName);
+    }
+    // Only the name has changed: the table is the same table, so its address is
+    // still an identity and its anchor still answers for it. Forgetting the
+    // identity here instead would leave the table hidden by name alone.
+    const auto it = mHiddenTableByName.constFind(oldFullName);
+    if (it != mHiddenTableByName.constEnd()) {
+        const void* const table = it.value();
+        mHiddenTableByName.remove(oldFullName);
+        mHiddenTableByName.insert(newFullName, table);
+    }
+}
+
 void VarUnit::addSavedVar(TVar* var)
 {
     const QString fullName = shortVarName(var).join(qsl("."));
