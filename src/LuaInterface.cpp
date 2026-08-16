@@ -150,53 +150,62 @@ bool LuaInterface::loadKey(lua_State* L, TVar* var)
 
 bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
 {
-    //puts a value on stack
+    // Pushes the value on success and leaves the stack alone on every failure
+    // path. Every caller hands over the profile's live state, where a slot left
+    // behind stays for the rest of the session (#9885).
+    const int entryTop = lua_gettop(L);
     if (setjmp(buf) == 0) {
-        if (loadKey(L, var)) {
-            //everything is tabled in lua, we need to just find what table
-            //we're using, if index == 0, we iterate to the closest table
-            if (index) {
-                // Validate stack before attempting table access
-                const int stackTop = lua_gettop(L);
-                const int actualIndex = (index < 0) ? stackTop + index + 1 : index;
-
-                if (actualIndex <= 0 || actualIndex > stackTop) {
-                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Invalid stack index " << index << " for variable \"" << var->getName() << "\". Stack size: " << stackTop
-                                                   << ", resolved index: " << actualIndex << ".";
-                    return false;
-                }
-
-                if (!lua_istable(L, index)) {
-                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - Value at stack index " << index << " is not a table for variable \"" << var->getName()
-                                                   << "\". Got type: " << lua_typename(L, lua_type(L, index)) << ".";
-                    return false;
-                }
-
-                lua_gettable(L, index);
-            } else {
-                // Find the closest table on the stack
-                bool foundTable = false;
-                for (int j = 1; j <= lua_gettop(L); j++) {
-                    if (lua_type(L, j * -1) == LUA_TTABLE) {
-                        lua_gettable(L, j * -1);
-                        foundTable = true;
-                        break;
-                    }
-                }
-                if (!foundTable) {
-                    qWarning().noquote().nospace() << "LuaInterface::loadValue() - No table found on stack for variable \"" << var->getName() << "\" when index=0. Stack size: " << lua_gettop(L)
-                                                   << ".";
-                    return false;
-                }
-            }
-        } else {
+        // loadKey() pushes nothing for a key type it does not handle, which the
+        // return value does not distinguish - the caller's own top would stand
+        // in for the key - and it can also return false after pushing
+        if (!loadKey(L, var) || lua_gettop(L) == entryTop) {
+            lua_settop(L, entryTop);
             return false;
         }
-        if (lua_gettop(L)) {
-            return lua_type(L, -1) == var->getValueType();
+        //everything is tabled in lua, we need to just find what table
+        //we're using, if index == 0, we iterate to the closest table
+        if (index) {
+            const int topWithKey = lua_gettop(L);
+            const int actualIndex = (index < 0) ? topWithKey + index + 1 : index;
+
+            if (actualIndex <= 0 || actualIndex > topWithKey) {
+                qWarning().noquote().nospace() << "LuaInterface::loadValue() - Invalid stack index " << index << " for variable \"" << var->getName() << "\". Stack size: " << topWithKey
+                                               << ", resolved index: " << actualIndex << ".";
+                lua_settop(L, entryTop);
+                return false;
+            }
+
+            if (!lua_istable(L, index)) {
+                qWarning().noquote().nospace() << "LuaInterface::loadValue() - Value at stack index " << index << " is not a table for variable \"" << var->getName()
+                                               << "\". Got type: " << lua_typename(L, lua_type(L, index)) << ".";
+                lua_settop(L, entryTop);
+                return false;
+            }
+
+            lua_gettable(L, index);
+        } else {
+            // Find the closest table on the stack
+            bool foundTable = false;
+            for (int j = 1; j <= lua_gettop(L); j++) {
+                if (lua_type(L, j * -1) == LUA_TTABLE) {
+                    lua_gettable(L, j * -1);
+                    foundTable = true;
+                    break;
+                }
+            }
+            if (!foundTable) {
+                qWarning().noquote().nospace() << "LuaInterface::loadValue() - No table found on stack for variable \"" << var->getName() << "\" when index=0. Stack size: " << lua_gettop(L) << ".";
+                lua_settop(L, entryTop);
+                return false;
+            }
         }
+        if (lua_gettop(L) > entryTop && lua_type(L, -1) == var->getValueType()) {
+            return true;
+        }
+        lua_settop(L, entryTop);
         return false;
     }
+    lua_settop(L, entryTop);
     return false;
 }
 
@@ -820,12 +829,21 @@ void LuaInterface::renameVar(TVar* var)
 // its values off the tree the walk built, see exportedValue() in XMLexport.cpp.
 QString LuaInterface::getValue(TVar* var)
 {
-    // this walks down to the variable a push at a time, so every way out owes
-    // the caller's Lua stack back
-    const int stackTop = lua_gettop(mL);
+    // A save calls this once per exported variable, on the profile's live stack,
+    // so every exit has to put that stack back where it found it: what one left
+    // behind used to be charged to the state for the rest of the session (#9885).
+    const int entryTop = lua_gettop(mL);
     if (setjmp(buf) == 0) {
         QList<TVar*> const vars = varOrder(var);
         if (vars.empty()) {
+            return {};
+        }
+        // lua_getglobal() and lua_gettable() below do not grow the stack, and the
+        // C API guarantees only LUA_MINSTACK free slots, so reserve the room up
+        // front: one per level of nesting - the key loadValue() pushes for a
+        // level becomes that level's value - plus one spare
+        if (!lua_checkstack(mL, static_cast<int>(vars.size()) + 1)) {
+            qWarning().noquote().nospace() << "LuaInterface::getValue() WARNING - could not grow the Lua stack to reach \"" << var->getName() << "\", so no value is being read for it.";
             return {};
         }
         //load from _G first
@@ -839,15 +857,22 @@ QString LuaInterface::getValue(TVar* var)
             lua_pushboolean(mL, firstVariable->getName().toLower() == "true" ? 1 : 0);
             lua_gettable(mL, LUA_GLOBALSINDEX);
         }
-        if (lua_isnoneornil(mL, lua_gettop(mL))) {
-            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() << "onto the Lua stack in order to get value of" << var->getName()
-                     << ", perhaps the key type isn't supported?";
-            lua_settop(mL, stackTop);
+        // a key type none of those handles pushes nothing at all, which the top
+        // alone cannot be told apart from - whatever the caller left there would
+        // stand in for the root
+        if (lua_gettop(mL) == entryTop) {
+            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() << "onto the Lua stack in order to get value of" << var->getName() << ", its key type"
+                     << lua_typename(mL, firstVariable->getKeyType()) << "isn't supported here.";
+            return {};
+        }
+        if (lua_isnoneornil(mL, -1)) {
+            qDebug() << "LuaInterface::getValue: Root value" << firstVariable->getName() << "is no longer set, so there is no value to get for" << var->getName();
+            lua_settop(mL, entryTop);
             return {};
         }
         for (int i = 1; i < vars.size(); i++) {
             if (!loadValue(mL, vars.at(i), -2)) {
-                lua_settop(mL, stackTop);
+                lua_settop(mL, entryTop);
                 return {};
             }
         }
@@ -858,10 +883,10 @@ QString LuaInterface::getValue(TVar* var)
         } else if (valueType == LUA_TNUMBER || valueType == LUA_TSTRING) {
             value = lua_tostring(mL, -1);
         }
-        lua_settop(mL, stackTop);
+        lua_settop(mL, entryTop);
         return value;
     }
-    lua_settop(mL, stackTop);
+    lua_settop(mL, entryTop);
     return {};
 }
 

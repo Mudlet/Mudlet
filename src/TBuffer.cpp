@@ -351,6 +351,9 @@ TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 TBuffer::~TBuffer()
 {
     if (mTagWatchdog) {
+        // The timeout lambda captures 'this', and so does the deferred
+        // continuation the watchdog queues against this timer. Destroying the
+        // timer with the buffer, just below, drops both:
         mTagWatchdog->stop();
     }
     if (mpServerWrapFlushTimer) {
@@ -418,8 +421,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mMudBuffer(other.mMudBuffer)
 , mServerWrapPendingLine(other.mServerWrapPendingLine)
 , mServerWrapPendingBuffer(other.mServerWrapPendingBuffer)
-, mWrapDetectCounts(other.mWrapDetectCounts)
-, mWrapDetectSamples(other.mWrapDetectSamples)
+, mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotEscCharset(other.mLocalGotEscCharset)
@@ -515,8 +517,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mMudBuffer = other.mMudBuffer;
         mServerWrapPendingLine = other.mServerWrapPendingLine;
         mServerWrapPendingBuffer = other.mServerWrapPendingBuffer;
-        mWrapDetectCounts = other.mWrapDetectCounts;
-        mWrapDetectSamples = other.mWrapDetectSamples;
+        mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotEscCharset = other.mLocalGotEscCharset;
@@ -1730,12 +1731,14 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // MXP <br> breaks and blank lines - is a real line boundary.
         const bool proseSegment = looksLikeWrappedProse(mMudLine);
         if (!mServerWrapPendingLine.isEmpty()) {
-            // A continuation of wrapped prose starts with a word - or with
-            // the single space some games move the break to instead of
-            // swallowing it. Anything else means the held line was complete
-            // after all:
+            // A held segment was only wrapped if what follows continues it:
+            // prose rather than art, not a list entry, indented by no more
+            // than the single space some games move the break to instead of
+            // swallowing it, and opening with a word that would not have
+            // fitted on the line above. Anything else means the held line was
+            // complete after all:
             const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
-            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine)) {
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine) || pendingLineHadRoomForNextWord()) {
                 flushPendingServerWrapJoin();
             }
         }
@@ -1743,10 +1746,12 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // the game's wrap column is a property of the segment as the game
         // sent it, not of the longer joined line.
         const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment;
+        const qsizetype segmentLength = mMudLine.size();
         joinPendingServerWrapOntoCurrent();
         if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
             mServerWrapPendingLine.swap(mMudLine);
             mServerWrapPendingBuffer.swap(mMudBuffer);
+            mServerWrapPendingSegmentLength = segmentLength;
             startServerWrapFlushTimer();
             ++localBufferPosition;
             return true;
@@ -1755,10 +1760,6 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // Any other kind of line ending means held text was a complete line
         // after all - commit it on its own first:
         flushPendingServerWrapJoin();
-    }
-
-    if (isFromServer && ch == '\n' && !forcedLineBreak && !mpHost->mUndoServerWrap && !mpHost->mServerWrapHintShown) {
-        recordLineLengthForWrapDetection(mMudLine.size());
     }
 
     QString line;
@@ -1879,9 +1880,10 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
 }
 
 // A line whose length is within csmServerWrapSlack characters below the
-// configured column ends where the game's own word wrap would have broken it
-// (the game breaks at the last space that fits, so wrapped segments fall up
-// to a word short of the column):
+// configured column could have been broken there by the game's own word wrap
+// (which breaks at the last space that fits, so wrapped segments fall up to a
+// word short of the column); pendingLineHadRoomForNextWord() settles whether
+// it really was once the continuation is in:
 bool TBuffer::endsAtServerWrapColumn() const
 {
     const qsizetype width = mpHost->mUndoServerWrapWidth;
@@ -1972,6 +1974,36 @@ bool TBuffer::startsWithListMarker(const QString& line)
     return numberFitsAList && closed && numberEnd + 1 < line.size() && line.at(numberEnd + 1) == QChar::Space;
 }
 
+// Word wrap breaks a line for one reason only: the next word did not fit. So
+// a continuation whose first word would have gone on the game line above it
+// is not a continuation at all - the game ended that line itself. Without
+// this two sentences that each stop short of the wrap column read exactly
+// like one wrapped paragraph. Only clear room counts, see
+// csmServerWrapFitTolerance.
+bool TBuffer::pendingLineHadRoomForNextWord() const
+{
+    // Measured against the last game line joined into the held text rather
+    // than the held text itself, which by then may be a whole paragraph:
+    qsizetype trailingSpaces = 0;
+    while (trailingSpaces < mServerWrapPendingLine.size() && mServerWrapPendingLine.at(mServerWrapPendingLine.size() - trailingSpaces - 1).isSpace()) {
+        ++trailingSpaces;
+    }
+    const qsizetype heldEnd = mServerWrapPendingSegmentLength - trailingSpaces;
+    qsizetype wordStart = 0;
+    while (wordStart < mMudLine.size() && mMudLine.at(wordStart).isSpace()) {
+        ++wordStart;
+    }
+    qsizetype wordEnd = wordStart;
+    while (wordEnd < mMudLine.size() && !mMudLine.at(wordEnd).isSpace()) {
+        ++wordEnd;
+    }
+    // The word starts past whatever the join will put between the two: the
+    // spaces the game left on either side of the break, or the single one
+    // added for it when the game swallowed it:
+    const qsizetype separator = std::max<qsizetype>(1, trailingSpaces + wordStart);
+    return heldEnd + separator + (wordEnd - wordStart) + csmServerWrapFitTolerance <= mpHost->mUndoServerWrapWidth;
+}
+
 void TBuffer::joinPendingServerWrapOntoCurrent()
 {
     if (mServerWrapPendingLine.isEmpty()) {
@@ -2029,72 +2061,6 @@ void TBuffer::startServerWrapFlushTimer()
     mpServerWrapFlushTimer->start();
 }
 
-// Called for every genuine game line while mUndoServerWrap is off: when line
-// lengths pile up against a stable ceiling column, the game is most likely
-// wrapping its own output, so - once per profile - point out the option that
-// undoes that:
-void TBuffer::recordLineLengthForWrapDetection(const qsizetype length)
-{
-    if (length < 40) {
-        // too short to carry any signal
-        return;
-    }
-    ++mWrapDetectCounts[length];
-    if (++mWrapDetectSamples % 100) {
-        return;
-    }
-
-    // The ceiling is the longest line length seen more than incidentally:
-    qsizetype ceiling = 0;
-    for (auto it = mWrapDetectCounts.constBegin(); it != mWrapDetectCounts.constEnd(); ++it) {
-        if (it.value() >= 3) {
-            ceiling = it.key();
-        }
-    }
-    if (ceiling < 60 || ceiling > 160) {
-        return;
-    }
-    int atCeiling = 0;
-    int beyondCeiling = 0;
-    for (auto it = mWrapDetectCounts.constBegin(); it != mWrapDetectCounts.constEnd(); ++it) {
-        if (it.key() > ceiling) {
-            beyondCeiling += it.value();
-        } else if (it.key() >= ceiling - 8) {
-            atCeiling += it.value();
-        }
-    }
-    if (atCeiling < csmWrapDetectThreshold || beyondCeiling > 2) {
-        return;
-    }
-
-    mpHost->mServerWrapHintShown = true;
-
-    // Deferred so the hint does not interleave with the line being committed:
-    QPointer<Host> hostGuard = mpHost;
-    QTimer::singleShot(0, mpConsole, [hostGuard, ceiling]() {
-        if (!hostGuard || !hostGuard->mpConsole) {
-            return;
-        }
-        //: %1 is the screen column that the game appears to wrap its lines at
-        hostGuard->postMessage(QObject::tr("[ INFO ]  - This game seems to wrap its own lines at %1 characters, which\n"
-                                           "makes triggers awkward to write. Mudlet can undo that, so that triggers\n"
-                                           "always see whole lines and wrapping follows your window size instead:")
-                                       .arg(QString::number(ceiling)));
-        //: Confirmation shown after the player clicks the link that enables undoing the game's own line wrapping
-        QString confirmation = QObject::tr("Done - Mudlet now undoes the game's wrapping, and triggers see whole lines.");
-        // the text is embedded in a double-quoted Lua string:
-        confirmation.replace(QChar('\\'), qsl("\\\\")).replace(QChar('"'), qsl("\\\""));
-        const QString clickAction = qsl("setConfig(\"undoServerWrapWidth\", %1) setConfig(\"undoServerWrap\", true) cecho(\"\\n<green>%2\\n\")").arg(QString::number(ceiling), confirmation);
-        QStringList func(clickAction);
-        //: Tooltip on the link that enables the option to undo the game's own line wrapping
-        QStringList hint(QObject::tr("Turn on \"Undo the game's own wrapping\" - also found in the settings under Main display"));
-        //: Clickable link shown in the main window when a game that wraps its own lines is detected
-        const QString linkText = QObject::tr("  ➜ Click here to turn that on now");
-        hostGuard->mpConsole->echoLink(linkText, func, hint, false);
-        hostGuard->mpConsole->print("\n");
-    });
-}
-
 const std::deque<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
 {
     if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber) {
@@ -2133,8 +2099,17 @@ void TBuffer::processMxpWatchdogCallback()
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
             QPointer<TConsole> consoleGuard = mpConsole;
-            QTimer::singleShot(0ms, mpConsole, [this, style, hostGuard, consoleGuard]() {
-                if (!hostGuard || !consoleGuard) {
+            // The continuation writes into this buffer through the captured
+            // 'this', so what has to cancel it is this buffer going away - not
+            // the console going away, which is a different and longer life. The
+            // watchdog timer is owned by the buffer, so naming it as the context
+            // object ties the two together: destroying the buffer destroys the
+            // timer, and that drops any continuation still queued against it.
+            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, style, hostGuard, consoleGuard]() {
+                // commitLine() and finalize() below both reach the main console
+                // through the host, and that pointer empties on its own when the
+                // profile's console goes:
+                if (!hostGuard || !consoleGuard || !hostGuard->mpConsole) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();

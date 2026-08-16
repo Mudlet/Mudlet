@@ -43,6 +43,11 @@ void initializeQRCResources();
 // state. Against the unfixed code the first case here does not merely fail, it
 // takes the process down with SIGSEGV.
 //
+// Only the two crash cases live here. Everything else about multiline state is
+// specced in Trigger_spec.lua, per docs/ai-instructions.md; what keeps these two
+// out of it is crash isolation, not sanitiser coverage - a SIGSEGV takes the
+// whole shared spec run down with it, where a functional test loses only itself.
+//
 // tempComplexRegexTrigger() is the only Lua function that can set the condition
 // line delta, which conditions arriving on separate lines need. The perm*Trigger
 // variants do make a multiline trigger - they pass (patterns.size() > 1) as the
@@ -128,62 +133,6 @@ private slots:
 
         QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
         QVERIFY2(bufferContains(qsl("FILTERFIRES=1#")), "a filtering multiline trigger did not fire exactly once across a nested feed");
-    }
-
-    // Guards the other direction: moving the state out of mConditionMap before
-    // the script runs must not disturb ordinary multiline matching, and the
-    // captures gathered across the earlier lines must still reach the script.
-    void test_ordinaryMultilineTriggerStillFiresWithItsCaptures()
-    {
-        startProfile(mpHostname, mpLocalhost, mpPort);
-        auto* host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
-        host->mEchoLuaErrors = true;
-
-        host->getLuaInterpreter()->compileAndExecuteScript(qsl("plainFires = 0\n"
-                                                               "caps = ''\n"
-                                                               "local code = [=[\n"
-                                                               "  plainFires = plainFires + 1\n"
-                                                               "  caps = multimatches[1][2] .. ',' .. multimatches[2][2]\n"
-                                                               "]=]\n"
-                                                               "tempComplexRegexTrigger('MLP', [[^one (\\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)\n"
-                                                               "tempComplexRegexTrigger('MLP', [[^two (\\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)\n"
-                                                               "feedTriggers('one aaa\\n')\n"
-                                                               "feedTriggers('two bbb\\n')\n"
-                                                               "echo('PLAIN=' .. plainFires .. '/' .. caps .. '#\\n')\n"));
-
-        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        QVERIFY2(bufferContains(qsl("PLAIN=1/aaa,bbb#")), "an ordinary multiline trigger no longer fires once with the captures from both of its lines");
-    }
-
-    // A state whose window closes without completing must still be dropped, so
-    // the same lines arriving later start a fresh state rather than completing
-    // the stale one. Both sides are asserted: a count of zero alone would also be
-    // what a silently broken setup produces.
-    void test_expiredStateIsStillDiscarded()
-    {
-        startProfile(mpHostname, mpLocalhost, mpPort);
-        auto* host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
-        host->mEchoLuaErrors = true;
-
-        // A delta of 1 lets the state survive exactly one further line, so the
-        // consecutive pair completes it and the padded pair must not:
-        host->getLuaInterpreter()->compileAndExecuteScript(qsl("expiredFires = 0\n"
-                                                               "local code = [=[expiredFires = expiredFires + 1]=]\n"
-                                                               "tempComplexRegexTrigger('MLE', [[^first$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
-                                                               "tempComplexRegexTrigger('MLE', [[^second$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
-                                                               "feedTriggers('first\\n')\n"
-                                                               "feedTriggers('second\\n')\n"
-                                                               "echo('CONSECUTIVE=' .. expiredFires .. '#\\n')\n"
-                                                               "feedTriggers('first\\n')\n"
-                                                               "feedTriggers('padding\\n')\n"
-                                                               "feedTriggers('second\\n')\n"
-                                                               "echo('PADDED=' .. expiredFires .. '#\\n')\n"));
-
-        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        QVERIFY2(bufferContains(qsl("CONSECUTIVE=1#")), "a multiline state within its line delta did not complete, so the case proves nothing about expiry");
-        QVERIFY2(bufferContains(qsl("PADDED=1#")), "a match state outlived its line delta, so a padded second condition completed it");
     }
 
     void cleanup()

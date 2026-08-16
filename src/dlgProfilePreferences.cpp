@@ -31,7 +31,6 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
-#include "TFeatureCallout.h"
 #include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -206,9 +205,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         disableHostDetails();
         clearHostDetails();
     }
-
-    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_showNewFeatureCallouts);
-    slot_showNewFeatureCallouts();
 
 #if defined(INCLUDE_UPDATER)
     if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
@@ -842,6 +838,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     undo_server_wrap_width_spinBox->setValue(pHost->mUndoServerWrapWidth);
     undo_server_wrap_width_spinBox->setEnabled(pHost->mUndoServerWrap);
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, undo_server_wrap_width_spinBox, &QWidget::setEnabled);
+    // The note is only worth its space to someone actually running the option:
+    label_undo_server_wrap_experimental->setVisible(pHost->mUndoServerWrap);
+    connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
@@ -5062,21 +5061,6 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     if (mpHost && mpHost->mEnableClosedCaption != state) {
         mpHost->mEnableClosedCaption = state;
     }
-}
-
-
-void dlgProfilePreferences::slot_showNewFeatureCallouts()
-{
-    // The balloon only makes sense while its anchor can be seen:
-    if (tabWidget->currentWidget() != tab_display) {
-        return;
-    }
-    TFeatureCallout::maybeShow(qsl("undo-server-wrap"),
-                               checkBox_undoServerWrap,
-                               //: Title of a balloon pointing out a newly added feature
-                               tr("New: undo the game's own wrapping"),
-                               //: Body of the balloon, anchored to the option that rejoins lines the game server wrapped itself so that triggers match whole lines
-                               tr("Games that wrap their own lines make triggers fiddly. Mudlet can now undo that wrapping, so triggers always see whole lines."));
 }
 
 void dlgProfilePreferences::slot_changeWrapAt()

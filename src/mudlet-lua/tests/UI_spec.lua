@@ -2752,14 +2752,24 @@ describe("Tests UI functions", function()
     local src = "uiReadbackClipSrc"
     local dst = "uiReadbackClipDst"
 
+    local srcWrap, dstWrap
+
     setup(function()
       createMiniConsole(src, 0, 0, 400, 100)
       createMiniConsole(dst, 0, 110, 400, 100)
+      srcWrap, dstWrap = getWindowWrap(src), getWindowWrap(dst)
     end)
 
     before_each(function()
       clearWindow(src)
       clearWindow(dst)
+    end)
+
+    -- the wrapping tests below narrow these, and a failing assert must not carry
+    -- that into the next test
+    after_each(function()
+      setWindowWrap(src, srcWrap)
+      setWindowWrap(dst, dstWrap)
     end)
 
     teardown(function()
@@ -2781,6 +2791,112 @@ describe("Tests UI functions", function()
       moveCursor(dst, 0, 0)
       selectSection(dst, 0, 1)
       assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- copy() and appendBuffer() carry the line's per-character formatting
+    -- through appendFormatted(), where a character can be given its
+    -- neighbour's colour
+    it("appendBuffer keeps every colour run of a multi-coloured line", function()
+      decho(src, "<255,0,0:0,0,0>red<0,255,0:0,0,0>green<0,0,255:0,0,0>blue\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("redgreenblue", lines[1])
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 3, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 8, 1)
+      assert.are.same({0, 0, 255}, getTextFormat(dst).foreground)
+      -- the last character before each colour change, where an off-by-one in
+      -- the carried formatting shows
+      selectSection(dst, 2, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 7, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- "!osc8-docs" in text being echoed or received is an easter egg: it prints
+    -- a documentation banner instead of the line. A line already in a buffer is
+    -- being moved, not written, so copying it must not re-read it - the text
+    -- would be lost and the banner would land in the main console. The
+    -- injection is debounced to once a second, so nothing else may use the
+    -- phrase near this spec or the assertion below holds for that reason.
+    it("copies a line holding the documentation trigger phrase verbatim", function()
+      -- in two pieces, so putting the line into the source does not trip it
+      echo(src, "chat: !osc8-")
+      echo(src, "docs\n")
+      local mainLinesBefore = getLineCount()
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("chat: !osc8-docs", lines[1])
+      assert.are.equal(mainLinesBefore, getLineCount())
+    end)
+
+    -- copy() slices the line's text and its per-character formatting at the same
+    -- offset from the line's start, so the two can only be seen to disagree when
+    -- the selection does not begin at column 0
+    it("copies a partial selection that spans a colour change", function()
+      decho(src, "<255,0,0:0,0,0>redpart<0,255,0:0,0,0>greenpart\n")
+      moveCursor(src, 0, 0)
+      selectSection(src, 4, 6)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("artgre", lines[1])
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 2, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 3, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- appendFormatted() finishes with the same wrapLine() call the echo path
+    -- makes, so an appended line has to lay out exactly as an echoed one
+    it("appendBuffer wraps a long line the same way echoing it does", function()
+      local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
+      -- wide source so copy() takes the line whole, narrow destination so the
+      -- appended line has to wrap
+      setWindowWrap(src, 500)
+      setWindowWrap(dst, 40)
+      echo(src, long .. "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local appended = getLines(dst, 0, getLineCount(dst))
+      clearWindow(dst)
+      echo(dst, long .. "\n")
+      local echoed = getLines(dst, 0, getLineCount(dst))
+      assert.is_true(#appended > 1, "the destination did not wrap, so this proves nothing")
+      assert.are.same(echoed, appended)
+    end)
+
+    -- the carried formatting must not be able to move a wrap point
+    it("wraps a multi-coloured line where the same text uncoloured wraps", function()
+      local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
+      setWindowWrap(src, 500)
+      setWindowWrap(dst, 40)
+      -- the colour changes mid-word, so the boundary between the colours is
+      -- nowhere a wrap point could legitimately be
+      local split = math.floor(#long / 2) + 2
+      decho(src, "<255,0,0:0,0,0>" .. long:sub(1, split) .. "<0,255,0:0,0,0>" .. long:sub(split + 1) .. "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local coloured = getLines(dst, 0, getLineCount(dst))
+      clearWindow(dst)
+      echo(dst, long .. "\n")
+      local plain = getLines(dst, 0, getLineCount(dst))
+      assert.is_true(#coloured > 1, "the destination did not wrap, so this proves nothing")
+      assert.are.same(plain, coloured)
     end)
 
     -- An empty target has no line after the cursor's, so TConsole::paste()

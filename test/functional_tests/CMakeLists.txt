@@ -34,13 +34,16 @@ set(FUNCTIONAL_TEST_SOURCES
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
+    MxpWatchdogBufferLifetimeTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
+    FeatureCalloutTest.cpp
     WrapLineRewrapTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
@@ -90,6 +93,11 @@ set(FUNCTIONAL_TEST_SOURCES
 # Updater wraps Sparkle instead of creating an UpdateDialog
 if(USE_UPDATER AND NOT APPLE)
     list(APPEND FUNCTIONAL_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
+endif()
+
+# dblsqd::Feed itself is built on every platform that has the updater
+if(USE_UPDATER)
+    list(APPEND FUNCTIONAL_TEST_SOURCES FeedChecksumRaceTest.cpp)
 endif()
 
 set(FUNCTIONAL_TEST_UTILS
@@ -279,6 +287,9 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
+
+# UndoServerWrapTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(UndoServerWrapTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
