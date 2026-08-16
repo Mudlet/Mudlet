@@ -162,12 +162,26 @@ QString TVar::getNewName() const
     return nName;
 }
 
+// Commits a rename that has happened: the variable now answers to the name it
+// was renamed to, so this node has to as well. Only call it once Lua holds the
+// variable under that name - see abandonNewName() for the other outcome.
 void TVar::clearNewName()
 {
     name = nName;
     keyType = newKeyType;
     nName = QString();
     newKeyType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
+}
+
+// Drops a rename that is not going to happen, leaving the node naming the
+// variable Lua still has. clearNewName() was used for this too, which put the
+// refused name onto the node: every later read and write then went looking for
+// a variable of that name - and if the rename was refused because a sibling
+// already had it, that sibling is what they would have found.
+void TVar::abandonNewName()
+{
+    nName = QString();
+    newKeyType = LUA_TNIL;
 }
 
 bool TVar::setValue(const QString& val)

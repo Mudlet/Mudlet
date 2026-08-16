@@ -6869,6 +6869,16 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
     return 1;
 }
 
+// A rename the Variables view asked for and did not get: nothing else on screen
+// would show that anything was refused, and the row has meanwhile been put back
+// to the name the variable still answers to.
+void dlgTriggerEditor::showVariableRenameRefused(TVar* variable)
+{
+    //: Warning shown in the editor's Variables view when a rename could not be carried out. %1 is the name the variable keeps.
+    showWarning(tr("\"%1\" was not renamed: another member of the same table already has that name, or this variable's key is a table or a function, which has no name to change.")
+                        .arg(variable->getName().toHtmlEscaped()));
+}
+
 void dlgTriggerEditor::saveVar()
 {
     // We can enter this function if:
@@ -6912,6 +6922,9 @@ void dlgTriggerEditor::saveVar()
         return;
     }
     mChangingVar = true;
+    // said at the very end: the tail of this function re-selects the row, which
+    // clears whatever notification is on screen
+    bool renameRefused = false;
     int uiNameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
     int uiValueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
     if ((uiNameType == LUA_TNUMBER || uiNameType == LUA_TSTRING) && newVar) {
@@ -7005,16 +7018,26 @@ void dlgTriggerEditor::saveVar()
                     change = change | 0x2;
                 }
                 if (change) {
+                    bool renamed = true;
                     if (change & 0x1 || newVar) {
-                        luaInterface->renameVar(variable);
+                        renamed = luaInterface->renameVar(variable);
                     }
                     if ((variable->getValueType() != LUA_TTABLE && change & 0x2) || newVar) {
                         luaInterface->setValue(variable);
                     }
-                    pItem->setText(0, newName);
-                    mpCurrentVarItem = nullptr;
+                    if (renamed) {
+                        pItem->setText(0, newName);
+                        mpCurrentVarItem = nullptr;
+                    } else {
+                        // the variable still answers to the name it had, so
+                        // that is what the row has to go back to showing
+                        pItem->setText(0, variable->getName());
+                        renameRefused = true;
+                    }
                 } else {
-                    variable->clearNewName();
+                    // nothing was renamed, so there is a pending new name to
+                    // drop rather than to write onto the variable
+                    variable->abandonNewName();
                 }
             }
         }
@@ -7067,14 +7090,20 @@ void dlgTriggerEditor::saveVar()
                 change = change | 0x2;
             }
             if (change) {
+                bool renamed = true;
                 if (change & 0x1 || newVar) {
-                    luaInterface->renameVar(var);
+                    renamed = luaInterface->renameVar(var);
                 }
                 if (change & 0x2 || newVar) {
                     luaInterface->setValue(var);
                 }
-                pItem->setText(0, newName);
-                mpCurrentVarItem = nullptr;
+                if (renamed) {
+                    pItem->setText(0, newName);
+                    mpCurrentVarItem = nullptr;
+                } else {
+                    pItem->setText(0, var->getName());
+                    renameRefused = true;
+                }
             }
         }
     }
@@ -7106,6 +7135,9 @@ void dlgTriggerEditor::saveVar()
     pItem->setIcon(0, icon);
     mChangingVar = false;
     slot_variableSelected(pItem);
+    if (renameRefused) {
+        showVariableRenameRefused(variable);
+    }
 }
 
 void dlgTriggerEditor::saveKey()

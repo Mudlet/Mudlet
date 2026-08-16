@@ -549,6 +549,133 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(!vu->savedVars.contains(qsl("savedRenamed")), "the name the variable no longer has must stop being saved");
     }
 
+    // A member whose key is a table of its own is named in the tree by the
+    // number of the registry reference holding that key, and that number is not
+    // a name a rename can write: renaming such a member deleted it outright.
+    void testRenamingATableKeyedMemberIsRefusedRatherThanDestroyingIt()
+    {
+        execLua("tableKeyHolder = {} do local key = {} tableKeyHolder[key] = 'keepme' end");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("tableKeyHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QVERIFY(members.first()->isReference());
+
+        members.first()->setNewName(qsl("renamedKey"), LUA_TSTRING);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("no name to change")));
+        QVERIFY(!interface->renameVar(members.first()));
+
+        QCOMPARE(luaMemberCount(qsl("tableKeyHolder")), 1);
+        QVERIFY2(memberAsString(qsl("tableKeyHolder"), qsl("renamedKey")).isEmpty(), "the rename must not have made a member of that name either");
+    }
+
+    // ...and the same for a function used as a key, which left the member alone
+    // but moved the saved mark onto a path naming nothing.
+    void testRenamingAFunctionKeyedMemberLeavesItsSavedMarkAlone()
+    {
+        execLua("fnKeyHolder = {} fnKeyHolder[function() end] = 'keepme'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+        TVar* holder = findGlobal(qsl("fnKeyHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QVERIFY(members.first()->isReference());
+        const QString keyName = members.first()->getName();
+        vu->savedVars.insert(qsl("fnKeyHolder.%1").arg(keyName));
+
+        members.first()->setNewName(qsl("renamedFn"), LUA_TSTRING);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("no name to change")));
+        QVERIFY(!interface->renameVar(members.first()));
+
+        QCOMPARE(luaMemberCount(qsl("fnKeyHolder")), 1);
+        QVERIFY2(!vu->savedVars.contains(qsl("fnKeyHolder.renamedFn")), "a refused rename must not move what is remembered onto a name that names nothing");
+        QVERIFY2(vu->savedVars.contains(qsl("fnKeyHolder.%1").arg(keyName)), "the mark stays on the member the user made it about");
+        QCOMPARE(members.first()->getName(), keyName);
+    }
+
+    // The name a rename would land on is looked up with the key type the rename
+    // is giving it, not the one the variable has: t[5] and t["5"] are two
+    // members, and asking about the wrong one waved the rename through.
+    void testRenameOntoANumberKeyedSiblingIsRefused()
+    {
+        execLua("numKeyHolder = {[5] = 'five', other = 'otherval'}");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("numKeyHolder"));
+        QVERIFY(holder);
+        TVar* other = nullptr;
+        for (TVar* member : holder->getChildren(false)) {
+            if (member->getName() == qsl("other")) {
+                other = member;
+            }
+        }
+        QVERIFY(other);
+
+        other->setNewName(qsl("5"), LUA_TNUMBER);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("would destroy it")));
+        QVERIFY(!interface->renameVar(other));
+
+        QCOMPARE(numberKeyedMemberAsString(qsl("numKeyHolder"), 5), qsl("five"));
+        QCOMPARE(memberAsString(qsl("numKeyHolder"), qsl("other")), qsl("otherval"));
+        QCOMPARE(other->getName(), qsl("other"));
+    }
+
+    // A write to a member sitting under a table used as a key has to put that
+    // key back on the stack out of the registry to get to the member at all -
+    // the text of the reference number reaches a member of its own instead.
+    void testSetValueReachesAMemberUnderATableKeyedIntermediate()
+    {
+        execLua("refHolder = {} do local key = {} refHolder[key] = {inner = 'placeholder'} end");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("refHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QVERIFY(members.first()->isReference());
+        TVar* inner = members.first()->getChildren(false).first();
+        QCOMPARE(inner->getName(), qsl("inner"));
+        inner->setValue(qsl("written"), LUA_TSTRING);
+
+        const int stackBefore = lua_gettop(L);
+        QVERIFY(interface->setValue(inner));
+        QCOMPARE(lua_gettop(L), stackBefore);
+
+        QCOMPARE(luaMemberCount(qsl("refHolder")), 1);
+        QCOMPARE(onlyMembersMemberAsString(qsl("refHolder"), qsl("inner")), qsl("written"));
+    }
+
+    // A rename that was refused leaves a new name pending on the node, and the
+    // editor goes on to its no-change path - which used to commit that pending
+    // name. The node then named the sibling the rename was refused over, and
+    // the next write through it went there.
+    void testARefusedRenameLeavesTheNodeNamingItsOwnVariable()
+    {
+        execLua("landmineHolder = {a = 'aval', b = 'bval'}");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("landmineHolder"));
+        QVERIFY(holder);
+        TVar* memberA = nullptr;
+        for (TVar* member : holder->getChildren(false)) {
+            if (member->getName() == qsl("a")) {
+                memberA = member;
+            }
+        }
+        QVERIFY(memberA);
+
+        memberA->setNewName(qsl("b"), LUA_TSTRING);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("would destroy it")));
+        QVERIFY(!interface->renameVar(memberA));
+
+        memberA->abandonNewName(); // what the editor does when nothing changed
+        QCOMPARE(memberA->getName(), qsl("a"));
+
+        memberA->setValue(qsl("written"), LUA_TSTRING);
+        QVERIFY(interface->setValue(memberA));
+        QCOMPARE(memberAsString(qsl("landmineHolder"), qsl("a")), qsl("written"));
+        QVERIFY2(memberAsString(qsl("landmineHolder"), qsl("b")) == qsl("bval"), "the write went to the sibling the rename was refused over");
+    }
+
     // The three names below are the cycle a real table of mixed names produced:
     // every one of the three comparisons answered true, so TVar::getChildren()
     // handed std::sort() an ordering that contradicted itself (#9956).
@@ -790,6 +917,52 @@ private:
         lua_gettable(L, -2);
         const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
         lua_pop(L, 2);
+        return value;
+    }
+
+    QString numberKeyedMemberAsString(const QString& tableName, const double key)
+    {
+        lua_getglobal(L, tableName.toUtf8().constData());
+        lua_pushnumber(L, key);
+        lua_gettable(L, -2);
+        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 2);
+        return value;
+    }
+
+    // walked with lua_next() rather than pairs(), which these tests do without
+    // the base library to provide
+    int luaMemberCount(const QString& tableName)
+    {
+        lua_getglobal(L, tableName.toUtf8().constData());
+        if (!lua_istable(L, -1)) {
+            lua_pop(L, 1);
+            return -1;
+        }
+        int count = 0;
+        lua_pushnil(L);
+        while (lua_next(L, -2)) {
+            ++count;
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+        return count;
+    }
+
+    // ...and the same for reading a member of the sole member of a table, whose
+    // key is a table of its own and so has no name to look it up by
+    QString onlyMembersMemberAsString(const QString& tableName, const QString& memberName)
+    {
+        lua_getglobal(L, tableName.toUtf8().constData());
+        lua_pushnil(L);
+        if (!lua_next(L, -2)) {
+            lua_pop(L, 1);
+            return QString();
+        }
+        lua_pushstring(L, memberName.toUtf8().constData());
+        lua_gettable(L, -2);
+        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 4);
         return value;
     }
 
