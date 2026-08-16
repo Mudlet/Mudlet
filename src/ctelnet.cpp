@@ -552,6 +552,20 @@ void cTelnet::abandonHostLookup()
     }
 }
 
+// cTelnet keeps its own copies of these two Host flags. connectIt() refreshes
+// them per connection, so a profile opened offline - which never gets there -
+// has to take them when it loads, or it parses telnet on the defaults rather
+// than on what the profile saved.
+void cTelnet::cacheHostSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+    mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+}
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     // Set early - before the recursion-on-busy-socket block below - so the
@@ -568,8 +582,7 @@ void cTelnet::connectIt(const QString& address, int port)
     abandonHostLookup();
 
     if (mpHost) {
-        mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+        cacheHostSettings();
         mCycleCountMTTS = 0;
         newEnvironVariablesSent.clear();
 #if !defined(QT_NO_SSL)
@@ -5605,7 +5618,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
         }
     MAIN_LOOP_END:;
         if (recvdGA) {
-            if (!mFORCE_GA_OFF) { //FIXME: isn't initialized correctly
+            if (!mFORCE_GA_OFF) {
                 mGA_Driver = true;
 
                 if (mCommands > 0) {

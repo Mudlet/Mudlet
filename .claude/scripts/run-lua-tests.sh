@@ -1,7 +1,9 @@
 #!/bin/bash
 # Runs the busted Lua specs the way CI's "(Linux) Run Lua tests" step does:
 # starts the HTTP, Discord IPC and MMCP peer fixtures, then drives the built
-# Mudlet through the "Mudlet self-test" profile under xvfb.
+# Mudlet through the "Mudlet self-test" profile under xvfb. --offline stops the
+# profile connecting to its game server, which is also what leaves the telnet
+# socket in the state feedTelnet() needs.
 #
 # Usage: .claude/scripts/run-lua-tests.sh [path-to-mudlet-binary]
 # Defaults to the linux-debug-nosan build. Needs the rocks and apt packages
@@ -91,7 +93,17 @@ export DBUS_SESSION_BUS_ADDRESS='disabled:'
 export TESTS_DIRECTORY="$WS/src/mudlet-lua/tests"
 export QUIT_MUDLET_AFTER_TESTS=true
 
+# Mudlet exits 0 whatever the specs did, so a failing run is only visible
+# through the marker file busted writes - the same signal CI's separate
+# "Passed Lua tests" step checks. Keep it in this run's temp directory so
+# concurrent runs cannot read each other's.
+export MUDLET_TEST_FAILURE_MARKER="$TMP/busted-tests-failed"
+
 cd "$WS"
 rc=0
-timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror || rc=$?
+timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline || rc=$?
+if [ -e "$MUDLET_TEST_FAILURE_MARKER" ]; then
+  echo "Lua tests failed - see the busted output above."
+  rc=1
+fi
 exit $rc

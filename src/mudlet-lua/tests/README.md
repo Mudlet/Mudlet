@@ -63,11 +63,17 @@ AUTORUN_BUSTED_TESTS=true \
 MUDLET_TEST_MODE=1 \
 QUIT_MUDLET_AFTER_TESTS=true \
 TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
-xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ```
 
 A failure writes a marker file (`/tmp/busted-tests-failed` on Linux/macOS) so the
 caller can detect it.
+
+`--offline` opens the profile without connecting to its game server, which is
+what lets a spec use `feedTelnet()` - that function only injects while the telnet
+socket is unconnected. Specs that rely on it fail without the flag, so keep it on
+every invocation; when opening the profile through the GUI instead, use the
+connection dialog's **Offline** button.
 
 By default Mudlet reads and writes `~/.config/mudlet`, so two runs started at the
 same time (for example from different checkouts) share one `Mudlet self-test`
@@ -93,7 +99,7 @@ QUIT_MUDLET_AFTER_TESTS=true \
 TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
 XDG_CONFIG_HOME="$CONFIG_DIR" \
 MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
-xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ```
 
 ## Creating tests
