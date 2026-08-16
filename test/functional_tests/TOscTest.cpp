@@ -486,6 +486,122 @@ private slots:
     }
   }
 
+  // A percent-encoded reserved parameter name is ordinary URL data, not OSC 8
+  // styling - that is the escape servers are told to use to put a literal
+  // "config" or "preset" parameter in a web URL. The styling parser has to agree
+  // with the URL-stripping path above, which already keeps the encoded name.
+  void test_Osc8UrlParams_EncodedReservedNameIsNotStyling() {
+    const QString encodedConfigName = qsl("%63%6F%6E%66%69%67");
+    injectData(qsl("\x1b]8;;https://example.com/?") + encodedConfigName +
+               qsl("=%7B%22tooltip%22%3A%22URL-DATA%22%2C%22style%22%3A%7B%"
+                   "22color%22%3A%22red%22%7D%7D\x1b\\Encoded\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    // Had the encoded name been consumed as styling, the hint would be the
+    // config's tooltip ("URL-DATA") instead of the URL Mudlet is about to open
+    const QString tooltip = console->buffer.getLinkTooltip(linkId);
+    QCOMPARE(tooltip, qsl("Open browser to: https://example.com/?") +
+                          encodedConfigName +
+                          qsl("=%7B%22tooltip%22%3A%22URL-DATA%22%2C%22style%"
+                              "22%3A%7B%22color%22%3A%22red%22%7D%7D"));
+    QVERIFY2(!console->getLinkStore().getStyling(linkId).hasCustomStyling,
+             "Encoded 'config' must not apply custom link styling");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+    QVERIFY2(commands.first().contains(encodedConfigName),
+             qPrintable(qsl("Expected the encoded parameter to survive into the "
+                            "opened URL: %1")
+                            .arg(commands.first())));
+  }
+
+  // The rewritten split reaches a reserved parameter through generic key
+  // matching rather than only at the head of the query, so these shapes each
+  // take a different route through it than they used to: a percent-encoded
+  // value bounded by the next '&', a reserved key that is not the first
+  // parameter, and the '%3D' separator.
+  void test_Osc8ReservedParamShapes_data() {
+    QTest::addColumn<QString>("query");
+    QTest::addColumn<QString>("expectedTooltip");
+    QTest::addColumn<QString>("mustRemainInUrl");
+
+    QTest::newRow("encoded config bounded by a later param")
+        << qsl("?config=%7B%22tooltip%22%3A%22Encoded%20config%22%7D&page=1")
+        << qsl("Encoded config") << qsl("page=1");
+    QTest::newRow("encoded config after another param")
+        << qsl("?page=1&config=%7B%22tooltip%22%3A%22Later%20config%22%7D")
+        << qsl("Later config") << qsl("page=1");
+    QTest::newRow("raw JSON config after another param")
+        << qsl("?page=1&config={\"tooltip\":\"Raw later\"}")
+        << qsl("Raw later") << qsl("page=1");
+    QTest::newRow("raw JSON config with an unencoded ampersand inside a string")
+        << qsl("?config={\"tooltip\":\"Tea & Cake\"}") << qsl("Tea & Cake")
+        << QString();
+    QTest::newRow("encoded separator")
+        << qsl("?config%3D%7B%22tooltip%22%3A%22Encoded%20separator%22%7D")
+        << qsl("Encoded separator") << QString();
+  }
+
+  void test_Osc8ReservedParamShapes() {
+    QFETCH(QString, query);
+    QFETCH(QString, expectedTooltip);
+    QFETCH(QString, mustRemainInUrl);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+
+    if (!mustRemainInUrl.isEmpty()) {
+      const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+      QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+      QVERIFY2(commands.first().contains(mustRemainInUrl),
+               qPrintable(qsl("Expected '%1' to survive into the opened URL: %2")
+                              .arg(mustRemainInUrl, commands.first())));
+    }
+  }
+
+  // preset= is matched on its raw key by the same loop as config=, so a
+  // registered preset must still resolve while a percent-encoded name must not.
+  void test_Osc8PresetNameMatchedOnRawKeyOnly() {
+    injectData(qsl("\x1b]8;;preset:danger?config=%7B%22style%22%3A%7B%22color%"
+                   "22%3A%22red%22%7D%7D\x1b\\\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    auto stylingFor = [&](const QString &query) {
+      injectData(qsl("\x1b]8;;https://example.com/") + query +
+                 qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+      int linkId = 0;
+      for (int line = console->buffer.getLastLineNumber();
+           line >= 0 && linkId == 0; --line) {
+        linkId = console->buffer.getLinkIndexAt(line, 0);
+      }
+      return console->getLinkStore().getStyling(linkId);
+    };
+
+    QVERIFY2(stylingFor(qsl("?preset=danger")).hasCustomStyling,
+             "A registered preset named by its raw key should style the link");
+    QVERIFY2(stylingFor(qsl("?page=1&preset=danger")).hasCustomStyling,
+             "A preset should resolve when it is not the first parameter");
+    QVERIFY2(!stylingFor(qsl("?%70%72%65%73%65%74=danger")).hasCustomStyling,
+             "A percent-encoded 'preset' name is URL data, not a preset");
+  }
+
   // =====================================================================
   // OSC 8 Hyperlink Context Menu Title Tests
   // =====================================================================
