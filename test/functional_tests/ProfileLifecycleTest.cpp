@@ -36,6 +36,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -226,27 +227,7 @@ private:
         const QString profileName = mFirstProfile;
         const QString address = mLocalhost;
         const QString port = mPort;
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        QVERIFY2(spy.wait(csmConnectBudgetMs), "the first profile took too long to load");
-        mpFirstHost = mudlet::self()->getActiveHost();
+        mpFirstHost = TestProfile::create(profileName, address, port);
         QVERIFY2(mpFirstHost, "no active host after creating the first profile");
         // otherwise closing a profile asks whether to save it, and the modal
         // question would hang the test

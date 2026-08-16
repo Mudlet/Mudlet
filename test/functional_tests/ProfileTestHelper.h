@@ -2,7 +2,7 @@
 #define MUDLET_PROFILETESTHELPER_H
 
 /***************************************************************************
- *   Copyright (C) 2026 by Mudlet Developers                               *
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -49,15 +49,13 @@
 // instead of blocking someone else's. See issue #9973.
 namespace TestProfile {
 
-// Waits until the focused widget is set and is no longer 'previous'.
-inline bool waitForFocusChange(QWidget* previous, const std::chrono::milliseconds timeout)
+// Waits until 'target' is the focused widget. Naming the widget matters rather
+// than merely waiting for focus to move: tests that create a profile more than
+// once per process can arrive with focus already sitting on the field about to
+// be typed into, and a wait for focus to *change* never returns for those.
+inline bool waitForFocus(QWidget* target, const std::chrono::milliseconds timeout)
 {
-    return QTest::qWaitFor(
-            [previous]() {
-                QWidget* current = QApplication::focusWidget();
-                return current != nullptr && current != previous;
-            },
-            timeout);
+    return QTest::qWaitFor([target]() { return QApplication::focusWidget() == target; }, timeout);
 }
 
 // The dialog's "Connect" button, which is its default button - so a Return in
@@ -75,57 +73,60 @@ inline QPushButton* connectButton(dlgConnectionProfiles* dialog)
     return nullptr;
 }
 
-// Types into the focused widget, then tabs on and waits for focus to move.
-inline bool typeFieldAndAdvance(const QString& text, const std::chrono::milliseconds timeout)
+// Waits for 'field' to take focus, types into it, then tabs on to the next one.
+// Typing into the focused widget rather than straight into 'field' keeps the
+// dialog seeing exactly the interaction a user would produce, selection state
+// included.
+inline bool typeFieldAndAdvance(QWidget* field, const QString& text, const std::chrono::milliseconds timeout)
 {
-    QWidget* field = QApplication::focusWidget();
-    if (!field) {
+    if (!field || !waitForFocus(field, timeout)) {
         return false;
     }
     QTest::keyClicks(field, text);
     QTest::keyClick(field, Qt::Key_Tab);
-    return waitForFocusChange(field, timeout);
+    return true;
 }
 
 // Drives the connection dialog to create and open a profile. Returns the loaded
 // Host, or nullptr having warned about the step that timed out - callers should
 // QVERIFY the result rather than dereferencing it.
-inline Host* create(const QString& profileName, const QString& address, const QString& port, const std::chrono::milliseconds timeout = std::chrono::seconds(15))
+inline Host* create(const QString& profileName,
+                    const QString& address,
+                    const QString& port,
+                    const std::chrono::milliseconds timeout = std::chrono::seconds(15))
 {
     mudlet::self()->startAutoLogin({});
 
+    // Existence is the condition, not visibility: on a pristine config Mudlet
+    // puts its first-run tutorial up instead of the profile dialog, which leaves
+    // the dialog built but never shown. QTest delivers events to it either way,
+    // and the focus waits below are what actually confirm it is driveable.
     if (!QTest::qWaitFor(
                 []() {
                     dlgConnectionProfiles* dialog = mudlet::self()->mpConnectionDialog;
-                    return dialog != nullptr && dialog->new_profile_button != nullptr && dialog->new_profile_button->isVisible();
+                    return dialog != nullptr && dialog->new_profile_button != nullptr && dialog->profile_name_entry != nullptr;
                 },
                 timeout)) {
-        qWarning() << "TestProfile::create() - the connection dialog never appeared";
+        qWarning() << "TestProfile::create() - the connection dialog was never built";
         return nullptr;
     }
 
-    QWidget* beforeClick = QApplication::focusWidget();
-    QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-    if (!waitForFocusChange(beforeClick, timeout)) {
-        qWarning() << "TestProfile::create() - no field took focus after 'new profile' was clicked";
-        return nullptr;
-    }
+    dlgConnectionProfiles* dialog = mudlet::self()->mpConnectionDialog;
+    QTest::mouseClick(dialog->new_profile_button, Qt::LeftButton);
 
-    if (!typeFieldAndAdvance(profileName, timeout)) {
-        qWarning() << "TestProfile::create() - focus did not advance past the profile name field";
+    if (!typeFieldAndAdvance(dialog->profile_name_entry, profileName, timeout)) {
+        qWarning() << "TestProfile::create() - the profile name field never took focus";
         return nullptr;
     }
-    if (!typeFieldAndAdvance(address, timeout)) {
-        qWarning() << "TestProfile::create() - focus did not advance past the address field";
+    if (!typeFieldAndAdvance(dialog->host_name_entry, address, timeout)) {
+        qWarning() << "TestProfile::create() - the address field never took focus";
         return nullptr;
     }
-
-    QWidget* portField = QApplication::focusWidget();
-    if (!portField) {
+    if (!waitForFocus(dialog->port_entry, timeout)) {
         qWarning() << "TestProfile::create() - the port field never took focus";
         return nullptr;
     }
-    QTest::keyClicks(portField, port);
+    QTest::keyClicks(dialog->port_entry, port);
 
     // Every field is filled, but the port is validated asynchronously and the
     // Connect button stays disabled until that has run - a Return arriving
