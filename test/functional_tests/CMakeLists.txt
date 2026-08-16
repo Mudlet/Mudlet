@@ -21,6 +21,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
+    MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
@@ -35,6 +36,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
@@ -146,27 +148,34 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
-        set(leakCheck "detect_leaks=1")
-        # The tracer prints the stack and TLS range of each thread as it reaches
-        # it, so the last one before a crash names the range it died scanning -
-        # the one thing the crash line alone does not say (#9809). Seven lines a
-        # run; LeakSanitizer's own hint also suggests verbosity=1, which adds
-        # ~2400 lines of allocator poisoning traffic and no extra diagnosis.
+        # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, at
+        # the cost of not scanning dynamic TLS blocks for roots. Up to GCC 13 and
+        # LLVM 16, the sanitizer runtime's __tls_get_addr interceptor - not
+        # LeakSanitizer itself, which is why this is an ASAN_OPTIONS flag -
+        # decides such a block carries a pre-2.25 glibc header when
+        # `tls_beg % 4096` equals sizeof(Glibc_2_19_tls_header), 16 on 64-bit,
+        # and reads the two words before it as the block's address and length.
+        # Since glibc 2.25 there is no header there and a malloc'd block lands on
+        # that offset by coincidence - roughly 1 in 256, always for the
+        # mmap-backed ones - so the range recorded is garbage and the tracer dies
+        # scanning it. That coincidence is why #9809 reads as a flake.
+        # google/sanitizers#1322; GCC 14 and LLVM 17 replaced the guess with an
+        # allocator lookup, so all four copies of this flag - here, the two
+        # build-mudlet workflows, and src/LsanHooks.cpp - can go once the legs
+        # that need them build with one of those.
+        set(leakCheck "detect_leaks=1:intercept_tls_get_addr=0")
+        # Kept as insurance rather than for a crash we still expect: if the flag
+        # above ever proves incomplete, the tracer prints the stack and TLS range
+        # of each thread as it reaches one, so the last line before a crash names
+        # the range it died scanning - the one thing the crash line alone does
+        # not say (#9809). Seven lines a run, and only on a failing test, since
+        # ctest hides the output of one that passes.
         set(leakLog "LSAN_OPTIONS=log_threads=1;")
-        # Every leak-checked exit is another chance to hit LeakSanitizer's tracer
-        # crash, which fails the run without reporting a leak (#9809), so these
-        # go through a launcher that reruns that one signature once. The rerun
-        # shares the test's TIMEOUT rather than widening it: overrunning the
-        # budget is the right outcome for a hang, and the crash is rare enough
-        # that blunting every test's hang detection to make room costs more.
-        add_test(NAME ${test_name} COMMAND ${CMAKE_COMMAND} -P
-            ${CMAKE_SOURCE_DIR}/test/lsan-tracer-retry.cmake --
-            $<TARGET_FILE:${test_name}>)
     else()
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
-        add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     endif()
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
@@ -185,6 +194,8 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
 # into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
 # again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
+set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
+
 set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
     TIMEOUT 300)
