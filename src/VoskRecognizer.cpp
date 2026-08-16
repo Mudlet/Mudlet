@@ -19,19 +19,16 @@
 
 #include "VoskRecognizer.h"
 
+#include "SpeechAudioCapture.h"
 #include "mudlet.h"
 
-#include <QAudioDevice>
-#include <QCoreApplication>
 #include <QDir>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QMediaDevices>
 #include <QPointer>
 #include <QRegularExpression>
 #include <QSettings>
-#include <QTimer>
 #include <QtMath>
 
 #if defined(Q_OS_MACOS)
@@ -93,40 +90,10 @@ static bool leadingWordIsPhantom(const QJsonArray& words)
 
 VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
+, mpCapture(new SpeechAudioCapture(this))
 {
-    // Set up audio format for Vosk (16kHz, 16-bit, mono PCM)
-    mAudioFormat.setSampleRate(VOSK_SAMPLE_RATE);
-    mAudioFormat.setChannelCount(1);
-    mAudioFormat.setSampleFormat(QAudioFormat::Int16);
-
-    // Connect the process timer to audio processing slot
-    connect(&mProcessTimer, &QTimer::timeout, this, &VoskRecognizer::processAudioData);
-}
-
-// Human-readable description of a QAudio::Error, for messages a player sees.
-// Each of these is substituted into "Audio input error occurred: %1", so they
-// read as the tail of that sentence rather than as standalone messages.
-static QString audioErrorText(const QAudio::Error error)
-{
-    switch (error) {
-    case QAudio::NoError:
-        //: Completes "Audio input error occurred: %1" - no fault was reported
-        return QCoreApplication::translate("VoskRecognizer", "no error");
-    case QAudio::OpenError:
-        //: Completes "Audio input error occurred: %1" - the microphone could not be opened
-        return QCoreApplication::translate("VoskRecognizer", "the microphone could not be opened");
-    case QAudio::IOError:
-        //: Completes "Audio input error occurred: %1" - reading from the microphone failed
-        return QCoreApplication::translate("VoskRecognizer", "reading from the microphone failed");
-    case QAudio::UnderrunError:
-        //: Completes "Audio input error occurred: %1" - the microphone went silent mid-capture
-        return QCoreApplication::translate("VoskRecognizer", "the microphone stopped supplying audio");
-    case QAudio::FatalError:
-        //: Completes "Audio input error occurred: %1" - the microphone can no longer be used
-        return QCoreApplication::translate("VoskRecognizer", "the microphone became unusable");
-    }
-    //: Completes "Audio input error occurred: %1" - the fault could not be identified
-    return QCoreApplication::translate("VoskRecognizer", "unknown error");
+    connect(mpCapture, &SpeechAudioCapture::pcm, this, &VoskRecognizer::slot_pcmReady);
+    connect(mpCapture, &SpeechAudioCapture::captureError, this, &VoskRecognizer::slot_captureError);
 }
 
 VoskRecognizer::~VoskRecognizer()
@@ -359,58 +326,6 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     return true;
 }
 
-bool VoskRecognizer::setupAudioInput()
-{
-    // Get the default audio input device
-    const QAudioDevice inputDevice = QMediaDevices::defaultAudioInput();
-    if (inputDevice.isNull()) {
-        emit errorOccurred(tr("No microphone available"));
-        return false;
-    }
-
-    // Always use the device's preferred format for reliable capture on macOS
-    // We'll resample/convert to Vosk's format (16kHz mono Int16) later
-    QAudioFormat formatToUse = inputDevice.preferredFormat();
-
-    // ...but only Float and Int16 samples can be converted; anything else would
-    // capture happily and then be discarded frame by frame, leaving the
-    // recognizer Listening and permanently deaf. Ask for Int16 at the device's
-    // own rate and channel count, and failing that at Vosk's 16kHz mono.
-    if (formatToUse.sampleFormat() != QAudioFormat::Float && formatToUse.sampleFormat() != QAudioFormat::Int16) {
-        QAudioFormat fallbackFormat = formatToUse;
-        fallbackFormat.setSampleFormat(QAudioFormat::Int16);
-        if (!inputDevice.isFormatSupported(fallbackFormat)) {
-            fallbackFormat = mAudioFormat; // Vosk's own 16kHz mono Int16
-        }
-        if (!inputDevice.isFormatSupported(fallbackFormat)) {
-            //: Shown when the microphone offers no audio format speech recognition can convert
-            emit errorOccurred(tr("The microphone does not offer an audio format speech recognition can use"));
-            return false;
-        }
-        formatToUse = fallbackFormat;
-    }
-
-    // Store the format we're actually using for later conversion
-    mActualAudioFormat = formatToUse;
-
-    // A source left behind by an attempt that failed after allocating one would
-    // otherwise linger, holding the capture device and still connected to
-    // handleAudioStateChanged(), which reads the member rather than sender()
-    if (mAudioSource) {
-        mAudioSource->stop();
-        delete mAudioSource;
-        mAudioSource = nullptr;
-    }
-
-    // Create the audio source with the device's preferred format
-    mAudioSource = new QAudioSource(inputDevice, formatToUse, this);
-
-    // Connect to state changes
-    connect(mAudioSource.data(), &QAudioSource::stateChanged, this, &VoskRecognizer::handleAudioStateChanged);
-
-    return true;
-}
-
 void VoskRecognizer::startListening()
 {
     if (mState != State::Ready) {
@@ -472,9 +387,8 @@ void VoskRecognizer::startListening()
 void VoskRecognizer::startListeningInternal()
 {
     // The recognizer is rebuilt before any audio device is opened, so the two
-    // failures below cannot leave a QAudioSource allocated for a session that
-    // never starts. setupAudioInput() and the start() check after it can still
-    // fail with one allocated, which is why both clean up after themselves.
+    // failures below cannot leave capture running for a session that never
+    // starts; the capture component cleans up after its own failures.
     //
     // Recreate the recognizer for a new session to ensure clean state
     // Note: vosk_recognizer_reset() can leave the decoder in an inconsistent state
@@ -499,11 +413,6 @@ void VoskRecognizer::startListeningInternal()
         return;
     }
 
-    if (!setupAudioInput()) {
-        setState(State::Error);
-        return;
-    }
-
     // Reapply settings to the new recognizer
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
@@ -516,34 +425,13 @@ void VoskRecognizer::startListeningInternal()
         s_vosk_recognizer_set_words(mVoskRecognizer, 1);
     }
 
-    // Clear any buffered audio
-    mAudioBuffer.clear();
-    mResamplePhase = 0.0;
-
-    // Set volume to maximum
-    mAudioSource->setVolume(1.0);
-
-    // Set a larger buffer size for more reliable capture
-    mAudioSource->setBufferSize(32000);
-
-    // Try PULL mode - start() returns a QIODevice we read from
-    mAudioDevice = mAudioSource->start();
-
-    if (!mAudioDevice) {
-        qWarning() << "VoskRecognizer: Failed to start audio source - start() returned null";
-        // Released here rather than left for the next attempt to trip over: it
-        // may still hold the capture device open
-        mAudioSource->stop();
-        mAudioSource->deleteLater();
-        mAudioSource = nullptr;
-        //: Shown when the microphone could not be opened for speech recognition
-        emit errorOccurred(tr("Failed to start audio capture"));
+    // mpCapture emits its own translated captureError before returning false,
+    // which slot_captureError() has already turned into errorOccurred - only
+    // the state transition is left to do here
+    if (!mpCapture->start()) {
         setState(State::Error);
         return;
     }
-
-    // Poll every 50ms for audio data
-    mProcessTimer.start(50);
 
     setState(State::Listening);
 }
@@ -556,16 +444,7 @@ void VoskRecognizer::stopListening()
 
     setState(State::Processing);
 
-    // Stop the timer
-    mProcessTimer.stop();
-
-    // Stop audio capture
-    if (mAudioSource) {
-        mAudioSource->stop();
-        mAudioSource->deleteLater();
-        mAudioSource = nullptr;
-    }
-    mAudioDevice = nullptr;
+    mpCapture->stop();
 
     // Get final result from Vosk
     if (mVoskRecognizer) {
@@ -575,7 +454,7 @@ void VoskRecognizer::stopListening()
             const QJsonObject obj = doc.object();
             QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
-                // Apply same hallucination filtering as in processAudioData
+                // Apply same hallucination filtering as in slot_pcmReady
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
                 const bool isHallucinationWord = kHallucinationWords->contains(text.toLower());
 
@@ -614,8 +493,6 @@ void VoskRecognizer::stopListening()
         }
     }
 
-    mAudioBuffer.clear();
-    mResamplePhase = 0.0;
     setState(State::Ready);
 }
 
@@ -645,142 +522,25 @@ void VoskRecognizer::cancel()
         return;
     }
 
-    // Stop the timer
-    mProcessTimer.stop();
-
-    // Stop audio capture without processing
-    if (mAudioSource) {
-        mAudioSource->stop();
-        mAudioSource->deleteLater();
-        mAudioSource = nullptr;
-    }
-    mAudioDevice = nullptr;
+    // Stop audio capture without processing the remainder
+    mpCapture->stop();
 
     // Reset the recognizer
     if (s_vosk_recognizer_reset && mVoskRecognizer) {
         s_vosk_recognizer_reset(mVoskRecognizer);
     }
 
-    mAudioBuffer.clear();
-    mResamplePhase = 0.0;
     setState(State::Ready);
 }
 
-void VoskRecognizer::processAudioData()
+void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
 {
-    // Timer callback for reading audio in pull mode
-    if (!mAudioDevice || !mVoskRecognizer || !mAudioSource) {
-        return;
-    }
-
-    // Check available bytes
-    const qint64 bytesAvailable = mAudioDevice->bytesAvailable();
-
-    if (bytesAvailable <= 0) {
-        return;
-    }
-
-    // Read all available data
-    QByteArray audioData = mAudioDevice->read(bytesAvailable);
-    if (audioData.isEmpty()) {
-        return;
-    }
-
-    // Process the audio
-    processAudioDataFromBuffer(audioData);
-}
-
-void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
-{
-    if (!mVoskRecognizer || audioData.isEmpty()) {
-        return;
-    }
-
-    // Convert from device format to Vosk format (16kHz mono Int16)
-    const int srcRate = mActualAudioFormat.sampleRate();
-    const int srcChannels = mActualAudioFormat.channelCount();
-    const int dstRate = VOSK_SAMPLE_RATE; // 16000
-    const QAudioFormat::SampleFormat srcFormat = mActualAudioFormat.sampleFormat();
-
-    // setupAudioInput() settles on a format this can convert, so reaching either
-    // of these means the device gave QAudioSource something else. Report once and
-    // stop, rather than warning 20 times a second while appearing to listen.
-    if (srcFormat != QAudioFormat::Float && srcFormat != QAudioFormat::Int16) {
-        qWarning() << "VoskRecognizer: Unsupported audio format:" << srcFormat;
-        //: %1 is a technical audio sample format name, e.g. "Int32"
-        emit errorOccurred(tr("The microphone is supplying audio in a format speech recognition cannot read (%1).").arg(QString::number(static_cast<int>(srcFormat))));
-        setState(State::Error);
-        return;
-    }
-
-    if (srcRate <= 0 || srcChannels <= 0) {
-        qWarning() << "VoskRecognizer: capture format has no usable sample rate or channel count:" << mActualAudioFormat;
-        //: Shown when the microphone reports an audio format speech recognition cannot work with
-        emit errorOccurred(tr("The microphone reported an unusable audio format - try selecting a different input device."));
-        setState(State::Error);
-        return;
-    }
-
-    const int bytesPerSample = (srcFormat == QAudioFormat::Float) ? static_cast<int>(sizeof(float)) : static_cast<int>(sizeof(qint16));
-    const int frameBytes = bytesPerSample * srcChannels;
-
-    // Carry over what the previous call could not consume, so a frame split
-    // across two reads is resampled rather than discarded
-    mAudioBuffer.append(audioData);
-    const int availableFrames = mAudioBuffer.size() / frameBytes;
-
-    // Interpolation reads the frame after the one it sits on, so the last frame
-    // has to wait for the next call to supply its partner
-    if (availableFrames < 2) {
-        return;
-    }
-
-    const double ratio = static_cast<double>(srcRate) / dstRate;
-    const char* const bufferData = mAudioBuffer.constData();
-
-    // First channel only - Vosk wants mono
-    const auto frameValue = [bufferData, srcChannels, srcFormat](const int frame) -> double {
-        if (srcFormat == QAudioFormat::Float) {
-            return static_cast<double>(reinterpret_cast<const float*>(bufferData)[frame * srcChannels]) * 32767.0;
-        }
-        return static_cast<double>(reinterpret_cast<const qint16*>(bufferData)[frame * srcChannels]);
-    };
-
-    QByteArray convertedData;
-    convertedData.reserve(static_cast<int>(availableFrames / ratio + 1) * static_cast<int>(sizeof(qint16)));
-
-    double phase = mResamplePhase;
-    while (phase + 1.0 < availableFrames) {
-        const int frame = static_cast<int>(phase);
-        const double frac = phase - frame;
-        const double sample = frameValue(frame) + frac * (frameValue(frame + 1) - frameValue(frame));
-        // Clamped before rounding: qRound() returns int, so an out-of-range float
-        // sample would overflow the conversion before a later clamp could help
-        const qint16 converted = static_cast<qint16>(qRound(qBound(-32768.0, sample, 32767.0)));
-        convertedData.append(reinterpret_cast<const char*>(&converted), sizeof(qint16));
-        phase += ratio;
-    }
-
-    // Drop only the frames no longer needed: the frame the phase now sits on is
-    // the next interpolation's left-hand sample, and any partial frame's bytes
-    // stay put for the read that completes them.
-    // The phase can end up past the last whole frame when downsampling, and
-    // removing more bytes than the buffer holds would take the partial frame with
-    // them - which desynchronises every read that follows, since what is left no
-    // longer starts on a frame boundary. Any phase beyond the buffer is carried
-    // instead, and the loop condition consumes it against the next read.
-    const int consumedFrames = qMin(static_cast<int>(phase), availableFrames);
-    if (consumedFrames > 0) {
-        mAudioBuffer.remove(0, consumedFrames * frameBytes);
-    }
-    mResamplePhase = phase - consumedFrames;
-
-    if (convertedData.isEmpty()) {
+    if (!mVoskRecognizer || pcmData.isEmpty()) {
         return;
     }
 
     // Calculate and emit audio level
-    const float level = calculateAudioLevel(convertedData);
+    const float level = calculateAudioLevel(pcmData);
     emit audioLevelChanged(level);
 
     // Track recent audio level with smoothing (for silence detection)
@@ -795,7 +555,7 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
     }
 
     // Feed audio to Vosk
-    const int result = s_vosk_recognizer_accept_waveform(mVoskRecognizer, convertedData.constData(), convertedData.size());
+    const int result = s_vosk_recognizer_accept_waveform(mVoskRecognizer, pcmData.constData(), pcmData.size());
 
     if (result > 0) {
         // We have a complete utterance
@@ -903,35 +663,12 @@ void VoskRecognizer::processAudioDataFromBuffer(const QByteArray& audioData)
     }
 }
 
-void VoskRecognizer::handleAudioStateChanged(QAudio::State newState)
+void VoskRecognizer::slot_captureError(const QString& message)
 {
-    // IdleState is included: a device that stops supplying audio reports the fault
-    // there as readily as it does on StoppedState, and leaving it unhandled means
-    // the timer keeps polling a dead microphone while the UI still says Listening
-    if ((newState == QAudio::StoppedState || newState == QAudio::IdleState) && mAudioSource) {
-        const QAudio::Error audioError = mAudioSource->error();
-        if (audioError != QAudio::NoError) {
-            qWarning() << "VoskRecognizer: Audio error:" << audioError;
-
-            // cancel() returns early unless Listening or Processing, so the audio
-            // device is torn down here rather than left open in any other state.
-            // The member is cleared before stop() is called, so that a stateChanged
-            // emitted from within stop() re-enters to a null source and returns
-            // rather than reporting the same fault twice.
-            mProcessTimer.stop();
-            QAudioSource* pDyingSource = mAudioSource;
-            mAudioSource = nullptr;
-            mAudioDevice = nullptr;
-            pDyingSource->stop();
-            pDyingSource->deleteLater();
-            mAudioBuffer.clear();
-            mResamplePhase = 0.0;
-
-            //: %1 is a description of what went wrong with the microphone
-            emit errorOccurred(tr("Audio input error occurred: %1").arg(audioErrorText(audioError)));
-            setState(State::Error);
-        }
-    }
+    // The capture component has already torn its device down; the recognizer
+    // just surfaces the fault and leaves Listening
+    emit errorOccurred(message);
+    setState(State::Error);
 }
 
 float VoskRecognizer::calculateAudioLevel(const QByteArray& data) const

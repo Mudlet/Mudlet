@@ -120,6 +120,7 @@ set(mudlet_SRCS
     SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
+    SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
@@ -367,6 +368,7 @@ set(mudlet_HDRS
     SentryWrapper.h
     ShortcutsManager.h
     SingleLineTextEdit.h
+    SpeechAudioCapture.h
     SpeechRecognizer.h
     SpeechRecognizerFactory.h
     T2DMap.h

@@ -22,14 +22,12 @@
 
 #include "SpeechRecognizer.h"
 
-#include <QAudioFormat>
-#include <QAudioSource>
-#include <QIODevice>
 #include <QLibrary>
 #include <QPointer>
 #include <QString>
-#include <QTimer>
 #include <QVariantList>
+
+class SpeechAudioCapture;
 
 // Forward declarations for Vosk types (opaque pointers). The recognizer handle is
 // not called VoskRecognizer because that is this file's Qt class, which would hide
@@ -129,9 +127,9 @@ public:
     static QString getBestAvailableModel();
 
 private slots:
-    void processAudioData();
-    void processAudioDataFromBuffer(const QByteArray& data);
-    void handleAudioStateChanged(QAudio::State newState);
+    // Consumes 16kHz mono Int16 PCM from the shared capture component
+    void slot_pcmReady(const QByteArray& pcmData);
+    void slot_captureError(const QString& message);
 
 private:
     // Load the Vosk library dynamically. Static: it touches only the shared
@@ -140,9 +138,6 @@ private:
 
     // Release Vosk resources
     void releaseVoskResources();
-
-    // Set up audio input from the microphone
-    bool setupAudioInput();
 
     // Internal method that actually starts listening (called after permission check)
     void startListeningInternal();
@@ -165,22 +160,8 @@ private:
     VoskModel* mVoskModel = nullptr;
     VoskRecognizerHandle* mVoskRecognizer = nullptr;
 
-    // Audio capture
-    QPointer<QAudioSource> mAudioSource;
-    QPointer<QIODevice> mAudioDevice;
-    QAudioFormat mAudioFormat;       // Vosk's expected format (16kHz mono Int16)
-    QAudioFormat mActualAudioFormat; // Device's actual capture format
-
-    // Timer for periodic audio processing
-    QTimer mProcessTimer;
-
-    // Source audio that has not been resampled yet: whole frames still needed as
-    // interpolation input, plus any trailing bytes of an incomplete frame
-    QByteArray mAudioBuffer;
-    // Position within mAudioBuffer, in source frames, that the next output sample
-    // reads from. Carried across calls so resampling does not restart its phase
-    // at every buffer boundary.
-    double mResamplePhase = 0.0;
+    // Shared microphone capture and resampling; delivers ready-to-decode PCM
+    SpeechAudioCapture* mpCapture = nullptr;
 
     // Track audio level for silence detection (filter hallucinations)
     float mRecentAudioLevel = 0.0f;
