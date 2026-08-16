@@ -417,9 +417,14 @@
 -- percent) are trusted once they recur, score screens are read passively,
 -- and as a last resort "score" is sent once - visibly - to learn the maxima
 -- on games whose prompt only carries current values.
+-- Every section starts in the dock but none is stuck there: dragging a header
+-- row pulls that section out to sit anywhere over the game's text, the sections
+-- left behind share out the space it had, and where each one was left is
+-- remembered between sessions.
 -- Type "baseui" for options; "baseui hide" removes it until "baseui show".
 
 BaseUI = BaseUI or {}
+BaseUI.sections = BaseUI.sections or {}
 BaseUI.gauges = BaseUI.gauges or {}
 BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots or 0
 BaseUI.recentCaptures = BaseUI.recentCaptures or {}
@@ -444,22 +449,64 @@ local theme = {
 }
 
 local layout = {
-  mapHeader = { y = "0%", height = "3%" },
-  map = { y = "3.5%", height = "33.5%" },
-  chatHeader = { y = "38.5%", height = "3%" },
-  tabs = { y = "42.5%", height = "3.8%" },
-  chat = { y = "46.3%", height = "29.7%" },
-  gaugeSlots = { "78%", "83.5%", "89%", "94.5%" },
-  gaugeHeight = "4.5%",
+  -- Every section of the dock is a container of its own, and what a drag can
+  -- take hold of is the strip of its background label its contents do not
+  -- cover - so each one keeps a header row of this many pixels above them.
+  -- Geyser resizes rather than moves on the top four pixel rows of that strip,
+  -- on its leftmost eleven pixels and its rightmost ten; the rest of the row is
+  -- what a drag can land on. Adjustable leaves twice its padding above its
+  -- contents, so the padding is half of this.
+  header = 20,
+  -- what the dock gives each section as a share of its height, and the gap
+  -- under it. The vitals panel has no height here: its bars decide that.
+  map = { height = 0.37, gap = 0.015 },
+  chat = { height = 0.375, gap = 0.02 },
+  vitals = { gap = 0 },
+  -- where the sections end when the vitals panel is not in the dock to end them
+  floor = 0.98,
+  -- pixels rather than shares, unlike the sections: the chat section's tab row
+  -- and the gap under it
+  tabs = 20, tabGap = 4,
 }
+-- where the bars start, which is everything the dock hands out above them
+layout.barsTop = layout.map.height + layout.map.gap + layout.chat.height + layout.chat.gap
 
-local headerCss = string.format(
-  [[background-color: transparent; border: 0px; border-bottom: 1px solid %s; padding-left: 2px;]],
-  theme.borderSoft)
+-- top to bottom, which is also the order a section is put back into when it
+-- comes back to the dock
+local sectionOrder = { "map", "chat", "vitals" }
+local sectionTitles = { map = "MAP", chat = "CHAT", vitals = "VITALS" }
+-- what a section is called in the sentences the player reads
+local sectionNames = { map = "map", chat = "chat window", vitals = "health bars" }
 
 local placeholderCss = string.format(
   [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
   theme.panel, theme.borderSoft)
+
+-- A section's own background. In the dock only its header row shows, over the
+-- dock's own background; out of the dock it needs a background of its own,
+-- since a section may be part transparent and would otherwise be read against
+-- whatever game text happens to be behind it. The alignment is what keeps the
+-- title in the header row rather than centred over the section's contents.
+local sectionCss = {
+  docked = [[background-color: transparent; border: 0px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
+  floating = string.format(
+    [[background-color: %s; border: 1px solid %s; border-radius: 6px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
+    theme.bg, theme.border),
+}
+
+-- the line closing off a header row. It sits on the row's own bottom pixel, so
+-- it is click-through and takes none of the strip a drag has to land on.
+local headerRuleCss = string.format([[background-color: %s; border: 0px;]], theme.borderSoft)
+
+local sectionButtonCss = string.format(
+  [[QLabel{ border-color: %s; background-color: %s; } QLabel::hover{ background-color: rgba(90,100,110,50%%); }]],
+  theme.border, theme.bg)
+
+-- a grip in front of the title, so a header row reads as something to take hold
+-- of rather than as a caption
+local function sectionTitle(key)
+  return string.format([[&lt;span style="color: %s;"&gt;&amp;#9776;&lt;/span&gt; %s]], theme.textDim, sectionTitles[key])
+end
 
 local tabCss = {
   active = string.format(
@@ -1225,10 +1272,24 @@ function BaseUI.loadSettings()
     BaseUI.settings = {}
     cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not read the saved settings - using the defaults.&lt;reset&gt;\n")
   end
+  -- where a section was left is Geyser's to remember, in a file of its own, so
+  -- any position the settings file carries is ignored
+  BaseUI.settings.gaugePanel = nil
 end
 
 function BaseUI.saveSettings()
-  table.save(settingsFile, BaseUI.settings)
+  -- table.save reports a path it cannot write by returning nil and a message
+  -- rather than by raising, so pcall on its own would never see that happen.
+  -- A full disk or a read-only profile fails every save from here on, so say
+  -- so once rather than on every drag.
+  local ok, _, message = pcall(table.save, settingsFile, BaseUI.settings)
+  if ok and message == nil then
+    return
+  end
+  if not BaseUI.warnedSaveFailed then
+    BaseUI.warnedSaveFailed = true
+    cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not save your settings, so this will not be remembered.&lt;reset&gt;\n")
+  end
 end
 
 -- the UI keeps out of the way either when the user hid it or when the game
@@ -1251,6 +1312,8 @@ function BaseUI.standAside(_, packageName)
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
   end
+  -- a section dragged out of the dock is no longer its child to hide
+  BaseUI.layoutDock()
 end
 
 -- if the game's interface is later uninstalled, quietly return to duty. Not
@@ -1270,19 +1333,15 @@ function BaseUI.serverGuiRemoved(_, packageName)
     BaseUI.armChatTriggers()
     BaseUI.createVitalsTriggers()
     BaseUI.renderVitals()
+    -- standing aside hid the dock, and a section is a window in its own right
+    -- rather than a child widget of it, so showing the sections alone would
+    -- leave them over the game's text with no dock behind them
+    if BaseUI.container then
+      BaseUI.container:show()
+      BaseUI.container:adjustBorder()
+    end
+    BaseUI.layoutDock()
   end)
-end
-
-function BaseUI.sectionHeader(name, text, spot)
-  local label = Geyser.Label:new({
-    name = name,
-    x = "0%", y = spot.y, width = "100%", height = spot.height,
-    font = theme.font, fontSize = 9, fgColor = theme.accent,
-    format = "lb",
-  }, BaseUI.container)
-  label:setStyleSheet(headerCss)
-  label:echo(text:upper())
-  return label
 end
 
 function BaseUI.mapHasData()
@@ -1292,8 +1351,8 @@ end
 function BaseUI.createMapper()
   BaseUI.map = Geyser.Mapper:new({
     name = "BaseUI_map",
-    x = "0%", y = layout.map.y, width = "100%", height = layout.map.height,
-  }, BaseUI.container)
+    x = "0%", y = "0%", width = "100%", height = "100%",
+  }, BaseUI.sections.map)
 end
 
 -- the embedded mapper shows a clipped "load or create a map" widget while the
@@ -1334,42 +1393,43 @@ function BaseUI.build()
     autoLoad = false,
     autoSave = false,
   })
-  BaseUI.mapHeader = BaseUI.sectionHeader("BaseUI_map_header", "Map", layout.mapHeader)
+  BaseUI.createSection("map")
   if BaseUI.mapHasData() then
     BaseUI.createMapper()
   else
     BaseUI.mapPlaceholder = Geyser.Label:new({
       name = "BaseUI_map_placeholder",
-      x = "0%", y = layout.map.y, width = "100%", height = layout.map.height,
+      x = "0%", y = "0%", width = "100%", height = "100%",
       font = theme.font, fontSize = 10, fgColor = theme.textDim,
       format = "c",
-    }, BaseUI.container)
+    }, BaseUI.sections.map)
     BaseUI.mapPlaceholder:setStyleSheet(placeholderCss)
     BaseUI.mapPlaceholder:echo("Your map will appear&lt;br&gt;here as you explore")
   end
-  BaseUI.chatHeader = BaseUI.sectionHeader("BaseUI_chat_header", "Chat", layout.chatHeader)
+  BaseUI.createSection("chat")
   BaseUI.chats = {}
   BaseUI.chatTabLabels = {}
   BaseUI.unread = { all = 0, tells = 0, channels = 0 }
   BaseUI.activeChatTab = "all"
   local tabX = { "0%", "34%", "68%" }
+  local belowTabs = layout.tabs + layout.tabGap
   for i, tab in ipairs(chatTabs) do
     local label = Geyser.Label:new({
       name = "BaseUI_tab_" .. tab.key,
-      x = tabX[i], y = layout.tabs.y, width = "32%", height = layout.tabs.height,
+      x = tabX[i], y = 0, width = "32%", height = layout.tabs,
       font = theme.font, fontSize = 9, format = "c",
-    }, BaseUI.container)
+    }, BaseUI.sections.chat)
     label:setClickCallback(BaseUI.selectChatTab, tab.key)
     BaseUI.chatTabLabels[tab.key] = label
     local console = Geyser.MiniConsole:new({
       name = "BaseUI_chat_" .. tab.key,
-      x = "0%", y = layout.chat.y, width = "100%", height = layout.chat.height,
+      x = "0%", y = belowTabs, width = "100%", height = "100%-" .. belowTabs,
       autoWrap = true,
       -- plain black so trigger-captured lines (which keep the main console's
       -- background colour) blend in seamlessly
       color = "black",
       fontSize = 10,
-    }, BaseUI.container)
+    }, BaseUI.sections.chat)
     BaseUI.chats[tab.key] = console
     if tab.key ~= "all" then
       console:hide()
@@ -1378,6 +1438,8 @@ function BaseUI.build()
   BaseUI.chat = BaseUI.chats.all
   BaseUI.refreshChatTabs()
   BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
+  -- last, so the bars are above the chat window where the two overlap
+  BaseUI.createSection("vitals")
   -- the container remembers its own hidden/detached state from the previous
   -- session (it saves on exit) - our setting says it should be visible, so
   -- override whatever it restored
@@ -1387,6 +1449,7 @@ function BaseUI.build()
       BaseUI.container:attachToBorder("right")
     end
   end
+  BaseUI.layoutDock()
   BaseUI.maybeAnnounce()
 end
 
@@ -1431,18 +1494,320 @@ function BaseUI.noteChatActivity(key)
   BaseUI.refreshChatTabs()
 end
 
+-- Each section of the dock lives in an adjustable container of its own.
+-- Dragging its header row moves it inside the dock; dragging it clear of the
+-- dock floats it over the game's text, which is what the dragOut constraint
+-- gives us. Geyser remembers both where a section was left and which of the two
+-- it was in, so what is left here is sharing the dock out between the sections
+-- still in it, fitting the vitals panel to its bars, and the dock's lifecycle.
+
+-- how tall the bars are, as shares of the dock: the pitch from one bar's top
+-- to the next, and the bar itself
+local gaugePitch, gaugeSpan = 0.055, 0.045
+-- a game with more stats than this loses the last of them - see vitalsStats
+local maxGaugeSlots = 4
+local function asPercent(fraction)
+  return string.format("%.4f%%", fraction * 100)
+end
+
+local function gaugePanelHeight(slots)
+  -- no bars, no height: the trailing gap the pitch carries would make it
+  -- negative, and Geyser reads a negative percentage as one off the far edge
+  return math.max(0, gaugePitch * slots - (gaugePitch - gaugeSpan))
+end
+
+function BaseUI.sectionFloating(key)
+  local section = BaseUI.sections[key]
+  return section ~= nil and section.draggedOut == true
+end
+
+-- the bars are shares of the panel, so a panel out of the dock is given the
+-- number of pixels they had in it, as a share of whatever it is in now
+local function floatingVitalsHeight()
+  local panel = BaseUI.sections.vitals
+  local parent = panel and panel.container
+  local within = parent and parent.get_height and parent.get_height() or 0
+  if BaseUI.usedGaugeSlots == 0 or within &lt;= 0 or not BaseUI.container then
+    return nil
+  end
+  local bars = gaugePanelHeight(BaseUI.usedGaugeSlots) * BaseUI.container.Inside:get_height()
+  return asPercent(bars / within) .. "+" .. layout.header
+end
+
+-- Where the dock's sections go. They stack from the top in a fixed order, each
+-- with the gap under it separating it from the next one still in the dock. The
+-- vitals panel is only as tall as its bars need; the map and the chat window
+-- divide what is left between them in the ratio they have when all three are
+-- docked. So a section dragged out leaves its space to the ones still in the
+-- dock, and putting it back gives that space straight back.
+-- Returns the place each docked section stacks into, keyed by section. That is
+-- the section's own geometry except for the vitals panel, whose header row sits
+-- above its place rather than in it - see placeSection.
+local function dockPlaces()
+  local docked, gaps, flexible = {}, 0, 0
+  for _, key in ipairs(sectionOrder) do
+    if BaseUI.sections[key] and not BaseUI.sectionFloating(key) then
+      if #docked &gt; 0 then
+        gaps = gaps + layout[docked[#docked]].gap
+      end
+      docked[#docked + 1] = key
+      flexible = flexible + (layout[key].height or 0)
+    end
+  end
+  -- with the bars in the dock the sections end where the bars start; without
+  -- them there is the rest of the dock to fill. The bars' height is no part of
+  -- the pool either way (layout.vitals has no share of its own), so the map and
+  -- the chat window keep the same place whatever the bar count.
+  local pool = (BaseUI.sectionFloating("vitals") and layout.floor or layout.barsTop) - gaps
+  local places, y = {}, 0
+  for _, key in ipairs(docked) do
+    local height = layout[key].height and pool * layout[key].height / flexible
+      or gaugePanelHeight(BaseUI.usedGaugeSlots)
+    places[key] = { y = y, height = height }
+    y = y + height + layout[key].gap
+  end
+  return places
+end
+
+-- Adjustable's own buttons and most of its menu would let the player put a
+-- section somewhere with no obvious way back - closed, collapsed, or locked in
+-- place. Locking is no alternative to hiding it: whichever lockStyle it uses, a
+-- locked container cannot be dragged either.
+-- Called again after a load, which applies whatever a save file says about all
+-- three and puts the buttons and the inside container back the way the
+-- constructor had them - so this has to undo them rather than only refuse to
+-- offer them, or a file naming a state the menu no longer reaches would stick.
+function BaseUI.trimSectionChrome(key)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  if section.locked then
+    section:unlockContainer()
+  end
+  if section.minimized then
+    section:restore()
+  end
+  section.exitLabel:hide()
+  section.minimizeLabel:hide()
+  for _, item in ipairs({ "lockLabel", "minLabel", "saveLabel", "loadLabel", "lockStylesLabel" }) do
+    section.adjLabel:hideMenuLabel(item)
+  end
+  section.Inside:move(0, layout.header)
+  section.Inside:resize("100%", "100%-" .. layout.header)
+end
+
+-- Adjustable keeps its own geometry, and whether it was dragged out of the
+-- dock, in a file of its own. A saved value Geyser cannot parse raises while it
+-- is being applied, which here would be in the middle of building the interface
+-- - so a file that cannot be read is dropped rather than obeyed.
+-- The two ways it can fail need catching separately: a value Geyser cannot
+-- apply raises, while a file it cannot parse at all only makes load() return
+-- false, which a pcall on its own reports as a success.
+-- A load also puts back the buttons and the inside container the constructor
+-- was given, hence the trim afterwards.
+function BaseUI.loadSection(key)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  BaseUI.trimSectionChrome(key)
+  -- a missing file is no failure: load() reports that by returning its message
+  local ok, applied = pcall(section.load, section)
+  if not ok or applied == false then
+    section:deleteSaveFile()
+    section:changeContainer(BaseUI.container.Inside)
+    -- the player put this somewhere on purpose and it is not there any more, so
+    -- say why rather than let them think it is simply never remembered
+    cecho(string.format(
+      "\n&lt;dim_grey&gt;[ Mudlet UI ] Could not restore where you left the %s, so it is back in the dock.&lt;reset&gt;\n",
+      sectionNames[key]))
+  end
+  BaseUI.trimSectionChrome(key)
+end
+
+function BaseUI.styleSection(key)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  local floating = BaseUI.sectionFloating(key)
+  section.adjLabelstyle = floating and sectionCss.floating or sectionCss.docked
+  section.adjLabel:setStyleSheet(section.adjLabelstyle)
+  section:setTitle(sectionTitle(key), theme.accent, "l8")
+  -- Geyser sets the hand from the first move event inside the header row, so a
+  -- pointer that comes to rest on it without moving again would otherwise be
+  -- left showing the default cursor
+  section.adjLabel:setCursor("OpenHand")
+  section.adjLabel:setToolTip(floating
+    and string.format("Drag to move the %s - right-click to put it back in the dock", sectionNames[key])
+    or string.format("Drag this header out of the dock to put the %s anywhere", sectionNames[key]), 0)
+end
+
+-- Puts one section where dockPlaces() says it goes. Where a floating section
+-- sits and how big it is are the player's business and Geyser's, so nothing is
+-- set on one but the height the bars need.
+function BaseUI.placeSection(key, place)
+  local section = BaseUI.sections[key]
+  if not section then
+    return
+  end
+  if BaseUI.sectionFloating(key) then
+    local height = key == "vitals" and floatingVitalsHeight()
+    if height then
+      section:resize(nil, height)
+    end
+  elseif place then
+    -- the vitals panel's header row hangs up into the gap above it, which is
+    -- what puts its bars at the top of its share rather than a header lower
+    -- down. There is nothing to hang into when it is the topmost section left.
+    local overhang = key == "vitals" and place.y * BaseUI.container.Inside:get_height() &gt; layout.header
+    section:move("0%", overhang and asPercent(place.y) .. "-" .. layout.header or asPercent(place.y))
+    section:resize("100%", key == "vitals" and asPercent(place.height) .. "+" .. layout.header
+      or asPercent(place.height))
+  end
+  BaseUI.styleSection(key)
+  -- everything goes while the UI is dormant; a vitals panel with no bars has
+  -- nothing to show but its own header row
+  if BaseUI.dormant() or (key == "vitals" and BaseUI.usedGaugeSlots == 0) then
+    section:hide()
+  else
+    section:show()
+  end
+  -- a section attached to a main window border keeps that border reserved for
+  -- itself, and a hidden one has no business doing that
+  section:adjustBorder()
+end
+
+-- Shares the dock out between the sections still in it. Deliberately not called
+-- while a drag is going on: Adjustable owns a section's position from the moment
+-- it is picked up, and the drop is when the dock has its answer.
+function BaseUI.layoutDock()
+  if not BaseUI.container then
+    return
+  end
+  BaseUI.placedGaugeSlots = BaseUI.usedGaugeSlots
+  local places = dockPlaces()
+  for _, key in ipairs(sectionOrder) do
+    BaseUI.placeSection(key, places[key])
+  end
+end
+
+-- Geyser has no dragging back into a parent, so this is the way back. It is
+-- the dock's inside container that holds its children, not the dock itself.
+-- changeContainer turns down a container it does not like by returning rather
+-- than by raising, and it is the only thing that clears draggedOut - so that
+-- flag is what says whether the section really came back.
+function BaseUI.dockSection(key)
+  local section = BaseUI.sections[key]
+  if not section or not BaseUI.sectionFloating(key) then
+    return false
+  end
+  if section.attached then
+    section:detach()
+  end
+  section:changeContainer(BaseUI.container.Inside)
+  if BaseUI.sectionFloating(key) then
+    return false
+  end
+  BaseUI.layoutDock()
+  section:save()
+  return true
+end
+
+-- returns how many sections came back and how many would not, which is what
+-- keeps "baseui dock" from reporting a success it never had
+function BaseUI.dockAll()
+  local docked, stuck = 0, 0
+  for _, key in ipairs(sectionOrder) do
+    if BaseUI.sectionFloating(key) then
+      if BaseUI.dockSection(key) then
+        docked = docked + 1
+      else
+        stuck = stuck + 1
+      end
+    end
+  end
+  return docked, stuck
+end
+
+-- The drop is where a section has finished leaving the dock or coming back to
+-- it, so it is where the sections still in the dock take over the space it left
+-- (a docked section a drag only shuffled about is put back in its own place,
+-- since the dock stacks its sections rather than letting them be arranged).
+-- Adjustable saves on exit by itself; saving here as well means a session that
+-- ends badly still remembers where a section was put.
+function BaseUI.sectionDropped(_, name)
+  for _, key in ipairs(sectionOrder) do
+    local section = BaseUI.sections[key]
+    if section and name == section.name then
+      BaseUI.layoutDock()
+      section:save()
+      return
+    end
+  end
+end
+
+-- A section's header row is the container's own title bar, which is why the
+-- title carries the grip rather than there being a label to hold.
+function BaseUI.createSection(key)
+  local section = Adjustable.Container:new({
+    -- not "BaseUI_" .. key: a container hides and shows itself by its name as a
+    -- Mudlet window, and the map section would then share one with the mapper
+    -- inside it
+    name = "BaseUI_" .. key .. "_section",
+    -- layoutDock gives it its place
+    x = "0%", y = "0%", width = "100%", height = "0%",
+    dragOut = true,
+    padding = layout.header / 2,
+    titleText = sectionTitle(key),
+    titleTxtColor = theme.accent,
+    titleFormat = "l8",
+    adjLabelstyle = sectionCss.docked,
+    buttonstyle = sectionButtonCss,
+    -- loaded by hand below instead, and saved on the drop as well as on exit
+    autoLoad = false,
+    autoSave = true,
+  }, BaseUI.container)
+  BaseUI.sections[key] = section
+  section:newCustomItem("Back to the dock", function()
+    BaseUI.dockSection(key)
+  end)
+  -- the rule belongs to the header row rather than to the section's contents,
+  -- so it goes beside the container Adjustable keeps those in
+  section.goInside = false
+  local rule = Geyser.Label:new({
+    name = section.name .. "_rule",
+    x = 0, y = layout.header - 1, width = "100%", height = 1,
+    clickthrough = true,
+  }, section)
+  section.goInside = true
+  rule:setStyleSheet(headerRuleCss)
+  BaseUI.loadSection(key)
+  return section
+end
+
 -- keep the created gauges in vitalsStats order and packed from the top,
 -- whatever order their data completed in (a percentage can be ready before
--- the hp maxima have arrived)
+-- the hp maxima have arrived). A slot is a share of the panel, and the panel
+-- is only as tall as the bars in it, so the shares depend on how many there are
 function BaseUI.layoutGauges()
+  local slots = BaseUI.usedGaugeSlots
+  if slots == 0 then
+    return
+  end
+  local height = gaugePanelHeight(slots)
   local index = 0
   for _, stat in ipairs(vitalsStats) do
     local gauge = BaseUI.gauges[stat.key]
     if gauge then
+      gauge:move("0%", asPercent(index * gaugePitch / height))
+      gauge:resize("100%", asPercent(gaugeSpan / height))
       index = index + 1
-      gauge:move("0%", layout.gaugeSlots[index])
     end
   end
+  -- the panel grows with the bars, wherever it is
+  BaseUI.layoutDock()
 end
 
 function BaseUI.ensureGauge(key)
@@ -1450,20 +1815,21 @@ function BaseUI.ensureGauge(key)
   if gauge then
     return gauge
   end
-  local slot = layout.gaugeSlots[BaseUI.usedGaugeSlots + 1]
   local def = gaugeDefs[key]
-  if not slot or not def then
+  -- without the panel a gauge would parent to the main window instead, where
+  -- its panel-relative size would stretch it across the top of the screen
+  if not def or not BaseUI.sections.vitals or BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
     return nil
   end
   BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots + 1
   gauge = Geyser.Gauge:new({
     name = "BaseUI_" .. key .. "_gauge",
-    x = "0%", y = slot,
-    width = "100%", height = layout.gaugeHeight,
+    -- layoutGauges gives it its slot
+    x = "0%", y = "0%", width = "100%", height = "100%",
     strict = true,
     font = theme.font,
     fontSize = 9,
-  }, BaseUI.container)
+  }, BaseUI.sections.vitals)
   gauge:setStyleSheet(def.front, gaugeBack, gaugeText)
   gauge:setFgColor("white")
   gauge:setAlignment("l")
@@ -1559,6 +1925,18 @@ function BaseUI.renderVitals()
     elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
       BaseUI.gauges[stat.key]:hide()
     end
+  end
+  -- The panel is built before there are any bars to put in it, so it starts
+  -- hidden; fitting it here rather than only where a bar is created is what
+  -- brings it back for a session that already has its bars - a reinstall keeps
+  -- them, so nothing would create one again.
+  -- Only when something it decides has changed, though: doing it on every line
+  -- would put a section being dragged back where the dock says it belongs, and
+  -- laying the dock out is three containers' worth of work now. A panel with no
+  -- bars is hidden on purpose and is not waiting to be brought back.
+  if BaseUI.usedGaugeSlots ~= BaseUI.placedGaugeSlots
+    or (BaseUI.usedGaugeSlots &gt; 0 and BaseUI.sections.vitals and BaseUI.sections.vitals.hidden) then
+    BaseUI.layoutDock()
   end
 end
 
@@ -1730,7 +2108,7 @@ function BaseUI.announce()
   BaseUI.settings.announced = true
   BaseUI.saveSettings()
   cecho("\n&lt;cyan&gt;[ Mudlet UI ] Built you a starter interface from what your game supports - health bars, map and chat.\n")
-  cecho("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, right-click for options, or type &lt;yellow&gt;baseui hide&lt;cyan&gt; to remove it.&lt;reset&gt;\n")
+  cecho("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, or any section's header out of it to put that section anywhere - type &lt;yellow&gt;baseui&lt;cyan&gt; for options.&lt;reset&gt;\n")
 end
 
 function BaseUI.hide()
@@ -1742,6 +2120,7 @@ function BaseUI.hide()
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
   end
+  BaseUI.layoutDock()
   cecho("\n&lt;cyan&gt;[ Mudlet UI ] Hidden - type &lt;yellow&gt;baseui show&lt;cyan&gt; to bring it back.&lt;reset&gt;\n")
 end
 
@@ -1765,6 +2144,9 @@ function BaseUI.show()
     if not BaseUI.container.attached then
       BaseUI.container:attachToBorder("right")
     end
+    -- after the dock is back, not before: showing it shows every section in it,
+    -- including one with nothing in it to show
+    BaseUI.layoutDock()
     BaseUI.checkMapData()
     cecho("\n&lt;cyan&gt;[ Mudlet UI ] Shown.&lt;reset&gt;\n")
   else
@@ -1778,6 +2160,15 @@ function BaseUI.alias(input)
     BaseUI.hide()
   elseif input == "show" then
     BaseUI.show()
+  elseif input == "dock" then
+    local docked, stuck = BaseUI.dockAll()
+    if stuck &gt; 0 then
+      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not put everything back in the dock - reconnecting will rebuild it where it belongs.&lt;reset&gt;\n")
+    elseif docked &gt; 0 then
+      cecho("\n&lt;cyan&gt;[ Mudlet UI ] Everything is back in the dock.&lt;reset&gt;\n")
+    else
+      cecho("\n&lt;cyan&gt;[ Mudlet UI ] Everything is in the dock already - drag a section's header out to put it anywhere.&lt;reset&gt;\n")
+    end
   else
     local state
     if BaseUI.settings.hidden then
@@ -1791,7 +2182,8 @@ function BaseUI.alias(input)
     end
     cecho("\n&lt;cyan&gt;[ Mudlet UI ] A starter interface built from your game's data (currently " .. state .. ").\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it (remembered between sessions)\n")
-    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui show&lt;cyan&gt; - bring it back&lt;reset&gt;\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui show&lt;cyan&gt; - bring it back\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui dock&lt;cyan&gt; - put every section back in the dock, if you dragged any out&lt;reset&gt;\n")
   end
 end
 
@@ -1818,6 +2210,7 @@ registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture
 registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
 registerAnonymousEventHandler("sysDisconnectionEvent", "BaseUI.handleDisconnect")
 registerAnonymousEventHandler("sysDataSendRequest", "BaseUI.noteCommandSent")
+registerAnonymousEventHandler("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
 registerAnonymousEventHandler("sysServerGuiInstalled", "BaseUI.standAside")
 registerAnonymousEventHandler("sysUninstallPackage", "BaseUI.serverGuiRemoved")
 for _, stat in ipairs(msdpStats) do

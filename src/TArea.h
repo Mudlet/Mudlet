@@ -25,6 +25,7 @@
 
 
 #include "TAreaGridIndex.h"
+#include "TAreaSpanIndex.h"
 #include "TAreaZLevelIndex.h"
 #include "TMap.h"
 
@@ -56,14 +57,12 @@ public:
     const QSet<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
-    // Atomically updates both the Z-level index and the grid index when a room
-    // moves to a new position.  All callers should use this instead of calling
-    // moveRoomZ and moveRoomInGridIndex separately.
-    void moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY)
-    {
-        mZLevelIndex.moveRoom(id, fromZ, toZ);
-        mGridIndex.moveRoom(id, fromZ, fromX, fromY, toZ, toX, toY);
-    }
+    // Keeps the Z-level index, the grid index and the area extremes in step
+    // when a room this area already holds moves to new coordinates; callers
+    // must use this rather than updating any of them on their own.  A room
+    // joining or leaving the area, including one being deleted, goes through
+    // addRoom()/removeRoom() instead.
+    void moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY);
     // Returns the set of room IDs on the given Z level.  The returned reference
     // is stable for the lifetime of the index (an internal empty set is used
     // for Z levels with no rooms), so it can be safely iterated immediately.
@@ -71,10 +70,13 @@ public:
     // Returns a const reference to the grid index for read-only access by the renderer.
     const TAreaGridIndex& getGridIndex() const { return mGridIndex; }
     void calcSpan();
-    void fast_calcSpan(int);
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
-    void removeRoom(int, bool deferAreaRecalculations = false);
+    // Recomputes the area exit records of this area's rooms that have an exit
+    // to the given room, which is what changes when that room joins or leaves
+    // this area.
+    void refreshAreaExitsToRoom(int);
+    void removeRoom(int);
     // List of coordinate triples (x,y,z) where there are multiple rooms
     QList<std::tuple<int, int, int>> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
@@ -111,7 +113,7 @@ public:
     QMap<int, int> xmaxForZ;
     QMap<int, int> yminForZ;
     QMap<int, int> ymaxForZ;
-    QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
+    QList<int> zLevels; // The z-levels that have rooms, in ascending order
     bool gridMode = false;
     bool isZone = false;
     int zoneAreaRef = 0;
@@ -142,6 +144,10 @@ private:
     QVector3D readJson3DCoordinates(const QJsonObject&, const QString&) const;
     void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&) const;
 
+    void publishSpan();
+    void publishSpanForZ(int z);
+    void publishOverallSpan();
+
     QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
     QPixmap convertBase64DataToImage(const QList<QByteArray>&) const;
 
@@ -159,6 +165,10 @@ private:
     TAreaZLevelIndex mZLevelIndex;
     // Per-(z,x,y) grid index for efficient viewport queries in grid mode.
     TAreaGridIndex mGridIndex;
+    // Source of truth for the public extremes above (min_x, xminForZ, zLevels
+    // and friends), which stay plain members because the map file format
+    // stores them and a lot of code reads them directly.
+    TAreaSpanIndex mSpanIndex;
 
     // In use this has a minimum of 3.0 and a default of 20.0, the latter will
     // be applied in the constructor initialisation list:
