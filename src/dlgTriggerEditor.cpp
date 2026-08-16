@@ -8057,12 +8057,19 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         if (vu->isSaved(var)) {
             return;
         }
+        // A tick is not on its own a decision to save: Qt's tristate cascade
+        // ticks children the user cannot tick themselves, and marks a parent
+        // partially ticked from a tick on any child, so what may be saved is
+        // asked again here rather than read off the check state (#9957).
+        if (!vu->shouldSave(var)) {
+            return;
+        }
         vu->addSavedVar(var);
         QList<QTreeWidgetItem*> list;
         recurseVariablesUp(pItem, list);
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }
@@ -8070,7 +8077,7 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         recurseVariablesDown(pItem, list);
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }

@@ -235,11 +235,17 @@ void VarUnit::clearPointers()
     mPointers.clear();
 }
 
+// The same question as the TVar overload below, asked of the row in the
+// Variables view standing for that variable - so it has to give the same answer.
+// It used to leave out the size limit, and Qt's tristate cascade ticks a child
+// whose ItemIsUserCheckable flag buildVarTree() stripped, so a table over the
+// limit reached by ticking its parent stayed ticked, went into savedVars and was
+// written into the profile (#9957).
 bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
 {
-    auto var = getWVar(pWidgetItem);
+    TVar* var = getWVar(pWidgetItem);
 
-    return !(!var || var->getValueType() == 6 || var->isReference());
+    return var && shouldSave(var);
 }
 
 bool VarUnit::shouldSave(TVar* var)

@@ -18,10 +18,13 @@
  ***************************************************************************/
 
 #include <LuaInterface.h>
+#include <TTreeWidget.h>
 #include <TVar.h>
 #include <VarUnit.h>
 #include <utils.h>
 #include <QtTest/QtTest>
+
+#include <QTreeWidgetItem>
 
 #include <memory>
 
@@ -93,6 +96,30 @@ private:
             }
         }
         return nullptr;
+    }
+
+    static QTreeWidgetItem* childItemNamed(QTreeWidgetItem* parent, const QString& name)
+    {
+        for (int i = 0; i < parent->childCount(); ++i) {
+            if (parent->child(i)->text(0) == name) {
+                return parent->child(i);
+            }
+        }
+        return nullptr;
+    }
+
+    // The Variables view as repopulateVars() builds it: a root row carrying no
+    // check state of its own, holding a table whose member is over the 10,000
+    // item limit and, beside it, a table small enough to save.
+    QTreeWidgetItem* buildFenceTree(TTreeWidget& tree)
+    {
+        execLua(QStringLiteral("fenceHolder = {big = {}} "
+                               "for i = 1, 10001 do fenceHolder.big[i] = i end "
+                               "keptTable = {member = 'kept'}"));
+        interface->getVars(false);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << QStringLiteral("Variables"));
+        interface->getVarUnit()->buildVarTree(rootItem, interface->getVarUnit()->getBase(), false);
+        return rootItem;
     }
 
     TVar* createVar(TVar* parent, const QString& name, int keyType, const QString& value, int valueType)
@@ -1328,6 +1355,82 @@ private slots:
         QVERIFY(vu->isSaved(&var));
         vu->removeSavedVar(&var);
         QVERIFY(!vu->isSaved(&var));
+    }
+
+    // ========================================================================
+    // The 10,000 item limit and the parent checkbox (#9957)
+    // ========================================================================
+
+    // Both overloads of shouldSave() answer for the same variable, so a row of
+    // the Variables view standing for an oversized table has to be refused the
+    // same way the table itself is.
+    void testWidgetRowOfAnOversizedTableIsRefusedTheSameWayTheTableIs()
+    {
+        TTreeWidget tree(nullptr);
+        QTreeWidgetItem* rootItem = buildFenceTree(tree);
+        QVERIFY(rootItem);
+        VarUnit* vu = interface->getVarUnit();
+        QTreeWidgetItem* holderItem = childItemNamed(rootItem, qsl("fenceHolder"));
+        QVERIFY(holderItem);
+        QTreeWidgetItem* bigItem = childItemNamed(holderItem, qsl("big"));
+        QTreeWidgetItem* keptItem = childItemNamed(rootItem, qsl("keptTable"));
+        QVERIFY(bigItem);
+        QVERIFY(keptItem);
+
+        QVERIFY2(!vu->shouldSave(vu->getWVar(bigItem)), "a table of 10001 members is over the limit");
+        QVERIFY2(!vu->shouldSave(bigItem), "and so is the row standing for it");
+        QVERIFY2(vu->shouldSave(keptItem), "while the row of a small table is still saveable");
+    }
+
+    // Ticking a row hands the tick to every row beneath it, an oversized table
+    // among them: Qt's tristate cascade writes the check state whether or not
+    // the child's ItemIsUserCheckable flag was taken away, which is what
+    // buildVarTree() does to a table over the limit. The sweep that runs after
+    // the tick is what has to take it back off again, or the table goes into
+    // savedVars and from there into the profile.
+    void testOversizedTableTickedThroughItsParentEndsUntickedAndUnsaved()
+    {
+        TTreeWidget tree(nullptr);
+        QTreeWidgetItem* rootItem = buildFenceTree(tree);
+        QVERIFY(rootItem);
+        VarUnit* vu = interface->getVarUnit();
+        QTreeWidgetItem* holderItem = childItemNamed(rootItem, qsl("fenceHolder"));
+        QVERIFY(holderItem);
+        QTreeWidgetItem* bigItem = childItemNamed(holderItem, qsl("big"));
+        QTreeWidgetItem* keptItem = childItemNamed(rootItem, qsl("keptTable"));
+        QVERIFY(bigItem);
+        QVERIFY(keptItem);
+        QVERIFY2(!(bigItem->flags() & Qt::ItemIsUserCheckable), "the view marks an oversized table untickable");
+
+        holderItem->setCheckState(0, Qt::Checked);
+        keptItem->setCheckState(0, Qt::Checked);
+        QVERIFY2(bigItem->checkState(0) == Qt::Checked, "Qt hands the tick to the untickable child all the same");
+
+        // the sweep TTreeWidget::mouseReleaseEvent() runs over each ticked row
+        // and everything under it
+        QList<QTreeWidgetItem*> sweep;
+        tree.getAllChildren(holderItem, sweep);
+        tree.getAllChildren(keptItem, sweep);
+        for (QTreeWidgetItem* item : sweep) {
+            if (!vu->shouldSave(item)) {
+                item->setCheckState(0, Qt::Unchecked);
+            }
+        }
+
+        QCOMPARE(bigItem->checkState(0), Qt::Unchecked);
+        QVERIFY2(keptItem->checkState(0) == Qt::Checked, "the fence must not reach past the tables it is for");
+
+        // and what dlgTriggerEditor::slot_variableChanged() does with what is
+        // left ticked - savedVars is what a profile save reads
+        for (QTreeWidgetItem* item : sweep) {
+            TVar* var = vu->getWVar(item);
+            if (var && item->checkState(0) != Qt::Unchecked) {
+                vu->addSavedVar(var);
+            }
+        }
+
+        QVERIFY2(!vu->savedVars.contains(qsl("fenceHolder.big")), "an oversized table ticked through its parent must not be saved");
+        QVERIFY2(vu->savedVars.contains(qsl("keptTable")), "a small table the user ticked still is");
     }
 
     // ========================================================================
