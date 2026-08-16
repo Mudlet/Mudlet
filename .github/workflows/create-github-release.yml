@@ -341,7 +341,9 @@ jobs:
           echo "Changelog preview:"
           head -20 changelog.md
 
-      # Clean up old PTB releases, keeping only the latest 1 (+ the new one = 2 total)
+      # Clean up old PTB releases, keeping the latest 15. The update dialog builds
+      # its changelog from the release notes still on the feed, so retaining only a
+      # couple meant anyone more than one PTB behind silently lost the rest.
       - name: Clean up old PTB releases
         if: steps.release-type.outputs.type == 'ptb'
         env:
@@ -351,7 +353,7 @@ jobs:
           # Filter by -ptb in tag name to avoid deleting non-PTB prereleases (e.g. release candidates).
           # Exclude the current tag so we never delete what we are about to publish.
           gh release list --limit 100 --json tagName,isPrerelease,createdAt \
-              --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[1:] | .[].tagName' | \
+              --jq '[.[] | select(.isPrerelease and (.tagName | contains("-ptb")))] | sort_by(.createdAt) | reverse | .[15:] | .[].tagName' | \
               while IFS= read -r old_tag; do
                   if [[ "${old_tag}" == "${RELEASE_TAG}" ]]; then
                     continue
