@@ -1260,7 +1260,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.9"
+local version = "2.1.10"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -2313,7 +2313,7 @@ map.defaults = {
         wd = 'wd', wu = 'wu', westdown = 'westdown', westup = 'westup',
     },
     debug = false,
-    download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+    download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper",
 }
 
 local move_queue, lines = {}, {}
@@ -2395,8 +2395,14 @@ local function config()
         stubmap[v[1]] = count
     end
     -- update to the current download path
-    if map.configs.download_path == "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
-        map.configs.download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper"
+    local old_paths = {
+        "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+        "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+    }
+    if table.contains(old_paths, map.configs.download_path) then
+        map.configs.download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper"
+    elseif map.configs.download_path == "https://gitee.com/mudlet/Mudlet/raw/development/src/mudlet-lua/lua/generic-mapper" then
+        map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/packages/generic_mapper"
     end
 
     -- setup metatable to store sensitive values
@@ -3221,7 +3227,7 @@ function map.export_area(name)
     tbl.rooms = {}
     tbl.exits = {}
     tbl.special = {}
-    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment, roomChar
+    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment, roomChar, hash
     for k,v in pairs(rooms) do
         rname = getRoomName(v)
         exits = getRoomExits(v)
@@ -3232,8 +3238,9 @@ function map.export_area(name)
 	environment = getRoomEnv(v)
 	roomChar = getRoomChar(v)
         coords = {getRoomCoordinates(v)}
+        hash = getRoomHashByID(v)
         tbl.rooms[v] = {name = rname, coords = coords, exits = exits, stubs = stubs, doors = doors, door_up = door_up,
-            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar}
+            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar, hash = hash}
         tmp = {}
         for k1,v1 in pairs(exits) do
             if not table.contains(rooms,v1) then
@@ -3269,6 +3276,7 @@ function map.import_area(name)
     local areaID = areas[tbl.name] or addAreaName(tbl.name)
     local rooms = {}
     local ID
+    local hash_conflicts = 0
     for k,v in pairs(tbl.rooms) do
         ID = createRoomID()
         rooms[k] = ID
@@ -3287,6 +3295,15 @@ function map.import_area(name)
         setRoomUserData(ID,"portals",v.portals)
 	setRoomEnv(ID,v.environment)
 	setRoomChar(ID,v.roomChar)
+        -- taking over a hash the map already uses would move the mapper's room
+        -- identification onto this imported copy, so leave those rooms hashless
+        if v.hash then
+            if getRoomIDbyHash(v.hash) == -1 then
+                setRoomIDbyHash(ID,v.hash)
+            else
+                hash_conflicts = hash_conflicts + 1
+            end
+        end
     end
     for k,v in pairs(tbl.rooms) do
         for i,j in pairs(v.exits) do
@@ -3314,6 +3331,9 @@ function map.import_area(name)
     end
     map.fix_portals()
     map.echo("Area " .. tbl.name .. " imported from " .. name)
+    if hash_conflicts > 0 then
+        map.echo(string.format("%d imported room(s) left without a hash, the map already has rooms using those.", hash_conflicts), false, true)
+    end
 end
 
 function map.set_recall()
@@ -4225,8 +4245,8 @@ function map.eventHandler(event, ...)
         local file = arg[1]
         if string.ends(file,"/versions.lua") and mudlet.translations.interfacelanguage == "zh_CN" then
             -- update to the current download path for chinese user
-            if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
-                map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/mudlet-lua/lua/generic-mapper"
+            if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper" then
+                map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/packages/generic_mapper"
                 map.checkVersion()
             end
         end

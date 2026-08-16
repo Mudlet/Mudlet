@@ -755,3 +755,549 @@ describe("Tests the Adjustable.Container mouse handlers", function()
     end)
   end)
 end)
+
+-- Dragging a container out of the container it is nested in. onMove follows the
+-- real mouse pointer through getMousePosition(), which a headless run cannot
+-- drive, so these specs go at the two functions onMove hands a drag to: the
+-- decision that the pointer has left the parent, and the move out itself.
+describe("Tests dragging an Adjustable.Container out of its parent", function()
+  local dock, child
+  local dockName, childName = "gadDock", "gadChild"
+
+  local function makeChild(cons)
+    cons = cons or {}
+    cons.name = childName
+    cons.x, cons.y = cons.x or 20, cons.y or 20
+    cons.width, cons.height = cons.width or "50%", cons.height or "50%"
+    cons.autoLoad, cons.autoSave = false, false
+    child = Adjustable.Container:new(cons, dock)
+    return child
+  end
+
+  local function assertNear(actual, expected, what)
+    assert.is_true(math.abs(actual - expected) <= 1,
+      string.format("%s: expected %s, got %s", what, tostring(expected), tostring(actual)))
+  end
+
+  -- drives a drag through the handlers a mouse would call. The handlers ask
+  -- getMousePosition where the pointer is, and they look it up in the globals of
+  -- the file they live in, which is not the globals a spec file writes to, so the
+  -- stand-in for the mouse has to go into their own environment
+  local function drag(container, grabX, grabY, stepX, stepY, steps)
+    local geyser = getfenv(Adjustable.Container.onMove)
+    local realGetMousePosition = geyser.getMousePosition
+    local pointerX, pointerY = 500, 400
+    local event = {button = "LeftButton", buttons = {"LeftButton"}, x = grabX, y = grabY, globalX = pointerX, globalY = pointerY}
+    geyser.getMousePosition = function() return pointerX, pointerY end
+    local ok, err = pcall(function()
+      -- which edge is being dragged is kept in one table shared by every
+      -- container, and only a completed click empties it, so start from a
+      -- released mouse rather than from whatever the last spec left behind
+      container:onClick(container.adjLabel, event)
+      container:onRelease(container.adjLabel, event)
+      container:onClick(container.adjLabel, event)
+      for _ = 1, steps do
+        pointerX, pointerY = pointerX + stepX, pointerY + stepY
+        container:onMove(container.adjLabel, event)
+      end
+      container:onRelease(container.adjLabel, event)
+    end)
+    geyser.getMousePosition = realGetMousePosition
+    if not ok then
+      error(err, 0)
+    end
+  end
+
+  before_each(function()
+    -- the window is whatever size the machine running the specs gives them, so
+    -- the container everything else nests in is sized to fit in it rather than
+    -- assumed to. Everything below goes by what it reads back, not by these
+    local winWidth, winHeight = getMainWindowSize()
+    local width, height = math.min(400, winWidth - 100), math.min(300, winHeight - 100)
+    assert.is_true(width >= 200 and height >= 150,
+      string.format("these specs need a window with room for a container in it, this one is %dx%d", winWidth, winHeight))
+    dock = Adjustable.Container:new({
+      name = dockName,
+      x = 50, y = 50, width = width, height = height,
+      autoLoad = false,
+      autoSave = false,
+    })
+  end)
+
+  local function cleanUp(container)
+    if container and Adjustable.Container.all[container.name] == container then
+      container:deleteSaveFile()
+      container:delete()
+    end
+  end
+
+  after_each(function()
+    -- the child first: dragged out it is no longer the dock's to delete, and
+    -- still inside it the dock's cascade would have taken it along
+    cleanUp(child)
+    cleanUp(dock)
+    child, dock = nil, nil
+  end)
+
+  it("holds a nested container inside its parent by default", function()
+    makeChild()
+    -- a container puts its children in an inside container of its own, which is
+    -- the parent a nested container is held inside of
+    assert.are.equal(dock.Inside, child.container)
+    assert.is_false(child.dragOut)
+    assert.is_false(child:dragLeavesParent(-500, -500, 5, 5))
+  end)
+
+  it("stays inside while the pointer is still over the parent", function()
+    makeChild({dragOut = true})
+    local inside = child.container
+    assert.is_false(child:dragLeavesParent(0, 0, 5, 5))
+    assert.is_false(child:dragLeavesParent(inside.get_width() - 50, inside.get_height() - 50, 5, 5))
+  end)
+
+  it("puts up with a small overshoot at the parent's edge", function()
+    makeChild({dragOut = true})
+    -- pushing a container flush into the corner of its parent and going a little
+    -- too far, which is not what asking for it to come out looks like
+    assert.is_false(child:dragLeavesParent(-25, 0, 5, 5))
+  end)
+
+  it("stays in while the pointer is over the parent's own title bar", function()
+    makeChild({dragOut = true})
+    -- a container holds its children below its title bar, so a pointer over that
+    -- title bar is already outside the area the children are placed in
+    dock:setPadding(30)
+    assert.is_false(child:dragLeavesParent(-40, -40, 5, 5))
+    assert.is_true(child:dragLeavesParent(-40, -120, 5, 5))
+  end)
+
+  it("goes by where the pointer is rather than by where the container was pushed to", function()
+    makeChild({dragOut = true, width = "80%"})
+    local inside = child.container
+    local grabX = child:get_width() - 20
+
+    -- the drag asking for far to the left of the parent, but the container was
+    -- grabbed near its right hand end, so the pointer is still over the parent
+    assert.is_false(child:dragLeavesParent(-100, 10, grabX, 5))
+    -- and the other way about: the container barely past the right hand edge,
+    -- but the pointer that dragged it there is well clear of the parent
+    assert.is_true(child:dragLeavesParent(inside.get_width() - 50, 10, grabX, 5))
+  end)
+
+  it("comes out once the pointer is dragged clear of the parent", function()
+    makeChild({dragOut = true})
+    local inside = child.container
+    assert.is_true(child:dragLeavesParent(-100, 0, 5, 5))
+    assert.is_true(child:dragLeavesParent(0, -100, 5, 5))
+    assert.is_true(child:dragLeavesParent(inside.get_width() + 100, 0, 5, 5))
+    assert.is_true(child:dragLeavesParent(0, inside.get_height() + 100, 5, 5))
+  end)
+
+  it("leaves a container that is not nested in another one alone", function()
+    makeChild({dragOut = true})
+    child:changeContainer(Geyser)
+    assert.is_false(child:dragLeavesParent(-500, -500, 5, 5))
+  end)
+
+  it("holds on to an attached container", function()
+    makeChild({dragOut = true})
+    -- set rather than attached for real: attachToBorder only takes a container
+    -- near enough to a border, which depends on the size of the window the tests
+    -- happen to run in, and it reserves a main window border and registers a
+    -- resize handler that a failing spec would leave behind
+    finally(function() child.attached = false end)
+    child.attached = "left"
+    assert.is_false(child:dragLeavesParent(-500, -500, 5, 5))
+    child.attached = false
+    assert.is_true(child:dragLeavesParent(-500, -500, 5, 5))
+  end)
+
+  it("stays where it is on screen when it comes out of its parent", function()
+    makeChild({dragOut = true})
+    local inside = child.container
+    local x, y = child:get_x(), child:get_y()
+    local width, height = child:get_width(), child:get_height()
+
+    -- the position the drag asks for is the one the container is already at
+    assert.is_true(child:dragOutOfParent(x - inside.get_x(), y - inside.get_y()))
+
+    assert.are.equal(Geyser, child.container)
+    assert.are.equal(child, Geyser.windowList[childName])
+    assert.is_true(child.draggedOut)
+    assertNear(child:get_x(), x, "x")
+    assertNear(child:get_y(), y, "y")
+    assertNear(child:get_width(), width, "width")
+    assertNear(child:get_height(), height, "height")
+    -- and the widget went with it rather than only the bookkeeping
+    local widgetX, widgetY = getWindowGeometry(childName .. "adjLabel")
+    assertNear(widgetX, x, "widget x")
+    assertNear(widgetY, y, "widget y")
+  end)
+
+  it("follows the drag out to where the pointer took it", function()
+    makeChild({dragOut = true})
+    local inside = child.container
+    local insideX, insideY = inside.get_x(), inside.get_y()
+
+    child:dragOutOfParent(-50, 10)
+
+    assertNear(child:get_x(), insideX - 50, "x")
+    assertNear(child:get_y(), insideY + 10, "y")
+  end)
+
+  it("keeps the size it had, whether that was a share of the parent or pixels", function()
+    makeChild({dragOut = true, width = "50%", height = 100})
+    local width = child:get_width()
+
+    child:dragOutOfParent(0, 0)
+
+    assert.is_truthy(tostring(child.width):find("%%$"))
+    assertNear(child:get_width(), width, "width")
+    assert.are.equal("100px", child.height)
+    assert.are.equal(100, child:get_height())
+  end)
+
+  it("keeps the size of a container measured from its parent's far edge", function()
+    -- a negative size is the parent's, less that many pixels, so it means a
+    -- different size in the window the container comes out into
+    makeChild({dragOut = true, width = "-100"})
+    local width = child:get_width()
+
+    child:dragOutOfParent(0, 0)
+
+    assert.is_truthy(tostring(child.width):find("%%$"))
+    assertNear(child:get_width(), width, "width")
+  end)
+
+  it("keeps a container that comes out at the edge inside the window", function()
+    makeChild({dragOut = true})
+    local winWidth, winHeight = getMainWindowSize()
+
+    child:dragOutOfParent(-100000, -100000)
+    assert.are.equal(0, child:get_x())
+    assert.are.equal(0, child:get_y())
+
+    child:changeContainer(dock.Inside)
+    child:dragOutOfParent(100000, 100000)
+    assertNear(child:get_x(), winWidth - child:get_width(), "x")
+    assertNear(child:get_y(), winHeight - child:get_height(), "y")
+  end)
+
+  it("restores a minimized container to the height it had", function()
+    makeChild({dragOut = true})
+    local height = child:get_height()
+    child:minimize()
+
+    child:dragOutOfParent(0, 0)
+    child:restore()
+
+    assert.is_false(child.minimized)
+    -- the height it restores to was a share of the parent it has left
+    assertNear(child:get_height(), height, "restored height")
+  end)
+
+  it("does nothing for a container that is not nested in another one", function()
+    makeChild({dragOut = true})
+    child:changeContainer(Geyser)
+    local x = child:get_x()
+
+    assert.is_false(child:dragOutOfParent(-500, -500))
+
+    assert.are.equal(x, child:get_x())
+  end)
+
+  it("is not dragged out any more once a script puts it back in a container", function()
+    makeChild({dragOut = true})
+    child:dragOutOfParent(0, 0)
+    assert.is_true(child.draggedOut)
+
+    child:changeContainer(dock.Inside)
+
+    assert.are.equal(dock.Inside, child.container)
+    assert.is_false(child.draggedOut)
+  end)
+
+  it("comes back out of its parent when its saved settings are loaded", function()
+    makeChild({dragOut = true})
+    child:dragOutOfParent(-50, 10)
+    local x, y = child:get_x(), child:get_y()
+    child:save()
+    child:delete()
+
+    local reloaded = makeChild({dragOut = true})
+    assert.are.equal(dock.Inside, reloaded.container)
+    reloaded:load()
+
+    assert.are.equal(Geyser, reloaded.container)
+    assert.is_true(reloaded.draggedOut)
+    assertNear(reloaded:get_x(), x, "x")
+    assertNear(reloaded:get_y(), y, "y")
+  end)
+
+  it("restores a minimized container that was dragged out to the height it had", function()
+    makeChild({dragOut = true})
+    local height = child:get_height()
+    child:minimize()
+    child:dragOutOfParent(-50, 10)
+    child:save()
+    child:delete()
+
+    local reloaded = makeChild({dragOut = true})
+    reloaded:load()
+    reloaded:restore()
+
+    assert.are.equal(Geyser, reloaded.container)
+    assertNear(reloaded:get_height(), height, "restored height")
+  end)
+
+  it("goes back into its parent for settings that were saved before it was dragged out", function()
+    makeChild({dragOut = true})
+    local x, y = child:get_x(), child:get_y()
+    child:save()
+
+    child:dragOutOfParent(-50, 10)
+    child:load()
+
+    -- those settings are a position inside the parent, which is only that
+    -- position while the container is back inside the parent
+    assert.are.equal(dock.Inside, child.container)
+    assert.is_false(child.draggedOut)
+    assertNear(child:get_x(), x, "x")
+    assertNear(child:get_y(), y, "y")
+  end)
+
+  it("comes out into the user window it is in rather than into the main window", function()
+    local userWindow = Geyser.UserWindow:new({name = "gadUserWindow", x = 0, y = 0, width = 200, height = 200})
+    finally(function()
+      -- the user window's own root container is what takes the window and
+      -- everything left in it with it
+      local root = Geyser.windowList.gadUserWindowContainer
+      if root then
+        root:delete()
+      end
+    end)
+    local windowDock = Adjustable.Container:new({
+      name = "gadWindowDock",
+      x = 0, y = 0, width = 150, height = 150,
+      autoLoad = false, autoSave = false,
+    }, userWindow)
+    local windowChild = Adjustable.Container:new({
+      name = "gadWindowChild",
+      x = 10, y = 10, width = 100, height = 60,
+      autoLoad = false, autoSave = false,
+      dragOut = true,
+    }, windowDock)
+    assert.are.equal(windowDock.Inside, windowChild.container)
+
+    assert.is_true(windowChild:dragOutOfParent(0, 0))
+
+    assert.are.equal(userWindow, windowChild.container)
+    assert.are.equal("gadUserWindow", windowChild.windowname)
+  end)
+
+  it("leaves a container without dragOut where the package that made it put it", function()
+    makeChild({dragOut = true})
+    child:dragOutOfParent(-50, 10)
+    child:save()
+    child:delete()
+
+    local reloaded = makeChild()
+    reloaded:load()
+
+    assert.are.equal(dock.Inside, reloaded.container)
+  end)
+
+  it("comes out to the window rather than to the container in between", function()
+    local middle, deep
+    finally(function()
+      cleanUp(deep)
+      cleanUp(middle)
+    end)
+    middle = Adjustable.Container:new({
+      name = "gadMiddle",
+      x = 10, y = 10, width = "80%", height = "80%",
+      autoLoad = false, autoSave = false,
+    }, dock)
+    deep = Adjustable.Container:new({
+      name = "gadDeep",
+      x = 5, y = 5, width = 60, height = 40,
+      autoLoad = false, autoSave = false,
+      dragOut = true,
+    }, middle)
+    assert.are.equal(middle.Inside, deep.container)
+    local x, y = deep:get_x(), deep:get_y()
+
+    assert.is_true(deep:dragOutOfParent(x - middle.Inside.get_x(), y - middle.Inside.get_y()))
+
+    assert.are.equal(Geyser, deep.container)
+    -- the position of a container two levels down counts in every container it
+    -- is inside of, so it has to come out of all of them onto the same spot
+    assertNear(deep:get_x(), x, "x")
+    assertNear(deep:get_y(), y, "y")
+  end)
+
+  it("keeps a container bigger than the window at the window's corner", function()
+    local winWidth, winHeight = getMainWindowSize()
+    makeChild({dragOut = true, width = winWidth + 200, height = winHeight + 200})
+
+    child:dragOutOfParent(0, 0)
+
+    -- there is nowhere to put a container that does not fit that keeps all of it
+    -- on screen, so it goes at the corner rather than off the top left of it
+    assert.are.equal(0, child:get_x())
+    assert.are.equal(0, child:get_y())
+  end)
+
+  it("does not hold a container back at the edge of a scroll box", function()
+    local box
+    finally(function()
+      -- deleting the box takes everything that was put in it with it
+      if box then
+        box:delete()
+      end
+    end)
+    box = Geyser.ScrollBox:new({name = "gadScrollBox", x = 0, y = 0, width = 200, height = 200})
+    local boxDock = Adjustable.Container:new({
+      name = "gadBoxDock",
+      x = 0, y = 0, width = 150, height = 150,
+      autoLoad = false, autoSave = false,
+    }, box)
+    local boxChild = Adjustable.Container:new({
+      name = "gadBoxChild",
+      x = 10, y = 10, width = 60, height = 40,
+      autoLoad = false, autoSave = false,
+      dragOut = true,
+    }, boxDock)
+    assert.are.equal("gadScrollBox", boxChild.windowname)
+
+    assert.is_true(boxChild:dragOutOfParent(400, 400))
+
+    assert.are.equal(box, boxChild.container)
+    -- a scroll box is scrolled to what does not fit into it, so a container
+    -- dragged out beyond its edge is not pulled back to it
+    assert.is_true(boxChild:get_x() > box.get_width() - boxChild:get_width())
+  end)
+
+  it("hands back what Geyser makes of a container it will not move into", function()
+    makeChild({dragOut = true})
+
+    local moved, message = child:changeContainer(nil)
+
+    assert.is_nil(moved)
+    assert.is_string(message)
+    assert.are.equal(dock.Inside, child.container)
+  end)
+
+  it("carries a drag that keeps pushing past the parent out of it", function()
+    makeChild({dragOut = true})
+    local inside = child.container
+
+    -- grabbed 60 pixels in and dragged 200 to the left, which is far enough for
+    -- the pointer to leave the parent long after the container stopped at its edge
+    drag(child, 60, 30, -10, 0, 20)
+
+    assert.are.equal(Geyser, child.container)
+    assert.is_true(child.draggedOut)
+    assert.is_true(child:get_x() < inside.get_x(), "the container ended up outside its old parent")
+  end)
+
+  it("holds a drag inside the parent when the container was not given dragOut", function()
+    makeChild()
+    local inside = child.container
+
+    drag(child, 60, 30, -10, 0, 20)
+
+    assert.are.equal(inside, child.container)
+    -- held against the inside of its parent, which is what a drag out is opting
+    -- out of and every container without the constraint still does
+    assertNear(child:get_x(), inside.get_x(), "x")
+    assert.is_truthy(tostring(child.x):find("%%$"))
+  end)
+
+  it("does not take a locked container out of its parent", function()
+    makeChild({dragOut = true})
+    local inside = child.container
+    local x = child:get_x()
+    child:lockContainer()
+
+    drag(child, 60, 30, -10, 0, 20)
+
+    assert.are.equal(inside, child.container)
+    assert.are.equal(x, child:get_x())
+  end)
+end)
+
+-- Dragging an edge used to set the position and then the size, laying the whole
+-- subtree out twice for one mouse-move.
+describe("Tests the cost of resizing an Adjustable.Container by its edge", function()
+  local container
+  local containerName = "gadEdge"
+
+  before_each(function()
+    container = Adjustable.Container:new({
+      name = containerName,
+      x = 50, y = 50, width = 300, height = 200,
+      autoLoad = false,
+      autoSave = false,
+    })
+    Geyser.Label:new({name = containerName .. "Leaf", x = 0, y = 0, width = "50%", height = "50%"},
+      container.Inside or container)
+  end)
+
+  after_each(function()
+    if container and Adjustable.Container.all[containerName] == container then
+      container:deleteSaveFile()
+      container:delete()
+    end
+    container = nil
+  end)
+
+  -- as with getMousePosition above, Geyser looks moveWindow up in its own globals
+  local function placements(work)
+    local geyser = getfenv(Geyser.Container.reposition)
+    local count = 0
+    local realMoveWindow = geyser.moveWindow
+    geyser.moveWindow = function(...)
+      count = count + 1
+      return realMoveWindow(...)
+    end
+    local ok, err = pcall(work)
+    geyser.moveWindow = realMoveWindow
+    assert.is_true(ok, tostring(err))
+    assert.is_true(count > 0, "nothing was placed, so the counter is not hooked up")
+    return count
+  end
+
+  it("lays the container out once per mouse-move rather than twice", function()
+    local geyser = getfenv(Adjustable.Container.onMove)
+    local realGetMousePosition = geyser.getMousePosition
+    local pointerX, pointerY = 500, 400
+    geyser.getMousePosition = function() return pointerX, pointerY end
+    finally(function() geyser.getMousePosition = realGetMousePosition end)
+
+    -- grabbing within ten pixels of the far edge is what adjust_Info reads as a
+    -- resize rather than a move, and it takes a click for onClick to see that
+    local grabX = container.adjLabel:get_width() - 2
+    local grabY = container.adjLabel:get_height() - 2
+    local event = {button = "LeftButton", buttons = {"LeftButton"},
+                   x = grabX, y = grabY, globalX = pointerX, globalY = pointerY}
+    container:onRelease(container.adjLabel, event)
+    container:onClick(container.adjLabel, event)
+    container:onClick(container.adjLabel, event)
+    finally(function() container:onRelease(container.adjLabel, event) end)
+
+    -- one geometry update over this container and its child is the yardstick, so
+    -- the spec holds whatever the machine's window size makes the subtree cost
+    local oneUpdate = placements(function() container:set_constraints(container) end)
+    local steps = 3
+    local wholeDrag = placements(function()
+      for _ = 1, steps do
+        pointerX, pointerY = pointerX - 5, pointerY - 5
+        container:onMove(container.adjLabel, event)
+      end
+    end)
+
+    assert.is_true(container:get_width() < 300, "the drag has to have resized the container")
+    assert.are.equal(oneUpdate * steps, wholeDrag)
+  end)
+end)

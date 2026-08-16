@@ -1113,7 +1113,11 @@ local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
 function verbosePackageInstall(fileName)
   local ok, err = installPackage(fileName)
-  local packageName = string.gsub(fileName, getMudletHomeDir() .. "/", "")
+  -- this has to stay a literal prefix strip: as a Lua pattern the profile path's
+  -- magic characters bite, and a "-" (as in "Mudlet self-test") stops it
+  -- matching at all
+  local profileFolder = getMudletHomeDir() .. "/"
+  local packageName = fileName:starts(profileFolder) and fileName:sub(#profileFolder + 1) or fileName
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok then

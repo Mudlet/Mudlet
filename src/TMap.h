@@ -116,7 +116,7 @@ public:
                        QColor outline = Qt::black);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
-    bool setRoomArea(int id, int area, bool deferAreaRecalculations = false);
+    bool setRoomArea(int id, int area);
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
     void logError(const QString&);

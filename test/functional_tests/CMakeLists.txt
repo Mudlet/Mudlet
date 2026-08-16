@@ -21,22 +21,33 @@ set(FUNCTIONAL_TEST_SOURCES
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerSameLineMatchTest.cpp
+    MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
     WindowLayoutSaveTest.cpp
+    TelnetCharsetNegotiationTest.cpp
+    MapAreaReassignmentTest.cpp
+    TelnetStringSequenceRecoveryTest.cpp
     EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
+    TelnetReconnectStateTest.cpp
+    SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    CsiCursorForwardTest.cpp
+    CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
+    VariableEditorWriteBackTest.cpp
     InsertTextCapTest.cpp
+    ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
     ClearWindowLogTest.cpp
+    ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
     SgrUnderlineStyleTest.cpp
     LogRestartDuplicateLineTest.cpp
@@ -51,19 +62,23 @@ set(FUNCTIONAL_TEST_SOURCES
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
     LabelMovieRefusalTest.cpp
+    StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
+    TelnetConnectLookupRaceTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfRemovalTest.cpp
     ProfileFolderNameTest.cpp
     ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
+    HostChildTeardownTest.cpp
     ConnectionDialogCrashTest.cpp
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
+    StarterUiGaugePanelTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
     WindowBackgroundTest.cpp
@@ -108,15 +123,26 @@ if(REGISTER_PERF_BENCHMARK)
         TIMEOUT 600)
 endif()
 
-# These still leak and stay unchecked until their defects are fixed:
-# - dlgTriggerEditorUndoRedoTest: never destroys its dlgTriggerEditor, leaving
-#   ~3.4MB of tree-item QIcon/QPixmap behind
-# - NewReleaseDialogTeardownTest: Qt's one-time system CA-certificate store load
-#   on first TLS use, cached for the process lifetime
+# Tests that run with the leak check off:
+# - dlgTriggerEditorUndoRedoTest still leaks, never destroying its
+#   dlgTriggerEditor and leaving ~3.4MB of tree-item QIcon/QPixmap behind
+# - NewReleaseDialogTeardownTest still leaks, on Qt's one-time system
+#   CA-certificate store load on first TLS use, cached for the process lifetime
+# - TriggerSameLineMatchTest replaces ASAN_OPTIONS further down to add an RSS
+#   ceiling, which drops detect_leaks with it
 set(leakCheckExcludedTests
     dlgTriggerEditorUndoRedoTest
     NewReleaseDialogTeardownTest
+    TriggerSameLineMatchTest
 )
+
+# Apple's ASan runtime has no LeakSanitizer, so detect_leaks is only meaningful
+# where the address or leak sanitizer is actually compiled in
+if(NOT APPLE AND "${USE_SANITIZER}" MATCHES "[Aa]ddress|[Ll]eak")
+    set(leakCheckAvailable TRUE)
+else()
+    set(leakCheckAvailable FALSE)
+endif()
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
@@ -125,15 +151,37 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
-    # Apple's ASan runtime has no LeakSanitizer
-    if(APPLE OR test_name IN_LIST leakCheckExcludedTests)
-        set(leakCheck "detect_leaks=0")
+    if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
+        # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, at
+        # the cost of not scanning dynamic TLS blocks for roots. Up to GCC 13 and
+        # LLVM 16, the sanitizer runtime's __tls_get_addr interceptor - not
+        # LeakSanitizer itself, which is why this is an ASAN_OPTIONS flag -
+        # decides such a block carries a pre-2.25 glibc header when
+        # `tls_beg % 4096` equals sizeof(Glibc_2_19_tls_header), 16 on 64-bit,
+        # and reads the two words before it as the block's address and length.
+        # Since glibc 2.25 there is no header there and a malloc'd block lands on
+        # that offset by coincidence - roughly 1 in 256, always for the
+        # mmap-backed ones - so the range recorded is garbage and the tracer dies
+        # scanning it. That coincidence is why #9809 reads as a flake.
+        # google/sanitizers#1322; GCC 14 and LLVM 17 replaced the guess with an
+        # allocator lookup, so all four copies of this flag - here, the two
+        # build-mudlet workflows, and src/LsanHooks.cpp - can go once the legs
+        # that need them build with one of those.
+        set(leakCheck "detect_leaks=1:intercept_tls_get_addr=0")
+        # Kept as insurance rather than for a crash we still expect: if the flag
+        # above ever proves incomplete, the tracer prints the stack and TLS range
+        # of each thread as it reaches one, so the last line before a crash names
+        # the range it died scanning - the one thing the crash line alone does
+        # not say (#9809). Seven lines a run, and only on a failing test, since
+        # ctest hides the output of one that passes.
+        set(leakLog "LSAN_OPTIONS=log_threads=1;")
     else()
-        set(leakCheck "detect_leaks=1")
+        set(leakCheck "detect_leaks=0")
+        set(leakLog "")
     endif()
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
@@ -149,7 +197,9 @@ set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 # A regression in the self-re-creating-trigger cases does not fail, it hangs and
 # grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
 # into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
-# again.
+# again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
+set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
+
 set_tests_properties(TriggerSameLineMatchTest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
     TIMEOUT 300)
@@ -157,12 +207,24 @@ set_tests_properties(TriggerSameLineMatchTest PROPERTIES
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
+# TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
+# times per method, so it needs a longer timeout
+set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
+
+# TelnetConnectLookupRaceTest creates a fresh profile per test method and waits out a connect to
+# an address nothing answers on, so it needs a longer timeout
+set_tests_properties(TelnetConnectLookupRaceTest PROPERTIES TIMEOUT 300)
+
 # GlyphOverflowTest creates a fresh profile per test method and sweeps two font
 # families across 22 sizes, so it needs a longer timeout
 set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 
 # InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
+
+# TelnetCharsetNegotiationTest creates a fresh profile per test case, each of which
+# also reconnects, so it needs a longer timeout
+set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
 # LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
@@ -189,9 +251,18 @@ if(mediaLoopTestBackend)
     set_property(TEST TMediaLoopTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
 
+# StarterUiSectionsTest creates a fresh profile per test method and one of them
+# waits out the delay before the interface comes back on duty, so it needs a
+# longer timeout
+set_tests_properties(StarterUiSectionsTest PROPERTIES TIMEOUT 300)
+
 # The round-trip tests boot a full mudlet instance and save/reload profile and
 # map data, so they need a longer timeout
 set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeamTest MapCloseDuringImportTest PROPERTIES TIMEOUT 300)
+
+# MapAreaReassignmentTest reports a cost curve built from thousands of rooms,
+# which takes minutes rather than milliseconds if the quadratic term returns
+set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
@@ -203,6 +274,14 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
+
+# TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
+# socket, waiting out cTelnet's 300ms idle flush in several cases and
+# reconnecting in others, so it needs a longer timeout
+set_tests_properties(TelnetStringSequenceRecoveryTest PROPERTIES TIMEOUT 300)
+
+# CopyAsImageTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(CopyAsImageTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's

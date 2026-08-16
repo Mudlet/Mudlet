@@ -310,6 +310,14 @@ bool TimerUnit::enableTimer(const QString& name)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TTimer* pT = it.value();
+        // A timer queued for deletion stays in the lookup table until
+        // doCleanup() frees it - re-activating one restarts the QTimer that
+        // killTimer() stopped, that a spent one-shot stopped itself (see
+        // TTimer::execute(), which markCleanup()s without deactivating, so that
+        // corpse is still isActive()), or that an uninstall is waiting to free.
+        if (mCleanupSet.contains(pT) || uninstallList.contains(pT)) {
+            continue;
+        }
 
         if (!pT->isOffsetTimer()) {
             pT->setIsActive(true);
@@ -320,7 +328,11 @@ bool TimerUnit::enableTimer(const QString& name)
 
         if (pT->isFolder()) {
             // disable or enable all timers in the respective branch
-            // irrespective of the user defined state.
+            // irrespective of the user defined state - and without re-checking
+            // the skip above. That is only safe while no child timer is ever
+            // queued for deletion under a live parent: only temporary root
+            // timers are ever queued (doCleanup() relies on the same thing) and
+            // _uninstall() queues whole subtrees.
             if (pT->shouldBeActive()) {
                 pT->enableTimer();
             } else {

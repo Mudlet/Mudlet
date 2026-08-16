@@ -39,6 +39,7 @@
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <QtEvents>
@@ -1316,7 +1317,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawPixmap(0, 0, pixmap);
     if (!noCopy) {
-        mScreenMap = pixmap.copy();
+        mScreenMap = pixmap;
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
@@ -1723,7 +1724,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             int charWidth = 0;
             // This could contain a surrogate pair (i.e. pair of QChars) and/or
             // include suffixed combining diacritical marks (additional QChars):
-            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+            const QStringView grapheme = QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar);
             const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
@@ -2166,20 +2167,24 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // matches slot_copySelectionToClipboard(), which also keeps the selection.
 }
 
+// The part of establishSelectedText()'s bail-out that is cheap enough to check
+// while building the context menu; its remaining checks (font metrics, pane
+// size) hold for any console the user can right-click on.
+bool TTextEdit::hasSelectedText() const
+{
+    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty();
+}
+
 bool TTextEdit::establishSelectedText()
 {
-    if (mpBuffer->lineBuffer.isEmpty()) {
-        // Prevent problems with trying to do a copy when TBuffer is empty:
+    if (!hasSelectedText()) {
         return false;
     }
 
     // if selection was made backwards swap
     // right to left
     if (mFontWidth <= 0 || mFontHeight <= 0) {
-        return false;
-    }
-
-    if (mSelectedRegion == QRegion(0, 0, 0, 0)) {
+        qWarning().nospace() << "TTextEdit::establishSelectedText() ERROR - font is " << mFontWidth << "x" << mFontHeight << " so the selection cannot be worked out";
         return false;
     }
 
@@ -2187,6 +2192,7 @@ bool TTextEdit::establishSelectedText()
         mScreenHeight = height() / mFontHeight;
         mScreenWidth = 100;
         if (mScreenHeight <= 0) {
+            qWarning().nospace() << "TTextEdit::establishSelectedText() ERROR - pane is only " << height() << "px high, too short for a line of text";
             return false;
         }
         if (mpConsole->getType() == TConsole::MainConsole && !mIsLowerPane) {
@@ -2201,6 +2207,18 @@ bool TTextEdit::establishSelectedText()
     return true;
 }
 
+// [first, last] line numbers, not clamped to the buffer - the caller must do that.
+std::pair<int, int> TTextEdit::visibleLines()
+{
+    if (mScreenHeight <= 0) {
+        // imageTopLine() works the top line out from mScreenHeight, so repair it
+        // first or the two disagree by a whole screen
+        mScreenHeight = std::max(1, height() / mFontHeight);
+    }
+    const int firstLine = std::max(0, imageTopLine());
+    return {firstLine, firstLine + mScreenHeight - 1};
+}
+
 // Technically this copies whole lines into the image even if the selection does
 // not start at the beginning of the first line or end at the last grapheme on
 // the last line.
@@ -2208,17 +2226,55 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 {
     mCopyImageStartTime = std::chrono::high_resolution_clock::now();
 
-    if (!establishSelectedText()) {
+    if (mFontWidth <= 0 || mFontHeight <= 0) {
+        qWarning().nospace() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - font is " << mFontWidth << "x" << mFontHeight << ", nothing was copied to the clipboard";
         return;
     }
 
+    // drawLine() reads both halves of the buffer, so neither may be indexed past
+    // its end:
+    const int lastBufferLine = std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())) - 1;
+    if (lastBufferLine < 0) {
+        qWarning() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - there is nothing in this console to copy";
+        return;
+    }
+
+    // Unlike Copy and Copy HTML, "as image" has an obvious default when nothing
+    // is selected: a picture of what the user is looking at (#9715).
+    bool copyingSelection = establishSelectedText();
+    if (copyingSelection && mPB.y() > lastBufferLine) {
+        // Lines lost off the front of a buffer that reached its limit shift every
+        // remaining index down; getSelectedText() compensates the same way. mPA
+        // and mPB move rather than a copy of them, so that the deselect below
+        // still finds the characters that are about to be drawn.
+        const int shift = mpBuffer->mBatchDeleteSize;
+        if (mPA.y() - shift >= 0 && mPB.y() - shift <= lastBufferLine) {
+            mPA.ry() -= shift;
+            mPB.ry() -= shift;
+        } else {
+            // The selected lines are gone for good, so copy the visible area
+            // rather than whatever has since taken their place in the buffer.
+            copyingSelection = false;
+        }
+    }
+
+    int firstLine = mPA.y();
+    int lastLine = mPB.y();
+    if (!copyingSelection) {
+        const auto [firstVisible, lastVisible] = visibleLines();
+        firstLine = firstVisible;
+        lastLine = lastVisible;
+    }
+    firstLine = std::clamp(firstLine, 0, lastBufferLine);
+    lastLine = std::clamp(lastLine, firstLine, lastBufferLine);
+
     // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
-    auto heightpx = std::min(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
-    auto lineOffset = mPA.y();
+    auto heightpx = std::min(65500, (lastLine - firstLine + 1) * mFontHeight);
+    auto lineOffset = firstLine;
 
     // find the biggest width of text we need to work with
     int largestLine{};
-    for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
+    for (int y = firstLine, total = lastLine + 1; y < total; ++y) {
         const QString lineText{mpBuffer->lineBuffer.at(y)};
         // Will accumulate the width in pixels of the current line:
         auto lineWidth{(mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0) * mFontWidth};
@@ -2229,8 +2285,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             auto nextBoundary{boundaryFinder.toNextBoundary()};
             // Width in "normal" width equivalent of this grapheme:
             int charWidth{};
-            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
-            const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+            const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
@@ -2249,8 +2304,11 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         largestLine = std::max(static_cast<int>(lineWidth), largestLine);
     }
 
-    auto widthpx = std::min(65500, largestLine);
-    auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
+    // A zero width pixmap is null, so the painter below never activates and
+    // nothing at all reaches the clipboard. Floor the width at one character so a
+    // run of only blank lines (which is what makes largestLine zero) still copies:
+    auto widthpx = std::max(mFontWidth, std::min(65500, largestLine));
+    auto rect = QRect(0, 0, widthpx, heightpx);
     // The bottom line's ink can reach past its cell, so paint into a spare row
     // and keep only as much of it as the glyphs actually used.
     auto pixmap = QPixmap(widthpx, std::min(65500, heightpx + mFontHeight));
@@ -2260,23 +2318,34 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     QPainter painter(&pixmap);
     if (!painter.isActive()) {
+        qWarning().nospace() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - cannot paint a " << widthpx << "x" << heightpx << " image, nothing was copied to the clipboard";
         return;
     }
 
-    // deselect to prevent inverted colours in image
-    unHighlight();
-    mSelectedRegion = QRegion(0, 0, 0, 0);
+    if (copyingSelection) {
+        // deselect to prevent inverted colours in image
+        unHighlight();
+        mSelectedRegion = QRegion(0, 0, 0, 0);
+    }
 
     auto result = drawTextForClipboard(painter, rect, lineOffset);
-    painter.end();
 
-    highlightSelection();
+    if (copyingSelection) {
+        highlightSelection();
+    }
+    // the pixmap cannot be read back while a painter is still active on it
+    painter.end();
 
     const QImage image = pixmap.toImage();
     int keepHeight = heightpx + overflowRowsUsed(image, heightpx, solidColor);
     if (!result.first) {
-        // ran out of time, so cut back to the lines that did get painted
-        keepHeight = std::max(1, result.second * mFontHeight);
+        // Crop rather than scale an abandoned copy: scaling to fit would squash
+        // the lines that did get drawn instead of dropping the rest.
+        keepHeight = result.second * mFontHeight;
+        if (keepHeight <= 0) {
+            qWarning() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - ran out of time before drawing a single line, nothing was copied to the clipboard";
+            return;
+        }
     }
     QApplication::clipboard()->setImage(image.copy(0, 0, widthpx, std::min(image.height(), keepHeight)));
 }
@@ -2310,7 +2379,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
     const TChar timeStampStyle = timeStampCharStyle();
     LineLayout previousLine;
     LineLayout currentLine;
-    for (int i = 0; i < lineCount; i++, linesDrawn++) {
+    for (int i = 0; i < lineCount; ++i) {
         if (!hasBufferLine(i + lineOffset)) {
             break;
         }
@@ -2319,9 +2388,12 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
         paintBackgrounds(painter, currentLine);
         paintForegrounds(painter, previousLine);
         previousLine.swap(currentLine);
+        // counted here rather than in the loop's increment, so that the timeout
+        // below reports the line it just drew instead of the one before it
+        ++linesDrawn;
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
-            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
+            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << linesDrawn << " lines";
             paintForegrounds(painter, previousLine);
             return {false, linesDrawn};
         }
@@ -2548,6 +2620,10 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->setAttribute(Qt::WA_DeleteOnClose);
         popup->setToolTipsVisible(true); // Not the default...
 
+        //: Tooltip shown on the console context menu's copy and search entries while they are disabled because nothing is selected
+        const QString noSelectionHint = utils::richText(tr("Select some text in the console first."));
+        const bool selectionAvailable = hasSelectedText();
+
         QAction* action = new QAction(tr("Copy"), popup);
         // According to the Qt Documentation:
         // "This text is used for the tooltip."
@@ -2564,6 +2640,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
 
         auto* actionCopyImage = new QAction(tr("Copy as image"), popup);
+        actionCopyImage->setToolTip(QString());
         connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
 
         QAction* action3 = new QAction(tr("Select all"), popup);
@@ -2574,6 +2651,28 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), popup);
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
+
+        // These have no sensible whole-console fallback, so they are disabled with
+        // a reason rather than left as entries that quietly do nothing. "Copy as
+        // image" is not among them: it falls back to the visible area (#9715).
+        // The object names let tests find each entry without matching translated text:
+        const QVector<std::pair<QAction*, QString>> selectionActions{{action, qsl("consoleCopy")}, {action2, qsl("consoleCopyHtml")}, {action4, qsl("consoleSearchOnline")}};
+        for (const auto& [selectionAction, objectName] : selectionActions) {
+            selectionAction->setObjectName(objectName);
+            selectionAction->setEnabled(selectionAvailable);
+            if (!selectionAvailable) {
+                selectionAction->setToolTip(noSelectionHint);
+            }
+        }
+        action3->setObjectName(qsl("consoleSelectAll"));
+
+        actionCopyImage->setObjectName(qsl("consoleCopyAsImage"));
+        if (mpBuffer->lineBuffer.isEmpty()) {
+            actionCopyImage->setEnabled(false);
+            //: Tooltip shown on the console context menu's "Copy as image" entry while it is disabled because the console holds no text at all
+            actionCopyImage->setToolTip(utils::richText(tr("This console is empty, there is nothing to copy.")));
+        }
+
         if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
             action->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
             action3->setIcon(QIcon::fromTheme(qsl("edit-select-all"), QIcon(qsl(":/icons/edit-select-all.png"))));

@@ -42,10 +42,48 @@ bool VarUnit::isHidden(TVar* var)
     if (var->getName() == qsl("_G")) { // we never hide global
         return false;
     }
-    if (hidden.contains(shortVarName(var).join(qsl(".")))) {
+    // By identity as well as by name: a saved variable holding one of Mudlet's
+    // or a package's tables reaches it under a name of the user's own, which no
+    // name-keyed lookup matches, and a profile save would then write out that
+    // table's contents (#9769).
+    if (var->pValue && hiddenTables.contains(var->pValue)) {
         return true;
     }
-    return hiddenByUser.contains(shortVarName(var).join(qsl(".")));
+    const QString fullName = shortVarName(var).join(qsl("."));
+    if (hidden.contains(fullName)) {
+        return true;
+    }
+    return hiddenByUser.contains(fullName);
+}
+
+// Thrown away at the start of every hiding walk, which is the only thing that
+// fills it: a Lua table's address is only an identity while that table is alive,
+// and Lua hands a freed one's address straight back out to the next table.
+void VarUnit::clearHiddenTables()
+{
+    hiddenTables.clear();
+    mHiddenTableByName.clear();
+}
+
+// Only tables are worth an identity: nothing else has contents for a saved
+// variable to drag into a profile save by holding it.
+void VarUnit::rememberHiddenTable(TVar* var, const QString& fullName)
+{
+    if (var->getValueType() != LUA_TTABLE || !var->pValue) {
+        return;
+    }
+    mHiddenTableByName.insert(fullName, var->pValue);
+    hiddenTables.insert(var->pValue);
+}
+
+void VarUnit::forgetHiddenTable(const QString& fullName)
+{
+    const auto it = mHiddenTableByName.constFind(fullName);
+    if (it == mHiddenTableByName.constEnd()) {
+        return;
+    }
+    hiddenTables.remove(it.value());
+    mHiddenTableByName.erase(it);
 }
 
 
@@ -63,6 +101,14 @@ bool VarUnit::isHidden(const QString& fullname)
 void VarUnit::addPointer(const void* pointer)
 {
     mPointers.insert(pointer);
+}
+
+// Resets the seen-pointer set varExists() answers from. iterateTable() does this
+// per saved root so a table two roots share is walked in full under each; within
+// one walk that set is the cycle guard, with the depth cap as the backstop.
+void VarUnit::clearPointers()
+{
+    mPointers.clear();
 }
 
 bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
@@ -251,21 +297,23 @@ QStringList VarUnit::shortVarName(TVar* var)
 
 void VarUnit::addVariable(TVar* var)
 {
-    const QString fullName = varName(var).join(qsl("."));
-    // pointers.insert(var->pointer);
-    variableSet.insert(fullName);
+    variableSet.insert(varName(var).join(qsl(".")));
     if (var->hidden) {
-        hidden.insert(shortVarName(var).join(qsl(".")));
+        const QString shortName = shortVarName(var).join(qsl("."));
+        hidden.insert(shortName);
+        rememberHiddenTable(var, shortName);
     }
 }
 
 void VarUnit::addHidden(TVar* var, int user)
 {
     var->hidden = true;
+    const QString shortName = shortVarName(var).join(qsl("."));
     if (user) {
-        hiddenByUser.insert(shortVarName(var).join(qsl(".")));
+        hiddenByUser.insert(shortName);
     } else {
-        hidden.insert(shortVarName(var).join(qsl(".")));
+        hidden.insert(shortName);
+        rememberHiddenTable(var, shortName);
     }
 }
 
@@ -279,6 +327,7 @@ void VarUnit::removeHidden(TVar* var)
     const QString fullName = shortVarName(var).join(qsl("."));
     hidden.remove(fullName);
     hiddenByUser.remove(fullName);
+    forgetHiddenTable(fullName);
     var->hidden = false;
 }
 
@@ -286,6 +335,7 @@ void VarUnit::removeHidden(const QString& name)
 {
     hidden.remove(name);
     hiddenByUser.remove(name);
+    forgetHiddenTable(name);
     // does not remove the reference from TVar, similar to addHidden()
 }
 
