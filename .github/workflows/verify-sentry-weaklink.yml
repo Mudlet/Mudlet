@@ -1,11 +1,12 @@
 # Temporary verification workflow for PR #9945 — delete after review.
 #
-# Empirically proves, on a real macOS runner, that forwarding
-# CMAKE_OSX_DEPLOYMENT_TARGET into the sentry-native ExternalProject flips the
-# os_sync_* symbols from strong imports (crash on macOS < 14.4) to weak imports:
-#   leg 1 ("fixed"):   WithSentry.cmake from this branch  -> expect WEAK imports
-#   leg 2 ("control"): WithSentry.cmake from development  -> expect STRONG imports
-# If either expectation fails, a tmate session opens for interactive debugging.
+# Empirically verifies, on a real macOS runner, what deployment target and
+# import linkage the sentry-native sub-build actually gets:
+#   leg 1 ("fixed"):   WithSentry.cmake from this branch  -> MUST produce
+#                      weak os_sync_* imports and LC_BUILD_VERSION minos 12.0
+#   leg 2 ("control"): WithSentry.cmake from development  -> diagnostic only:
+#                      measures the un-forwarded default (varies by toolchain;
+#                      whichever builder defaults to >= 14.4 ships the crash)
 name: Verify sentry weak-linking (PR 9945)
 
 on:
@@ -50,6 +51,8 @@ jobs:
           if [ "$(uname -m)" = "arm64" ]; then HOMEBREW_PREFIX=/opt/homebrew; else HOMEBREW_PREFIX=/usr/local; fi
           echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
           echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR}:${HOMEBREW_PREFIX}" >> $GITHUB_ENV
+          sw_vers
+          xcrun clang --version
 
       - name: 'Leg 1 (fixed): build sentry via WithSentry.cmake from this branch'
         run: |
@@ -60,19 +63,24 @@ jobs:
             -DWITH_SENTRY=ON
           cmake --build build-fixed --target sentry_without_transport
 
-      - name: 'Leg 1 (fixed): scan for weak imports'
+      - name: 'Leg 1 (fixed): scan linkage and minos'
         run: |
           mkdir -p scan
-          find 3rdparty/sentry-native/install_without_transport -name '*.a' \
-            -exec nm -m {} + 2>/dev/null | grep -i 'os_sync_' | sort -u | tee scan/fixed.txt
-          echo "---"
-          if [ ! -s scan/fixed.txt ]; then
-            echo "::error::FIXED leg: no os_sync_* references found at all - scan is broken"; exit 1
+          LIBS=$(find 3rdparty/sentry-native/install_without_transport -name '*.a')
+          echo "libs found:"; echo "$LIBS"
+          nm -m $LIBS 2>/dev/null | grep -i 'os_sync_' | sort -u | tee scan/fixed-linkage.txt
+          for lib in $LIBS; do otool -l "$lib" 2>/dev/null; done \
+            | grep -E '^\s+minos ' | sort | uniq -c | tee scan/fixed-minos.txt
+          if [ ! -s scan/fixed-linkage.txt ]; then
+            echo "::error::FIXED leg: no os_sync_* references found - scan is broken"; exit 1
           fi
-          if grep -i 'os_sync_' scan/fixed.txt | grep -v -i 'weak' ; then
-            echo "::error::FIXED leg: found STRONG os_sync_* imports - the fix did NOT take effect"; exit 1
+          if grep -i 'os_sync_' scan/fixed-linkage.txt | grep -v -i 'weak'; then
+            echo "::error::FIXED leg: STRONG os_sync_* import present - fix did not take effect"; exit 1
           fi
-          echo "FIXED leg OK: every os_sync_* reference is a weak import"
+          if grep -qE 'minos\s+1[3-9]' scan/fixed-minos.txt; then
+            echo "::error::FIXED leg: some objects have minos > 12 - deployment target not forwarded everywhere"; exit 1
+          fi
+          echo "FIXED leg OK: weak imports only, and all objects target macOS 12"
 
       - name: 'Leg 2 (control): revert WithSentry.cmake to development'
         run: |
@@ -90,20 +98,21 @@ jobs:
             -DWITH_SENTRY=ON
           cmake --build build-control --target sentry_without_transport
 
-      - name: 'Leg 2 (control): scan and render verdict'
+      - name: 'Leg 2 (control): measure the un-forwarded default (diagnostic)'
         run: |
-          find 3rdparty/sentry-native/install_without_transport -name '*.a' \
-            -exec nm -m {} + 2>/dev/null | grep -i 'os_sync_' | sort -u | tee scan/control.txt
-          echo "==================== VERDICT ===================="
-          echo "--- fixed (this branch) ---";   cat scan/fixed.txt
-          echo "--- control (development) ---"; cat scan/control.txt
-          if [ ! -s scan/control.txt ]; then
-            echo "::error::CONTROL leg: no os_sync_* references found - scan is broken"; exit 1
-          fi
-          if grep -i 'os_sync_' scan/control.txt | grep -q -v -i 'weak'; then
-            echo "VERDICT: PASS - control has strong imports (the shipping bug), fixed leg is weak-only. PR #9945 is load-bearing and effective."
+          LIBS=$(find 3rdparty/sentry-native/install_without_transport -name '*.a')
+          nm -m $LIBS 2>/dev/null | grep -i 'os_sync_' | sort -u | tee scan/control-linkage.txt
+          for lib in $LIBS; do otool -l "$lib" 2>/dev/null; done \
+            | grep -E '^\s+minos ' | sort | uniq -c | tee scan/control-minos.txt
+          echo "==================== REPORT ===================="
+          echo "--- fixed linkage ---";   cat scan/fixed-linkage.txt
+          echo "--- fixed minos ---";     cat scan/fixed-minos.txt
+          echo "--- control linkage ---"; cat scan/control-linkage.txt
+          echo "--- control minos ---";   cat scan/control-minos.txt
+          if grep -i 'os_sync_' scan/control-linkage.txt | grep -q -v -i 'weak'; then
+            echo "CONTROL: un-forwarded default on this toolchain is >= 14.4 -> STRONG imports (reproduces the shipping bug here)"
           else
-            echo "::error::CONTROL leg unexpectedly weak-only - the fix is not what changes the linkage (runner target may be < 14.4?)"; exit 1
+            echo "CONTROL: un-forwarded default on this toolchain is < 14.4 -> weak imports; this runner/toolchain combo cannot reproduce the strong linkage (the >=14.4-defaulting builder is the one that shipped the bug). See control-minos for the measured default."
           fi
 
       - name: Upload scan results
