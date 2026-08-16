@@ -2823,6 +2823,8 @@ describe("Tests UI functions", function()
     -- a documentation banner instead of the line. A line already sitting in a
     -- buffer is being moved, not written, so copying it must not re-read it -
     -- the text would be lost and the banner would land in the main console.
+    -- The injection is debounced to once a second, so nothing else may use the
+    -- phrase near this spec or the assertion below would hold for that reason.
     it("copies a line holding the documentation trigger phrase verbatim", function()
       -- in two pieces, so putting the line into the source does not trip it
       echo(src, "chat: !osc8-")
@@ -2837,8 +2839,9 @@ describe("Tests UI functions", function()
       assert.are.equal(mainLinesBefore, getLineCount())
     end)
 
-    -- copy() indexes the source line from its own start, so a selection that
-    -- does not begin at column 0 is what would notice those offsets slipping
+    -- copy() slices the line's text and its per-character formatting at the same
+    -- offset from the line's start, so the two can only be seen to disagree when
+    -- the selection does not begin at column 0
     it("copies a partial selection that spans a colour change", function()
       decho(src, "<255,0,0:0,0,0>redpart<0,255,0:0,0,0>greenpart\n")
       moveCursor(src, 0, 0)
