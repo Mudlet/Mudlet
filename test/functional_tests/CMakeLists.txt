@@ -37,6 +37,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     ColorTriggerFilterChildTest.cpp
+    TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
@@ -55,6 +56,7 @@ set(FUNCTIONAL_TEST_SOURCES
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
     PackageRemovalSaveTeardownTest.cpp
+    TutorialInvitationGateTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
