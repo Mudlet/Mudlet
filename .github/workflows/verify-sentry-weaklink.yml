@@ -1,0 +1,121 @@
+# Temporary verification workflow for PR #9945 — delete after review.
+#
+# Empirically proves, on a real macOS runner, that forwarding
+# CMAKE_OSX_DEPLOYMENT_TARGET into the sentry-native ExternalProject flips the
+# os_sync_* symbols from strong imports (crash on macOS < 14.4) to weak imports:
+#   leg 1 ("fixed"):   WithSentry.cmake from this branch  -> expect WEAK imports
+#   leg 2 ("control"): WithSentry.cmake from development  -> expect STRONG imports
+# If either expectation fails, a tmate session opens for interactive debugging.
+name: Verify sentry weak-linking (PR 9945)
+
+on:
+  push:
+    branches:
+      - claude/verify-9945-macos-weaklink
+
+jobs:
+  verify:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.0'
+          dir: ${{ runner.workspace }}
+          cache: true
+          modules: qt5compat qtmultimedia qtspeech
+
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: '5.1.5'
+          buildCache: false
+
+      - name: Install dependencies
+        env:
+          HOMEBREW_NO_ANALYTICS: "ON"
+          HOMEBREW_NO_AUTO_UPDATE: "ON"
+          HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+        timeout-minutes: 7
+        run: |
+          brew uninstall --ignore-dependencies llvm@15 2>/dev/null || true
+          brew install libzzip libzip expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+          if [ "$(uname -m)" = "arm64" ]; then HOMEBREW_PREFIX=/opt/homebrew; else HOMEBREW_PREFIX=/usr/local; fi
+          echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR}:${HOMEBREW_PREFIX}" >> $GITHUB_ENV
+
+      - name: 'Leg 1 (fixed): build sentry via WithSentry.cmake from this branch'
+        run: |
+          cmake -S . -B build-fixed -G Ninja \
+            -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
+            -DLUA_INCLUDE_DIR="${GITHUB_WORKSPACE}/.lua/include" \
+            -DLUA_LIBRARY="${GITHUB_WORKSPACE}/.lua/lib/liblua.a" \
+            -DWITH_SENTRY=ON
+          cmake --build build-fixed --target sentry_without_transport
+
+      - name: 'Leg 1 (fixed): scan for weak imports'
+        run: |
+          mkdir -p scan
+          find 3rdparty/sentry-native/install_without_transport -name '*.a' \
+            -exec nm -m {} + 2>/dev/null | grep -i 'os_sync_' | sort -u | tee scan/fixed.txt
+          echo "---"
+          if [ ! -s scan/fixed.txt ]; then
+            echo "::error::FIXED leg: no os_sync_* references found at all - scan is broken"; exit 1
+          fi
+          if grep -i 'os_sync_' scan/fixed.txt | grep -v -i 'weak' ; then
+            echo "::error::FIXED leg: found STRONG os_sync_* imports - the fix did NOT take effect"; exit 1
+          fi
+          echo "FIXED leg OK: every os_sync_* reference is a weak import"
+
+      - name: 'Leg 2 (control): revert WithSentry.cmake to development'
+        run: |
+          rm -rf 3rdparty/sentry-native/install_without_transport
+          git fetch origin development --depth=1
+          git checkout FETCH_HEAD -- src/cmake/WithSentry.cmake
+          git diff --stat HEAD -- src/cmake/WithSentry.cmake
+
+      - name: 'Leg 2 (control): build sentry via development WithSentry.cmake'
+        run: |
+          cmake -S . -B build-control -G Ninja \
+            -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
+            -DLUA_INCLUDE_DIR="${GITHUB_WORKSPACE}/.lua/include" \
+            -DLUA_LIBRARY="${GITHUB_WORKSPACE}/.lua/lib/liblua.a" \
+            -DWITH_SENTRY=ON
+          cmake --build build-control --target sentry_without_transport
+
+      - name: 'Leg 2 (control): scan and render verdict'
+        run: |
+          find 3rdparty/sentry-native/install_without_transport -name '*.a' \
+            -exec nm -m {} + 2>/dev/null | grep -i 'os_sync_' | sort -u | tee scan/control.txt
+          echo "==================== VERDICT ===================="
+          echo "--- fixed (this branch) ---";   cat scan/fixed.txt
+          echo "--- control (development) ---"; cat scan/control.txt
+          if [ ! -s scan/control.txt ]; then
+            echo "::error::CONTROL leg: no os_sync_* references found - scan is broken"; exit 1
+          fi
+          if grep -i 'os_sync_' scan/control.txt | grep -q -v -i 'weak'; then
+            echo "VERDICT: PASS - control has strong imports (the shipping bug), fixed leg is weak-only. PR #9945 is load-bearing and effective."
+          else
+            echo "::error::CONTROL leg unexpectedly weak-only - the fix is not what changes the linkage (runner target may be < 14.4?)"; exit 1
+          fi
+
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: os-sync-linkage-scan
+          path: scan/
+
+      - name: Interactive debugging on failure
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: false
+        timeout-minutes: 20
