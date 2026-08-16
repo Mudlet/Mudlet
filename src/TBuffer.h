@@ -420,6 +420,7 @@ private:
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
     static bool startsWithListMarker(const QString& line);
+    bool pendingLineHadRoomForNextWord() const;
     void joinPendingServerWrapOntoCurrent();
     void startServerWrapFlushTimer();
     void processMxpWatchdogCallback();
@@ -528,6 +529,10 @@ private:
     // joined back on and triggers run once over the whole logical line:
     QString mServerWrapPendingLine;
     std::deque<TChar> mServerWrapPendingBuffer;
+    // Length of the last game line joined into the above. Once a paragraph
+    // has been joined even once the held text is longer than the wrap column,
+    // so the column the game actually broke at is only recoverable from this:
+    qsizetype mServerWrapPendingSegmentLength = 0;
     // Commits a held line if the game goes quiet without completing it - a
     // full-width line that really was the end of the output:
     QPointer<QTimer> mpServerWrapFlushTimer;
@@ -603,9 +608,20 @@ private:
     bool mSkipTriggerProcessing = false;
 
     // Server wrap undoing: a line no shorter than this many characters below
-    // the configured wrap column is considered a wrapped segment (the game
-    // breaks at the last space, so segments fall a partial word short):
+    // the configured wrap column is a candidate wrapped segment (the game
+    // breaks at the last space, so segments fall a partial word short);
+    // whether it really was one is settled once the continuation arrives,
+    // see csmServerWrapFitTolerance:
     static constexpr int csmServerWrapSlack = 15;
+    // How many columns clear of the wrap column the continuation's first word
+    // would have had to end before its fitting proves the game ended the line
+    // itself. Text laid out by hand does not sit exactly on the column, so a
+    // few columns to spare mean nothing: in captures of MorgenGrauen and
+    // Discworld no genuine wrap left more than 7 free. Held lines start no
+    // more than csmServerWrapSlack short of the column, so this can only ever
+    // reject a continuation opening with a word of csmServerWrapSlack less
+    // this many characters or fewer:
+    static constexpr int csmServerWrapFitTolerance = 8;
     // Stop joining once a logical line has grown this long - a runaway guard:
     static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
     // How long to hold a full-width line for its continuation before deciding

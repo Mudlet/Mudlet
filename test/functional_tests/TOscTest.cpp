@@ -345,6 +345,24 @@ private slots:
                             .arg(allText)));
   }
 
+  // A private/reserved CSI ("CSI ?25l" and friends) split across two server
+  // packets must survive the boundary. The branch that discards such a sequence
+  // has to sit BELOW the incomplete-packet check: above it, the first packet's
+  // "?25" is consumed on its own and the trailing "l" is left to print as text.
+  // Only a genuine packet split reaches this - two feedTriggers() calls cannot,
+  // because the incomplete bytes are carried only when isFromServer is set.
+  void test_SplitPrivateCsiSurvivesThePacketBoundary() {
+    std::string part1{"PRIVSPLIT(\x1b[?25"};
+    mpHost->mpConsole->printOnDisplay(part1, true);
+    std::string part2{"l)PRIVSPLIT\n"};
+    mpHost->mpConsole->printOnDisplay(part2, true);
+
+    const QString allText = allBufferText();
+    QVERIFY2(allText.contains(qsl("PRIVSPLIT()PRIVSPLIT")),
+             qPrintable(qsl("A private CSI split across two packets did not survive the boundary: '%1'")
+                            .arg(allText)));
+  }
+
   // The don't-decode-this-payload flag set by a DCS/SOS/PM/APC introducer
   // (mGotString) is carry-over parser state just like mGotOSC and must swap
   // with the rest of it around a local feed. If it leaks: a complete OSC in

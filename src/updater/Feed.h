@@ -96,6 +96,7 @@ private:
 
     QNetworkAccessManager mNam;
     QNetworkReply* mFeedReply{nullptr};
+    QNetworkReply* mChecksumsReply{nullptr};
     Release mCurrentDownload;
     QNetworkReply* mDownloadReply{nullptr};
     QTemporaryFile* mDownloadFile{nullptr};
