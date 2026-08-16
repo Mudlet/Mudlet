@@ -350,7 +350,61 @@ private slots:
         execLua(qsl("dropTargetTable = nil droppedGlobal = nil"));
     }
 
+    // The key type shown belongs to the variable selected, and a boolean key is
+    // a key type of its own: showing the one the variable looked at before it
+    // had says something untrue about this one (#9959).
+    void test_aBooleanKeyedMemberNamesItsOwnKeyType()
+    {
+        execLua(qsl("booleanKeyTable = {[true] = 'boolean member value', [2] = 'integer member value'} booleanKeyDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pBooleanMember = findVariableItem({qsl("booleanKeyTable"), qsl("true")});
+        QVERIFY2(pBooleanMember, "the Variables view did not show the member under its boolean key");
+        QTreeWidgetItem* pIntegerMember = findVariableItem({qsl("booleanKeyTable"), qsl("2")});
+        QVERIFY2(pIntegerMember, "the Variables view did not show the member under its integer key");
+        QTreeWidgetItem* pStringKeyed = findVariableItem({qsl("booleanKeyDecoy")});
+        QVERIFY2(pStringKeyed, "the Variables view did not show the string-keyed variable");
+
+        selectVariable(pIntegerMember);
+        selectVariable(pBooleanMember);
+        const QString afterAnIntegerKey = keyTypeShown();
+
+        selectVariable(pStringKeyed);
+        selectVariable(pBooleanMember);
+        const QString afterAStringKey = keyTypeShown();
+
+        QCOMPARE(afterAStringKey, afterAnIntegerKey);
+        QVERIFY2(afterAnIntegerKey.contains(qsl("boolean"), Qt::CaseInsensitive),
+                 qPrintable(qsl("the key type shown for a boolean key was \"%1\", which does not name a boolean").arg(afterAnIntegerKey)));
+
+        selectVariable(pStringKeyed);
+        execLua(qsl("booleanKeyTable = nil booleanKeyDecoy = nil"));
+    }
+
+    // ...and what is shown for it is a description, not an instruction: leaving
+    // the member alone leaves the key it is under boolean.
+    void test_leavingABooleanKeyedMemberKeepsItsKey()
+    {
+        execLua(qsl("booleanRoundTripTable = {[true] = 'boolean member value'} booleanRoundTripDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pMember = findVariableItem({qsl("booleanRoundTripTable"), qsl("true")});
+        QVERIFY2(pMember, "the Variables view did not show the member under its boolean key");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("booleanRoundTripDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pMember);
+        selectVariable(pDecoy);
+
+        QCOMPARE(luaMemberCount(qsl("booleanRoundTripTable")), 1);
+        QVERIFY2(luaHolds(qsl("booleanRoundTripTable[true]"), qsl("boolean member value")), "the member did not stay under the boolean key it was read from");
+
+        execLua(qsl("booleanRoundTripTable = nil booleanRoundTripDecoy = nil"));
+    }
+
 private:
+    QString keyTypeShown() const { return mpEditor->mpVarsMainArea->comboBox_variable_key_type->currentText(); }
+
     void execLua(const QString& code)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
