@@ -2342,6 +2342,68 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  -- echoLink takes the main console's link colour from the profile's
+  -- background and a miniconsole's from that console's own, so this block
+  -- drives the main console to cover the profile-background branch
+  describe("link colour against the console background", function()
+    local savedBg, savedWrap
+
+    -- WCAG relative luminance, so that "readable" is a measurement rather than
+    -- a preference about which blue looks nicer
+    local function relativeLuminance(rgb)
+      local function channel(value)
+        value = value / 255
+        if value <= 0.03928 then
+          return value / 12.92
+        end
+        return ((value + 0.055) / 1.055) ^ 2.4
+      end
+      return 0.2126 * channel(rgb[1]) + 0.7152 * channel(rgb[2]) + 0.0722 * channel(rgb[3])
+    end
+
+    local function contrastRatio(first, second)
+      local one, other = relativeLuminance(first), relativeLuminance(second)
+      return (math.max(one, other) + 0.05) / (math.min(one, other) + 0.05)
+    end
+
+    local function echoLinkAndReadItsFormat(text)
+      local line = getLastLineNumber("main")
+      echoLink(text, [[noop()]], "a link")
+      echo("\n")
+      assert.is_true(moveCursor("main", 0, line))
+      assert.is_true(selectString(text, 1) >= 0, "the link was not printed onto the line it was echoed on")
+      return getTextFormat("main")
+    end
+
+    setup(function()
+      -- getBackgroundColor() answers the console's own background and there is
+      -- no Lua reader for the profile's, but setBackgroundColor() writes both,
+      -- so this is the restore available
+      savedBg = {getBackgroundColor()}
+      savedWrap = getWindowWrap("main")
+      setWindowWrap("main", 500)
+    end)
+
+    teardown(function()
+      setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
+      setWindowWrap("main", savedWrap)
+      deselect()
+    end)
+
+    it("picks whichever link blue reads better against the console background", function()
+      setBackgroundColor(0, 0, 0)
+      local dark = echoLinkAndReadItsFormat("a link against a dark background")
+
+      setBackgroundColor(255, 255, 255)
+      local light = echoLinkAndReadItsFormat("a link against a light background")
+
+      assert.are_not.same(dark.foreground, light.foreground, "the link colour did not follow the console background at all")
+      assert.are.same({0, 0, 255}, light.foreground, "a light background did not keep the darker blue that reads best on it")
+      assert.is_true(contrastRatio(dark.foreground, dark.background) > 4.5, "the link does not contrast enough with a dark console background")
+      assert.is_true(contrastRatio(light.foreground, light.background) > 4.5, "the link does not contrast enough with a light console background")
+    end)
+  end)
+
   describe("insertText, replace and deleteLine effects", function()
     local win = "uiReadbackEdit"
 

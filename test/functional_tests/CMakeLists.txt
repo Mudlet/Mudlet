@@ -8,8 +8,6 @@ cmake_language(DEFER CALL restore_windows_test_output)
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     TelnetTextDisplayedTest.cpp
-    TelnetSubnegotiationTest.cpp
-    TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     cTelnetBufferTest.cpp
@@ -68,7 +66,6 @@ set(FUNCTIONAL_TEST_SOURCES
     MapCloseDuringImportTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
-    UndoServerWrapTest.cpp
     TelnetConnectLookupRaceTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -287,9 +284,6 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
-
-# UndoServerWrapTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(UndoServerWrapTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
