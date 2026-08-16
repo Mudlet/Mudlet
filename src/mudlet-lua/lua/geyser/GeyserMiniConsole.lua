@@ -11,8 +11,8 @@ Geyser.MiniConsole = Geyser.Window:new({
   wrapAt = 300, })
 
 --- Override reposition to reset autowrap
-function Geyser.MiniConsole:reposition()
-  self.parent.reposition(self)
+function Geyser.MiniConsole:reposition(skipChildren)
+  self.parent.reposition(self, skipChildren)
   if self.autoWrap then
     self:resetAutoWrap()
   end
@@ -609,7 +609,7 @@ function Geyser.MiniConsole:new (cons, container)
     createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
 
--- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+-- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
     if me.hidden or me.auto_hidden then
       hideWindow(me.name)
     end

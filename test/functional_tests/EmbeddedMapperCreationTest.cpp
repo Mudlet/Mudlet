@@ -134,7 +134,7 @@ private slots:
         const int playerAreaId = pRoomDB->addArea(mPlayerAreaName);
         QVERIFY(playerAreaId > 0);
         QVERIFY(pMap->addRoom(1));
-        QVERIFY(pMap->setRoomArea(1, playerAreaId, false));
+        QVERIFY(pMap->setRoomArea(1, playerAreaId));
         pMap->mRoomIdHash[pMap->mProfileName] = 1;
         pMap->setDefaultAreaShown(false);
         QVERIFY2(!pRoomDB->isEmpty(), "the map has to be non-empty for this to be the returning-user path");

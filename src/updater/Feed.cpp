@@ -128,6 +128,30 @@ QList<Release> Feed::selectUpdates(const QList<Release>& releases, const Release
     return updates;
 }
 
+QList<Release> Feed::selectReleasesBetween(const QList<Release>& releases, const Release& after, const Release& upTo)
+{
+    QList<Release> selected;
+    // With nothing on offer upTo is a default-constructed Release, which no
+    // release is older than or equal to
+    if (upTo.getVersion().isEmpty()) {
+        return selected;
+    }
+    for (const auto& release : releases) {
+        // The release being run is in the feed as well, and its own notes were
+        // read when it was installed. Matched by version like selectUpdates
+        // does: a version SemVer cannot read is ordered by date instead, and
+        // the date the running release carries is when it was built rather than
+        // when it was published, so it can sort as older than itself
+        if (after.getVersion().compare(release.getVersion(), Qt::CaseInsensitive) == 0) {
+            continue;
+        }
+        if (after < release && release <= upTo) {
+            selected << release;
+        }
+    }
+    return selected;
+}
+
 QString Feed::getDownloadFilePath() const
 {
     return mDownloadFilePath;

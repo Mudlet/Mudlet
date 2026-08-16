@@ -22,7 +22,7 @@ end
 local function assertArgError(fn, needle)
   local ok, err = pcall(fn)
   assert.is_false(ok)
-  assert.is_true(contains(err, needle))
+  assert.is_true(contains(err, needle), tostring(err))
 end
 
 describe("Media playback functions validate their parameters", function()
@@ -173,10 +173,10 @@ end)
 
 describe("Media load functions validate their parameters", function()
   -- loadMusicFile/loadSoundFile/loadVideoFile are one preload request behind
-  -- three names: they share a pair of parsers which set no media type at all,
-  -- so what actually differs between them is the name in their error messages
-  -- and loadVideoFile taking the table form only. Nothing here names a file
-  -- that exists, so no preload gets as far as the media engine.
+  -- three names: they share a pair of parsers, each call stamping its own media
+  -- type on the request, and loadVideoFile takes the table form only. Nothing
+  -- here names a file that exists, so no preload gets as far as the media
+  -- engine.
   it("each raises a Lua error when called with no arguments", function()
     assertArgError(function() loadMusicFile() end, "loadMusicFile: need at least one argument")
     assertArgError(function() loadSoundFile() end, "loadSoundFile: need at least one argument")
@@ -198,11 +198,11 @@ describe("Media load functions validate their parameters", function()
     assert.is_true(contains(err, "missing argument 1"), tostring(err))
   end)
 
-  it("the table form raises a Lua error when it is given no name", function()
-    -- Only the tail of the message: all three loads report this one as
-    -- loadMusicFile, whichever was called, and pinning that here would hold
-    -- that in place.
-    assertArgError(function() loadSoundFile({}) end, "missing name")
+  it("the table form raises a Lua error naming the load that was called", function()
+    -- the three share one table parser, so each has to name its own caller
+    assertArgError(function() loadSoundFile({}) end, "loadSoundFile: missing name")
+    assertArgError(function() loadMusicFile({}) end, "loadMusicFile: missing name")
+    assertArgError(function() loadVideoFile({}) end, "loadVideoFile: missing name")
   end)
 
   it("the ordered form raises a Lua error when the url is not a string", function()
@@ -276,12 +276,14 @@ describe("Media query and stop functions validate their parameters", function()
     assert.is_table(getPausedVideos({[1] = "junk", key = "busted-media-no-such-key"}))
   end)
 
-  it("the ordered play forms refuse a negative fade", function()
-    -- Only the range refusal, not the whole message: the music parser's fade
-    -- messages name playSoundFile, and pinning that here would hold it in
-    -- place.
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "bad argument range for fadein")
-    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "bad argument range for fadeout")
+  it("the ordered play forms refuse a negative fade, start or finish and name the call", function()
+    -- #9785: the music parser's four range messages all named playSoundFile
+    -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "playMusicFile: bad argument range for fadein")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, -1) end, "playMusicFile: bad argument range for fadeout")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, -1) end, "playMusicFile: bad argument range for start")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, "k", "t", false, nil, -1) end, "playMusicFile: bad argument range for finish")
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "playSoundFile: bad argument range for fadeout")
   end)
 
   it("every query returns an empty table while nothing is playing", function()
@@ -460,9 +462,11 @@ describe("Media playback effects with a generated sound file", function()
   end
 
   -- The fixture server of CI/http-fixture-server.py, when the harness started
-  -- one and handed its ephemeral port over. A preload's only observable effect
-  -- is the fetch it starts for a file the profile does not have, so the two
-  -- load specs below are the media ones that need a server to talk to.
+  -- one and handed its ephemeral port over. A preload's observable effect is
+  -- the fetch it starts for a file the profile does not have, so the specs
+  -- below that name a url are the media ones that need a server to talk to. A
+  -- GET below /media for a .wav is answered with generated silence rather than
+  -- from disk.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
   local requireFixture = os.getenv("MUDLET_TEST_REQUIRE_HTTP_FIXTURE")
   -- the file CI/http-fixtures/ serves, and its contents
@@ -982,6 +986,90 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.equals(1, #done)
     assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("a preload from a url keeps the file without playing it", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- #9783: the download's completion played what it had just written. The
+    -- fixture server answers this path with MEDIA_SECONDS of silence, long
+    -- enough that a playback which started would still be running here.
+    local downloadName = "busted-media-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+
+    local done = {}
+    collect("sysDownloadDone", done)
+    assert.is_true(loadSoundFile({name = downloadName, url = fixtureUrl() .. "/media"}))
+    waitForCount("sysDownloadDone", done, 1)
+    assert.equals(1, #done)
+
+    -- the playback this must not start would begin after the event above, and a
+    -- preloaded one raises no sysMediaStarted to wait for, so give the player
+    -- the turns it would need to reach the playing state
+    pumpEvents(1000)
+    assert.equals(0, #getPlayingSounds())
+    assert.equals(0, #getPlayingMusic())
+    assert.equals(0, #getPlayingVideos())
+
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the preload did not keep the file it downloaded")
+  end)
+
+  it("a sound preload leaves paused music of the same name paused", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- #9784: what a load is filed as decides which players it can reach.
+    -- playMedia() looks for a paused player to resume before it does anything
+    -- else, among the players of the type the request carries - and a load that
+    -- carried no type at all searched all three of the API lists, so a sound
+    -- preload took over music.
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-load-typed"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(pauseMusic())
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #getPausedMusic())
+
+    -- both parsers stamp the type, and each has its own copy of that line
+    assert.is_true(loadSoundFile({name = longSoundFile}))
+    assert.is_true(loadSoundFile(longSoundFile))
+    assert.equals(1, #getPausedMusic())
+    assert.equals(0, #getPlayingMusic())
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a play with a url plays the file once the download lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- the other half of #9783's guard: a request that is not a preload still
+    -- has to play what it fetched, or the fix would have taken playback away
+    -- from every play*File() that names a url
+    local downloadName = "busted-media-play.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-played"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
+
+    local playing = getPlayingSounds()
+    assert.equals(1, #playing)
+    assert.equals(downloadName, playing[1].name)
   end)
 
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
