@@ -268,6 +268,34 @@ private slots:
         QCOMPARE(luaL_dostring(L, "untickedMemberTable = nil"), 0);
     }
 
+    // A global is free to hold a dot in its own name, and savedVars is keyed by
+    // the dotted path - so such a global reads exactly like a member of a table
+    // of that path. The save used to write that global out under the member's
+    // entry, which handed the next session the wrong variable's value (#9954).
+    void test_globalWithADotInItsNameIsNotExportedUnderAMembersSavedName()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "dottedNameTable = {member = 'the member value'} "
+                               "_G['dottedNameTable.member'] = 'the unrelated global value'"),
+                 0);
+        // what ticking the table and its member in the Variables view records
+        vu->savedVars.insert(qsl("dottedNameTable"));
+        vu->savedVars.insert(qsl("dottedNameTable.member"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("the member value")), "the member the user ticked has to be exported");
+        QVERIFY2(!xml.contains(qsl("the unrelated global value")), "the unrelated global of that dotted name must not be exported in its place");
+
+        vu->savedVars.remove(qsl("dottedNameTable"));
+        vu->savedVars.remove(qsl("dottedNameTable.member"));
+        QCOMPARE(luaL_dostring(L, "dottedNameTable = nil _G['dottedNameTable.member'] = nil"), 0);
+    }
+
     // A member table beyond the 10,000-item save limit must not ride along -
     // it would bloat every profile save.
     void test_oversizedMemberTableIsNotExported()

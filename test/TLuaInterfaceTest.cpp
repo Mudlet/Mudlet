@@ -627,6 +627,136 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         }
     }
 
+    // A global is free to have a dot in its own name, and everything the
+    // Variables view remembers about a variable it remembers by the dotted path
+    // the tree gives it - so such a global reads exactly like a member of a
+    // table that happens to be named the same way. Both are real variables of
+    // their own, and both have to be in the tree with their own values (#9954).
+    void testADottedGlobalAndTheMatchingMemberAreBothInTheTree()
+    {
+        defineGlobalsTable();
+        execLua("colT = {b = 5} _G['colT.b'] = 'unrelated'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+
+        TVar* dottedRoot = findGlobal(qsl("colT.b"));
+        QVERIFY2(dottedRoot, "a global whose own name holds a dot has to be in the tree");
+        QCOMPARE(dottedRoot->getValue(), qsl("unrelated"));
+        QVERIFY2(!vu->isHidden(dottedRoot), "and nothing has hidden it");
+
+        TVar* table = findGlobal(qsl("colT"));
+        QVERIFY(table);
+        const QList<TVar*> members = table->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QCOMPARE(members.first()->getName(), qsl("b"));
+        QCOMPARE(members.first()->getValue(), qsl("5"));
+        QVERIFY2(members.first() != dottedRoot, "the member and the global of that name are two different nodes");
+    }
+
+    // The way a user meets this: the hiding walk at profile load records the
+    // member path "apiHolder.load", and a global of that name made afterwards
+    // then answered to the mark left for the member - so it was born hidden and
+    // never appeared in the Variables view.
+    void testAGlobalMadeAfterAHideWalkIsNotHiddenByAMatchingMemberPath()
+    {
+        defineGlobalsTable();
+        execLua("apiHolder = {load = 5}");
+        interface->getVars(true); // the hiding walk Mudlet runs at profile load
+        VarUnit* vu = interface->getVarUnit();
+        QVERIFY2(vu->hidden.contains(qsl("apiHolder.load")), "the walk is supposed to record the member path");
+
+        execLua("_G['apiHolder.load'] = 7");
+        interface->getVars(false);
+
+        TVar* dottedRoot = findGlobal(qsl("apiHolder.load"));
+        QVERIFY(dottedRoot);
+        QVERIFY2(!vu->isHidden(dottedRoot), "a global made after the hiding walk must not inherit a member path's hiding");
+        QCOMPARE(dottedRoot->getValue(), qsl("7"));
+
+        TVar* member = findGlobal(qsl("apiHolder"))->getChildren(false).first();
+        QCOMPARE(member->getName(), qsl("load"));
+        QVERIFY2(vu->isHidden(member), "the member the walk did hide has to stay hidden");
+    }
+
+    // ...and the same collision the other way round: the saved mark the user put
+    // on the member is keyed by that same dotted path, so the unrelated global
+    // read as saved too - and a profile save wrote it out in the member's place.
+    void testSavingAMemberDoesNotSaveTheGlobalOfThatDottedName()
+    {
+        defineGlobalsTable();
+        execLua("cfgT = {port = 23} _G['cfgT.port'] = 'not the member'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+
+        TVar* member = findGlobal(qsl("cfgT"))->getChildren(false).first();
+        QCOMPARE(member->getName(), qsl("port"));
+        vu->addSavedVar(member);
+
+        QVERIFY2(vu->isSaved(member), "the member the user ticked is saved");
+        TVar* dottedRoot = findGlobal(qsl("cfgT.port"));
+        QVERIFY(dottedRoot);
+        QVERIFY2(!vu->isSaved(dottedRoot), "an unrelated global must not be saved by the member's mark");
+    }
+
+    // Nor may going the other way take the member's mark away: clicking such a
+    // global's row in the Variables view removed the savedVars entry the user
+    // had made about the member.
+    void testTouchingTheDottedGlobalLeavesTheMembersSavedMarkAlone()
+    {
+        defineGlobalsTable();
+        execLua("keepT = {port = 23} _G['keepT.port'] = 'not the member'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+        TVar* member = findGlobal(qsl("keepT"))->getChildren(false).first();
+        vu->addSavedVar(member);
+        TVar* dottedRoot = findGlobal(qsl("keepT.port"));
+        QVERIFY(dottedRoot);
+
+        vu->addSavedVar(dottedRoot);
+        vu->removeSavedVar(dottedRoot);
+
+        QVERIFY2(vu->savedVars.contains(qsl("keepT.port")), "the member's saved mark is the user's and has to survive");
+        QVERIFY2(vu->isSaved(member), "so the member is still saved");
+    }
+
+    // Saving is fenced off for such a global rather than made to work: savedVars
+    // is keyed by the dotted path, and a name that reads as a member path cannot
+    // be told apart from one in it - so a save would restore the wrong variable.
+    void testADottedGlobalIsFencedOffFromBeingSaved()
+    {
+        defineGlobalsTable();
+        execLua("fenceT = {port = 23} _G['fenceT.port'] = 'not the member' plainGlobal = 'saveable'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+
+        TVar* dottedRoot = findGlobal(qsl("fenceT.port"));
+        QVERIFY(dottedRoot);
+        QVERIFY2(!vu->shouldSave(dottedRoot), "a global whose own name holds a dot cannot be saved");
+        QVERIFY2(!vu->getUnsaveableReason(dottedRoot).isEmpty(), "and the view has to say why");
+        QVERIFY(vu->getUnsaveableReason(dottedRoot).contains(qsl("dot")));
+
+        QVERIFY2(vu->shouldSave(findGlobal(qsl("plainGlobal"))), "a global with no dot in its name is saveable as before");
+        QVERIFY2(vu->shouldSave(findGlobal(qsl("fenceT"))->getChildren(false).first()), "and so is the member whose path reads the same");
+        QVERIFY2(vu->getUnsaveableReason(findGlobal(qsl("fenceT"))->getChildren(false).first()).isEmpty(), "the member has nothing to explain away");
+    }
+
+    // The fence is about the name a root is reached by, so it must not reach a
+    // member whose own key holds a dot - that member is found through its table.
+    void testAMemberWhoseOwnKeyHoldsADotIsStillSaveable()
+    {
+        defineGlobalsTable();
+        execLua("dotHolder = {} dotHolder['a.b'] = 'member value'");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+
+        TVar* member = findGlobal(qsl("dotHolder"))->getChildren(false).first();
+        QCOMPARE(member->getName(), qsl("a.b"));
+        QVERIFY2(vu->shouldSave(member), "a member of a table is reached through that table, dot in its key or not");
+        vu->addSavedVar(member);
+        QVERIFY(vu->isSaved(member));
+        QVERIFY(vu->savedVars.contains(qsl("dotHolder.a.b")));
+    }
+
 private:
     static std::unique_ptr<TVar> namedVar(const QString& name)
     {

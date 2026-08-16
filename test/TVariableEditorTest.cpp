@@ -1434,6 +1434,54 @@ private slots:
     }
 
     // ========================================================================
+    // A global whose own name holds a dot (#9954)
+    // ========================================================================
+
+    // The Variables view is where this is felt: the row for a global made after
+    // the hiding walk answered to the mark that walk left for a member of the
+    // same dotted path, so the row was never built and the global could not be
+    // seen, renamed or deleted.
+    void testGlobalWithADotInItsNameHasARowInTheVariablesView()
+    {
+        execLua(qsl("dotHolderTable = {member = 'the member'}"));
+        interface->getVars(true); // the hiding walk Mudlet runs at profile load
+        execLua(qsl("_G['dotHolderTable.member'] = 'the global'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        vu->buildVarTree(rootItem, vu->getBase(), false);
+
+        QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("dotHolderTable.member"));
+        QVERIFY2(dottedItem, "the global has to have a row of its own in the Variables view");
+        QVERIFY2(!childItemNamed(rootItem, qsl("dotHolderTable")), "while the table the walk hid stays hidden");
+    }
+
+    // ...and that row is greyed out and untickable, with the reason on it: the
+    // save keys variables by the dotted path, so this one cannot be saved.
+    void testTheRowOfAGlobalWithADotInItsNameIsGreyedWithAReason()
+    {
+        execLua(qsl("_G['greyed.global'] = 'value' plainSaveable = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        vu->buildVarTree(rootItem, vu->getBase(), false);
+
+        QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("greyed.global"));
+        QVERIFY(dottedItem);
+        QVERIFY2(!(dottedItem->flags() & Qt::ItemIsUserCheckable), "the row must not offer a tick that cannot be honoured");
+        QCOMPARE(dottedItem->foreground(0).color(), QColor("grey"));
+        QVERIFY2(!dottedItem->toolTip(0).isEmpty(), "the row has to say why it cannot be saved");
+
+        QTreeWidgetItem* plainItem = childItemNamed(rootItem, qsl("plainSaveable"));
+        QVERIFY(plainItem);
+        QVERIFY2(plainItem->flags() & Qt::ItemIsUserCheckable, "an ordinary global is still tickable");
+    }
+
+    // ========================================================================
     // Float keys and values
     // ========================================================================
 

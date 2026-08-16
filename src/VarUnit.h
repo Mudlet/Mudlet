@@ -97,6 +97,7 @@ public:
     QSet<QString> savedVars;
 
 private:
+    bool rootNameReadsAsAMemberPath(TVar*) const;
     int countTableItems(TVar*);
     void rememberHiddenTable(TVar*, const QString& fullName);
     void forgetHiddenTable(const QString& fullName);
