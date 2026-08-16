@@ -26,7 +26,7 @@
     <message>
       <location filename="../src/crash_reporter/main.cpp" line="88"/>
       <source>Don&apos;t send</source>
-      <translation type="unfinished"/>
+      <translation>No lo envíes</translation>
     </message>
   </context>
   <context>
@@ -142,7 +142,7 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="895"/>
       <source>[ INFO ]  - You&apos;ll be signed in automatically next time. Manage this under Preferences, Connection.</source>
       <extracomment>Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Se iniciará tu sesión automáticamente la próxima vez. Para gestionarlo ves a Preferencias, Conexión.</translation>
     </message>
   </context>
   <context>
@@ -172,7 +172,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1078"/>
       <source>the profile is no longer available</source>
-      <translation type="unfinished"/>
+      <translation>el perfil ya no está disponible</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1291"/>
@@ -189,7 +189,7 @@
     <message>
       <location filename="../src/Host.cpp" line="2125"/>
       <source>[ ERROR ] - Package install failed for &quot;%1&quot;: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - La instalación del paquete falló para &quot;%1&quot;: %2</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2194"/>
@@ -581,7 +581,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPServer.cpp" line="446"/>
       <source>Color Key</source>
-      <translation type="unfinished"/>
+      <translation>Tecla de Color</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="446"/>
@@ -591,7 +591,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPServer.cpp" line="447"/>
       <source>Pending</source>
-      <translation type="unfinished"/>
+      <translation>Pendiente</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="452"/>
@@ -602,58 +602,58 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPServer.cpp" line="454"/>
       <source>Firewall</source>
-      <translation type="unfinished"/>
+      <translation>Cortafuegos</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="454"/>
       <source>Ignored</source>
-      <translation type="unfinished"/>
+      <translation>Ignorado</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="454"/>
       <source>Private</source>
-      <translation type="unfinished"/>
+      <translation>Privado</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="455"/>
       <source>Serving</source>
-      <translation type="unfinished"/>
+      <translation>Entrega</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="455"/>
       <source>Allow Snooping</source>
-      <translation type="unfinished"/>
+      <translation>Permitir Espiar</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="455"/>
       <source>Being Snooped</source>
-      <translation type="unfinished"/>
+      <translation>Siendo Espiado</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="469"/>
       <source>[ CHAT ]  - Invalid chat name: tilde (~) and comma (,) are not allowed.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Nombre para el chat inválido: no se permite la tilde (~) ni la coma (,).</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="489"/>
       <source>[ CHAT ]  - You are now known as %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ahora eres conocido como %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="564"/>
       <source>[ CHAT ]  - Assigned &apos;%1&apos; to group &apos;%2&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ]  - Se asignó a &apos;%1&apos; al grupo &apos;%2&apos;.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="567"/>
       <source>[ CHAT ]  - Removed &apos;%1&apos; from group &apos;%2&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Eliminado &apos;%1&apos; del grupo &apos;%2&apos;.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="609"/>
       <source>You emote to everyone: &apos;%1 %2&apos;</source>
       <extracomment>%1 is player&apos;s name, %2 is the emote message sent to everyone</extracomment>
-      <translation type="unfinished"/>
+      <translation>Haces gesto a todos: &apos;%1 %2&apos;</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="614"/>
@@ -663,77 +663,77 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPServer.cpp" line="650"/>
       <source>[ CHAT ]  - You are no longer ignoring %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ya no estás ignorando a %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="653"/>
       <source>[ CHAT ]  - You are now ignoring %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ahora estás ignorando a %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="660"/>
       <source>[ CHAT ]  - Cannot find client identified by &apos;%1&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - No se puede encontrar el cliente identificado por &apos;%1&apos;.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="721"/>
       <source>[ CHAT ]  - %1 is no longer private.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 ya no es privado.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="725"/>
       <source>[ CHAT ]  - %1 is now set as private.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 se ha establecido como privado.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="746"/>
       <source>[ CHAT ]  - You are no longer serving %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ya no estás atendiendo a %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="753"/>
       <source>[ CHAT ]  - You are now serving %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Ahora estás atendiendo a %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="775"/>
       <source>[ CHAT ]  - Unable to start server: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - No se ha podido iniciar el servidor: %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="780"/>
       <source>[ CHAT ]  - Started server on port %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Servidor iniciado en el puerto %1.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="794"/>
       <source>[ CHAT ]  - Stopped server</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - Servidor detenido</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="799"/>
       <source>[ CHAT ]  - Unable to stop server, it is not running</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - No se puede detener el servidor, ya que no se está ejecutando</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="813"/>
       <source>[ CHAT ]  - DoNotDisturb enabled.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - NoMolestar activado.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="815"/>
       <source>[ CHAT ]  - DoNotDisturb disabled.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - NoMolestar desactivado.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="833"/>
       <source>[ CHAT ]  - %1 is no longer allowed to snoop you.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 ya no está autorizado a espiarte.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="840"/>
       <source>[ CHAT ]  - %1 can now snoop you.</source>
-      <translation type="unfinished"/>
+      <translation>[ CHAT ] - %1 ahora puede espiarte.</translation>
     </message>
   </context>
   <context>
@@ -808,25 +808,25 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/OAuthClientFlow.cpp" line="249"/>
       <source>This sign-in attempt could not be verified. Please return to Mudlet and try again.</source>
       <extracomment>Shown in the user&apos;s web browser when a browser sign-in attempt could not be verified as the one Mudlet started.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo verificar este intento de inicio de sesión. Por favor, vuelve a Mudlet e inténtalo de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/OAuthClientFlow.cpp" line="256"/>
       <source>The sign-in was not completed. You can close this tab and return to Mudlet.</source>
       <extracomment>Shown in the user&apos;s web browser when the identity provider reported that the sign-in did not complete.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se completó el inicio de sesión. Puedes cerrar esta pestaña y volver a Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/OAuthClientFlow.cpp" line="264"/>
       <source>The sign-in did not complete. Please return to Mudlet and try again.</source>
       <extracomment>Shown in the user&apos;s web browser when the identity provider&apos;s redirect did not include an authorization code.</extracomment>
-      <translation type="unfinished"/>
+      <translation>El inicio de sesión no se completó. Por favor, vuelve a Mudlet e inténtalo de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/OAuthClientFlow.cpp" line="270"/>
       <source>You are signed in. You can close this tab and return to Mudlet.</source>
       <extracomment>Shown in the user&apos;s web browser after a successful browser sign-in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Has iniciado sesión. Puedes cerrar esta pestaña y volver a Mudlet.</translation>
     </message>
   </context>
   <context>
