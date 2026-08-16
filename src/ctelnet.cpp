@@ -158,6 +158,7 @@ void cTelnet::reset()
     iac2 = false;
     insb = false;
     mDiscardingOversizedSubnegotiation = false;
+    mDeferredReconnect = false;
     // Stop any pending password mode timeout
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
@@ -521,12 +522,27 @@ void cTelnet::sendGMCPSupportsRemove(const QString& package)
     socketOutRaw(data);
 }
 
+// Stops waiting on the name lookup in progress, if there is one. Aborting does
+// not always stop a result that is already on its way, so the id is cleared as
+// well and slot_socketHostFound() drops anything that does not match it.
+void cTelnet::abandonHostLookup()
+{
+    if (mHostLookupId != -1) {
+        QHostInfo::abortHostLookup(mHostLookupId);
+        mHostLookupId = -1;
+    }
+}
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     // Set early - before the recursion-on-busy-socket block below - so the
     // QCoreApplication::processEvents() call there cannot leave the indicator
     // briefly showing Disconnected during a reconnect.
     mLookingUpHost = true;
+
+    // Done before the processEvents() below so that call cannot deliver a
+    // result for a server this one has already replaced.
+    abandonHostLookup();
 
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
@@ -596,7 +612,7 @@ void cTelnet::connectIt(const QString& address, int port)
     // We can now use a compile-time slot for this as:
     // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
     // Qt 5.12.5:
-    QHostInfo::lookupHost(address, this, &cTelnet::slot_socketHostFound);
+    mHostLookupId = QHostInfo::lookupHost(address, this, &cTelnet::slot_socketHostFound);
 }
 
 void cTelnet::reconnect()
@@ -614,6 +630,10 @@ void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
     mLookingUpHost = false;
+    // There is no socket yet while the name lookup is outstanding, so without
+    // this a Disconnect during the lookup is followed by the connection being
+    // made anyway when the result arrives.
+    abandonHostLookup();
     if (mpSocket) {
         // This will write out any pending data before it disconnects...
         mpSocket->disconnectFromHost();
@@ -628,6 +648,7 @@ void cTelnet::abortConnection()
     // lingering until the (asynchronous) disconnect signal arrives.
     mLookingUpHost = false;
     mDontReconnect = true;
+    abandonHostLookup();
     if (mpSocket) {
         // One socket is probably active - and has signals connected - but will
         // close immediately, dropping any pending output:
@@ -1010,7 +1031,23 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - called.";
 #endif
+    // A result for a connect that has been replaced or called off: its address
+    // belongs with a port that has already been overwritten, so acting on it
+    // would dial the old host on the new port and leave the wanted connection
+    // unmade. mLookingUpHost is deliberately left alone - the lookup that is
+    // being waited on is still outstanding.
+    if (hostInfo.lookupId() != mHostLookupId) {
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
+        qDebug().noquote().nospace() << "cTelnet::slot_socketHostFound(QHostInfo) INFO - ignoring the result of lookup " << hostInfo.lookupId() << " for \"" << hostInfo.hostName()
+                                     << "\", waiting on lookup " << mHostLookupId << ".";
+#endif
+        return;
+    }
+    mHostLookupId = -1;
     mLookingUpHost = false;
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
     QStringList addressList_ipV4;
     QStringList addressList_ipV6;
     for (const QHostAddress& address : hostInfo.addresses()) {
@@ -2594,13 +2631,28 @@ void cTelnet::trackKaVirNegotiation(unsigned char option)
 void cTelnet::autoEnableTTYPEVersion()
 {
     mpHost->mPromptedForVersionInTTYPE = true;
-
-    // Automatically enable TTYPE version compatibility
-    disconnectIt();
     mpHost->mVersionInTTYPE = true;
-    postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has "
-                   "been automatically enabled for improved color support. Reconnecting..."));
-    reconnect();
+
+    // This is called from the middle of parsing a packet, and reconnecting from
+    // here returns into that parse: the remaining bytes of the connection being
+    // dropped would be applied to the state the fresh one is about to negotiate
+    // with - a CHARSET REQUEST among them is accepted and saved as the profile's
+    // encoding. Raise the flag before anything that could turn the event loop,
+    // as that is all it takes for more of those bytes to arrive.
+    mDeferredReconnect = true;
+    QTimer::singleShot(0, this, [this]() {
+        mDeferredReconnect = false;
+        if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
+            // Nothing to replace by the time this ran: the player may have
+            // disconnected or closed the profile, and a replay or feedTelnet()
+            // carrying the pattern was never online to begin with.
+            return;
+        }
+        postMessage(tr("[ INFO ]  - This game appears to use KaVir's protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type "
+                       "has been automatically enabled for improved color support. Reconnecting..."));
+        disconnectIt();
+        reconnect();
+    });
 }
 
 // Auto-enable MXP processor when indicators are detected
@@ -2619,6 +2671,34 @@ void cTelnet::autoEnableMXPProcessor()
     mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
     postMessage(tr("[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room "
                    "info, and richer interactions. You can disable this setting in Settings > Special Options."));
+}
+
+// Maps a character set offered in an RFC 2066 CHARSET REQUEST, upper-cased by the
+// caller, onto the name Mudlet knows it by - which is always one setEncoding()
+// accepts - or an empty value if Mudlet cannot use it. The "M_" prefix some of
+// Mudlet's own codecs carry is not part of a name a server would offer, so
+// encodingChanged() is left to put it back on.
+QByteArray cTelnet::encodingForCharacterSet(const QByteArray& characterSet) const
+{
+    if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains("M_" + characterSet)) {
+        return characterSet;
+    }
+
+    if (characterSet.contains("ASCII")) { // Accept variants of ASCII
+        return QByteArrayLiteral("ASCII");
+    }
+
+    // "ISO ####-#" is the spelling TEncodingTable::csmEncodings is keyed by, so
+    // fold the "ISO-####-#" and "ISO####-#" ones a server may use onto it:
+    if (characterSet.startsWith("ISO-") && mAcceptableEncodings.contains("ISO " + characterSet.mid(4))) {
+        return "ISO " + characterSet.mid(4);
+    }
+
+    if (characterSet.startsWith("ISO") && !characterSet.startsWith("ISO ") && mAcceptableEncodings.contains("ISO " + characterSet.mid(3))) {
+        return "ISO " + characterSet.mid(3);
+    }
+
+    return {};
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -3552,30 +3632,41 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     payload.remove(0, 9);
                 }
 
-                auto characterSetList = payload.split(payload[1]); // Second character is the separator.
+                // A request is the separator character followed by at least one
+                // character set name; anything shorter has nothing on offer, and
+                // reading a separator out of it would be past the end of it.
+                const auto characterSetList = payload.size() >= 2 ? payload.split(payload[1]) : QList<QByteArray>{};
+                // An acceptance has to name a character set from the request, so
+                // keep the offer verbatim alongside the name Mudlet knows it by:
                 QByteArray acceptedCharacterSet;
+                QByteArray acceptedEncoding;
+                // An empty mEncoding is how ASCII is held, and Mudlet's own codecs
+                // carry an "M_" prefix that no server spells out:
+                const QByteArray currentEncoding = mEncoding.isEmpty() ? QByteArrayLiteral("ASCII") : (mEncoding.startsWith("M_") ? mEncoding.mid(2) : mEncoding);
 
-                if (!characterSetList.isEmpty()) {
-                    for (QByteArray characterSet : std::as_const(characterSetList)) {
-                        characterSet = characterSet.toUpper();
+                // RFC 2066 leaves the choice from the offered list to us, so keep the
+                // encoding in use when it is on offer and only fall back to the first
+                // name recognised. Taking that first name outright lets a game that
+                // lists e.g. ASCII ahead of UTF-8 downgrade a UTF-8 profile: that is
+                // saved to the profile, drops the UTF-8 bit from the MTTS bitvector -
+                // so games stop sending anything outside ASCII - and renders what they
+                // do send as mojibake.
+                for (const QByteArray& offer : characterSetList) {
+                    const QByteArray encoding = encodingForCharacterSet(offer.toUpper());
 
-                        if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains(("M_" + characterSet))
-                            || characterSet.contains(QByteArray("ASCII"))) { // Accept variants of ASCII
-                            acceptedCharacterSet = characterSet;
-                            break;
-                        }
+                    if (encoding.isEmpty()) {
+                        continue;
+                    }
 
-                        if (characterSet.startsWith("ISO-") && // Accept "ISO-####-#" variant of "ISO ####-#"
-                            mAcceptableEncodings.contains(QByteArray("ISO " + characterSet.mid(4)))) {
-                            acceptedCharacterSet = characterSet;
-                            break;
-                        }
+                    if (acceptedCharacterSet.isEmpty()) {
+                        acceptedCharacterSet = offer;
+                        acceptedEncoding = encoding;
+                    }
 
-                        if (!characterSet.startsWith("ISO ") && characterSet.startsWith("ISO") && // Accept "ISO####-#" variant of "ISO ####-#"
-                            mAcceptableEncodings.contains(QByteArray("ISO " + characterSet.mid(3)))) {
-                            acceptedCharacterSet = characterSet;
-                            break;
-                        }
+                    if (encoding == currentEncoding) {
+                        acceptedCharacterSet = offer;
+                        acceptedEncoding = encoding;
+                        break;
                     }
                 }
 
@@ -3585,21 +3676,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += OPT_CHARSET;
 
                 if (!acceptedCharacterSet.isEmpty()) {
-                    QByteArray value;
-                    if (acceptedCharacterSet.contains(QByteArray("ASCII"))) {
-                        value = QByteArray("ASCII");
-                        setEncoding(value, true); // Force variants of ASCII to ASCII
-                    } else if (acceptedCharacterSet.startsWith("ISO-")) {
-                        value = QByteArray("ISO " + acceptedCharacterSet.mid(4));
-                        setEncoding(value, true); // Align with TEncodingTable::csmEncodings
-                    } else if (acceptedCharacterSet.startsWith("ISO") && !acceptedCharacterSet.startsWith("ISO ")) {
-                        value = QByteArray("ISO " + acceptedCharacterSet.mid(3));
-                        setEncoding(value, true); // Align with TEncodingTable::csmEncodings
-                    } else {
-                        value = acceptedCharacterSet;
-                        setEncoding(value, true);
-                    }
-                    qDebug() << "Game changed encoding to" << value;
+                    setEncoding(acceptedEncoding, true);
+                    qDebug() << "Game changed encoding to" << acceptedEncoding;
 
                     output += CHARSET_ACCEPTED;
                     output += encodeAndCookBytes(acceptedCharacterSet.toStdString());
@@ -5105,8 +5183,10 @@ void cTelnet::slot_socketReadyToBeRead()
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketReadyToBeRead() INFO - called.";
 #endif
-    // Check if Host is closing down or null/invalid
-    if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
+    // Anything arriving after the KaVir handshake pattern was spotted belongs to
+    // the connection autoEnableTTYPEVersion() is about to drop, so leave it unread
+    // rather than negotiate with it:
+    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
         return;
     }
 
@@ -5227,6 +5307,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 command += ch;
                 processTelnetCommand(command);
                 command = "";
+                if (mDeferredReconnect && !loopbackTesting) {
+                    // That announcement completed the KaVir handshake pattern (see
+                    // autoEnableTTYPEVersion()), so this connection is about to be
+                    // replaced: no further negotiation in it may be acted on. Only
+                    // this branch needs the check - the pattern is built from option
+                    // announcements, which nothing else dispatches. Text received
+                    // before it is still shown, and the half-parsed state the break
+                    // leaves behind is cleared by reset() on the next connection.
+                    // Data fed in by a script is nobody's connection, so it is not
+                    // the doomed one's and must not be cut short.
+                    break;
+                }
             } else if (iac && (!insb) && (ch == TN_SB)) {
                 //5. IAC SB
                 iac = false;
@@ -5408,8 +5500,10 @@ Some data loss is likely - please mention this problem to the game admins.)",
 
     // Reprocess data left over after this decompression pass (more compressed
     // data than fit in one output buffer, or plain data past the end of the
-    // compressed stream). finalize() runs only at the deepest level.
-    if (remainingData && remainingAmount > 0) {
+    // compressed stream). finalize() runs only at the deepest level. A pending
+    // reconnect makes this leftover the dropped connection's, same as the bytes
+    // the loop above stopped at.
+    if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
         processSocketData(remainingData, remainingAmount, loopbackTesting);
         return;
     }

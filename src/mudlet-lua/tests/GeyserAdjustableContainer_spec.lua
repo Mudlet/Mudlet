@@ -1226,3 +1226,78 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
     assert.are.equal(x, child:get_x())
   end)
 end)
+
+-- Dragging an edge used to set the position and then the size, laying the whole
+-- subtree out twice for one mouse-move.
+describe("Tests the cost of resizing an Adjustable.Container by its edge", function()
+  local container
+  local containerName = "gadEdge"
+
+  before_each(function()
+    container = Adjustable.Container:new({
+      name = containerName,
+      x = 50, y = 50, width = 300, height = 200,
+      autoLoad = false,
+      autoSave = false,
+    })
+    Geyser.Label:new({name = containerName .. "Leaf", x = 0, y = 0, width = "50%", height = "50%"},
+      container.Inside or container)
+  end)
+
+  after_each(function()
+    if container and Adjustable.Container.all[containerName] == container then
+      container:deleteSaveFile()
+      container:delete()
+    end
+    container = nil
+  end)
+
+  -- as with getMousePosition above, Geyser looks moveWindow up in its own globals
+  local function placements(work)
+    local geyser = getfenv(Geyser.Container.reposition)
+    local count = 0
+    local realMoveWindow = geyser.moveWindow
+    geyser.moveWindow = function(...)
+      count = count + 1
+      return realMoveWindow(...)
+    end
+    local ok, err = pcall(work)
+    geyser.moveWindow = realMoveWindow
+    assert.is_true(ok, tostring(err))
+    assert.is_true(count > 0, "nothing was placed, so the counter is not hooked up")
+    return count
+  end
+
+  it("lays the container out once per mouse-move rather than twice", function()
+    local geyser = getfenv(Adjustable.Container.onMove)
+    local realGetMousePosition = geyser.getMousePosition
+    local pointerX, pointerY = 500, 400
+    geyser.getMousePosition = function() return pointerX, pointerY end
+    finally(function() geyser.getMousePosition = realGetMousePosition end)
+
+    -- grabbing within ten pixels of the far edge is what adjust_Info reads as a
+    -- resize rather than a move, and it takes a click for onClick to see that
+    local grabX = container.adjLabel:get_width() - 2
+    local grabY = container.adjLabel:get_height() - 2
+    local event = {button = "LeftButton", buttons = {"LeftButton"},
+                   x = grabX, y = grabY, globalX = pointerX, globalY = pointerY}
+    container:onRelease(container.adjLabel, event)
+    container:onClick(container.adjLabel, event)
+    container:onClick(container.adjLabel, event)
+    finally(function() container:onRelease(container.adjLabel, event) end)
+
+    -- one geometry update over this container and its child is the yardstick, so
+    -- the spec holds whatever the machine's window size makes the subtree cost
+    local oneUpdate = placements(function() container:set_constraints(container) end)
+    local steps = 3
+    local wholeDrag = placements(function()
+      for _ = 1, steps do
+        pointerX, pointerY = pointerX - 5, pointerY - 5
+        container:onMove(container.adjLabel, event)
+      end
+    end)
+
+    assert.is_true(container:get_width() < 300, "the drag has to have resized the container")
+    assert.are.equal(oneUpdate * steps, wholeDrag)
+  end)
+end)

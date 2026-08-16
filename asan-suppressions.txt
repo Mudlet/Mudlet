@@ -59,22 +59,21 @@ leak:_dri.so
 # match) - keep the GL context from being created/destroyed under the sanitizer
 # test-side instead, as PR #9534 did for the show3dMapView test.
 #
-# A second un-suppressible flake lives on the same CI job (#9809): LeakSanitizer's
-# stop-the-world tracer - the helper process that ptrace-attaches at exit to scan
-# memory for live pointers - takes SIGSEGV, and the run ends with
+# A second failure on the same CI job was never suppressible either, and is fixed
+# elsewhere rather than here (#9809): LeakSanitizer's stop-the-world tracer - the
+# helper process that ptrace-attaches at exit to scan memory for live pointers -
+# took SIGSEGV, and the run ended with
 #   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
 #   ==NNNNN==LeakSanitizer has encountered a fatal error.
 # straight after the test body reported itself green, and with no leak report at
-# all (run 31428353403, on TelnetTextDisplayedTest).
+# all (run 31428353403 on TelnetTextDisplayedTest, run 31867450938 on four more).
 #
 # Nothing in this file can reach it: suppressions filter leak *reports*, and this
-# aborts before reporting begins. So the test definitions rerun instead, locally
-# as well as on CI - leak-checked tests and the Lua suite go through
-# test/lsan-tracer-retry.cmake, which reruns exactly once and only for that
-# signature. A leak report, a failing test and a second tracer crash all still
-# fail; test/ci/lsan-tracer-retry-test.sh is the full list of what does and does
-# not qualify. Each rerun prints a line and adds one to the job summary, which is
-# the only measure of how often this fires.
+# aborts before reporting begins. The cause is not a leak either - up to GCC 13
+# and LLVM 16 the sanitizer runtime misreads where a dynamic TLS block starts and
+# how long it is, and the tracer dies scanning the garbage range that leaves.
+# intercept_tls_get_addr=0 stops the misreading; test/functional_tests/
+# CMakeLists.txt has the mechanism and names every place the flag is set.
 
 # ==============================================================================
 # Fontconfig library leaks
