@@ -4286,7 +4286,8 @@ o se está importando desde un archivo local - espere a que la operación se com
 export is already in progress - wait for that operation to complete
 before retrying!</source>
       <extracomment>Shown in the main console when a map download is refused</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Se ha intentado descargar un mapa XML mientras ya hay una importación o exportación de mapa en curso. 
+¡Espera a que se complete esa operación antes de reintentarlo!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2545"/>
@@ -4318,7 +4319,7 @@ y si hay suficiente espacio. Se ha producido un error en la operación de descar
       <source>loadMap: unable to perform request, a map import or export is
 already in progress.</source>
       <extracomment>Error returned by the loadMap() Lua function</extracomment>
-      <translation type="unfinished"/>
+      <translation>loadMap: no se puede realizar la solicitud; ya hay una importación o exportación de mapa en curso.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2631"/>
@@ -4326,7 +4327,9 @@ already in progress.</source>
 export is already in progress - wait for that operation to complete
 before retrying!</source>
       <extracomment>Shown in the main console when a map import is refused</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Se ha intentado importar un mapa XML mientras ya hay una importación o
+exportación de mapa en curso. 
+¡Espera a que se complete esa operación antes de reintentarlo!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2738"/>
@@ -4340,7 +4343,9 @@ before retrying!</source>
       <source>[ ALERT ] - Map download failed, unable to save destination file:
 %1
 reason: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - La descarga del mapa ha fallado, no se puede guardar el archivo de destino:
+%1
+razón: %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3095"/>
@@ -4387,7 +4392,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3277"/>
       <source>empty Json file, no map data detected</source>
-      <translation>el archivo JSON vacío, no se detectaron datos del mapa</translation>
+      <translation>El archivo JSON está vacío; no se encontraron datos del mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3291"/>
@@ -4421,17 +4426,17 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="163"/>
       <source>[MAP ERROR:] %1</source>
       <extracomment>Used to print a map error in the Errors console in the Editor, %1 is the message text and a line-feed is also appended.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ERROR MAPA:] %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="186"/>
       <source>Can not set room with RoomID %1 to AreaID %2. Room does not exist!</source>
-      <translation type="unfinished"/>
+      <translation>No es posible asignar la sala con RoomID %1 al AreaID %2. ¡La sala no existe!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="196"/>
       <source>Can not set room with RoomID %1 to AreaID %2. Area does not exist!</source>
-      <translation type="unfinished"/>
+      <translation>No es posible asignar la sala con RoomID %1 al AreaID %2. ¡El área no existe!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1116"/>
@@ -4466,7 +4471,7 @@ versión del mapa recomendada %2 para esta versión de Mudlet.</translation>
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
       <translation>[ ALERTA ] - El archivo no parece ser un archivo Mudlet Map. La parte que indica
-su versión de formato parece ser &quot;%1&quot; y eso no tiene sentido&apos;. El archivo es:
+su versión de formato parece ser &quot;%1&quot; y eso no tiene sentido. El archivo es:
 &quot;%2&quot;.</translation>
     </message>
     <message>
@@ -4606,13 +4611,13 @@ en la consola principal!</translation>
       <location filename="../src/TMapView.cpp" line="98"/>
       <source>Go up one z-level</source>
       <extracomment>Tooltip for z-level up button in secondary map view</extracomment>
-      <translation type="unfinished"/>
+      <translation>Subir un nivel Z</translation>
     </message>
     <message>
       <location filename="../src/TMapView.cpp" line="107"/>
       <source>Go down one z-level</source>
       <extracomment>Tooltip for z-level down button in secondary map view</extracomment>
-      <translation type="unfinished"/>
+      <translation>Bajar un nivel Z</translation>
     </message>
     <message>
       <location filename="../src/TMapView.cpp" line="111"/>
@@ -4627,7 +4632,7 @@ en la consola principal!</translation>
       <location filename="../src/TMapViewManager.cpp" line="59"/>
       <source>Map View %1 - %2</source>
       <extracomment>Title for a secondary map view window, %1 is the view number, %2 is the profile name</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ver mapa %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -4665,7 +4670,7 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TMedia.cpp" line="1267"/>
       <source>Media error: %1</source>
       <extracomment>%1 is the media backend&apos;s own description of what went wrong, e.g. &quot;Failed to load media&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error de multimedia: %1</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1779"/>
@@ -4753,19 +4758,19 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="105"/>
       <location filename="../src/TRoom.cpp" line="1231"/>
       <source>Down</source>
-      <translation>Down</translation>
+      <translation>Abajo</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="107"/>
       <location filename="../src/TRoom.cpp" line="1245"/>
       <source>In</source>
-      <translation>Adentro</translation>
+      <translation>Dentro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="109"/>
       <location filename="../src/TRoom.cpp" line="1259"/>
       <source>Out</source>
-      <translation>Afuera</translation>
+      <translation>Fuera</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="111"/>
@@ -4825,49 +4830,49 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="1422"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus door items that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of door items</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En la sala con ID %1 se han encontrado una o más puertas sobrantes que han sido eliminadas: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1439"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus weight items that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of weight items</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En la sala con ID %1 se han encontrado uno o más pesos sobrantes que han sido eliminados: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1456"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus exit lock items that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of exit lock items</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En la sala con ID %1 se han encontrado uno o más bloqueos de salida sobrantes que han sido eliminados: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1536"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus custom line elements that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of custom line elements</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En la sala con ID %1 se han encontrado uno o más elementos de línea personalizada sobrantes que han sido eliminados: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1563"/>
       <source>[ INFO ]  - In room with ID: %1 correcting exit &quot;%2&quot; that was to room with an exit to invalid room: %3 to now go to: %4.</source>
       <extracomment>%1 is the room ID, %2 is the exit direction, %3 is the old destination room ID, %4 is the new destination room ID</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En la sala con ID %1 se corrige la salida &quot;%2&quot;, que llevaba a una sala con salida a la sala no válida %3, para que ahora vaya a: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1582"/>
       <source>[ WARN ]  - Room with ID: %1 has an exit &quot;%2&quot; to: %3 but that room does not exist.  The exit will be removed (but the destination room ID will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
       <extracomment>%1 is the room ID, %2 is the exit direction, %3 is the destination room ID that doesn&apos;t exist, %4 is the audit key</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - La sala con ID %1 tiene una salida &quot;%2&quot; hacia %3, pero esa sala no existe. La salida se eliminará (pero el ID de la sala de destino se guardará en los datos de usuario de la sala bajo la clave &quot;%4&quot;) y la salida se convertirá en un enlace incompleto.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1630"/>
       <source>[ ALERT ] - Room with ID: %1 has an exit &quot;%2&quot; to: %3 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
       <extracomment>%1 is the room ID, %2 is the exit direction, %3 is the destination room ID</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - La sala con ID %1 tiene una salida &quot;%2&quot; hacia %3, ¡pero también tiene una salida pendiente en la misma dirección! Dado que una salida real excluye una salida pendiente, esta última será eliminada.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1688"/>
       <source>[ INFO ]  - In room with ID: %1 exit &quot;%2&quot; that was to room with an invalid ID: %3 that does not exist.  The exit will be removed (the bad destination room ID will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
       <extracomment>%1 is the room ID, %2 is the exit direction, %3 is the invalid destination room ID, %4 is the audit key</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En la sala con ID %1, la salida &quot;%2&quot; llevaba a una sala con ID no válida: %3 que no existe. La salida se eliminará (el ID de destino no válido se guardará en los datos de usuario de la sala bajo la clave &quot;%4&quot;) y la salida se convertirá en una salida pendiente.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1406"/>
@@ -4877,18 +4882,18 @@ Se eliminó al jugador activo más antiguo.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="240"/>
       <source>Cannot set exit stub in given direction in RoomID %1. There is already an exit there!</source>
-      <translation type="unfinished"/>
+      <translation>No se puede crear una salida pendiente en la dirección indicada en el ID de sala %1. ¡Ya existe una salida allí!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="361"/>
       <source>Requested AreaID %1 did not exist and could not be created. Note: Area numbers must be greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>El ID de área %1 solicitado no existe y no se pudo crear. Nota: ¡Los números de área deben ser mayores que cero!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="384"/>
       <source>When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!</source>
       <extracomment>Although this is reported as an error it is not a problem</extracomment>
-      <translation type="unfinished"/>
+      <translation>Al configurar el área para la sala con ID %1 no tenía un área previa. ¡Es algo inesperado, pero no es grave!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1409"/>
@@ -4914,12 +4919,12 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="1708"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
       <extracomment>%1 is the audit key for the weight</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tenía un peso; esto se registra como datos de usuario con la clave: &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1718"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Había una línea de salida personalizada asociada a la salida no válida, pero no ha sido posible recuperarla; ¡Se ha perdido!</translation>
     </message>
   </context>
   <context>
@@ -4930,12 +4935,15 @@ Se eliminó al jugador activo más antiguo.</translation>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Problema con la estructura de datos asociada al ID de sala: %1. 
+Los datos de esa sala se han perdido, por lo que el ID se va a eliminar. 
+Esto sugiere problemas graves con la versión actual en ejecución de Mudlet. 
+¿Se está quedando el sistema sin memoria?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="676"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Problema con la estructura de datos asociada a esta sala. Los datos de la sala se han perdido, por lo que el ID se va a eliminar. Esto sugiere problemas graves con la versión actual en ejecución de Mudlet. ¿Se está quedando tu sistema sin memoria?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="725"/>
@@ -4953,48 +4961,61 @@ Mudlet - is your system running out of memory?</source>
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERTA ] - Se ha detectado %n área faltante en el mapa: añadiéndola. 
+Busque más mensajes relacionados con las salas que se supone 
+que están en esta área...</numerusform>
+        <numerusform>[ ALERTA ] - Se han detectado %n áreas faltantes en el mapa: añadiéndolas. 
+Busque más mensajes relacionados con las salas que se supone 
+que están en estas áreas...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="773"/>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ]  - El área faltante se llama ahora: (ID) ==&gt; &quot;nombre&quot;</numerusform>
+        <numerusform>[ INFO ]  - Las áreas faltantes se llama ahora: (ID) ==&gt; &quot;nombre&quot;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="808"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Se han encontrado ID de áreas no válidas (menores a +1 y no el -1 reservado) en el mapa (cantidad: %1); calculando ahora qué nuevos números de ID usar...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="820"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Los ID de área renumerados serán:
+Anterior ==&gt; Nuevo</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="838"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - El área con este ID no válida se ha renumerado a: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="839"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Este área se ha renumerado desde el ID no válido: %1</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="876"/>
       <location filename="../src/TRoomDB.cpp" line="879"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - La numeración de los ID de área es correcta.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="887"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Se han encontrado ID de sala no válidos (menores a +1) en el mapa (cantidad: %1); 
+
+calculando ahora qué nuevos números de ID usar.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="899"/>
