@@ -680,11 +680,15 @@ local chatTabs = {
 }
 
 function BaseUI.routeChatLine(family)
-  -- several shapes can match the same line - copy it only once
-  if BaseUI.gmcpChat or BaseUI.dormant() or getLineNumber() == BaseUI.lastChatLine then
+  if BaseUI.gmcpChat or BaseUI.dormant() then
     return
   end
-  BaseUI.lastChatLine = getLineNumber()
+  -- several shapes can match the same line - copy it only once
+  local lineNumber = getLineNumber()
+  if lineNumber == BaseUI.lastChatLine then
+    return
+  end
+  BaseUI.lastChatLine = lineNumber
   selectCurrentLine()
   copy()
   deselect()
@@ -1409,6 +1413,7 @@ function BaseUI.build()
   BaseUI.createSection("chat")
   BaseUI.chats = {}
   BaseUI.chatTabLabels = {}
+  BaseUI.tabPainted = {}
   BaseUI.unread = { all = 0, tells = 0, channels = 0 }
   BaseUI.activeChatTab = "all"
   local tabX = { "0%", "34%", "68%" }
@@ -1453,18 +1458,38 @@ function BaseUI.build()
   BaseUI.maybeAnnounce()
 end
 
+-- Guarded because a setStyleSheet has Qt reparse a stylesheet and an echo
+-- rebuilds the label's rich text, and a captured chat line moves one unread
+-- count. The comparisons are against Qt, not against Geyser's cache: Geyser
+-- records a paint whether or not it landed, and a write that never went
+-- through it leaves the cache untouched. The readbacks are 4.30us of the
+-- 5.45us a refresh with nothing to do costs, so a third one is not free.
 function BaseUI.refreshChatTabs()
+  BaseUI.tabPainted = BaseUI.tabPainted or {}
   for _, tab in ipairs(chatTabs) do
     local label = BaseUI.chatTabLabels and BaseUI.chatTabLabels[tab.key]
     if label then
       local active = BaseUI.activeChatTab == tab.key
-      label:setStyleSheet(active and tabCss.active or tabCss.inactive)
+      local css = active and tabCss.active or tabCss.inactive
+      -- nil once no label of that name exists, which compares unequal and so
+      -- falls back to repainting every time
+      if getLabelStyleSheet(label.name) ~= css then
+        label:setStyleSheet(css)
+      end
       local text = tab.label
       local unread = BaseUI.unread[tab.key]
       if unread &gt; 0 and not active then
         text = string.format("%s (%d)", tab.label, math.min(unread, 99))
       end
-      label:echo(text, active and theme.text or theme.textDim)
+      local color = active and theme.text or theme.textDim
+      -- what comes back is the html Geyser wraps the message in, so it can only
+      -- be compared against itself. Cached comparisons first, so only a tab
+      -- that would have been left alone pays for the readback.
+      if label.message ~= text or label.fgColor ~= color
+        or getLabelText(label.name) ~= BaseUI.tabPainted[tab.key] then
+        label:echo(text, color)
+        BaseUI.tabPainted[tab.key] = getLabelText(label.name)
+      end
     end
   end
 end
