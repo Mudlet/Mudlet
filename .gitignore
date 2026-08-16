@@ -55,3 +55,6 @@ CI/build-dir
 # python bytecode (CI helper scripts)
 __pycache__/
 *.pyc
+
+# Throwaway git worktrees that AI assistants check out to work in isolation
+.claude/worktrees/
