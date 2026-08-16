@@ -34,6 +34,8 @@
 #include "LuaInterface.h"
 #include "TDebug.h"
 #include "MudletInstanceCoordinator.h"
+#include "SpeechRecognizer.h"
+#include "SpeechRecognizerFactory.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -166,6 +168,65 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 /*static*/ mudlet* mudlet::self()
 {
     return smpSelf;
+}
+
+
+SpeechRecognizer* mudlet::speechRecognizer() const
+{
+    return mpSpeechRecognizer;
+}
+
+void mudlet::initSpeechRecognition()
+{
+    if (mpSpeechRecognizer) {
+        return;
+    }
+
+    mpSpeechRecognizer = SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Auto, this);
+    if (!mpSpeechRecognizer) {
+        return;
+    }
+
+    // Bridge glue only: recognizer signals surface as Lua events on the active
+    // profile. Text routing, UI state and policy all belong to the packages
+    // consuming these events, not to the core.
+    auto raiseSpeechEvent = [this](const QString& name, const QString& value) {
+        Host* pHost = getActiveHost();
+        if (!pHost) {
+            return;
+        }
+        TEvent event{};
+        event.mArgumentList.append(name);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(value);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEvent(event);
+    };
+
+    connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, [raiseSpeechEvent](const QString& text) { raiseSpeechEvent(qsl("sysSTTPartialResult"), text); });
+    connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, [raiseSpeechEvent](const QString& text) { raiseSpeechEvent(qsl("sysSTTResult"), text); });
+    connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, [raiseSpeechEvent](const QString& message) { raiseSpeechEvent(qsl("sysSTTError"), message); });
+    connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [raiseSpeechEvent](SpeechRecognizer::State newState) {
+        QString stateName;
+        switch (newState) {
+        case SpeechRecognizer::State::Ready:
+            stateName = qsl("ready");
+            break;
+        case SpeechRecognizer::State::Listening:
+            stateName = qsl("listening");
+            break;
+        case SpeechRecognizer::State::Processing:
+            stateName = qsl("processing");
+            break;
+        case SpeechRecognizer::State::Error:
+            stateName = qsl("error");
+            break;
+        case SpeechRecognizer::State::Uninitialized:
+            stateName = qsl("uninitialized");
+            break;
+        }
+        raiseSpeechEvent(qsl("sysSTTStateChanged"), stateName);
+    });
 }
 
 mudlet::mudlet()

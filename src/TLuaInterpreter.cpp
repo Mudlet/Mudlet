@@ -62,6 +62,7 @@
 #include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDesktopServices>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
@@ -3388,6 +3389,37 @@ int TLuaInterpreter::getOS(lua_State* L)
 #endif
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Utility_Functions#hashFile
+int TLuaInterpreter::hashFile(lua_State* L)
+{
+    const QString filePath = getVerifiedString(L, __func__, 1, "file path");
+    const QString algorithmName = getVerifiedString(L, __func__, 2, "algorithm");
+
+    QCryptographicHash::Algorithm algorithm{};
+    if (!algorithmName.compare(qsl("sha256"), Qt::CaseInsensitive)) {
+        algorithm = QCryptographicHash::Sha256;
+    } else if (!algorithmName.compare(qsl("sha1"), Qt::CaseInsensitive)) {
+        algorithm = QCryptographicHash::Sha1;
+    } else if (!algorithmName.compare(qsl("md5"), Qt::CaseInsensitive)) {
+        algorithm = QCryptographicHash::Md5;
+    } else {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a supported algorithm, use 'sha256', 'sha1' or 'md5'").arg(algorithmName));
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return warnArgumentValue(L, __func__, qsl("couldn't open '%1': %2").arg(filePath, file.errorString()));
+    }
+
+    QCryptographicHash hash(algorithm);
+    if (!hash.addData(&file)) {
+        return warnArgumentValue(L, __func__, qsl("couldn't read '%1'").arg(filePath));
+    }
+
+    lua_pushstring(L, hash.result().toHex().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessID
 int TLuaInterpreter::getProcessID(lua_State* L)
 {
@@ -5833,6 +5865,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "hashFile", TLuaInterpreter::hashFile);
     lua_register(pGlobalLua, "getProcessID", TLuaInterpreter::getProcessID);
     lua_register(pGlobalLua, "getClipboardText", TLuaInterpreter::getClipboardText);
     lua_register(pGlobalLua, "setClipboardText", TLuaInterpreter::setClipboardText);
@@ -6002,6 +6035,40 @@ void TLuaInterpreter::initLuaGlobals()
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::mmcpGetClientList);
     lua_setfield(pGlobalLua, -2, "getClientList");
     lua_setglobal(pGlobalLua, "mmcp");
+
+    // Create Speech-to-Text (STT) Library
+    lua_newtable(pGlobalLua);
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttInit);
+    lua_setfield(pGlobalLua, -2, "init");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttStart);
+    lua_setfield(pGlobalLua, -2, "start");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttStop);
+    lua_setfield(pGlobalLua, -2, "stop");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttToggle);
+    lua_setfield(pGlobalLua, -2, "toggle");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsListening);
+    lua_setfield(pGlobalLua, -2, "isListening");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsAvailable);
+    lua_setfield(pGlobalLua, -2, "isAvailable");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsInitialized);
+    lua_setfield(pGlobalLua, -2, "isInitialized");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetInfo);
+    lua_setfield(pGlobalLua, -2, "getInfo");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetModelPath);
+    lua_setfield(pGlobalLua, -2, "getModelPath");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttListModels);
+    lua_setfield(pGlobalLua, -2, "listModels");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttClose);
+    lua_setfield(pGlobalLua, -2, "close");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetPlatformKey);
+    lua_setfield(pGlobalLua, -2, "getPlatformKey");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttReloadLibrary);
+    lua_setfield(pGlobalLua, -2, "reloadLibrary");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttUnloadLibrary);
+    lua_setfield(pGlobalLua, -2, "unloadLibrary");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetLibraryPath);
+    lua_setfield(pGlobalLua, -2, "getLibraryPath");
+    lua_setglobal(pGlobalLua, "stt");
 
 
     QStringList additionalLuaPaths;

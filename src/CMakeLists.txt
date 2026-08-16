@@ -120,6 +120,7 @@ set(mudlet_SRCS
     SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
+    SpeechRecognizerFactory.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
@@ -158,6 +159,7 @@ set(mudlet_SRCS
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterSpeechToText.cpp
     TLuaInterpreterUI.cpp
     TMainConsole.cpp
     TMap.cpp
@@ -216,6 +218,7 @@ set(mudlet_SRCS
     TVar.cpp
     UntrustedText.cpp
     VarUnit.cpp
+    VoskRecognizer.cpp
     WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -233,6 +236,18 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
+
+  # Native macOS microphone permission handling for speech recognition
+  list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
+  list(APPEND mudlet_HDRS MacMicrophonePermission.h)
+  # Only the .mm is compiled, so only it carries the language and ARC settings -
+  # the header is listed in mudlet_HDRS above for IDE visibility
+  set_source_files_properties(
+    MacMicrophonePermission.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -352,6 +367,8 @@ set(mudlet_HDRS
     SentryWrapper.h
     ShortcutsManager.h
     SingleLineTextEdit.h
+    SpeechRecognizer.h
+    SpeechRecognizerFactory.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -454,6 +471,7 @@ set(mudlet_HDRS
     UntrustedText.h
     utils.h
     VarUnit.h
+    VoskRecognizer.h
     widechar_width.h
     WideComboBox.h
     XMLexport.h
@@ -653,6 +671,10 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about the GMCP Char.Login authentication flow:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
+# * Produce qDebug() messages about speech-to-text recognition, including
+#   hallucination filtering, partial/final results, and audio level monitoring:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_STT)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
@@ -829,6 +851,10 @@ endif()
 
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+
+  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
