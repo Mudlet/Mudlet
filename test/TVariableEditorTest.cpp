@@ -479,7 +479,6 @@ private slots:
 
     void testCreateVarWithNumericKeyZeroAtRoot()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("0"), LUA_TNUMBER, QStringLiteral("zeroVal"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[0]")), QStringLiteral("zeroVal"));
@@ -487,7 +486,6 @@ private slots:
 
     void testCreateVarWithNumericKeyAtRoot()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("5"), LUA_TNUMBER, QStringLiteral("fiveVal"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[5]")), QStringLiteral("fiveVal"));
@@ -495,7 +493,6 @@ private slots:
 
     void testCreateVarWithNegativeNumericKeyAtRoot()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("-1"), LUA_TNUMBER, QStringLiteral("negVal"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[-1]")), QStringLiteral("negVal"));
@@ -717,7 +714,6 @@ private slots:
 
     void testDeleteNumericKeyAtRoot()
     {
-        QSKIP("PENDING: deleteVar generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         execLua(QStringLiteral("_G[99] = 'rootNum'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("99"));
@@ -1158,7 +1154,6 @@ private slots:
 
     void testNumericKeyZeroRoundTrip()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("0"), LUA_TNUMBER, QStringLiteral("zeroRT"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[0]")), QStringLiteral("zeroRT"));
@@ -1200,10 +1195,7 @@ private slots:
         var->setName(QStringLiteral("bracketVal"), LUA_TSTRING);
         var->setValue(QStringLiteral("a]]b"), LUA_TSTRING);
         interface->getVarUnit()->getBase()->addChild(var);
-        const bool result = interface->setValue(var);
-        if (!result) {
-            QSKIP("Known issue: setValue fails for strings containing ']]'");
-        }
+        QVERIFY(interface->setValue(var));
         QCOMPARE(getLuaValue(QStringLiteral("bracketVal")), QStringLiteral("a]]b"));
     }
 

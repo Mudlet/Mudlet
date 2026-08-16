@@ -8165,13 +8165,17 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     TVar* var = vu->getWVar(pItem); // This does NOT modify pItem or what it points at
     QList<QTreeWidgetItem*> list;
     if (state == Qt::Checked || state == Qt::PartiallyChecked) {
-        if (var) {
+        // What may be saved is asked again rather than read off the check state,
+        // for the same reason slot_variableChanged() asks: a row can be left
+        // ticked from before whatever now makes it unsaveable - a table grown
+        // past the size limit, say - and clicking it would enrol it again.
+        if (var && vu->shouldSave(var)) {
             vu->addSavedVar(var);
         }
         recurseVariablesUp(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }
@@ -8179,7 +8183,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         recurseVariablesDown(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }

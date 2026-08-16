@@ -91,8 +91,10 @@ bool TVarLessThan(TVar* varA, TVar* varB)
     const int bNumber = b.toInt(&isBNumber);
 
     if (isANumber != isBNumber) {
-        // numbers ahead of names, which is how a table of nothing but numbers
-        // already sorted
+        // Numbers ahead of names. Which way round is arbitrary - what matters
+        // is that it is the same way round for every such pair, so that the two
+        // kinds of name form two blocks rather than interleaving by whatever
+        // else is in the table.
         return isANumber;
     }
     if (isANumber) {

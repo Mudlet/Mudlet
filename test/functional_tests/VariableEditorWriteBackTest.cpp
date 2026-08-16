@@ -32,8 +32,10 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "VarUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -400,6 +402,45 @@ private slots:
         QVERIFY2(luaHolds(qsl("booleanRoundTripTable[true]"), qsl("boolean member value")), "the member did not stay under the boolean key it was read from");
 
         execLua(qsl("booleanRoundTripTable = nil booleanRoundTripDecoy = nil"));
+    }
+
+    // Qt's tristate cascade ticks rows the user cannot tick themselves, so a tick
+    // on a table's parent reaches a table the size limit rules out - and what may
+    // be saved has to be asked again rather than read off the check state
+    // (#9957). The parent of an oversized table is over the limit itself, so
+    // neither of them may be enrolled here.
+    void test_tickingTheParentOfAnOversizedTableSavesNeitherOfThem()
+    {
+        execLua(qsl("bypassHolder = {small = 1, big = {}} for i = 1, 10001 do bypassHolder.big[i] = i end"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pParent = findVariableItem({qsl("bypassHolder")});
+        QVERIFY2(pParent, "the Variables view did not show the holder table");
+        QTreeWidgetItem* pBig = findVariableItem({qsl("bypassHolder"), qsl("big")});
+        QVERIFY2(pBig, "the Variables view did not show the oversized table");
+
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        pVarUnit->savedVars.clear();
+        mpEditor->mpCurrentVarItem = nullptr; // nothing left over from an earlier test to be saved
+
+        // the real signal path: setCheckState() cascades down and each change
+        // reaches slot_variableChanged() through itemChanged
+        pParent->setCheckState(0, Qt::Checked);
+
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder")), "a table over the size limit was enrolled for saving by a tick on it");
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder.big")), "the oversized table was enrolled for saving through its parent");
+        QVERIFY2(pVarUnit->savedVars.contains(qsl("bypassHolder.small")), "a member that is saveable is still enrolled by the same tick");
+
+        // ...and neither does clicking the row afterwards, which finds it ticked
+        QCOMPARE(pBig->checkState(0), Qt::Checked);
+        mpEditor->slot_variableSelected(pBig);
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder.big")), "clicking a row left ticked from before enrolled the oversized table it stands for");
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder")), "...and its parent with it");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        pVarUnit->savedVars.clear();
+        execLua(qsl("bypassHolder = nil"));
+        mpEditor->repopulateVars();
     }
 
 private:
