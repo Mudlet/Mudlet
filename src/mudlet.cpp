@@ -4875,7 +4875,7 @@ void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
         return;
     }
 
-    loadProfile(profile_name, true);
+    loadProfile(profile_name, !offline);
 
     slot_connectionDialogueFinished(profile_name, !offline);
     enableToolbarButtons();
