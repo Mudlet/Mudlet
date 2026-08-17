@@ -329,6 +329,11 @@ void UpdateDialog::disableAutoShow()
     connect(qApp, &QGuiApplication::lastWindowClosed, qApp, &QCoreApplication::quit);
 }
 
+QString UpdateDialog::pendingDownloadPath(QSettings* settings)
+{
+    return settingsValue(qsl("updateFilePath"), QString(), settings).toString();
+}
+
 // "DBLSQD/" prefix retained for backward compatibility with user settings from the previous update system
 QVariant UpdateDialog::settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings)
 {
