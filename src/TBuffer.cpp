@@ -2689,8 +2689,12 @@ void TBuffer::decodeSGR(const QString& sequence)
                     // {presumably 2 would be a double underline and 1
                     // the normal single underline) by sending e.g.:
                     // ESC[...;4:3;...m - that is handled above in the colon
-                    // sub-string separated part:
+                    // sub-string separated part. Plain 4 is that convention's
+                    // single underline, so it has to drop any style already set:
                     mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
                 case 5:
                     mBlink = true;
