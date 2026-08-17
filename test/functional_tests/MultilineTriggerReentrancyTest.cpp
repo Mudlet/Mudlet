@@ -146,7 +146,7 @@ private slots:
 
 private:
     // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // TriggerSameLineMatchTest).
+    // TFeedTriggersRecursionTest).
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);
