@@ -12,19 +12,21 @@ explains how to do that.
 The harness is the `PipelineBenchmark` functional test
 (`test/functional_tests/PipelineBenchmark.cpp`). It drives a real Mudlet profile
 with a fixed, deterministically-generated corpus (mixed plain text, ANSI SGR
-colour, UTF-8 and long wrapping-heavy prose) through the production
-`cTelnet::processSocketData -> TBuffer::translateToPlainText -> TConsole ->
-TriggerUnit` path via `cTelnet::loopbackTest()` - the same code an online
-session runs (that path internally calls `TMainConsole::printOnDisplay()`, so the
-Lua `feedTriggers()` entry point is covered too) - and measures:
+colour, UTF-8, block-glyph map art and long wrapping-heavy prose) through the
+production `cTelnet::processSocketData -> TBuffer::translateToPlainText ->
+TConsole -> TriggerUnit` path via `cTelnet::loopbackTest()` - the same code an
+online session runs (that path internally calls `TMainConsole::printOnDisplay()`,
+so the Lua `feedTriggers()` entry point is covered too) - and measures:
 
 - **text pipeline throughput** - no triggers active (`text_*` metrics)
-- **trigger engine throughput** - the same corpus with a realistic ~34-trigger
+- **trigger engine throughput** - the same corpus with a realistic 46-trigger
   set active covering the plain substring, Perl regex with capture groups,
   begin-of-line substring, ANSI colour and multiline matcher kinds
   (`trigger_*` metrics). Lua-code matchers are deliberately excluded to keep
   Lua execution out of the timed path, and prompt triggers need a GA signal a
   loopback feed cannot produce.
+- **display throughput** - how fast a filled buffer is drawn back out again
+  (`display_*` metrics), covered below
 - **peak resident set size** for the whole process, from `/proc/self/status`
   `VmHWM` on Linux (`peak_rss_kb`)
 
@@ -40,6 +42,30 @@ reports the **fastest single pass** - the least-disturbed pass isolates the
 code's intrinsic speed from transient CPU contention, which is exactly what a
 before/after comparison needs. That makes the numbers stable (~2% run-to-run)
 even on a shared/CI box running other builds alongside it.
+
+### The corpus
+
+The corpus is generated, not recorded: a fixed seed makes its bytes identical on
+every machine and every run, which is what a regression gate needs and what a
+captured log could not give. Its **line-length distribution** is tuned to 25 000
+lines of real Achaea logs, because per-line cost dominates the pipeline and an
+unrepresentative line length biases every number:
+
+| property | corpus | real logs |
+| --- | --- | --- |
+| mean line length | 52 chars | 55 |
+| median | 54 | 50 |
+| p90 | 81 | 82 |
+| p99 | 114 | 115 |
+| longest line | 362 | 362 |
+| lines <= 20 chars | 3.7% | 3.2% |
+| lines >= 100 chars | 1.7% | 2.2% |
+
+Retuning it is legitimate, but it **moves every absolute number the benchmark
+reports**, so `kCorpusVersion` in `PipelineBenchmark.cpp` must be bumped with any
+change to `generateCorpus()`. The compare script treats `corpus_version` as an
+invariant and refuses a comparison across a change to it, rather than reporting
+the corpus difference as a code regression.
 
 ## How to run
 
@@ -73,6 +99,7 @@ diffed mechanically (the values below are illustrative, not a target):
 
 ```
 METRIC build_asan 1
+METRIC corpus_version 2
 METRIC text_lines_per_sec 4281.46
 METRIC text_mb_per_sec 0.41
 METRIC trigger_lines_per_sec 3323.25
@@ -82,7 +109,10 @@ METRIC defaults_root_triggers ...
 METRIC defaults_text_lines_per_sec ...
 METRIC defaults_text_best_pass_ms ...
 METRIC defaults_peak_rss_kb ...
-...
+METRIC display_paints_per_sec ...
+METRIC display_paint_ms ...
+METRIC display_rows_per_paint ...
+METRIC display_lines_per_sec ...
 ```
 
 ### Two profile configurations, and why the split matters
@@ -120,13 +150,13 @@ HOME=$scratch XDG_CONFIG_HOME=$scratch/.config QT_QPA_PLATFORM=offscreen \
   ./test/functional_tests/PipelineBenchmark
 ```
 
-Comparing a build from before this split against one from after it will abort
-with "gated metric defaults_text_lines_per_sec is missing from the before run".
-That is the script working as intended - the two harnesses are not comparable.
-Pass `--gate text_lines_per_sec,trigger_lines_per_sec` to compare across the
-change, bearing in mind the older run's `text_lines_per_sec` includes whichever
-default packages that machine's `experiencedMudletPlayer()` allowed it - the
-older harness had no guard - while the newer one includes none.
+Comparing a run captured before this split against one from after it aborts, as
+does comparing across a corpus retune. That is the script working as intended -
+the two runs did not measure the same thing. To compare a Mudlet old enough to
+predate a harness change, copy the *current* `PipelineBenchmark.cpp` into the
+older tree and build it against that tree's `mudlet_core`, so both sides run
+identical measurement code and only the engine differs. That is how the 4.22.0
+side of the 5.0 sweep was measured.
 
 ## The before/after workflow (the 10% gate)
 
@@ -175,9 +205,10 @@ Because it is the arbiter of the gate, the script refuses (exit code 2) rather
 than silently passing whenever it cannot trust the comparison:
 
 - an invariant (`text_corpus_lines`, `text_corpus_bytes`, `trigger_count`,
-  `build_asan`) is missing from either run, or differs between them - the two
-  runs used different corpora, trigger sets or build flavours. `build_asan`
-  specifically stops an ASan build being compared against a release build.
+  `build_asan`, `corpus_version`) is missing from either run, or differs between
+  them - the two runs used different corpora, trigger sets or build flavours.
+  `build_asan` specifically stops an ASan build being compared against a release
+  build, and `corpus_version` stops a comparison across a retuned corpus.
 - a **gated** metric is missing from either run, or its "before" value is not
   positive (a valid throughput/time baseline must be greater than zero).
 - a `--gate` name matches no metric in either run (usually a typo).
@@ -196,11 +227,43 @@ change specifically targets trigger matching, gate on it explicitly and confirm
 the movement is real - `--gate text_lines_per_sec,trigger_lines_per_sec,trigger_overhead_ms`,
 ideally over a couple of runs or with a slightly relaxed threshold.
 
+## The display benchmark (`display_*`)
+
+Everything else here measures how fast text gets *into* the buffer.
+`benchDisplay` measures how fast it gets back *out* onto the screen, which a user
+experiences as scrollback smoothness. It fills the buffer with the corpus, sizes
+the main window to 1200x800 and calls `TTextEdit::render()` on the upper pane 200
+times per pass, scrolling more than a full screen between paints so
+`drawForeground()`'s scroll-blit shortcut cannot serve any part of a frame from
+the previous one. `render()` runs `paintEvent` synchronously, so the number is
+the drawing code rather than a race with Qt's paint coalescing.
+
+Sizing has to go through the **main window**: `TTextEdit` takes its row count
+from its *visible* region, so resizing the pane alone leaves it clipped by its
+unchanged parents and it silently redraws a fraction of itself. The slot asserts
+the pane is unclipped rather than trusting that.
+
+`display_lines_per_sec` is `display_paints_per_sec` multiplied by the rows on
+screen, which makes it directly comparable to `text_lines_per_sec` - and worth
+comparing, because the display is by a wide margin the narrowest part of the
+pipeline. `display_rows_per_paint` records the rows the paint path actually
+drew; it depends on the font, so it is reported rather than treated as an
+invariant.
+
+The slot runs last so that its render target and the paint path's cached screen
+pixmap fall outside both `peak_rss_kb` and `defaults_peak_rss_kb`, whose
+difference is documented above as what the default packages cost.
+
+The `display_*` metrics are reported, not gated by default. They measure at
+least as tightly as the text metrics do on an unloaded machine, so gate on them
+explicitly when a change touches drawing:
+`--gate text_lines_per_sec,trigger_lines_per_sec,display_lines_per_sec`.
+
 ## Companion: Stressinator (live GUI display path)
 
-`PipelineBenchmark` deliberately stops at the core pipeline: it runs offscreen
-and never paints a widget, so it does not measure the on-screen rendering and
-echo path. That path needs a live window and is covered by the **Stressinator
+`benchDisplay` drives `TTextEdit` directly and offscreen, so it covers drawing
+but not the surrounding live-window path - compositing, the echo round trip and
+Lua-driven output. That needs a real window and is covered by the **Stressinator
 display benchmark** (`src/packages/StressinatorDisplayBench/`),
 pre-installed into the `mudlet.org` self-test profile.
 
@@ -225,9 +288,10 @@ or a committed baseline - capture your own "before" on the machine you are
 testing on and compare against that.
 
 It predates the two-profile split above, so its `text_lines_per_sec` includes
-the default packages and there are no `defaults_*` rows. Read the ratios between
-the `text_*` and `trigger_*` rows; do not compare any figure here against a
-current run.
+the default packages and there are no `defaults_*` rows; it also predates both
+the corpus retune and the trigger set growing to 46, so not even `trigger_count`
+describes a current run. Read the ratios between the `text_*` and `trigger_*`
+rows; do not compare any figure here against a current run.
 
 | Metric | Example value |
 | --- | --- |

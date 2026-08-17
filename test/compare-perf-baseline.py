@@ -30,8 +30,10 @@ import sys
 # Fixed properties of the corpus/trigger set plus the build flavour; if any
 # differ, the two runs used different harnesses or build configurations and the
 # comparison is invalid - so we abort. build_asan guards against comparing an
-# ASan build to a release build, whose absolute numbers are incomparable.
-INVARIANTS = ("text_corpus_lines", "text_corpus_bytes", "trigger_count", "build_asan")
+# ASan build to a release build, whose absolute numbers are incomparable;
+# corpus_version guards against comparing across a retune of the generated
+# corpus, which moves every absolute number the benchmark reports.
+INVARIANTS = ("text_corpus_lines", "text_corpus_bytes", "trigger_count", "build_asan", "corpus_version")
 
 # Gated by default: throughput (lines/sec) for the text and trigger pipelines,
 # plus the shipped default packages on the same corpus - the pipeline metrics run
