@@ -79,6 +79,7 @@ set(FUNCTIONAL_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     WindowBackgroundTest.cpp
     EmbeddedMapperCreationTest.cpp
+    ShortcutsTabOrderTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
