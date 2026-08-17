@@ -2116,18 +2116,30 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // Auto-retry installation after save completes
         QObject* obj = new QObject(this);
         connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            // The synchronous caller has already been told {true, ""} below;
-            // surface any deferred failure via the warning log and the
-            // profile's message area so it isn't lost silently.
+            // The synchronous caller has already been told {true, ""} below, so
+            // the nested call is the only thing that can report this. It tells
+            // the user itself via fail() below, leaving the log line here.
             auto [ok, msg] = installPackage(fileName, thing, quiet);
             if (!ok) {
                 qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
-                postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
             }
             obj->deleteLater();
         });
         return {true, QString()};
     }
+
+    // Every failure below returns a reason, and most callers drop it: the package
+    // manager logs it without showing it, and the repository, default-package and
+    // module-sync installs ignore it altogether. Say it once here instead. Script
+    // installs pass quiet and get the reason back as a return value, so they are
+    // left to report it themselves rather than having it appear unbidden.
+    auto fail = [this, &fileName, quiet](const QString& reason) -> std::pair<bool, QString> {
+        qWarning() << "Host::installPackage() failed for" << fileName << ":" << reason;
+        if (!quiet) {
+            postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, reason));
+        }
+        return {false, reason};
+    };
 
     bool showedUnpackingDialog = false;
 
@@ -2138,19 +2150,16 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
         tempFile = std::make_unique<QTemporaryFile>();
         if (!tempFile->open()) {
-            qWarning() << "Host::installPackage() failed to create temporary file for resource:" << fileName;
-            return {false, qsl("Failed to create temporary file for resource package")};
+            return fail(qsl("failed to create a temporary file for the resource package: %1").arg(tempFile->errorString()));
         }
 
         QFile resourceFile(fileName);
         if (!resourceFile.open(QIODevice::ReadOnly)) {
-            qWarning() << "Host::installPackage() failed to open resource file:" << fileName << "Error:" << resourceFile.errorString();
-            return {false, qsl("Failed to open resource package file")};
+            return fail(qsl("failed to open the resource package file: %1").arg(resourceFile.errorString()));
         }
 
         if (tempFile->write(resourceFile.readAll()) == -1) {
-            qWarning() << "Host::installPackage() failed to write resource data to temp file. Error:" << tempFile->errorString();
-            return {false, qsl("Failed to write resource package data to temporary file")};
+            return fail(qsl("failed to write the resource package to a temporary file: %1").arg(tempFile->errorString()));
         }
 
         tempFile->close();
@@ -2165,12 +2174,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     //     This separation is necessary to be able to reuse code while avoiding infinite loops from script installations.
 
     if (actualFileName.isEmpty()) {
-        return {false, qsl("no package file was actually given")};
+        return fail(qsl("no package file was actually given"));
     }
 
     QFile file(actualFileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        return {false, qsl("could not open file '%1").arg(actualFileName)};
+        return fail(qsl("could not open file '%1").arg(actualFileName));
     }
 
     QString packageName = sanitizePackageName(fileName);
@@ -2191,14 +2200,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 mModulesLoadedOk.remove(packageName);
             } else {
                 // Module actually exists, show duplicate error
-                return {false, tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName)};
+                return fail(tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
             }
         } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
-            return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
+            return fail(qsl("module %1 is already installed").arg(packageName)); //we're already installed
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
-            return {false, qsl("package %1 is already installed").arg(packageName)};
+            return fail(qsl("package %1 is already installed").arg(packageName));
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
@@ -2220,7 +2229,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const bool destinationAlreadyExisted = QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
-            return {false, qsl("could not create destination folder")};
+            return fail(qsl("could not create destination folder"));
         }
         QString folderThisInstallMade = destinationAlreadyExisted ? QString() : QDir(_dest).absolutePath();
 
@@ -2241,7 +2250,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             emit signal_hideUnpackingProgress();
         }
         if (!unzipSuccessful) {
-            return {false, qsl("could not unzip package")};
+            return fail(qsl("could not unzip package"));
         }
 
         // requirements for zip packages:
@@ -2265,7 +2274,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 if (mInstalledPackages.contains(packageName)) {
                     // cleanup and quit if already installed
                     removeDir(_dir.absolutePath(), _dir.absolutePath());
-                    return {false, qsl("package %1 is already installed").arg(packageName)};
+                    return fail(qsl("package %1 is already installed").arg(packageName));
                 }
             }
             // continuing, so update the folder name on disk
@@ -2334,13 +2343,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
             }
-            return {false, qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName)};
+            return fail(qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName));
         }
     } else {
         file2.setFileName(fileName);
         if (!file2.open(QFile::ReadOnly | QFile::Text)) {
-            qWarning() << "Host: failed to open file for reading:" << fileName << file2.errorString();
-            return {false, qsl("could not open package file")};
+            return fail(qsl("could not open the package file: %1").arg(file2.errorString()));
         }
         XMLimport reader(this);
         if (thing != enums::PackageModuleType::Package) {
