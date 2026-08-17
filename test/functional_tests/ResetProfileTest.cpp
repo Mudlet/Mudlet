@@ -938,6 +938,28 @@ private slots:
     QCOMPARE(luaL_dostring(newL, "killMapInfo('reset.stale')"), 0);
   }
 
+  // registerMapInfo() can be given a built-in's name, which replaces the
+  // built-in callback. Dropping that on reset must not leave the profile with
+  // fewer contributors than a freshly loaded one has.
+  void test_builtinMapInfoRestoredAfterShadowingContributorDropped() {
+    auto *pManager = mpHost->mpMap->mMapInfoContributorManager;
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('Short', function() return "
+                              "'shadowed' end)"),
+             0);
+
+    performReset();
+
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Short")),
+             "the built-in contributor should be back once the Lua one that "
+             "replaced it is dropped");
+    QColor color;
+    auto info = pManager->getContributor(qsl("Short"))(0, 0, -1, -1, color);
+    QVERIFY2(info.text.isEmpty(),
+             "'Short' should be Mudlet's own contributor again, which reports "
+             "nothing for a room that does not exist");
+  }
+
   // Dropping the contributors is only acceptable because the script that
   // registered them runs again in the same reset, in compileAll(); the enabled
   // state is the user's saved choice and is deliberately not dropped with them,

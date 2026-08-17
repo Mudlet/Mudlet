@@ -73,6 +73,7 @@ signals:
     void signal_contributorsUpdated();
 
 private:
+    void registerBuiltInContributors();
     void releaseLuaCallbackRef(const QString& name);
 
     QList<QString> ordering;

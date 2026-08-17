@@ -31,6 +31,11 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
 : QObject(parent)
 , mpHost(pH)
 {
+    registerBuiltInContributors();
+}
+
+void MapInfoContributorManager::registerBuiltInContributors()
+{
     registerContributor(qsl("Short"), [=, this](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
@@ -99,6 +104,13 @@ void MapInfoContributorManager::removeLuaContributors()
         ordering.removeOne(name);
     }
     mLuaCallbackRefs.clear();
+    // Registering under a built-in's name replaces it, so put the built-ins
+    // back rather than leave a reset profile with fewer contributors than a
+    // freshly loaded one. Only once the refs above are cleared, or this would
+    // unref them a second time.
+    if (!contributors.contains(qsl("Short")) || !contributors.contains(qsl("Full"))) {
+        registerBuiltInContributors();
+    }
     emit signal_contributorsUpdated();
 }
 
