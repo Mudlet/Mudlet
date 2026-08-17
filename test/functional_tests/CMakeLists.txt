@@ -20,8 +20,6 @@ set(FUNCTIONAL_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
-    WindowStateGettersTest.cpp
-    MainConsoleSelectionTest.cpp
     WindowLayoutSaveTest.cpp
     TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
@@ -44,7 +42,6 @@ set(FUNCTIONAL_TEST_SOURCES
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
-    MainWindowSizeReportTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
     ProfileRoundTripTest.cpp
@@ -62,7 +59,6 @@ set(FUNCTIONAL_TEST_SOURCES
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     TelnetConnectLookupRaceTest.cpp
-    NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfRemovalTest.cpp
     ProfileFolderNameTest.cpp
@@ -77,7 +73,6 @@ set(FUNCTIONAL_TEST_SOURCES
     StarterUiGaugePanelTest.cpp
     ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
-    WindowBackgroundTest.cpp
     EmbeddedMapperCreationTest.cpp
 )
 
@@ -92,17 +87,39 @@ if(USE_UPDATER)
     list(APPEND FUNCTIONAL_TEST_SOURCES FeedChecksumRaceTest.cpp)
 endif()
 
+# Tests that share one executable rather than getting one each. A functional
+# test binary statically links mudlet_core and costs a build tree ~250MB plus a
+# link step, and none of that is per-test - so tests of one subsystem are built
+# together and told on the command line which class to run. See GroupedTest.h.
+#
+# A new window or console test belongs here rather than in
+# FUNCTIONAL_TEST_SOURCES, and writes MUDLET_GROUPED_TEST_MAIN() rather than
+# QTEST_MAIN(). Its class name has to match its filename, since that is the name
+# ctest passes on the command line and the group binary looks up.
+set(WINDOW_GROUP_TEST_SOURCES
+    MainConsoleSelectionTest.cpp
+    MainWindowSizeReportTest.cpp
+    NarrowWindowWrapTest.cpp
+    WindowBackgroundTest.cpp
+    WindowStateGettersTest.cpp
+)
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
 )
 
+# mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
+macro(add_functional_test_binary target)
+    add_executable(${target} ${ARGN} ${FUNCTIONAL_TEST_UTILS})
+    add_dependencies(${target} ${LIB_MUDLET_TARGET})
+    target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
+    set_target_properties(${target} PROPERTIES ENABLE_EXPORTS ON)
+endmacro()
+
 # Manual replay tool for verifying mUndoServerWrap against captured game
 # output - built but deliberately not registered with ctest:
-add_executable(UndoServerWrapReplay UndoServerWrapReplay.cpp ${FUNCTIONAL_TEST_UTILS})
-add_dependencies(UndoServerWrapReplay ${LIB_MUDLET_TARGET})
-target_link_libraries(UndoServerWrapReplay PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
-set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
+add_functional_test_binary(UndoServerWrapReplay UndoServerWrapReplay.cpp)
 
 # Report-only perf harness for manual before/after comparisons
 # (test/compare-perf-baseline.py runs the built binary directly). Built with the
@@ -111,10 +128,7 @@ set_target_properties(UndoServerWrapReplay PROPERTIES ENABLE_EXPORTS ON)
 # so running it every CI pipeline only burns minutes. -DREGISTER_PERF_BENCHMARK=ON
 # also registers it with ctest.
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
-add_executable(PipelineBenchmark PipelineBenchmark.cpp ${FUNCTIONAL_TEST_UTILS})
-add_dependencies(PipelineBenchmark ${LIB_MUDLET_TARGET})
-target_link_libraries(PipelineBenchmark PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
-set_target_properties(PipelineBenchmark PROPERTIES ENABLE_EXPORTS ON)
+add_functional_test_binary(PipelineBenchmark PipelineBenchmark.cpp)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
@@ -142,13 +156,24 @@ else()
     set(leakCheckAvailable FALSE)
 endif()
 
-# mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
+set(allFunctionalTestNames "")
+
 foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     get_filename_component(test_name ${test_file} NAME_WE)
-    add_executable(${test_name} ${test_file} ${FUNCTIONAL_TEST_UTILS})
-    add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
-    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
-    set_target_properties(${test_name} PROPERTIES ENABLE_EXPORTS ON)
+    add_functional_test_binary(${test_name} ${test_file})
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    list(APPEND allFunctionalTestNames ${test_name})
+endforeach()
+
+add_functional_test_binary(functional_window_tests GroupedTestMain.cpp ${WINDOW_GROUP_TEST_SOURCES})
+foreach(test_file ${WINDOW_GROUP_TEST_SOURCES})
+    get_filename_component(test_name ${test_file} NAME_WE)
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:functional_window_tests> ${test_name})
+    list(APPEND allFunctionalTestNames ${test_name})
+endforeach()
+
+# Both lists' cases, so a grouped test's properties are the solo ones verbatim
+foreach(test_name ${allFunctionalTestNames})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, at
         # the cost of not scanning dynamic TLS blocks for roots. Up to GCC 13 and
@@ -177,7 +202,6 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
     endif()
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"

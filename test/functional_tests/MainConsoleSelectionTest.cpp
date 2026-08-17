@@ -30,14 +30,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+using namespace std::chrono_literals;
 
 // Regression test for #3922: left-clicking into the main console to give it
 // focus must not leave a one-character selection behind. Such a stray
@@ -83,8 +78,6 @@ private:
     }
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
-
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
@@ -247,20 +240,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "MainConsoleSelectionTest.moc"
-QTEST_MAIN(MainConsoleSelectionTest)
+MUDLET_GROUPED_TEST_MAIN(MainConsoleSelectionTest)

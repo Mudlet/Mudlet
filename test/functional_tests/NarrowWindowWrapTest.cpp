@@ -33,12 +33,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // A wrap width that cannot hold a single glyph - because it is zero, because
 // the glyph is wider than the width, or because the indentation uses the width
@@ -61,8 +56,6 @@ private:
     const QString mWideText = QString(QChar(0x6F22)) + QChar(0x5B57);
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
-
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
@@ -379,20 +372,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "NarrowWindowWrapTest.moc"
-QTEST_MAIN(NarrowWindowWrapTest)
+MUDLET_GROUPED_TEST_MAIN(NarrowWindowWrapTest)

@@ -32,6 +32,8 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+#include "GroupedTest.h"
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lua.h>
@@ -41,13 +43,6 @@ extern "C" {
 }
 
 using namespace std::chrono_literals;
-
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForWindowBackgroundTest();
 
 // Covers the full-window background feature added in #9394.
 class WindowBackgroundTest : public QObject
@@ -124,8 +119,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForWindowBackgroundTest();
-
         QVERIFY(mImageDir.isValid());
 
         mpServer = new TelnetServerStub(qApp);
@@ -395,20 +388,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForWindowBackgroundTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "WindowBackgroundTest.moc"
-QTEST_MAIN(WindowBackgroundTest)
+MUDLET_GROUPED_TEST_MAIN(WindowBackgroundTest)
