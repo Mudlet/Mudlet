@@ -33,7 +33,7 @@ so the Lua `feedTriggers()` entry point is covered too) - and measures:
 It is **report-only**: it makes no timing assertions (absolute speed varies
 wildly between machines and CI runners) and always passes as long as the
 pipeline actually processed data - which is genuinely asserted: each phase
-verifies the console buffer filled to its scrollback cap, the trigger phase
+verifies the console buffer filled with thousands of lines, the trigger phase
 verifies every trigger compiled and registered, and an untimed sentinel trigger
 proves the trigger engine consumes what the loopback path feeds. A
 silently-disconnected pipeline fails the run instead of reporting

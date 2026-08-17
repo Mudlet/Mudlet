@@ -104,8 +104,9 @@ private:
     // Report the FASTEST pass, not the average: the least-disturbed pass isolates
     // intrinsic speed from transient CPU contention (this often runs on a shared/CI
     // box), which is what a before/after gate wants. More passes raise the chance
-    // one lands in a clean window; TConsole's 10 000-line scrollback cap bounds
-    // memory regardless of corpus size.
+    // one lands in a clean window, at the cost of buffer memory: the console's
+    // line limit sits far above what this corpus produces, so no pass is trimmed
+    // away and every pass adds to the buffer.
     static constexpr int kCorpusLines = 25000;
     static constexpr int kFeedPasses = 6;
     // Bump with any change to generateCorpus(). compare-perf-baseline.py reads
@@ -288,7 +289,7 @@ private:
                 break;
             case LineShape::MapArt: {
                 // Rows of U+2588 FULL BLOCK, as a game's drawn map produces. The
-                // only shape that puts a box-drawing glyph in front of the
+                // only shape that puts a Block Elements glyph in front of the
                 // renderer benchDisplay() times.
                 const int indent = pick(6);
                 for (int space = 0; space < indent; ++space) {
@@ -567,7 +568,8 @@ private slots:
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         mTextBestPassSeconds = seconds;
         // A silently-disconnected pipeline would report absurdly good numbers, so
-        // prove data flowed: the console must sit near its 10 000-line scrollback cap.
+        // prove data flowed: the console must hold thousands of lines rather than
+        // just a login banner.
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
