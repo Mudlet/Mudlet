@@ -192,6 +192,7 @@ private slots:
         QVERIFY2(host, "Could not start an offline profile");
         TTextEdit* pane = host->mpConsole->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
+        waitForQuietConsole(host);
 
         int checkedSizes = 0;
         for (int size = kFirstSize; size <= kLastSize; ++size) {
@@ -207,16 +208,31 @@ private slots:
             if (pane->height() % cellHeight == 0) {
                 continue;
             }
-            ++checkedSizes;
 
             const int screenHeight = pane->getScreenHeight();
+            const QString underscores(kUnderscoreCount, QLatin1Char('_'));
             runLua(host, qsl("clearWindow()"));
-            runLua(host, qsl("cecho('<white>' .. string.rep('filler\\n', %1) .. '%2\\n')").arg(screenHeight - 1).arg(QString(kUnderscoreCount, QLatin1Char('_'))));
+            runLua(host, qsl("cecho('<white>' .. string.rep('filler\\n', %1) .. '%2\\n')").arg(screenHeight - 1).arg(underscores));
             pane->forceUpdate();
             QApplication::processEvents();
 
+            // Where the line ended up, rather than where the echo above should have
+            // put it: anything else printing to the console scrolls the view, which
+            // otherwise silently moves a different row under the measurement.
+            const int underscoreLine = findLine(host, underscores);
+            QVERIFY2(underscoreLine >= 0, qPrintable(qsl("%1pt: the underscore line never reached the buffer").arg(size)));
+            const int screenRow = underscoreLine - pane->imageTopLine();
+            if (screenRow != screenHeight - 1) {
+                QWARN(qPrintable(qsl("%1pt: the underscore line sits on row %2 rather than the bottom row %3, so the pixmap edge went unexercised at this size")
+                                         .arg(size)
+                                         .arg(screenRow)
+                                         .arg(screenHeight - 1)));
+                continue;
+            }
+            ++checkedSizes;
+
             const QImage rendered = renderPane(host);
-            const int cellTop = (screenHeight - 1) * cellHeight;
+            const int cellTop = screenRow * cellHeight;
             const QPair<int, int> actual = inkExtent(collectInk(rendered, cellTop, cellHeight, cellWidth));
             QVERIFY2(actual == expected,
                      qPrintable(qsl("%1pt: the bottom line's underscore ink occupies %2 of its cell, expected %3").arg(QString::number(size), describeExtent(actual), describeExtent(expected))));
@@ -618,6 +634,26 @@ private:
             }
         }
         return ink;
+    }
+
+    // A profile keeps printing after signal_profileLoaded - the package manager
+    // announces itself, for one - and anything arriving while a case is running
+    // scrolls the view out from under the row being measured. Wait for the buffer
+    // to stop growing before relying on where a line sits.
+    static void waitForQuietConsole(Host* host)
+    {
+        int previousLastLine = -1;
+        int pollsUnchanged = 0;
+        while (pollsUnchanged < 3) {
+            const int lastLine = host->mpConsole->buffer.getLastLineNumber();
+            if (lastLine == previousLastLine) {
+                ++pollsUnchanged;
+            } else {
+                pollsUnchanged = 0;
+                previousLastLine = lastLine;
+            }
+            QTest::qWait(50);
+        }
     }
 
     static int findLine(Host* host, const QString& text)
