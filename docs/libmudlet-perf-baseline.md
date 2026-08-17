@@ -63,9 +63,12 @@ unrepresentative line length biases every number:
 
 Retuning it is legitimate, but it **moves every absolute number the benchmark
 reports**, so `kCorpusVersion` in `PipelineBenchmark.cpp` must be bumped with any
-change to `generateCorpus()`. The compare script treats `corpus_version` as an
-invariant and refuses a comparison across a change to it, rather than reporting
-the corpus difference as a code regression.
+change to `generateCorpus()`. The benchmark checks the corpus against the byte
+count that version is known to produce and fails at startup if they disagree, so
+an unbumped edit - or a line shape accidentally left without a `switch` case,
+which these builds are too permissive to warn about - cannot silently reshape the
+corpus. The compare script then treats `corpus_version` as an invariant and
+refuses a comparison across a change to it.
 
 ## How to run
 
@@ -112,6 +115,7 @@ METRIC defaults_peak_rss_kb ...
 METRIC display_paints_per_sec ...
 METRIC display_paint_ms ...
 METRIC display_rows_per_paint ...
+METRIC display_cols_per_paint ...
 METRIC display_lines_per_sec ...
 ```
 
@@ -205,10 +209,14 @@ Because it is the arbiter of the gate, the script refuses (exit code 2) rather
 than silently passing whenever it cannot trust the comparison:
 
 - an invariant (`text_corpus_lines`, `text_corpus_bytes`, `trigger_count`,
-  `build_asan`, `corpus_version`) is missing from either run, or differs between
-  them - the two runs used different corpora, trigger sets or build flavours.
-  `build_asan` specifically stops an ASan build being compared against a release
-  build, and `corpus_version` stops a comparison across a retuned corpus.
+  `build_asan`, `corpus_version`, `display_rows_per_paint`,
+  `display_cols_per_paint`) is missing from either run, or differs between them -
+  the two runs used different corpora, trigger sets, screen geometry or build
+  flavours. `build_asan` specifically stops an ASan build being compared against
+  a release build, `corpus_version` stops a comparison across a retuned corpus,
+  and the two `display_*` invariants stop one across a differently-sized screen.
+  Because the invariants come from several slots, compare **full runs**: a
+  single-slot run on both sides is refused for the missing ones.
 - a **gated** metric is missing from either run, or its "before" value is not
   positive (a valid throughput/time baseline must be greater than zero).
 - a `--gate` name matches no metric in either run (usually a typo).
@@ -246,9 +254,14 @@ the pane is unclipped rather than trusting that.
 `display_lines_per_sec` is `display_paints_per_sec` multiplied by the rows on
 screen, which makes it directly comparable to `text_lines_per_sec` - and worth
 comparing, because the display is by a wide margin the narrowest part of the
-pipeline. `display_rows_per_paint` records the rows the paint path actually
-drew; it depends on the font, so it is reported rather than treated as an
-invariant.
+pipeline.
+
+`display_rows_per_paint` and `display_cols_per_paint` record the size of the
+drawn screen, and are **invariants**: they move with the font metrics and the
+surrounding layout, so two builds reporting different ones did not draw the same
+workload, and comparing their throughput would report a geometry difference as a
+code change. That is the same role `text_corpus_lines` and `text_corpus_bytes`
+play for the text bench.
 
 The slot runs last so that its render target and the paint path's cached screen
 pixmap fall outside both `peak_rss_kb` and `defaults_peak_rss_kb`, whose

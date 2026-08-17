@@ -113,6 +113,12 @@ private:
     // this as an invariant, so it refuses a cross-corpus comparison instead of
     // reporting the corpus difference as a code regression.
     static constexpr int kCorpusVersion = 2;
+    // What kCorpusVersion 2 generates. Checked at startup, so editing the corpus
+    // without bumping the version fails here instead of silently invalidating
+    // every comparison against an earlier run - and so a shape accidentally left
+    // without a switch case, which the functional tests build too permissively to
+    // warn about, cannot quietly skew the mix either.
+    static constexpr qint64 kCorpusBytesForVersion = 1467189;
 
     // A typical main-window size, and enough paints per pass to sit well clear
     // of timer noise.
@@ -528,6 +534,8 @@ private slots:
         initializeQRCResources();
         mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
+        QCOMPARE(mCorpusLines, kCorpusLines);
+        QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
         // Invariants, emitted here so they are present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison,
         // and a comparison across two different corpora.
@@ -731,20 +739,34 @@ private slots:
         const int rows = pane->getScreenHeight();
         QVERIFY2(rows > 1, qPrintable(qsl("the display pane draws %1 rows, which is too few to describe a console").arg(rows)));
 
-        QPixmap target(pane->size());
-        target.fill(Qt::magenta);
-        pane->scrollTo(bufferedLines / 2);
-        pane->render(&target);
-        // Proves text really reaches the pixmap, and keeps first-paint costs -
-        // glyph caches, the pane's own screen pixmap - out of the timed passes.
-        QVERIFY2(frameHasContent(target.toImage()), "the rendered frame is a single flat colour - nothing was drawn, so the timings below would describe an empty widget");
-
         // scrollTo(line) draws the rows ending just ABOVE line, so `rows` is the
         // first argument that fills the pane. Advancing by more than one screenful
         // per paint keeps drawForeground()'s scroll-blit shortcut from serving any
         // part of a frame from the previous one, so every paint is a full redraw.
         const int stride = rows + 1;
         const int span = std::max(1, bufferedLines - rows);
+
+        QPixmap target(pane->size());
+        target.fill(Qt::magenta);
+        // Rendered at the position the timed loop starts from, so what is proven
+        // here is a frame the loop actually draws.
+        pane->scrollTo(rows);
+        pane->render(&target);
+        // Proves text really reaches the pixmap, and keeps first-paint costs -
+        // glyph caches, the pane's own screen pixmap - out of the timed passes.
+        QVERIFY2(frameHasContent(target.toImage()), "the rendered frame is a single flat colour - nothing was drawn, so the timings below would describe an empty widget");
+
+        // drawForeground() only skips its scroll-blit shortcut while the scroll
+        // between two paints exceeds the rows on screen, and imageTopLine() is the
+        // very offset it differences to decide that. Prove the stride clears it:
+        // otherwise most of each frame is served from the previous one and the
+        // timings describe a partial redraw, several times too fast, with every
+        // other assertion here still passing.
+        const int firstTop = pane->imageTopLine();
+        pane->scrollTo(rows + stride);
+        const int steppedTop = pane->imageTopLine();
+        QVERIFY2(qAbs(steppedTop - firstTop) > rows,
+                 qPrintable(qsl("a %1-line stride moves the top line by %2 on a %3-row screen, so consecutive paints would share cached rows").arg(stride).arg(qAbs(steppedTop - firstTop)).arg(rows)));
 
         double best = std::numeric_limits<double>::max();
         for (int pass = 0; pass < kDisplayPasses; ++pass) {
@@ -760,7 +782,11 @@ private slots:
         const double paintsPerSec = kDisplayPaints / best;
         emitMetric("display_paints_per_sec", paintsPerSec);
         emitMetric("display_paint_ms", (best / kDisplayPaints) * 1000.0);
+        // The size of the drawn area, and so of the workload: both are invariants
+        // the compare script refuses to look past, because a font or layout
+        // difference between two builds means they did not draw the same thing.
         emitMetric("display_rows_per_paint", static_cast<qint64>(rows));
+        emitMetric("display_cols_per_paint", static_cast<qint64>(pane->getColumnCount()));
         // Lines/s the display can sustain, directly comparable to text_lines_per_sec.
         emitMetric("display_lines_per_sec", paintsPerSec * rows);
     }
