@@ -474,7 +474,7 @@ void VoskRecognizer::stopListening()
                 // Check confidence if word-level results are available
                 bool hasHighConfidence = false;
 
-                if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
+                if (obj.contains(QLatin1String("result"))) {
                     const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
                     if (wordsArray.size() == 1) {
                         const double conf = wordsArray.first().toObject().value(QLatin1String("conf")).toDouble();
@@ -500,6 +500,24 @@ void VoskRecognizer::stopListening()
 
                     if (!text.isEmpty()) {
                         emit finalResult(text);
+
+                        // Word-level detail accompanies this final too - the
+                        // silence timeout makes this the common path, not the
+                        // exception
+                        const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
+                        QVariantList wordsList;
+                        for (const QJsonValue& wordValue : wordsArray) {
+                            const QJsonObject wordObject = wordValue.toObject();
+                            QVariantMap wordData;
+                            wordData[qsl("word")] = wordObject.value(QLatin1String("word")).toString();
+                            wordData[qsl("conf")] = wordObject.value(QLatin1String("conf")).toDouble();
+                            wordData[qsl("start")] = wordObject.value(QLatin1String("start")).toDouble();
+                            wordData[qsl("end")] = wordObject.value(QLatin1String("end")).toDouble();
+                            wordsList.append(wordData);
+                        }
+                        if (!wordsList.isEmpty()) {
+                            emit wordsResult(wordsList);
+                        }
                     }
                 }
             }
@@ -584,7 +602,7 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
 
                 // Check confidence if word-level results are available
                 bool hasLowConfidence = false;
-                if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
+                if (obj.contains(QLatin1String("result"))) {
                     const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
                     if (wordsArray.size() == 1) {
                         const double conf = wordsArray.first().toObject().value(QLatin1String("conf")).toDouble();
@@ -616,7 +634,7 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
                         emit finalResult(text);
 
                         // Emit word-level results with confidence if available and enabled
-                        if (mWordsEnabled && obj.contains(QLatin1String("result"))) {
+                        if (obj.contains(QLatin1String("result"))) {
                             const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
                             QVariantList wordsList;
                             for (const QJsonValue& wordVal : wordsArray) {
@@ -976,15 +994,6 @@ void VoskRecognizer::setEndpointerMode(EndpointerMode mode)
         qDebug() << "VoskRecognizer: Set endpointer mode to" << modeInt;
 #endif
     }
-}
-
-void VoskRecognizer::setWordsEnabled(bool enabled)
-{
-    // Records whether word detail is surfaced to the user. The backend is left
-    // reporting words either way, because the leading-word filter depends on
-    // their timings - turning them off would silently restore the old behaviour
-    // of eating a spoken "a", "an" or "to".
-    mWordsEnabled = enabled;
 }
 
 void VoskRecognizer::setSensitivity(Sensitivity sensitivity)

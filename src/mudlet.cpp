@@ -65,6 +65,7 @@
 #include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QImage>
 #include <QKeyEvent>
@@ -206,6 +207,16 @@ void mudlet::initSpeechRecognition()
     connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, [raiseSpeechEvent](const QString& text) { raiseSpeechEvent(qsl("sysSTTPartialResult"), text); });
     connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, [raiseSpeechEvent](const QString& text) { raiseSpeechEvent(qsl("sysSTTResult"), text); });
     connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, [raiseSpeechEvent](const QString& message) { raiseSpeechEvent(qsl("sysSTTError"), message); });
+    // Word-level detail travels as one JSON string argument: table arguments
+    // need per-Host Lua registry bookkeeping this glue should not own, and a
+    // string is the one type every client's event system carries
+    connect(mpSpeechRecognizer, &SpeechRecognizer::wordsResult, this, [raiseSpeechEvent](const QVariantList& words) {
+        QJsonArray array;
+        for (const QVariant& word : words) {
+            array.append(QJsonObject::fromVariantMap(word.toMap()));
+        }
+        raiseSpeechEvent(qsl("sysSTTWords"), QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact)));
+    });
     connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [raiseSpeechEvent](SpeechRecognizer::State newState) {
         QString stateName;
         switch (newState) {

@@ -65,6 +65,10 @@ public:
     void resetUtterance() override;
     void setSilenceTimeout(int msec) override;
     int silenceTimeout() const override;
+    // Vosk delivers per-word confidence and timing; it has no biasing, and
+    // grammar constraint (vosk_recognizer_new_grm) is not wired up yet, so
+    // only word results are claimed
+    bool supportsWordResults() const override { return true; }
 
     State state() const override { return mState; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
@@ -82,10 +86,6 @@ public:
     // SpeechRecognizer sensitivity interface (maps to EndpointerMode)
     void setSensitivity(Sensitivity sensitivity) override;
     Sensitivity sensitivity() const override;
-
-    // SpeechRecognizer words interface
-    void setWordsEnabled(bool enabled) override;
-    bool wordsEnabled() const override { return mWordsEnabled; }
 
     // Vosk-specific: Finer-grained control over end-of-speech detection
     void setEndpointerMode(EndpointerMode mode);
@@ -208,7 +208,6 @@ private:
 
     // Settings
     EndpointerMode mEndpointerMode = EndpointerMode::Default;
-    bool mWordsEnabled = false;
 };
 
 #endif // MUDLET_VOSKRECOGNIZER_H

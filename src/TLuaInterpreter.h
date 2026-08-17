@@ -266,6 +266,7 @@ public:
     static int sttReloadLibrary(lua_State*);
     static int sttUnloadLibrary(lua_State*);
     static int sttSetSilenceTimeout(lua_State*);
+    static int sttSetVocabulary(lua_State*);
     static int hashFile(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);

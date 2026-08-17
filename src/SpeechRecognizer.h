@@ -87,6 +87,31 @@ public:
     virtual void setSilenceTimeout(int msec) { Q_UNUSED(msec) }
     virtual int silenceTimeout() const { return 0; }
 
+    // === Capabilities ===
+    // What this backend can actually do, so consumers adapt instead of
+    // guessing. Defaults describe the least capable backend; overrides only
+    // claim what the implementation genuinely delivers.
+
+    // Recognition can be biased toward a supplied vocabulary
+    virtual bool supportsBiasing() const { return false; }
+    // Recognition can be constrained to a supplied grammar
+    virtual bool supportsGrammar() const { return false; }
+    // Results carry per-word confidence and timing (wordsResult signal)
+    virtual bool supportsWordResults() const { return false; }
+    // Audio is processed locally; false means an off-device service is
+    // involved and no privacy guarantee about audio leaving the machine holds
+    virtual bool onDevice() const { return true; }
+
+    // Supply vocabulary for biasing or grammar constraint. Returns true only
+    // when the backend applied it; false means the words were ignored and a
+    // consumer should rely on client-side correction instead. The default
+    // matches the default capabilities: nothing applied.
+    virtual bool setVocabulary(const QStringList& words)
+    {
+        Q_UNUSED(words)
+        return false;
+    }
+
     // === State Queries ===
 
     // Get current state of the recognizer
@@ -151,11 +176,6 @@ public:
     virtual void setSensitivity(Sensitivity sensitivity) = 0;
     virtual Sensitivity sensitivity() const = 0;
 
-    // Enable word-level results with confidence scores (if supported by backend).
-    // When enabled, wordsResult() signal may be emitted with per-word details.
-    virtual void setWordsEnabled(bool enabled) = 0;
-    virtual bool wordsEnabled() const = 0;
-
 signals:
     // Emitted during recognition with partial (non-final) text.
     // This text may change as more audio is processed.
@@ -164,8 +184,9 @@ signals:
     // Emitted when an utterance is complete with the final transcription.
     void finalResult(const QString& text);
 
-    // Emitted with word-level results including confidence scores (when wordsEnabled).
-    // Each word is a QVariantMap with keys like "word", "start", "end", "conf".
+    // Emitted alongside each final result on backends whose
+    // supportsWordResults() is true. Each word is a QVariantMap with keys
+    // "word", "start", "end", "conf".
     void wordsResult(const QVariantList& words);
 
     // Emitted when the recognizer state changes.

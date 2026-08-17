@@ -288,6 +288,26 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
             lua_pushstring(L, "silenceTimeout");
             lua_pushinteger(L, pRecognizer->silenceTimeout());
             lua_settable(L, -3);
+
+            // What this backend can do, so packages adapt rather than guess:
+            // biasing/grammar govern whether setVocabulary reaches the
+            // engine, words whether sysSTTWords fires, onDevice whether audio
+            // stays on this machine
+            lua_pushstring(L, "capabilities");
+            lua_newtable(L);
+            lua_pushstring(L, "biasing");
+            lua_pushboolean(L, pRecognizer->supportsBiasing());
+            lua_settable(L, -3);
+            lua_pushstring(L, "grammar");
+            lua_pushboolean(L, pRecognizer->supportsGrammar());
+            lua_settable(L, -3);
+            lua_pushstring(L, "words");
+            lua_pushboolean(L, pRecognizer->supportsWordResults());
+            lua_settable(L, -3);
+            lua_pushstring(L, "onDevice");
+            lua_pushboolean(L, pRecognizer->onDevice());
+            lua_settable(L, -3);
+            lua_settable(L, -3);
         } else {
             lua_pushstring(L, "initialized");
             lua_pushboolean(L, false);
@@ -428,6 +448,50 @@ int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
 
     pRecognizer->setSilenceTimeout(msec);
     lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.setVocabulary(words)
+// Supply a table (array) of words or phrases for the backend to bias or
+// constrain recognition toward. Returns true only when the engine applied
+// the vocabulary; false is not an error - it means this backend cannot use
+// it (see stt.getInfo().capabilities) and callers should correct results
+// client-side instead.
+int TLuaInterpreter::sttSetVocabulary(lua_State* L)
+{
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "stt.setVocabulary: bad argument #1 type (words as table expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    QStringList words;
+    for (int i = 1;; ++i) {
+        lua_rawgeti(L, 1, i);
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            break;
+        }
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            const QString word = QString::fromUtf8(lua_tostring(L, -1)).trimmed();
+            if (!word.isEmpty()) {
+                words.append(word);
+            }
+        }
+        lua_pop(L, 1);
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    pMudlet->initSpeechRecognition();
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        return warnArgumentValue(L, __func__, "failed to create speech recognizer");
+    }
+
+    lua_pushboolean(L, pRecognizer->setVocabulary(words));
     return 1;
 }
 
