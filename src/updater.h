@@ -59,6 +59,9 @@ public:
     bool updateAutomatically() const;
     bool shouldShowChangelog();
     bool ready() const;
+    // Removes update downloads and installers left behind by previous runs
+    // (#9985). Takes the directory so it can be pointed at a test one.
+    static void cleanupStaleUpdateFiles(const QString& directory, const QString& keepFilePath);
 
 private:
     std::unique_ptr<dblsqd::Feed> feed;

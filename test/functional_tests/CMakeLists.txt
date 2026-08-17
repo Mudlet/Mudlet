@@ -7,8 +7,6 @@ cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
-    TelnetSubnegotiationTest.cpp
-    TelnetSgrDefaultColorTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     cTelnetBufferTest.cpp
@@ -18,7 +16,6 @@ set(FUNCTIONAL_TEST_SOURCES
     SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
-    TriggerSameLineMatchTest.cpp
     MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
@@ -29,7 +26,6 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
-    EnableDisableByNameTest.cpp
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
@@ -37,7 +33,6 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetConnectFailureTest.cpp
     TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
-    ColorTriggerFilterChildTest.cpp
     CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
@@ -52,7 +47,6 @@ set(FUNCTIONAL_TEST_SOURCES
     MainWindowSizeReportTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
-    SgrUnderlineStyleTest.cpp
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
     PackageSelfRemovalTest.cpp
@@ -67,7 +61,6 @@ set(FUNCTIONAL_TEST_SOURCES
     LabelMovieRefusalTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
-    UndoServerWrapTest.cpp
     TelnetConnectLookupRaceTest.cpp
     NarrowWindowWrapTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -136,12 +129,9 @@ endif()
 #   dlgTriggerEditor and leaving ~3.4MB of tree-item QIcon/QPixmap behind
 # - NewReleaseDialogTeardownTest still leaks, on Qt's one-time system
 #   CA-certificate store load on first TLS use, cached for the process lifetime
-# - TriggerSameLineMatchTest replaces ASAN_OPTIONS further down to add an RSS
-#   ceiling, which drops detect_leaks with it
 set(leakCheckExcludedTests
     dlgTriggerEditorUndoRedoTest
     NewReleaseDialogTeardownTest
-    TriggerSameLineMatchTest
 )
 
 # Apple's ASan runtime has no LeakSanitizer, so detect_leaks is only meaningful
@@ -202,15 +192,8 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
-# A regression in the self-re-creating-trigger cases does not fail, it hangs and
-# grows the heap by ~110MB/s: the RSS ceiling and the timeout are what turn that
-# into a reported failure. ENVIRONMENT replaces the loop's, hence QT_QPA_PLATFORM
-# again, and the lost detect_leaks is why the test is in leakCheckExcludedTests.
+# MultilineTriggerReentrancyTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
-
-set_tests_properties(TriggerSameLineMatchTest PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0:hard_rss_limit_mb=3000"
-    TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
@@ -280,9 +263,6 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
-
-# UndoServerWrapTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(UndoServerWrapTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)

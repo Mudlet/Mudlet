@@ -24,7 +24,9 @@
 #include <QtTest/QtTest>
 
 #include <QApplication>
+#include <QDateTime>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -34,6 +36,9 @@
 #include <memory>
 
 /*
+ * What the Updater has to clean up after itself: the dialog it owns, and the
+ * files it leaves in the temp directory.
+ *
  * Regression test for https://github.com/Mudlet/Mudlet/issues/9122:
  * STATUS_HEAP_CORRUPTION at application close on Windows.
  *
@@ -65,7 +70,51 @@ class NewReleaseDialogTeardownTest : public QObject
 
 private slots:
     void updateDialogDestroyedBeforeApplicationTeardown();
+    void staleUpdateFilesAreSweptAtStartup();
 };
+
+/*
+ * Regression test for https://github.com/Mudlet/Mudlet/issues/9985: nothing ever
+ * deleted the installer copied for the batch file to run, nor a download Mudlet
+ * went away without recording, so each update left ~135MB in the temp directory.
+ *
+ * What must survive matters as much as what goes: UpdateDialog records a
+ * download and reuses it on the next launch, and an installer waiting for the
+ * batch file is seconds old - sweeping either turns a disk fix into a 135MB
+ * re-download or a lost update.
+ */
+void NewReleaseDialogTeardownTest::staleUpdateFilesAreSweptAtStartup()
+{
+    QTemporaryDir tempDir;
+    QVERIFY(tempDir.isValid());
+
+    const QStringList leftovers{qsl("mudlet-update-Mudlet-5.0.0-linux-x64.AppImage-abc123.tar"), qsl("mudlet-update-81fcfb86-2e9a-40f5-8f40-42fd5f689e5c.SDYFjK"), qsl("mudlet-setup-1786938971.exe")};
+    const QStringList bystanders{qsl("mudlet-update.bat"), qsl("mudlet_updated_at"), qsl("setup.exe"), qsl("Mudlet-5.0.0-windows-64-installer.exe")};
+    const QString pendingDownload = qsl("mudlet-update-still-wanted.exe");
+    const QString justCopiedInstaller = qsl("mudlet-setup-1786999999.exe");
+
+    const QDateTime longEnoughAgo = QDateTime::currentDateTime().addSecs(-7200);
+    for (const QString& name : leftovers + bystanders + QStringList{pendingDownload}) {
+        QFile file(tempDir.filePath(name));
+        QVERIFY2(file.open(QIODevice::WriteOnly), qPrintable(name));
+        QVERIFY(file.setFileTime(longEnoughAgo, QFileDevice::FileModificationTime));
+        file.close();
+    }
+    QFile freshFile(tempDir.filePath(justCopiedInstaller));
+    QVERIFY(freshFile.open(QIODevice::WriteOnly));
+    freshFile.close();
+
+    Updater::cleanupStaleUpdateFiles(tempDir.path(), tempDir.filePath(pendingDownload));
+
+    for (const QString& name : leftovers) {
+        QVERIFY2(!QFile::exists(tempDir.filePath(name)), qPrintable(qsl("%1 should have been swept - see #9985").arg(name)));
+    }
+    for (const QString& name : bystanders) {
+        QVERIFY2(QFile::exists(tempDir.filePath(name)), qPrintable(qsl("%1 is not ours to delete").arg(name)));
+    }
+    QVERIFY2(QFile::exists(tempDir.filePath(pendingDownload)), "the download UpdateDialog means to reuse must survive, or every launch re-downloads it");
+    QVERIFY2(QFile::exists(tempDir.filePath(justCopiedInstaller)), "an installer this recent may still be waiting for the batch file that runs it");
+}
 
 void NewReleaseDialogTeardownTest::updateDialogDestroyedBeforeApplicationTeardown()
 {
@@ -75,6 +124,24 @@ void NewReleaseDialogTeardownTest::updateDialogDestroyedBeforeApplicationTeardow
 
     QTemporaryDir settingsDir;
     QVERIFY(settingsDir.isValid());
+
+    // Test mode does not redirect TempLocation, and checkUpdatesOnStart() sweeps
+    // leftover update files out of it - point it somewhere disposable so a real
+    // pending update on this machine is not collected by the test run (#9985)
+    QTemporaryDir sweepableTempDir;
+    QVERIFY(sweepableTempDir.isValid());
+    // TMPDIR is what Qt reads on Unix, TMP and TEMP on Windows
+    const QList<QByteArray> tempVariables{"TMPDIR", "TMP", "TEMP"};
+    QList<QByteArray> realTempDirs;
+    for (const QByteArray& variable : tempVariables) {
+        realTempDirs.append(qgetenv(variable.constData()));
+        qputenv(variable.constData(), sweepableTempDir.path().toLocal8Bit());
+    }
+    const auto restoreTempDirs = qScopeGuard([&tempVariables, &realTempDirs]() {
+        for (int i = 0; i < tempVariables.size(); ++i) {
+            qputenv(tempVariables.at(i).constData(), realTempDirs.at(i));
+        }
+    });
     QSettings settings(settingsDir.filePath(qsl("updater-test.ini")), QSettings::IniFormat);
 
     int argc = 1;

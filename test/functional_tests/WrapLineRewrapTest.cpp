@@ -40,7 +40,9 @@ void initializeQRCResources();
 // buffer, and its callers rely on more than the text coming back out intact:
 // the count it returns positions the user cursor and the repaint range, and the
 // timestamps and prompt flags it carries over decide what the timestamp column
-// and TConsole::printCommand() do next. These lock all of that down.
+// and TConsole::printCommand() do next. These lock all of that down, along with
+// the one thing about the server-wrap flush that a spec cannot sample in time:
+// that the line it commits is painted rather than appended.
 class WrapLineRewrapTest : public QObject
 {
     Q_OBJECT
@@ -311,6 +313,51 @@ private slots:
         QVERIFY2(log.contains(qsl("and a short one")), "the line after the wrapped one is missing from the log");
     }
 
+    // A line the server-wrap undoing held back for a continuation is committed
+    // by a flush timer once the game goes quiet, and that commit has to go
+    // through the painted path rather than appending: only showNewLines()
+    // advances buffer.mCursorY, so it having caught up with the buffer is what
+    // tells the two apart. It has to be read the moment the flush returns
+    // rather than polled for - cTelnet's posting timer calls finalize() as well
+    // and repaints within a tick, so any wait long enough to see the line
+    // appear is also long enough to lose the evidence.
+    void test_aHeldLineIsPaintedWhenTheFlushTimerCommitsIt()
+    {
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        TMainConsole* console = host->mpConsole;
+        // keep Mudlet's own display wrap out of the way, so the held line is
+        // one buffer line to look for
+        console->setWrapAt(500);
+
+        // 70 characters, inside the join band for a wrap column of 80, and
+        // nothing follows it - so it is held back for a continuation that never
+        // comes and only the flush timer can commit it
+        const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
+        runLua(qsl("feedTelnet('%1\\n')").arg(heldLine));
+
+        auto* flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
+        QVERIFY2(flushTimer && flushTimer->isActive(), "the full-width line was not held back for a continuation");
+
+        int sizeAtFlush = -1;
+        int cursorAtFlush = -1;
+        connect(flushTimer, &QTimer::timeout, this, [&]() {
+            sizeAtFlush = console->buffer.size();
+            cursorAtFlush = console->buffer.mCursorY;
+        });
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return bufferHasLine(console, heldLine);
+                         },
+                         5000),
+                 "held full-width line was not flushed after the game went quiet");
+        QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
+        QCOMPARE(cursorAtFlush, sizeAtFlush);
+    }
+
     // The bounds check lets startLine == buffer.size() through, so the empty
     // range has to answer 0 and leave the buffer alone.
     void test_anEmptyRangeChangesNothing()
@@ -411,10 +458,18 @@ private:
     // wrapping pads lines out with indentation
     static QString textIgnoringIndentation(TConsole* console) { return joinedText(console).remove(QChar::Space); }
 
-    // Takes the profile offline (feedTelnet() needs that) and turns on
-    // plain-text logging to a known file name, without timestamps so the log
-    // holds nothing but the wrapped text.
-    Host* startLoggingProfile()
+    static bool bufferHasLine(TConsole* console, const QString& text)
+    {
+        for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
+            if (console->buffer.line(i) == text) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // feedTelnet() only injects while the telnet socket is unconnected
+    Host* startOfflineProfile()
     {
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
@@ -428,6 +483,17 @@ private:
                     },
                     5000)) {
             qWarning() << "Profile did not go offline in time; feedTelnet() calls will fail";
+        }
+        return host;
+    }
+
+    // Turns on plain-text logging to a known file name, without timestamps so
+    // the log holds nothing but the wrapped text.
+    Host* startLoggingProfile()
+    {
+        auto* host = startOfflineProfile();
+        if (!host) {
+            return nullptr;
         }
 
         host->mLogDir.clear();
