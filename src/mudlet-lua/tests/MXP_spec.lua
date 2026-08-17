@@ -1,9 +1,9 @@
 describe("Tests MXP handling", function()
 
   setup(function()
-    -- feedTelnet cannot negotiate MXP here as the test profile's socket is
-    -- not in the unconnected state, so force the MXP processor on instead -
-    -- that also locks secure mode, letting feedTriggers carry MXP tags
+    -- these specs carry MXP tags in through feedTriggers, so the processor is
+    -- forced on: that is what locks secure mode, which negotiating MXP with a
+    -- server would not do
     setConfig("specialForceMXPProcessorOn", true)
   end)
 
