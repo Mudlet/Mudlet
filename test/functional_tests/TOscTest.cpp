@@ -27,6 +27,7 @@
  * Run with: ctest -R TOscTest -V
  */
 
+#include <QFileInfo>
 #include <QKeyEvent>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -63,6 +64,15 @@ private:
   const QString mHostname = "OSC-Test-Host";
   QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = "localhost";
+
+  // setupConfig() consults portable.txt before the XDG logic
+  static bool portableMarkerPresent() {
+    return QFileInfo::exists(
+                   qsl("%1/portable.txt")
+                           .arg(QCoreApplication::applicationDirPath())) ||
+           QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt")
+                                     .arg(QDir::homePath()));
+  }
 
   // Injects raw telnet data into the processing pipeline via loopback and
   // waits for the buffer to process it.
@@ -191,6 +201,11 @@ private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
     initializeQRCResourcesForOscTest();
+
+    if (portableMarkerPresent()) {
+      QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
+            "so the config dir cannot be redirected");
+    }
 
     // A config root of this process's own. Sharing the developer's
     // ~/.config/mudlet means sharing a profile list, so a second copy of this
@@ -1564,10 +1579,14 @@ private slots:
     delete mpServer;
     mpServer = nullptr;
     mpHost = nullptr;
-    const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
-    QDir(path).removeRecursively();
-    delete mudlet::self();
+    // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+    // getMudletPath() dereferences the instance rather than checking it
+    if (mudlet::self()) {
+      const QString path =
+          mudlet::getMudletPath(enums::profileHomePath, mHostname);
+      QDir(path).removeRecursively();
+      delete mudlet::self();
+    }
     mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
                        : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
