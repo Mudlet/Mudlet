@@ -168,6 +168,366 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
     return smpSelf;
 }
 
+int mudlet::addAddonToolbarButton(const QString& name, const QString& icon, const QString& tooltip, Host* pHost)
+{
+    if (!mpMainToolBar) {
+        return -1;
+    }
+
+    // Add separator before first addon button if not present
+    if (!mpAddonToolbarSeparator) {
+        mpAddonToolbarSeparator = mpMainToolBar->addSeparator();
+    }
+
+    auto* button = new QToolButton(this);
+    button->setText(name);
+    button->setObjectName(qsl("addon_%1").arg(name));
+
+    // Handle icon - can be a path or a built-in icon name
+    if (icon.startsWith(qsl(":/"))) {
+        button->setIcon(QIcon(icon));
+    } else if (QFile::exists(icon)) {
+        button->setIcon(QIcon(icon));
+    } else {
+        // Try as a standard icon
+        button->setIcon(QIcon::fromTheme(icon));
+    }
+
+    button->setToolTip(utils::richText(tooltip));
+    button->setAutoRaise(true);
+    button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+    QAction* pToolbarAction = mpMainToolBar->addWidget(button);
+
+    const int buttonId = mNextAddonButtonId++;
+    AddonButton addonButton;
+    addonButton.button = button;
+    addonButton.toolbarAction = pToolbarAction;
+    addonButton.name = name;
+    addonButton.pHost = pHost;
+    mAddonButtons[buttonId] = addonButton;
+
+    // Connect click to raise event - resolve Host at click time to avoid use-after-free
+    connect(button, &QToolButton::clicked, this, [this, buttonId]() {
+        if (!mAddonButtons.contains(buttonId)) {
+            return;
+        }
+        Host* pH = mAddonButtons[buttonId].pHost;
+        if (pH) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysToolbarButtonClicked"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::number(buttonId));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            pH->raiseEvent(event);
+        }
+    });
+
+    return buttonId;
+}
+
+bool mudlet::removeAddonToolbarButton(int buttonId)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+
+    if (addonButton.pulseTimer) {
+        addonButton.pulseTimer->stop();
+        delete addonButton.pulseTimer;
+    }
+
+    if (addonButton.toolbarAction) {
+        // removeAction() only detaches the QWidgetAction that addWidget() created,
+        // leaving it parented to the toolbar; deleting it here stops one accruing
+        // per add/remove cycle, and takes the button with it since a QWidgetAction
+        // owns its default widget.
+        // deleteLater(), because the usual caller is a Lua handler running from
+        // this very button's clicked signal, with Qt still inside the button's
+        // event handling.
+        mpMainToolBar->removeAction(addonButton.toolbarAction);
+        addonButton.toolbarAction->deleteLater();
+    }
+
+    mAddonButtons.remove(buttonId);
+
+    // Remove separator if no more addon buttons. addSeparator() parents its
+    // QAction to the toolbar and removeAction() only detaches it, so it needs
+    // deleting too or one accumulates per empty-to-occupied cycle.
+    if (mAddonButtons.isEmpty() && mpAddonToolbarSeparator) {
+        mpMainToolBar->removeAction(mpAddonToolbarSeparator);
+        mpAddonToolbarSeparator->deleteLater();
+        mpAddonToolbarSeparator = nullptr;
+    }
+
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonState(int buttonId, const QString& state)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    // State can be used to store custom state for the button
+    addonButton.button->setProperty("state", state);
+
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonIcon(int buttonId, const QString& icon)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    if (icon.startsWith(qsl(":/"))) {
+        addonButton.button->setIcon(QIcon(icon));
+    } else if (QFile::exists(icon)) {
+        addonButton.button->setIcon(QIcon(icon));
+    } else {
+        addonButton.button->setIcon(QIcon::fromTheme(icon));
+    }
+
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    addonButton.button->setToolTip(utils::richText(tooltip));
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonEnabled(int buttonId, bool enabled)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    addonButton.button->setEnabled(enabled);
+    return true;
+}
+
+bool mudlet::setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval)
+{
+    if (!mAddonButtons.contains(buttonId)) {
+        return false;
+    }
+
+    AddonButton& addonButton = mAddonButtons[buttonId];
+    if (!addonButton.button) {
+        return false;
+    }
+
+    if (enabled) {
+        addonButton.pulseColor1 = color1;
+        addonButton.pulseColor2 = color2;
+        addonButton.pulseState = true;
+
+        if (!addonButton.pulseTimer) {
+            addonButton.pulseTimer = new QTimer(this);
+            connect(addonButton.pulseTimer, &QTimer::timeout, this, [this, buttonId]() {
+                if (!mAddonButtons.contains(buttonId)) {
+                    return;
+                }
+                AddonButton& btn = mAddonButtons[buttonId];
+                if (!btn.button) {
+                    return;
+                }
+                btn.pulseState = !btn.pulseState;
+                const QString& color = btn.pulseState ? btn.pulseColor1 : btn.pulseColor2;
+                btn.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(color));
+            });
+        }
+
+        addonButton.pulseTimer->setInterval(interval);
+        addonButton.pulseTimer->start();
+        addonButton.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(color1));
+    } else {
+        if (addonButton.pulseTimer) {
+            addonButton.pulseTimer->stop();
+        }
+        addonButton.button->setStyleSheet(QString());
+    }
+
+    return true;
+}
+
+int mudlet::addAddonMenuItem(const QString& menuPath, const QString& name, const QString& shortcut, Host* pHost)
+{
+    // Find or create the Addons menu. menuOptions comes from the generated UI,
+    // so it is used directly rather than hunting the menu bar for an action whose
+    // translated text happens to contain "Options"
+    if (!mpAddonsMenu) {
+        if (menuOptions) {
+            mpAddonsMenu = menuOptions->addMenu(tr("Extensions"));
+        } else {
+            // Create as top-level menu
+            mpAddonsMenu = menuBar()->addMenu(tr("Extensions"));
+        }
+    }
+
+    if (!mpAddonsMenu) {
+        return -1;
+    }
+
+    // The root hides itself while empty (see removeAddonMenuItem), so an add
+    // after a full clear-out has to bring it back
+    mpAddonsMenu->menuAction()->setVisible(true);
+
+    // Parse menu path to support submenus like "Speech/Settings"
+    QStringList pathParts = menuPath.split(qsl("/"), Qt::SkipEmptyParts);
+    QMenu* targetMenu = mpAddonsMenu;
+
+    for (const QString& part : pathParts) {
+        // Look for existing submenu
+        QMenu* submenu = nullptr;
+        for (QAction* action : targetMenu->actions()) {
+            if (action->menu() && action->text() == part) {
+                submenu = action->menu();
+                break;
+            }
+        }
+        if (!submenu) {
+            submenu = targetMenu->addMenu(part);
+        }
+        targetMenu = submenu;
+    }
+
+    // Add the action
+    QAction* action = targetMenu->addAction(name);
+    if (!shortcut.isEmpty()) {
+        action->setShortcut(QKeySequence(shortcut));
+    }
+
+    const int itemId = mNextAddonMenuItemId++;
+    AddonMenuItem menuItem;
+    menuItem.action = action;
+    menuItem.menuPath = menuPath;
+    menuItem.name = name;
+    menuItem.pHost = pHost;
+    mAddonMenuItems[itemId] = menuItem;
+
+    // Connect to raise event - resolve Host at click time to avoid use-after-free
+    connect(action, &QAction::triggered, this, [this, itemId]() {
+        if (!mAddonMenuItems.contains(itemId)) {
+            return;
+        }
+        Host* pH = mAddonMenuItems[itemId].pHost;
+        if (pH) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysMenuItemClicked"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::number(itemId));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            pH->raiseEvent(event);
+        }
+    });
+
+    return itemId;
+}
+
+bool mudlet::removeAddonMenuItem(int itemId)
+{
+    if (!mAddonMenuItems.contains(itemId)) {
+        return false;
+    }
+
+    AddonMenuItem& menuItem = mAddonMenuItems[itemId];
+    // Captured before the action goes: addAction() parents it to the menu it was
+    // added to, which is the submenu chain addAddonMenuItem() built for menuPath
+    QMenu* parentMenu = menuItem.action ? qobject_cast<QMenu*>(menuItem.action->parent()) : nullptr;
+    if (menuItem.action) {
+        // Detached now so the emptiness test below sees the menu without it,
+        // but destroyed later - see the comment on the loop
+        if (parentMenu) {
+            parentMenu->removeAction(menuItem.action);
+        }
+        menuItem.action->deleteLater();
+    }
+
+    // Discard the menuPath submenus once they hold no visible items, otherwise
+    // repeated add/remove cycles leave a trail of empty menus behind.
+    // Everything here is deleteLater(), not delete: the usual caller is a Lua
+    // handler running from the item's own triggered signal, and Qt is still
+    // inside QMenu's activation machinery, which touches the menu after the
+    // handler returns. The menu action is hidden immediately so the empty
+    // submenu does not linger visibly until the event loop runs, and deleting
+    // the menu later takes that action with it.
+    while (parentMenu && parentMenu != mpAddonsMenu && parentMenu->isEmpty()) {
+        QMenu* grandParentMenu = qobject_cast<QMenu*>(parentMenu->parent());
+        parentMenu->menuAction()->setVisible(false);
+        parentMenu->deleteLater();
+        parentMenu = grandParentMenu;
+    }
+
+    // The Extensions root is kept (it is the stable anchor every menuPath
+    // hangs off) but hidden while it has nothing to show
+    if (mpAddonsMenu && mpAddonsMenu->isEmpty()) {
+        mpAddonsMenu->menuAction()->setVisible(false);
+    }
+
+    mAddonMenuItems.remove(itemId);
+    return true;
+}
+
+bool mudlet::setAddonMenuItemEnabled(int itemId, bool enabled)
+{
+    if (!mAddonMenuItems.contains(itemId)) {
+        return false;
+    }
+
+    AddonMenuItem& menuItem = mAddonMenuItems[itemId];
+    if (!menuItem.action) {
+        return false;
+    }
+
+    menuItem.action->setEnabled(enabled);
+    return true;
+}
+
+bool mudlet::setAddonMenuItemChecked(int itemId, bool checked)
+{
+    if (!mAddonMenuItems.contains(itemId)) {
+        return false;
+    }
+
+    AddonMenuItem& menuItem = mAddonMenuItems[itemId];
+    if (!menuItem.action) {
+        return false;
+    }
+
+    menuItem.action->setCheckable(true);
+    menuItem.action->setChecked(checked);
+    return true;
+}
+
+
 mudlet::mudlet()
 : QMainWindow()
 {
@@ -2095,6 +2455,29 @@ void mudlet::closeHost(const QString& name)
         qDebug() << "mudlet::closeHost: Removing detached window mapping for profile" << name;
 #endif
         mDetachedWindows.remove(name);
+    }
+
+
+    // Clean up addon toolbar buttons belonging to this host
+    QList<int> buttonIdsToRemove;
+    for (auto it = mAddonButtons.constBegin(); it != mAddonButtons.constEnd(); ++it) {
+        if (it.value().pHost == pH) {
+            buttonIdsToRemove.append(it.key());
+        }
+    }
+    for (int buttonId : buttonIdsToRemove) {
+        removeAddonToolbarButton(buttonId);
+    }
+
+    // Clean up addon menu items belonging to this host
+    QList<int> menuItemIdsToRemove;
+    for (auto it = mAddonMenuItems.constBegin(); it != mAddonMenuItems.constEnd(); ++it) {
+        if (it.value().pHost == pH) {
+            menuItemIdsToRemove.append(it.key());
+        }
+    }
+    for (int itemId : menuItemIdsToRemove) {
+        removeAddonMenuItem(itemId);
     }
 
     mpTabBar->removeTab(name);

@@ -308,6 +308,21 @@ public:
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
+    // Addon toolbar button management
+    int addAddonToolbarButton(const QString& name, const QString& icon, const QString& tooltip, Host* pHost);
+    bool removeAddonToolbarButton(int buttonId);
+    bool setAddonToolbarButtonState(int buttonId, const QString& state);
+    bool setAddonToolbarButtonIcon(int buttonId, const QString& icon);
+    bool setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip);
+    bool setAddonToolbarButtonEnabled(int buttonId, bool enabled);
+    bool setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval);
+
+    // Addon menu item management
+    int addAddonMenuItem(const QString& menuPath, const QString& name, const QString& shortcut, Host* pHost);
+    bool removeAddonMenuItem(int itemId);
+    bool setAddonMenuItemEnabled(int itemId, bool enabled);
+    bool setAddonMenuItemChecked(int itemId, bool checked);
+
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:
     void showOptionsDialog(const QString&, Host* = nullptr);
@@ -755,6 +770,37 @@ private:
     // Window menu management for multiple windows
     QList<QAction*> mWindowListActions;
     QAction* mWindowListSeparator = nullptr;
+
+    // Addon toolbar button management. closeHost() removes every button and menu
+    // item belonging to a profile before the Host is deleted, so no entry should
+    // outlive its owner - the QPointers are what keeps a missed path from turning
+    // into a dangling read in the click handlers, which resolve pHost lazily.
+    struct AddonButton
+    {
+        QPointer<QToolButton> button;
+        QPointer<QAction> toolbarAction;
+        QPointer<QTimer> pulseTimer;
+        QString name;
+        QPointer<Host> pHost;
+        bool pulseState = false;
+        QString pulseColor1;
+        QString pulseColor2;
+    };
+    QMap<int, AddonButton> mAddonButtons;
+    int mNextAddonButtonId = 1;
+    QAction* mpAddonToolbarSeparator = nullptr;
+
+    // Addon menu item management
+    struct AddonMenuItem
+    {
+        QPointer<QAction> action;
+        QString menuPath;
+        QString name;
+        QPointer<Host> pHost;
+    };
+    QMap<int, AddonMenuItem> mAddonMenuItems;
+    int mNextAddonMenuItemId = 1;
+    QPointer<QMenu> mpAddonsMenu;
 
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen
