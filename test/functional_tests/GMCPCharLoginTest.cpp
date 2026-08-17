@@ -36,6 +36,7 @@
 #include <QUrlQuery>
 #include <functional>
 
+#include "ProfileTestHelper.h"
 #include "CredentialManager.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -1082,31 +1083,8 @@ private:
     Host* createProfileAndConnect()
     {
         const QString port = QString::number(mPort);
-        QTimer::singleShot(0ms, qApp, [this, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), qsl("localhost"));
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
         // A fresh mudlet and profile per test on an instrumented, loaded runner is slow.
-        QSignalSpy loaded(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!loaded.wait(20000)) {
-            qWarning("Profile took too long to load");
-            return nullptr;
-        }
-        Host* host = mudlet::self()->getActiveHost();
+        Host* host = TestProfile::create(mHostname, qsl("localhost"), port, 20s);
         if (!host) {
             qWarning("No active host");
             return nullptr;

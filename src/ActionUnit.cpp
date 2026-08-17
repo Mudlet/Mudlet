@@ -501,26 +501,93 @@ TAction* ActionUnit::getHeadAction(TToolBar* pT)
     return nullptr;
 }
 
-void ActionUnit::showToolBar(const QString& name)
+// A root action that is a package or module container is not a toolbar itself -
+// its children are. Location 4 is the floating setting, which is not one of the
+// TEasyButtonBars that live in the profile's window.
+TAction* ActionUnit::findEasyButtonBarAction(const QString& name)
 {
-    for (auto& easyButtonBar : mEasyButtonBarList) {
-        if (easyButtonBar->mpTAction->getName() == name) {
-            easyButtonBar->mpTAction->setIsActive(true);
-            updateAllToolbars();
+    for (auto& rootAction : mActionRootNodeList) {
+        if (rootAction->mLocation == 4) {
+            continue;
+        }
+        if (!rootAction->mPackageName.isEmpty()) {
+            for (auto& childAction : *rootAction->mpMyChildrenList) {
+                if (childAction->mLocation != 4 && childAction->getName() == name) {
+                    return childAction;
+                }
+            }
+            continue;
+        }
+        if (rootAction->getName() == name) {
+            return rootAction;
         }
     }
-    mudlet::self()->processEventLoopHack();
+    return nullptr;
 }
 
-void ActionUnit::hideToolBar(const QString& name)
+// showToolBar() and hideToolBar() only reach the button bars in the profile's
+// window, so a toolbar set to float is worth telling apart from a typo.
+bool ActionUnit::namesAFloatingToolBar(const QString& name)
 {
-    for (auto& easyButtonBar : mEasyButtonBarList) {
-        if (easyButtonBar->mpTAction->getName() == name) {
-            easyButtonBar->mpTAction->setIsActive(false);
-            updateAllToolbars();
+    for (auto& rootAction : mActionRootNodeList) {
+        if (rootAction->mLocation == 4 && rootAction->getName() == name) {
+            return true;
+        }
+        if (rootAction->mPackageName.isEmpty()) {
+            continue;
+        }
+        for (auto& childAction : *rootAction->mpMyChildrenList) {
+            if (childAction->mLocation == 4 && childAction->getName() == name) {
+                return true;
+            }
         }
     }
+    return false;
+}
+
+std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const bool active)
+{
+    bool found = false;
+    if (auto* pAction = findEasyButtonBarAction(name)) {
+        pAction->setIsActive(active);
+        found = true;
+    } else {
+        // the name of a package is accepted as well, and covers every toolbar
+        // that came in it
+        for (auto& rootAction : mActionRootNodeList) {
+            if (rootAction->mLocation == 4 || rootAction->mPackageName.isEmpty() || rootAction->getName() != name) {
+                continue;
+            }
+            for (auto& childAction : *rootAction->mpMyChildrenList) {
+                if (childAction->mLocation != 4) {
+                    childAction->setIsActive(active);
+                    found = true;
+                }
+            }
+        }
+    }
+
+    if (found) {
+        updateAllToolbars();
+    }
     mudlet::self()->processEventLoopHack();
+    if (found) {
+        return {true, QString()};
+    }
+    if (namesAFloatingToolBar(name)) {
+        return {false, qsl("toolbar '%1' is set to float, which showToolBar() and hideToolBar() do not move").arg(name)};
+    }
+    return {false, qsl("toolbar '%1' not found").arg(name)};
+}
+
+std::pair<bool, QString> ActionUnit::showToolBar(const QString& name)
+{
+    return setToolBarActive(name, true);
+}
+
+std::pair<bool, QString> ActionUnit::hideToolBar(const QString& name)
+{
+    return setToolBarActive(name, false);
 }
 
 void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
@@ -567,8 +634,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pAction->mLocation == 4) {
         if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
-            qWarning().nospace().noquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\""
-                                           << pAction->getName()
+            qWarning().nospace().noquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
                                            << "\"), for this toolbar forcing it to the Left one!";
         }
         mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);

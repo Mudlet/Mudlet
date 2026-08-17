@@ -38,6 +38,7 @@
 
 #include <QtTest/QtTest>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
@@ -266,6 +267,34 @@ private slots:
         vu->savedVars.remove(qsl("untickedMemberTable"));
         vu->savedVars.remove(qsl("untickedMemberTable.kept"));
         QCOMPARE(luaL_dostring(L, "untickedMemberTable = nil"), 0);
+    }
+
+    // A global is free to hold a dot in its own name, and savedVars is keyed by
+    // the dotted path - so such a global reads exactly like a member of a table
+    // of that path. The save used to write that global out under the member's
+    // entry, which handed the next session the wrong variable's value (#9954).
+    void test_globalWithADotInItsNameIsNotExportedUnderAMembersSavedName()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "dottedNameTable = {member = 'the member value'} "
+                               "_G['dottedNameTable.member'] = 'the unrelated global value'"),
+                 0);
+        // what ticking the table and its member in the Variables view records
+        vu->savedVars.insert(qsl("dottedNameTable"));
+        vu->savedVars.insert(qsl("dottedNameTable.member"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("the member value")), "the member the user ticked has to be exported");
+        QVERIFY2(!xml.contains(qsl("the unrelated global value")), "the unrelated global of that dotted name must not be exported in its place");
+
+        vu->savedVars.remove(qsl("dottedNameTable"));
+        vu->savedVars.remove(qsl("dottedNameTable.member"));
+        QCOMPARE(luaL_dostring(L, "dottedNameTable = nil _G['dottedNameTable.member'] = nil"), 0);
     }
 
     // A member table beyond the 10,000-item save limit must not ride along -
@@ -1104,29 +1133,7 @@ private:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(2000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
