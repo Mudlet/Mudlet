@@ -20,6 +20,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "ProfileTestHelper.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -113,42 +114,7 @@ private:
 
   void startProfile(const QString &profileName, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100ms);
-
-      // Verify connection dialog is available before UI interactions
-      Q_ASSERT_X(mudlet::self()->mpConnectionDialog, "startProfile",
-                 "Connection dialog not initialized");
-      Q_ASSERT_X(mudlet::self()->mpConnectionDialog->new_profile_button,
-                 "startProfile", "New profile button not found");
-
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100ms);
-
-      Q_ASSERT_X(QApplication::focusWidget(), "startProfile",
-                 "No widget has focus after clicking new profile button");
-
-      QTest::keyClicks(QApplication::focusWidget(), profileName);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(2000)) {
-      QFAIL("Profile took too long to load.");
-    }
-
-    mpHost = mudlet::self()->getActiveHost();
+    mpHost = TestProfile::create(profileName, address, port);
     if (!mpHost) {
       QFAIL("No active host available for the test.");
     }

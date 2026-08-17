@@ -1,4 +1,29 @@
 -- https://wiki.mudlet.org/w/Manual:UI_Functions
+
+-- How many things Mudlet is holding on to in the Lua registry. A function
+-- handed to one of the link or popup calls is anchored there as the call reads
+-- it, and counting is how these specs tell whether a call that then refused let
+-- go of it again.
+local function registryEntryCount()
+  local count = 0
+  for _ in pairs(debug.getregistry()) do
+    count = count + 1
+  end
+  return count
+end
+
+-- Counts the registry across 20 refusals, after one warm-up refusal: releasing
+-- a reference puts it on the registry's free list, and the first release is what
+-- creates that list, so a count taken across it grows even when nothing leaks.
+local function registryGrowthOver(refuseOnce)
+  refuseOnce()
+  local before = registryEntryCount()
+  for _ = 1, 20 do
+    refuseOnce()
+  end
+  return registryEntryCount() - before
+end
+
 describe("Tests UI functions", function()
 
   describe("Test the functionality of copy2decho", function()
@@ -2335,6 +2360,33 @@ describe("Tests UI functions", function()
       assert.is_nil(ok)
       assert.is_string(err)
       assert.is_truthy(err:find("do not match up", 1, true))
+    end)
+
+    it("a rejected echoPopup or insertPopup lets go of the functions it read", function()
+      local grewBy = registryGrowthOver(function()
+        echoPopup(win, "menu", {function() end, function() end}, {"one"})
+        insertPopup(win, "menu", {function() end, function() end}, {"one"})
+      end)
+      assert.are.equal(0, grewBy, ("the registry grew by %d over 40 refused calls"):format(grewBy))
+    end)
+
+    it("a popup naming no window lets go of the functions it read", function()
+      local absent = "uiReadbackNoSuchWindow"
+      local grewBy = registryGrowthOver(function()
+        echoPopup(absent, "menu", {function() end}, {"one"})
+        insertPopup(absent, "menu", {function() end}, {"one"})
+      end)
+      assert.are.equal(0, grewBy, ("the registry grew by %d over 40 refused calls"):format(grewBy))
+    end)
+
+    it("a link call naming no window lets go of the function it read", function()
+      local absent = "uiReadbackNoSuchWindow"
+      local grewBy = registryGrowthOver(function()
+        echoLink(absent, "text", function() end, "hint")
+        insertLink(absent, "text", function() end, "hint")
+        setLink(absent, function() end, "hint")
+      end)
+      assert.are.equal(0, grewBy, ("the registry grew by %d over 60 refused calls"):format(grewBy))
     end)
 
     it("echoLink hard-errors when required arguments are missing", function()
@@ -5177,11 +5229,15 @@ describe("Label movies", function()
     end)
 
     it("a refused movie leaves no gif registered", function()
-      pending("the QMovie is made and handed to the gif tracker before the file is read, so a refused setMovie still leaves one counted in getProfileStats()")
+      local totalBefore = gifStats()
+      assert.is_nil(setMovie(label, notAGifFile))
+      assert.are.equal(totalBefore, gifStats())
+      assert.is_nil(setMovie(label, missingFile))
+      assert.are.equal(totalBefore, gifStats())
     end)
 
-    it("a refused movie over a working one leaves the label driving the dead movie", function()
-      pending("Host::setMovie calls setFileName on the label's live QMovie before it finds out the new file is not a movie, so the label keeps a movie the call said it would not have")
+    it("checking that the movie the label kept is the one that works", function()
+      pending("a label driving a movie with no frames in it answers every movie getter the same way as one that works - LabelMovieRefusalTest reads the QMovie itself")
     end)
 
     it("a refused movie leaves the label without a movie to drive", function()
@@ -5379,6 +5435,19 @@ describe("Console buffer size", function()
     assert.are.same({1000, 100}, {getConsoleBufferSize(console)})
   end)
 
+  it("a batch deletion size of none at all is raised to one line", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 0))
+    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    assert.is_true(setConsoleBufferSize(console, 100, -5))
+    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    for lineNumber = 1, 400 do
+      echo(console, ("buffer line %d\n"):format(lineNumber))
+    end
+    local lineCount = getLineCount(console)
+    assert.is_true(lineCount <= 110, "line count was " .. lineCount)
+  end)
+
   it("the buffer actually stops growing past the limit that was set", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 10))
@@ -5569,6 +5638,35 @@ describe("Main window size and saved layout", function()
     assert.is_true(tallHeight <= smallHeight + 300)
   end)
 
+  it("a main window that loses more than half its width is reported at the width it has", function()
+    if not resizableWindowAvailable() then
+      return
+    end
+    finally(restoreMainWindowSize)
+    setMainWindowSize(1600, 700)
+    pumpEvents(200)
+    local wideWidth = getMainWindowSize()
+    local wideColumns = getColumnCount("main")
+
+    setMainWindowSize(300, 700)
+    pumpEvents(200)
+    local narrowWidth = getMainWindowSize()
+    local narrowColumns = getColumnCount("main")
+
+    -- the main window has a minimum width of its own, so how narrow it really
+    -- became is read off the column count rather than assumed; that and
+    -- getMainWindowSize() have to tell the same story
+    if narrowColumns * 2 >= wideColumns then
+      pending("this display would not take the main window below half its width")
+      return
+    end
+    -- the console holds fewer than half the columns it did, so the width it
+    -- reports has to have more than halved with them; merely falling would also
+    -- be true of a size that only got part of the way down
+    assert.is_true(narrowWidth * 2 < wideWidth,
+      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(narrowWidth, wideWidth, wideColumns, narrowColumns))
+  end)
+
   it("the main window can be put back the size it was", function()
     if not resizableWindowAvailable() then
       return
@@ -5755,9 +5853,13 @@ describe("Toolbar buttons", function()
   local toolbar = "buttonSpecToolbar" .. suffix
   local pushDownButton = "buttonSpecPushDown" .. suffix
   local plainButton = "buttonSpecPlain" .. suffix
+  local floatingToolbar = "buttonSpecFloating" .. suffix
+  local floatingButton = "buttonSpecFloatingButton" .. suffix
   local packageFile = specFilePath(packageName .. ".xml")
 
-  local function actionXml(name, pushButton, isFolder)
+  -- location 0 is a button bar in the profile's window, location 4 the floating
+  -- setting that showToolBar() and hideToolBar() do not move
+  local function actionXml(name, pushButton, isFolder, location)
     return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
       <name>%s</name>
       <script></script>
@@ -5766,7 +5868,7 @@ describe("Toolbar buttons", function()
       <commandButtonDown></commandButtonDown>
       <icon></icon>
       <orientation>0</orientation>
-      <location>0</location>
+      <location>%s</location>
       <buttonRotation>0</buttonRotation>
       <sizeX>0</sizeX>
       <sizeY>0</sizeY>
@@ -5775,7 +5877,7 @@ describe("Toolbar buttons", function()
       <buttonFillerOffset>0</buttonFillerOffset>
       <posX>0</posX>
       <posY>0</posY>
-    ]]):format(isFolder, pushButton, name)
+    ]]):format(isFolder, pushButton, name, location or 0)
   end
 
   local function packageXml()
@@ -5787,6 +5889,9 @@ describe("Toolbar buttons", function()
       actionXml(toolbar, "no", "yes"),
       actionXml(pushDownButton, "yes", "no"), "</Action>",
       actionXml(plainButton, "no", "no"), "</Action>",
+      "</Action>",
+      actionXml(floatingToolbar, "no", "yes", 4),
+      actionXml(floatingButton, "no", "no"), "</Action>",
       "</Action>",
       [[</ActionPackage>]],
       [[</MudletPackage>]],
@@ -5982,41 +6087,61 @@ describe("Toolbar buttons", function()
   end)
 
   describe("showToolBar and hideToolBar", function()
-    -- both answer nothing at all, but they flip the active flag of the action
-    -- the toolbar was built from, which isActive() reads back. For a toolbar
-    -- that came out of a package that action is the package's own folder
-    -- rather than the toolbar, so the package's name is what they answer to
+    -- both flip the active flag of the toolbar's own action, which isActive()
+    -- reads back; whether the bar is on screen is not readable from Lua
     local function toolbarActive()
-      return isActive(packageName, "button")
+      return isActive(toolbar, "button")
     end
 
     after_each(function()
-      showToolBar(packageName)
+      showToolBar(toolbar)
     end)
 
     it("hideToolBar deactivates the toolbar and showToolBar activates it again", function()
       assert.are.equal(1, toolbarActive())
-      assert.are.equal(0, select("#", hideToolBar(packageName)))
+      assert.is_true(hideToolBar(toolbar))
       assert.are.equal(0, toolbarActive())
-      assert.are.equal(0, select("#", showToolBar(packageName)))
+      assert.is_true(showToolBar(toolbar))
       assert.are.equal(1, toolbarActive())
     end)
 
     it("hiding and showing repeatedly ends up where it started", function()
-      hideToolBar(packageName)
-      showToolBar(packageName)
-      hideToolBar(packageName)
-      showToolBar(packageName)
+      hideToolBar(toolbar)
+      showToolBar(toolbar)
+      hideToolBar(toolbar)
+      showToolBar(toolbar)
       assert.are.equal(1, toolbarActive())
       assert.is_true(setButtonStyleSheet(pushDownButton, ""))
     end)
 
     it("a name that is no toolbar is refused", function()
-      pending("both walk the toolbar list and do nothing at all when no name matches, so a typo is silent")
+      local absent = "toolbarNoSuchBar" .. suffix
+      local hideOk, hideErr = hideToolBar(absent)
+      assert.is_nil(hideOk)
+      assert.are.equal(("toolbar '%s' not found"):format(absent), hideErr)
+      local showOk, showErr = showToolBar(absent)
+      assert.is_nil(showOk)
+      assert.are.equal(("toolbar '%s' not found"):format(absent), showErr)
     end)
 
-    it("a packaged toolbar answering to its own name", function()
-      pending("regenerateEasyButtonBars builds a package's toolbars against the package's own action, so hideToolBar only answers to the package name and moves every toolbar in the package at once")
+    it("a floating toolbar is refused by name rather than reported missing", function()
+      local hideOk, hideErr = hideToolBar(floatingToolbar)
+      assert.is_nil(hideOk)
+      assert.are.equal(("toolbar '%s' is set to float, which showToolBar() and hideToolBar() do not move"):format(floatingToolbar), hideErr)
+      assert.are.equal(1, isActive(floatingToolbar, "button"))
+    end)
+
+    it("a packaged toolbar answers to its own name, leaving the package alone", function()
+      assert.is_true(hideToolBar(toolbar))
+      assert.are.equal(0, isActive(toolbar, "button"))
+      assert.are.equal(1, isActive(packageName, "button"))
+    end)
+
+    it("the name of the package a toolbar came in still moves it", function()
+      assert.is_true(hideToolBar(packageName))
+      assert.are.equal(0, toolbarActive())
+      assert.is_true(showToolBar(packageName))
+      assert.are.equal(1, toolbarActive())
     end)
 
     it("both hard-error on a non-string toolbar name", function()
@@ -6156,6 +6281,15 @@ describe("Command line actions and suggestions", function()
       assert.are.equal(('command line "%s" not found'):format(unknown), err)
     end)
 
+    it("still reads the command line name when something trails it", function()
+      -- clearing has no mandatory second argument, so argument 1 is the command
+      -- line name whatever follows it; the add and remove siblings only look
+      -- different because their last argument is the suggestion text
+      local ok, err = clearCmdLineSuggestions(unknown, "trailing")
+      assert.is_nil(ok)
+      assert.are.equal(('command line "%s" not found'):format(unknown), err)
+    end)
+
     it("hard-errors on a non-string command line name", function()
       local ok, err = pcall(clearCmdLineSuggestions, {})
       assert.is_false(ok)
@@ -6230,6 +6364,24 @@ describe("setPopup", function()
     assert.are.equal(('window "%s" not found'):format(unknown), err)
   end)
 
+  it("a refused call lets go of the functions it read", function()
+    local mismatchGrowth = registryGrowthOver(function()
+      setPopup(console, {function() end, function() end}, {"only one hint"})
+    end)
+    assert.are.equal(0, mismatchGrowth, ("the registry grew by %d over 20 size-mismatched calls"):format(mismatchGrowth))
+
+    local unknownGrowth = registryGrowthOver(function()
+      setPopup(unknown, {function() end}, {"first"})
+    end)
+    assert.are.equal(0, unknownGrowth, ("the registry grew by %d over 20 calls naming no window"):format(unknownGrowth))
+  end)
+
+  it("names the window before it counts the tables", function()
+    local ok, err = setPopup(unknown, {"one", "two"}, {"only one"})
+    assert.is_nil(ok)
+    assert.are.equal(('window "%s" not found'):format(unknown), err)
+  end)
+
   it("opening the popup menu and picking an entry", function()
     pending("the menu only opens on a real right-click - needs a functional test")
   end)
@@ -6260,9 +6412,8 @@ describe("Labels inside a user window", function()
   end)
 
   it("the label really is inside the user window, not the main window", function()
-    -- createLabel falls back to the main window without a word when the parent
-    -- window name matches nothing, so a spec that only reads the label back
-    -- would pass either way; hiding the parent is what tells them apart
+    -- reading the label back would pass wherever it ended up; hiding the parent
+    -- is what says which window it is in
     assert.is_true(windowVisible(label))
     hideWindow(userWindow)
     assert.is_false(windowVisible(label))
@@ -6271,7 +6422,21 @@ describe("Labels inside a user window", function()
   end)
 
   it("a parent window name that matches nothing is refused", function()
-    pending("createLabel puts the label in the main window and answers true when the parent window name is not a window")
+    local absentParent = "labelNoSuchParent" .. suffix
+    local orphan = "labelWithNoParent" .. suffix
+    local ok, err = createLabel(absentParent, orphan, 0, 0, 20, 10, 1)
+    assert.is_false(ok)
+    assert.are.equal(("window '%s' not found"):format(absentParent), err)
+    -- and no label was put in the main window instead
+    local deleteOk, deleteErr = deleteLabel(orphan)
+    assert.is_false(deleteOk)
+    assert.are.equal(("label name '%s' not found"):format(orphan), deleteErr)
+  end)
+
+  it("the main window is still a parent name it takes", function()
+    local mainLabel = "labelBackInTheMainWindow" .. suffix
+    finally(function() deleteLabel(mainLabel) end)
+    assert.is_true(createLabel("main", mainLabel, 0, 0, 20, 10, 1))
   end)
 
   it("echo puts text on a label that lives in a user window", function()
