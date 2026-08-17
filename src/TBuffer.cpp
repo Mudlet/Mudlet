@@ -435,6 +435,11 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     if (batch >= requestedLinesLimit) {
         batch = requestedLinesLimit / 10;
     }
+    // shrinkBuffer() pops one line per batch step, so a batch of none at all
+    // switches trimming off and lets the buffer grow past its limit
+    if (batch < 1) {
+        batch = 1;
+    }
     // clip the maximum to something reasonable that the machine can handle
     auto max = getMaxBufferSize();
     if (requestedLinesLimit > max) {
