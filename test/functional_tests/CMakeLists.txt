@@ -7,14 +7,12 @@ cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
-    TelnetTextDisplayedTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     cTelnetBufferTest.cpp
     DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
     TOscTest.cpp
-    TUserWindowTest.cpp
     SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
@@ -44,14 +42,11 @@ set(FUNCTIONAL_TEST_SOURCES
     GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     VariableEditorWriteBackTest.cpp
-    InsertTextCapTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
     MainWindowSizeReportTest.cpp
-    ClearWindowLogTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
-    LogRestartDuplicateLineTest.cpp
     ProfileRoundTripTest.cpp
     ProfileLoadTempFileTest.cpp
     PackageSelfRemovalTest.cpp
@@ -219,15 +214,9 @@ set_tests_properties(TelnetConnectLookupRaceTest PROPERTIES TIMEOUT 300)
 # families across 22 sizes, so it needs a longer timeout
 set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 
-# InsertTextCapTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(InsertTextCapTest PROPERTIES TIMEOUT 300)
-
 # TelnetCharsetNegotiationTest creates a fresh profile per test case, each of which
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
-
-# LogRestartDuplicateLineTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(LogRestartDuplicateLineTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout

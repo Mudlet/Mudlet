@@ -710,6 +710,160 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_false(contains(contents, "mudlet-spec-never-logged"), "the text was appended to a log that was closed")
         end)
       end)
+
+      -- A received line is held back from the log until the next one commits.
+      -- That deferral is what duplicate detection needs, and it is also the
+      -- window in which a trigger can still gag the line with deleteLine().
+      -- These pin down what it must, and must not, swallow.
+      describe("Tests what the deferred logging of received lines writes out", function()
+        local htmlLogging
+
+        setup(function()
+          -- plain text, so the assertions read the lines rather than the markup
+          -- an HTML log would wrap them in
+          htmlLogging = getConfig("logInHTML")
+          setConfig("logInHTML", false)
+        end)
+
+        teardown(function()
+          setConfig("logInHTML", htmlLogging)
+        end)
+
+        -- counts plain-text occurrences, so a needle carrying a Lua pattern
+        -- character still counts what it looks like
+        local function occurrences(haystack, needle)
+          local seen, from = 0, 1
+          while true do
+            local start, stop = haystack:find(needle, from, true)
+            if not start then
+              return seen
+            end
+            seen, from = seen + 1, stop + 1
+          end
+        end
+
+        it("keeps a line the window was cleared after", function()
+          local logPath
+          finally(function()
+            startLogging(false)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          logPath = select(3, startLogging(true))
+
+          local mark = getLastLineNumber("main")
+          feedTelnet("You are dead.\n")
+          assert.is_true(contains(textFrom(mark), "You are dead."), "the fed line did not reach the console buffer - start the suite with --offline, see the tests README")
+
+          -- the main console is shared with every other spec file, so this is
+          -- the one place in the suite that empties it; nothing else reads
+          -- console content it did not put there itself
+          clearWindow()
+          feedTelnet("You emerge unscathed.\n")
+          startLogging(false)
+
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.is_true(contains(log, "You are dead."), "clearing the window dropped the line that was pending for logging")
+          assert.is_true(contains(log, "You emerge unscathed."), "the line received after the window was cleared is missing from the log")
+        end)
+
+        it("keeps a line whose own trigger cleared the window", function()
+          local logPath, triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          logPath = select(3, startLogging(true))
+          triggerId = tempRegexTrigger("^You perish$", [[clearWindow()]])
+
+          feedTelnet("You perish\n")
+          feedTelnet("A new dawn\n")
+          startLogging(false)
+
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.is_true(contains(log, "You perish"), "a line whose own trigger cleared the window was dropped from the log")
+          assert.is_true(contains(log, "A new dawn"), "the line received after the window was cleared is missing from the log")
+        end)
+
+        it("leaves out a line its trigger gagged with deleteLine", function()
+          local logPath, triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          logPath = select(3, startLogging(true))
+          triggerId = tempRegexTrigger("^Top secret plans$", [[deleteLine()]])
+
+          feedTelnet("Before the gag.\n")
+          feedTelnet("Top secret plans\n")
+          feedTelnet("After the gag.\n")
+          startLogging(false)
+
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.is_true(contains(log, "Before the gag."), "the line before the gagged one is missing from the log")
+          assert.is_false(contains(log, "Top secret plans"), "the gagged line leaked into the log")
+          assert.is_true(contains(log, "After the gag."), "the line after the gagged one is missing from the log")
+        end)
+
+        it("does not replay the last line of one session into the next", function()
+          local firstPath, secondPath
+          finally(function()
+            startLogging(false)
+            if firstPath then
+              os.remove(firstPath)
+            end
+            if secondPath and secondPath ~= firstPath then
+              os.remove(secondPath)
+            end
+          end)
+
+          firstPath = select(3, startLogging(true))
+          local mark = getLastLineNumber("main")
+          feedTelnet("Session one final line.\n")
+          assert.is_true(contains(textFrom(mark), "Session one final line."), "the fed line did not reach the console buffer - start the suite with --offline, see the tests README")
+
+          -- stopping flushes the line that was still pending
+          local stoppedState = select(4, startLogging(false))
+          assert.equals(0, stoppedState)
+          local restartedPath, restartedState = select(3, startLogging(true))
+          secondPath = restartedPath
+          assert.equals(1, restartedState)
+
+          feedTelnet("Session two line.\n")
+          startLogging(false)
+
+          local log = readFile(secondPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          -- the log file is named after the second it was opened in and there is
+          -- no Lua setter for that name, so the restart either appends to the
+          -- same file or opens a new one. Either way the first session's last
+          -- line is written exactly once, and only into the log that was open
+          -- when it arrived.
+          if secondPath == firstPath then
+            assert.equals(1, occurrences(log, "Session one final line."))
+          else
+            assert.equals(0, occurrences(log, "Session one final line."))
+            local firstLog = readFile(firstPath)
+            assert.is_string(firstLog, "the first session's log file is not readable")
+            assert.equals(1, occurrences(firstLog, "Session one final line."))
+          end
+          assert.is_true(contains(log, "Session two line."), "the second session's own line is missing from its log")
+        end)
+      end)
     end)
 
     describe("Tests the file watching functions", function()

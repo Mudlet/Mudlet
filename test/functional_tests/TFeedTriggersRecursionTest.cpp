@@ -191,8 +191,7 @@ private slots:
         delete mudlet::self();
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // TelnetTextDisplayedTest).
+    // Starts a profile the way a user would via the GUI.
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);
