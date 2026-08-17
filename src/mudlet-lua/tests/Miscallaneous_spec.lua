@@ -1621,19 +1621,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("raises a Lua error for a first argument it cannot carry", function()
-        -- safe to assert, unlike the spec below: nothing has been put into the
-        -- event yet, so the raise has nothing to strand
         assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument type #1")
       end)
 
       it("raises a Lua error for a later argument it cannot carry", function()
-        -- BUG: the refusal is right, but it is raised with lua_error() after the
-        -- event has been built, and that longjmps past the destructor of the
-        -- TEvent holding the arguments read so far, which LeakSanitizer reports
-        -- and which would turn the leak-checking CI job red. Refusing the first
-        -- argument (above) is safe because nothing has been appended yet. Left
-        -- pending until the raise happens before the event is built.
-        pending("raiseGlobalEvent() leaks the event it was building when it refuses a later argument")
+        -- the arguments are all vetted before the TEvent is built, so this raise
+        -- has nothing to strand; the leak-checking CI job is what would notice
+        -- if that changed
         assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument type #2")
       end)
 
@@ -1744,6 +1738,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           -- command line's blacklist
           assert.equals(0, select('#', clearCmdLineBlacklist()))
           assert.equals(0, select('#', clearCmdLineBlacklist("main")))
+        end)
+
+        it("still reads the command line name when something trails it", function()
+          local ok, err = clearCmdLineBlacklist("mudlet-spec-no-such-command-line", "trailing")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "not found"), tostring(err))
         end)
       end)
 

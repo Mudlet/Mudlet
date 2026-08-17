@@ -286,7 +286,7 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
 {
     const int n = lua_gettop(L);
     const char* name = "main";
-    if (n == 1) {
+    if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
     auto pN = COMMANDLINE(L, QString{name});
@@ -1722,6 +1722,25 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         return lua_error(L);
     }
 
+    // every argument is vetted before the event is built: lua_error() longjmps
+    // past the TEvent's destructor, stranding whatever it has collected by then
+    for (int i = 1; i <= n; ++i) {
+        switch (lua_type(L, i)) {
+        case LUA_TNUMBER:
+        case LUA_TSTRING:
+        case LUA_TBOOLEAN:
+        case LUA_TNIL:
+            break;
+        default:
+            lua_pushfstring(L,
+                            "raiseGlobalEvent: bad argument type #%d (boolean, number, string or nil\n"
+                            "expected, got a %s!)",
+                            i,
+                            luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
     TEvent event{};
 
     for (int i = 1; i <= n; ++i) {
@@ -1750,12 +1769,9 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
             break;
         default:
-            lua_pushfstring(L,
-                            "raiseGlobalEvent: bad argument type #%d (boolean, number, string or nil\n"
-                            "expected, got a %s!)",
-                            i,
-                            luaL_typename(L, i));
-            return lua_error(L);
+            // the loop above refused every other type, so a type reaching here
+            // means the two have gone out of step
+            Q_UNREACHABLE();
         }
     }
 
