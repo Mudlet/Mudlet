@@ -97,11 +97,17 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     // last window closes, #9388), which means ~Updater only runs inside the
     // application's own destructor - after ~QApplication has torn down all
     // widget infrastructure. Deleting a QWidget that late corrupts the heap on
-    // Windows (#9122). aboutToQuit fires as the event loop exits, after the
-    // dialog's last-window-closed flow has finished but while the application
-    // is still fully alive, so destroy it there instead.
+    // Windows (#9122). aboutToQuit fires while the application is still fully
+    // alive, so destroy it there instead.
+    //
+    // deleteLater(), not delete: quit() emits aboutToQuit synchronously and the
+    // dialog quits when dismissed, so this can run with dialog code still on
+    // the stack (#9967). Qt flushes pending DeferredDelete events as exec()
+    // unwinds, so the dialog is still destroyed before ~QApplication.
     connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this]() {
-        delete updateDialog.data();
+        if (updateDialog) {
+            updateDialog->deleteLater();
+        }
     });
 #endif
 }

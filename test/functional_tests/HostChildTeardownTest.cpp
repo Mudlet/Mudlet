@@ -36,6 +36,7 @@
 #include <QJsonObject>
 #include <QPlainTextEdit>
 
+#include "ProfileTestHelper.h"
 #include "ActionUnit.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -81,29 +82,7 @@ private:
 
         const QString address = mLocalhost;
         const QString port = mPort;
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            return nullptr;
-        }
-        return mudlet::self()->getActiveHost();
+        return TestProfile::create(profileName, address, port);
     }
 
     // A root action set to be a floating toolbar is what puts a TToolBar on the
