@@ -89,6 +89,10 @@ private:
     static const inline QStringList kTestFamilies = {qsl("Bitstream Vera Sans Mono"), qsl("Ubuntu Mono")};
     static constexpr int kFirstSize = 9;
     static constexpr int kLastSize = 30;
+    static constexpr int kSpaceRunCount = 20;
+    // Any size where the bundled families are legible; these two cases are about
+    // whether a decoration is drawn at all, not about how tall its cell is.
+    static constexpr int kDecorationSize = 14;
 
     static bool pixelIsInk(QRgb pixel, QRgb background)
     {
@@ -436,6 +440,47 @@ private slots:
         }
     }
 
+    // A blank cell has no glyph to draw, so its underline is the only thing that
+    // reaches the screen from it. Qt draws that underline as part of the text
+    // for an unlinked cell, which is what stops such a cell being skipped.
+    void test_underlinedSpacesKeepTheirUnderline()
+    {
+        Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
+        QVERIFY2(host->mpConsole->mUpperPane, "No upper pane available");
+        applyFont(host, kTestFamilies.first(), kDecorationSize);
+        const QString spaces(kSpaceRunCount, QLatin1Char(' '));
+
+        // Undecorated the same run is genuinely blank, so this pins the check
+        // below to the underline rather than to anything else on the row
+        runLua(host, qsl("clearWindow() echo('%1') echo('\\n')").arg(spaces));
+        const int blankInk = inkOnLine(host, spaces);
+        QVERIFY2(blankInk >= 0, "could not find the run of spaces in the buffer");
+        QCOMPARE(blankInk, 0);
+
+        runLua(host, qsl("clearWindow() setUnderline(true) echo('%1') setUnderline(false) echo('\\n')").arg(spaces));
+        const int underlinedInk = inkOnLine(host, spaces);
+        QVERIFY2(underlinedInk >= 0, "could not find the underlined run of spaces in the buffer");
+        QVERIFY2(underlinedInk > 0, "an underlined run of spaces rendered no ink, so its underline was lost");
+    }
+
+    // A link suppresses Qt's own underline so a custom-coloured one can be drawn
+    // separately, which means a linked blank cell is skipped and its underline
+    // can only come from the decoration pass that follows the glyph.
+    void test_linkedSpacesKeepTheirUnderline()
+    {
+        Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
+        QVERIFY2(host->mpConsole->mUpperPane, "No upper pane available");
+        applyFont(host, kTestFamilies.first(), kDecorationSize);
+        const QString spaces(kSpaceRunCount, QLatin1Char(' '));
+
+        runLua(host, qsl("clearWindow() setUnderline(true) echoLink('%1', '', 'hint', true) setUnderline(false) echo('\\n')").arg(spaces));
+        const int ink = inkOnLine(host, spaces);
+        QVERIFY2(ink >= 0, "could not find the linked run of spaces in the buffer");
+        QVERIFY2(ink > 0, "a linked, underlined run of spaces rendered no ink, so its underline was lost");
+    }
+
     void cleanup()
     {
         const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
@@ -540,6 +585,39 @@ private:
         const QImage rendered = renderPane(host);
         const int cellHeight = cellHeightOf(pane);
         return collectInk(rendered, (underscoreLine - pane->imageTopLine()) * cellHeight, cellHeight, cellWidthOf(pane));
+    }
+
+    // How many pixels of the row holding the given line differ from the console
+    // background, sampled across the columns that line occupies. -1 if the line
+    // is not in the buffer or has scrolled out of view.
+    int inkOnLine(Host* host, const QString& lineText)
+    {
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        const int line = findLine(host, lineText);
+        if (line < 0) {
+            return -1;
+        }
+        pane->forceUpdate();
+        QApplication::processEvents();
+
+        const QImage rendered = renderPane(host);
+        const int cellHeight = cellHeightOf(pane);
+        const int top = (line - pane->imageTopLine()) * cellHeight;
+        if (top < 0) {
+            return -1;
+        }
+        const QRgb background = host->mpConsole->getConsoleBgColor().rgb();
+        const int lastY = qMin(top + cellHeight, rendered.height()) - 1;
+        const int lastX = qMin(lineText.size() * cellWidthOf(pane), rendered.width()) - 1;
+        int ink = 0;
+        for (int y = top; y <= lastY; ++y) {
+            for (int x = 0; x <= lastX; ++x) {
+                if (pixelIsInk(rendered.pixel(x, y), background)) {
+                    ++ink;
+                }
+            }
+        }
+        return ink;
     }
 
     static int findLine(Host* host, const QString& text)
