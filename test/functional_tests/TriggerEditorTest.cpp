@@ -28,6 +28,7 @@
 
 #include <QClipboard>
 
+#include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
@@ -55,30 +56,7 @@ private:
 
   void startProfile(const QString &hostname, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100ms);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), hostname);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    mpHost = mudlet::self()->getActiveHost();
+    mpHost = TestProfile::create(hostname, address, port);
     if (!mpHost) {
       QFAIL("No active host available.");
     }
