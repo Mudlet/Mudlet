@@ -114,8 +114,58 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 
 Updater::~Updater() = default;
 
+// A download is kept deliberately - UpdateDialog records it in settings and
+// reuses it next launch rather than fetching another 135MB - and the installer
+// copied from it on Windows has to outlive Mudlet, since the batch file only
+// runs it once Mudlet has exited. What was missing is anything to collect the
+// ones that never get reused: the installer copy, which nothing has ever
+// deleted, and downloads orphaned when Mudlet went away without recording them
+// (#9985). Those accumulated at ~135MB apiece.
+//
+// keepFilePath is the download UpdateDialog still intends to use. Everything
+// else is fair game once it has had time to be claimed - a second Mudlet may
+// have just started a download of its own, and an installer waiting for the
+// batch file to pick it up is only seconds old.
+void Updater::cleanupStaleUpdateFiles(const QString& directory, const QString& keepFilePath)
+{
+    if (directory.isEmpty()) {
+        qWarning() << "No temporary directory to clean leftover update files from";
+        return;
+    }
+
+    const QDir tempDir(directory);
+    const QStringList leftovers{qsl("mudlet-update-*"), qsl("mudlet-setup-*.exe")};
+    const QDateTime unclaimedBy = QDateTime::currentDateTime().addSecs(-3600);
+    const QString keepFile = keepFilePath.isEmpty() ? QString() : QFileInfo(keepFilePath).absoluteFilePath();
+    qint64 freedBytes = 0;
+    int removedCount = 0;
+    int failedCount = 0;
+
+    for (const QFileInfo& fileInfo : tempDir.entryInfoList(leftovers, QDir::Files)) {
+        if (fileInfo.absoluteFilePath() == keepFile || fileInfo.lastModified() > unclaimedBy) {
+            continue;
+        }
+        const qint64 fileSize = fileInfo.size();
+        if (QFile::remove(fileInfo.absoluteFilePath())) {
+            freedBytes += fileSize;
+            ++removedCount;
+        } else {
+            ++failedCount;
+        }
+    }
+
+    if (removedCount) {
+        qWarning() << "Removed" << removedCount << "leftover update file(s), freeing" << (freedBytes / 1024) << "KB";
+    }
+    if (failedCount) {
+        qWarning() << "Could not remove" << failedCount << "leftover update file(s) in" << directory << "- retrying on the next start";
+    }
+}
+
 void Updater::checkUpdatesOnStart()
 {
+    cleanupStaleUpdateFiles(QStandardPaths::writableLocation(QStandardPaths::TempLocation), dblsqd::UpdateDialog::pendingDownloadPath(mSettings));
+
 #if defined(Q_OS_MACOS)
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
