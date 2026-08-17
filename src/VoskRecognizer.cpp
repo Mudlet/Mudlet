@@ -94,6 +94,19 @@ VoskRecognizer::VoskRecognizer(QObject* parent)
 {
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &VoskRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &VoskRecognizer::slot_captureError);
+    // A silence timeout ends the utterance the way the user stopping would:
+    // finalise and report, never discard
+    connect(mpCapture, &SpeechAudioCapture::silenceTimedOut, this, &VoskRecognizer::stopListening);
+}
+
+void VoskRecognizer::setSilenceTimeout(int msec)
+{
+    mpCapture->setSilenceTimeout(msec);
+}
+
+int VoskRecognizer::silenceTimeout() const
+{
+    return mpCapture->silenceTimeout();
 }
 
 VoskRecognizer::~VoskRecognizer()

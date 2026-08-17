@@ -282,6 +282,12 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
             lua_pushstring(L, "modelPath");
             lua_pushstring(L, pRecognizer->modelPath().toUtf8().constData());
             lua_settable(L, -3);
+
+            // Milliseconds of continuous silence before listening stops
+            // automatically; 0 while the timeout is disabled
+            lua_pushstring(L, "silenceTimeout");
+            lua_pushinteger(L, pRecognizer->silenceTimeout());
+            lua_settable(L, -3);
         } else {
             lua_pushstring(L, "initialized");
             lua_pushboolean(L, false);
@@ -392,6 +398,35 @@ int TLuaInterpreter::sttClose(lua_State* L)
         }
     }
 
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+
+// stt.setSilenceTimeout(milliseconds)
+// Stop listening automatically after this long of continuous silence, with
+// the utterance finalised exactly as stt.stop() would. 0 disables the
+// timeout. The setting persists across listening sessions.
+// Returns true, or nil + error message on failure.
+int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
+{
+    const int msec = getVerifiedInt(L, __func__, 1, "milliseconds");
+    if (msec < 0) {
+        return warnArgumentValue(L, __func__, qsl("milliseconds must be 0 (disabled) or greater, got %1").arg(msec));
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    pMudlet->initSpeechRecognition();
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        return warnArgumentValue(L, __func__, "failed to create speech recognizer");
+    }
+
+    pRecognizer->setSilenceTimeout(msec);
     lua_pushboolean(L, true);
     return 1;
 }

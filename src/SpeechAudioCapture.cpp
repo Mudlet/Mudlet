@@ -24,6 +24,7 @@
 #include <QDebug>
 #include <QIODevice>
 #include <QMediaDevices>
+#include <QtMath>
 
 // Human-readable description of a QAudio::Error, for messages a player sees.
 // Each of these is substituted into "Audio input error occurred: %1", so they
@@ -131,6 +132,10 @@ bool SpeechAudioCapture::start()
 
     mCarryBuffer.clear();
     mResamplePhase = 0.0;
+    mSmoothedLevel = 0.0f;
+    // The timeout clock starts at start(), so a session opened into silence
+    // still times out rather than waiting forever for a first word
+    mSinceVoiced.start();
     mPollTimer.start(50);
     return true;
 }
@@ -264,6 +269,31 @@ void SpeechAudioCapture::convertAndEmit(const QByteArray& audioData)
     }
 
     emit pcm(convertedData);
+
+    if (mSilenceTimeoutMsec > 0) {
+        // RMS over the converted chunk, smoothed the same way the recognizer
+        // smooths for its own silence detection
+        const auto* samples = reinterpret_cast<const qint16*>(convertedData.constData());
+        const int sampleCount = convertedData.size() / static_cast<int>(sizeof(qint16));
+        double sumOfSquares = 0.0;
+        for (int i = 0; i < sampleCount; ++i) {
+            const double sample = samples[i] / 32768.0;
+            sumOfSquares += sample * sample;
+        }
+        const float level = sampleCount > 0 ? static_cast<float>(qSqrt(sumOfSquares / sampleCount)) : 0.0f;
+        mSmoothedLevel = mSmoothedLevel * 0.7f + level * 0.3f;
+
+        if (mSmoothedLevel >= 0.01f) {
+            mSinceVoiced.restart();
+        } else if (mSinceVoiced.isValid() && mSinceVoiced.elapsed() >= mSilenceTimeoutMsec) {
+            // Restart before announcing, so a receiver that keeps capture
+            // running gets one announcement per elapsed period, not one per
+            // poll. Emitted last: the receiver may stop() this component from
+            // within the signal.
+            mSinceVoiced.restart();
+            emit silenceTimedOut();
+        }
+    }
 }
 
 void SpeechAudioCapture::slot_audioStateChanged(QAudio::State newState)

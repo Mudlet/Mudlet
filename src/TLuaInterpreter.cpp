@@ -6068,6 +6068,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "unloadLibrary");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetLibraryPath);
     lua_setfield(pGlobalLua, -2, "getLibraryPath");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttSetSilenceTimeout);
+    lua_setfield(pGlobalLua, -2, "setSilenceTimeout");
     lua_setglobal(pGlobalLua, "stt");
 
 

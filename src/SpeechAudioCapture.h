@@ -23,6 +23,7 @@
 #include <QAudioFormat>
 #include <QAudioSource>
 #include <QByteArray>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPointer>
 #include <QTimer>
@@ -53,6 +54,12 @@ public:
 
     bool active() const { return mAudioSource != nullptr; }
 
+    // Stop delivering audio after this many milliseconds of continuous
+    // silence, announced via silenceTimedOut(). 0 (the default) disables the
+    // timeout entirely, preserving open-ended capture.
+    void setSilenceTimeout(int msec) { mSilenceTimeoutMsec = qMax(0, msec); }
+    int silenceTimeout() const { return mSilenceTimeoutMsec; }
+
     // The delivery format: pcm() payloads are this rate, mono, Int16
     static constexpr int scmSampleRate = 16000;
 
@@ -63,6 +70,11 @@ signals:
     // Capture became unusable. The device has already been torn down; the
     // message is translated and ready to show a player.
     void captureError(const QString& message);
+
+    // The configured silence timeout elapsed with no speech. Capture is still
+    // running when this fires, so the receiver decides what stopping means -
+    // typically finalising the utterance rather than discarding it.
+    void silenceTimedOut();
 
 private slots:
     void slot_poll();
@@ -85,6 +97,12 @@ private:
     // sample reads from. Carried across reads so resampling does not restart
     // its phase at every buffer boundary.
     double mResamplePhase = 0.0;
+
+    // Silence timeout state: level smoothing matches the recognizer's own
+    // silence detection, and the clock restarts on every voiced chunk
+    int mSilenceTimeoutMsec = 0;
+    float mSmoothedLevel = 0.0f;
+    QElapsedTimer mSinceVoiced;
 };
 
 #endif // MUDLET_SPEECHAUDIOCAPTURE_H

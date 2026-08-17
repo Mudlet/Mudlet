@@ -80,6 +80,13 @@ public:
     // No finalResult() is emitted for the abandoned phrase.
     virtual void resetUtterance() {}
 
+    // Stop listening automatically after this many milliseconds of continuous
+    // silence, finalising the utterance as stopListening() would. 0 (the
+    // default) keeps listening open-ended. Backends without the capability
+    // ignore it and keep reporting 0.
+    virtual void setSilenceTimeout(int msec) { Q_UNUSED(msec) }
+    virtual int silenceTimeout() const { return 0; }
+
     // === State Queries ===
 
     // Get current state of the recognizer

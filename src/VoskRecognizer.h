@@ -63,6 +63,8 @@ public:
     void stopListening() override;
     void cancel() override;
     void resetUtterance() override;
+    void setSilenceTimeout(int msec) override;
+    int silenceTimeout() const override;
 
     State state() const override { return mState; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
