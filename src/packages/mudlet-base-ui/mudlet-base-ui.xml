@@ -437,10 +437,13 @@ local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
 
 -- Everything a look decides lives in one of these tables: the dock's chrome,
 -- the gauge colours, the font, and the colour the game's own text sits on. In
--- all three the accent appears only on section headers and the active chat tab
--- so it stays an accent.
--- Fonts are limited to the families Mudlet ships, so a look renders the same on
--- a machine that has nothing else installed.
+-- all three the accent at full strength appears only on section headers and the
+-- active chat tab so it stays an accent; two of them reuse it heavily faded as the
+-- hover for a button.
+-- Fonts are limited to the families Mudlet ships, so a look's typography renders the
+-- same on a machine with nothing else installed. The two glyphs used as furniture
+-- (the palette button and the header grip) are in none of them and fall back per
+-- glyph, as the grip already did before any of this.
 local themes = {
   midnight = {
     label = "Midnight",
@@ -499,13 +502,14 @@ local themes = {
   },
 }
 
--- the order the palette button cycles through, which is also the order the
--- "baseui" listing reads in
+-- The order the palette button cycles through, which is also the order the "baseui"
+-- listing reads in. A look missing from here cannot be reached by the button at all.
+-- Names double as "baseui &lt;name&gt;" keywords, so they go through the alias last.
 local themeOrder = { "midnight", "ember", "hardlight" }
 local defaultThemeName = "midnight"
 
--- The look in force. Filled in place rather than reassigned, so the closures
--- and format strings built from it keep reading the live table.
+-- the look in force, a shallow copy of one of the above - so its gauges and
+-- console tables are still the look's own and must not be written to
 local theme = {}
 
 local layout = {
@@ -544,7 +548,7 @@ local function sectionTitle(key)
   return string.format([[&lt;span style="color: %s;"&gt;&amp;#9776;&lt;/span&gt; %s]], theme.textDim, sectionTitles[key])
 end
 
--- every gauge shares one look, a thin HUD line: bold value text floating
+-- every gauge is styled the same way, a thin HUD line: bold value text floating
 -- over a transparent zone, with a slim stat-colored line along the bottom
 -- 30% tracking the value. The band edge is a hard gradient stop - Qt
 -- gradient stops don't alpha-composite, so each band is either fully
@@ -568,18 +572,14 @@ local dockedSectionCss = [[background-color: transparent; border: 0px; padding-l
 -- above the line, inset from the left edge
 local gaugeText = [[background-color: transparent; padding-left: 8px; padding-bottom: 9px;]]
 
--- a half-filled circle, the usual shorthand for "change how this looks". It sits
--- with the dock's own minimize and close buttons, which is what makes it
--- something a player finds without being told about it. Written as the character
--- rather than as an HTML entity because it goes into console text as well as into
--- a label, and cecho prints an entity literally.
+-- Written as the character rather than as an HTML entity because it goes into
+-- console text as well as into a label, and cecho prints an entity literally.
 local paletteGlyph = "◐"
 
 local mapPlaceholderText = "Your map will appear&lt;br&gt;here as you explore"
 
 -- Every stylesheet the dock paints with, rebuilt from `theme` whenever the look
--- changes. Held in one table (rather than as separate locals) so switching look
--- is a matter of refilling it - the widgets are then repainted from here.
+-- changes; the widgets are then repainted from here.
 local css = {}
 local gaugeDefs = { hp = {}, mp = {}, xp = {}, mv = {}, enemy = {} }
 
@@ -1363,30 +1363,43 @@ function BaseUI.saveSettings()
   end
 end
 
--- Mudlet's own default background, which is also what "Midnight" wants: that
--- look asks for no tint, so choosing it puts the game's text back on black.
-local defaultConsoleTint = { 0, 0, 0 }
+-- what an untouched profile has, and what a look with no tint of its own asks for
+local defaultConsoleTint = { 0, 0, 0, 255 }
 
+-- Alpha is part of the comparison, not an afterthought: it is a setting of its own
+-- (the preferences colour picker offers it, and the profile saves it), and a
+-- translucent console is what makes a full-window background image visible at all.
+-- Ignoring it here would read (0,0,0,0) as the plain default black we are free to
+-- take over, and painting it back opaque would destroy that image for good.
 local function sameTint(one, other)
-  return one and other and one[1] == other[1] and one[2] == other[2] and one[3] == other[3]
+  return one and other and one[1] == other[1] and one[2] == other[2]
+    and one[3] == other[3] and one[4] == other[4]
 end
 
--- A look tints the background the game's own text sits on, which is the
--- difference between a themed strip beside a black screen and a themed window.
--- That colour belongs to the player though, so we only ever move one that is
--- still Mudlet's default or the one we set ourselves - and what we set has to be
--- remembered, because the profile saves its background colour and ours would
--- otherwise be indistinguishable from a choice by the next session.
+-- A look tints the background the game's own text sits on, which is the difference
+-- between a themed strip beside a black screen and a themed window. That colour
+-- belongs to the player though, so we only ever move one we can still account for.
+-- What we applied has to be remembered, because the profile saves its background
+-- colour and ours would otherwise be indistinguishable from a deliberate choice by
+-- the next session.
+-- Once there is a tint on record it is the only thing that counts as ours. Treating
+-- plain black as ours as well would undo the most likely reaction to a tint someone
+-- dislikes and cannot place: Preferences has a "Reset colours" button that sets the
+-- background back to black, and we would put our own colour straight back.
 function BaseUI.consoleTintIsOurs()
-  local red, green, blue = getBackgroundColor("main")
-  local current = { red, green, blue }
-  return sameTint(current, defaultConsoleTint) or sameTint(current, BaseUI.settings.consoleTint)
+  local current = { getBackgroundColor("main") }
+  if BaseUI.settings.consoleTint then
+    return sameTint(current, BaseUI.settings.consoleTint)
+  end
+  return sameTint(current, defaultConsoleTint)
 end
 
 -- The chat panes are fed lines copied out of the main console, and a copied line
--- carries that console's background with it - so a pane on any other colour
--- shows captured chat as rectangles of the wrong shade. Whatever the main
--- console ends up on, tinted by us or chosen by the player, the panes follow.
+-- carries that console's background with it - so a pane on any other colour shows
+-- captured chat as rectangles of the wrong shade. Re-matched wherever we touch the
+-- tint, and when the panes are made. Mudlet raises no event for the player changing
+-- their background themselves, so that only reaches the panes at the next look
+-- change or hide/show.
 local function matchChatPanesToConsole()
   if not BaseUI.chats then
     return
@@ -1400,21 +1413,42 @@ local function matchChatPanesToConsole()
   end
 end
 
-local function applyConsoleTint()
+-- Writes BaseUI.settings.consoleTint, so a caller that also saves has to run this
+-- before its saveSettings or it persists the tint from before. Returns whether the
+-- background is ours to colour, which is not the same as having changed it.
+-- giveBack asks for the untinted colour whatever the look wants, for the one caller
+-- that is on its way out and has no dormant flag to set
+local function applyConsoleTint(giveBack)
   if not BaseUI.consoleTintIsOurs() then
-    -- the player has a background of their own: stop claiming it, and leave both
-    -- it and the panes that have to match it alone from here on
+    -- the player has a background of their own: stop tinting, but keep the panes
+    -- in step with the colour they chose
     BaseUI.settings.consoleTint = nil
     matchChatPanesToConsole()
-    return
+    return false
   end
-  -- a hidden UI, or one standing aside for the game's own interface, has no
-  -- business colouring the game's text either
-  local tint = not BaseUI.dormant() and theme.console
-  local wanted = tint or defaultConsoleTint
-  setBackgroundColor("main", wanted[1], wanted[2], wanted[3])
-  BaseUI.settings.consoleTint = tint and { tint[1], tint[2], tint[3] } or nil
+  -- A hidden UI, or one standing aside for the game's own interface, has no
+  -- business colouring the game's text. Neither has one that does not exist yet:
+  -- the dock is built only once the game sends something to show, and a tint with
+  -- no dock beside it is a recoloured window with nothing to show for it, so
+  -- build() applies this once it has one.
+  local tint = not giveBack and BaseUI.container and not BaseUI.dormant() and theme.console
+  -- the player's own transparency is left as it is: a look picks a hue, not
+  -- whether the window can be seen through
+  local alpha = select(4, getBackgroundColor("main"))
+  local wanted = { tint and tint[1] or defaultConsoleTint[1],
+                   tint and tint[2] or defaultConsoleTint[2],
+                   tint and tint[3] or defaultConsoleTint[3], alpha }
+  -- Only when it would actually differ. Untinted looks want plain black, which is
+  -- already what an untouched profile has - writing it anyway would put every
+  -- profile's background through a needless change on every single load.
+  if not sameTint({ getBackgroundColor("main") }, wanted) then
+    setBackgroundColor("main", wanted[1], wanted[2], wanted[3], wanted[4])
+  end
+  -- copied rather than referenced, and with the alpha actually in force, so the
+  -- next session recognises this as ours
+  BaseUI.settings.consoleTint = tint and { wanted[1], wanted[2], wanted[3], wanted[4] } or nil
   matchChatPanesToConsole()
+  return true
 end
 
 local function paintPaletteButton()
@@ -1423,12 +1457,11 @@ local function paintPaletteButton()
   end
   BaseUI.paletteButton:setStyleSheet(css.button)
   BaseUI.paletteButton:echo(paletteGlyph, theme.textDim, "c")
-  -- names the look it is on, so the button explains itself before it is clicked
   BaseUI.paletteButton:setToolTip(
     string.format("Change the look - now %s, %s", theme.label, theme.blurb), 0)
 end
 
--- Repaints what is already on screen from the refilled css table. Everything
+-- Repaints what is already on screen from the refilled css table and `theme`. Everything
 -- here is created once and then outlives any number of look changes, so none of
 -- it can be left carrying the colours of the look before.
 function BaseUI.restyle()
@@ -1446,8 +1479,8 @@ function BaseUI.restyle()
   if BaseUI.mapPlaceholder then
     BaseUI.mapPlaceholder:setStyleSheet(css.placeholder)
     BaseUI.mapPlaceholder:setFont(theme.font)
-    -- the echo is what repaints the text in the new colour: setFgColor alone
-    -- only changes what the next echo will use
+    -- after the setFont, not before: that re-echoes in the colour the label already
+    -- had, so the new one has to go on afterwards
     BaseUI.mapPlaceholder:echo(mapPlaceholderText, theme.textDim)
   end
   for _, key in ipairs(sectionOrder) do
@@ -1459,7 +1492,6 @@ function BaseUI.restyle()
       if section.headerRule then
         section.headerRule:setStyleSheet(css.headerRule)
       end
-      -- carries the section's own background and its accented title
       BaseUI.styleSection(key)
     end
   end
@@ -1470,24 +1502,31 @@ function BaseUI.restyle()
         label:setFont(theme.font)
       end
     end
-    -- the tab stylesheets and title colours, compared against Qt rather than
-    -- cached, so a look change repaints every one of them
+    -- the stylesheet is compared against Qt and the colour against Geyser's own
+    -- cache; a look change moves both, so every tab repaints
     BaseUI.refreshChatTabs()
   end
   for key, gauge in pairs(BaseUI.gauges) do
     local def = gaugeDefs[key]
     if def then
-      gauge:setStyleSheet(def.front, css.gaugeBack, gaugeText)
+      -- the font first: Geyser wraps a label's message in the face it had at the
+      -- time, so the stylesheet pass below is what re-echoes the value into the new
+      -- one rather than leaving it in the previous look's face until it next moves
       gauge.text:setFont(theme.font)
+      gauge:setStyleSheet(def.front, css.gaugeBack, gaugeText)
     end
   end
 end
 
--- The one entry point for changing look: fills `theme` in place, rebuilds every
--- stylesheet from it, then repaints. Also the scriptable one - a game that wants
--- the starter UI in its own colours calls this from its package.
+-- The one entry point for changing look: refills `theme`, rebuilds every stylesheet
+-- from it, then repaints. Scriptable too, so a game's package can put the starter UI
+-- on one of the looks above by name - there is no way to register colours of its own.
 function BaseUI.setTheme(name, quiet)
   if not themes[name] then
+    -- a package author calling this by hand gets nothing back but false, so say
+    -- which names there are somewhere they will see it
+    debugc(string.format("BaseUI.setTheme: there is no look called \"%s\" - the looks are %s.\n",
+      tostring(name), table.concat(themeOrder, ", ")))
     return false
   end
   -- in place, so the closures and the css table keep reading the same table
@@ -1499,21 +1538,25 @@ function BaseUI.setTheme(name, quiet)
   end
   BaseUI.themeName = name
   rebuildCss()
-  applyConsoleTint()
+  local tookBackground = applyConsoleTint()
   BaseUI.restyle()
-  if BaseUI.settings.theme ~= name then
-    BaseUI.settings.theme = name
-    BaseUI.saveSettings()
-  end
+  -- unconditionally: applyConsoleTint moves settings.consoleTint even on a look
+  -- that is already in force, and that has to be remembered too
+  BaseUI.settings.theme = name
+  BaseUI.saveSettings()
   if not quiet then
     cecho(string.format("\n&lt;cyan&gt;[ Mudlet UI ] Look: &lt;yellow&gt;%s&lt;cyan&gt; - %s.&lt;reset&gt;\n",
       theme.label, theme.blurb))
+    -- otherwise a look that only got half of what it asked for reads as a failure
+    -- of the look rather than as us keeping out of the player's way
+    if theme.console and not tookBackground then
+      cecho("&lt;dim_grey&gt;[ Mudlet UI ] Kept the background color you chose, so only the panel changed.&lt;reset&gt;\n")
+    end
   end
   return true
 end
 
--- what the palette button does: the next look round, so trying all three is
--- three clicks and needs nothing typed
+-- advances one look, wrapping - so the looks can be tried by eye with nothing typed
 function BaseUI.cycleTheme()
   local current = BaseUI.themeName or defaultThemeName
   for index, name in ipairs(themeOrder) do
@@ -1554,6 +1597,19 @@ end
 -- if the game's interface is later uninstalled, quietly return to duty. Not
 -- straight away though: a version upgrade uninstalls only to reinstall a
 -- moment later, so look again once the dust has settled
+-- Uninstalling this package takes the dock and the "baseui" command with it, so a
+-- tinted background would otherwise be left behind with nothing left to explain it
+-- or to give it back. Handled here rather than in a handler of its own because both
+-- cases arrive on the same event.
+function BaseUI.packageRemoved(_, packageName)
+  if packageName == "mudlet-base-ui" then
+    applyConsoleTint(true)
+    BaseUI.saveSettings()
+    return
+  end
+  BaseUI.serverGuiRemoved(nil, packageName)
+end
+
 function BaseUI.serverGuiRemoved(_, packageName)
   if not BaseUI.settings.standingAside or packageName ~= BaseUI.settings.standingAside then
     return
@@ -1628,10 +1684,11 @@ function BaseUI.build()
     autoSave = false,
   })
   -- Sits in the dock's title bar beside the minimize and close buttons Adjustable
-  -- puts there, one slot further in - so it reads as part of the same row rather
-  -- than as something dropped on top of it. Those two are direct children of the
-  -- container rather than of the container's contents, and this has to be one too
-  -- or it would scroll away with the sections.
+  -- puts there, one slot further in - 3.8 continues its own 1.4/2.6 spacing, so this
+  -- tracks whatever it does. Like those two it has to be a direct child rather than
+  -- part of the container's contents: contents are inset by the padding and are
+  -- hidden when the dock is minimized, and this belongs to the title row.
+  -- buttonsize comes back from Adjustable as a string, hence the tonumber.
   BaseUI.container.goInside = false
   local buttonSize = tonumber(BaseUI.container.buttonsize) or 15
   BaseUI.paletteButton = Geyser.Label:new({
@@ -1675,9 +1732,8 @@ function BaseUI.build()
       name = "BaseUI_chat_" .. tab.key,
       x = "0%", y = belowTabs, width = "100%", height = "100%-" .. belowTabs,
       autoWrap = true,
-      -- matchChatPanesToConsole puts every pane on the main console's own colour
-      -- below, once they all exist: trigger-captured lines keep that console's
-      -- background, so anything else shows them as rectangles of the wrong shade
+      -- no `color` here on purpose: applyConsoleTint puts every pane on the main
+      -- console's own colour once they all exist
       fontSize = 10,
     }, BaseUI.sections.chat)
     BaseUI.chats[tab.key] = console
@@ -1686,7 +1742,9 @@ function BaseUI.build()
     end
   end
   BaseUI.chat = BaseUI.chats.all
-  matchChatPanesToConsole()
+  -- now that there is a dock to tint alongside, and panes to keep in step with it
+  applyConsoleTint()
+  BaseUI.saveSettings()
   BaseUI.refreshChatTabs()
   BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
   -- last, so the bars are above the chat window where the two overlap
@@ -2054,7 +2112,8 @@ function BaseUI.createSection(key)
   }, section)
   section.goInside = true
   rule:setStyleSheet(css.headerRule)
-  -- kept so a look change can repaint it; it is not the section's child to find
+  -- kept so a look change can repaint it without going through Geyser's
+  -- windowList by name
   section.headerRule = rule
   BaseUI.loadSection(key)
   return section
@@ -2433,9 +2492,9 @@ end
 
 function BaseUI.alias(input)
   input = (input or ""):trim():lower()
-  if themes[input] then
-    BaseUI.setTheme(input)
-  elseif input == "hide" then
+  -- looks are matched after the commands, so naming one "hide" could never take
+  -- that command away from the player
+  if input == "hide" then
     BaseUI.hide()
   elseif input == "show" then
     BaseUI.show()
@@ -2448,6 +2507,8 @@ function BaseUI.alias(input)
     else
       cecho("\n&lt;cyan&gt;[ Mudlet UI ] Everything is in the dock already - drag a section's header out to put it anywhere.&lt;reset&gt;\n")
     end
+  elseif themes[input] then
+    BaseUI.setTheme(input)
   else
     local state
     if BaseUI.settings.hidden then
@@ -2473,8 +2534,13 @@ function BaseUI.alias(input)
 end
 
 BaseUI.loadSettings()
--- the look has to be in force before anything is painted from it
-BaseUI.setTheme(BaseUI.settings.theme or defaultThemeName, true)
+-- The look has to be in force before anything is painted from it, and the name
+-- comes out of a file the player can edit - or from a later release that had a
+-- look this one does not. An unknown name would leave the palette empty and the
+-- first paint would fail on it, taking the whole interface with it, so fall back.
+if not BaseUI.setTheme(BaseUI.settings.theme, true) then
+  BaseUI.setTheme(defaultThemeName, true)
+end
 -- the chat gates are live from the start (unless the UI is dormant) so the
 -- interface can appear on the first chat line even on games without GMCP.
 -- Their tree is imported ahead of this script, and the vitals trigger is
@@ -2499,7 +2565,7 @@ registerAnonymousEventHandler("sysDisconnectionEvent", "BaseUI.handleDisconnect"
 registerAnonymousEventHandler("sysDataSendRequest", "BaseUI.noteCommandSent")
 registerAnonymousEventHandler("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
 registerAnonymousEventHandler("sysServerGuiInstalled", "BaseUI.standAside")
-registerAnonymousEventHandler("sysUninstallPackage", "BaseUI.serverGuiRemoved")
+registerAnonymousEventHandler("sysUninstallPackage", "BaseUI.packageRemoved")
 for _, stat in ipairs(msdpStats) do
   registerAnonymousEventHandler("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
   registerAnonymousEventHandler("msdp." .. stat.max, "BaseUI.updateMsdpVitals")

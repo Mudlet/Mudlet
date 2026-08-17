@@ -18,8 +18,8 @@ over the game's text. The sections left behind share out the space it
 had, and where you leave each one is remembered.
 
 It comes in three looks - Midnight, Ember and Hardlight. Click the ◐ in
-the dock's title bar to try each in turn; a look colours the dock and,
-if you have not chosen a background colour of your own, the background
+the dock's title bar to try each in turn; a look colors the dock and,
+if you have not chosen a background color of your own, the background
 the game's text sits on as well.
 
 Commands:
