@@ -2376,12 +2376,32 @@ describe("Tests UI functions", function()
       assert.are.equal("none", format.underlineStyle)
     end)
 
+    -- The plain SGR 4 is the solid underline, so it has to replace whatever
+    -- style came before it instead of leaving that style in place
+    local plainOverStyle = {
+      {style = "curly", sequence = "\27[4:3m"},
+      {style = "dotted", sequence = "\27[4:4m"},
+      {style = "dashed", sequence = "\27[4:5m"},
+    }
+
+    for _, row in ipairs(plainOverStyle) do
+      it("reports that a plain SGR 4 after a " .. row.style .. " underline is a solid one", function()
+        local format = formatAfter(row.sequence .. "\27[4m")
+        assert.is_true(format.underline)
+        assert.are.equal("solid", format.underlineStyle)
+      end)
+    end
+
     -- "none" cannot show whether the style flags were cleared along with the
-    -- underline, and the plain SGR 4 leaves them alone - so a style that
-    -- survived being turned off would come back on the next plain underline
+    -- underline, so put the underline back through a hyperlink instead: that
+    -- adds a plain underline to the cell without touching the parser's own
+    -- style flags, which a style left behind by the clearing sequence would
+    -- then win over
+    local solidLink = "\27]8;;https://example.com/?config={\"style\":{\"underline\":true}}\27\\"
+
     for _, clearingSequence in ipairs({"\27[4:0m", "\27[4:6m"}) do
       it("reports that a curly underline cleared by " .. clearingSequence:sub(3, -2) .. " does not come back", function()
-        local format = formatAfter("\27[4:3m" .. clearingSequence .. "\27[4m")
+        local format = formatAfter("\27[4:3m" .. clearingSequence .. solidLink, "\27]8;;\27\\")
         assert.is_true(format.underline)
         assert.are.equal("solid", format.underlineStyle)
       end)
