@@ -36,14 +36,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
+using namespace std::chrono_literals;
 
 // One telnet option command, as either side of the conversation sends it.
 struct TelnetReply
@@ -247,8 +242,6 @@ private:
     static constexpr unsigned char kCompress2 = static_cast<unsigned char>(OPT_COMPRESS2);
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
-
     void init()
     {
         mpServer = new ProtocolOfferServer(qApp);
@@ -616,20 +609,5 @@ private:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TelnetReconnectStateTest.moc"
-QTEST_MAIN(TelnetReconnectStateTest)
+MUDLET_GROUPED_TEST_MAIN(TelnetReconnectStateTest)

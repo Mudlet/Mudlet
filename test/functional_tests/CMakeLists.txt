@@ -7,12 +7,8 @@ cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
-    TelnetTlsPromptTest.cpp
-    TelnetBenchmark.cpp
-    cTelnetBufferTest.cpp
     DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
-    TOscTest.cpp
     SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
@@ -21,24 +17,18 @@ set(FUNCTIONAL_TEST_SOURCES
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
     WindowLayoutSaveTest.cpp
-    TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
-    TelnetStringSequenceRecoveryTest.cpp
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
-    TelnetConnectFailureTest.cpp
-    TelnetReconnectStateTest.cpp
     SavedVariableFenceTest.cpp
     CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
-    CsiCursorForwardTest.cpp
     CopyAsImageTest.cpp
     FeatureCalloutTest.cpp
     WrapLineRewrapTest.cpp
     GlyphOverflowTest.cpp
-    GMCPCharLoginTest.cpp
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
@@ -58,7 +48,6 @@ set(FUNCTIONAL_TEST_SOURCES
     LabelMovieRefusalTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
-    TelnetConnectLookupRaceTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfRemovalTest.cpp
     ProfileFolderNameTest.cpp
@@ -92,16 +81,30 @@ endif()
 # link step, and none of that is per-test - so tests of one subsystem are built
 # together and told on the command line which class to run. See GroupedTest.h.
 #
-# A new window or console test belongs here rather than in
-# FUNCTIONAL_TEST_SOURCES, and writes MUDLET_GROUPED_TEST_MAIN() rather than
-# QTEST_MAIN(). Its class name has to match its filename, since that is the name
-# ctest passes on the command line and the group binary looks up.
+# A new test of a subsystem that has a group belongs in that group's list rather
+# than in FUNCTIONAL_TEST_SOURCES, and writes MUDLET_GROUPED_TEST_MAIN() rather
+# than QTEST_MAIN(). Its class name has to match its filename, since that is the
+# name ctest passes on the command line and the group binary looks up.
 set(WINDOW_GROUP_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
     NarrowWindowWrapTest.cpp
     WindowBackgroundTest.cpp
     WindowStateGettersTest.cpp
+)
+
+set(TELNET_GROUP_TEST_SOURCES
+    CsiCursorForwardTest.cpp
+    cTelnetBufferTest.cpp
+    GMCPCharLoginTest.cpp
+    TelnetBenchmark.cpp
+    TelnetCharsetNegotiationTest.cpp
+    TelnetConnectFailureTest.cpp
+    TelnetConnectLookupRaceTest.cpp
+    TelnetReconnectStateTest.cpp
+    TelnetStringSequenceRecoveryTest.cpp
+    TelnetTlsPromptTest.cpp
+    TOscTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -165,14 +168,21 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     list(APPEND allFunctionalTestNames ${test_name})
 endforeach()
 
-add_functional_test_binary(functional_window_tests GroupedTestMain.cpp ${WINDOW_GROUP_TEST_SOURCES})
-foreach(test_file ${WINDOW_GROUP_TEST_SOURCES})
-    get_filename_component(test_name ${test_file} NAME_WE)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:functional_window_tests> ${test_name})
-    list(APPEND allFunctionalTestNames ${test_name})
-endforeach()
+# One executable for the group, but a ctest case each: every test keeps its own
+# add_test entry, which names the class for the group binary to run.
+macro(add_grouped_test_binary target)
+    add_functional_test_binary(${target} GroupedTestMain.cpp ${ARGN})
+    foreach(grouped_test_file ${ARGN})
+        get_filename_component(grouped_test_name ${grouped_test_file} NAME_WE)
+        add_test(NAME ${grouped_test_name} COMMAND $<TARGET_FILE:${target}> ${grouped_test_name})
+        list(APPEND allFunctionalTestNames ${grouped_test_name})
+    endforeach()
+endmacro()
 
-# Both lists' cases, so a grouped test's properties are the solo ones verbatim
+add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
+
+# Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, at

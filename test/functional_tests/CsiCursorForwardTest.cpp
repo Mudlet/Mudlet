@@ -46,12 +46,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
+#include "GroupedTest.h"
 
 class CsiCursorForwardTest : public QObject
 {
@@ -104,8 +99,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResources();
-
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0);
         mPort = QString::number(mpServer->serverPort());
@@ -200,20 +193,5 @@ private slots:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "CsiCursorForwardTest.moc"
-QTEST_MAIN(CsiCursorForwardTest)
+MUDLET_GROUPED_TEST_MAIN(CsiCursorForwardTest)

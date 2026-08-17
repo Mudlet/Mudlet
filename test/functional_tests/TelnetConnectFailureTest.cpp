@@ -36,14 +36,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
+using namespace std::chrono_literals;
 
 // A game that says nothing and only counts who arrives. It can be taken off the air and put back
 // on the same port, which is how a game that is down and then comes back is played out here.
@@ -133,8 +128,6 @@ private:
     quint16 mPort = 0;
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
-
     void init()
     {
         mpServer = new SilentGameServer(qApp);
@@ -486,20 +479,5 @@ private:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TelnetConnectFailureTest.moc"
-QTEST_MAIN(TelnetConnectFailureTest)
+MUDLET_GROUPED_TEST_MAIN(TelnetConnectFailureTest)

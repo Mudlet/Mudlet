@@ -37,12 +37,7 @@
 #include <QTcpServer>
 #include <QRegularExpression>
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForTlsPrompt();
+#include "GroupedTest.h"
 
 using namespace std::chrono_literals;
 
@@ -63,8 +58,6 @@ private:
     QString mPort;
 
 private slots:
-    void initTestCase() { initializeQRCResourcesForTlsPrompt(); }
-
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
@@ -476,20 +469,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForTlsPrompt()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TelnetTlsPromptTest.moc"
-QTEST_MAIN(TelnetTlsPromptTest)
+MUDLET_GROUPED_TEST_MAIN(TelnetTlsPromptTest)
