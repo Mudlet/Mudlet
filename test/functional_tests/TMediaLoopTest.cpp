@@ -96,7 +96,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "Test-Media-Loop";
-    const QString mPort = "4012";
+    QString mPort; // assigned the stub's actual ephemeral port in init()
     const QString mLocalhost = "localhost";
 
     // Length of the generated clip. Long enough that "still playing" cannot be an
@@ -135,7 +135,8 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mLocalhost, mPort.toUShort());
+        mpServer->start(mLocalhost, 0);
+        mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
