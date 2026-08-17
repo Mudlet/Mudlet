@@ -5077,45 +5077,45 @@ están en estas áreas...</numerusform>
     <message>
       <location filename="../src/TRoomDB.cpp" line="915"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Esta sala con este ID inválido se ha renumerado a: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="916"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Esta sala se ha renumerado desde el ID inválido: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="952"/>
       <location filename="../src/TRoomDB.cpp" line="955"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - La numeración de los ID de sala es correcta.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="975"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Se han encontrado identificadores de salidas duplicadas incompletas en la sala con ID: %1; es una anomalía, pero se ha solucionado fácilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="980"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Se han encontrado identificadores de salidas duplicadas incompletas en la sala; es una anomalía, pero se ha solucionado fácilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="989"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Se han encontrado identificadores de bloqueo de salida duplicadas en la sala con ID: %1; es una anomalía, pero se ha solucionado fácilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="994"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Se han encontrado identificadores de bloqueo de salida duplicados en la sala; es una anomalía, pero se ha solucionado fácilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1067"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Esta sala indica pertenecer al área con ID: %1, pero dicha área no tenía registro de ella. Se ha actualizado el área para incluir esta sala.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1073"/>
@@ -5123,17 +5123,19 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En el área con ID: %1 faltaban %2 salas respecto a las que debería registrar como propias y son las siguientes:
+%3
+se han añadido.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1081"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En esta área faltaban %1 salas respecto a las que debería registrar como propias. Son: %2. Se han añadido.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1102"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Esta sala estaba reclamada por el área con ID: %1, pero no pertenece a ella. Se ha actualizado el área para no incluir esta sala.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1108"/>
@@ -5141,17 +5143,19 @@ they have been added.</source>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En el área con ID: %1 había %2 salas adicionales en comparación con las que debería registrar como propias y eran las siguientes:
+%3
+se han eliminado.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1116"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - En esta área había %1 salas adicionales que no se deberían registrar como propias. Eran: %2. Se han eliminado.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1227"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Se ha detectado que ya se han utilizado sufijos con el formato &quot;_###&quot;. Para simplificar el algoritmo de renombrado, estos se habrán eliminado y posiblemente cambiado mientras Mudlet resuelve este asunto. Si un número asignado de esta manera &lt;b&gt;es&lt;/b&gt; importante para usted, puede volver a cambiarlo, ¡Siempre y cuando renombre primero el área a la que se le asignó el sufijo deseado...!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1238"/>
@@ -5161,12 +5165,12 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1241"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Se cambió el nombre del área para evitar duplicados o áreas sin nombre. Nombre anterior: &quot;%1&quot;, nombre nuevo: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1250"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - ¡Se detectaron nombres de área vacíos y duplicados en el archivo del mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1251"/>
@@ -5176,12 +5180,14 @@ here (or created in the future) will automatically be assigned the name &quot;%1
 Duplicated area names will cause all but the first encountered one to gain a
 &quot;_###&quot; style suffix.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Anteriormente Mudlet permitía que el mapa tuviera más de un área con el mismo nombre o sin nombre. Para resolver estos casos, las áreas sin nombre aquí (o creadas en el futuro) se les asignará automáticamente el nombre &quot;%1&quot;. 
+Los nombres del área duplicados harán que todas, excepto la primera encontrada, reciban un sufijo del tipo &quot;_###&quot;.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1260"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - ¡Se detectaron nombres de área duplicados en el archivo del mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1261"/>
@@ -5197,12 +5203,16 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Debido a que en el pasado no se verificaban ciertas situaciones, Mudlet permitía al usuario tener más de un área con el mismo nombre.
+Esto generaba confusión y ahora no está permitido. 
+Los nombres del área duplicados harán que todas, excepto la primera encontrada, reciban un sufijo del tipo &quot;_###&quot;, donde cada &quot;###&quot; es un número en incremento; es posible que desee cambiarlos, tal vez reemplazándolos con un &quot;(nombre de subárea)&quot;, pero dependerá completamente de usted cómo hacerlo, con la única restricción de que no podrá asignar a un área el nombre de otra existente en ese momento.
+Si hay más de un área sin nombre, todas excepto la primera también recibirán un sufijo de esta manera.
+%1</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1276"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - ¡Se ha detectado un nombre de área vacío en el archivo del mapa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1279"/>
@@ -5217,13 +5227,16 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Debido a que en el pasado no se verificaban ciertas situaciones, Mudlet permitía que el mapa tuviera un área sin nombre. Esto puede generar confusión y ahora no está permitido.
+Para resolver este caso, a las áreas sin nombre aquí (o a las que se creen en el futuro) se les asignará automáticamente el nombre &quot;%1&quot;.
+Si esto ocurre más de una vez, el dúplicado de nombres del área hará que todas, excepto la primera encontrada, reciban un sufijo del tipo &quot;_###&quot;, donde cada &quot;###&quot; es un número en incremento. 
+Es posible que desee cambiarlos, tal vez añadiendo nombres de área más significativos, pero depende completamente de usted cómo hacerlo, con la única restricción de que no podrá asignar a un área el nombre de otra existente en ese momento.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1303"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - No ha encontrado el nombre del área predeterminado (restablecido) para salas que no han sido asignadas a un área. Añadiendo &quot;%1&quot; con el ID reservado -1.</translation>
     </message>
   </context>
   <context>
@@ -5232,7 +5245,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2625"/>
       <source>Select some text in the console first.</source>
       <extracomment>Tooltip shown on the console context menu&apos;s copy and search entries while they are disabled because nothing is selected</extracomment>
-      <translation type="unfinished"/>
+      <translation>Selecciona primero algún texto en la consola.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2628"/>
@@ -5252,7 +5265,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2647"/>
       <source>Select all</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar todo</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2651"/>
@@ -5268,7 +5281,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2674"/>
       <source>This console is empty, there is nothing to copy.</source>
       <extracomment>Tooltip shown on the console context menu&apos;s &quot;Copy as image&quot; entry while it is disabled because the console holds no text at all</extracomment>
-      <translation type="unfinished"/>
+      <translation>Esta consola está vacía, no hay nada que copiar.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2689"/>
@@ -5278,7 +5291,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2698"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Pase el cursor sobre este elemento para mostrar los puntos de código Unicode de la selección &lt;i&gt;i>(¡Solo la primera línea!)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2707"/>
