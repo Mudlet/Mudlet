@@ -209,8 +209,8 @@ foreach(test_name ${allFunctionalTestNames})
     )
 endforeach()
 
-# ResetProfileTest creates a full profile per test method (30 tests),
-# so it needs a longer timeout than the default 60s
+# ResetProfileTest creates a full profile per test method, so it needs a longer
+# timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
