@@ -44,12 +44,17 @@
  * heap. The dialog must instead be destroyed on aboutToQuit, while the
  * application is still fully alive.
  *
- * The timing is pinned from both sides: the dialog must still be alive when
+ * The timing is pinned from three sides: the dialog must still be alive when
  * the last window closes (its purpose is to offer an update at exactly that
- * point, #9388), and must be gone once the event loop has exited. Note that
- * with no update to offer the dialog's own last-window-closed handler calls
- * quit(), which in Qt 6 emits aboutToQuit synchronously - so the dialog is
- * destroyed inside that cascade, before close() even returns.
+ * point, #9388), must survive the quit it triggers itself, and must be gone
+ * once the event loop has exited.
+ *
+ * The middle one is https://github.com/Mudlet/Mudlet/issues/9967: quit() emits
+ * aboutToQuit synchronously and the dialog quits the application when it is
+ * dismissed, so an aboutToQuit handler that deletes the dialog outright frees
+ * it underneath its own dismissal - and underneath the caller that dismissed
+ * it. Applying an update does exactly that: it calls close() and then done()
+ * on the dialog, which crashed on Windows.
  *
  * QTEST_APPLESS_MAIN is used because the test itself must own the
  * QApplication lifetime to walk it through quit and destruction.
@@ -81,9 +86,8 @@ void NewReleaseDialogTeardownTest::updateDialogDestroyedBeforeApplicationTeardow
 
     // Connected before checkUpdatesOnStart() creates the dialog, so with
     // direct connections firing in connection order this probe runs before
-    // the dialog's own last-window-closed handler - the last moment the
-    // dialog is guaranteed to exist, as that handler quits when there is no
-    // update to offer and the quit destroys the dialog
+    // the dialog's own last-window-closed handler, which quits the
+    // application when there is no update to offer
     QPointer<dblsqd::UpdateDialog> dialog;
     bool dialogAliveAtLastWindowClosed = false;
     connect(app.get(), &QGuiApplication::lastWindowClosed, this, [&dialog, &dialogAliveAtLastWindowClosed]() {
@@ -102,19 +106,40 @@ void NewReleaseDialogTeardownTest::updateDialogDestroyedBeforeApplicationTeardow
     }
     QVERIFY2(dialog, "expected the Updater to have created its UpdateDialog");
 
+    // The Updater connected its own aboutToQuit handler in its constructor, so
+    // this direct connection runs straight after it and sees what it did
+    bool aboutToQuitFired = false;
+    bool dialogAliveInAboutToQuit = false;
+    connect(app.get(), &QCoreApplication::aboutToQuit, this, [&dialog, &aboutToQuitFired, &dialogAliveInAboutToQuit]() {
+        aboutToQuitFired = true;
+        dialogAliveInAboutToQuit = !dialog.isNull();
+    });
+
     auto* window = new QWidget;
     window->show();
-    QTimer::singleShot(0, app.get(), [&window]() {
+    bool dialogAliveAfterQuit = false;
+    QTimer::singleShot(0, app.get(), [&window, &dialog, &dialogAliveAfterQuit]() {
         window->close();
         delete window;
         // The dialog's own last-window-closed handler quits when no update is
         // available; quit explicitly so the test cannot hang if an update is
         // available (the dialog then shows itself and waits for the user)
         QCoreApplication::quit();
+        // Read before anything can return to the event loop: this is the
+        // window in which applying an update goes on using the dialog
+        dialogAliveAfterQuit = !dialog.isNull();
+        if (!dialog.isNull()) {
+            // the pair that crashed on Windows, in the order the updater runs it
+            dialog->close();
+            dialog->done(0);
+        }
     });
     app->exec();
 
     QVERIFY2(dialogAliveAtLastWindowClosed, "the UpdateDialog must still be alive when the last window closes so it can offer an update at that point - see #9388");
+    QVERIFY2(aboutToQuitFired, "aboutToQuit never fired, so the checks either side of it prove nothing");
+    QVERIFY2(dialogAliveInAboutToQuit, "the Updater's aboutToQuit handler must not destroy the UpdateDialog outright - see #9967");
+    QVERIFY2(dialogAliveAfterQuit, "the UpdateDialog must outlive the quit it triggers: applying an update keeps using it afterwards - see #9967");
     QVERIFY2(dialog.isNull(), "UpdateDialog must be destroyed when the application quits: deleting it any later (from ~Updater, inside the application's destructor) corrupts the heap - see #9122");
 }
 

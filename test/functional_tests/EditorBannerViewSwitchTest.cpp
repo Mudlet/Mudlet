@@ -31,6 +31,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -96,61 +97,7 @@ private:
 
     void startProfile(const QString& profileName, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-
-            // Guard every UI step so a setup flake names the failing step in
-            // the log instead of surfacing as a generic profile-load timeout
-            dlgConnectionProfiles* connectionDialog = mudlet::self()->mpConnectionDialog;
-            if (!connectionDialog || !connectionDialog->new_profile_button) {
-                qWarning() << "startProfile: connection dialog did not appear";
-                return;
-            }
-            QTest::mouseClick(connectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-
-            const auto focusedWidget = [](const char* step) -> QWidget* {
-                QWidget* widget = QApplication::focusWidget();
-                if (!widget) {
-                    qWarning() << "startProfile: no focused widget at step" << step;
-                }
-                return widget;
-            };
-
-            QWidget* nameField = focusedWidget("profile name");
-            if (!nameField) {
-                return;
-            }
-            QTest::keyClicks(nameField, profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(nameField, Qt::Key_Tab);
-            QTest::qWait(100ms);
-
-            QWidget* addressField = focusedWidget("address");
-            if (!addressField) {
-                return;
-            }
-            QTest::keyClicks(addressField, address);
-            QTest::qWait(100ms);
-            QTest::keyClick(addressField, Qt::Key_Tab);
-            QTest::qWait(100ms);
-
-            QWidget* portField = focusedWidget("port");
-            if (!portField) {
-                return;
-            }
-            QTest::keyClicks(portField, port);
-            QTest::qWait(100ms);
-            QTest::keyClick(portField, Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(2000)) {
-            QFAIL("Profile took too long to load.");
-        }
-
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(profileName, address, port);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }

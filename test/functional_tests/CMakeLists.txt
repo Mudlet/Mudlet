@@ -27,6 +27,7 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     WindowStateGettersTest.cpp
     MainConsoleSelectionTest.cpp
+    WindowLayoutSaveTest.cpp
     TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
@@ -51,6 +52,7 @@ set(FUNCTIONAL_TEST_SOURCES
     InsertTextCapTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
+    MainWindowSizeReportTest.cpp
     ClearWindowLogTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     XMLexportVariablesTest.cpp
@@ -59,12 +61,14 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileLoadTempFileTest.cpp
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
+    ProfileSwitchMiniconsoleTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     TutorialInvitationGateTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
+    LabelMovieRefusalTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     UndoServerWrapTest.cpp
