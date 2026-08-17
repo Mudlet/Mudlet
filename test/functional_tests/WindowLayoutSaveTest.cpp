@@ -50,14 +50,9 @@ extern "C" {
 #endif
 }
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForWindowLayoutSaveTest();
+using namespace std::chrono_literals;
 
 class WindowLayoutSaveTest : public QObject
 {
@@ -104,8 +99,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForWindowLayoutSaveTest();
-
         QVERIFY(mConfigDir.isValid());
         // setupConfig() only adopts $XDG_CONFIG_HOME once the profiles
         // directory under it is there to be adopted
@@ -199,20 +192,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForWindowLayoutSaveTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "WindowLayoutSaveTest.moc"
-QTEST_MAIN(WindowLayoutSaveTest)
+MUDLET_GROUPED_TEST_MAIN(WindowLayoutSaveTest)

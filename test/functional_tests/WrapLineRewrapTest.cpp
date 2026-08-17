@@ -29,12 +29,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // TBuffer::wrapLine() rebuilds every line from its start line to the end of the
 // buffer, and its callers rely on more than the text coming back out intact:
@@ -57,8 +52,6 @@ private:
     const QString mWideText = QString(QChar(0x6F22)) + QChar(0x5B57);
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
-
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
@@ -528,20 +521,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "WrapLineRewrapTest.moc"
-QTEST_MAIN(WrapLineRewrapTest)
+MUDLET_GROUPED_TEST_MAIN(WrapLineRewrapTest)
