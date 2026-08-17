@@ -5020,38 +5020,39 @@ calculando ahora qué nuevos números de ID usar.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="899"/>
       <source>[ INFO ]  - The renumbered rooms will be:</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Las salas renumeradas serán:</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1231"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Los cambios realizados son:
+(ID) &quot;nombre antiguo&quot; ==&gt; &quot;nombre nuevo&quot;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="813"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - ¡Se han encontrado ID de área no válidas (menores a +1 y no el -1 reservado) en el mapa (cantidad: %1)! Busca más mensajes relacionados con esto para cada área afectada...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="97"/>
       <source>Room not created. RoomID %1 is not allowed as room numbers must be greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>Sala no creada. ¡El ID de sala %1 no está permitido, ya que los números de sala deben ser mayores que cero!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="548"/>
       <source>Area not added. An area with AreaID %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Área no añadida. ¡Ya existe un área con el ID de área %1!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="566"/>
       <source>Area not added. An unnamed area (empty area name) is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Área no añadida. (Ya no) se permite un área sin nombre (nombre de área vacío).</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="570"/>
       <source>Area not added. An area called &quot;%1&quot; already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Área no añadida. ¡Ya existe un área llamada &quot;%1&quot;!</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="764"/>
@@ -5059,12 +5060,19 @@ calculando ahora qué nuevos números de ID usar.</translation>
 Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERTA ] - Se ha detectado %n área faltante en el mapa: añadiéndola.
+Busque más mensajes relacionados con las salas que se supone que
+están en esta área...</numerusform>
+        <numerusform>[ ALERTA ] - Se ha detectado %n áreas faltantes en el mapa: añadiéndolas.
+Busque más mensajes relacionados con las salas que se supone que
+están en estas áreas...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="892"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - ¡Se han encontrado ID de sala no válidas (menores a +1) en el mapa (cantidad: %1)! Busque más mensajes relacionados con esto para cada sala afectada...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="915"/>
