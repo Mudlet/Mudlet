@@ -36,12 +36,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // Regression tests for the self-uninstall use-after-free: a package toolbar
 // button whose Lua script calls uninstallPackage() on its own package used to
@@ -116,8 +111,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResources();
-
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -255,20 +248,5 @@ private slots:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ActionSelfRemovalTest.moc"
-QTEST_MAIN(ActionSelfRemovalTest)
+MUDLET_GROUPED_TEST_MAIN(ActionSelfRemovalTest)

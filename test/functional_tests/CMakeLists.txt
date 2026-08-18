@@ -20,23 +20,18 @@ set(FUNCTIONAL_TEST_SOURCES
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
-    PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
-    PackageRemovalSaveTeardownTest.cpp
     TutorialInvitationGateTest.cpp
-    ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     HostWidgetDecouplingTest.cpp
-    ActionSelfRemovalTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
-    DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
     StarterUiGaugePanelTest.cpp
     ExperiencedPlayerGateTest.cpp
@@ -115,6 +110,15 @@ set(TELNET_GROUP_TEST_SOURCES
     TOscTest.cpp
 )
 
+# Packages and modules: installing them, saving them and removing them
+set(PACKAGE_GROUP_TEST_SOURCES
+    ActionSelfRemovalTest.cpp
+    DefaultPackagesTest.cpp
+    ModuleSaveTeardownTest.cpp
+    PackageRemovalSaveTeardownTest.cpp
+    PackageSelfRemovalTest.cpp
+)
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
@@ -190,6 +194,7 @@ endmacro()
 add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
