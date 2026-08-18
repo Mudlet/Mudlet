@@ -51,6 +51,21 @@ static const char* speechRecognizerStateName(const SpeechRecognizer::State state
     return "uninitialized";
 }
 
+// Lowercase, script-friendly name for an end-of-speech sensitivity, matching
+// the words stt.setSensitivity() accepts.
+static const char* speechSensitivityName(const SpeechRecognizer::Sensitivity sensitivity)
+{
+    switch (sensitivity) {
+    case SpeechRecognizer::Sensitivity::Short:
+        return "short";
+    case SpeechRecognizer::Sensitivity::Long:
+        return "long";
+    case SpeechRecognizer::Sensitivity::Default:
+        break;
+    }
+    return "default";
+}
+
 // stt.init([modelPath])
 // Initialize speech recognition with a language model.
 // modelPath is optional - falls back to SpeechRecognizerFactory::defaultModelPath().
@@ -289,6 +304,11 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
             lua_pushinteger(L, pRecognizer->silenceTimeout());
             lua_settable(L, -3);
 
+            // How quickly the engine calls an utterance finished
+            lua_pushstring(L, "sensitivity");
+            lua_pushstring(L, speechSensitivityName(pRecognizer->sensitivity()));
+            lua_settable(L, -3);
+
             // What this backend can do, so packages adapt rather than guess:
             // biasing/grammar govern whether setVocabulary reaches the
             // engine, words whether sysSTTWords fires, onDevice whether audio
@@ -447,6 +467,43 @@ int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
     }
 
     pRecognizer->setSilenceTimeout(msec);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.setSensitivity(mode)
+// How quickly the engine decides an utterance has ended: "short" for
+// commands, "default" for balanced use, "long" for dictation. Engines apply
+// this to their own end-of-speech detection, so the effect is comparable
+// rather than identical between them.
+// Returns true, or nil + error message on failure.
+int TLuaInterpreter::sttSetSensitivity(lua_State* L)
+{
+    const QString mode = getVerifiedString(L, __func__, 1, "sensitivity").toLower();
+
+    SpeechRecognizer::Sensitivity sensitivity;
+    if (mode == QLatin1String("short")) {
+        sensitivity = SpeechRecognizer::Sensitivity::Short;
+    } else if (mode == QLatin1String("default")) {
+        sensitivity = SpeechRecognizer::Sensitivity::Default;
+    } else if (mode == QLatin1String("long")) {
+        sensitivity = SpeechRecognizer::Sensitivity::Long;
+    } else {
+        return warnArgumentValue(L, __func__, qsl(R"(sensitivity must be "short", "default" or "long", got "%1")").arg(mode));
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    pMudlet->initSpeechRecognition();
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        return warnArgumentValue(L, __func__, "failed to create speech recognizer");
+    }
+
+    pRecognizer->setSensitivity(sensitivity);
     lua_pushboolean(L, true);
     return 1;
 }
