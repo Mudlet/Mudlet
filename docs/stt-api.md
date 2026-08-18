@@ -73,6 +73,7 @@ archives — but it is not part of the `stt` namespace.
 | `state` | string | `"uninitialized"`, `"ready"`, `"listening"`, `"processing"`, `"error"`. Distinguishes `error` from `uninitialized`, which `initialized` alone cannot. |
 | `modelPath` | string | The model actually loaded (empty when none) — not the install directory. |
 | `silenceTimeout` | integer | Current timeout in ms; `0` while disabled. |
+| `audioLevel` | number | Level last received from the microphone, `0.0`–`1.0`; `0` while not listening. Sampled during speech, it distinguishes a phrase the engine misheard from one it barely received — failures that look identical in the text and need opposite remedies. |
 | `sensitivity` | string | `"short"`, `"default"` or `"long"`; how quickly an utterance is judged finished. |
 | `capabilities` | table | See below. |
 | `version`, `language` | string | Present once a recognizer instance exists. |

@@ -71,6 +71,7 @@ public:
     bool supportsWordResults() const override { return true; }
 
     State state() const override { return mState; }
+    float audioLevel() const override { return mState == State::Listening ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
     void releaseResources() override;
     QString modelPath() const override { return mModelPath; }

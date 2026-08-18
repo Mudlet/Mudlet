@@ -304,6 +304,12 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
             lua_pushinteger(L, pRecognizer->silenceTimeout());
             lua_settable(L, -3);
 
+            // Level last heard from the microphone, so a caller can tell a
+            // misheard phrase from one that barely arrived
+            lua_pushstring(L, "audioLevel");
+            lua_pushnumber(L, pRecognizer->audioLevel());
+            lua_settable(L, -3);
+
             // How quickly the engine calls an utterance finished
             lua_pushstring(L, "sensitivity");
             lua_pushstring(L, speechSensitivityName(pRecognizer->sensitivity()));

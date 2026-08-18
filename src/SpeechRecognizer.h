@@ -112,6 +112,12 @@ public:
         return false;
     }
 
+    // Level of the audio last received from the microphone, 0.0 to 1.0, or 0
+    // while not listening. Reported so a consumer can tell a phrase the engine
+    // misheard from one the microphone barely received - two failures that
+    // look identical in the results and need opposite remedies.
+    virtual float audioLevel() const { return 0.0f; }
+
     // === State Queries ===
 
     // Get current state of the recognizer
