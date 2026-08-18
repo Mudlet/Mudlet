@@ -56,12 +56,7 @@
 #include "TriggerUnit.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForCorruptTriggerPatternsTest();
+#include "GroupedTest.h"
 
 namespace {
 const QString scmCorruptFolderName = qsl("corrupt folder");
@@ -234,8 +229,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForCorruptTriggerPatternsTest();
-
         QVERIFY(mConfigDir.isValid());
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
@@ -325,20 +318,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForCorruptTriggerPatternsTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "CorruptTriggerPatternsTest.moc"
-QTEST_MAIN(CorruptTriggerPatternsTest)
+MUDLET_GROUPED_TEST_MAIN(CorruptTriggerPatternsTest)

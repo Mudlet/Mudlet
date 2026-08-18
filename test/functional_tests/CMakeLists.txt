@@ -6,36 +6,19 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    TriggerEditorTest.cpp
-    TFeedTriggersRecursionTest.cpp
-    MultilineTriggerReentrancyTest.cpp
-    dlgTriggerEditorUndoRedoTest.cpp
-    EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
-    MapAreaReassignmentTest.cpp
-    UnitDeferredDeleteTest.cpp
-    CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
     FeatureCalloutTest.cpp
-    VariableEditorWriteBackTest.cpp
-    ScriptEventHandlerLifetimeTest.cpp
-    SetScriptCallbackTest.cpp
-    UnitProcessingDepthTest.cpp
     TutorialInvitationGateTest.cpp
-    MapRoundTripTest.cpp
-    MapProgressDialogSeamTest.cpp
-    MapCloseDuringImportTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     HostWidgetDecouplingTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
-    EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     StarterUiTriggerCostTest.cpp
     StarterUiGaugePanelTest.cpp
     ExperiencedPlayerGateTest.cpp
-    EmbeddedMapperCreationTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -108,6 +91,35 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
+)
+
+# Triggers and the other scriptable units, and what a running script does to them
+set(TRIGGER_GROUP_TEST_SOURCES
+    CorruptTriggerPatternsTest.cpp
+    MultilineTriggerReentrancyTest.cpp
+    SetScriptCallbackTest.cpp
+    TFeedTriggersRecursionTest.cpp
+    UnitDeferredDeleteTest.cpp
+    UnitProcessingDepthTest.cpp
+)
+
+# The script editor, and the trigger, variable and script forms it hosts
+set(EDITOR_GROUP_TEST_SOURCES
+    dlgTriggerEditorUndoRedoTest.cpp
+    EdbeeReinitTest.cpp
+    EditorBannerViewSwitchTest.cpp
+    ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorTest.cpp
+    VariableEditorWriteBackTest.cpp
+)
+
+# The map: its rooms and areas, its file format, and the mapper widget
+set(MAP_GROUP_TEST_SOURCES
+    EmbeddedMapperCreationTest.cpp
+    MapAreaReassignmentTest.cpp
+    MapCloseDuringImportTest.cpp
+    MapProgressDialogSeamTest.cpp
+    MapRoundTripTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
@@ -194,6 +206,9 @@ endmacro()
 add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
