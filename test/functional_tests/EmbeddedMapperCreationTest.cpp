@@ -45,9 +45,9 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
-
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class EmbeddedMapperCreationTest : public QObject
 {
