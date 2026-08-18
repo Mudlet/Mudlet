@@ -8179,213 +8179,228 @@ Cuenta</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="187"/>
       <source>Joined in 2023 and works across the whole client - script editor, preferences, package manager and mapper - along with many Lua API additions. Wrote the Mudlet Tutorial profile and maintains the Mudlet package repository.</source>
       <extracomment>about:Zooka</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se unió en 2023 y trabaja en todo el cliente —el editor de scripts, las preferencias, el gestor de paquetes y el mapeador— junto con muchas adiciones a la API de Lua. Escribió el perfil del Tutorial de Mudlet y mantiene el repositorio de paquetes de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="192"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <extracomment>about:ahmedcharles</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuciones a la integración de Travis, la compilación con CMake y Visual C++, y una gran cantidad de mejoras en la calidad del código y en la gestión de la memoria.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="196"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <extracomment>about:Chris7</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desarrolló un sistema de módulos compartidos que permite compartir paquetes de scripts entre perfiles, una interfaz de usuario para ver variables de Lua y mejoras en el mapeador y en general.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="200"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <extracomment>about:Ben Carlsen</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desarrolló la primera versión de nuestro instalador para Mac OSX. Es el antiguo mantenedor de la versión para Mac de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="204"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <extracomment>about:Ben Smith</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se unió en diciembre de 2009, aunque ha estado presente desde mucho antes. Contribuyó a la API de Lua y es el antiguo mantenedor de la API de Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="208"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <extracomment>about:Blaine von Roeder</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se unió en diciembre de 2009. Ha contribuido a la API de Lua, ha enviado pequeños parches de corrección de errores y ha ayudado con la gestión de lanzamientos de la versión 1.0.5.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="212"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <extracomment>about:Bruno Bigras</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desarrolló el script de compilación original de CMake y ha enviado una serie de parches.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="215"/>
       <source>Contributed to the Lua API.</source>
       <extracomment>about:Carter Dewey</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuyó a la API de Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <extracomment>about:Oneymus</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desarrolló el gestor de la interfaz gráfica Vyzor para Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
       <source>Brought the 3D mapper back to life with camera controls, lighting and proper geometry for z-squished rooms, and has fixed a number of console and command line annoyances.</source>
       <extracomment>about:Harrison</extracomment>
-      <translation type="unfinished"/>
+      <translation>Revivió la herramienta de mapeo 3D incorporando controles de cámara, iluminación y la geometría adecuada para las salas comprimidas en el eje Z, además de corregir diversos problemas molestos relacionados con la consola y la línea de comandos.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="225"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <extracomment>about:TheFae</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hizo maravillas para rejuvenecer nuestro sitio web en 2017, pero prefiere un poco de anonimato —si eres un &lt;i&gt;SpamBot&lt;/i&gt;, ahora no podrás entrar en nuestros foros. También ha realizado algunas contribuciones útiles al código principal en C++ y esperamos con interés futuras revisiones y trabajos en esa área.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="230"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <extracomment>about:Dicene</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se unió a nosotros en 2017 y nos ha aportado algunas contribuciones útiles en C++ y Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="233"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <extracomment>about:James Younquist</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuyó con el gestor de diseño Geyser para Mudlet en marzo de 2010. Está escrito en Lua y tiene como objetivo simplificar la creación de scripts de interfaz gráfica (GUI) por parte del usuario.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="237"/>
       <source>Helped develop and debug the Lua API.</source>
       <extracomment>about:John Dahlström</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ayudó a desarrollar y depurar la API de Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="240"/>
       <source>Implemented MMCP, so Mudlet can join MudMaster chat networks, and has contributed a range of console and Lua API fixes.</source>
       <extracomment>about:John McKisson</extracomment>
-      <translation type="unfinished"/>
+      <translation>Implementó MMCP para que Mudlet pueda unirse a las redes de chat de MudMaster, y ha contribuido con una variedad de correcciones en la consola y en la API de Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="244"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <extracomment>about:Beliaar</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contribuyó con varias mejoras y nuevas funciones para Geyser.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="247"/>
       <source>The original author of our Windows installer.</source>
       <extracomment>about:Leigh Stillard</extracomment>
-      <translation type="unfinished"/>
+      <translation>El autor original de nuestro instalador para Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="250"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <extracomment>about:Maksym Grinenko</extracomment>
-      <translation type="unfinished"/>
+      <translation>Trabajó en el manual, la ayuda del foro y colabora con el diseño de la interfaz gráfica (GUI) y la documentación.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="253"/>
       <source>Built much of the GUI toolkit you script with between 2020 and 2022: Adjustable Containers, Geyser&apos;s ScrollBox, animated labels and Geyser in UserWindows - plus the dark theme toggle and the Package Exporter rework.</source>
       <extracomment>about:Edru2</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desarrolló gran parte de las herramientas de interfaz gráfica (GUI) con las que creas scripts entre 2020 y 2022: contenedores ajustables, el ScrollBox de Geyser, etiquetas animadas y Geyser en UserWindows; además del interruptor del tema oscuro y el rediseño del exportador de paquetes.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="258"/>
       <source>Joined in 2018 and looks after nearly everything Mudlet plays or negotiates - MCMP media, sound and video, closed captioning, MXP, OSC 8 hyperlinks and text encodings - plus multi-window support with drag-and-drop tabs.</source>
       <extracomment>about:Mike Conley</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se unió en 2018 y se encarga de casi todo lo que Mudlet reproduce o negocia: multimedia de MCMP, sonido y video, subtítulos, MXP, hipervínculos OSC 8 y codificaciones de texto; además del soporte multi-ventana con pestañas de arrastrar y soltar.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="263"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <extracomment>about:Stephen Hansen</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desarrolló una API de base de datos en Lua que permite un uso mucho más sencillo de las bases de datos, y uno de los instaladores originales de OSX.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="266"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <extracomment>about:Thorsten Wilms</extracomment>
-      <translation type="unfinished"/>
+      <translation>Diseñó nuestro hermoso logotipo, nuestra pantalla de inicio, el cuadro de diálogo "Acerca de", nuestro sitio web, varios iconos y emblemas. Visite su página web en &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="270"/>
       <source>Joined in 2020 and made Mudlet work far better with screen readers, alongside secure IRC connections, Discord improvements, and a batch of editor shortcuts and Lua configuration functions.</source>
       <extracomment>about:Tim Johnson</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se unió en 2020 e hizo que Mudlet funcionara mucho mejor con lectores de pantalla, además de añadir conexiones IRC seguras, mejoras en Discord y un conjunto de atajos de teclado para el editor y funciones de configuración en Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="884"/>
       <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre2 - Enlace de biblioteca de expresiones regulares (variante PCRE2).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="898"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
-      <translation type="unfinished"/>
+      <translation>El propio widget &lt;b&gt;edbee-lib&lt;/b&gt; incorpora otros componentes con licencias que también deben tenerse en cuenta, los cuales son:
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="900"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LICENCIA de Onigmo (Oniguruma-mod)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 EN ybb PUNTO ne PUNTO jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt EN csc PUNTO jp&amp;gt;&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="905"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LICENCIA de Oniguruma&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 EN ybb PUNTO ne PUNTO jp&amp;gt;&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="909"/>
       <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="920"/>
       <source>&lt;h2&gt;&lt;u&gt;Dblsqd (derived work)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Dblsqd (obra derivada)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="923"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Sparkle - Actualizador de macOS&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="933"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h4&gt;bspatch.c y bsdiff.c, de bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c y sais.c, de sais-lite (07/08/2010) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="943"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="946"/>
       <source>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API for storing passwords securely&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;QtKeyChain - API de Qt independiente de la plataforma para almacenar contraseñas de forma segura&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="958"/>
       <source>&lt;h2&gt;&lt;u&gt;Sentry Native - Crash reporting SDK&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Sentry (https://sentry.io) and individual contributors.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Sentry Native - SDK de reporte de errores&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Sentry (https://sentry.io) y colaboradores individuales.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1069"/>
       <source>&lt;h2&gt;&lt;u&gt;Sword 3D Model&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Model obtained from &lt;a href=&quot;https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63&quot;&gt;Sketchfab&lt;/a&gt;&lt;br&gt;Author: &lt;a href=&quot;https://sketchfab.com/minghau&quot;&gt;minghauLoh&lt;/a&gt;&lt;br&gt;Licensed under &lt;a href=&quot;https://creativecommons.org/licenses/by/4.0/&quot;&gt;CC BY 4.0&lt;/a&gt;&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Modelo 3D de Sword&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Modelo obtenido de &lt;a href=&quot;https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63&quot;&gt;Sketchfab&lt;/a&gt;&lt;br&gt;Autor: &lt;a href=&quot;https://sketchfab.com/minghau&quot;&gt;minghauLoh&lt;/a&gt;&lt;br&gt;Licenciado bajo &lt;a href=&quot;https://creativecommons.org/licenses/by/4.0/&quot;&gt;CC BY 4.0&lt;/a&gt;&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1134"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            Estas formidables personas serán recordadas con cariño para siempre&lt;br&gt;por su generoso apoyo financiero en el Patreon de Mudlet:
+                            
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1143"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>                            Estas formidables personas serán recordadas con cariño para siempre&lt;br&gt;por su generoso apoyo financiero en el &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Patreon de Mudlet&lt;/a&gt;:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1166"/>
@@ -8393,7 +8408,7 @@ Cuenta</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="1217"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1245"/>
       <source>Technical information:</source>
-      <translation>CPU (%1-bits):</translation>
+      <translation>Información técnica:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1167"/>
@@ -8452,13 +8467,13 @@ Cuenta</translation>
       <location filename="../src/dlgActionMainArea.cpp" line="87"/>
       <source>Number of columns:</source>
       <extracomment>A toolbar is being set to vertical orientation - so multiple rows of this number of columns</extracomment>
-      <translation type="unfinished"/>
+      <translation>Número de columnas:</translation>
     </message>
     <message>
       <location filename="../src/dlgActionMainArea.cpp" line="90"/>
       <source>Number of rows:</source>
       <extracomment>A toolbar is being set to horizontal orientation - so multiple columns of this number of rows</extracomment>
-      <translation type="unfinished"/>
+      <translation>Número de filas:</translation>
     </message>
   </context>
   <context>
@@ -8467,7 +8482,7 @@ Cuenta</translation>
       <location filename="../src/dlgAliasMainArea.cpp" line="37"/>
       <source>for example, ^myalias$ to match &apos;myalias&apos;</source>
       <extracomment>This text is shown as placeholder in the pattern box when no real pattern was entered, yet.</extracomment>
-      <translation type="unfinished"/>
+      <translation>por ejemplo, ^myalias$ para que coincida con &apos;myalias&apos;</translation>
     </message>
   </context>
   <context>
@@ -8490,32 +8505,32 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="58"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para que el activador de color ignore el color de fondo del texto; sin embargo, elegir esto tanto para el primer plano como para el fondo es un error.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Haz clic para que el activador de color ignore el color de primer plano del texto; sin embargo, elegir esto tanto para el primer plano como para el fondo es un error.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="65"/>
       <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para hacer que el activador de color se active cuando el color de fondo del texto no haya sido modificado de su valor normal.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para hacer que el activador de color se active cuando el color de primer plano del texto no haya sido modificado de su valor normal.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic en un color para hacer que el activador se dispare solo cuando el color de fondo del texto coincida con el número de color indicado.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="68"/>
       <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic en un color para hacer que el activador se dispare solo cuando el color de primer plano del texto coincida con el número de color indicado.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="73"/>
@@ -8555,12 +8570,12 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Blanco (gris claro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Negro claro (gris oscuro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
@@ -8606,7 +8621,7 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="362"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Se muestran todas las opciones de color.</translation>
     </message>
   </context>
   <context>
@@ -8664,46 +8679,46 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="320"/>
       <source>Characters password. Note that the password is not encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Contraseña del personaje. Tenga en cuenta que la contraseña no se encripta al guardarse</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="398"/>
       <source>Game name: %1</source>
-      <translation type="unfinished"/>
+      <translation>Nombre del juego: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="400"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <extracomment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</extracomment>
-      <translation type="unfinished"/>
+      <translation>Botón para seleccionar un juego MUD; haz doble clic en él para conectarte y empezar a jugar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1416"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Este perfil está cargado actualmente; ciérrelo antes de cambiar los parámetros de conexión.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1776"/>
       <source>Reset icon</source>
       <extracomment>Reset the custom picture for this profile in the connection dialog and show the default one instead</extracomment>
-      <translation type="unfinished"/>
+      <translation>Restablecer icono</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1780"/>
       <source>Set custom icon</source>
       <extracomment>Set a custom picture to show for the profile in the connection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Establecer icono personalizado</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1785"/>
       <source>Set custom color</source>
       <extracomment>Set a custom color to show for the profile in the connection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Establecer color personalizado</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2293"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
-      <translation type="unfinished"/>
+      <translation>El carácter %1 no está permitido. Utiliza uno de los siguientes:</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2325"/>
@@ -8729,13 +8744,14 @@ Cuenta</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="202"/>
       <source>Skip - show me the games list</source>
       <extracomment>Button shown on first launch to skip the tutorial and show the full games list</extracomment>
-      <translation type="unfinished"/>
+      <translation>Omitir - mostrar la lista de juegos</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="227"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;img src=&quot;tutorialIcon&quot;/&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;Play a short guided adventure to learn&lt;br&gt;how to navigate in games, use triggers, aliases, and scripting.&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;a href=&quot;mudlet-tutorial&quot;&gt;Start Tutorial&lt;/a&gt;&lt;/center&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <extracomment>Welcome message shown on first launch, focused on starting the tutorial.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;img src=&quot;tutorialIcon&quot;/&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;¡Te damos la bienvenida a Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;Juega una breve aventura guiada para aprender&lt;br&gt;a moverte en los juegos, usar activadores, alias y la creación de scripts.&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;a href=&quot;mudlet-tutorial&quot;&gt;Comenzar tutorial&lt;/a&gt;&lt;/center&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;El equipo de Mudlet &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="240"/>
@@ -8746,47 +8762,47 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="242"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Copiar solo la configuración</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="259"/>
       <source>copy profile</source>
-      <translation type="unfinished"/>
+      <translation>copiar perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="260"/>
       <source>copy the entire profile to new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>Copie el perfil completo a uno nuevo que requerirá un nombre diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="272"/>
       <source>copy profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Copiar configuración del perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="273"/>
       <source>copy the settings and some other parts of the profile to a new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>copia la configuración y otras partes del perfil a uno nuevo que requerirá un nombre diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="318"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
-      <translation type="unfinished"/>
+      <translation>Copia la configuración y otras partes del perfil a uno nuevo que requerirá un nombre diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="395"/>
       <source>Click to load but not connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Copia la configuración y otras partes del perfil a uno nuevo que requerirá un nombre diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="396"/>
       <source>Click to load and connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para cargar y conectar el perfil seleccionado.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="397"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
+      <translation>Es necesario tener un nombre de perfil, una dirección de servidor de juego y un puerto válido antes de poder activar este botón.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="904"/>
@@ -8804,42 +8820,42 @@ Cuenta</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="159"/>
       <source>My games</source>
       <extracomment>Tab showing only the games the user already has profiles for</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mis juegos</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="161"/>
       <source>All games</source>
       <extracomment>Tab showing every game Mudlet has a built-in profile for</extracomment>
-      <translation type="unfinished"/>
+      <translation>Todos los juegos</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="163"/>
       <source>games shown</source>
-      <translation type="unfinished"/>
+      <translation>Juegos mostrados</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="164"/>
       <source>Switch between showing only your own games and all of the games Mudlet knows about.</source>
-      <translation type="unfinished"/>
+      <translation>Cambia entre mostrar solo tus propios juegos o todos los juegos que Mudlet conoce.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1050"/>
       <source>&apos;%1&apos; has no profile folder of its own, so there is nothing to remove.</source>
       <extracomment>%1 is a profile name that does not name a folder of its own, so there is nothing that could be removed for it</extracomment>
-      <translation type="unfinished"/>
+      <translation>&apos;%1&apos; no tiene una carpeta de perfil propia, por lo que no hay nada que eliminar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1061"/>
       <source>Could not remove everything belonging to &apos;%1&apos;. Close it if it is open elsewhere, check that you may write to its folder, and try again.</source>
       <extracomment>%1 is a profile name. Shown when some of the profile&apos;s files could not be deleted, e.g. because another program has them open</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo eliminar todo lo correspondiente a &apos;%1&apos;. Ciérralo si está abierto en otro lugar, verifica que tengas permisos de escritura en su carpeta e inténtalo de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1158"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1168"/>
       <source>Could not open the confirmation, so &apos;%1&apos; has not been removed.</source>
       <extracomment>%1 is a profile name. Shown when the dialog asking the user to confirm a removal could not be built</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo abrir la confirmación, por lo que &apos;%1&apos; no ha sido eliminado.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1188"/>
@@ -8849,43 +8865,43 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1420"/>
       <source>A profile that is in use cannot be removed</source>
-      <translation type="unfinished"/>
+      <translation>Un perfil que está en uso no se puede eliminar</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1803"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar imagen personalizada para el perfil (debe ser de 120x30)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1803"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>Imágenes (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1891"/>
       <source>Copying...</source>
-      <translation type="unfinished"/>
+      <translation>Copiando...</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2306"/>
       <source>A profile name cannot be &quot;.&quot; or contain &quot;..&quot;, as those refer to other folders on your computer. Please pick a different name.</source>
       <extracomment>Shown when a profile name would not name a folder of its own. Keep the quoted dots as they are, they are literal characters the user typed</extracomment>
-      <translation type="unfinished"/>
+      <translation>El nombre de un perfil no puede ser &quot;.&quot; ni contener &quot;..&quot;, ya que estos caracteres hacen referencia a otras carpetas de su equipo. Por favor, elija un nombre diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2335"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>El número de puerto debe ser mayor que cero y menor que 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2355"/>
       <source>Mudlet can not load support for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet no puede cargar el soporte para conexiones seguras.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2377"/>
       <source>Please enter the URL or IP address of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>Por favor, introduce la URL o la dirección IP del servidor del juego.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2396"/>
@@ -8893,17 +8909,20 @@ Cuenta</translation>
 
 &lt;i&gt;SSL/TLS connections require a URL, as an IP address is not a suitable identifier for the certification of the Game Server.&lt;/i&gt;</source>
       <extracomment>Please use two line-feeds after the first line so the second line can be italicised and spaced out - if appropriate for the locale.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Por favor, introduzca la URL del servidor del juego.
+
+&lt;i&gt;Las conexiones SSL/TLS requieren una URL, ya que una dirección IP no es un identificador adecuado para la certificación del servidor del juego.&lt;/i&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2415"/>
       <source>Load profile without connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Cargar perfil sin conectar</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2431"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Por favor, establezca un nombre de perfil, una dirección de servidor de juego y un puerto de juego válidos antes de cargar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2436"/>
@@ -8913,18 +8932,18 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2489"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para ocultar la contraseña; también se ocultará si se selecciona otro perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2493"/>
       <source>Click to reveal the password for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para mostrar la contraseña de este perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2343"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2346"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet no está configurado para conexiones seguras.</translation>
     </message>
   </context>
   <context>
@@ -8967,7 +8986,8 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="137"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$ Escribe &lt;b&gt;/help&lt;/b&gt; para ver los comandos o &lt;b&gt;/help [comando]&lt;/b&gt; para ver la sintaxis de un comando.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="198"/>
@@ -8977,7 +8997,8 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>[Error] ¡MSGLIMIT requiere que &lt;limit&gt; sea un número entero mayor que cero!
+</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
