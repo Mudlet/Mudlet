@@ -6621,18 +6621,22 @@ The package is hosted on a server with an SSL certificate problem. The URL may b
       <location filename="../src/ctelnet.cpp" line="1589"/>
       <source>[ WARN ]  - Package download failed: could not save file, reason: %1</source>
       <extracomment>%1 is the error message</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete: no se pudo guardar el archivo, motivo: %1
+
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1602"/>
       <source>[ WARN ]  - Package installation failed for &apos;%1&apos;, reason: %2</source>
       <extracomment>%1 is the package file path, %2 is the error message</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Error al instalar el paquete &apos;%1&apos;, motivo: %2
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2563"/>
       <source>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Este juego parece utilizar el manejador de protocolos de KaVir, el cual funciona mejor cuando Mudlet reporta su número de versión durante la conexión. Se ha activado automáticamente el reporte de versión en la terminal tipo para mejorar el soporte de color. Reconectando.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="556"/>
@@ -6645,69 +6649,86 @@ The package is hosted on a server with an SSL certificate problem. The URL may b
       <location filename="../src/ctelnet.cpp" line="559"/>
       <source>Looking up the details of server: %1:%2 ...</source>
       <extracomment>%1 is the URL or an IP address (suitably wrapped if it is an IPv6 one) of the Game Server (or Proxy); %2 is the port number.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Buscando los detalles del servidor: %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="706"/>
       <source>[  OK  ]  - Secure connection made (IPv6).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Conexión segura establecida (IPv6).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="708"/>
       <source>[  OK  ]  - Secure connection made (IPv4).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Conexión segura establecida (IPv4).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="712"/>
       <source>[  OK  ]  - Open connection made (IPv6).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Conexión segura establecida (IPv4).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="714"/>
       <source>[  OK  ]  - Open connection made (IPv4).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Conexión abierta establecida (IPv4).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="719"/>
       <source>[  OK  ]  - Connection made (IPv6).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Conexión establecida (IPv6).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="721"/>
       <source>[  OK  ]  - Connection made (IPv4).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Conexión establecida (IPv4).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="776"/>
       <source>[ INFO ]  - Connection time: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Tiempo de conexión: %1.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/ctelnet.cpp" line="839"/>
       <source>[ ALERT ] - Socket got disconnected, for %n reason(s):
 %1</source>
       <extracomment>This message is used when we have been trying to connect or we were connected securely, but the connection has been lost. It is possible with a secure connection that there is MORE than one error message to show, but for English or other locales where the singular case (%n==1) is distinct it would be perfectly feasible to replace &quot;for %n reason(s)&quot; with &quot;because&quot; for that number (1) of errors - however the text should then be repeated in the corresponding situation for an &quot;open&quot; connection which is different in that it only ever has one &quot;reason&quot; to report.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERTA ] - El socket se desconectó por %n motivo:
+%1
+</numerusform>
+        <numerusform>[ ALERTA ] - El socket se desconectó por %n motivos:
+%1</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="852"/>
       <location filename="../src/ctelnet.cpp" line="885"/>
       <source>[ ALERT ] - Socket got disconnected.</source>
       <extracomment>This message is used when we have been trying to connect or we were connected securely or in an open manner, but the connection has been lost and we do not have any explaination to give to the user as to why. Anyhow, in this case we do not have anything more to say about it. This text used in two places, ensure the same translation is used in both of them.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - El socket se desconectó.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="868"/>
       <source>Secure connections not supported by this game on this port; try turning the option off</source>
       <extracomment>A reason why a connection to a game server ended.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Este juego no admite conexiones seguras en este puerto; intenta desactivar la opción.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="895"/>
       <source>[ ALERT ] - Socket got disconnected, for reason:
 %1</source>
       <extracomment>This message is used when we have been trying to connect or we were connected in an open, insecure manner, but the connection has been lost. Unlike the secure connection case there is only one error message to show; it would be desirable to use the same text for this message as the &quot;one reason&quot; (%n==1) situation for locales such as English (with a distinct form for the singular) use for the secure type of connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - El socket se desconectó por el siguiente motivo:
+%1
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1021"/>
@@ -6716,32 +6737,37 @@ The server name is not correct, or your nameservers are not
 working properly.
 </source>
       <extracomment>This text is used in the (expected) case when the user has provided a URL for the Game Server rather than (unusually) an IP address. After a DNS lookup however, we have NOT found any IP addresses which means that we cannot proceed further to connect to the Game server.</extracomment>
-      <translation type="unfinished"/>
+      <translation>¡Error en la resolución del nombre de host! No se puede establecer la conexión.
+El nombre del servidor no es correcto o la dirección de los servidores no están
+funcionando correctamente.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1026"/>
       <source>[ ERROR ] - Unable to connect to &quot;%1&quot;.
 Check your internet connection and the details entered for the game server.</source>
       <extracomment>%1 is the URL of the Game Server</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se pudo conectar a &quot;%1&quot;.
+Comprueba tu conexión a internet y los datos introducidos para el servidor del juego.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1038"/>
       <source>%1 (IPv6)</source>
       <extracomment>Used to add an IPv6 address line to the list displayed during connecting to a Host. Some, e.g. Far Eastern locales may require a different text here if they do not use spaces, or need &quot;wide&quot; &apos;(&apos; &apos;)&apos;s</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 (IPv6)</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1044"/>
       <source>%1 (IPv4)</source>
       <extracomment>Used to add an IPv4 address line to the list displayed during connecting to a Host. Some, e.g. Far Eastern locales may require a different text here if they do not use spaces, or &quot;wide&quot; &apos;(&apos;...&apos;)&apos;</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 (IPv4)</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1063"/>
       <source>A host name could not be found for the given IP address.</source>
       <extracomment>This text is used when the user has provided a raw IP address for the Game Server rather than a URL. In this case we try to perform a &quot;reverse-lookup&quot; to see if we can identify the URL that matches it - but nothing useful was found and we&apos;ve got the original address back.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo encontrar un nombre de host para la dirección IP proporcionada.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1070"/>
@@ -6749,19 +6775,27 @@ Check your internet connection and the details entered for the game server.</sou
 It is: &quot;%1&quot;
 </source>
       <extracomment>This text is used when the user has provided a raw IP address for the Game Server rather than a URL. In this case we try to perform a &quot;reverse-lookup&quot; to see if we can identify the URL that matches it - and this is used when we have something (%1) to show.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se ha encontrado un nombre de host para la dirección IP.
+Es: &quot;%1&quot;
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/ctelnet.cpp" line="1081"/>
       <source>The %n IP address(es) of %1 has/have been found. It/They are:</source>
       <extracomment>This text is used in the (expected) case when the user has provided a URL (%1) for the Game Server rather than (unusually) an IP address. After a DNS lookup we have found at least one but possibly more (%n) IP addresses, which will be listed (one per line) immediately afterwards.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>La dirección IP %n de %1 ha sido encontrada. Es:
+</numerusform>
+        <numerusform>Las direcciones IP %n de %1 han sido encontradas. Son:
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1118"/>
       <source>Trying secure (IPv4 and IPv6) connections to proxy %1:%2 ...</source>
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the server and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando conexiones seguras (IPv4 e IPv6) al proxy %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1123"/>
@@ -6771,7 +6805,8 @@ It is: &quot;%1&quot;
       <extracomment>We don&apos;t need to worry about %1 being a raw IPv6 address here as we prohibit IP addresses for secure connections so it is a URL; %2 is the port number.
 ----------
 %1 is a URL for the Game Server; %2 is the port number.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Intentando establecer una conexión segura con %1:%2 a través del proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1129"/>
@@ -6780,7 +6815,8 @@ It is: &quot;%1&quot;
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the Server and %2 is the port number (on BOTH addresses) for the connection.
 ----------
 %1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando conexiones seguras (IPv4 e IPv6) a %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1134"/>
@@ -6790,31 +6826,36 @@ It is: &quot;%1&quot;
       <extracomment>We don&apos;t need to worry about %1 being a raw IPv6 address here as we prohibit IP addresses for secure connections so it is a URL; %2 is the port number.
 ----------
 %1 is a URL for the Game Server; %2 is the port number.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Intentando establecer una conexión segura con %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1151"/>
       <source>Trying secure (IPv6) connection to %1:%2 via proxy...</source>
       <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando una conexión segura (IPv6) a %1:%2 a través del proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1180"/>
       <source>Trying secure (IPv4) connection to %1:%2 via proxy...</source>
       <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando una conexión segura (IPv4) a %1:%2 a través del proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1188"/>
       <source>Trying secure (IPv4) connection to %1:%2 ...</source>
       <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando una conexión segura (IPv4) a %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1212"/>
       <source>Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...</source>
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the proxy and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando conexiones abiertas (IPv4 e IPv6) a %1:%2 a través del proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1215"/>
@@ -6826,13 +6867,15 @@ It is: &quot;%1&quot;
 %1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number.
 ----------
 %1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Intentando establecer una conexión abierta con %1:%2 a través del proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1221"/>
       <source>Trying open (IPv4 and IPv6) connections to %1:%2 ...</source>
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the Server and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando conexiones abiertas (IPv4 e IPv6) a %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1224"/>
@@ -6844,19 +6887,22 @@ It is: &quot;%1&quot;
 %1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.
 ----------
 %1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Intentando establecer una conexión abierta con %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1242"/>
       <source>Trying open (IPv6) connection to %1:%2 via proxy...</source>
       <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando una conexión abierta (IPv6) a %1:%2 a través del proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1250"/>
       <source>Trying open (IPv6) connection to %1:%2 ...</source>
       <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intentando una conexión abierta (IPv6) a %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1269"/>
@@ -6873,20 +6919,25 @@ It is: &quot;%1&quot;
     <message>
       <location filename="../src/ctelnet.cpp" line="2582"/>
       <source>[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings &gt; Special Options.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Este juego parece ser compatible con MXP (Mud eXtension Protocol), pero no se ha activado correctamente. Se ha habilitado automáticamente el procesamiento de MXP para enlaces en los que se puede hacer clic, información de salas e interacciones más completas. Puedes desactivar esta opción en Ajustes &gt; Opciones especiales.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3674"/>
       <location filename="../src/ctelnet.cpp" line="4073"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos;
 (url=&apos;%3&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Actualizando la interfaz gráfica (GUI) a la nueva versión &apos;%1&apos; desde la versión &apos;%2&apos;
+(url=&apos;%3&apos;).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4010"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos;
 (url=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Descargando e instalando el paquete &apos;%1&apos;
+(url=&apos;%2&apos;).
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4034"/>
@@ -6947,14 +6998,16 @@ It is: &quot;%1&quot;
     <message>
       <location filename="../src/ctelnet.cpp" line="4578"/>
       <source>CHAT</source>
-      <translation type="unfinished"/>
+      <translation>CHAT</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4821"/>
       <source>[ WARN  ]  - MCCP decompression error (%1), compression disabled.
 If the display looks garbled, please reconnect to the game.</source>
       <extracomment>%1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA  ]  - Error de descompresión MCCP (%1), compresión desactivada.
+Si la pantalla se ve borrosa o con caracteres extraños, por favor reconéctate al juego.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4868"/>
@@ -6966,12 +7019,15 @@ If the display looks garbled, please reconnect to the game.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="4892"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede reproducir el archivo &quot;%1&quot;, el mensaje de error ha sido: &quot;el archivo de grabación parece estar dañado&quot;.
+
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4894"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation>[ ADVERTENCIA ] - La repetición ha sido abortada ya que el archivo parece estar corrupto.</translation>
+      <translation>[ WARN ]  - La reproducción se ha abortado porque el archivo parece estar dañado.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4903"/>
@@ -6989,67 +7045,73 @@ Inténtalo de nuevo cuando haya terminado.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="4913"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede leer el archivo &quot;%1&quot;, el mensaje de error ha sido: &quot;%2&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4915"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede leer el archivo &quot;%1&quot;,
+el mensaje de error ha sido: &quot;%2&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4954"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[  OK  ] - Ha terminado la repetición.</translation>
+      <translation>[  OK  ]  - La reproducción ha finalizado.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5096"/>
       <source>[ WARN  ]  - Too much data to process at once, some may have been lost.</source>
       <extracomment>Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA  ]  - Demasiados datos para procesar a la vez, es posible que algunos se hayan perdido.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5658"/>
       <source>server %1</source>
       <extracomment>Telnet options report: server side of an option, %1 is &quot;enabled&quot; or &quot;disabled&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>servidor %1</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5658"/>
       <location filename="../src/ctelnet.cpp" line="5662"/>
       <source>enabled</source>
-      <translation type="unfinished"/>
+      <translation>habilitado</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5658"/>
       <location filename="../src/ctelnet.cpp" line="5662"/>
       <source>disabled</source>
-      <translation type="unfinished"/>
+      <translation>deshabilitado</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5662"/>
       <source>client %1</source>
       <extracomment>Telnet options report: client side of an option, %1 is &quot;enabled&quot; or &quot;disabled&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>cliente %1</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5665"/>
       <source>  %1: %2</source>
       <extracomment>Telnet option line: %1 is the option name (e.g. &quot;NAWS (31)&quot;), %2 is one or both sides</extracomment>
-      <translation type="unfinished"/>
+      <translation>  %1: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5669"/>
       <source>  (none negotiated yet)
 </source>
       <extracomment>Shown in the Telnet options statistics report when no options have been negotiated yet</extracomment>
-      <translation type="unfinished"/>
+      <translation>  (ninguno negociado aún)</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5703"/>
       <source>[ WARN ]  - This game appears to use character-at-a-time mode, which Mudlet does not support. Input may not work as expected. Consider using keybindings for immediate key response instead.</source>
       <extracomment>Warning shown when server uses character-at-a-time mode which Mudlet doesn&apos;t support</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Este juego parece utilizar el modo "carácter a carácter", el cual Mudlet no admite. El texto de entrada podría no funcionar como se espera. Considera usar atajos de teclado para obtener una respuesta inmediata de las teclas en su lugar.
+</translation>
     </message>
   </context>
   <context>
@@ -7066,7 +7128,11 @@ error message was: &quot;%2&quot;.</source>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;small&gt;Elige:&lt;ul&gt;&lt;li&gt;uno de los 16 colores básicos de abajo&lt;/li&gt;
+&lt;li&gt;haz clic en el botón &lt;i&gt;más&lt;/i&gt; para acceder a otros colores del conjunto de 256 colores, luego sigue las instrucciones para seleccionar un color de esa parte de los 256 colores admitidos; si dicho color ya está en uso, esa parte ya se estará mostrando&lt;/li&gt;
+&lt;li&gt;haz clic en los botones &lt;i&gt;Predeterminado&lt;/i&gt; o &lt;i&gt;Ignorar&lt;/i&gt; en la parte inferior para  otros casos especiales&lt;/li&gt;
+&lt;li&gt;haz clic en &lt;i&gt;Cancelar&lt;/i&gt; para cerrar este diálogo sin realizar ningún cambio&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="59"/>
@@ -7149,7 +7215,8 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="99"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Guardar (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="102"/>
@@ -7203,8 +7270,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/connection_profiles.ui" line="553"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation>
-Un nombre único para el perfil, pero limitado a un subconjunto de caracteres ASCII.</translation>
+      <translation>Un nombre único para el perfil, pero limitado únicamente a un subconjunto de caracteres ASCII.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="563"/>
@@ -7239,7 +7305,8 @@ Un nombre único para el perfil, pero limitado a un subconjunto de caracteres AS
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="624"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation type="unfinished"/>
+      <translation>El puerto que se utiliza junto con el nombre del servidor para establecer la conexión con el servidor del juego. Si no se especifica, se usará el valor predeterminado 23 para conexiones &quot;Telnet&quot;. Las conexiones seguras pueden requerir un número de puerto diferente.
+</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="643"/>
@@ -7345,7 +7412,8 @@ Un nombre único para el perfil, pero limitado a un subconjunto de caracteres AS
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="715"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Contraseña del personaje. Ten en cuenta que la contraseña no se cifra en el almacenamiento
+</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="773"/>
@@ -7388,7 +7456,8 @@ Un nombre único para el perfil, pero limitado a un subconjunto de caracteres AS
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="44"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selecciona el estilo, el color y si deseas finalizar la línea con una punta de flecha.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="123"/>
@@ -7451,17 +7520,20 @@ Un nombre único para el perfil, pero limitado a un subconjunto de caracteres AS
     <message>
       <location filename="../src/ui/custom_lines.ui" line="48"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Al seleccionar una salida, se procede inmediatamente a dibujar el primer segmento de línea desde el punto central de la sala.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="61"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selecciona el estilo, el color y si deseas finalizar la línea con una punta de flecha ANTES de elegir la salida para la cual dibujar la línea...&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="188"/>
       <source>&lt;p&gt;Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selecciona una salida normal para comenzar a dibujar una línea para ella; los botones se muestran hundidos si ya tienen una línea personalizada de este tipo y desactivados si no hay una salida en esa dirección.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="191"/>
@@ -7531,27 +7603,32 @@ Un nombre único para el perfil, pero limitado a un subconjunto de caracteres AS
     <message>
       <location filename="../src/ui/custom_lines.ui" line="445"/>
       <source>&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selecciona una salida especial para comenzar a dibujar una línea para ella; la primera columna aparecerá marcada si la salida ya tiene una línea personalizada de este tipo.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="504"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Indica si ya existe una línea personalizada para esta salida especial; se reemplazará si se selecciona la salida.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="515"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;La sala a la que conduce esta salida especial.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="526"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El comando o script de Lua que se dirige a la sala dada.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="562"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Para eliminar una línea personalizada: cancela este diálogo, selecciona la línea y haz clic con el botón derecho para obtener la opción de &amp;quot;eliminar&amp;quot;.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="448"/>
@@ -7586,43 +7663,43 @@ custom line?</source>
       <location filename="../src/updater/Feed.cpp" line="142"/>
       <source>Update check already in progress</source>
       <extracomment>Error shown when the user triggers an update check while one is already running</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ya hay una comprobación de actualización en progreso</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="170"/>
       <source>No download available for your platform</source>
       <extracomment>Error shown when the GitHub release has no binary matching the user&apos;s operating system</extracomment>
-      <translation type="unfinished"/>
+      <translation>No hay ninguna descarga disponible para tu plataforma</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="182"/>
       <source>This update does not publish the checksums needed to verify it. Please try again later, or download it from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when the release publishes no checksums at all, so the download cannot be verified as safe to install</extracomment>
-      <translation type="unfinished"/>
+      <translation>Esta actualización no publica las sumas de verificación (checksums) necesarias para verificarla. Por favor, inténtalo de nuevo más tarde o descárgala desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="243"/>
       <source>Could not download the checksums needed to verify this update. Please try again later.</source>
       <extracomment>Error shown when the checksums needed to verify the update could not be downloaded</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudieron descargar las sumas de verificación (checksums) necesarias para verificar esta actualización. Por favor, inténtalo de nuevo más tarde.</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="261"/>
       <source>The checksums for this update could not be read, so it cannot be verified. Please try again later.</source>
       <extracomment>Error shown when the checksum file for the update was downloaded but could not be read</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudieron leer las sumas de verificación (checksums) de esta actualización, por lo que no se puede verificar. Por favor, inténtalo de nuevo más tarde.</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="265"/>
       <source>This update is missing a checksum for your platform, so it cannot be verified. Please try again later, or download it from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when the release publishes checksums but none of them cover this platform&apos;s download</extracomment>
-      <translation type="unfinished"/>
+      <translation>Esta actualización no contiene la suma de verificación (checksum) para tu plataforma, por lo que no se puede verificar. Por favor, inténtalo de nuevo más tarde o descárgala desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="309"/>
       <source>Could not connect to the update server: %1</source>
       <extracomment>Error shown when the network request to the update server fails. %1 is the technical error description.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo conectar al servidor de actualizaciones: %1</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="323"/>
@@ -7631,56 +7708,56 @@ custom line?</source>
       <extracomment>Error shown when the server response cannot be understood
 ----------
 Error shown when the update server response cannot be understood</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo leer la información de actualización desde el servidor</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="334"/>
       <source>Update check temporarily unavailable. Please try again in a few minutes.</source>
       <extracomment>Error shown when the GitHub API rate limit has been exceeded</extracomment>
-      <translation type="unfinished"/>
+      <translation>La comprobación de las actualizaciones no está disponible temporalmente. Por favor, inténtalo de nuevo en unos minutos.</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="337"/>
       <source>Could not check for updates: %1</source>
       <extracomment>Error shown when the GitHub API returns an error. %1 is the error message from the server.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo comprobar si hay actualizaciones: %1</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="391"/>
       <source>Could not create temporary file for download: %1</source>
       <extracomment>Error shown when a temporary file cannot be created for the update download. %1 is the system error message.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo crear el archivo temporal para la descarga: %1</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="401"/>
       <source>Failed to save download data: %1</source>
       <extracomment>Error shown when writing download data to disk fails. %1 is the system error message.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al guardar los datos de la descarga: %1</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="412"/>
       <source>Download failed: %1</source>
       <extracomment>Error shown when the update file download fails. %1 is the network error message.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error en la descarga: %1</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="420"/>
       <source>Download failed. Please try again.</source>
       <extracomment>Error shown when the update download completed but nothing was received</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error en la descarga. Por favor, inténtalo de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="428"/>
       <source>Failed to save download: %1</source>
       <extracomment>Error shown when flushing the downloaded file to disk fails. %1 is the system error message.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al guardar la descarga: %1</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="436"/>
       <location filename="../src/updater/Feed.cpp" line="445"/>
       <source>Failed to verify download integrity</source>
       <extracomment>Error shown when the downloaded file cannot be read back for checksum verification</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al verificar la integridad de la descarga</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="454"/>
@@ -7696,31 +7773,32 @@ Error shown when the update server response cannot be understood</extracomment>
       <source>Could not open the downloaded update. You can try opening it manually:
 %1</source>
       <extracomment>Error shown when the downloaded update file cannot be opened for installation. %1 is the file path.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo abrir la actualización descargada. Puede intentar abrirla manualmente:
+%1</translation>
     </message>
     <message>
       <location filename="../src/updater/UpdateDialog.cpp" line="662"/>
       <source>Could not check for updates</source>
       <extracomment>Label shown in the update dialog when the update check fails due to a network or server error</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo buscar actualizaciones</translation>
     </message>
     <message>
       <location filename="../src/updater/UpdateDialog.cpp" line="677"/>
       <source>Download failed. Please try again.</source>
       <extracomment>Error shown when the download finished but no file was saved</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error en la descarga. Por favor, inténtelo de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/updater/UpdateDialog.cpp" line="700"/>
       <source>Download Error</source>
       <extracomment>Title for the download error warning dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error en la descarga</translation>
     </message>
     <message>
       <location filename="../src/updater/UpdateDialog.cpp" line="702"/>
       <source>There was an error while downloading the update.</source>
       <extracomment>Message shown in the download error warning dialog, followed by the specific error details</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se produjo un error al descargar la actualización.</translation>
     </message>
   </context>
   <context>
@@ -7735,7 +7813,8 @@ Error shown when the update server response cannot be understood</extracomment>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>¿Está seguro de que desea eliminar este perfil? Se perderá todo (alias, activadores, copias de seguridad, etc.).
+Si es así, escriba el nombre del perfil para confirmar:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="77"/>
@@ -7944,7 +8023,13 @@ Cuenta</translation>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Página web&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Foros&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentación&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Código fuente&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Funciones/Errores&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="278"/>
@@ -7954,7 +8039,13 @@ Cuenta</translation>
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;¡Otros también han dejado su huella en diferentes aspectos del proyecto Mudlet y, si no han sido mencionados aquí, no es en absoluto intencional! Para los colaboradores anteriores, puedes verlos mencionados en la lista de &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; (en nuestro antiguo sitio de seguimiento de errores), o para los colaboradores actuales, es muy posible que estén incluidos en la lista de &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Colaboradores&lt;/a&gt;&lt;/b&gt; en GitHub.&lt;/p&gt;
+&lt;br&gt;
+&lt;p&gt;Muchos iconos se han tomado del &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;tema de iconos KDE4 oxygen&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; en &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{archivo de wayback machine}&lt;/sup&gt;&lt;/a&gt; o &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;. La mayoría de los restantes son de Thorsten Wilms, o de Stephen Lyons combinando partes del trabajo de Thorsten con las otras fuentes.&lt;/p&gt;
+&lt;p&gt;Agradecimientos especiales a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; y &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. Han aportado muchas buenas ideas y, por lo tanto, han ayudado a mejorar sustancialmente el entorno de desarrollo de scripts.&lt;/p&gt;
+&lt;p&gt;Gracias a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;), quien nos reunió a todos y nos inspiró con su proyecto KMuddy. Mudlet utiliza parte del código telnet que escribió para su proyecto KMuddy (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;Agradecimientos especiales a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) por darnos algunos valiosos consejos.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="321"/>
@@ -7967,27 +8058,32 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="617"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; se construye sobre los hombros de otros proyectos del mundo FOSS (software libre y de código abierto); además de utilizar muchos componentes GPL, también hacemos uso de software de terceros con otras licencias:&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="859"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Biblioteca Communi IRC&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="862"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Partes del código de &lt;tt&gt;irctextformat.cpp&lt;/tt&gt; provienen de Konversation y los derechos de autor pertenecen a:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="868"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="871"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="874"/>
