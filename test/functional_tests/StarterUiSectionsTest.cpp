@@ -743,6 +743,39 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "game text after the uninstall started the interface up again");
     }
 
+    // The introduction is held back while the first-run tour is open, on a
+    // one-shot handler registered long after the ones the script sets up. An
+    // uninstall in that window has to take that one too, or closing the tour
+    // calls into a BaseUI that is no longer there.
+    void test_uninstallingWhileTheFirstRunTourIsOpenTakesItsHandlerToo()
+    {
+        startProfile();
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+        // what mudlet::loadProfile() sets before the default packages install
+        QVERIFY(runLua(host, qsl("mudlet = mudlet or {}\nmudlet.uiTourPending = true")));
+        if (!host->mInstalledPackages.contains(qsl("mudlet-base-ui"))) {
+            auto [installed, message] = host->installPackage(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+        feedLine(host, qsl("Health:   3600/3600     Mana:     3400/3400"));
+        // an interface that has not introduced itself is one that took the tour
+        // branch, which is the only thing that registers that handler
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.settings.announced")), "the dock was not built with its introduction held back for the tour, so there is no handler to leak");
+
+        QVERIFY2(host->uninstallPackage(qsl("mudlet-base-ui"), enums::PackageModuleType::Package), "the starter UI package would not uninstall");
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "the uninstall left the interface's state behind");
+
+        // a stand-in under the same name: a handler that outlived the package
+        // calls announce on this rather than on a nil global, so what would have
+        // been a Lua error is something this can assert on
+        QVERIFY(runLua(host, qsl("__uiTourReached = false\nBaseUI = { announce = function() __uiTourReached = true end }")));
+        QVERIFY(runLua(host, qsl("raiseEvent('sysUiTourFinished')")));
+        QVERIFY(runLua(host, qsl("BaseUI = nil")));
+        QVERIFY2(luaTrue(host, qsl("__uiTourReached == false")), "closing the first-run tour after the uninstall still called into the interface");
+    }
+
 private:
     // every section's band of the dock, in percentages of it, which is what the
     // layout is written in and what survives a window of any size

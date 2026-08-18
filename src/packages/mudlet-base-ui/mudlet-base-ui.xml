@@ -432,6 +432,20 @@ BaseUI.vitalsTriggerIds = BaseUI.vitalsTriggerIds or {}
 BaseUI.shapeSightings = BaseUI.shapeSightings or {}
 BaseUI.vitalsData = BaseUI.vitalsData or {}
 BaseUI.vitalsLock = BaseUI.vitalsLock or 0
+BaseUI.eventHandlerIds = BaseUI.eventHandlerIds or {}
+
+-- An anonymous event handler belongs to the profile rather than to the package
+-- that registered it, so uninstalling has to take these with it. Every
+-- registration goes through here, including the ones made later in a session.
+-- The id is only recorded once: re-running this script (saving it in the editor
+-- does) hands back the ids registered the first time rather than new ones.
+local function onEvent(event, handler, oneShot)
+  local id = registerAnonymousEventHandler(event, handler, oneShot)
+  if not table.contains(BaseUI.eventHandlerIds, id) then
+    BaseUI.eventHandlerIds[#BaseUI.eventHandlerIds + 1] = id
+  end
+  return id
+end
 
 local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
 local ownPackage = "mudlet-base-ui"
@@ -2467,7 +2481,7 @@ function BaseUI.maybeAnnounce()
   end
   -- respect the first-run UI tour: hold the introduction until it is done
   if mudlet and mudlet.uiTourPending then
-    registerAnonymousEventHandler("sysUiTourFinished", "BaseUI.announce", true)
+    onEvent("sysUiTourFinished", "BaseUI.announce", true)
     return
   end
   BaseUI.announce()
@@ -2593,15 +2607,6 @@ BaseUI.createVitalsTriggers()
 -- negotiate MSDP up front: it costs nothing on servers without it and gives
 -- gauges to games that have it but lack GMCP
 setConfig("enableMSDP", true)
-
--- An anonymous event handler belongs to the profile rather than to the package
--- that registered it, so uninstalling has to take these with it. Refilled rather
--- than added to: re-running this script (saving it in the editor does) hands back
--- the ids it registered the first time, and the list would name each one twice.
-BaseUI.eventHandlerIds = {}
-local function onEvent(event, handler)
-  BaseUI.eventHandlerIds[#BaseUI.eventHandlerIds + 1] = registerAnonymousEventHandler(event, handler)
-end
 
 onEvent("gmcp.Char.Vitals", "BaseUI.updateVitals")
 onEvent("gmcp.char.vitals", "BaseUI.updateVitals")
