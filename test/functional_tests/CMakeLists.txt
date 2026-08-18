@@ -7,18 +7,11 @@ cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
-    TutorialInvitationLayoutTest.cpp
-    FeatureCalloutTest.cpp
-    TutorialInvitationGateTest.cpp
-    StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     HostWidgetDecouplingTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
     TMediaLoopTest.cpp
-    StarterUiTriggerCostTest.cpp
-    StarterUiGaugePanelTest.cpp
-    ExperiencedPlayerGateTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -131,6 +124,18 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageSelfRemovalTest.cpp
 )
 
+# Onboarding and in-app guidance: the starter UI, the tutorial invitation,
+# the feature callouts and the experienced-player gate
+set(STARTERUI_GROUP_TEST_SOURCES
+    ExperiencedPlayerGateTest.cpp
+    FeatureCalloutTest.cpp
+    StarterUiGaugePanelTest.cpp
+    StarterUiSectionsTest.cpp
+    StarterUiTriggerCostTest.cpp
+    TutorialInvitationGateTest.cpp
+    TutorialInvitationLayoutTest.cpp
+)
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
@@ -210,6 +215,7 @@ add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
