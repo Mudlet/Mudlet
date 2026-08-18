@@ -2593,13 +2593,20 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             //we're a dual install, reinstalling package
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
-            installPackage(entry[0], enums::PackageModuleType::Package);
+            //report a failure as the restore not happening, not as an install the user never asked for
+            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); !restored) {
+                //: %1 is the module name, %2 is the reason the package sharing that name could not be put back
+                postMessage(tr("[ ERROR ] - Removed module \"%1\", but its package copy could not be restored: %2").arg(packageName, reason));
+            }
         }
     } else {
         mInstalledPackages.removeAll(packageName);
         if (dualInstallations) {
             QStringList entry = mInstalledModules[packageName];
-            installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true); !restored) {
+                //: %1 is the package name, %2 is the reason the module sharing that name could not be put back
+                postMessage(tr("[ ERROR ] - Removed package \"%1\", but its module copy could not be restored: %2").arg(packageName, reason));
+            }
             //restore the module edit flag
             mInstalledModules[packageName] = entry;
         }
