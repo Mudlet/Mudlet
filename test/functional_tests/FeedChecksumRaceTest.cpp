@@ -31,6 +31,8 @@
 #include <QTcpSocket>
 #include <QTimer>
 
+#include "GroupedTest.h"
+
 /*
  * Regression test for https://github.com/Mudlet/Mudlet/issues/9938 (Sentry
  * MUDLET-4M): EXCEPTION_ACCESS_VIOLATION_READ at address 0x8 inside
@@ -202,5 +204,5 @@ void FeedChecksumRaceTest::secondDownloadRequestDuringChecksumFetchDoesNotCrash(
     QVERIFY2(feed.isDownloading(), "the download started by the first request must still be running");
 }
 
-QTEST_MAIN(FeedChecksumRaceTest)
+MUDLET_GROUPED_TEST_MAIN(FeedChecksumRaceTest)
 #include "FeedChecksumRaceTest.moc"

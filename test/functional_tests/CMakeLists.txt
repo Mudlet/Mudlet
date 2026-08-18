@@ -8,27 +8,18 @@ cmake_language(DEFER CALL restore_windows_test_output)
 set(FUNCTIONAL_TEST_SOURCES
 )
 
-# The updater sources are only built with USE_UPDATER, and on macOS the
-# Updater wraps Sparkle instead of creating an UpdateDialog
-if(USE_UPDATER AND NOT APPLE)
-    list(APPEND FUNCTIONAL_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
-endif()
-
-# dblsqd::Feed itself is built on every platform that has the updater
-if(USE_UPDATER)
-    list(APPEND FUNCTIONAL_TEST_SOURCES FeedChecksumRaceTest.cpp)
-endif()
-
 # Tests that share one executable rather than getting one each. A functional
 # test binary statically links mudlet_core and costs a build tree ~250MB plus a
 # link step, and none of that is per-test - so tests of one subsystem are built
 # together and told on the command line which class to run. See GroupedTest.h.
 #
 # A new test belongs in its subsystem's list below if there is one, and then
-# writes MUDLET_GROUPED_TEST_MAIN() rather than QTEST_MAIN(); a subsystem with
-# no list yet still belongs in FUNCTIONAL_TEST_SOURCES. A grouped test's class
-# name has to match its filename, since that is the name ctest passes on the
-# command line and the group binary looks up.
+# writes MUDLET_GROUPED_TEST_MAIN() rather than QTEST_MAIN() - or
+# MUDLET_GROUPED_TEST_APPLESS_MAIN() rather than QTEST_APPLESS_MAIN(), if it
+# builds its own application object. A subsystem with no list yet still belongs
+# in FUNCTIONAL_TEST_SOURCES. A grouped test's class name has to match its
+# filename, since that is the name ctest passes on the command line and the
+# group binary looks up.
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
@@ -144,6 +135,25 @@ set(MEDIA_GROUP_TEST_SOURCES
     TtsInterruptingSpeakTest.cpp
 )
 
+# The updater: the release feed it reads and the dialog it offers. Named for
+# releases rather than the updater because Windows refuses to launch an unsigned
+# executable whose name contains "update" without elevation (#9748), which the
+# name gate in ../CMakeLists.txt enforces. Both members are conditional and not
+# on the same condition, so this list is appended to rather than declared, and
+# its target is only created if anything landed in it.
+set(RELEASE_GROUP_TEST_SOURCES)
+
+# The updater sources are only built with USE_UPDATER, and on macOS the
+# Updater wraps Sparkle instead of creating an UpdateDialog
+if(USE_UPDATER AND NOT APPLE)
+    list(APPEND RELEASE_GROUP_TEST_SOURCES NewReleaseDialogTeardownTest.cpp)
+endif()
+
+# dblsqd::Feed itself is built on every platform that has the updater
+if(USE_UPDATER)
+    list(APPEND RELEASE_GROUP_TEST_SOURCES FeedChecksumRaceTest.cpp)
+endif()
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
@@ -226,6 +236,9 @@ add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
+if(RELEASE_GROUP_TEST_SOURCES)
+    add_grouped_test_binary(functional_release_tests ${RELEASE_GROUP_TEST_SOURCES})
+endif()
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})

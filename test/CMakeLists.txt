@@ -221,9 +221,9 @@ endfunction()
 
 # Both passes are needed. Targets carry the name that actually reaches disk,
 # OUTPUT_NAME included, but only for the tests this configuration builds:
-# NewReleaseDialogTeardownTest, for one, is registered only under USE_UPDATER.
-# Source names are what the registration loops derive executable names from,
-# and are present whatever the configuration.
+# functional_release_tests, for one, is created only under USE_UPDATER. Source
+# names are what the registration loops derive executable names from, are
+# present whatever the configuration, and are all a grouped test ever has.
 function(mudlet_check_test_executable_names directory)
     mudlet_reject_uac_installer_target_names("${directory}")
 

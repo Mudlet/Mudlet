@@ -35,6 +35,8 @@
 
 #include <memory>
 
+#include "GroupedTest.h"
+
 /*
  * What the Updater has to clean up after itself: the dialog it owns, and the
  * files it leaves in the temp directory.
@@ -61,7 +63,7 @@
  * it. Applying an update does exactly that: it calls close() and then done()
  * on the dialog, which crashed on Windows.
  *
- * QTEST_APPLESS_MAIN is used because the test itself must own the
+ * The appless entry point is used because the test itself must own the
  * QApplication lifetime to walk it through quit and destruction.
  */
 class NewReleaseDialogTeardownTest : public QObject
@@ -210,5 +212,5 @@ void NewReleaseDialogTeardownTest::updateDialogDestroyedBeforeApplicationTeardow
     QVERIFY2(dialog.isNull(), "UpdateDialog must be destroyed when the application quits: deleting it any later (from ~Updater, inside the application's destructor) corrupts the heap - see #9122");
 }
 
-QTEST_APPLESS_MAIN(NewReleaseDialogTeardownTest)
+MUDLET_GROUPED_TEST_APPLESS_MAIN(NewReleaseDialogTeardownTest)
 #include "NewReleaseDialogTeardownTest.moc"
