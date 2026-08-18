@@ -166,7 +166,7 @@ add_dependencies(copy_sentry sentry_without_transport)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
-    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT USE_SANITIZER)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
             COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
             COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
@@ -179,7 +179,7 @@ if(APPLE)
         )
     endif()
 elseif(UNIX)
-    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT USE_SANITIZER)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
             COMMAND objcopy --only-keep-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}> $<TARGET_FILE:${EXE_MUDLET_TARGET}>.debug
             COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
