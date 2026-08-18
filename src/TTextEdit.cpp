@@ -967,7 +967,6 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
 {
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    QFontMetrics fm(painter.font());
 
     // Calculate decoration positions
     int underlineY = textRect.bottom() - 1;
