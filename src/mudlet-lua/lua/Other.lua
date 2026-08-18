@@ -954,6 +954,18 @@ local timeframetable = {}
 
 function timeframe(vname, true_time, nil_time, ...)
   local format = string.format
+  local isTableMode = false
+  local additional_timers = {}
+
+  -- Support table argument format
+  if type(vname) == 'table' and not (type(true_time) == 'number' or type(true_time) == 'table') then
+    isTableMode = true
+    local args = vname
+    vname = args.vname or args.name or args.variable
+    true_time = args.true_time or args.trueTime
+    nil_time = args.nil_time or args.nilTime
+    additional_timers = args.timerlist or args.timers or {}
+  end
 
   assert(type(vname) == "string" or type(vname) == "function", format("timeframe: bad argument #1 type (vname as a string or function expected, got %s!", type(vname)))
   assert(type(true_time) == "number" or type(true_time) == "table", format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!)", type(true_time)))
@@ -969,6 +981,13 @@ function timeframe(vname, true_time, nil_time, ...)
     timerlist,
     (type(nil_time) == "number" and {nil_time, nil}) or (type(nil_time) == "table" and nil_time) or nil
   )
+
+  -- Add additional timers from table argument (positional varargs already included via ...)
+  if isTableMode then
+    for _, timer in ipairs(additional_timers) do
+      timerlist[#timerlist + 1] = timer
+    end
+  end
 
   -- reinitialise timeframe for vname
   killtimeframe(vname)

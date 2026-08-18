@@ -1134,6 +1134,284 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  -- Tests for table argument support in mapper C++ functions with 5+ parameters
+  describe("Tests createMapper() table argument support", function()
+    -- A successful call is a one way door for the profile: it builds the
+    -- embedded mapper, which nothing can take down again, and from then on
+    -- openMapWidget() can only answer "do you already use an embedded mapper?".
+    -- This file sorts ahead of GeyserMapper_spec, Mapper_spec and UI_spec, all
+    -- of which need the dockable map widget, so the specs below stop at the
+    -- point where the arguments have been read and before anything is built.
+    pending("creates the embedded mapper, which cannot be undone for the rest of the session")
+
+    it("should reject a table that is missing a required key", function()
+      local created, message = createMapper({x = 0, y = 0, width = 300})
+      assert.is_nil(created)
+      assert.is_truthy(message:find("height", 1, true))
+    end)
+
+    -- The table branch reads its keys with the non-raising checkStringArg /
+    -- checkIntArg helpers and defers the raise until every QString is out of
+    -- scope, so this path no longer strands the key buffer under the leak
+    -- detection job. A boolean is used rather than a string because
+    -- lua_isnumber() accepts a numeric string.
+    it("should type check the values it reads out of the table", function()
+      assert.has_error(function() createMapper({x = 0, y = 0, width = 300, height = false}) end)
+    end)
+
+    it("should reject a key that is neither a string nor a number", function()
+      assert.has_error(function() createMapper({[true] = 1}) end)
+    end)
+
+    it("should still type check positional arguments", function()
+      assert.has_error(function() createMapper(0, 0, 300) end)
+    end)
+  end)
+
+  describe("Tests addMapEvent() table argument support", function()
+    -- getMapEvents() is profile wide, and Mapper_spec opens by asserting that
+    -- nothing is registered yet, so every event made here has to go again.
+    local registered = {}
+
+    local function track(uniqueName)
+      registered[#registered + 1] = uniqueName
+      return uniqueName
+    end
+
+    teardown(function()
+      for _, uniqueName in ipairs(registered) do
+        removeMapEvent(uniqueName)
+      end
+      registered = {}
+    end)
+
+    it("should accept positional arguments", function()
+      local result = pcall(addMapEvent, track("uniqueEvent" .. os.time()), "eventName", "parent", "displayName", "arg1,arg2")
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(addMapEvent, {
+        uniquename = track("uniqueEvent2" .. os.time()),
+        event = "eventName",
+        parent = "parent",
+        displayname = "displayName",
+        arguments = {"arg1", "arg2"}
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createMapLabel() table argument support", function()
+    it("should accept minimum positional arguments (11 required)", function()
+      local result = pcall(createMapLabel, 1, "Test Label", 0, 0, 0, 255, 255, 255, 0, 0, 0)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with required parameters", function()
+      local result = pcall(createMapLabel, {
+        area = 1,
+        text = "Table Label",
+        posX = 0,
+        posY = 0,
+        posZ = 0,
+        fgRed = 255,
+        fgGreen = 255,
+        fgBlue = 255,
+        bgRed = 0,
+        bgGreen = 0,
+        bgBlue = 0
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with optional parameters", function()
+      local result = pcall(createMapLabel, {
+        areaID = 1,
+        text = "Full Label",
+        x = 0,
+        y = 0,
+        z = 0,
+        fgR = 255,
+        fgG = 255,
+        fgB = 255,
+        bgR = 0,
+        bgG = 0,
+        bgB = 0,
+        zoom = 30.0,
+        fontSize = 50,
+        showOnTop = true,
+        noScaling = true,
+        foregroundTransparency = 255,
+        backgroundTransparency = 50
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests highlightRoom() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(highlightRoom, 1, 255, 0, 0, 128, 0, 0, 1.0, 255, 128)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(highlightRoom, {
+        roomID = 1,
+        color1Red = 255,
+        color1Green = 0,
+        color1Blue = 0,
+        color2Red = 128,
+        color2Green = 0,
+        color2Blue = 0,
+        highlightRadius = 1.0,
+        color1Alpha = 255,
+        color2Alpha = 128
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createMapImageLabel() table argument support", function()
+    it("should accept positional arguments", function()
+      -- Create a temp image file for testing
+      local tmpfile = "/tmp/mudlet_test_" .. os.time() .. ".png"
+      local f = io.open(tmpfile, "w")
+      if f then
+        f:write("dummy")
+        f:close()
+        local result = pcall(createMapImageLabel, 1, tmpfile, 0, 0, 0, 100, 100, 30.0, true)
+        os.remove(tmpfile)
+        assert.is_true(result)
+      else
+        pending("Could not create temp file")
+      end
+    end)
+
+    it("should accept table arguments", function()
+      local tmpfile = "/tmp/mudlet_test2_" .. os.time() .. ".png"
+      local f = io.open(tmpfile, "w")
+      if f then
+        f:write("dummy")
+        f:close()
+        local result = pcall(createMapImageLabel, {
+          areaID = 1,
+          imagePath = tmpfile,
+          posX = 0,
+          posY = 0,
+          posZ = 0,
+          width = 100,
+          height = 100,
+          zoom = 30.0,
+          showOnTop = true
+        })
+        os.remove(tmpfile)
+        assert.is_true(result)
+      else
+        pending("Could not create temp file")
+      end
+    end)
+  end)
+
+  describe("Tests addCustomLine() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(addCustomLine, 1, 2, "north", "solid line", {255, 0, 0}, true)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(addCustomLine, {
+        roomID = 1,
+        toRoomID = 2,
+        direction = "north",
+        style = "solid line",
+        color = {255, 0, 0},
+        arrow = true
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setCustomEnvColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setCustomEnvColor, 255, 255, 128, 64, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setCustomEnvColor, {
+        environmentID = 255,
+        r = 255,
+        g = 128,
+        b = 64,
+        alpha = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  -- Rejecting a value must not strand the QString the table branch built for
+  -- the key: lua_error() longjmps past C++ destructors, so those branches
+  -- record the failure and defer the raise until that scope has closed. The
+  -- leak detection CI job only reports a leak on a path some spec actually
+  -- runs, so these are what keeps the class from coming back.
+  --
+  -- A boolean is the bad value throughout because lua_isstring() accepts
+  -- numbers and lua_isnumber() accepts numeric strings, so neither a number
+  -- nor a string reliably fails a check. None of these calls gets far enough
+  -- to build anything, so they leave no map state behind.
+  -- uniqueName and eventName reject a value that is not a string, so the other
+  -- string keys of the same table have to as well: silently dropping a bad
+  -- parent or displayName registered the event anyway, under a name the caller
+  -- never asked for.
+  describe("Tests addMapEvent treating all its string keys alike", function()
+    local registered = {}
+
+    teardown(function()
+      for _, uniqueName in ipairs(registered) do
+        removeMapEvent(uniqueName)
+      end
+      registered = {}
+    end)
+
+    local cases = {
+      {"parent", "addMapEventParentProbe"},
+      {"displayname", "addMapEventDisplayNameProbe"},
+    }
+
+    for _, case in ipairs(cases) do
+      local key, uniqueName = case[1], case[2]
+
+      it("rejects a non-string " .. key, function()
+        registered[#registered + 1] = uniqueName
+        assert.has_error(function()
+          addMapEvent({uniquename = uniqueName, eventname = "addMapEventProbeEvent", [key] = false})
+        end)
+        assert.is_nil(getMapEvents()[uniqueName])
+      end)
+    end
+  end)
+
+  describe("Tests table argument rejection in the mapper functions", function()
+    local cases = {
+      {"addMapEvent", addMapEvent, {uniquename = "tableArgRejectProbe", eventname = false}},
+      {"createMapLabel", createMapLabel, {area = false}},
+      {"createMapImageLabel", createMapImageLabel, {areaID = false}},
+      {"highlightRoom", highlightRoom, {roomID = false}},
+      {"setCustomEnvColor", setCustomEnvColor, {environmentID = false}},
+      {"addCustomLine", addCustomLine, {roomID = false}},
+    }
+
+    for _, case in ipairs(cases) do
+      local label, callable, argument = case[1], case[2], case[3]
+
+      it(label .. " raises on a bad value type without stranding the key", function()
+        assert.is_function(callable, label .. " is unavailable in this profile")
+        assert.has_error(function() callable(argument) end)
+      end)
+    end
+  end)
+
   describe("Tests, if hanging indexes are removed", function()
     local test_db_name = db:safe_name("remove_indexes_test")
     local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
@@ -1339,18 +1617,18 @@ describe("Tests DB.lua functions", function()
   describe("Tests that _violations changes trigger table migration", function()
     local test_db_name = "violations_migration_test"
     local test_db_file
-    
+
     before_each(function()
       test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
       -- Remove any existing test database
       os.remove(test_db_file)
     end)
-    
+
     after_each(function()
       db:close()
       os.remove(test_db_file)
     end)
-    
+
     it("should migrate table when _violations changes from FAIL to REPLACE", function()
       -- Create initial database with FAIL
       mydb = db:create(test_db_name, {
@@ -1361,16 +1639,16 @@ describe("Tests DB.lua functions", function()
           _violations = "FAIL"
         }
       })
-      
+
       -- Add some test data
       db:add(mydb.people, {name = "Alice", city = "Boston"})
       db:add(mydb.people, {name = "Bob", city = "Chicago"})
-      
+
       -- Verify FAIL behavior: adding duplicate should error
       local result, err = db:add(mydb.people, {name = "Alice", city = "Denver"})
       assert.is_nil(result)
       assert.is_not_nil(err)
-      
+
       -- Close and recreate with REPLACE
       db:close()
       mydb = db:create(test_db_name, {
@@ -1381,17 +1659,17 @@ describe("Tests DB.lua functions", function()
           _violations = "REPLACE"
         }
       })
-      
+
       -- Verify data is still there
       local results = db:fetch(mydb.people)
       assert.are.equal(2, #results)
-      
+
       -- Now REPLACE behavior should work: adding duplicate should replace
       db:add(mydb.people, {name = "Alice", city = "Denver"})
-      
+
       results = db:fetch(mydb.people)
       assert.are.equal(2, #results)
-      
+
       -- Find Alice's record
       local alice = nil
       for _, person in ipairs(results) do
@@ -1400,11 +1678,11 @@ describe("Tests DB.lua functions", function()
           break
         end
       end
-      
+
       assert.is_not_nil(alice)
       assert.are.equal("Denver", alice.city)
     end)
-    
+
     it("should migrate table when _violations changes from REPLACE to IGNORE", function()
       -- Create initial database with REPLACE
       mydb = db:create(test_db_name, {
@@ -1415,15 +1693,15 @@ describe("Tests DB.lua functions", function()
           _violations = "REPLACE"
         }
       })
-      
+
       -- Add initial data
       db:add(mydb.items, {id = 1, value = "first"})
       db:add(mydb.items, {id = 1, value = "second"}) -- Should replace
-      
+
       local results = db:fetch(mydb.items)
       assert.are.equal(1, #results)
       assert.are.equal("second", results[1].value)
-      
+
       -- Close and recreate with IGNORE
       db:close()
       mydb = db:create(test_db_name, {
@@ -1434,15 +1712,15 @@ describe("Tests DB.lua functions", function()
           _violations = "IGNORE"
         }
       })
-      
+
       -- Add duplicate with IGNORE - should keep original
       db:add(mydb.items, {id = 1, value = "third"})
-      
+
       results = db:fetch(mydb.items)
       assert.are.equal(1, #results)
       assert.are.equal("second", results[1].value) -- Should still be "second"
     end)
-    
+
     it("should migrate table when _violations changes with multi-column unique constraint", function()
       -- Create initial database with FAIL on multi-column unique
       mydb = db:create(test_db_name, {
@@ -1454,16 +1732,16 @@ describe("Tests DB.lua functions", function()
           _violations = "FAIL"
         }
       })
-      
+
       -- Add test data
       db:add(mydb.records, {name = "Item1", category = "A", value = 10})
       db:add(mydb.records, {name = "Item1", category = "B", value = 20})
-      
+
       -- Verify FAIL behavior
       local result, err = db:add(mydb.records, {name = "Item1", category = "A", value = 30})
       assert.is_nil(result)
       assert.is_not_nil(err)
-      
+
       -- Close and recreate with REPLACE
       db:close()
       mydb = db:create(test_db_name, {
@@ -1475,13 +1753,13 @@ describe("Tests DB.lua functions", function()
           _violations = "REPLACE"
         }
       })
-      
+
       -- Now REPLACE should work
       db:add(mydb.records, {name = "Item1", category = "A", value = 30})
-      
+
       local results = db:fetch(mydb.records, db:eq(mydb.records.name, "Item1"))
       assert.are.equal(2, #results)
-      
+
       -- Verify the value was replaced
       local found_replaced = false
       for _, record in ipairs(results) do

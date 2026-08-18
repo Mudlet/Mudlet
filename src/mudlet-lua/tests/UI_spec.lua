@@ -1283,6 +1283,330 @@ describe("Tests UI functions", function()
     deselect()
   end)
 
+  -- Tests for table argument support in C++ functions with 5+ parameters
+  describe("Tests echoLink() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(echoLink, "main", "test link", "echo('clicked')", "hint text", true)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(echoLink, {
+        windowName = "main",
+        text = "test link",
+        command = "echo('clicked')",
+        hint = "hint text",
+        useCurrentFormat = true
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests insertLink() table argument support", function()
+    it("should accept positional arguments", function()
+      echo("test ")
+      local result = pcall(insertLink, "main", "insert link", "echo('inserted')", "tooltip", false)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      echo("test ")
+      local result = pcall(insertLink, {
+        windowName = "main",
+        text = "insert link",
+        command = "echo('inserted')",
+        hint = "tooltip"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests echoPopup() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(echoPopup, "main", "popup text", {"cmd1", "cmd2"}, {"hint1", "hint2"}, true)
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests insertPopup() table argument support", function()
+    it("should accept positional arguments", function()
+      echo("test ")
+      local result = pcall(insertPopup, "main", "popup", {"cmd1"}, {"hint1"}, false)
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setCommandBackgroundColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setCommandBackgroundColor, "main", 255, 128, 64, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setCommandBackgroundColor, {
+        windowName = "main",
+        r = 255,
+        g = 128,
+        b = 64,
+        transparency = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setCommandForegroundColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setCommandForegroundColor, "main", 255, 128, 64, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setCommandForegroundColor, {
+        windowName = "main",
+        r = 255,
+        g = 128,
+        b = 64,
+        transparency = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setBackgroundColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setBackgroundColor, "main", 50, 50, 50, 255)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setBackgroundColor, {
+        windowName = "main",
+        r = 50,
+        g = 50,
+        b = 50,
+        transparency = 255
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setBgColor() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setBgColor, "main", 50, 50, 50, 255)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setBgColor, {
+        windowName = "main",
+        r = 50,
+        g = 50,
+        b = 50,
+        transparency = 255
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests setTextFormat() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(setTextFormat, "main", 255, 255, 255, 0, 0, 0, true, false, false, false, false, false)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(setTextFormat, {
+        windowName = "main",
+        fgRed = 255,
+        fgGreen = 255,
+        fgBlue = 255,
+        bgRed = 0,
+        bgGreen = 0,
+        bgBlue = 0,
+        bold = true,
+        underline = false,
+        italics = false,
+        strikeout = false,
+        overline = false,
+        reverse = false
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createLabel() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createLabel, "main", "testLabel" .. os.time(), 0, 0, 100, 50, true, false)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createLabel, {
+        name = "testLabel2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 100,
+        height = 50,
+        fillBackground = true,
+        enableClickthrough = false
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createMiniConsole() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createMiniConsole, "main", "testMini" .. os.time(), 0, 0, 300, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createMiniConsole, {
+        name = "testMini2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createCommandLine() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createCommandLine, "main", "testCmd" .. os.time(), 0, 0, 300, 30)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createCommandLine, {
+        name = "testCmd2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 30
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests createScrollBox() table argument support", function()
+    it("should accept positional arguments", function()
+      local result = pcall(createScrollBox, "main", "testScroll" .. os.time(), 0, 0, 300, 200)
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(createScrollBox, {
+        name = "testScroll2" .. os.time(),
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 200
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  -- Rejecting a value must not strand the QString the table branch built for
+  -- the key, nor the Lua registry reference a command or function value was
+  -- already given: lua_error() longjmps past C++ destructors, so those
+  -- branches record the failure, release what they hold and defer the raise
+  -- until that scope has closed. The leak detection CI job only reports a leak
+  -- on a path some spec actually runs, so these are what keeps the class from
+  -- coming back.
+  --
+  -- A boolean is the bad value throughout because lua_isstring() accepts
+  -- numbers and lua_isnumber() accepts numeric strings, so neither a number
+  -- nor a string reliably fails a check. None of these calls gets far enough
+  -- to create a window, label or console.
+  describe("Tests table argument key handling in the link and popup functions", function()
+    -- insertPopup only ever takes a string as its first positional argument, so
+    -- a table there is unambiguously the named form and has to be handled as
+    -- one. Deciding that from a case-sensitive probe for a "text" key meant a
+    -- table keyed TEXT, or with no text at all, fell through to the positional
+    -- path and reported a type error about argument #1 instead.
+    it("reports the table form error when the table carries no text", function()
+      local created, message = insertPopup({commands = {"popupNoTextCmd"}, hints = {"popupNoTextHint"}})
+      assert.is_nil(created)
+      assert.is_truthy(message:find("text", 1, true))
+      assert.is_truthy(message:find("table", 1, true))
+    end)
+
+    it("accepts a mis-cased text key, as it does for every other key", function()
+      echo("test ")
+      assert.is_true(insertPopup({TEXT = "mis-cased", commands = {"popupMisCaseCmd"}, hints = {"popupMisCaseHint"}}))
+    end)
+
+    -- Repeated spellings of a key resolve last-wins everywhere else in these
+    -- table branches, so the second commands table has to replace the first
+    -- rather than append to it - appending left the command and hint counts
+    -- mismatched and the popup was refused.
+    it("lets the last spelling of a repeated key win instead of appending", function()
+      echo("test ")
+      assert.is_true(insertPopup({text = "repeated", commands = {"popupDupA"}, Commands = {"popupDupB"}, hints = {"popupDupHint"}}))
+    end)
+
+    -- A command given as a function is held by a Lua registry reference. When a
+    -- repeated spelling of the key replaces it, the reference it replaced has to
+    -- go back to the registry free list, otherwise every such call strands one.
+    -- One reference per call is handed to the console and legitimately stays
+    -- live, so the registry may grow by at most the number of calls.
+    local function assertRepeatedCommandKeyReleasesReference(callable, label)
+      local registry = debug.getregistry()
+
+      -- warm up: the first calls into a console allocate more than the
+      -- reference under test
+      for _ = 1, 5 do
+        callable({text = "warm", command = function() end, hint = "warm"})
+      end
+
+      local before = #registry
+      local calls = 40
+      for _ = 1, calls do
+        callable({text = "repeated", command = function() end, Command = function() end, hint = "repeated"})
+      end
+      local grew = #registry - before
+
+      assert.is_true(grew <= calls, ("%s stranded a registry reference: %d calls grew the registry by %d"):format(label, calls, grew))
+    end
+
+    it("echoLink releases the registry reference a repeated command key replaced", function()
+      assertRepeatedCommandKeyReleasesReference(echoLink, "echoLink")
+    end)
+
+    it("insertLink releases the registry reference a repeated command key replaced", function()
+      echo("test ")
+      assertRepeatedCommandKeyReleasesReference(insertLink, "insertLink")
+    end)
+  end)
+
+  describe("Tests table argument rejection in the window and format functions", function()
+    local cases = {
+      {"createLabel", createLabel, {name = false}},
+      {"createMiniConsole", createMiniConsole, {name = false}},
+      {"createCommandLine", createCommandLine, {name = false}},
+      {"createScrollBox", createScrollBox, {name = false}},
+      {"echoLink", echoLink, {text = false}},
+      {"insertLink", insertLink, {text = false}},
+      {"insertPopup", insertPopup, {text = false}},
+      {"setBackgroundColor", setBackgroundColor, {r = false}},
+      {"setBgColor", setBgColor, {r = false}},
+      {"setTextFormat", setTextFormat, {bgR = false}},
+      {"setCommandBackgroundColor", setCommandBackgroundColor, {r = false}},
+      {"setCommandForegroundColor", setCommandForegroundColor, {r = false}},
+    }
+
+    for _, case in ipairs(cases) do
+      local label, callable, argument = case[1], case[2], case[3]
+
+      it(label .. " raises on a bad value type without stranding the key", function()
+        assert.is_function(callable, label .. " is unavailable in this profile")
+        assert.has_error(function() callable(argument) end)
+      end)
+    end
+  end)
+
   -- https://github.com/Mudlet/Mudlet/issues/8945
   -- insertText with newlines should create new lines, not insert literal \n
   describe("Tests the functionality of insertText", function()

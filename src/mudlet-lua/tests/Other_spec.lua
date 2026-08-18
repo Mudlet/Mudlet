@@ -543,6 +543,239 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests timeframe() table argument support", function()
+    -- Only timeframe()'s argument handling is under test here, so the timer API
+    -- it drives is stubbed out. busted's setup() gives a stub no scope of its
+    -- own, so the originals have to be put back by hand: the timer API specs
+    -- further down this file drive the real timer engine.
+    local savedTempTimer, savedKillTimer
+
+    setup(function()
+      savedTempTimer, savedKillTimer = _G.tempTimer, _G.killTimer
+      _G.tempTimer = function() return 1 end
+      _G.killTimer = function() end
+    end)
+
+    teardown(function()
+      _G.tempTimer, _G.killTimer = savedTempTimer, savedKillTimer
+    end)
+
+    it("should accept positional arguments", function()
+      local result = pcall(timeframe, "testVar", 1.0, 2.0)
+      assert.is_true(result)
+    end)
+
+    it("should accept positional arguments with additional timers", function()
+      local result = pcall(timeframe, "testVar2", 1.0, 2.0, {3.0, "value3"}, {4.0, "value4"})
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments", function()
+      local result = pcall(timeframe, {
+        vname = "testVar3",
+        true_time = 1.0,
+        nil_time = 2.0,
+        timerlist = {{3.0, "value3"}, {4.0, "value4"}}
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with alternative key names", function()
+      local result = pcall(timeframe, {
+        name = "testVar4",
+        trueTime = 1.0,
+        nilTime = 2.0,
+        timers = {{3.0, "value3"}}
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept function as vname parameter", function()
+      local callback = function(val) end
+      local result = pcall(timeframe, callback, 1.0, 2.0)
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests permKey() table argument support", function()
+    local testGroupName = "testGroup" .. os.time()
+
+    setup(function()
+      permGroup(testGroupName, "key")
+    end)
+
+    it("should accept positional arguments without modifier (4 params)", function()
+      local result = pcall(permKey, "testKey" .. os.time(), testGroupName, string.byte('a'), "echo('test')")
+      assert.is_true(result)
+    end)
+
+    it("should accept positional arguments with modifier (5 params)", function()
+      local result = pcall(permKey, "testKey2" .. os.time(), testGroupName, 0x02000000, string.byte('b'), "echo('test2')")
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments without modifier", function()
+      local result = pcall(permKey, {
+        name = "testKey3" .. os.time(),
+        parent = testGroupName,
+        keyCode = string.byte('c'),
+        code = "echo('test3')"
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with modifier", function()
+      local result = pcall(permKey, {
+        name = "testKey4" .. os.time(),
+        parentGroup = testGroupName,
+        modifier = 0x02000000,
+        key = string.byte('d'),
+        luaCode = "echo('test4')"
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  describe("Tests tempComplexRegexTrigger() table argument support", function()
+    local testGroupName = "testTriggerGroup" .. os.time()
+
+    setup(function()
+      permGroup(testGroupName, "trigger")
+    end)
+
+    it("should accept positional arguments with string code", function()
+      local result = pcall(tempComplexRegexTrigger,
+        "test" .. os.time(), ".*test.*", "echo('found')",
+        0, 0, 0, 0, 0,
+        0, 0, "", 0, 0, -1
+      )
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with string code", function()
+      local result = pcall(tempComplexRegexTrigger, {
+        name = "test2" .. os.time(),
+        pattern = ".*test.*",
+        code = "echo('found')",
+        multiLine = false,
+        fgColor = 0,
+        bgColor = 0,
+        filter = false,
+        matchAll = false,
+        highlightFgColor = 0,
+        highlightBgColor = 0,
+        soundFile = "",
+        fireLength = 0,
+        lineDelta = 0
+      })
+      assert.is_true(result)
+    end)
+
+    it("should accept table arguments with function code", function()
+      local codeFunc = function() echo('found by function') end
+      local result = pcall(tempComplexRegexTrigger, {
+        triggerName = "test3" .. os.time(),
+        regex = ".*test.*",
+        code = codeFunc,
+        multiline = false,
+        fgColor = 0,
+        bgColor = 0,
+        filter = false,
+        matchAll = false,
+        highlightFgColor = 0,
+        highlightBgColor = 0,
+        soundFile = "",
+        fireLength = 0,
+        lineDelta = 0
+      })
+      assert.is_true(result)
+    end)
+  end)
+
+  -- Rejecting a value must not strand the QString the table branch built for
+  -- the key: lua_error() longjmps past C++ destructors, so those branches
+  -- record the failure and defer the raise until that scope has closed. The
+  -- leak detection CI job only reports a leak on a path some spec actually
+  -- runs, so these are what keeps the class from coming back.
+  --
+  -- A boolean is the bad value because lua_isstring() accepts numbers and
+  -- lua_isnumber() accepts numeric strings, so neither a number nor a string
+  -- reliably fails a check. Neither call gets far enough to register anything.
+  describe("Tests tempComplexRegexTrigger table and positional forms agreeing", function()
+    local created = {}
+
+    local function make(name, overrides)
+      local argument = {
+        triggerName = name,
+        regex = ".*probe.*",
+        code = "",
+        multiline = false,
+        fgColor = 0,
+        bgColor = 0,
+        filter = false,
+        matchAll = false,
+        highlightFgColor = 0,
+        highlightBgColor = 0,
+        soundFile = "",
+        fireLength = 0,
+        lineDelta = 0,
+      }
+      for key, value in pairs(overrides or {}) do
+        argument[key] = value
+      end
+      created[#created + 1] = name
+      return tempComplexRegexTrigger(argument)
+    end
+
+    teardown(function()
+      for _, name in ipairs(created) do
+        pcall(killTrigger, name)
+      end
+      created = {}
+    end)
+
+    -- The positional form kills a trigger of the same name before registering
+    -- the replacement, so re-registering carries the earlier patterns forward
+    -- onto one live trigger. The table form has to do the same, or the profile
+    -- ends up with two triggers of that name both matching.
+    --
+    -- exists() is the wrong probe here: killTrigger() only deactivates and
+    -- queues the trigger, and it stays findable by name until the deferred
+    -- cleanup frees it, so a corpse and its replacement both count. What the
+    -- kill actually changes is how many are still active.
+    it("leaves only one live trigger when the same name is registered twice", function()
+      local name = "tcrtReplaceProbe" .. os.time()
+      make(name)
+      make(name, {regex = ".*second.*"})
+      assert.are.equal(1, isActive(name, "trigger"))
+    end)
+
+    -- The positional form reads multiline with lua_tonumber, so a number is
+    -- what callers of this function already pass. The table form should not
+    -- reject what the same function accepts positionally.
+    it("accepts a number for multiline, as the positional form does", function()
+      local name = "tcrtMultilineProbe" .. os.time()
+      local id = make(name, {multiline = 0})
+      assert.are.equal("number", type(id))
+      assert.is_true(id > 0)
+    end)
+  end)
+
+  describe("Tests table argument rejection in permKey and tempComplexRegexTrigger", function()
+    local cases = {
+      {"permKey", permKey, {name = false}},
+      {"tempComplexRegexTrigger", tempComplexRegexTrigger, {name = false}},
+    }
+
+    for _, case in ipairs(cases) do
+      local label, callable, argument = case[1], case[2], case[3]
+
+      it(label .. " raises on a bad value type without stranding the key", function()
+        assert.is_function(callable, label .. " is unavailable in this profile")
+        assert.has_error(function() callable(argument) end)
+      end)
+    end
+  end)
 
   describe("Tests timeframe", function()
     teardown(function()
