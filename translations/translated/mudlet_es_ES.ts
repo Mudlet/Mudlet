@@ -1889,7 +1889,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/RoomContextMenuHandler.cpp" line="259"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation>Moverse a la sala seleccionada o al grupo de salas a las coordenadas especificadas en este área</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="266"/>
