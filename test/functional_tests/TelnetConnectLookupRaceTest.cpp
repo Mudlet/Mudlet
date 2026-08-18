@@ -36,12 +36,7 @@
 #include "mudlet.h"
 
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
+#include "GroupedTest.h"
 
 // A game that says nothing and only counts who reaches it. Bound to 127.0.0.1 by name rather
 // than to every interface, so the test can name a loopback address that is not this one and know
@@ -97,8 +92,6 @@ private:
     quint16 mPort = 0;
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
-
     void init()
     {
         mpServer = new ConnectionCountingServer(qApp);
@@ -287,20 +280,5 @@ private:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TelnetConnectLookupRaceTest.moc"
-QTEST_MAIN(TelnetConnectLookupRaceTest)
+MUDLET_GROUPED_TEST_MAIN(TelnetConnectLookupRaceTest)

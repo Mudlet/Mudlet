@@ -42,14 +42,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
+using namespace std::chrono_literals;
 
 // What one client connection told the server. A bitvector of -1 means the client
 // never sent an "MTTS <n>" terminal type at all, which has to be distinguished
@@ -299,8 +294,6 @@ private:
     const QString mHostname = qsl("Test-Telnet-Charset");
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
-
     void init()
     {
         mpServer = new KaVirServerStub(qApp);
@@ -535,20 +528,5 @@ private:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TelnetCharsetNegotiationTest.moc"
-QTEST_MAIN(TelnetCharsetNegotiationTest)
+MUDLET_GROUPED_TEST_MAIN(TelnetCharsetNegotiationTest)

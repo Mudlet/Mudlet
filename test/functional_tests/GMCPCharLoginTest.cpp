@@ -44,6 +44,8 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+#include "GroupedTest.h"
+
 using namespace std::chrono_literals;
 
 // Self-signed loopback certificate, valid until 2126; the client accepts it via Host::mSslIgnoreAll.
@@ -95,13 +97,6 @@ i850uRyh7X6whywY8gm0VLO+xzCVsCR6CvgZY1MwwFuDwu2d/d5jdJXLpHueQwNU
 3HipTI77OuIRv4ykXwPOIemT9VmL/N21CgrckJGA6dYywTnc/JNpOKxdTM9srOyr
 Rcsgla9jttJevaHI71x2jLNBaKk=
 -----END PRIVATE KEY-----)PEM";
-
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
 
 // Hands out QSslSocket connections when asked to, so the stub can offer an encrypted transport.
 class GmcpTcpServer : public QTcpServer
@@ -371,7 +366,6 @@ private slots:
         // Force CredentialManager to use its deterministic encrypted-file backend rather than the
         // system keychain, so reconnect-token storage/retrieval is synchronous and observable in tests.
         qputenv("MUDLET_TEST_MODE", "1");
-        initializeQRCResources();
     }
 
     void init()
@@ -1193,20 +1187,5 @@ private:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "GMCPCharLoginTest.moc"
-QTEST_MAIN(GMCPCharLoginTest)
+MUDLET_GROUPED_TEST_MAIN(GMCPCharLoginTest)

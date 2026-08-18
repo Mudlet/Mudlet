@@ -44,14 +44,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForOscTest();
+using namespace std::chrono_literals;
 
 class TOscTest : public QObject {
   Q_OBJECT
@@ -200,8 +195,6 @@ private:
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
-    initializeQRCResourcesForOscTest();
-
     if (portableMarkerPresent()) {
       QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
             "so the config dir cannot be redirected");
@@ -1592,19 +1585,5 @@ private slots:
   }
 };
 
-void initializeQRCResourcesForOscTest() {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-  qInitResources_mudlet();
-  qInitResources_qm();
-}
-
 #include "TOscTest.moc"
-QTEST_MAIN(TOscTest)
+MUDLET_GROUPED_TEST_MAIN(TOscTest)

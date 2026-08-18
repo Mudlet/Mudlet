@@ -6,27 +6,17 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    TelnetTlsPromptTest.cpp
-    TelnetBenchmark.cpp
-    cTelnetBufferTest.cpp
-    TOscTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
-    TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
-    TelnetStringSequenceRecoveryTest.cpp
     UnitDeferredDeleteTest.cpp
-    TelnetConnectFailureTest.cpp
-    TelnetReconnectStateTest.cpp
     CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
-    CsiCursorForwardTest.cpp
     FeatureCalloutTest.cpp
-    GMCPCharLoginTest.cpp
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
@@ -40,7 +30,6 @@ set(FUNCTIONAL_TEST_SOURCES
     MapCloseDuringImportTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
-    TelnetConnectLookupRaceTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfRemovalTest.cpp
     DialogTeardownTest.cpp
@@ -111,6 +100,21 @@ set(PROFILE_GROUP_TEST_SOURCES
     XMLexportVariablesTest.cpp
 )
 
+# Telnet, and the protocols and escape sequences carried over it
+set(TELNET_GROUP_TEST_SOURCES
+    CsiCursorForwardTest.cpp
+    cTelnetBufferTest.cpp
+    GMCPCharLoginTest.cpp
+    TelnetBenchmark.cpp
+    TelnetCharsetNegotiationTest.cpp
+    TelnetConnectFailureTest.cpp
+    TelnetConnectLookupRaceTest.cpp
+    TelnetReconnectStateTest.cpp
+    TelnetStringSequenceRecoveryTest.cpp
+    TelnetTlsPromptTest.cpp
+    TOscTest.cpp
+)
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
@@ -172,19 +176,20 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     list(APPEND allFunctionalTestNames ${test_name})
 endforeach()
 
-add_functional_test_binary(functional_window_tests GroupedTestMain.cpp ${WINDOW_GROUP_TEST_SOURCES})
-foreach(test_file ${WINDOW_GROUP_TEST_SOURCES})
-    get_filename_component(test_name ${test_file} NAME_WE)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:functional_window_tests> ${test_name})
-    list(APPEND allFunctionalTestNames ${test_name})
-endforeach()
+# One executable for the group, but a ctest case each: every test keeps its own
+# add_test entry, which names the class for the group binary to run.
+macro(add_grouped_test_binary target)
+    add_functional_test_binary(${target} GroupedTestMain.cpp ${ARGN})
+    foreach(grouped_test_file ${ARGN})
+        get_filename_component(grouped_test_name ${grouped_test_file} NAME_WE)
+        add_test(NAME ${grouped_test_name} COMMAND $<TARGET_FILE:${target}> ${grouped_test_name})
+        list(APPEND allFunctionalTestNames ${grouped_test_name})
+    endforeach()
+endmacro()
 
-add_functional_test_binary(functional_profile_tests GroupedTestMain.cpp ${PROFILE_GROUP_TEST_SOURCES})
-foreach(test_file ${PROFILE_GROUP_TEST_SOURCES})
-    get_filename_component(test_name ${test_file} NAME_WE)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:functional_profile_tests> ${test_name})
-    list(APPEND allFunctionalTestNames ${test_name})
-endforeach()
+add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
