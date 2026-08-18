@@ -9,26 +9,19 @@ set(FUNCTIONAL_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     DefaultGameDeleteTest.cpp
     ResetProfileTest.cpp
-    SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
-    WindowLayoutSaveTest.cpp
     MapAreaReassignmentTest.cpp
     UnitDeferredDeleteTest.cpp
     ProfileLifecycleTest.cpp
-    MxpFramePlacementTest.cpp
-    MxpWatchdogBufferLifetimeTest.cpp
     SavedVariableFenceTest.cpp
     CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
-    CopyAsImageTest.cpp
     FeatureCalloutTest.cpp
-    WrapLineRewrapTest.cpp
-    GlyphOverflowTest.cpp
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
@@ -38,14 +31,12 @@ set(FUNCTIONAL_TEST_SOURCES
     ProfileLoadTempFileTest.cpp
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
-    ProfileSwitchMiniconsoleTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     TutorialInvitationGateTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
-    LabelMovieRefusalTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -60,7 +51,6 @@ set(FUNCTIONAL_TEST_SOURCES
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
     StarterUiGaugePanelTest.cpp
-    ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
     EmbeddedMapperCreationTest.cpp
 )
@@ -86,11 +76,21 @@ endif()
 # than QTEST_MAIN(). Its class name has to match its filename, since that is the
 # name ctest passes on the command line and the group binary looks up.
 set(WINDOW_GROUP_TEST_SOURCES
+    CopyAsImageTest.cpp
+    GlyphOverflowTest.cpp
+    LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
+    MxpFramePlacementTest.cpp
+    MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    ProfileSwitchMiniconsoleTest.cpp
+    ProfileSwitchShortcutTest.cpp
+    SubCommandLineLifetimeTest.cpp
     WindowBackgroundTest.cpp
+    WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WrapLineRewrapTest.cpp
 )
 
 set(TELNET_GROUP_TEST_SOURCES
@@ -219,8 +219,8 @@ foreach(test_name ${allFunctionalTestNames})
     )
 endforeach()
 
-# ResetProfileTest creates a full profile per test method (30 tests),
-# so it needs a longer timeout than the default 60s
+# ResetProfileTest creates a full profile per test method, so it needs a longer
+# timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations

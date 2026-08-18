@@ -34,14 +34,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForMxpWatchdogBufferLifetimeTest();
+using namespace std::chrono_literals;
 
 // Covers issue #9934, the return of #8784: the MXP tag watchdog unfreezes a
 // stalled tag from a deferred continuation that captures a raw TBuffer 'this'.
@@ -69,8 +64,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForMxpWatchdogBufferLifetimeTest();
-
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0);
         mPort = QString::number(mpServer->serverPort());
@@ -167,20 +160,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForMxpWatchdogBufferLifetimeTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "MxpWatchdogBufferLifetimeTest.moc"
-QTEST_MAIN(MxpWatchdogBufferLifetimeTest)
+MUDLET_GROUPED_TEST_MAIN(MxpWatchdogBufferLifetimeTest)

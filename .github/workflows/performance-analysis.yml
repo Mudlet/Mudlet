@@ -15,7 +15,6 @@ jobs:
       matrix:
         include:
           - buildname: 'pi'
-            qt: '6.9.0'
             triplet: arm64-linux
             compiler: gcc_64
             os: [ self-hosted, pi4 ]
