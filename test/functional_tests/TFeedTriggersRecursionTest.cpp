@@ -33,14 +33,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+using namespace std::chrono_literals;
 
 // Validates the guards that stop a self-feeding trigger (one whose action calls
 // feedTriggers() or feedTelnet() with text that re-matches it) from recursing the
@@ -68,8 +63,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResources();
-
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -263,20 +256,5 @@ private slots:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TFeedTriggersRecursionTest.moc"
-QTEST_MAIN(TFeedTriggersRecursionTest)
+MUDLET_GROUPED_TEST_MAIN(TFeedTriggersRecursionTest)
