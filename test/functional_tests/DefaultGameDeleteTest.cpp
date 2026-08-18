@@ -85,9 +85,19 @@ private:
     // and the notification area
     bool makeProfileOnDisk(const QString& game) const { return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, game)); }
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         QVERIFY(mConfigDir.isValid());
         // pre-create $XDG_CONFIG_HOME/mudlet/profiles so setupConfig() adopts it
         // and the test never touches the real profiles or settings

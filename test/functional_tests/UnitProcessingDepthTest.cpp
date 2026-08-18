@@ -68,10 +68,20 @@ private:
     // first call in a process.
     bool luaHolds(const QString& condition) { return mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
         initializeQRCResourcesForUnitProcessingDepthTest();
+
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: resolve the config dir to a temporary
         // directory rather than the user's real profiles.

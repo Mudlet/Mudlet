@@ -342,10 +342,20 @@ private:
         }
     }
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
         initializeQRCResourcesForModuleSaveTeardownTest();
+
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: point the config dir resolution at a temporary
         // directory instead of the user's real profiles.
@@ -377,8 +387,12 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 

@@ -69,7 +69,10 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    static bool portableMarkerPresent() { return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())); }
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
 
     // Returns the Lua error, or a null QString when the chunk ran
     QString runLua(const QString& code) const
@@ -158,9 +161,13 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-        QDir(path).removeRecursively();
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            QDir(path).removeRecursively();
+            delete mudlet::self();
+        }
         if (mSavedXdgConfigHome.isEmpty()) {
             qunsetenv("XDG_CONFIG_HOME");
         } else {

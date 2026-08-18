@@ -81,10 +81,20 @@ private:
         return mudlet::self()->mPackagesToInstallList;
     }
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
         initializeQRCResourcesForDefaultPackagesTest();
+
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
@@ -236,7 +246,9 @@ private slots:
 
         lua_State* L = luaL_newstate();
         QVERIFY(L);
-        auto closeState = qScopeGuard([L]() { lua_close(L); });
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
 
         int compiled = 0;
         for (const QString& package : packages) {

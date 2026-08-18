@@ -129,10 +129,20 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
         initializeQRCResourcesForPackageSelfRemovalTest();
+
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
