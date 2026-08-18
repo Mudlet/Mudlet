@@ -918,6 +918,103 @@ describe("Tests a package that uninstalls itself", function()
   end)
 end)
 
+describe("Tests uninstalling one half of a dual package/module install", function()
+  -- One name can be installed both ways at once: a package is a copy the profile
+  -- owns, a module is a link to a file that other profiles may share. The item
+  -- units uninstall by name alone, so taking either half away destroys both
+  -- halves' items, and uninstallPackage() reinstalls whichever half the user did
+  -- not ask to remove.
+
+  -- The package's clean-up is registered first so that it runs last: taking the
+  -- module away while the package is still installed puts the package back, and
+  -- would strand it in the profile.
+  local function withDualInstall()
+    withFixturePackage(moduleName)
+    return withFixtureModule(moduleName)
+  end
+
+  local function overwriteWithGarbage(path)
+    local broken = io.open(path, "wb")
+    assert.is_not_nil(broken, "could not overwrite " .. path)
+    assert.is_not_nil(broken:write("this is not a zip archive"), "could not overwrite " .. path)
+    broken:close()
+  end
+
+  it("leaves the module installed and working when the package is uninstalled", function()
+    withDualInstall()
+    assert.is_true(packageInstalled(moduleName))
+    assert.is_true(moduleInstalled(moduleName))
+    assert.equals(2, exists(moduleName .. " alias", "alias"), "a dual install should have both halves' aliases")
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(uninstallPackage(moduleName))
+    pumpEvents(200)
+
+    assert.is_false(packageInstalled(moduleName))
+    assert.is_true(moduleInstalled(moduleName), "the module the user did not ask to remove has to survive")
+    -- still being listed is not enough: the module's items are what the by-name
+    -- uninstall destroyed, and what the restore has to bring back
+    assert.equals(1, exists(moduleName .. " alias", "alias"), "the module's alias was not put back")
+    local text = textFrom(mark)
+    assert.is_false(containsWrapped(text, "could not be restored"), text)
+  end)
+
+  it("leaves the package installed and working when the module is uninstalled", function()
+    withDualInstall()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(uninstallModule(moduleName))
+    pumpEvents(200)
+
+    assert.is_false(moduleInstalled(moduleName))
+    assert.is_true(packageInstalled(moduleName), "the package the user did not ask to remove has to survive")
+    assert.equals(1, exists(moduleName .. " alias", "alias"), "the package's alias was not put back")
+    local text = textFrom(mark)
+    assert.is_false(containsWrapped(text, "could not be restored"), text)
+  end)
+
+  it("says why the module could not be put back", function()
+    local modulePath = withDualInstall()
+    -- the restore reads the module's own file, so a file that is no longer an
+    -- archive is what makes it fail for a reason of its own rather than because
+    -- the module's registration was still in the way
+    overwriteWithGarbage(modulePath)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(uninstallPackage(moduleName))
+    pumpEvents(200)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, 'Removed package "' .. moduleName .. '", but its module copy could not be restored'), text)
+    assert.is_true(containsWrapped(text, "could not unzip package"), text)
+  end)
+
+  it("does not write the emptied module back over its own file when the restore fails", function()
+    local modulePath = withDualInstall()
+    local moduleXml = getMudletHomeDir() .. "/" .. moduleName .. "/" .. moduleName .. ".xml"
+    overwriteWithGarbage(modulePath)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(uninstallPackage(moduleName))
+    pumpEvents(200)
+
+    -- taking the unpacked XML away makes "did the save write this module out" a
+    -- plain yes or no, the same way the synced-module spec above does
+    os.remove(moduleXml)
+    assert.is_nil(lfs.attributes(moduleXml), "the module's unpacked XML could not be cleared")
+
+    assert.is_true(saveProfile())
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    pumpEvents(500)
+
+    -- the module lost its items to the by-name uninstall and was never put back,
+    -- so writing it out would leave an empty module in place of its contents
+    assert.is_nil(lfs.attributes(moduleXml), "the save wrote the emptied module out over its own file")
+  end)
+end)
+
 describe("Tests installing a package while the profile is being saved", function()
   it("installs a package that is asked for while an earlier install is still saving", function()
     defer(function()
