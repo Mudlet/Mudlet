@@ -175,13 +175,18 @@ private slots:
 
     void cleanupTestCase()
     {
-        clearBannerSettings();
         mpEditor = nullptr;
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getQSettings() and getMudletPath() dereference the instance rather
+        // than checking it
+        if (mudlet::self()) {
+            clearBannerSettings();
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 

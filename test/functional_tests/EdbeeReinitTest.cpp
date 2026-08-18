@@ -89,11 +89,10 @@ private:
         }
     }
 
-    void bootMudlet()
+    static void bootMudlet()
     {
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -149,14 +148,21 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     void test_editorAliveAfterMudletReconstruction()
     {
         bootMudlet();
+        // in the slot rather than in bootMudlet(), where a failing compare would
+        // return before init() and leave the edbee singleton below unprimed
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         delete mudlet::self();
 
         bootMudlet();

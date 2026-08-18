@@ -216,8 +216,12 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mHostname);
+            delete mudlet::self();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 

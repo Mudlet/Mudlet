@@ -237,20 +237,24 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
 
-        // getMudletPath() reads the main window, so the path has to be taken
-        // while there still is one
-        const QString leftOpenProfilePath = mudlet::getMudletPath(enums::profileHomePath, mProfileLeftOpenAtTheEnd);
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            // getMudletPath() reads the main window, so the path has to be taken
+            // while there still is one
+            const QString leftOpenProfilePath = mudlet::getMudletPath(enums::profileHomePath, mProfileLeftOpenAtTheEnd);
 
-        // The third ordering: a profile still loaded when the main window goes,
-        // so the Host is destroyed with no close of any kind asked for.
-        QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on three null pointers");
-        delete mudlet::self();
-        // Only the notepad and the IRC client carry weight here: the toolbars
-        // are children of the main window, so ~QWidget frees them either way.
-        const QStringList leftBehind = windowsLeftBehind(mWindowsLeftOpenAtTheEnd);
-        QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the main window left %1 of the profile that was still loaded behind").arg(leftBehind.join(qsl(" and ")))));
+            // The third ordering: a profile still loaded when the main window goes,
+            // so the Host is destroyed with no close of any kind asked for.
+            QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on three null pointers");
+            delete mudlet::self();
+            // Only the notepad and the IRC client carry weight here: the toolbars
+            // are children of the main window, so ~QWidget frees them either way.
+            const QStringList leftBehind = windowsLeftBehind(mWindowsLeftOpenAtTheEnd);
+            QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the main window left %1 of the profile that was still loaded behind").arg(leftBehind.join(qsl(" and ")))));
 
-        QDir(leftOpenProfilePath).removeRecursively();
+            QDir(leftOpenProfilePath).removeRecursively();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
