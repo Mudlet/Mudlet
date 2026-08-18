@@ -662,6 +662,87 @@ private slots:
         }
     }
 
+    // Uninstalling the package takes the alias, the chat trigger tree and the
+    // script with it - and nothing else. Everything the script built is made at
+    // runtime and belongs to the profile: the dock and its sections are Geyser
+    // objects, the vitals prefilter is a temporary trigger and the handlers are
+    // anonymous ones. Left behind, the interface sits on screen still repainting
+    // from the game's text, and the "baseui hide" that could have dismissed it
+    // went with the alias.
+    void test_uninstallingThePackageTakesTheInterfaceWithIt()
+    {
+        Host* host = startProfileWithDock();
+        QVERIFY(host);
+        // A section out of the dock is no longer the dock's child, so nothing
+        // done to the dock reaches it. A look with a tint of its own puts the
+        // colour behind the game's own text in the package's hands as well.
+        QVERIFY(runLua(host,
+                       qsl("BaseUI.sections.chat:dragOutOfParent(-200, 120)\n"
+                           "BaseUI.sectionDropped(nil, BaseUI.sections.chat.name)\n"
+                           "BaseUI.setTheme('ember')\n"
+                           "__ui = { dock = BaseUI.container.name, gauge = BaseUI.gauges.hp.name,\n"
+                           "  trigger = tostring(BaseUI.vitalsTriggerIds[1]),\n"
+                           "  settings = getMudletHomeDir() .. '/base_ui_settings.lua',\n"
+                           "  savedSection = getMudletHomeDir() .. '/AdjustableContainer/' .. BaseUI.sections.chat.name .. '.lua',\n"
+                           "  sections = {}, border = getBorderRight(), tint = select(1, getBackgroundColor('main')) }\n"
+                           "for _, key in ipairs({ 'map', 'chat', 'vitals' }) do __ui.sections[key] = BaseUI.sections[key].name end")));
+        QVERIFY2(luaTrue(host,
+                         qsl("__ui.trigger ~= 'nil' and __ui.border > 0 and __ui.tint == 18"
+                             " and io.exists(__ui.settings) and io.exists(__ui.savedSection)"
+                             " and getLabelStyleSheet(__ui.gauge .. '_back') ~= nil")),
+                 "the interface is not in the state this uninstalls, so it would prove nothing");
+
+        QVERIFY2(host->uninstallPackage(qsl("mudlet-base-ui"), enums::PackageModuleType::Package), "the starter UI package would not uninstall");
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "the interface's state outlived the package that built it, so a reinstall starts on this session's leftovers");
+        QVERIFY2(luaTrue(host, qsl("Adjustable.Container.all[__ui.dock] == nil and Geyser.windowList[__ui.dock] == nil")), "the dock is still there after the package that built it was uninstalled");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet(__ui.dock .. 'adjLabel') == nil")), "the dock's own window is still on screen");
+        for (const QString& key : {qsl("map"), qsl("chat"), qsl("vitals")}) {
+            QVERIFY2(luaTrue(host, qsl("Adjustable.Container.all[__ui.sections.%1] == nil and Geyser.windowList[__ui.sections.%1] == nil").arg(key)),
+                     qPrintable(qsl("the %1 section outlived the uninstall").arg(key)));
+            QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet(__ui.sections.%1 .. 'adjLabel') == nil").arg(key)), qPrintable(qsl("the %1 section's window is still on screen").arg(key)));
+        }
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet(__ui.gauge .. '_back') == nil")), "the health bar is still on screen");
+        // killTrigger says whether there was one to kill: a live prefilter here
+        // is the whole of the "still repainting the gauges" half of the bug
+        QVERIFY2(luaTrue(host, qsl("killTrigger(__ui.trigger) == false")), "the vitals trigger outlived the package and goes on reading the game's text");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() == 0")), "the dock is gone but the screen space it was attached to was never given back");
+        QVERIFY2(luaTrue(host, qsl("select(1, getBackgroundColor('main')) == 0")), "the look's tint was left behind with nothing to explain it");
+        QVERIFY2(luaTrue(host, qsl("not io.exists(__ui.settings) and not io.exists(__ui.savedSection)")), "the interface's saved state was left on disk for a reinstall to pick up");
+
+        // and the game goes on talking to a profile that no longer has any of it
+        feedLine(host, qsl("Ithilwen tells you: still here?"));
+        feedLine(host, qsl("Health:   321/400"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil and getLabelStyleSheet(__ui.gauge .. '_back') == nil")), "game text after the uninstall brought part of the interface back");
+    }
+
+    // Nothing is built until the game sends something to show, so a player who
+    // removes the package before that has no dock on screen - but the vitals
+    // trigger and the event handlers are live from the first line, and a
+    // teardown written around a dock that is not there would raise half way
+    // through and leave them running.
+    void test_uninstallingBeforeTheInterfaceWasBuiltIsAlsoClean()
+    {
+        startProfile();
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+        if (!host->mInstalledPackages.contains(qsl("mudlet-base-ui"))) {
+            auto [installed, message] = host->installPackage(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+        QVERIFY(runLua(host, qsl("__ui = { trigger = tostring(BaseUI.vitalsTriggerIds[1]) }")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil and __ui.trigger ~= 'nil'")), "this profile was expected to have the trigger layer up but no dock built yet");
+
+        QVERIFY2(host->uninstallPackage(qsl("mudlet-base-ui"), enums::PackageModuleType::Package), "the starter UI package would not uninstall");
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "an uninstall before the interface was built left its state behind");
+        QVERIFY2(luaTrue(host, qsl("killTrigger(__ui.trigger) == false")), "an uninstall before the interface was built left the vitals trigger reading the game's text");
+
+        // and the line that would have built it builds nothing
+        feedLine(host, qsl("Health:   3600/3600     Mana:     3400/3400"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "game text after the uninstall started the interface up again");
+    }
+
 private:
     // every section's band of the dock, in percentages of it, which is what the
     // layout is written in and what survives a window of any size
