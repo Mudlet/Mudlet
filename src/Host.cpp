@@ -2603,6 +2603,10 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mInstalledPackages.removeAll(packageName);
         if (dualInstallations) {
             QStringList entry = mInstalledModules[packageName];
+            //so we don't get denied from installPackage, as the module branch above does for the package
+            mInstalledModules.remove(packageName);
+            mActiveModules.removeAll(packageName);
+            mModulesLoadedOk.remove(packageName);
             if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true); !restored) {
                 //: %1 is the package name, %2 is the reason the module sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed package \"%1\", but its module copy could not be restored: %2").arg(packageName, reason));
