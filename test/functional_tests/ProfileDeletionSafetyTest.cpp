@@ -34,12 +34,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileDeletionSafetyTest();
+#include "GroupedTest.h"
 
 class ProfileDeletionSafetyTest : public QObject
 {
@@ -146,7 +141,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForProfileDeletionSafetyTest();
 
         QVERIFY(mConfigDir.isValid());
         // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in that makes setupConfig()
@@ -505,20 +499,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileDeletionSafetyTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileDeletionSafetyTest.moc"
-QTEST_MAIN(ProfileDeletionSafetyTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileDeletionSafetyTest)

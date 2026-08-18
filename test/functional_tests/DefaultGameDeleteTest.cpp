@@ -37,12 +37,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForDefaultGameDeleteTest();
+#include "GroupedTest.h"
 
 class DefaultGameDeleteTest : public QObject
 {
@@ -93,8 +88,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForDefaultGameDeleteTest();
-
         QVERIFY(mConfigDir.isValid());
         // pre-create $XDG_CONFIG_HOME/mudlet/profiles so setupConfig() adopts it
         // and the test never touches the real profiles or settings
@@ -345,20 +338,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForDefaultGameDeleteTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "DefaultGameDeleteTest.moc"
-QTEST_MAIN(DefaultGameDeleteTest)
+MUDLET_GROUPED_TEST_MAIN(DefaultGameDeleteTest)

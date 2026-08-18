@@ -41,6 +41,8 @@
 #include "mudlet.h"
 #include "utils.h"
 
+#include "GroupedTest.h"
+
 class ConfigDirOverrideTest : public QObject
 {
     Q_OBJECT
@@ -431,4 +433,4 @@ private slots:
 };
 
 #include "ConfigDirOverrideTest.moc"
-QTEST_MAIN(ConfigDirOverrideTest)
+MUDLET_GROUPED_TEST_MAIN(ConfigDirOverrideTest)
