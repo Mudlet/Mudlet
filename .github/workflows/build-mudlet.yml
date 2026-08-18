@@ -41,7 +41,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
             gcc_compiler_version: 10
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
@@ -52,22 +52,22 @@ jobs:
             buildname: 'ubuntu (x86_64)'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.9.0'
+            qt: '6.11.1'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 10
-            qt: '6.9.0'
+            qt: '6.11.1'
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
 
