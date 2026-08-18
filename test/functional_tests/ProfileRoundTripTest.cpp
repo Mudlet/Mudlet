@@ -57,12 +57,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileRoundTripTest();
+#include "GroupedTest.h"
 
 namespace {
 template <typename T>
@@ -453,8 +448,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForProfileRoundTripTest();
-
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, mPort.toUShort());
         mudlet::start();
@@ -606,20 +599,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileRoundTripTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileRoundTripTest.moc"
-QTEST_MAIN(ProfileRoundTripTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileRoundTripTest)

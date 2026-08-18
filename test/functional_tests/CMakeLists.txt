@@ -6,12 +6,9 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    ConfigDirOverrideTest.cpp
     TelnetTlsPromptTest.cpp
     TelnetBenchmark.cpp
     cTelnetBufferTest.cpp
-    DefaultGameDeleteTest.cpp
-    ResetProfileTest.cpp
     TOscTest.cpp
     SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
@@ -25,12 +22,10 @@ set(FUNCTIONAL_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     UnitDeferredDeleteTest.cpp
-    ProfileLifecycleTest.cpp
     MxpFramePlacementTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetReconnectStateTest.cpp
-    SavedVariableFenceTest.cpp
     CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
@@ -42,10 +37,6 @@ set(FUNCTIONAL_TEST_SOURCES
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
-    ProfileSaveShutdownRaceTest.cpp
-    XMLexportVariablesTest.cpp
-    ProfileRoundTripTest.cpp
-    ProfileLoadTempFileTest.cpp
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
@@ -61,11 +52,8 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetConnectLookupRaceTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfRemovalTest.cpp
-    ProfileFolderNameTest.cpp
-    ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
-    ConnectionDialogCrashTest.cpp
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
@@ -92,16 +80,35 @@ endif()
 # link step, and none of that is per-test - so tests of one subsystem are built
 # together and told on the command line which class to run. See GroupedTest.h.
 #
-# A new window or console test belongs here rather than in
-# FUNCTIONAL_TEST_SOURCES, and writes MUDLET_GROUPED_TEST_MAIN() rather than
-# QTEST_MAIN(). Its class name has to match its filename, since that is the name
-# ctest passes on the command line and the group binary looks up.
+# A new test belongs in its subsystem's list below if there is one, and then
+# writes MUDLET_GROUPED_TEST_MAIN() rather than QTEST_MAIN(); a subsystem with
+# no list yet still belongs in FUNCTIONAL_TEST_SOURCES. A grouped test's class
+# name has to match its filename, since that is the name ctest passes on the
+# command line and the group binary looks up.
+
+# Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
     NarrowWindowWrapTest.cpp
     WindowBackgroundTest.cpp
     WindowStateGettersTest.cpp
+)
+
+# Profiles: their config dir, their folders, and loading, saving and deleting them
+set(PROFILE_GROUP_TEST_SOURCES
+    ConfigDirOverrideTest.cpp
+    ConnectionDialogCrashTest.cpp
+    DefaultGameDeleteTest.cpp
+    ProfileDeletionSafetyTest.cpp
+    ProfileFolderNameTest.cpp
+    ProfileLifecycleTest.cpp
+    ProfileLoadTempFileTest.cpp
+    ProfileRoundTripTest.cpp
+    ProfileSaveShutdownRaceTest.cpp
+    ResetProfileTest.cpp
+    SavedVariableFenceTest.cpp
+    XMLexportVariablesTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -172,7 +179,14 @@ foreach(test_file ${WINDOW_GROUP_TEST_SOURCES})
     list(APPEND allFunctionalTestNames ${test_name})
 endforeach()
 
-# Both lists' cases, so a grouped test's properties are the solo ones verbatim
+add_functional_test_binary(functional_profile_tests GroupedTestMain.cpp ${PROFILE_GROUP_TEST_SOURCES})
+foreach(test_file ${PROFILE_GROUP_TEST_SOURCES})
+    get_filename_component(test_name ${test_file} NAME_WE)
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:functional_profile_tests> ${test_name})
+    list(APPEND allFunctionalTestNames ${test_name})
+endforeach()
+
+# Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, at
