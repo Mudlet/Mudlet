@@ -98,7 +98,7 @@ private:
     Host* mpTarget = nullptr;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
-    const QString mPort = qsl("4013");
+    QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
 
@@ -449,7 +449,8 @@ private slots:
     void initTestCase()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mLocalhost, mPort.toUShort());
+        mpServer->start(mLocalhost, 0);
+        mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));

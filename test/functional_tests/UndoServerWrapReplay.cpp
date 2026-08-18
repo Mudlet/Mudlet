@@ -27,7 +27,7 @@
 //   REPLAY_OUT     - path to write buffer dump to (required)
 //   REPLAY_UNWRAP  - "1" to enable mUndoServerWrap (default off)
 //   REPLAY_WIDTH   - wrap column to undo (default 80)
-//   REPLAY_PORT    - local stub port (default 4010)
+//   REPLAY_PORT    - local stub port (default: an ephemeral OS-assigned one)
 
 #include <QtTest/QtTest>
 
@@ -64,10 +64,12 @@ private slots:
 
     void init()
     {
-        mPort = qEnvironmentVariable("REPLAY_PORT", qsl("4010"));
-        mProfileName = qsl("Replay-%1").arg(mPort);
+        // An unset or unparseable REPLAY_PORT gives 0, which the stub takes as
+        // "any free port", so concurrent replays share neither socket nor profile.
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mPort.toUShort());
+        mpServer->start(mpLocalhost, qEnvironmentVariable("REPLAY_PORT").toUShort());
+        mPort = QString::number(mpServer->serverPort());
+        mProfileName = qsl("Replay-%1").arg(mPort);
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));

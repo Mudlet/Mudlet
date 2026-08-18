@@ -10,43 +10,34 @@ set(FUNCTIONAL_TEST_SOURCES
     TelnetBenchmark.cpp
     cTelnetBufferTest.cpp
     TOscTest.cpp
-    SubCommandLineLifetimeTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     MultilineTriggerReentrancyTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
-    WindowLayoutSaveTest.cpp
     TelnetCharsetNegotiationTest.cpp
     MapAreaReassignmentTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     UnitDeferredDeleteTest.cpp
-    MxpFramePlacementTest.cpp
-    MxpWatchdogBufferLifetimeTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetReconnectStateTest.cpp
     CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
     CsiCursorForwardTest.cpp
-    CopyAsImageTest.cpp
     FeatureCalloutTest.cpp
-    WrapLineRewrapTest.cpp
-    GlyphOverflowTest.cpp
     GMCPCharLoginTest.cpp
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
-    ProfileSwitchMiniconsoleTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     TutorialInvitationGateTest.cpp
     ModuleSaveTeardownTest.cpp
     MapRoundTripTest.cpp
     MapProgressDialogSeamTest.cpp
     MapCloseDuringImportTest.cpp
-    LabelMovieRefusalTest.cpp
     StarterUiSectionsTest.cpp
     TtsInterruptingSpeakTest.cpp
     TelnetConnectLookupRaceTest.cpp
@@ -59,7 +50,6 @@ set(FUNCTIONAL_TEST_SOURCES
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
     StarterUiGaugePanelTest.cpp
-    ProfileSwitchShortcutTest.cpp
     ExperiencedPlayerGateTest.cpp
     EmbeddedMapperCreationTest.cpp
 )
@@ -88,11 +78,21 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    CopyAsImageTest.cpp
+    GlyphOverflowTest.cpp
+    LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
+    MxpFramePlacementTest.cpp
+    MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    ProfileSwitchMiniconsoleTest.cpp
+    ProfileSwitchShortcutTest.cpp
+    SubCommandLineLifetimeTest.cpp
     WindowBackgroundTest.cpp
+    WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WrapLineRewrapTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -223,8 +223,8 @@ foreach(test_name ${allFunctionalTestNames})
     )
 endforeach()
 
-# ResetProfileTest creates a full profile per test method (30 tests),
-# so it needs a longer timeout than the default 60s
+# ResetProfileTest creates a full profile per test method, so it needs a longer
+# timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
