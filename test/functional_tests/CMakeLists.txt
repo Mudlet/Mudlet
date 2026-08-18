@@ -6,15 +6,10 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    TriggerEditorTest.cpp
-    dlgTriggerEditorUndoRedoTest.cpp
-    EditorBannerViewSwitchTest.cpp
     TDiscordModeTest.cpp
     MapAreaReassignmentTest.cpp
     TutorialInvitationLayoutTest.cpp
     FeatureCalloutTest.cpp
-    VariableEditorWriteBackTest.cpp
-    ScriptEventHandlerLifetimeTest.cpp
     PackageSelfRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     TutorialInvitationGateTest.cpp
@@ -28,7 +23,6 @@ set(FUNCTIONAL_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
-    EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
     StarterUiTriggerCostTest.cpp
@@ -119,6 +113,16 @@ set(TRIGGER_GROUP_TEST_SOURCES
     UnitProcessingDepthTest.cpp
 )
 
+# The script editor, and the trigger, variable and script forms it hosts
+set(EDITOR_GROUP_TEST_SOURCES
+    dlgTriggerEditorUndoRedoTest.cpp
+    EdbeeReinitTest.cpp
+    EditorBannerViewSwitchTest.cpp
+    ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorTest.cpp
+    VariableEditorWriteBackTest.cpp
+)
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
@@ -195,6 +199,7 @@ add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
