@@ -566,6 +566,7 @@ QString UpdateDialog::generateChangelogDocument()
         // the same release getUpdates() measures against, so what is listed and
         // what is offered cannot disagree.
         changelogReleases = Feed::selectReleasesBetween(mReleases, Release::getCurrentRelease(), mLatestRelease);
+        changelog = generateCompareLink();
     } else {
         Release minRelease(mMinVersion.isEmpty() ? QApplication::applicationVersion() : mMinVersion);
         Release maxRelease(mMaxVersion);
@@ -589,6 +590,23 @@ QString UpdateDialog::generateChangelogDocument()
         changelog.append(body + qsl("\n\n"));
     }
     return changelog;
+}
+
+QString UpdateDialog::generateCompareLink() const
+{
+    const QString installedVersion = QApplication::applicationVersion();
+    const QString updateVersion = mLatestRelease.getVersion();
+    if (installedVersion.isEmpty() || updateVersion.isEmpty()) {
+        return QString();
+    }
+    const QString base = Release::gitHubRef(installedVersion);
+    const QString head = Release::gitHubRef(updateVersion);
+    if (base == head || mFeed->getOwner().isEmpty() || mFeed->getRepo().isEmpty()) {
+        return QString();
+    }
+    const QString url = qsl("https://github.com/%1/%2/compare/%3...%4").arg(mFeed->getOwner(), mFeed->getRepo(), base, head);
+    //: Shown above the update changelog; the text in [] is a clickable link, %1 is the GitHub comparison URL
+    return tr("[See every change between your version and this update](%1) on GitHub.").arg(url) + qsl("\n\n");
 }
 
 void UpdateDialog::startDownload()

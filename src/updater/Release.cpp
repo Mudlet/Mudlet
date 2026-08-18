@@ -28,6 +28,7 @@
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QRegularExpression>
 
 namespace dblsqd {
 
@@ -178,6 +179,26 @@ dblsqd::Release Release::getCurrentRelease()
     QDateTime date = QLocale::c().toDateTime(buildDateTime.simplified(), qsl("MMM d yyyy hh:mm:ss"));
 
     return dblsqd::Release(QCoreApplication::applicationVersion(), date);
+}
+
+/*!
+ * \brief Returns the GitHub ref for a Mudlet version string.
+ *
+ * Development and PTB versions embed a short commit SHA as the last
+ * hyphen-separated token; that SHA is returned directly. Otherwise the
+ * version maps to a release tag name.
+ */
+QString Release::gitHubRef(const QString& version)
+{
+    const int lastHyphen = version.lastIndexOf(QLatin1Char('-'));
+    if (lastHyphen != -1) {
+        static const QRegularExpression shaRx(qsl("^[0-9a-f]{7,40}$"));
+        const QString sha = version.mid(lastHyphen + 1);
+        if (shaRx.match(sha).hasMatch()) {
+            return sha;
+        }
+    }
+    return qsl("Mudlet-") + version;
 }
 
 QString Release::buildAssetPattern(const QString& os, const QString& arch)

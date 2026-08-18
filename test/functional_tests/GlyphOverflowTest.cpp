@@ -35,12 +35,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // TTextEdit lays text out in cells of QFontMetrics::height(), which is a
 // typographic measure rather than the glyph ink box. At a good number of font
@@ -112,8 +107,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResources();
-
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -133,9 +126,9 @@ private slots:
         QSKIP("Built with WITH_FONTS=NO, so the fonts whose metrics this measures are not available");
 #else
         // src/main.cpp extracts the bundled fonts into the config directory and
-        // FontManager picks them up from there, but QTEST_MAIN never runs
-        // main(), so on a machine that has not run Mudlet before there is
-        // nothing on disk to pick up and Qt quietly substitutes another family.
+        // FontManager picks them up from there, but no test binary runs it, so
+        // on a machine that has not run Mudlet before there is nothing on disk
+        // to pick up and Qt quietly substitutes another family.
         for (const QString& file : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"),
                                     qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf"),
                                     qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf"),
@@ -784,20 +777,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "GlyphOverflowTest.moc"
-QTEST_MAIN(GlyphOverflowTest)
+MUDLET_GROUPED_TEST_MAIN(GlyphOverflowTest)

@@ -55,6 +55,7 @@
 #include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
 extern "C" {
@@ -851,6 +852,145 @@ private slots:
     QVERIFY2(newVu->hidden.contains(qsl("Geyser")),
              "Mudlet's internal variables should be re-hidden after reset, "
              "as on profile load");
+  }
+
+  // -----------------------------------------------------------------------
+  // Group 18: MapInfoContributorManager stale lua_State (#10001)
+  // -----------------------------------------------------------------------
+
+  // registerMapInfo() stores the lua_State it was called on plus a registry
+  // reference, and the callback captures that state too, while phase2's
+  // initLuaGlobals() closes it. A contributor left registered across a reset
+  // therefore holds a dangling state: the next killMapInfo()/registerMapInfo()
+  // on that name unrefs into freed memory - which a package that does both in
+  // its init hits from compileAll() later in the same phase2 - and one that
+  // nothing re-registers is called on that state by every later map redraw.
+  void test_luaMapInfoContributorsRemovedByReset() {
+    auto *pManager = mpHost->mpMap->mMapInfoContributorManager;
+    QVERIFY(pManager);
+    QSignalSpy spy(pManager,
+                   &MapInfoContributorManager::signal_contributorsUpdated);
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('reset.contrib', function() "
+                              "return 'info' end)\n"
+                              "registerMapInfo('reset.contrib2', function() "
+                              "return 'info' end)"),
+             0);
+    QVERIFY(pManager->getContributorKeys().contains(qsl("reset.contrib")));
+    QVERIFY(pManager->getContributorKeys().contains(qsl("reset.contrib2")));
+    spy.clear();
+
+    performReset();
+
+    QCOMPARE(mpHost->mpMap->mMapInfoContributorManager, pManager);
+    QVERIFY2(!pManager->getContributorKeys().contains(qsl("reset.contrib")),
+             "Lua map info contributor should not outlive the lua_State it was "
+             "registered on");
+    QVERIFY2(!pManager->getContributorKeys().contains(qsl("reset.contrib2")),
+             "every Lua map info contributor should go, not just one");
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Short")),
+             "built-in contributors have no Lua reference and must stay");
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Full")),
+             "built-in contributors have no Lua reference and must stay");
+    QVERIFY2(
+        !spy.isEmpty(),
+        "the mapper rebuilds its info menu from signal_contributorsUpdated");
+  }
+
+  // The reporter's package kills a contributor before re-registering it, and
+  // after a reset that kill is the call that unrefs into the closed state. The
+  // dangling unref is not what fails here without the fix: liblua is linked as
+  // a prebuilt system library and so is not ASan-instrumented, and ASan leaves
+  // freed memory intact by default, so on Linux the read of the closed state
+  // goes unnoticed (on Windows it crashes with an access violation). What goes
+  // red is the kill still finding a contributor - which is also what a fix that
+  // dropped the name from the ordering but left it in the contributor map would
+  // do.
+  void test_mapInfoKillAfterResetFindsNothingToRemove() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('reset.stale', function() "
+                              "return 'info' end)"),
+             0);
+
+    performReset();
+
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(newL,
+                           "resetStaleKilled, resetStaleMessage = "
+                           "killMapInfo('reset.stale')\n"
+                           "registerMapInfo('reset.stale', function() return "
+                           "'info' end)"),
+             0);
+    lua_getglobal(newL, "resetStaleKilled");
+    QVERIFY2(lua_isnil(newL, -1),
+             "the reset should have left killMapInfo() nothing to remove");
+    lua_pop(newL, 1);
+    lua_getglobal(newL, "resetStaleMessage");
+    QVERIFY2(
+        lua_isstring(newL, -1),
+        "killMapInfo() should report the label as missing, as it does on a "
+        "profile that has just been loaded");
+    lua_pop(newL, 1);
+    QVERIFY2(mpHost->mpMap->mMapInfoContributorManager->getContributorKeys()
+                 .contains(qsl("reset.stale")),
+             "re-registering after a reset should work");
+
+    QCOMPARE(luaL_dostring(newL, "killMapInfo('reset.stale')"), 0);
+  }
+
+  // registerMapInfo() can be given a built-in's name, which replaces the
+  // built-in callback. Dropping that on reset must not leave the profile with
+  // fewer contributors than a freshly loaded one has.
+  void test_builtinMapInfoRestoredAfterShadowingContributorDropped() {
+    auto *pManager = mpHost->mpMap->mMapInfoContributorManager;
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('Short', function() return "
+                              "'shadowed' end)"),
+             0);
+
+    performReset();
+
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Short")),
+             "the built-in contributor should be back once the Lua one that "
+             "replaced it is dropped");
+    QColor color;
+    auto info = pManager->getContributor(qsl("Short"))(0, 0, -1, -1, color);
+    QVERIFY2(info.text.isEmpty(),
+             "'Short' should be Mudlet's own contributor again, which reports "
+             "nothing for a room that does not exist");
+  }
+
+  // Dropping the contributors is only acceptable because the script that
+  // registered them runs again in the same reset, in compileAll(); the enabled
+  // state is the user's saved choice and is deliberately not dropped with them,
+  // so the contributor comes back exactly as it was.
+  void test_scriptRegisteredMapInfoReturnsAfterReset() {
+    auto *pScript = new TScript(qsl("mapInfoRegisteringScript"), mpHost);
+    pScript->setScript(qsl("registerMapInfo('reset.pkg', function() return "
+                           "'info' end)"));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "enableMapInfo('reset.pkg')"), 0);
+    QVERIFY(mpHost->mMapInfoContributors.contains(qsl("reset.pkg")));
+
+    performReset();
+
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(newL, "resetPkgEnabled = getMapInfo()['reset.pkg']"),
+             0);
+    lua_getglobal(newL, "resetPkgEnabled");
+    QVERIFY2(lua_isboolean(newL, -1),
+             "the registering script should have put its contributor back");
+    QVERIFY2(lua_toboolean(newL, -1),
+             "the user's enabled choice should survive the reset");
+    lua_pop(newL, 1);
+
+    // stop the script re-registering into every later test's reset
+    pScript->setScript(qsl(""));
+    pScript->setIsActive(false);
+    QCOMPARE(luaL_dostring(newL, "killMapInfo('reset.pkg')"), 0);
   }
 
   // -----------------------------------------------------------------------

@@ -26,7 +26,7 @@ jobs:
         include:
           - language: cpp
             buildname: 'CodeQL'
-            qt: '6.9.0'
+            qt: '6.11.1'
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10

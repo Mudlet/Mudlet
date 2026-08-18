@@ -53,7 +53,7 @@ class ActionSelfRemovalTest : public QObject
 private:
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-ActionSelfRemoval";
-    const QString mpPort = "4009";
+    QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
     // Builds a package the way an installed package with a toolbar button is laid
@@ -109,7 +109,8 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mpPort.toUShort());
+        mpServer->start(mpLocalhost, 0);
+        mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
