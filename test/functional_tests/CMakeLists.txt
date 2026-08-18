@@ -104,6 +104,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAreaReassignmentTest.cpp
+    MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoundTripTest.cpp
