@@ -8,9 +8,6 @@ cmake_language(DEFER CALL restore_windows_test_output)
 set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     TtsInterruptingSpeakTest.cpp
-    HostWidgetDecouplingTest.cpp
-    DialogTeardownTest.cpp
-    HostChildTeardownTest.cpp
     TMediaLoopTest.cpp
 )
 
@@ -136,6 +133,13 @@ set(STARTERUI_GROUP_TEST_SOURCES
     TutorialInvitationLayoutTest.cpp
 )
 
+# Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
+set(TEARDOWN_GROUP_TEST_SOURCES
+    DialogTeardownTest.cpp
+    HostChildTeardownTest.cpp
+    HostWidgetDecouplingTest.cpp
+)
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
@@ -216,6 +220,7 @@ add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
