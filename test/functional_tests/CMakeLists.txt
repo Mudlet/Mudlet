@@ -50,6 +50,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
+    DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
