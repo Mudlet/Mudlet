@@ -1889,7 +1889,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/RoomContextMenuHandler.cpp" line="259"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Moverse a la sala seleccionada o al grupo de salas a las coordenadas especificadas en esta área</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="266"/>
@@ -2085,7 +2085,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/T2DMap.cpp" line="4459"/>
       <source>Click to finish moving the label.</source>
       <extracomment>2D Mapper big, bottom of screen help message when moving a label</extracomment>
-      <translation type="unfinished"/>
+      <translation>Haz clic para terminar de mover la etiqueta.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4664"/>
@@ -5797,7 +5797,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="3463"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <extracomment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>U+&lt;i&gt;####&lt;/i&gt; Punto de código Unicode &lt;i&gt;(Altos:Subrogados Bajos)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3402"/>
@@ -5831,55 +5831,55 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="3698"/>
       <source>link</source>
       <extracomment>Generic screen-reader announcement for a link with no tooltip or URL — used as fallback link description</extracomment>
-      <translation type="unfinished"/>
+      <translation>enlace</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3703"/>
       <source>, visited</source>
       <extracomment>Appended to link announcement when the link has been previously visited</extracomment>
-      <translation type="unfinished"/>
+      <translation>, visitado</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3707"/>
       <source>, disabled</source>
       <extracomment>Appended to link announcement when the link is disabled</extracomment>
-      <translation type="unfinished"/>
+      <translation>, deshabilitado</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3711"/>
       <source>, selected</source>
       <extracomment>Appended to link announcement when the link is selected</extracomment>
-      <translation type="unfinished"/>
+      <translation>, seleccionado</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3716"/>
       <source>, has menu</source>
       <extracomment>Appended to link announcement when the link opens a menu</extracomment>
-      <translation type="unfinished"/>
+      <translation>, tiene menú</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="4004"/>
       <source>Wrapping to first link</source>
       <extracomment>Screen-reader announcement when forward link navigation (Tab / Ctrl+]) wraps past the last link back to the first</extracomment>
-      <translation type="unfinished"/>
+      <translation>Volviendo al primer enlace</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="4007"/>
       <source>Wrapping to last link</source>
       <extracomment>Screen-reader announcement when backward link navigation (Shift+Tab / Ctrl+[) wraps past the first link back to the last</extracomment>
-      <translation type="unfinished"/>
+      <translation>Volviendo al último enlace</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="4153"/>
       <source>Jumped to start of buffer.</source>
       <extracomment>Screen-reader announcement when the user presses Ctrl+Home in caret mode to jump to the start of the buffer</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se saltó al principio del búfer.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="4167"/>
       <source>Jumped to latest content.</source>
       <extracomment>Screen-reader announcement when the user presses Ctrl+End in caret mode to jump to the latest (most recent) content in the buffer</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se saltó al contenido más reciente.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2071"/>
@@ -5889,17 +5889,17 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2073"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, extracto de la miniconsola %1 del perfil %2</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2075"/>
       <source>Mudlet, %1 user window extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, extracto de la ventana de usuario %1 del perfil %2</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2077"/>
       <source>Mudlet, main console extract from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, extracto de la consola principal del perfil %1</translation>
     </message>
   </context>
   <context>
@@ -5920,27 +5920,30 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="156"/>
       <source>Error: in item %1, perl regex &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Error: en el elemento %1, la expresión regular de Perl &quot;%2&quot; no se pudo compilar, motivo: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="178"/>
       <source>Error: in item %1, lua function &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Error: en el elemento %1, la función de Lua &quot;%2&quot; no se pudo compilar, motivo: &quot;%3&quot;</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="197"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Error: en el elemento %1, no se establecieron colores coincidentes; al menos &lt;i&gt;uno&lt;/i&gt; de los colores de primer plano o de fondo no debe ser &lt;i&gt;ignorado&lt;/i&gt;>.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1119"/>
       <source>Trigger name=%1 expired.</source>
-      <translation type="unfinished"/>
+      <translation>El disparador con nombre=%1 ha expirado.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1124"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>El disparador nombre=%1 se activará %n una vez.</numerusform>
+        <numerusform>El disparador nombre=%1 se activará %n veces más.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -5949,104 +5952,104 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TUiTour.cpp" line="61"/>
       <source>Mudlet interface tour</source>
       <extracomment>Name of the interface tour overlay, announced by screen readers</extracomment>
-      <translation type="unfinished"/>
+      <translation>Visita guiada por la interfaz de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="120"/>
       <source>Skip tour</source>
       <extracomment>Button on the interface tour that dismisses the tour</extracomment>
-      <translation type="unfinished"/>
+      <translation>Saltar la visita guiada</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="123"/>
       <source>Back</source>
       <extracomment>Button on the interface tour that goes back to the previous step</extracomment>
-      <translation type="unfinished"/>
+      <translation>Volver</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="125"/>
       <location filename="../src/TUiTour.cpp" line="274"/>
       <source>Next</source>
       <extracomment>Button on the interface tour that advances to the next step</extracomment>
-      <translation type="unfinished"/>
+      <translation>Siguiente</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="185"/>
       <source>Welcome to Mudlet!</source>
       <extracomment>Title of the first step of the interface tour</extracomment>
-      <translation type="unfinished"/>
+      <translation>¡Bienvenido a Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="187"/>
       <source>New here? This quick tour points out the most important parts of Mudlet - it takes less than a minute. Click anywhere or use the arrow keys to move through it.</source>
       <extracomment>Body of the first step of the interface tour</extracomment>
-      <translation type="unfinished"/>
+      <translation>¿Eres nuevo aquí? Esta rápida visita guiada te mostrará las partes más importantes de Mudlet; te llevará menos de un minuto. Haz clic en cualquier lugar o usa las teclas de dirección para avanzar.</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="196"/>
       <source>The game window</source>
       <extracomment>Title of the interface tour step highlighting the main text display</extracomment>
-      <translation type="unfinished"/>
+      <translation>La ventana del juego</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="198"/>
       <source>Text from the game appears here. Scroll up to review earlier text - the newest text stays visible in a split view while you do.</source>
       <extracomment>Body of the interface tour step highlighting the main text display</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aquí aparece el texto del juego. Desplázate hacia arriba para revisar el texto anterior; el texto más nuevo permanecerá visible en una vista dividida mientras lo haces.</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="205"/>
       <source>The input line</source>
       <extracomment>Title of the interface tour step highlighting the command input line</extracomment>
-      <translation type="unfinished"/>
+      <translation>Línea de entrada</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="207"/>
       <source>Type game commands here and press Enter to send them. Use the up and down arrow keys to bring back commands you typed before.</source>
       <extracomment>Body of the interface tour step highlighting the command input line</extracomment>
-      <translation type="unfinished"/>
+      <translation>Escribe los comandos del juego aquí y presiona Intro para enviarlos. Usa las teclas de dirección arriba y abajo para recuperar los comandos que escribiste antes.</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="216"/>
       <source>Automate your game</source>
       <extracomment>Title of the interface tour step highlighting the scripting tools</extracomment>
-      <translation type="unfinished"/>
+      <translation>Automatiza tu juego</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="218"/>
       <source>Triggers, aliases, timers and scripts let Mudlet react to the game for you and shorten what you type. You will find them in the script editor, right here - start simple, no programming needed.</source>
       <extracomment>Body of the interface tour step highlighting the scripting tools</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los disparadores, alias, temporizadores y scripts permiten que Mudlet reaccione al juego por ti y acorte lo que escribes. Los encontrarás en el editor de scripts, justo aquí; empieza por lo sencillo, no se necesita programar.</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="226"/>
       <source>Make Mudlet yours</source>
       <extracomment>Title of the interface tour step highlighting the preferences</extracomment>
-      <translation type="unfinished"/>
+      <translation>Personaliza el Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="228"/>
       <source>Fonts, colors, the map, accessibility options and much more can be adjusted in the settings, right here.</source>
       <extracomment>Body of the interface tour step highlighting the preferences</extracomment>
-      <translation type="unfinished"/>
+      <translation>Las fuentes, los colores, el mapa, las opciones de accesibilidad y mucho más se pueden ajustar en la configuración, justo aquí.</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="232"/>
       <source>That&apos;s it - have fun!</source>
       <extracomment>Title of the last step of the interface tour</extracomment>
-      <translation type="unfinished"/>
+      <translation>¡Eso es todo, diviértete!</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="234"/>
       <source>For a hands-on lesson, connect to the &lt;b&gt;Mudlet Tutorial&lt;/b&gt; game. And if you ever want to see this tour again, it lives in Help → Take a UI tour.</source>
       <extracomment>Body of the last step of the interface tour. The tour can be re-run via the named menu entry.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Para una lección práctica, conéctate al &lt;b&gt;Tutorial de Mudlet&lt;/b&gt;. Si alguna vez quieres volver a realizar esta visita guiada, esta se encuentra en Ayuda → Hacer una visita guiada por la interfaz.</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="268"/>
       <source>%1 of %2</source>
       <extracomment>Progress through the interface tour, %1 is the current step number, %2 the total number of steps</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 de %2</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="274"/>
@@ -6061,19 +6064,22 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TriggerUnit.cpp" line="382"/>
       <source>%n trigger(s) created while processing this line have been stopped: temporary ones removed, permanent ones switched off until the profile is reloaded.</source>
       <extracomment>%n is a count of triggers. Shown in the game window when a trigger keeps creating new triggers that match the same line, which would otherwise never end</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Se han detenido %n disparador creado al procesar esta línea: se eliminaron los temporales y se desactivaron los permanentes hasta que se vuelva a cargar el perfil.</numerusform>
+        <numerusform>Se han detenido los %n disparadores creados al procesar esta línea: se eliminaron los temporales y se desactivaron los permanentes hasta que se vuelva a cargar el perfil.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TriggerUnit.cpp" line="387"/>
       <source>[ ERROR ] - Trigger processing stopped to prevent a freeze: a trigger (or another trigger it creates) keeps creating new triggers that match the line being processed, so that line never finishes. %1 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.</source>
       <extracomment>%1 is the sentence above, about the triggers that were stopped</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Se detuvo el procesamiento de los disparadores para evitar un bloqueo: un disparador (o otro disparador creado por este) no deja de crear nuevos disparadores que coinciden con la línea que se está procesando, por lo que esa línea nunca termina. %1 Crea el disparador una sola vez, fuera de su propio script, o asígnale un patrón que no coincida con la línea en la que se crea.</translation>
     </message>
     <message>
       <location filename="../src/TriggerUnit.cpp" line="393"/>
       <source>[ ERROR ] - Trigger processing stopped to prevent a freeze: trigger &apos;%1&apos; (or another trigger it creates) keeps creating new triggers that match the line being processed, so that line never finishes. %2 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.</source>
       <extracomment>%1 is the name of a trigger - the name of a trigger made by tempTrigger() and friends is its id number - and %2 is the sentence above, about the triggers that were stopped</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Se detuvo el procesamiento de los disparadores para evitar un bloqueo: el disparador &apos;%1&apos; (o otro disparador creado por este) no deja de crear nuevos disparadores que coinciden con la línea que se está procesando, por lo que esa línea nunca termina. %2 Crea el disparador una sola vez, fuera de su propio script, o asígnale un patrón que no coincida con la línea en la que se crea.</translation>
     </message>
   </context>
   <context>
@@ -6167,32 +6173,32 @@ Label for the update button shown in the update dialog</extracomment>
       <location filename="../src/updater.cpp" line="239"/>
       <source>Changelog Error</source>
       <extracomment>Error title for dialog shown when changelog fails to load</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error del registro de cambios</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="241"/>
       <source>Could not load the changelog. Please try again later.</source>
       <extracomment>Error message shown when changelog fails to load from the server</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo cargar el registro de cambios. Por favor, inténtalo de nuevo más tarde.</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="264"/>
       <source>No download available for version %1. Please try again later or download manually from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when no download is available for the user&apos;s platform. %1 is the version number.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No hay ninguna descarga disponible para la versión %1. Por favor, inténtalo de nuevo más tarde o descárgala manualmente desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="353"/>
       <location filename="../src/updater.cpp" line="398"/>
       <source>Update download failed. Please try again or download manually from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when the automatic update download finished but produced no file</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error en la descarga de la actualización. Por favor, inténtalo de nuevo o descárgala manualmente desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="456"/>
       <source>Failed to extract the update. Please try again or download manually from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when extracting the downloaded update archive fails on Linux</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al extraer la actualización. Por favor, inténtalo de nuevo o descárgala manualmente desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="476"/>
@@ -6201,13 +6207,13 @@ Label for the update button shown in the update dialog</extracomment>
       <location filename="../src/updater.cpp" line="509"/>
       <source>Failed to install the update. Please try again or download manually from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when the automatic update fails to install on Linux</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo instalar la actualización. Por favor, inténtalo de nuevo o descárgala manualmente desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="490"/>
       <source>Failed to install the update and could not restore the previous version. Your previous version is saved at: %1 - please rename it back manually. Alternatively, download a fresh copy from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when the update fails and the previous version could not be restored automatically. %1 is the file path to the backup copy.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo instalar la actualización y no se pudo restaurar la versión anterior. Tu versión anterior está guardada en: %1 ; por favor, cámbiale el nombre de nuevo manualmente. En su defecto, descarga una copia limpia desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="546"/>
@@ -6216,19 +6222,19 @@ Label for the update button shown in the update dialog</extracomment>
       <extracomment>Error title for update-related warning dialogs
 ----------
 Error title for dialog shown when Mudlet fails to restart after updating</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error de la actualización</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="551"/>
       <source>The update installer could not be found. Please try checking for updates again.</source>
       <extracomment>Error shown when the downloaded installer file cannot be found on disk</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo encontrar el instalador de la actualización. Por favor, intenta buscar actualizaciones de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="563"/>
       <source>Could not prepare the update installer. Please try again or download the update manually from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when the installer file cannot be copied to a temporary location for launch</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo preparar el instalador de la actualización. Por favor, inténtalo de nuevo o descarga la actualización manualmente desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="595"/>
@@ -6238,19 +6244,19 @@ Error title for dialog shown when Mudlet fails to restart after updating</extrac
       <extracomment>Error shown when the batch file for managing the update process cannot be written. %1 is the path to the installer.
 ----------
 Error shown when the batch file for managing the update process cannot be created. %1 is the path to the installer.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo preparar la actualización. Por favor, cierra Mudlet y ejecuta el instalador manualmente: %1</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="603"/>
       <source>Could not launch the update installer. Please restart Mudlet and try again.</source>
       <extracomment>Error shown when the update installer process fails to start</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo iniciar el instalador de la actualización. Por favor, reinicia Mudlet e inténtalo de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="648"/>
       <source>Could not restart Mudlet after the update. Please start it manually.</source>
       <extracomment>Error message shown when Mudlet fails to restart after updating on Linux</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo reiniciar Mudlet después de la actualización. Por favor, inícialo manualmente.</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="673"/>
@@ -6262,7 +6268,7 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/updater.cpp" line="676"/>
       <source>Update failed</source>
       <extracomment>Label for the update button shown when the update installation failed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error en la actualización</translation>
     </message>
   </context>
   <context>
@@ -6271,19 +6277,19 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/VarUnit.cpp" line="120"/>
       <source>Lua functions cannot be saved.</source>
       <extracomment>Tooltip explaining why a Lua function cannot be saved</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pueden guardar las funciones de Lua.</translation>
     </message>
     <message>
       <location filename="../src/VarUnit.cpp" line="125"/>
       <source>Referenced variables cannot be saved.</source>
       <extracomment>Tooltip explaining why a referenced variable cannot be saved</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pueden guardar las variables referenciadas.</translation>
     </message>
     <message>
       <location filename="../src/VarUnit.cpp" line="132"/>
       <source>This table has %1 items, exceeding the 10,000 item limit for saved variables. Use &lt;b&gt;table.save()&lt;/b&gt; and &lt;b&gt;table.load()&lt;/b&gt; instead for better performance with large tables.</source>
       <extracomment>Tooltip explaining why a large table cannot be saved, recommending alternative methods</extracomment>
-      <translation type="unfinished"/>
+      <translation>Esta tabla tiene %1 elementos, superando el límite de 10.000 elementos para variables guardadas. Usa en su lugar &lt;b&gt;table.save()&lt;/b&gt; y &lt;b&gt;table.load()&lt;/b&gt; para un mejor rendimiento con tablas grandes.</translation>
     </message>
     <message>
       <location filename="../src/VarUnit.cpp" line="153"/>
@@ -6297,7 +6303,7 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/XMLexport.cpp" line="816"/>
       <source>[ WARN ]  - These saved variables are nested more than %1 tables deep, so this save holds them as empty tables: %2. Store data that deep with table.save() and table.load() instead.</source>
       <extracomment>%1 is how many levels of nested tables Mudlet reads, %2 is a comma separated list of Lua variable names</extracomment>
-      <translation type="unfinished"/>
+      <translation> ADVERTENCIA ] - Estas variables guardadas tienen un nivel de jerarquía superior a %1 tablas, por lo que este archivo de guardado las almacena como tablas vacías: %2. En su lugar, almacena datos a esa profundidad utilizando table.save() y table.load().</translation>
     </message>
   </context>
   <context>
@@ -6308,7 +6314,10 @@ Error shown when the batch file for managing the update process cannot be create
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Lo sentimos, el archivo que se está leyendo:
+&quot;%1&quot;
+indica que tiene una versión (%2) que debe provenir de una versión posterior de Mudlet,
+y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más reciente!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="356"/>
@@ -6394,7 +6403,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="246"/>
       <source>Dock Area Top</source>
-      <translation/>
+      <translation>Área de acoplamiento superior</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="251"/>
@@ -6460,17 +6469,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="75"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Elige un nombre bueno e idealmente único para tu botón, menú o barra de herramientas. Este se mostrará en el árbol de botones.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
       <source>Number of rows:</source>
-      <translation type="unfinished"/>
+      <translation>Número de filas:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="199"/>
       <source>Offset of first button:</source>
-      <translation type="unfinished"/>
+      <translation>Desplazamiento del primer botón:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="348"/>
