@@ -40,6 +40,8 @@
  * package; see docs/libmudlet-perf-baseline.md.
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <algorithm>
@@ -89,6 +91,8 @@ class PipelineBenchmark : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = qsl("Perf-Baseline-Host");
     const QString mLocalhost = qsl("localhost");
@@ -523,9 +527,30 @@ private:
 #endif
     }
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
         // QApplication's construction adopts the environment locale, which on some
         // machines makes printf("%f") emit comma decimals the compare script cannot
         // parse. Force C numeric formatting for every METRIC line, independent of
@@ -544,6 +569,8 @@ private slots:
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
 
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
@@ -553,6 +580,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -683,14 +711,15 @@ private slots:
         Host* host = startProfile(DefaultPackages::Install);
         QVERIFY(host);
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        // Needs a fresh HOME/XDG_CONFIG_HOME: the starter UI is gated on
-        // mudlet::experiencedMudletPlayer(), which answers from the machine's
-        // own Mudlet history, and without it this slot silently measures the
-        // same thing as benchTextPipeline. A trigger count would not catch that
-        // - the other default packages register root folders of their own.
+        // The starter UI is gated on mudlet::experiencedMudletPlayer(), which
+        // answers from the config root's Mudlet history - the empty one
+        // initTestCase() redirects to - and without it this slot silently
+        // measures the same thing as benchTextPipeline. A trigger count would
+        // not catch that: the other default packages register root folders of
+        // their own.
         QVERIFY2(host->mInstalledPackages.contains(qsl("mudlet-base-ui")),
                  "the starter UI is not installed, so this profile is not the one a new user gets and defaults_* "
-                 "would describe something else entirely. Re-run under a fresh HOME and XDG_CONFIG_HOME.");
+                 "would describe something else entirely.");
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
