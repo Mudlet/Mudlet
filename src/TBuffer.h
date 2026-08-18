@@ -417,8 +417,10 @@ private:
     void commitLineData(QString line, std::deque<TChar> chars, char ch);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
+    static bool segmentEndsSettledSentence(const QString& line);
     static bool startsWithListMarker(const QString& line);
     bool pendingLineHadRoomForNextWord() const;
+    bool continuationRepeatsSegmentOpening() const;
     void joinPendingServerWrapOntoCurrent();
     void startServerWrapFlushTimer();
     void processMxpWatchdogCallback();
@@ -531,6 +533,9 @@ private:
     // has been joined even once the held text is longer than the wrap column,
     // so the column the game actually broke at is only recoverable from this:
     qsizetype mServerWrapPendingSegmentLength = 0;
+    // Opening of that same game line, kept so that a continuation repeating it
+    // can be told from one that carries on where it left off:
+    QString mServerWrapPendingSegmentStart;
     // Commits a held line if the game goes quiet without completing it - a
     // full-width line that really was the end of the output:
     QPointer<QTimer> mpServerWrapFlushTimer;
@@ -620,6 +625,15 @@ private:
     // reject a continuation opening with a word of csmServerWrapSlack less
     // this many characters or fewer:
     static constexpr int csmServerWrapFitTolerance = 8;
+    // How much of a held game line's opening is kept for comparing a
+    // continuation against. Only the first csmServerWrapRepeatedWords shared
+    // words and the spaces after them have to fall inside it, and this leaves
+    // room for that even where a long name is one of them:
+    static constexpr qsizetype csmServerWrapSegmentStartChars = 48;
+    // How many opening words a continuation has to share with the held segment
+    // before it is a message the game re-prefixed rather than a wrap. One is
+    // far too common in prose to mean anything:
+    static constexpr int csmServerWrapRepeatedWords = 2;
     // Stop joining once a logical line has grown this long - a runaway guard:
     static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
     // How long to hold a full-width line for its continuation before deciding
