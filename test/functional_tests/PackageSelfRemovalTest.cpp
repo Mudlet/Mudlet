@@ -80,12 +80,7 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForPackageSelfRemovalTest();
+#include "GroupedTest.h"
 
 // TriggerUnit only holds its depth inside processDataStream(), so a save at
 // depth has to come from a trigger's own script. Stands in for the Lua
@@ -132,8 +127,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForPackageSelfRemovalTest();
-
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
         QVERIFY(mConfigDir.isValid());
@@ -655,20 +648,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForPackageSelfRemovalTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "PackageSelfRemovalTest.moc"
-QTEST_MAIN(PackageSelfRemovalTest)
+MUDLET_GROUPED_TEST_MAIN(PackageSelfRemovalTest)
