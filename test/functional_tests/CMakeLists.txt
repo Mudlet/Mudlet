@@ -6,9 +6,6 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    ConfigDirOverrideTest.cpp
-    DefaultGameDeleteTest.cpp
-    ResetProfileTest.cpp
     TriggerEditorTest.cpp
     TFeedTriggersRecursionTest.cpp
     MultilineTriggerReentrancyTest.cpp
@@ -17,18 +14,12 @@ set(FUNCTIONAL_TEST_SOURCES
     TDiscordModeTest.cpp
     MapAreaReassignmentTest.cpp
     UnitDeferredDeleteTest.cpp
-    ProfileLifecycleTest.cpp
-    SavedVariableFenceTest.cpp
     CorruptTriggerPatternsTest.cpp
     TutorialInvitationLayoutTest.cpp
     FeatureCalloutTest.cpp
     VariableEditorWriteBackTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     SetScriptCallbackTest.cpp
-    ProfileSaveShutdownRaceTest.cpp
-    XMLexportVariablesTest.cpp
-    ProfileRoundTripTest.cpp
-    ProfileLoadTempFileTest.cpp
     PackageSelfRemovalTest.cpp
     UnitProcessingDepthTest.cpp
     PackageRemovalSaveTeardownTest.cpp
@@ -41,11 +32,8 @@ set(FUNCTIONAL_TEST_SOURCES
     TtsInterruptingSpeakTest.cpp
     HostWidgetDecouplingTest.cpp
     ActionSelfRemovalTest.cpp
-    ProfileFolderNameTest.cpp
-    ProfileDeletionSafetyTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
-    ConnectionDialogCrashTest.cpp
     EdbeeReinitTest.cpp
     TMediaLoopTest.cpp
     DefaultPackagesTest.cpp
@@ -71,10 +59,13 @@ endif()
 # link step, and none of that is per-test - so tests of one subsystem are built
 # together and told on the command line which class to run. See GroupedTest.h.
 #
-# A new test of a subsystem that has a group belongs in that group's list rather
-# than in FUNCTIONAL_TEST_SOURCES, and writes MUDLET_GROUPED_TEST_MAIN() rather
-# than QTEST_MAIN(). Its class name has to match its filename, since that is the
-# name ctest passes on the command line and the group binary looks up.
+# A new test belongs in its subsystem's list below if there is one, and then
+# writes MUDLET_GROUPED_TEST_MAIN() rather than QTEST_MAIN(); a subsystem with
+# no list yet still belongs in FUNCTIONAL_TEST_SOURCES. A grouped test's class
+# name has to match its filename, since that is the name ctest passes on the
+# command line and the group binary looks up.
+
+# Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
@@ -93,6 +84,23 @@ set(WINDOW_GROUP_TEST_SOURCES
     WrapLineRewrapTest.cpp
 )
 
+# Profiles: their config dir, their folders, and loading, saving and deleting them
+set(PROFILE_GROUP_TEST_SOURCES
+    ConfigDirOverrideTest.cpp
+    ConnectionDialogCrashTest.cpp
+    DefaultGameDeleteTest.cpp
+    ProfileDeletionSafetyTest.cpp
+    ProfileFolderNameTest.cpp
+    ProfileLifecycleTest.cpp
+    ProfileLoadTempFileTest.cpp
+    ProfileRoundTripTest.cpp
+    ProfileSaveShutdownRaceTest.cpp
+    ResetProfileTest.cpp
+    SavedVariableFenceTest.cpp
+    XMLexportVariablesTest.cpp
+)
+
+# Telnet, and the protocols and escape sequences carried over it
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
@@ -180,6 +188,7 @@ macro(add_grouped_test_binary target)
 endmacro()
 
 add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim

@@ -61,12 +61,7 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForSavedVariableFenceTest();
+#include "GroupedTest.h"
 
 struct SavedShape
 {
@@ -155,8 +150,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForSavedVariableFenceTest();
-
         mpServer = new TelnetServerStub(qApp);
         // port 0 asks the OS for an ephemeral port, so parallel test runs
         // (and other worktrees) cannot collide on a fixed one
@@ -470,20 +463,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForSavedVariableFenceTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "SavedVariableFenceTest.moc"
-QTEST_MAIN(SavedVariableFenceTest)
+MUDLET_GROUPED_TEST_MAIN(SavedVariableFenceTest)
