@@ -6,9 +6,6 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    TDiscordModeTest.cpp
-    TtsInterruptingSpeakTest.cpp
-    TMediaLoopTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -140,6 +137,13 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
 )
 
+# Sound and music, text-to-speech, and the rich presence published to Discord
+set(MEDIA_GROUP_TEST_SOURCES
+    TDiscordModeTest.cpp
+    TMediaLoopTest.cpp
+    TtsInterruptingSpeakTest.cpp
+)
+
 set(FUNCTIONAL_TEST_UTILS
     TelnetServerStub.cpp
     DiscordIpcServerStub.cpp
@@ -221,6 +225,7 @@ add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
@@ -298,7 +303,7 @@ set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
 # and each clip has to be waited out in real time, so it needs a longer timeout.
-# QTEST_MAIN does not run src/main.cpp, so pin QT_MEDIA_BACKEND to what main.cpp picks for
+# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND to what main.cpp picks for
 # the shipped application - otherwise the tests silently exercise Qt's default backend for
 # the platform rather than the one users actually get.
 if(APPLE)
