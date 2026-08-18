@@ -6484,12 +6484,14 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="348"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Escribe uno o más comandos que quieras que el botón envíe directamente al juego al ser presionado. (Opcional)&lt;/p&gt;&lt;p&gt;Si este es un botón de &lt;i&gt;pulsar &lt;/i&gt;, esto se enviará solo cuando el botón pase del estado &lt;i&gt;desactivado (arriba) &lt;/i&gt; al estado &lt;i&gt;activado (abajo) &lt;/i&gt;. &lt;/p&gt;&lt;p&gt;Para enviar comandos más complejos que dependan de variables o necesiten modificarlas dentro de este perfil, se debe introducir &lt;i&gt;en su lugar&lt;/i&gt; un script de Lua en el área de edición inferior. Cualquier cosa que se escriba aquí se enviará, literalmente, solo al servidor del juego.&lt;/p&gt;&lt;p&gt;Está permitido usar tanto esto &lt;i&gt;como&lt;/i&gt; un script de Lua; esto se enviará &lt;b&gt;antes&lt;/b&gt; de que se ejecute el script.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="371"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Escribe uno o más comandos que quieras que el botón envíe directamente al juego cuando este pase del estado &lt;i&gt;activado (abajo)&lt;/i&gt; al &lt;i&gt;desactivado (arriba)&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Para enviar comandos más complejos que dependan de variables o necesiten modificarlas dentro de este perfil, se debe introducir &lt;i&gt;en su lugar&lt;/i&gt; un script de Lua en el área de edición inferior. Cualquier cosa que se escriba aquí se enviará, literalmente, solo al servidor del juego.&lt;/p&gt;&lt;p&gt;Está permitido usar tanto esto &lt;i&gt;como&lt;/i&gt; un script de Lua; esto se enviará &lt;b&gt;antes&lt;/b&gt; de que se ejecute el script.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="384"/>
@@ -6512,7 +6514,7 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation type="unfinished"/>
+      <translation>elige un nombre único para tu alias; se mostrará en el árbol y es necesario para la creación de scripts.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="85"/>
@@ -6527,7 +6529,7 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="192"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>Introduce un patrón de expresiones regulares de Perl para tu alias; los alias son disparadores para tu texto de entrada.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="195"/>
@@ -6542,12 +6544,13 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="170"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Introduce uno o más comandos a utilizar si el comando introducido coincide con el patrón. (Opcional)&lt;/p&gt;&lt;p&gt;Este podría ser otro alias o un comando para enviar directamente al juego. Para comandos complejos que requieran modificar variables dentro de este perfil, utiliza en su lugar un script de Lua en el área de edición inferior. Es posible usar tanto este campo como un script de Lua; el contenido de este campo se utilizará antes de ejecutar el script.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="173"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto de reemplazo (opcional)</translation>
     </message>
   </context>
   <context>
@@ -6555,21 +6558,21 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ctelnet.cpp" line="781"/>
       <source>hh:mm:ss.zzz</source>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="809"/>
       <location filename="../src/ctelnet.cpp" line="865"/>
       <source>User Disconnected</source>
       <extracomment>A reason why a connection to a game server ended, could be one of several to be listed. This text used in two places, ensure the same text is used in both.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Usuario Desconectado</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="814"/>
       <location filename="../src/ctelnet.cpp" line="873"/>
       <source>Connection/login attempt rejected by server</source>
       <extracomment>A reason why a connection to a game server ended, could be one of several to be listed. This text used in two places, ensure the same text is used in both.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Intento de conexión/inicio de sesión rechazado por el servidor</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1323"/>
@@ -6580,30 +6583,39 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Error interno: no se encontró ningún códec para la configuración actual de {&quot;%1&quot;},
+por lo que Mudlet no puede enviar datos en ese formato al servidor del juego. Por favor,
+comprueba si hay alguna alternativa que el MUD y Mudlet puedan
+utilizar. Mudlet intentará enviar los datos usando la codificación ASCII,
+pero se limitará únicamente a caracteres sin acento del inglés básico.
+Nota: esta advertencia solo se emitirá una vez, hasta que se cambie
+la codificación.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1555"/>
       <source>[ INFO ]  - Package download cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Descarga de paquetes cancelada.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1558"/>
       <source>[ WARN ]  - Package download failed from &apos;%1&apos;, reason: %2</source>
       <extracomment>%1 is the URL, %2 is the error message</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete desde &apos;%1&apos;, motivo: %2
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1562"/>
       <source>
 The package is hosted on a server with an SSL certificate problem. The URL may be using HTTPS when it should use HTTP, or the server&apos;s security certificate is not trusted by your system.</source>
-      <translation type="unfinished"/>
+      <translation>El paquete está alojado en un servidor con un problema de certificado SSL. Es posible que la URL esté utilizando HTTPS cuando debería usar HTTP, o que el certificado de seguridad del servidor no sea de confianza para tu sistema.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1578"/>
       <source>[ WARN ]  - Package download failed: could not open file &apos;%1&apos; for writing, reason: %2</source>
       <extracomment>%1 is the file path, %2 is the error message</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete: no se pudo abrir el archivo &apos;%1&apos; para escritura, motivo: %2
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1589"/>
