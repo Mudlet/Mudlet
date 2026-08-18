@@ -330,6 +330,23 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(packageInstalled("mudlet-spec-notazip"))
   end)
 
+  it("hands a script the reason instead of announcing it on the main console", function()
+    -- installPackage() posts the reason to the profile for an install asked for
+    -- through the interface, because most of those callers drop it. A script's
+    -- install passes quiet and is handed the reason back instead, so nothing must
+    -- appear in the message area for it to talk over.
+    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+    assert.is_true(contains(err, "could not unzip package"), tostring(err))
+
+    local text = textFrom(mark)
+    assert.is_false(containsWrapped(text, "Package install failed"), text)
+  end)
+
   describe("with the fixture package installed", function()
     local runsBefore, installEvents, packageEvents, handlers
 
