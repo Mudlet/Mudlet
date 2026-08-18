@@ -8088,42 +8088,50 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="874"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lua_yajl - Interfaz de Lua 5.1 para yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Brian Maher &amp;lt;maherb en brimworks punto com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="878"/>
       <source>&lt;h2&gt;&lt;u&gt;Luautf8 - A UTF-8 support module for Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Luautf8 - Un módulo de soporte UTF-8 para Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="881"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Conectividad de la base de datos para el lenguaje de programación Lua (componente Sqlite3).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="895"/>
       <source>&lt;h2&gt;&lt;u&gt;Edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Edbee - widget de editor con múltiples funciones&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 por Reliable Bits Software por Blommers IT&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="913"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [enlace roto]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {versión archivada de &amp;quot;Wayback Machine&amp;quot;}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="949"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - parte de KDToolBox&lt;/u&gt;&lt;br&gt;GitHub: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, una empresa del Grupo KDAB, &amp;lt;info@kdab.com&amp;gt;.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="953"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifica las funciones estándar de Lua para que funcionen con nombres de archivos en UTF-8 en Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;GitHub GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="889"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaZip - Lectura de archivos dentro de archivos zip&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="153"/>
@@ -8135,37 +8143,37 @@ Cuenta</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="156"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <extracomment>about:Vadi</extracomment>
-      <translation type="unfinished"/>
+      <translation>Diseño de la interfaz gráfica (GUI) y planificación inicial de funciones. Es responsable de la página web del proyecto y del manual de usuario. Mantenedor de los instaladores de Windows, macOS, Ubuntu y Linux genérico. Mantiene la wiki de Mudlet, la API de Lua, y se encarga de la gestión del proyecto, las relaciones públicas y la ayuda al usuario. Ha estado en el proyecto desde el mismísimo principio y es portavoz oficial del mismo. Desde el retiro de Heiko, se ha convertido en el director del proyecto Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="163"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <extracomment>about:SlySven</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tras unirse en 2013, ha estado hurgando en varias partes del código C++ y de la interfaz gráfica (GUI) con un palo afilado, intentando posteriormente parchear algunos de los agujeros hechos o encontrados. Más recientemente ha estado trabajando en la internacionalización (I18n) y localización (L10n) para Mudlet 4.0.0; de modo que, si juegas a Mudlet en un idioma diferente al inglés americano, estarás viendo los resultados del hartazgo entre diferencias de ortografía entre lo que se usaba y el inglés británico que su cerebro quería ver.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="170"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <extracomment>about:demonnic</extracomment>
-      <translation type="unfinished"/>
+      <translation>Antiguo mantenedor de los primeros paquetes para Windows y Apple OSX. También administra nuestro servidor y ayuda al proyecto de muchas maneras.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="174"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <extracomment>about:keneanung</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ha aportado muchas mejoras a la interfaz db de Mudlet, al sistema de eventos, y ha estado en el proyecto durante muchísimo tiempo ayudando a los usuarios.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="178"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <extracomment>about:Leris</extracomment>
-      <translation type="unfinished"/>
+      <translation>¡Hace un montón de trabajo para lograr que Mudlet, el sitio web y la wiki estén accesibles para ti, independientemente del idioma que hables, y para promocionar nuestro género!</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="182"/>
       <source>Joined in 2020, reworking much of the 2D mapper and adding many Lua API features. Outside the client they build Mudlet Web, the documentation extract that powers autocompletion in code editors, and the tools that share Mudlet maps online.</source>
       <extracomment>about:Delwing</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se unió en 2020, rediseñando gran parte del mapeador 2D y añadiendo muchas funciones a la API de Lua. Fuera del cliente, desarrolla Mudlet Web, la extracción de documentación que alimenta el autocompletado en los editores de código, y las herramientas que permiten compartir mapas de Mudlet en línea</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="187"/>
