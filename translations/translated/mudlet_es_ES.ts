@@ -9043,7 +9043,8 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="637"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation type="unfinished"/>
+      <translation>! El apodo %1 está reservado. Cambiando automáticamente el apodo a: %2
+</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="648"/>
@@ -9063,7 +9064,7 @@ Cuenta</translation>
       <location filename="../src/dlgMapLabel.cpp" line="70"/>
       <source>Font size is automatically calculated to fit the label</source>
       <extracomment>Tooltip for font display in map label dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>El tamaño de la fuente se calcula automáticamente para ajustarse a la etiqueta</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="97"/>
@@ -9081,13 +9082,13 @@ Cuenta</translation>
       <location filename="../src/dlgMapLabel.cpp" line="143"/>
       <source>Text outline color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Color del contorno del texto</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="165"/>
       <source>Label font</source>
       <extracomment>2D mapper create label font dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Fuente de la etiqueta</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="187"/>
@@ -9107,13 +9108,13 @@ Cuenta</translation>
       <location filename="../src/dlgMapper.cpp" line="177"/>
       <source>No map yet for this profile.</source>
       <extracomment>Empty-state text shown in the mapper when the profile has no local map yet.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aún no hay ningún mapa para este perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="182"/>
       <source>Download from game</source>
       <extracomment>Button in the mapper empty-state. Downloads a shared map offered by the game server via MMP.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Descargar desde el juego</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="187"/>
@@ -9137,27 +9138,27 @@ Cuenta</translation>
       <location filename="../src/dlgMapper.cpp" line="337"/>
       <source>Any map file (*.dat *.json *.xml)</source>
       <extracomment>File dialog filter. Keep the extensions (in braces) unchanged - they are used programmatically.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cualquier archivo de mapa (*.dat *.json *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="337"/>
       <source>Mudlet binary map (*.dat)</source>
-      <translation type="unfinished"/>
+      <translation>Mapa binario de Mudlet (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="337"/>
       <source>Mudlet JSON map (*.json)</source>
-      <translation type="unfinished"/>
+      <translation>Mapa JSON de Mudlet (*.json)</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="337"/>
       <source>Mudlet XML map (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Mapa XML de Mudlet (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="337"/>
       <source>Any file (*)</source>
-      <translation type="unfinished"/>
+      <translation>Cualquier archivo (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="341"/>
@@ -9169,82 +9170,82 @@ Cuenta</translation>
       <location filename="../src/dlgMapper.cpp" line="363"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se pudo cargar el archivo de mapa JSON: %1 por el motivo: %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="858"/>
       <source>Draw rooms on upper and lower levels</source>
-      <translation type="unfinished"/>
+      <translation>Dibujar salas en los niveles superiores e inferiores</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="861"/>
       <source>When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está activado, las salas de los niveles superiores e inferiores al nivel actual se dibujarán con un color más claro para mostrar el contexto del diseño del mapa.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="866"/>
       <source>Round rooms</source>
-      <translation type="unfinished"/>
+      <translation>Salas redondas</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="869"/>
       <source>When enabled, rooms will be drawn with round corners instead of square corners.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está activado, las habitaciones se dibujarán con esquinas redondeadas en lugar de esquinas cuadradas.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="874"/>
       <source>Show room IDs</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar IDs de sala</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="877"/>
       <source>When enabled, room IDs will be displayed on the map.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está activado, los IDs de las salas se mostrarán en el mapa</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="882"/>
       <source>Show room names</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar nombres de las salas</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="885"/>
       <source>When enabled, room names will be displayed on the map.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está activado, los nombres de las salas se mostrarán en el mapa.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="890"/>
       <source>Show map grid</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar cuadrícula del mapa</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="893"/>
       <source>When enabled, grid will be shown on mapper.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está activado, la cuadrícula se mostrará en el mapa.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="899"/>
       <source>Show map in 3D</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar mapa en 3D</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="902"/>
       <source>When enabled, the map will be displayed in 3D mode.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está activado, el mapa se mostrará en modo 3D.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="909"/>
       <source>Info overlays</source>
-      <translation type="unfinished"/>
+      <translation>Capas de información</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="913"/>
       <source>New map window</source>
-      <translation type="unfinished"/>
+      <translation>Nueva ventana de mapa</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="914"/>
       <source>Open an additional map view</source>
-      <translation type="unfinished"/>
+      <translation>Abrir una vista de mapa adicional</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="951"/>
@@ -9255,17 +9256,17 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="985"/>
       <source>Map autosave failed</source>
-      <translation type="unfinished"/>
+      <translation>Error en el guardado automático del mapa</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="991"/>
       <source>Retry save</source>
-      <translation type="unfinished"/>
+      <translation>Reintentar el guardado</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="1001"/>
       <source>Dismiss warning</source>
-      <translation type="unfinished"/>
+      <translation>Descartar advertencia</translation>
     </message>
   </context>
   <context>
@@ -9299,7 +9300,7 @@ reason: %2.</source>
       <location filename="../src/dlgModuleManager.cpp" line="107"/>
       <source>Master module: saved and resynchronized across all sessions on Save Profile or session end.</source>
       <extracomment>Tooltip for master module checkbox</extracomment>
-      <translation type="unfinished"/>
+      <translation>Módulo maestro: guardado y resincronizado en todas las sesiones al guardar el perfil o al finalizar la sesión.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="140"/>
@@ -9310,13 +9311,13 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="140"/>
       <source>Mudlet Packages (*.mpackage *.zip *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Paquetes de Mudlet (*.mpackage *.zip *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="169"/>
       <source>Failed to import: %1</source>
       <extracomment>Module manager - status message shown when some modules failed to import. %1 is a comma-separated list of module names</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al importar: %1</translation>
     </message>
   </context>
   <context>
@@ -9325,23 +9326,23 @@ reason: %2.</source>
       <location filename="../src/dlgNotepad.cpp" line="73"/>
       <source>Prepend</source>
       <extracomment>label for prepended text entry box in notepad</extracomment>
-      <translation type="unfinished"/>
+      <translation>Anteponer</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="77"/>
       <source>Text to prepend to lines</source>
       <extracomment>placeholder text for text entry box in notepad - text which gets added before sending a line</extracomment>
-      <translation type="unfinished"/>
+      <translation>Texto a anteponer a las líneas</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="81"/>
       <source>Stop</source>
-      <translation type="unfinished"/>
+      <translation>Detener</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="107"/>
       <source>Add new note tab (Ctrl+T)</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nueva pestaña de nota (Ctrl+T)</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="124"/>
@@ -9352,59 +9353,59 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="130"/>
       <source>Find previous</source>
-      <translation type="unfinished"/>
+      <translation>Buscar anterior</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="136"/>
       <source>Find next</source>
-      <translation type="unfinished"/>
+      <translation>Buscar siguiente</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="142"/>
       <source>Close find bar</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar barra de búsqueda</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="209"/>
       <source>New Note</source>
       <extracomment>Default name for a new note tab</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nueva nota</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="243"/>
       <source>Rename Note Tab</source>
       <extracomment>Dialog title for renaming a note tab</extracomment>
-      <translation type="unfinished"/>
+      <translation>Renombrar pestaña de nota</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="245"/>
       <source>New name:</source>
       <extracomment>Label for the input field when renaming a note tab</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nuevo nombre:</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="267"/>
       <source>New Tab</source>
       <extracomment>Context menu action to create a new note tab</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nueva pestaña</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="277"/>
       <source>Rename Tab</source>
       <extracomment>Context menu action to rename a note tab</extracomment>
-      <translation type="unfinished"/>
+      <translation>Renombrar pestaña</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="284"/>
       <source>Close Tab</source>
       <extracomment>Context menu action to close a note tab</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cerrar pestaña</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="292"/>
       <source>Close Other Tabs</source>
       <extracomment>Context menu action to close all note tabs except the clicked one</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cerrar las otras pestañas</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="386"/>
@@ -9417,7 +9418,7 @@ reason: %2.</source>
       <extracomment>Name for the migrated notes tab when upgrading from single-note to tabbed notepad
 ----------
 Default name for the first note tab</extracomment>
-      <translation type="unfinished"/>
+      <translation>Notas</translation>
     </message>
   </context>
   <context>
@@ -9425,7 +9426,7 @@ Default name for the first note tab</extracomment>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="29"/>
       <source>Package name here</source>
-      <translation type="unfinished"/>
+      <translation>Nombre del paquete aquí</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
@@ -9446,34 +9447,35 @@ Default name for the first note tab</extracomment>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="358"/>
       <source>(recommended)</source>
-      <translation type="unfinished"/>
+      <translation>(recomendado)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="213"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="241"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>Se recomienda un tamaño de icono de 512x512</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="260"/>
       <source>X</source>
-      <translation type="unfinished"/>
+      <translation>X</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="270"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>Recomendado 512x512</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="293"/>
       <source>one-line description (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Descripción de una línea (recomendado)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="300"/>
       <source>Description
 (e.g. how to use)</source>
-      <translation type="unfinished"/>
+      <translation>Descripción
+(p. ej., cómo se usa)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="314"/>
@@ -9502,7 +9504,32 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>(recomendado)
+
+Esta descripción del paquete se muestra en el administrador de paquetes. El editor es compatible con el lenguaje de marcado Commonmark. Sigue las indicaciones de abajo para ver un ejemplo detallado de qué incluir en la descripción de tu paquete.
+
+### Descripción
+
+Una descripción completa de lo que logra este paquete. Si el paquete es específico para un juego en concreto, menciónalo aquí. Especifica si el paquete cuenta con actualización automática o, de lo contrario, añade un enlace al repositorio de código en la sección «Ver también» de abajo.
+
+### Uso
+
+Si este paquete utiliza alias, muestra algunos ejemplos y el resultado esperado.
+
+`&gt; alias_1`
+
+    resultado de alias_1  -- sangria con cuatro espacios
+    más resultados          -- para bloques de código
+
+Si este paquete es una implementación de interfaz gráfica (GUI), considera añadir capturas de pantalla arrastrando y soltando las imágenes directamente en este editor.
+
+### Ver también
+
+Material de lectura adicional. P. ej., un enlace a la wiki de Mudlet, foros, repositorio del paquete en Github o página web.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [Link 2 might be a webpage](https://example.org)
+</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="355"/>
@@ -9518,22 +9545,22 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/ui/dlgPackageExporter.ui" line="66"/>
       <source>Select what to export</source>
       <comment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</comment>
-      <translation type="unfinished"/>
+      <translation>Selecciona qué exportar</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="109"/>
       <source>Describe your package. Add a description, icons, assets and more.</source>
-      <translation type="unfinished"/>
+      <translation>Describe tu paquete. Añade una descripción, iconos, recursos y más.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
       <source>Add icon</source>
-      <translation type="unfinished"/>
+      <translation>Añadir icono</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="280"/>
       <source>Short description</source>
-      <translation type="unfinished"/>
+      <translation>Breve descripción</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="345"/>
@@ -9544,37 +9571,37 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/ui/dlgPackageExporter.ui" line="365"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="378"/>
       <source>Webpage where users can find help for this package. It is shown by the &quot;Module Help&quot; button in the Module Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Página web donde los usuarios pueden encontrar ayuda para este paquete. Se muestra mediante el botón &quot;Ayuda del módulo&quot; en el Administrador de módulos.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="368"/>
       <source>Help URL</source>
-      <translation type="unfinished"/>
+      <translation>URL de ayuda</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="391"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>Paquetes requeridos</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="491"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package.</source>
-      <translation type="unfinished"/>
+      <translation>¿Este paquete hace uso de otros paquetes? Lístalos aquí como requisitos. Presiona &apos;Suprimir&apos; para eliminar un paquete.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="523"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Incluir recursos (imágenes, sonidos, fuentes)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="533"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>Arrastra y suelta archivos y carpetas, o utiliza el botón de examinar de abajo</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="581"/>
       <source>Select files to include in package</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona los archivos a incluir en el paquete</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
@@ -9584,12 +9611,12 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="388"/>
       <source>Does this package make use of other packages? List them here as requirements.</source>
-      <translation type="unfinished"/>
+      <translation>¿Este paquete hace uso de otros paquetes? Lístalos aquí como requisitos.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="631"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona la ubicación de exportación</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="74"/>
