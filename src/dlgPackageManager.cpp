@@ -458,6 +458,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
             }
 
             if (--(*remainingDownloads.get()) == 0) {
+                QStringList failedPackages;
+
                 for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
                     const QString& packageName = it.key();
                     const QString& filePath = it.value();
@@ -467,7 +469,10 @@ void dlgPackageManager::slot_installPackageFromRepository()
                         if (mpHost->mInstalledPackages.contains(packageName)) {
                             mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                         }
-                        mpHost->installPackage(filePath, enums::PackageModuleType::Package);
+                        if (!mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
+                            failedPackages << packageName;
+                            qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
+                        }
                     }
                     QFile::remove(filePath);
                 }
@@ -478,6 +483,11 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 manager->deleteLater();
 
                 resetPackageList();
+
+                if (!failedPackages.isEmpty()) {
+                    //: Package manager - status message shown when some packages downloaded from the repository failed to install. %1 is a comma-separated list of package names
+                    showImportStatus(tr("Failed to install: %1").arg(failedPackages.join(qsl(", "))));
+                }
             }
         });
     }
