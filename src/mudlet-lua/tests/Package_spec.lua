@@ -1000,13 +1000,21 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     assert.is_true(uninstallPackage(moduleName))
     pumpEvents(200)
 
+    -- the uninstall queues a save of its own, and saveProfile() is refused while
+    -- one of those is running, so let it finish before taking the XML away - both
+    -- so the save under test is the one that answers, and so that this save cannot
+    -- put the file back after it has been cleared
+    assert.is_true(waitForProfileSaveToPass(), "the uninstall's profile save was still running")
+
     -- taking the unpacked XML away makes "did the save write this module out" a
     -- plain yes or no, the same way the synced-module spec above does
     os.remove(moduleXml)
     assert.is_nil(lfs.attributes(moduleXml), "the module's unpacked XML could not be cleared")
 
-    assert.is_true(saveProfile())
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    -- one refusal is still possible here on a slow machine, so ask until a save
+    -- actually starts rather than pinning the first answer as correct
+    assert.is_true(waitUntil(function() return saveProfile() == true end, 10000), "no profile save could be started")
+    assert.is_true(waitForProfileSaveToPass(), "the profile save was still running")
     pumpEvents(500)
 
     -- the module lost its items to the by-name uninstall and was never put back,
