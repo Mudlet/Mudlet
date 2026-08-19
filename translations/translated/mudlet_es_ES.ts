@@ -12122,191 +12122,191 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8692"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Alias - Disparadores de entrada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8706"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Combinaciones de teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9936"/>
       <source>Add Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Añadir disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9937"/>
       <source>Add new trigger</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9938"/>
       <source>Add Trigger Group</source>
-      <translation type="unfinished"/>
+      <translation>Añadir grupo de disparadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9939"/>
       <source>Add new group of triggers</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo grupo de disparadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9940"/>
       <source>Delete Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9941"/>
       <source>Delete the selected trigger</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar el disparador seleccionado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9942"/>
       <location filename="../src/dlgTriggerEditor.h" line="588"/>
       <source>Save Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Guardar disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9947"/>
       <source>Add Timer</source>
-      <translation type="unfinished"/>
+      <translation>Añadir temporizador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9948"/>
       <source>Add new timer</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo temporizador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9949"/>
       <source>Add Timer Group</source>
-      <translation type="unfinished"/>
+      <translation>Añadir grupo de temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9950"/>
       <source>Add new group of timers</source>
-      <translation type="unfinished"/>
+      <translation>Añadir un nuevo grupo de temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9951"/>
       <source>Delete Timer</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar temporizadores </translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9952"/>
       <source>Delete the selected timer</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar el temporizador seleccionado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9953"/>
       <location filename="../src/dlgTriggerEditor.h" line="589"/>
       <source>Save Timer</source>
-      <translation type="unfinished"/>
+      <translation>Guardar temporizador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9958"/>
       <source>Add Alias</source>
-      <translation type="unfinished"/>
+      <translation>Añadir alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9959"/>
       <source>Add new alias</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9960"/>
       <source>Add Alias Group</source>
-      <translation type="unfinished"/>
+      <translation>Añadir grupo de alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9961"/>
       <source>Add new group of aliases</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo grupo de alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9962"/>
       <source>Delete Alias</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9963"/>
       <source>Delete the selected alias</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar el alias seleccionado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9964"/>
       <location filename="../src/dlgTriggerEditor.h" line="590"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>Guardar alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9969"/>
       <source>Add Script</source>
-      <translation type="unfinished"/>
+      <translation>Añadir script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9970"/>
       <source>Add new script</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9971"/>
       <source>Add Script Group</source>
-      <translation type="unfinished"/>
+      <translation>Añadir grupo de scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9972"/>
       <source>Add new group of scripts</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo grupo de scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9973"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9974"/>
       <source>Delete the selected script</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar el script seleccionado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9975"/>
       <location filename="../src/dlgTriggerEditor.h" line="591"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>Guardar script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9980"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>Añadir botón</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9981"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo botón</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9982"/>
       <source>Add Toolbar or Menu</source>
-      <translation type="unfinished"/>
+      <translation>Añadir barra de herramientas o menú</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9983"/>
       <source>Add a Toolbar (top level) or Menu (lower levels) to contain menus or buttons</source>
-      <translation type="unfinished"/>
+      <translation>Añadir una barra de herramientas (nivel superior) o menú (nivel inferior) para contener menús o botones</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9984"/>
       <source>Delete Button, Menu or Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar botón, menú o barra de herramientas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9985"/>
       <source>Delete the selected button, menu or toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar el botón, menú o barra de herramientas seleccionadas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9986"/>
       <source>Save item</source>
-      <translation type="unfinished"/>
+      <translation>Guardar elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9988"/>
@@ -12317,84 +12317,84 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.h" line="592"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>Guardar botón</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9991"/>
       <source>Add Key</source>
-      <translation type="unfinished"/>
+      <translation>Añadir Tecla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9992"/>
       <source>Add new key</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nueva tecla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9993"/>
       <source>Add Key Group</source>
-      <translation type="unfinished"/>
+      <translation>Añadir grupo de teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9994"/>
       <source>Add new group of keys</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nuevo grupo de teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9995"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar tecla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9996"/>
       <source>Delete the selected key</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar la tecla seleccionada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9997"/>
       <location filename="../src/dlgTriggerEditor.h" line="593"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>Guardar tecla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10002"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>Añadir variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10003"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nueva variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10004"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Añadir tabla Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10005"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Añadir nueva tabla Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10006"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10007"/>
       <source>Delete the selected variable</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar la variable seleccionada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10008"/>
       <location filename="../src/dlgTriggerEditor.h" line="594"/>
       <source>Save Variable</source>
-      <translation type="unfinished"/>
+      <translation>Guardar variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10808"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Consola central de depuración</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11090"/>
@@ -12444,7 +12444,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="11460"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="11516"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Primero se debe seleccionar un elemento para exportar. Por favor, seleccione un elemento del árbol y luego haga clic en exportar de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11099"/>
@@ -12459,7 +12459,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11245"/>
       <source>No valid triggers found to export.</source>
-      <translation type="unfinished"/>
+      <translation>No se encontraron disparadores válidos para exportar.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11253"/>
@@ -12474,57 +12474,57 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11257"/>
       <source>Copied %1 triggers to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Se copiaron %1 disparadores al portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11309"/>
       <source>No valid timers found to export.</source>
-      <translation type="unfinished"/>
+      <translation>No se encontraron temporizadores válidos para exportar.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11319"/>
       <source>Copied %1 timers to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Se copiaron %1 temporizadores al portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11365"/>
       <source>No valid aliases found to export.</source>
-      <translation type="unfinished"/>
+      <translation>No se encontraron alias válidos para exportar.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11375"/>
       <source>Copied %1 aliases to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Se copiaron %1 alias al portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11421"/>
       <source>No valid actions found to export.</source>
-      <translation type="unfinished"/>
+      <translation>No se encontraron acciones válidas para exportar.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11431"/>
       <source>Copied %1 actions to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Se copiaron %1 acciones al portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11477"/>
       <source>No valid scripts found to export.</source>
-      <translation type="unfinished"/>
+      <translation>No se encontraron scripts válidos para exportar.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11487"/>
       <source>Copied %1 scripts to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Se copiaron %1 scripts al portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11533"/>
       <source>No valid keys found to export.</source>
-      <translation type="unfinished"/>
+      <translation>No se encontraron teclas válidas para exportar.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11543"/>
       <source>Copied %1 keys to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Se copiaron %1 teclas al portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11578"/>
@@ -12534,7 +12534,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11578"/>
       <source>Export Item</source>
-      <translation type="unfinished"/>
+      <translation>Exportar elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11595"/>
@@ -12545,18 +12545,19 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="11595"/>
       <source>Cannot write file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede escribir el archivo %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11893"/>
       <source>Pasted %1 items successfully</source>
-      <translation type="unfinished"/>
+      <translation>Se pegaron %1 elementos con éxito</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11913"/>
       <source>paste</source>
       <extracomment>Undo/redo text for pasting items</extracomment>
-      <translation type="unfinished"/>
+      <translation>pegar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12401"/>
@@ -12567,13 +12568,13 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12401"/>
       <source>Mudlet Packages (*.mpackage *.zip *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Paquetes de Mudlet (*.mpackage *.zip *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12444"/>
       <source>Failed to import: %1</source>
       <extracomment>Trigger editor - status message shown when some packages failed to import. %1 is a comma-separated list of package names</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al importar: %s</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12534"/>
@@ -12583,7 +12584,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12534"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Lo sentimos, no se pudo guardar tu perfil. Se produjo el siguiente error: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12544"/>
@@ -12600,19 +12601,19 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="12787"/>
       <source>Keep color</source>
       <extracomment>Button in the color picker that preserves the existing text color on trigger matches</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mantener el color</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12821"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <extracomment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Archivos de audio(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="14469"/>
       <source>Banner hidden. &lt;a href=&apos;undo&apos; style=&apos;color: inherit; text-decoration: underline;&apos;&gt;Undo&lt;/a&gt; | &lt;a href=&apos;hide-permanently&apos; style=&apos;color: inherit; text-decoration: underline;&apos;&gt;Hide permanently&lt;/a&gt;</source>
       <extracomment>Toast notification shown when user dismisses an editor tip banner. Allows them to undo or permanently hide the tips for this editor view type.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Banner oculto. &lt;a href=&apos;undo&apos; style=&apos;color: inherit; text-decoration: underline;&apos;&gt;Deshacer&lt;/a&gt; | &lt;a href=&apos;hide-permanently&apos; style=&apos;color: inherit; text-decoration: underline;&apos;&gt;Ocultar permanentemente&lt;/a&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12714"/>
@@ -12623,62 +12624,62 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="9944"/>
       <source>Apply trigger changes (does not save to disk).</source>
       <extracomment>Status tip for saving trigger changes</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aplicar cambios de disparadores (no se guardan en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9955"/>
       <source>Apply timer changes (does not save to disk).</source>
       <extracomment>Status tip for saving timer changes</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aplicar cambios de temporizadores (no se guardan en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9966"/>
       <source>Apply alias changes (does not save to disk).</source>
       <extracomment>Status tip for saving alias changes</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aplicar cambios de alias (no se guardan en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9977"/>
       <source>Apply script changes (does not save to disk).</source>
       <extracomment>Status tip for saving script changes</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aplicar cambios de scripts (no se guardan en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9999"/>
       <source>Apply key changes (does not save to disk).</source>
       <extracomment>Status tip for saving key changes</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aplicar cambios de teclas (no se guardan en el disco). </translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10010"/>
       <source>Apply variable changes (does not save to disk).</source>
       <extracomment>Status tip for saving variable changes</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aplicar cambios de variables (no se guardan en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12736"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar color de fuente para aplicar a las coincidencias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12780"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar color de fondo para aplicar a las coincidencias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12818"/>
       <source>Choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>Elegir archivo de sonido</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12874"/>
       <source>Select foreground trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar color de fuente del disparador para el elemento %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12938"/>
       <source>Select background trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar color de fondo del activador para el elemento %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12987"/>
@@ -12688,7 +12689,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13292"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Formatear todo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13298"/>
@@ -12705,103 +12706,109 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13473"/>
       <source>Sound file to play when the trigger fires.</source>
-      <translation type="unfinished"/>
+      <translation>Archivo de sonido para reproducir cuando se active el disparador.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>substring</source>
-      <translation type="unfinished"/>
+      <translation>subcadena</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="118"/>
       <source>Alias react on user input.</source>
       <extracomment>Headline for the Alias intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los alias reaccionan a la entrada del usuario.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
       <source>How to add a new alias now</source>
       <extracomment>Name of a selectable option for the Alias intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo alias ahora</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="122"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Alias intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;patrón&lt;/strong&gt; de entrada, ya sea de forma literal o con una expresión regular de Perl.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; de &apos;sustitución&apos; para enviarlo al juego en texto plano &lt;strong&gt;en lugar del patrón del alias&lt;/strong&gt;, o escribe un script para necesidades más complejas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el alias.&lt;/li&gt;&lt;/ol&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>Triggers react on game output.</source>
       <extracomment>Headline for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los activadores reaccionan a la salida del juego.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="156"/>
       <source>How to add a new trigger now</source>
       <extracomment>Name of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo activador ahora</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="158"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Define el &lt;strong&gt;patrón&lt;/strong&gt; que deseas que active la acción.&lt;/li&gt;&lt;li&gt;Selecciona el &lt;strong&gt;tipo&lt;/strong&gt; de patrón adecuado.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; de texto claro que quieras enviar al juego si el disparador encuentra el patrón en el texto del juego, o escribe un script para necesidades más complejas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el disparador.&lt;/li&gt;&lt;/ol&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="189"/>
       <source>Scripts organize code and can react to events.</source>
       <extracomment>Headline for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los scripts organizan el código y pueden reaccionar a eventos.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="191"/>
       <source>How to add a new script now</source>
       <extracomment>Name of a selectable option for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo script ahora</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="193"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Introduce un script en el cuadro de abajo. Puedes, por ejemplo, definir &lt;strong&gt;funciones&lt;/strong&gt; para que sean llamadas por otros disparadores, alias, etc.&lt;/li&gt;&lt;li&gt;Si escribes &lt;strong&gt;comandos&lt;/strong&gt; de lua sin definir una función, se ejecutarán al iniciar Mudlet y cada vez que abras el script para editarlo.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el script.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Los scripts se ejecutan automáticamente cuando se visualizan, incluso si están desactivados.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="199"/>
       <source>How to have a script react to events</source>
       <extracomment>Name of a selectable option for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo hacer que un script reaccione a eventos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="201"/>
       <source>&lt;p&gt;You can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Puedes registrar una lista de &lt;strong&gt;eventos&lt;/strong&gt; con los símbolos + y -. Si suceden uno de estos eventos, se llamará a la función que tenga el mismo nombre que el propio elemento del script.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Los eventos también se pueden añadir a un script desde la línea de comandos en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="214"/>
       <source>Timers react after a timespan once or regularly.</source>
       <extracomment>Headline for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los temporizadores reaccionan después de un intervalo de tiempo, una sola vez o de forma regular.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="216"/>
       <source>How to add a new timer now</source>
       <extracomment>Name of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo temporizador ahora</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="218"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Define el &lt;strong&gt;intervalo de tiempo&lt;/strong&gt; tras el cual debe reaccionar el temporizador en este formato: horas : minutos : segundos.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; en texto claro que quieras enviar al juego cuando haya transcurrido el tiempo, o escribe un script para necesidades más complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el temporizador.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Si quieres que el activador reaccione solo una vez y no de forma regular, utiliza en su lugar la función tempTimer() de Lua.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="226"/>
       <source>&lt;p&gt;Timers can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Los temporizadores también se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hola!\n&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Esto te saludará exactamente 3 segundos después de haber sido creado.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="237"/>
