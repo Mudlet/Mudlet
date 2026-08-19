@@ -9658,82 +9658,82 @@ Material de lectura adicional. P. ej., un enlace a la wiki de Mudlet, foros, rep
       <location filename="../src/dlgPackageExporter.cpp" line="142"/>
       <source>Package Exporter - %1</source>
       <extracomment>Title of the window. The %1 will be replaced by the current profile&apos;s name</extracomment>
-      <translation type="unfinished"/>
+      <translation>Exportador de paquetes - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="166"/>
       <source>Create Module - %1</source>
-      <translation type="unfinished"/>
+      <translation>Crear módulo - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="169"/>
       <source>Enter module name</source>
-      <translation type="unfinished"/>
+      <translation>Introduce el nombre del módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="172"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Crear módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="175"/>
       <source>Select where to save module</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona dónde guardar el módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="178"/>
       <source>Select items to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona los elementos a incluir en el módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="186"/>
       <source>Add module description, icon, and assets (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Añade una descripción del módulo, icono y recursos (opcional)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="189"/>
       <source>Module location</source>
-      <translation type="unfinished"/>
+      <translation>Ubicación del módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="195"/>
       <source>Module description</source>
-      <translation type="unfinished"/>
+      <translation>Descripción del módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="196"/>
       <source>Brief description of your module</source>
-      <translation type="unfinished"/>
+      <translation>Breve descripción de tu módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="197"/>
       <source>Module author (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Autor del módulo (recomendado)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="198"/>
       <source>Module version (recommended)</source>
-      <translation type="unfinished"/>
+      <translation>Versión del módulo (recomendado)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="201"/>
       <source>Module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Dependencias del módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="202"/>
       <source>Include module assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Incluir recursos del módulo (imágenes, sonidos, fuentes)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="203"/>
       <source>Select files to include in module</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona los archivos a incluir en el módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="211"/>
       <source>Select module dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona las dependencias del módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="222"/>
@@ -9759,205 +9759,230 @@ If this module uses aliases, show a few examples and expected output.
 Further reading material, e.g., links to documentation or forum posts.
 
 * https://wiki.mudlet.org/w/Manual:Modules</source>
-      <translation type="unfinished"/>
+      <translation>(opcional)
+
+Esta descripción del módulo se muestra en el Administrador de módulos. El editor es compatible con el lenguaje de marcado Commonmark.
+
+### Descripción
+
+Una descripción completa de lo que hace este módulo. Si el módulo es específico para un juego en concreto, menciónalo aquí.
+
+### Uso
+
+Si este paquete utiliza alias, muestra algunos ejemplos y el resultado esperado.
+
+`&gt; alias_1`
+
+    resultado de alias_1  -- sangria con cuatro espacios
+    más resultados         -- para bloques de código
+
+### Ver también
+
+Material de lectura adicional. P. ej., enlaces a la documentación o a publicaciones del foro.
+
+* https://wiki.mudlet.org/w/Manual:Modules
+</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="415"/>
       <source>Failed to open file &quot;%1&quot; to place into package. Error message was: &quot;%2&quot;.</source>
       <extracomment>This error message will appear when a file is to be placed into the package but the code cannot open it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo abrir el archivo &quot;%1&quot; para incluirlo en el paquete. El mensaje de error fue: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="423"/>
       <source>Failed to add file &quot;%1&quot; to package. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo añadir el archivo &quot;%1&quot; al paquete. El mensaje de error ha sido: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="606"/>
       <source>package name</source>
       <extracomment>package name will be added to other fields in the &apos;required fields missing: ...&apos; tooltip when it&apos;s missing</extracomment>
-      <translation type="unfinished"/>
+      <translation>nombre del paquete</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="628"/>
       <source>Required field missing: %1</source>
-      <translation type="unfinished"/>
+      <translation>Falta el campo obligatorio: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="631"/>
       <source>Export package</source>
-      <translation type="unfinished"/>
+      <translation>Exportar paquete</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="859"/>
       <source>Cannot create empty module. Please select at least one trigger, timer, alias, script, action, or key to include in the module.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede crear un módulo vacío. Selecciona al menos un disparador, temporizador, alias, script, acción o tecla para incluir en el módulo.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="861"/>
       <source>Cannot create empty package. Please select at least one item to include in the package.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede crear un paquete vacío. Selecciona al menos un elemento para incluir en el paquete</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1035"/>
       <source>Module &quot;%1&quot; exported but installation failed: %2</source>
-      <translation type="unfinished"/>
+      <translation>Módulo &quot;%1&quot; exportado, pero falló la instalación: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1015"/>
       <source>Module &quot;%1&quot; exported but failed to uninstall existing version</source>
-      <translation type="unfinished"/>
+      <translation>Módulo &quot;%1&quot; exportado, pero no se pudo desinstalar la versión existente</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1376"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <extracomment>This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo abrir el archivo del paquete. El error es: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1542"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <extracomment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se pudo comprimir el paquete en formato ZIP. El error es: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1978"/>
       <source>Why not &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <extracomment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>¿Por qué no &lt;a href=&quot;https://packages.mudlet.org/upload&quot;&gt;subes&lt;/a&gt; tu paquete para otros usuarios de Mudlet?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageExporter.cpp" line="1995"/>
       <source>Select what to export (%n item(s))</source>
       <extracomment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Selecciona qué exportar (%n elemento)</numerusform>
+        <numerusform>Selecciona qué exportar (%n elementos)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1998"/>
       <source>Select what to export</source>
       <extracomment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Selecciona qué exportar</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="437"/>
       <source>update installed package</source>
       <extracomment>First item in package selection dropdown - when selected, allows updating an existing installed package</extracomment>
-      <translation type="unfinished"/>
+      <translation>actualizar paquete instalado</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="432"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Añadir dependencias</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="591"/>
       <location filename="../src/dlgPackageExporter.cpp" line="593"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>Exportar a %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1344"/>
       <source>cannot copy %1 to the temporary location %2 - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>no se pudo copiar %1 en la ubicación temporal %2; ¿puedes verificarlo?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="640"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>Abrir icono</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="640"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
-      <translation type="unfinished"/>
+      <translation>Archivos de imagen (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="778"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>Por favor, introduzca el nombre del paquete.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="888"/>
       <source>Overwrite module?</source>
       <extracomment>Title of the dialog asking whether to replace a module that already exists when creating a module</extracomment>
-      <translation type="unfinished"/>
+      <translation>¿Sobrescribir el módulo?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="890"/>
       <source>A module named &quot;%1&quot; already exists.</source>
       <extracomment>%1 is the name of the module that already exists</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ya existe un módulo llamado &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="893"/>
       <source>Overwrite package?</source>
       <extracomment>Title of the dialog asking whether to replace a package file that already exists when exporting</extracomment>
-      <translation type="unfinished"/>
+      <translation>¿Sobrescribir el paquete?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="895"/>
       <source>A file named &quot;%1&quot; already exists.</source>
       <extracomment>%1 is the file name of the package file that would be overwritten</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ya existe un archivo llamado &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="898"/>
       <source>Do you want to overwrite it?</source>
       <extracomment>Shown under the &apos;a file/module already exists&apos; text when exporting a package or creating a module</extracomment>
-      <translation type="unfinished"/>
+      <translation>¿Quieres sobrescribirlo?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="936"/>
       <location filename="../src/dlgPackageExporter.cpp" line="1053"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>Exportando paquete...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="956"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Error al exportar. No se pudo abrir la carpeta &quot;%1&quot; para escribir en ella. ¿Tienes los permisos necesarios y espacio libre en el disco para escribir en esa carpeta?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1028"/>
       <source>Module &quot;%1&quot; created and installed successfully! Saved to: %2. You can now close this dialog.</source>
       <extracomment>%1 is the module name, %2 is a clickable link to the folder the module file was saved in</extracomment>
-      <translation type="unfinished"/>
+      <translation>¡Módulo &quot;%1&quot; creado e instalado correctamente! Guardado en: %2. Ya puedes cerrar este cuadro de diálogo.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1263"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <extracomment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al exportar. No se pudieron escribir los elementos de Mudlet en el archivo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1339"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 ya no parece existir; ¿puedes verificarlo?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1460"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo añadir el directorio &quot;%1&quot; al paquete. El error es: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1503"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation type="unfinished"/>
+      <translation>No se encontró el archivo requerido &quot;%1&quot; en el área de preparación. Esta área contiene los elementos de Mudlet elegidos para el paquete que seleccionaste e incluir en el archivo del paquete. Esto sugiere que puede haber un problema con esa carpeta: &quot;%2&quot;. ¿Tienes los permisos necesarios y espacio libre en el disco?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1038"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation type="unfinished"/>
+      <translation>Paquete &quot;%1&quot; exportado a: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1534"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>Exportación cancelada.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1614"/>
       <source>Where do you want to save the package?</source>
-      <translation type="unfinished"/>
+      <translation>¿Dónde quieres guardar el paquete?</translation>
     </message>
   </context>
   <context>
@@ -9966,7 +9991,7 @@ Further reading material, e.g., links to documentation or forum posts.
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Package Manager - %1</source>
       <extracomment>Package manager - window title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Gestor de paquetes - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="199"/>
@@ -9983,19 +10008,19 @@ Further reading material, e.g., links to documentation or forum posts.
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="323"/>
       <source>Mudlet Packages (*.mpackage *.zip *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Paquetes de Mudlet (*.mpackage *.zip *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="348"/>
       <source>Failed to import: %1</source>
       <extracomment>Package manager - status message shown when some packages failed to import. %1 is a comma-separated list of package names</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error al importar: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="360"/>
       <source>Downloading packages...</source>
       <extracomment>Package manager - cancel button text for download progress dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Descargando paquetes...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="360"/>
@@ -10010,36 +10035,39 @@ Further reading material, e.g., links to documentation or forum posts.
       <extracomment>Package manager: package couldn&apos;t be downloaded
 ----------
 Package manager: network error, package couldn&apos;t be downloaded</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error en la instalación</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="398"/>
       <location filename="../src/dlgPackageManager.cpp" line="407"/>
       <source>Package &apos;%1&apos; not found in repository</source>
-      <translation type="unfinished"/>
+      <translation>Paquete &apos;%1&apos; no encontrado en el repositorio</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="456"/>
       <source>Package &apos;%1&apos; could not be downloaded due to a network error</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo descargar el paquete &apos;%1&apos; debido a un error de red</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="556"/>
       <source>Version %1 → %2</source>
       <extracomment>Package manager - version update indicator showing old and new versions</extracomment>
-      <translation type="unfinished"/>
+      <translation>Versión %1 → %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="783"/>
       <source>All packages are up to date.</source>
       <extracomment>Package manager - message shown in description area when no updates are available</extracomment>
-      <translation type="unfinished"/>
+      <translation>Todos los paquetes están actualizados.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="820"/>
       <source>Update (%n)</source>
       <extracomment>Message on button in package manager to update one or multiple (%n is the count) selected packages.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Actualizar (%n)</numerusform>
+        <numerusform>Actualizar (%n)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="823"/>
@@ -10051,13 +10079,16 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
       <location filename="../src/dlgPackageManager.cpp" line="826"/>
       <source>Update selected packages</source>
       <extracomment>Tooltip for button in package manager when in Updates view</extracomment>
-      <translation type="unfinished"/>
+      <translation>Actualizar los paquetes seleccionados</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="830"/>
       <source>Install (%n)</source>
       <extracomment>Message on button in package manager to install one or multiple (%n is the count) selected packages.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Instalar (%n)</numerusform>
+        <numerusform>Instalar (%n)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="833"/>
@@ -10073,13 +10104,16 @@ Message on button in package manager initially and when the view is the &quot;In
       <location filename="../src/dlgPackageManager.cpp" line="843"/>
       <source>Install package from repository</source>
       <extracomment>Tooltip for button in package manager when in Explore view</extracomment>
-      <translation type="unfinished"/>
+      <translation>Instalar paquete desde el repositorio</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="855"/>
       <source>Remove (%n)</source>
       <extracomment>Message on button in package manager to remove one or multiple (%n is the count) selected packages.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Eliminar (%n)</numerusform>
+        <numerusform>Eliminar (%n)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="858"/>
@@ -10094,7 +10128,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgPackageManager.cpp" line="880"/>
       <source>Updates (%1)</source>
       <extracomment>Package manager - navigation button showing one or more available updates</extracomment>
-      <translation type="unfinished"/>
+      <translation>Actualizaciones (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="883"/>
@@ -10108,105 +10142,105 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="177"/>
       <source>Location which will be used to store log files - matching logs will be appended to.</source>
-      <translation type="unfinished"/>
+      <translation>Ubicación utilizada para almacenar los archivos de registro (logs). Los registros que coincidan se añadirán al final.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="178"/>
       <source>Select a directory where logs will be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona una carpeta donde se guardarán los registros (logs).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="179"/>
       <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
-      <translation type="unfinished"/>
+      <translation>Restablecer la carpeta para que los registros se guarden en la carpeta de &lt;i&gt;log&lt;/i&gt; del perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="183"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation type="unfinished"/>
+      <translation>Establece un nombre personalizado para tu registro (log). (Los nuevos registros se añadirán al final si ya existe un archivo de registro con el mismo nombre).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="219"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>Las actualizaciones automáticas están desactivadas en las versiones de desarrollo para evitar que una actualización sobrescriba tu Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="250"/>
       <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona la fuente única o principal que se utilizará (según el ajuste &lt;i&gt;Usar solo símbolos (glifos) de la fuente elegida&lt;/i&gt;) para generar los símbolos de las habitaciones en el mapa 2D.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="333"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% hecho)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="404"/>
       <source>Migrated all passwords to secure storage.</source>
-      <translation type="unfinished"/>
+      <translation>Migrado de todas las contraseñas para un almacenamiento seguro.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="415"/>
       <source>Migrated all passwords to profile storage.</source>
-      <translation type="unfinished"/>
+      <translation>Migrado de todas las contraseñas al almacenamiento del perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="780"/>
       <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
-      <translation type="unfinished"/>
+      <translation>Del archivo de diccionario &lt;tt&gt;%1.dic&lt;/tt&gt; (y su archivo de afijos complementario &lt;tt&gt;.aff&lt;/tt&gt;).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="972"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>aaa-MM-dd#HH-mm-ss (ej. 1970-01-01#00-00-00html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="974"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>aaa-MM-ddTHH-mm-ss (ej. 1970-01-01T00-00-00html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="975"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (concatenar registros diarios, ej. 1970-01-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="978"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (concatenar registros mensuales, ej. 1970-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="979"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>Archivo con nombre (unificar registros en un solo archivo)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1074"/>
       <source>Other profiles to Map to:</source>
-      <translation type="unfinished"/>
+      <translation>Otros perfiles a mapear:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1138"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation type="unfinished"/>
+      <translation>Factor de escala del símbolo de sala en el mapa 2D:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1170"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar &quot;%1&quot; en la selección de área del mapa</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1253"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (*Error, reportar a los Desarrolladores de Mudlet*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1430"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="4857"/>
       <source>Profile preferences - %1</source>
-      <translation type="unfinished"/>
+      <translation>Preferencias de perfil - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1904"/>
