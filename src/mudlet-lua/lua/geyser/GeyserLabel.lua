@@ -1344,7 +1344,7 @@ function Geyser.Label:findMenuElement(name, parent, findParent)
     end
     if type(item) == "table" then
       local itemParent = menu[i-1]
-      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent])
+      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent], findParent)
       if element then
         return element, menuTable
       end
@@ -1405,12 +1405,24 @@ end
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional)
+-- @param index of the new menu item (optional). Not usable together with a nested
+--        parent: an item is named for the parent it sits in, so the index lookup
+--        misses and raises.
+-- @return true, or false plus a message when the item cannot be added
 function Geyser.Label:addMenuLabel(name, parent, index)
+  if type(name) ~= "string" then
+    return false, "addMenuLabel: needs the name of the item to add as a string, got "..type(name)
+  end
+
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
 
-  if parent and not menuParent then
-    error ("showMenuLabel: Couldn't find menu parent "..parent)
+  -- findMenuElement reports failure as nil plus a message, so the second return
+  -- is a string rather than nil when it fails and cannot be tested for absence -
+  -- the element is what has to be checked. With findParent set it only answers
+  -- for a parent that is followed by a submenu table, so a parent declared
+  -- without one lands here as well: appending to it has nowhere to go.
+  if parent and not menuElement then
+    return false, "addMenuLabel: Couldn't find menu parent "..parent
   end
 
   menuElement = menuElement or self.rightClickMenu
@@ -1433,6 +1445,8 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   if index then
     self:changeMenuIndex(parent..name, index)
   end
+
+  return true
 end
 
 --- changes a right click menu items index
