@@ -24,6 +24,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -92,12 +93,6 @@ private:
     // Any size where the bundled families are legible; these two cases are about
     // whether a decoration is drawn at all, not about how tall its cell is.
     static constexpr int kDecorationSize = 14;
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     static bool pixelIsInk(QRgb pixel, QRgb background)
     {

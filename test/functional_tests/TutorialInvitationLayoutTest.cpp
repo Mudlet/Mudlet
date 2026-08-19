@@ -35,6 +35,7 @@
 #include <QPushButton>
 #include <QScrollBar>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -48,12 +49,6 @@ class TutorialInvitationLayoutTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

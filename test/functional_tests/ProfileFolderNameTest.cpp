@@ -30,6 +30,7 @@
  * Run with: ctest -R ProfileFolderNameTest -V
  */
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -55,13 +56,6 @@ private:
     // Trailing whitespace: the entered name arrives trimmed, so the exemption
     // has to match against the trimmed folder name to cover this one:
     const QString mPaddedName = qsl("padded café ");
-
-    // setupConfig() consults portable.txt before the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest).
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     void makeExternalProfileFolder(const QString& name) const
     {

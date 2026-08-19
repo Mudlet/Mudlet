@@ -37,6 +37,7 @@
 #include <QScopeGuard>
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "AliasUnit.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -62,12 +63,6 @@ private:
     // which reports an absolute stack slot and so only answers correctly for the
     // first call in a process.
     bool luaHolds(const QString& condition) { return mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

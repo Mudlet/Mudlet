@@ -38,6 +38,7 @@
 
 #include <utility>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "DiscordIpcServerStub.h"
 #include "MudletInstanceCoordinator.h"
@@ -160,12 +161,6 @@ private:
                 },
                 65000);
         return loggedIn && mpDiscordIpcStub->handshakeCount() > handshakesBefore;
-    }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
 private slots:

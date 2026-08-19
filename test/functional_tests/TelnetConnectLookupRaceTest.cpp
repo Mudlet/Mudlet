@@ -30,6 +30,7 @@
 #include <QtNetwork/QTcpSocket>
 #include <limits>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -94,12 +95,6 @@ private:
     // waiting on tell against a build that does act on it.
     const QString mBlackhole = qsl("192.0.2.1");
     quint16 mPort = 0;
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

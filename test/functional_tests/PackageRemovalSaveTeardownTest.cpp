@@ -49,6 +49,7 @@
 #include <chrono>
 #include <zip.h>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "AliasUnit.h"
@@ -146,12 +147,6 @@ private:
     static bool writeConfigOnlyArchive(const QString& path, const QString& declaredName) { return writeArchive(path, qsl("config.lua"), qsl("mpackage = \"%1\"\n").arg(declaredName).toUtf8()); }
 
     QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

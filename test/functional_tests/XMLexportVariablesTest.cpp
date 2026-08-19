@@ -40,6 +40,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
@@ -82,12 +83,6 @@ private:
     dlgTriggerEditor* mpEditor = nullptr;
     const QString mHostname = "XMLexportVars-Test";
     const QString mLocalhost = "localhost";
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

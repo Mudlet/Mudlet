@@ -32,6 +32,7 @@
 #include <QTabBar>
 #include <QTabWidget>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TGameDetails.h"
 #include "dlgConnectionProfiles.h"
@@ -84,12 +85,6 @@ private:
     // where fillout_form() hides the games list along with the Remove button
     // and the notification area
     bool makeProfileOnDisk(const QString& game) const { return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, game)); }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

@@ -30,6 +30,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -68,11 +69,6 @@ private:
     // than inside one, so this test gets a configuration directory of its own
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
-
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     // Returns the Lua error, or a null QString when the chunk ran
     QString runLua(const QString& code) const
