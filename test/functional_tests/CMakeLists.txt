@@ -70,10 +70,13 @@ set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
+    TelnetAtcpMspTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
+    TelnetNewEnvironTest.cpp
+    TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
@@ -296,6 +299,11 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # TelnetCharsetNegotiationTest creates a fresh profile per test case, each of which
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
+
+# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
+# full profile against a loopback server, and the MSP half of the last waits out
+# real HTTP requests, so the 60s default is too tight under a sanitizer
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
