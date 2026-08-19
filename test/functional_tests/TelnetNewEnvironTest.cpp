@@ -506,11 +506,13 @@ private slots:
     }
 
     // The two namespaces in one request, which is where the parser has to keep
-    // track of which type the name it is collecting belongs to.
+    // track of which type the name it is collecting belongs to. The USERVAR comes
+    // first so the name before the switch is flushed by the well-known arm - the
+    // mirror of the arm the all-USERVAR request above runs.
     void test_aRequestMixingBothNamespacesKeepsThemApart()
     {
         enableNewEnviron();
-        requestSend(named(NEW_ENVIRON_VAR, "CHARSET") + named(NEW_ENVIRON_USERVAR, "ANSI"));
+        requestSend(named(NEW_ENVIRON_USERVAR, "ANSI") + named(NEW_ENVIRON_VAR, "CHARSET"));
 
         QString problem;
         const QList<EnvironVariable> variables = soleReplyVariables(NEW_ENVIRON_IS, problem);
@@ -715,6 +717,29 @@ private slots:
         const EnvironVariable clientName = clientNameReply.first();
         QCOMPARE(clientName.name, QByteArray("CLIENT_NAME"));
         QCOMPARE(clientName.value, QByteArray("MUDLET"));
+    }
+
+    // MNES has its own request parser, with the same flush-on-the-next-name shape
+    // and the same hole if only one name is ever asked for.
+    void test_severalMnesNamesInOneRequestAreAllAnswered()
+    {
+        mpHost->mEnableMNES = true;
+        enableNewEnviron();
+        requestSend(named(NEW_ENVIRON_VAR, "CLIENT_NAME") + named(NEW_ENVIRON_VAR, "CHARSET") + named(NEW_ENVIRON_VAR, "TERMINAL_TYPE"));
+
+        // MNES answers a name at a time rather than gathering them into one IS.
+        const QList<Subnegotiation> replies = newEnvironReplies();
+        QCOMPARE(replies.size(), 3);
+
+        QList<EnvironVariable> answered;
+        for (const Subnegotiation& reply : replies) {
+            QCOMPARE(reply.payload.at(0), NEW_ENVIRON_IS);
+            answered.append(variablesIn(reply.payload.mid(1)));
+        }
+        QCOMPARE(answered.size(), 3);
+        QCOMPARE(variableNamed(answered, "CLIENT_NAME").value, QByteArray("MUDLET"));
+        QCOMPARE(variableNamed(answered, "CHARSET").value, QByteArray("UTF-8"));
+        QCOMPARE(variableNamed(answered, "TERMINAL_TYPE").value, QByteArray("ANSI-TRUECOLOR"));
     }
 
     // The MTTS bitvector is how a game learns MNES is on offer before it asks
