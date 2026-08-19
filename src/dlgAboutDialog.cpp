@@ -909,7 +909,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
                            "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
 
-#if ! defined(INCLUDE_UPDATER) || defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
+#if defined(INCLUDE_UPDATER) || defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
     // This uses curly double quotes “ = &#8220; and ” = &#8221;
     QString APACHE2_Body(
             qsl("<h4>Apache Licence</h4>"
