@@ -325,7 +325,9 @@ end
 --- built without one takes writes to it silently, since db:add reports the rejected INSERT the
 --- same way and returns nil, which callers do not check, so a script can record nothing for weeks
 --- with no sign of it. A fault that would cost the sheet a column therefore stays fatal, and its
---- message names the key so the fix is obvious. <br/><br/>
+--- message names the key so the fix is obvious. A value whose shape no sheet can be built from is
+--- refused as well, whatever it holds: a malformed _index, _unique or _violations leaves nothing to
+--- skip and nothing to build from. <br/><br/>
 ---
 --- Note when weighing that up that printError is a quiet channel: it reaches the editor's Errors
 --- tab, which is hidden until the user opens it, and the main console only when they have turned
