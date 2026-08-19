@@ -31,6 +31,18 @@ if(TARGET ${EXE_MUDLET_TARGET})
     )
 endif()
 
+# Packaging copies this executable out of the build tree instead of installing
+# it, so BUILD_RPATH rather than INSTALL_RPATH is what ships. $ORIGIN/lib is the
+# AppImage layout and @executable_path/../Frameworks the .app bundle; with
+# neither, the shipped binary knows only the build machine's Qt path and the
+# loader kills it before it can report anything. Both are appended to the
+# automatically determined entries, so build-tree runs are unaffected.
+if(APPLE)
+    set_target_properties(MudletCrashReporter PROPERTIES BUILD_RPATH "@executable_path/../Frameworks")
+elseif(UNIX)
+    set_target_properties(MudletCrashReporter PROPERTIES BUILD_RPATH "$ORIGIN/lib")
+endif()
+
 add_dependencies(MudletCrashReporter sentry_with_transport)
 
 target_include_directories(MudletCrashReporter PRIVATE
