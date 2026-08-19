@@ -40,7 +40,8 @@ then
 
   # We refer to $BUILD_COMMIT in the environment to get the commit data now
 
-  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
+  # TESTING: Use the branch from the developer's repo that is being tested:
+  git clone https://github.com/SlySven/installers.git -b "Fix_ensureOpenSSL_3_libraryIsIncludedInLinuxBuilds" "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/generic-linux"
 
