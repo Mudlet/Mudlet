@@ -11198,7 +11198,10 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="245"/>
       <source>Enter a new room weight to use as the travel time for all of the %n selected room(s). This will be used for calculating the best path. The minimum and default is 1.</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Introduce un nuevo valor de la sala para usarlo como tiempo de viaje para toda la %n sala seleccionada. Esto se usará para calcular la ruta óptima. El mínimo y valor por defecto es 1.</numerusform>
+        <numerusform>Introduce los nuevos valores de la sala para usarlas como tiempo de viaje para todas las %n salas seleccionadas. Esto se usará para calcular la ruta óptima. El mínimo y valor por defecto es 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="251"/>
@@ -11206,7 +11209,14 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
  • an existing room weight from the list below (sorted by most commonly used first)
  • enter a new positive integer value to use as a new weight. The default is 1.</source>
       <comment>This is for when applying a new room weight to one or more rooms and some have different weights at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Para cambiar el valor de la sala seleccionada, elige una opción:
+• un valor de sala existente de la lista de abajo (ordenado por los más usados primero)
+• introduce un nuevo valor entero positivo para usarlo como nuevo valor. El valor por defecto es 1.</numerusform>
+        <numerusform>Para cambiar los valores de las %n salas seleccionadas, elige una opción:
+• un valor de sala existente de la lista de abajo (ordenado por los más usados primero)
+• introduce un nuevo valor entero positivo para usarlo como nuevo valor. El valor por defecto es 1.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="618"/>
@@ -11230,7 +11240,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="701"/>
       <source>Set a custom border color and thickness for the selected room(s). Leave at default to use the global map settings.</source>
       <extracomment>Instruction text shown in room properties dialog for the border customization section</extracomment>
-      <translation type="unfinished"/>
+      <translation>Establece un color y un grosor de borde personalizados para las salas seleccionadas. Déjalo en los valores predeterminados para usar la configuración global del mapa.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="714"/>
@@ -11247,37 +11257,52 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="193"/>
       <source>Lock %n room(s), so it/they will never be used for speedwalking</source>
       <extracomment>room properties dialog, text will be shown at a checkbox, where you can set/unset a number of room&apos;s lock.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Bloquea la sala para que nunca se use para caminar rápidamente.</numerusform>
+        <numerusform>Bloquea %n salas para que nunca se usen para caminar rápidamente.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="209"/>
       <source>Hide all %n room(s).%1</source>
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset a number of room&apos;s hidden status. More than one room is being considered and some, but not all (%n) of them are hidden and in this case the checkbox also has an partially checked state to be used to leave them all unchanged. A second translatable sentance indicating the number of currently hidden rooms will be inserted as %1.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Ocultar la sala.%1</numerusform>
+        <numerusform>Ocultar las %n salas.%1</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="216"/>
       <source> %n room(s) are currently hidden.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Actualmente hay una sala oculta.</numerusform>
+        <numerusform>Actualmente hay %n salas ocultas.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="222"/>
       <source>Leave as partially checked to not change the state of the selected rooms.</source>
       <extracomment>Tooltip to give additional information for the checkbox to control the state of being hidden when the selection includes multiple rooms and they are not all in the same state.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Déjala parcialmente marcada para no cambiar el estado de las salas seleccionadas.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="229"/>
       <source>Hide (all) %n room(s).</source>
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset the hidden status of one or more rooms where %n is the total number of rooms and all of them are currently hidden or shown.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Ocultar la sala.</numerusform>
+        <numerusform>Ocultar las %n salas (todas).</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="275"/>
       <source>Enter one or more characters to set a new symbol for %n room(s).  Clear to unset.</source>
       <comment>%n is the total number of rooms involved.</comment>
       <extracomment>room properties dialog, setting symbols</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Introduce el caracter para asignar un nuevo símbolo a la sala. Borra el texto para quitarlo.</numerusform>
+        <numerusform>Introduce más caracteres para asignar un nuevo símbolo a %n salas. Borra el texto para quitarlo.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="281"/>
@@ -11287,7 +11312,16 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
  • clear to unset.</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
       <extracomment>room properties dialog, setting symbols</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Para asignar el símbolo a la sala, elige una opción:
+ • un símbolo existente de la lista,
+ • introduce uno o más caracteres para asignar un nuevo símbolo,
+ • borra el texto para quitarlo.</numerusform>
+        <numerusform>Para asignar el símbolo a las %n salas, elige una opción:
+ • un símbolo existente de la lista,
+ • introduce uno o más caracteres para asignar un nuevo símbolo,
+ • borra el texto para quitarlo.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="323"/>
@@ -11296,23 +11330,23 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <extracomment>Format for showing a room symbol with its usage count. %1 is the symbol itself (e.g., &quot;★&quot; or &quot;!&quot;), %2 is the number of rooms using this symbol. Example output: &quot;★ (count: 5)&quot; or &quot;! (count: 12)&quot;. The word &quot;count&quot; and the format can be translated, but ensure the numbers remain clearly associated.
 ----------
 Format for showing a room weight with its usage count. %1 is the weight value (e.g., &quot;1&quot; or &quot;50&quot;), %2 is the number of rooms with this weight. Example output: &quot;5 (count: 3)&quot; or &quot;100 (count: 7)&quot;. The word &quot;count&quot; and the format can be translated, but ensure the numbers remain clearly associated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 (cantidad: %2)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="580"/>
       <location filename="../src/dlgRoomProperties.cpp" line="637"/>
       <source>Define new room color</source>
-      <translation type="unfinished"/>
+      <translation>Definir un nuevo color de sala</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="603"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Asignar color de sala</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="97"/>
       <source>(Multiple values...)</source>
-      <translation type="unfinished"/>
+      <translation>(Múltiples valores...)</translation>
     </message>
   </context>
   <context>
@@ -11391,7 +11425,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="824"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="825"/>
       <source>Show Keybindings</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar combinaciones de teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="828"/>
@@ -11414,7 +11448,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="857"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
-      <translation type="unfinished"/>
+      <translation>Activar o desactivar disparadores, scripts, etc.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="875"/>
@@ -11479,23 +11513,23 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="327"/>
       <source>new folder</source>
       <extracomment>Accessible description for a newly created folder, shown after the folder name</extracomment>
-      <translation type="unfinished"/>
+      <translation>nueva carpeta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="329"/>
       <source>new item</source>
       <extracomment>Accessible description for a newly created item, shown after the item name</extracomment>
-      <translation type="unfinished"/>
+      <translation>nuevo elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="335"/>
       <source>%1 - Editor</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Editor</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="723"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** iniciando nueva sesión ***</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="849"/>
@@ -11506,31 +11540,31 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="995"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Algo salió mal al cargar tu perfil de Mudlet y no se pudo abrir. Intenta cargar una versión anterior en &apos;Conectar - Opciones - Historial del perfil&apos;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1022"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <extracomment>This is the toolbar that is initially placed at the top of the editor.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Barra de herramientas del editor - %1 - Acciones</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1063"/>
       <source>Editor Toolbar - %1 - Items</source>
       <extracomment>This is the toolbar that is initially placed at the left side of the editor.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Barra de herramientas del editor - %1 - Elementos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1073"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Restaurar barra de herramientas de acciones</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1076"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Restaurar barra de herramientas de elementos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1241"/>
@@ -11546,32 +11580,32 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>inicio de línea</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5005"/>
       <source>New trigger group</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo grupo de disparadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5005"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5111"/>
       <source>New timer group</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo grupo de temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5111"/>
       <source>New timer</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo temporizador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5266"/>
       <source>New key group</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo grupo de teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5266"/>
@@ -11583,78 +11617,78 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5355"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo grupo de alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5355"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="6237"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5450"/>
       <source>New menu</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo menú</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5450"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5477"/>
       <source>New button</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo botón</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5477"/>
       <source>New toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Nueva barra de herramientas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5552"/>
       <source>New script group</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo grupo de scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5552"/>
       <source>New script</source>
-      <translation type="unfinished"/>
+      <translation>Nuevo script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6436"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
-      <translation type="unfinished"/>
+      <translation>El alias&lt;em&gt;%1&lt;/em&gt; tiene un bucle infinito: la sustitución coincide con su propio patrón. Por favor, corrígelo, este alias no es válido porque se llamará a sí mismo indefinidamente.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6741"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8536"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="13788"/>
       <source>While loading the profile, this script had an error that has since been fixed, possibly by another script. The error was:%2%3</source>
-      <translation type="unfinished"/>
+      <translation>Al cargar el perfil, este script tuvo un error, que ya ha sido solucionado, posiblemente por otro script. El error fue: %2%3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7071"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8275"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Las variables marcadas se guardarán y se cargarán con tu perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7298"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>activar en la línea del prompt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7302"/>
       <source>match on the prompt line (disabled)</source>
-      <translation type="unfinished"/>
+      <translation>activar en la línea del prompt (desactivado)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7303"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
-      <translation type="unfinished"/>
+      <translation>Se requiere una señal Go-Ahead (GA) del juego para que esta función funcione</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7738"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7740"/>
       <source>fault</source>
-      <translation type="unfinished"/>
+      <translation>fallo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7590"/>
@@ -11662,13 +11696,13 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="12895"/>
       <source>Foreground color ignored</source>
       <extracomment>Color trigger ignored foreground color button, ensure all three instances have the same text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Color de primer plano ignorado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="127"/>
       <source>How to add a new alias from the input line</source>
       <extracomment>Name of a selectable option for the Alias intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo alias desde la línea de entrada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="130"/>
@@ -11677,37 +11711,37 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <extracomment>Help contents of a selectable option for the Alias intro
 ----------
 Help contents of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hay un &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;par&lt;/a&gt; de &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;paquetes&lt;/a&gt; que pueden ayudarte.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
       <source>Alias can also be defined from the input line in the main profile window like this:</source>
       <extracomment>Part of the Alias intro - This introductory text will be followed by a Lua code example for a trigger.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los alias también se pueden definir desde la línea de entrada en la ventana principal del perfil, de esta manera:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="135"/>
       <source>My greetings</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the name of the alias which reacts on the player typing &quot;hi&quot; by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Un saludo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="137"/>
       <source>hi</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the text input from the player which will be reacted on by saying &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>hola</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="139"/>
       <source>say Greetings, traveller!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the command that Mudlet will send to the game after the player typed &quot;hi&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>decir ¡Saludos, viajero!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="141"/>
       <source>We said hi!</source>
       <extracomment>Part of the Alias intro, code example for an alias - This is the confirmation text shown to the player after they typed &quot;hi&quot; and we said &quot;Greetings, traveller!&quot; in game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>¡Dijimos hola!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
@@ -11718,7 +11752,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="272"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="298"/>
       <source>Where to find more information</source>
-      <translation type="unfinished"/>
+      <translation>Dónde encontrar más información</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
@@ -11726,12 +11760,12 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="206"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="274"/>
       <source>Watch a &lt;a href=&apos;%1&apos;&gt;video demonstration&lt;/a&gt; of the basic functionality.</source>
-      <translation type="unfinished"/>
+      <translation>Mira una &lt;a href=&apos;%1&apos;&gt;demostración en el vídeo&lt;/a&gt; de las funciones básicas.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;Introduction to Aliases&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt; Introducción de Alias&lt;/a&gt; para ver una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="149"/>
@@ -11742,7 +11776,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="277"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="301"/>
       <source>Do you maybe have any other suggestions, questions or doubts?</source>
-      <translation type="unfinished"/>
+      <translation>¿Quizás tienes alguna otra sugerencia, pregunta o duda?</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="150"/>
@@ -11753,19 +11787,19 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="278"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="302"/>
       <source>Join our community on &lt;a href=&apos;https://www.mudlet.org/chat&apos;&gt;Discord&lt;/a&gt; or in &lt;a href=&apos;https://forums.mudlet.org/&apos;&gt;Mudlet forums&lt;/a&gt; - See you there!</source>
-      <translation type="unfinished"/>
+      <translation>Únete a nuestra comunidad en &lt;a href=&apos;https://www.mudlet.org/chat&apos;&gt;Discord&lt;/a&gt;o en losl&lt;a href=&apos;https://forums.mudlet.org/&apos;&gt;foros de Mudlet&lt;/a&gt;. ¡Nos vemos allí!</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="164"/>
       <source>How to add a new trigger from the input line</source>
       <extracomment>Name of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo disparador desde la línea de entrada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="169"/>
       <source>Triggers can also be defined from the input line in the main profile window like this:</source>
       <extracomment>Part of the Trigger intro - This introductory text will be followed by a Lua code example for a trigger.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los disparadores también se pueden definir desde la línea de entrada en la ventana principal del perfil, de esta manera:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="172"/>
