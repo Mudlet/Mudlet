@@ -6,41 +6,6 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    TriggerEditorTest.cpp
-    TFeedTriggersRecursionTest.cpp
-    MultilineTriggerReentrancyTest.cpp
-    dlgTriggerEditorUndoRedoTest.cpp
-    EditorBannerViewSwitchTest.cpp
-    TDiscordModeTest.cpp
-    MapAreaReassignmentTest.cpp
-    UnitDeferredDeleteTest.cpp
-    CorruptTriggerPatternsTest.cpp
-    TutorialInvitationLayoutTest.cpp
-    FeatureCalloutTest.cpp
-    VariableEditorWriteBackTest.cpp
-    ScriptEventHandlerLifetimeTest.cpp
-    SetScriptCallbackTest.cpp
-    PackageSelfRemovalTest.cpp
-    UnitProcessingDepthTest.cpp
-    PackageRemovalSaveTeardownTest.cpp
-    TutorialInvitationGateTest.cpp
-    ModuleSaveTeardownTest.cpp
-    MapRoundTripTest.cpp
-    MapProgressDialogSeamTest.cpp
-    MapCloseDuringImportTest.cpp
-    StarterUiSectionsTest.cpp
-    TtsInterruptingSpeakTest.cpp
-    HostWidgetDecouplingTest.cpp
-    ActionSelfRemovalTest.cpp
-    DialogTeardownTest.cpp
-    HostChildTeardownTest.cpp
-    EdbeeReinitTest.cpp
-    TMediaLoopTest.cpp
-    DefaultPackagesTest.cpp
-    StarterUiTriggerCostTest.cpp
-    StarterUiGaugePanelTest.cpp
-    ExperiencedPlayerGateTest.cpp
-    EmbeddedMapperCreationTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -113,6 +78,70 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
+)
+
+# Triggers and the other scriptable units, and what a running script does to them
+set(TRIGGER_GROUP_TEST_SOURCES
+    CorruptTriggerPatternsTest.cpp
+    MultilineTriggerReentrancyTest.cpp
+    SetScriptCallbackTest.cpp
+    TFeedTriggersRecursionTest.cpp
+    UnitDeferredDeleteTest.cpp
+    UnitProcessingDepthTest.cpp
+)
+
+# The script editor, and the trigger, variable and script forms it hosts
+set(EDITOR_GROUP_TEST_SOURCES
+    dlgTriggerEditorUndoRedoTest.cpp
+    EdbeeReinitTest.cpp
+    EditorBannerViewSwitchTest.cpp
+    ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorTest.cpp
+    VariableEditorWriteBackTest.cpp
+)
+
+# The map: its rooms and areas, its file format, and the mapper widget
+set(MAP_GROUP_TEST_SOURCES
+    EmbeddedMapperCreationTest.cpp
+    MapAreaReassignmentTest.cpp
+    MapCloseDuringImportTest.cpp
+    MapProgressDialogSeamTest.cpp
+    MapRoundTripTest.cpp
+)
+
+# Packages and modules: installing them, saving them and removing them
+set(PACKAGE_GROUP_TEST_SOURCES
+    ActionSelfRemovalTest.cpp
+    DefaultPackagesTest.cpp
+    ModuleSaveTeardownTest.cpp
+    PackageRemovalSaveTeardownTest.cpp
+    PackageSelfRemovalTest.cpp
+)
+
+# Onboarding and in-app guidance: the starter UI, the tutorial invitation,
+# the feature callouts and the experienced-player gate
+set(STARTERUI_GROUP_TEST_SOURCES
+    ExperiencedPlayerGateTest.cpp
+    FeatureCalloutTest.cpp
+    StarterUiGaugePanelTest.cpp
+    StarterUiSectionsTest.cpp
+    StarterUiTriggerCostTest.cpp
+    TutorialInvitationGateTest.cpp
+    TutorialInvitationLayoutTest.cpp
+)
+
+# Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
+set(TEARDOWN_GROUP_TEST_SOURCES
+    DialogTeardownTest.cpp
+    HostChildTeardownTest.cpp
+    HostWidgetDecouplingTest.cpp
+)
+
+# Sound and music, text-to-speech, and the rich presence published to Discord
+set(MEDIA_GROUP_TEST_SOURCES
+    TDiscordModeTest.cpp
+    TMediaLoopTest.cpp
+    TtsInterruptingSpeakTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -190,6 +219,13 @@ endmacro()
 add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
@@ -267,7 +303,7 @@ set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
 # and each clip has to be waited out in real time, so it needs a longer timeout.
-# QTEST_MAIN does not run src/main.cpp, so pin QT_MEDIA_BACKEND to what main.cpp picks for
+# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND to what main.cpp picks for
 # the shipped application - otherwise the tests silently exercise Qt's default backend for
 # the platform rather than the one users actually get.
 if(APPLE)

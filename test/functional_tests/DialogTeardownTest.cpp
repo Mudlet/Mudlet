@@ -60,14 +60,9 @@
 #include "updater.h"
 #endif
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForDialogTeardownTest();
+using namespace std::chrono_literals;
 
 class DialogTeardownTest : public QObject
 {
@@ -121,8 +116,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForDialogTeardownTest();
-
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -369,20 +362,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForDialogTeardownTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "DialogTeardownTest.moc"
-QTEST_MAIN(DialogTeardownTest)
+MUDLET_GROUPED_TEST_MAIN(DialogTeardownTest)

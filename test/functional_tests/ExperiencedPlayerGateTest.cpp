@@ -37,14 +37,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
 
-// init() reads compiled-in resources, which are not registered automatically in
-// a test binary that links mudlet_core statically
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForExperiencedPlayerGateTest();
+#include "GroupedTest.h"
 
 class ExperiencedPlayerGateTest : public QObject
 {
@@ -302,7 +295,6 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(configDir)));
         qputenv("XDG_CONFIG_HOME", mLiveConfig.path().toUtf8());
 
-        initializeQRCResourcesForExperiencedPlayerGateTest();
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(mudlet::getMudletPath(enums::mainPath), configDir);
@@ -334,20 +326,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForExperiencedPlayerGateTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ExperiencedPlayerGateTest.moc"
-QTEST_MAIN(ExperiencedPlayerGateTest)
+MUDLET_GROUPED_TEST_MAIN(ExperiencedPlayerGateTest)

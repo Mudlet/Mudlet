@@ -25,6 +25,8 @@
 #include "enums.h"
 #include "mudlet.h"
 
+#include "GroupedTest.h"
+
 /*
  * A feature callout is a Qt::ToolTip window, which the platforms Mudlet ships
  * on keep above ordinary windows - including the windows of whatever
@@ -224,4 +226,4 @@ private slots:
 };
 
 #include "FeatureCalloutTest.moc"
-QTEST_MAIN(FeatureCalloutTest)
+MUDLET_GROUPED_TEST_MAIN(FeatureCalloutTest)

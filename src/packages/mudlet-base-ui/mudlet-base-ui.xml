@@ -432,8 +432,23 @@ BaseUI.vitalsTriggerIds = BaseUI.vitalsTriggerIds or {}
 BaseUI.shapeSightings = BaseUI.shapeSightings or {}
 BaseUI.vitalsData = BaseUI.vitalsData or {}
 BaseUI.vitalsLock = BaseUI.vitalsLock or 0
+BaseUI.eventHandlerIds = BaseUI.eventHandlerIds or {}
+
+-- An anonymous event handler belongs to the profile rather than to the package
+-- that registered it, so uninstalling has to take these with it. Every
+-- registration goes through here, including the ones made later in a session.
+-- The id is only recorded once: re-running this script (saving it in the editor
+-- does) hands back the ids registered the first time rather than new ones.
+local function onEvent(event, handler, oneShot)
+  local id = registerAnonymousEventHandler(event, handler, oneShot)
+  if not table.contains(BaseUI.eventHandlerIds, id) then
+    BaseUI.eventHandlerIds[#BaseUI.eventHandlerIds + 1] = id
+  end
+  return id
+end
 
 local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
+local ownPackage = "mudlet-base-ui"
 
 -- Everything a look decides lives in one of these tables: the dock's chrome,
 -- the gauge colours, the font, and the colour the game's own text sits on. In
@@ -1594,27 +1609,68 @@ function BaseUI.standAside(_, packageName)
   BaseUI.layoutDock()
 end
 
--- if the game's interface is later uninstalled, quietly return to duty. Not
--- straight away though: a version upgrade uninstalls only to reinstall a
--- moment later, so look again once the dust has settled
--- Uninstalling this package takes the dock and the "baseui" command with it, so a
--- tinted background would otherwise be left behind with nothing left to explain it
--- or to give it back. Handled here rather than in a handler of its own because both
--- cases arrive on the same event.
+-- An uninstall of this package and one of the game's own interface arrive on the
+-- same event, so they are told apart here rather than in a handler each.
 function BaseUI.packageRemoved(_, packageName)
-  if packageName == "mudlet-base-ui" then
-    applyConsoleTint(true)
-    BaseUI.saveSettings()
+  if packageName == ownPackage then
+    BaseUI.uninstall()
     return
   end
   BaseUI.serverGuiRemoved(nil, packageName)
 end
 
+-- Uninstalling the package takes the alias, the chat trigger tree and this very
+-- script with it - and nothing else. The dock and everything in it are Geyser
+-- objects made at runtime, the vitals prefilter is a temporary trigger and the
+-- handlers below are anonymous ones: all three belong to the profile rather than
+-- to the package, so they would be left on screen and still repainting from game
+-- text, with the "baseui" command that could have dismissed them gone. So the
+-- package takes its own interface down here, while the code to do it is still
+-- loaded: the event is raised before the script is removed.
+-- A step that raised would leave the rest of it standing, so the ones that can
+-- are on their own pcall.
+function BaseUI.uninstall()
+  for _, id in ipairs(BaseUI.eventHandlerIds) do
+    killAnonymousEventHandler(id)
+  end
+  BaseUI.eventHandlerIds = {}
+  BaseUI.killVitalsTriggers()
+  if BaseUI.settleTimerId then
+    killTimer(BaseUI.settleTimerId)
+    BaseUI.settleTimerId = nil
+  end
+  -- before the settings that record the tint as ours are thrown away, and while
+  -- the chat panes it also matches are still there
+  applyConsoleTint(true)
+  -- the game was asked for its channel text on this interface's behalf
+  if type(gmcp) == "table" and next(gmcp) then
+    pcall(gmod.disableModule, "BaseUI", "Comm.Channel")
+  end
+  -- a section dragged out of the dock is no longer the dock's child, so the
+  -- delete cascade would never reach it - and each has a save file of its own
+  for _, section in pairs(BaseUI.sections) do
+    section:deleteSaveFile()
+    pcall(section.delete, section)
+  end
+  if BaseUI.container then
+    -- takes the palette button and every remaining section with it, and gives
+    -- back the border the dock was attached to
+    pcall(BaseUI.container.delete, BaseUI.container)
+  end
+  os.remove(settingsFile)
+  -- last, since everything above is written in terms of it: a reinstall builds
+  -- itself from nothing rather than from what this session left behind
+  BaseUI = nil
+end
+
+-- if the game's interface is later uninstalled, quietly return to duty. Not
+-- straight away though: a version upgrade uninstalls only to reinstall a
+-- moment later, so look again once the dust has settled
 function BaseUI.serverGuiRemoved(_, packageName)
   if not BaseUI.settings.standingAside or packageName ~= BaseUI.settings.standingAside then
     return
   end
-  tempTimer(10, function()
+  BaseUI.settleTimerId = tempTimer(10, function()
     local aside = BaseUI.settings.standingAside
     if not aside or table.contains(getPackages(), aside) then
       return
@@ -2425,7 +2481,7 @@ function BaseUI.maybeAnnounce()
   end
   -- respect the first-run UI tour: hold the introduction until it is done
   if mudlet and mudlet.uiTourPending then
-    registerAnonymousEventHandler("sysUiTourFinished", "BaseUI.announce", true)
+    onEvent("sysUiTourFinished", "BaseUI.announce", true)
     return
   end
   BaseUI.announce()
@@ -2552,29 +2608,29 @@ BaseUI.createVitalsTriggers()
 -- gauges to games that have it but lack GMCP
 setConfig("enableMSDP", true)
 
-registerAnonymousEventHandler("gmcp.Char.Vitals", "BaseUI.updateVitals")
-registerAnonymousEventHandler("gmcp.char.vitals", "BaseUI.updateVitals")
-registerAnonymousEventHandler("gmcp.Char.Maxstats", "BaseUI.updateVitals")
-registerAnonymousEventHandler("gmcp.char.maxstats", "BaseUI.updateVitals")
-registerAnonymousEventHandler("gmcp.Char.Status", "BaseUI.updateVitals")
-registerAnonymousEventHandler("gmcp.char.status", "BaseUI.updateVitals")
-registerAnonymousEventHandler("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
-registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableChannelCapture")
-registerAnonymousEventHandler("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
-registerAnonymousEventHandler("sysDisconnectionEvent", "BaseUI.handleDisconnect")
-registerAnonymousEventHandler("sysDataSendRequest", "BaseUI.noteCommandSent")
-registerAnonymousEventHandler("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
-registerAnonymousEventHandler("sysServerGuiInstalled", "BaseUI.standAside")
-registerAnonymousEventHandler("sysUninstallPackage", "BaseUI.packageRemoved")
+onEvent("gmcp.Char.Vitals", "BaseUI.updateVitals")
+onEvent("gmcp.char.vitals", "BaseUI.updateVitals")
+onEvent("gmcp.Char.Maxstats", "BaseUI.updateVitals")
+onEvent("gmcp.char.maxstats", "BaseUI.updateVitals")
+onEvent("gmcp.Char.Status", "BaseUI.updateVitals")
+onEvent("gmcp.char.status", "BaseUI.updateVitals")
+onEvent("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
+onEvent("sysProtocolEnabled", "BaseUI.enableChannelCapture")
+onEvent("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
+onEvent("sysDisconnectionEvent", "BaseUI.handleDisconnect")
+onEvent("sysDataSendRequest", "BaseUI.noteCommandSent")
+onEvent("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
+onEvent("sysServerGuiInstalled", "BaseUI.standAside")
+onEvent("sysUninstallPackage", "BaseUI.packageRemoved")
 for _, stat in ipairs(msdpStats) do
-  registerAnonymousEventHandler("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
-  registerAnonymousEventHandler("msdp." .. stat.max, "BaseUI.updateMsdpVitals")
+  onEvent("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
+  onEvent("msdp." .. stat.max, "BaseUI.updateMsdpVitals")
 end
-registerAnonymousEventHandler("mapOpenEvent", "BaseUI.checkMapData")
-registerAnonymousEventHandler("sysMapDownloadEvent", "BaseUI.checkMapData")
-registerAnonymousEventHandler("sysMapAreaChanged", "BaseUI.checkMapData")
-registerAnonymousEventHandler("gmcp.Room.Info", "BaseUI.checkMapData")
-registerAnonymousEventHandler("gmcp.room.info", "BaseUI.checkMapData")</script>
+onEvent("mapOpenEvent", "BaseUI.checkMapData")
+onEvent("sysMapDownloadEvent", "BaseUI.checkMapData")
+onEvent("sysMapAreaChanged", "BaseUI.checkMapData")
+onEvent("gmcp.Room.Info", "BaseUI.checkMapData")
+onEvent("gmcp.room.info", "BaseUI.checkMapData")</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>

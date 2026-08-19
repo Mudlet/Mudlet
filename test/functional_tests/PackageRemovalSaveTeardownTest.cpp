@@ -58,14 +58,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForPackageRemovalSaveTeardownTest();
+using namespace std::chrono_literals;
 
 class PackageRemovalSaveTeardownTest : public QObject
 {
@@ -161,8 +156,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForPackageRemovalSaveTeardownTest();
-
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -376,20 +369,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForPackageRemovalSaveTeardownTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "PackageRemovalSaveTeardownTest.moc"
-QTEST_MAIN(PackageRemovalSaveTeardownTest)
+MUDLET_GROUPED_TEST_MAIN(PackageRemovalSaveTeardownTest)
