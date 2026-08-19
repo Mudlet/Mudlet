@@ -696,8 +696,9 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # The suite alone can run past a minute on the slower Intel runners
-      timeout-minutes: 3
+      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
+      # tighter limit fails on runner speed rather than on anything the suite did
+      timeout-minutes: 6
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
