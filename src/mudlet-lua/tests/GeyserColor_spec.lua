@@ -83,8 +83,80 @@ describe("Tests functionality of Geyser.Color", function()
       assert.are.equal("#ffffff", Geyser.Color.hex("white"))
       assert.are.equal("#ffffffff", Geyser.Color.hexa("white"))
       assert.are.equal("|cffffff", Geyser.Color.hhex("white"))
+      assert.are.equal("|cffffffff", Geyser.Color.hhexa("white"))
       assert.are.equal("<255,255,255>", Geyser.Color.hdec("white"))
       assert.are.equal("<255,255,255,255>", Geyser.Color.hdeca("white"))
+    end)
+
+    -- the alpha forms are the only ones that can carry a fourth component, so
+    -- they are the ones a colour that has one has to come back out of
+    it("carries the alpha through the forms that have room for it", function()
+      assert.are.equal("#aa00ff80", Geyser.Color.hexa("<170,0,255,128>"))
+      assert.are.equal("|caa00ff80", Geyser.Color.hhexa("<170,0,255,128>"))
+      assert.are.equal("<170,0,255,128>", Geyser.Color.hdeca("<170,0,255,128>"))
+      -- and the three component forms drop it rather than mangling the colour
+      assert.are.equal("#aa00ff", Geyser.Color.hex("<170,0,255,128>"))
+      assert.are.equal("|caa00ff", Geyser.Color.hhex("<170,0,255,128>"))
+      assert.are.equal("<170,0,255>", Geyser.Color.hdec("<170,0,255,128>"))
+    end)
+
+    it("formats discrete components as well as a string", function()
+      assert.are.equal("#0a141e", Geyser.Color.hex(10, 20, 30))
+      assert.are.equal("|c0a141e28", Geyser.Color.hhexa(10, 20, 30, 40))
+      assert.are.equal("<10,20,30,40>", Geyser.Color.hdeca(10, 20, 30, 40))
+    end)
+  end)
+
+  -- applyColors is what every Geyser widget constructor calls to put the
+  -- fgColor/bgColor/color constraints onto the primitive it just made, so it is
+  -- specced against a real miniconsole and read back out of Mudlet.
+  describe("Geyser.Color.applyColors", function()
+    local console
+
+    before_each(function()
+      console = Geyser.MiniConsole:new({name = "gcoColours", x = 0, y = 0, width = 200, height = 100})
+    end)
+
+    after_each(function()
+      if console and Geyser.windowList.gcoColours == console then
+        console:delete()
+      end
+      console = nil
+    end)
+
+    it("puts all three colour constraints onto the widget", function()
+      console.fgColor = "red"
+      console.bgColor = "blue"
+      console.color = "#102030"
+
+      Geyser.Color.applyColors(console)
+
+      console:echo("coloured\n")
+      moveCursor("gcoColours", 0, getLineCount("gcoColours") - 1)
+      selectCurrentLine("gcoColours")
+      local format = getTextFormat("gcoColours")
+      assert.are.same({255, 0, 0}, format.foreground)
+      assert.are.same({0, 0, 255}, format.background)
+      -- color is the window's own background rather than the text's
+      local red, green, blue = getBackgroundColor("gcoColours")
+      assert.are.same({16, 32, 48}, {red, green, blue})
+    end)
+
+    it("reads the colours in whatever form they were written", function()
+      console.fgColor = "<0,255,0>"
+      console.bgColor = "#000080"
+      console.color = "|c204060"
+
+      Geyser.Color.applyColors(console)
+
+      console:echo("mixed\n")
+      moveCursor("gcoColours", 0, getLineCount("gcoColours") - 1)
+      selectCurrentLine("gcoColours")
+      local format = getTextFormat("gcoColours")
+      assert.are.same({0, 255, 0}, format.foreground)
+      assert.are.same({0, 0, 128}, format.background)
+      local red, green, blue = getBackgroundColor("gcoColours")
+      assert.are.same({32, 64, 96}, {red, green, blue})
     end)
   end)
 end)

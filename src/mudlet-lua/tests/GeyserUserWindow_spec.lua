@@ -415,7 +415,87 @@ describe("Tests functionality of Geyser.UserWindow", function()
     end)
   end)
 
-  pending("Geyser.UserWindow:setDockPosition - which edge a user window ended up docked to, and whether it docks by itself when dragged, are not readable from Lua")
+  describe("Geyser.UserWindow:setDockPosition", function()
+    -- Docking takes the dock's size off the main window, so every spec here
+    -- floats the window again before it finishes rather than leaving the main
+    -- window short for whatever runs next. finally() only holds one function,
+    -- and these specs have both that and a spy to undo, so the undos go into a
+    -- list drained here instead.
+    local undo
+
+    before_each(function()
+      undo = {}
+    end)
+
+    after_each(function()
+      for index = #undo, 1, -1 do
+        undo[index]()
+      end
+      undo = {}
+    end)
+
+    local function floatAgain(userWindow)
+      undo[#undo + 1] = function() userWindow:setDockPosition("floating") end
+    end
+
+    local function watchOpenUserWindow()
+      local openWindow = spy.on(_G, "openUserWindow")
+      undo[#undo + 1] = function() openWindow:revert() end
+      return openWindow
+    end
+
+    it("records the position and reopens the window at it", function()
+      local openWindow = watchOpenUserWindow()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockPos", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+
+      assert.is_true(userWindow:setDockPosition("top"))
+
+      assert.are.equal("top", userWindow.dockPosition)
+      assert.spy(openWindow).was.called_with("guwDockPos", false, true, "top")
+      assert.is_true(windowVisible("guwDockPos"))
+    end)
+
+    it("docks a window whose automatic docking is turned off", function()
+      local openWindow = watchOpenUserWindow()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockNoAuto", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:disableAutoDock()
+
+      userWindow:setDockPosition("left")
+
+      -- autoDock is about being docked by dragging, so asking for a dock
+      -- position outright still has to work, and has to carry the flag
+      assert.spy(openWindow).was.called_with("guwDockNoAuto", false, false, "left")
+      assert.are.equal("left", userWindow.dockPosition)
+    end)
+
+    it("floats a docked window again", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwFloatBack", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:setDockPosition("bottom")
+
+      assert.is_true(userWindow:setDockPosition("floating"))
+
+      assert.are.equal("floating", userWindow.dockPosition)
+      assert.is_true(windowVisible("guwFloatBack"))
+      -- floating again, the dock takes the geometry its constraints ask for
+      userWindow:move(30, 40)
+      userWindow:resize(220, 160)
+      assert.are.same({x = 30, y = 40, width = 220, height = 160}, geometry("guwFloatBack"))
+    end)
+
+    it("takes a hidden window's dock position without putting it on screen", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockHidden", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:hide()
+      userWindow:setDockPosition("right")
+      assert.are.equal("right", userWindow.dockPosition)
+      assert.is_true(userWindow.hidden)
+    end)
+  end)
+
+  pending("Geyser.UserWindow:setDockPosition docking the window against the edge it names - which edge a user window ended up docked to, and whether it docks by itself when dragged, are not readable from Lua")
 
   -- restoreLayout = true makes the constructor reopen the window from the
   -- layout saved in the profile and skip the move/resize it was given. Running

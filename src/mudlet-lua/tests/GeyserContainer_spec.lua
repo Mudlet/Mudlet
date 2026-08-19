@@ -878,6 +878,50 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
+  -- Geyser.display writes to the main console, and Geyser looks echo up in the
+  -- globals of the file it lives in, so the stand-in has to go into that
+  -- environment rather than into the spec's - the same trick the placement
+  -- counter above uses for moveWindow. Capturing rather than letting it through
+  -- also keeps a screenful of debug output out of the suite's own console.
+  describe("Geyser.display", function()
+    local function displayed(...)
+      local environment = getfenv(Geyser.display)
+      local realEcho = environment.echo
+      local written = {}
+      environment.echo = function(text) written[#written + 1] = text end
+      local ok, err = pcall(Geyser.display, ...)
+      environment.echo = realEcho
+      assert.is_true(ok, tostring(err))
+      return table.concat(written)
+    end
+
+    it("heads the output with the type it was given", function()
+      assert.is_truthy(displayed({}):find("------ table ------", 1, true))
+      assert.is_truthy(displayed("text"):find("------ string ------", 1, true))
+      assert.is_truthy(displayed(42):find("------ number ------", 1, true))
+    end)
+
+    it("writes one line per entry of a table", function()
+      local text = displayed({alpha = 1, beta = "two"})
+      assert.is_truthy(text:find("'alpha' - 1\n", 1, true))
+      assert.is_truthy(text:find("'beta' - two\n", 1, true))
+    end)
+
+    it("writes anything that is not a table on a line of its own", function()
+      assert.is_truthy(displayed("hello"):find("hello\n", 1, true))
+      assert.is_truthy(displayed(nil):find("nil\n", 1, true))
+    end)
+
+    -- the whole point of it over display() is that it does not recurse, so a
+    -- table inside a table is printed as itself rather than walked into
+    it("does not walk into a nested table", function()
+      local nested = {"inner"}
+      local text = displayed({outer = nested})
+      assert.is_truthy(text:find("'outer' - " .. tostring(nested), 1, true))
+      assert.is_nil(text:find("inner", 1, true))
+    end)
+  end)
+
   describe("Geyser.copyTable", function()
     it("copies the entries of a table", function()
       local source = {name = "x", width = "10px"}
