@@ -34,7 +34,7 @@ SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* pare
 
     switch (backend) {
     case Backend::Vosk:
-        if (!VoskRecognizer::voskAvailable()) {
+        if (!VoskRecognizer::libraryAvailable()) {
             qWarning() << "SpeechRecognizerFactory: Vosk backend requested but not available";
             return nullptr;
         }
@@ -60,7 +60,7 @@ QList<SpeechRecognizerFactory::Backend> SpeechRecognizerFactory::availableBacken
 {
     QList<Backend> backends;
 
-    if (VoskRecognizer::voskAvailable()) {
+    if (VoskRecognizer::libraryAvailable()) {
         backends.append(Backend::Vosk);
     }
 
@@ -74,7 +74,7 @@ bool SpeechRecognizerFactory::backendAvailable(Backend backend)
 {
     switch (backend) {
     case Backend::Vosk:
-        return VoskRecognizer::voskAvailable();
+        return VoskRecognizer::libraryAvailable();
 
     case Backend::Whisper:
         return false; // Not yet implemented

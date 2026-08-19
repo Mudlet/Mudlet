@@ -25,7 +25,7 @@
 MacMicrophonePermission::AuthorizationStatus MacMicrophonePermission::checkStatus()
 {
     AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
-    
+
     switch (status) {
         case AVAuthorizationStatusAuthorized:
             return AuthorizationStatus::Authorized;

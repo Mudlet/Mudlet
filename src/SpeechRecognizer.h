@@ -34,7 +34,6 @@ class SpeechRecognizer : public QObject
     Q_OBJECT
 
 public:
-    // Recognition engine state
     enum class State {
         Uninitialized, // No model loaded
         Ready,         // Model loaded, not listening
@@ -58,7 +57,6 @@ public:
     }
     ~SpeechRecognizer() override = default;
 
-    // Prevent copying
     SpeechRecognizer(const SpeechRecognizer&) = delete;
     SpeechRecognizer& operator=(const SpeechRecognizer&) = delete;
 
@@ -128,7 +126,6 @@ public:
 
     // === State Queries ===
 
-    // Get current state of the recognizer
     virtual State state() const = 0;
 
     // Convenience methods
@@ -158,7 +155,6 @@ public:
     // Get list of available language codes (e.g., "en-US", "de-DE")
     virtual QStringList availableLanguages() const = 0;
 
-    // Get currently selected language code
     virtual QString currentLanguage() const = 0;
 
     // Set the recognition language. Returns true on success.
@@ -170,7 +166,6 @@ public:
     // Get human-readable name of the backend (e.g., "Vosk", "Whisper")
     virtual QString backendName() const = 0;
 
-    // Get version string of the backend library
     virtual QString backendVersion() const = 0;
 
     // Check if the backend is available (library loaded, etc.)
@@ -206,10 +201,8 @@ signals:
     // "word", "start", "end", "conf".
     void wordsResult(const QVariantList& words);
 
-    // Emitted when the recognizer state changes.
     void stateChanged(SpeechRecognizer::State newState);
 
-    // Emitted when an error occurs.
     void errorOccurred(const QString& errorMessage);
 
     // Emitted periodically with the current audio input level (0.0 to 1.0).
