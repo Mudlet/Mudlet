@@ -55,6 +55,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "AliasUnit.h"
 #include "Host.h"
@@ -93,12 +94,6 @@ private:
     // QMultiMap::count() is a qsizetype; narrow it so QCOMPARE reports a plain
     // number against the int literals below
     static int lookupCount(qsizetype count) { return static_cast<int>(count); }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

@@ -31,6 +31,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLabel.h"
@@ -62,8 +63,6 @@ private:
     QByteArray mSavedXdgConfigHome;
     QString mGifPath;
     QString mNotAGifPath;
-
-    static bool portableMarkerPresent() { return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())); }
 
     // three frames so the count is a distinctive thing to compare, and a 60
     // second frame delay so the animation never advances between two reads
@@ -153,9 +152,13 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-        QDir(path).removeRecursively();
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            QDir(path).removeRecursively();
+            delete mudlet::self();
+        }
         if (mSavedXdgConfigHome.isEmpty()) {
             qunsetenv("XDG_CONFIG_HOME");
         } else {

@@ -25,6 +25,7 @@
  * Run with: ctest -R ConnectionDialogCrashTest -V
  */
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -63,13 +64,6 @@ private:
     static constexpr int scmTestMarkerRole = Qt::UserRole + 99;
     const QString mProfileUrl = qsl("mudlet.org");
     const QString mProfilePort = qsl("23");
-
-    // setupConfig() consults portable.txt before the XDG logic, so its presence
-    // would put this test on the user's real config dir (see ConfigDirOverrideTest)
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     // by name: QTabWidget gives the dialog a second QTabBar
     QTabBar* gamesTabBar(dlgConnectionProfiles* dialog) const { return dialog->findChild<QTabBar*>(qsl("gamesTabBar")); }

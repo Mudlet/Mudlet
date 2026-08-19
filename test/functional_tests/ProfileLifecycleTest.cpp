@@ -36,6 +36,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -101,13 +102,6 @@ private:
     const QString mOnlineProfile = qsl("ProfileLifecycle-Online");
     const QString mUnloadedProfile = qsl("ProfileLifecycle-Unloaded");
     const QString mAbsentProfile = qsl("ProfileLifecycle-Absent");
-
-    // setupConfig() consults portable.txt ahead of the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest)
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
 

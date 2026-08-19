@@ -34,6 +34,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -59,12 +60,6 @@ private:
     const QString mHostname = qsl("Test-StarterUiSections");
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()
@@ -660,6 +655,120 @@ private slots:
                      qPrintable(qsl("a right-click menu item that can wedge the %1 section is still there").arg(key)));
             QVERIFY2(luaTrue(host, qsl("__ui.dockItem")), qPrintable(qsl("the %1 section's right-click menu has no way back into the dock").arg(key)));
         }
+    }
+
+    // Uninstalling the package takes the alias, the chat trigger tree and the
+    // script with it - and nothing else. Everything the script built is made at
+    // runtime and belongs to the profile: the dock and its sections are Geyser
+    // objects, the vitals prefilter is a temporary trigger and the handlers are
+    // anonymous ones. Left behind, the interface sits on screen still repainting
+    // from the game's text, and the "baseui hide" that could have dismissed it
+    // went with the alias.
+    void test_uninstallingThePackageTakesTheInterfaceWithIt()
+    {
+        Host* host = startProfileWithDock();
+        QVERIFY(host);
+        // A section out of the dock is no longer the dock's child, so nothing
+        // done to the dock reaches it. A look with a tint of its own puts the
+        // colour behind the game's own text in the package's hands as well.
+        QVERIFY(runLua(host,
+                       qsl("BaseUI.sections.chat:dragOutOfParent(-200, 120)\n"
+                           "BaseUI.sectionDropped(nil, BaseUI.sections.chat.name)\n"
+                           "BaseUI.setTheme('ember')\n"
+                           "__ui = { dock = BaseUI.container.name, gauge = BaseUI.gauges.hp.name,\n"
+                           "  trigger = tostring(BaseUI.vitalsTriggerIds[1]),\n"
+                           "  settings = getMudletHomeDir() .. '/base_ui_settings.lua',\n"
+                           "  savedSection = getMudletHomeDir() .. '/AdjustableContainer/' .. BaseUI.sections.chat.name .. '.lua',\n"
+                           "  sections = {}, border = getBorderRight(), tint = select(1, getBackgroundColor('main')) }\n"
+                           "for _, key in ipairs({ 'map', 'chat', 'vitals' }) do __ui.sections[key] = BaseUI.sections[key].name end")));
+        QVERIFY2(luaTrue(host,
+                         qsl("__ui.trigger ~= 'nil' and __ui.border > 0 and __ui.tint == 18"
+                             " and io.exists(__ui.settings) and io.exists(__ui.savedSection)"
+                             " and getLabelStyleSheet(__ui.gauge .. '_back') ~= nil")),
+                 "the interface is not in the state this uninstalls, so it would prove nothing");
+
+        QVERIFY2(host->uninstallPackage(qsl("mudlet-base-ui"), enums::PackageModuleType::Package), "the starter UI package would not uninstall");
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "the interface's state outlived the package that built it, so a reinstall starts on this session's leftovers");
+        QVERIFY2(luaTrue(host, qsl("Adjustable.Container.all[__ui.dock] == nil and Geyser.windowList[__ui.dock] == nil")), "the dock is still there after the package that built it was uninstalled");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet(__ui.dock .. 'adjLabel') == nil")), "the dock's own window is still on screen");
+        for (const QString& key : {qsl("map"), qsl("chat"), qsl("vitals")}) {
+            QVERIFY2(luaTrue(host, qsl("Adjustable.Container.all[__ui.sections.%1] == nil and Geyser.windowList[__ui.sections.%1] == nil").arg(key)),
+                     qPrintable(qsl("the %1 section outlived the uninstall").arg(key)));
+            QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet(__ui.sections.%1 .. 'adjLabel') == nil").arg(key)), qPrintable(qsl("the %1 section's window is still on screen").arg(key)));
+        }
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet(__ui.gauge .. '_back') == nil")), "the health bar is still on screen");
+        // killTrigger says whether there was one to kill: a live prefilter here
+        // is the whole of the "still repainting the gauges" half of the bug
+        QVERIFY2(luaTrue(host, qsl("killTrigger(__ui.trigger) == false")), "the vitals trigger outlived the package and goes on reading the game's text");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() == 0")), "the dock is gone but the screen space it was attached to was never given back");
+        QVERIFY2(luaTrue(host, qsl("select(1, getBackgroundColor('main')) == 0")), "the look's tint was left behind with nothing to explain it");
+        QVERIFY2(luaTrue(host, qsl("not io.exists(__ui.settings) and not io.exists(__ui.savedSection)")), "the interface's saved state was left on disk for a reinstall to pick up");
+
+        // and the game goes on talking to a profile that no longer has any of it
+        feedLine(host, qsl("Ithilwen tells you: still here?"));
+        feedLine(host, qsl("Health:   321/400"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil and getLabelStyleSheet(__ui.gauge .. '_back') == nil")), "game text after the uninstall brought part of the interface back");
+    }
+
+    // Nothing is built until the game sends something to show, so a player who
+    // removes the package before that has no dock on screen - but the vitals
+    // trigger and the event handlers are live from the first line, and a
+    // teardown written around a dock that is not there would raise half way
+    // through and leave them running.
+    void test_uninstallingBeforeTheInterfaceWasBuiltIsAlsoClean()
+    {
+        startProfile();
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+        if (!host->mInstalledPackages.contains(qsl("mudlet-base-ui"))) {
+            auto [installed, message] = host->installPackage(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+        QVERIFY(runLua(host, qsl("__ui = { trigger = tostring(BaseUI.vitalsTriggerIds[1]) }")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil and __ui.trigger ~= 'nil'")), "this profile was expected to have the trigger layer up but no dock built yet");
+
+        QVERIFY2(host->uninstallPackage(qsl("mudlet-base-ui"), enums::PackageModuleType::Package), "the starter UI package would not uninstall");
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "an uninstall before the interface was built left its state behind");
+        QVERIFY2(luaTrue(host, qsl("killTrigger(__ui.trigger) == false")), "an uninstall before the interface was built left the vitals trigger reading the game's text");
+
+        // and the line that would have built it builds nothing
+        feedLine(host, qsl("Health:   3600/3600     Mana:     3400/3400"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "game text after the uninstall started the interface up again");
+    }
+
+    // The introduction is held back while the first-run tour is open, on a
+    // one-shot handler registered long after the ones the script sets up. An
+    // uninstall in that window has to take that one too, or closing the tour
+    // calls into a BaseUI that is no longer there.
+    void test_uninstallingWhileTheFirstRunTourIsOpenTakesItsHandlerToo()
+    {
+        startProfile();
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        host->mEchoLuaErrors = true;
+        // what mudlet::loadProfile() sets before the default packages install
+        QVERIFY(runLua(host, qsl("mudlet = mudlet or {}\nmudlet.uiTourPending = true")));
+        if (!host->mInstalledPackages.contains(qsl("mudlet-base-ui"))) {
+            auto [installed, message] = host->installPackage(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+        feedLine(host, qsl("Health:   3600/3600     Mana:     3400/3400"));
+        // an interface that has not introduced itself is one that took the tour
+        // branch, which is the only thing that registers that handler
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.settings.announced")), "the dock was not built with its introduction held back for the tour, so there is no handler to leak");
+
+        QVERIFY2(host->uninstallPackage(qsl("mudlet-base-ui"), enums::PackageModuleType::Package), "the starter UI package would not uninstall");
+        QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "the uninstall left the interface's state behind");
+
+        // a stand-in under the same name: a handler that outlived the package
+        // calls announce on this rather than on a nil global, so what would have
+        // been a Lua error is something this can assert on
+        QVERIFY(runLua(host, qsl("__uiTourReached = false\nBaseUI = { announce = function() __uiTourReached = true end }")));
+        QVERIFY(runLua(host, qsl("raiseEvent('sysUiTourFinished')")));
+        QVERIFY(runLua(host, qsl("BaseUI = nil")));
+        QVERIFY2(luaTrue(host, qsl("__uiTourReached == false")), "closing the first-run tour after the uninstall still called into the interface");
     }
 
 private:

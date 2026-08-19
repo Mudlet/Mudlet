@@ -34,6 +34,7 @@
 #include <QtTest/QtTest>
 #include <QTimeZone>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
 
@@ -62,12 +63,6 @@ private:
     }
 
     void setFirstLaunch(QSettings& settings, const QDateTime& when) const { settings.setValue(mKey, when.toUTC().toString(Qt::ISODate)); }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase() { mSavedXdg = qgetenv("XDG_CONFIG_HOME"); }

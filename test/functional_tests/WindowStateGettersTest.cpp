@@ -30,6 +30,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -65,12 +66,6 @@ private:
     const QString mTextEditName = qsl("wsgTextEdit");
     const QString mUserWindowName = qsl("wsgUserWindow");
     const QString mChildLabelName = qsl("wsgChildLabel");
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()
