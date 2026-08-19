@@ -411,14 +411,51 @@ describe("Trigger processing", function()
     end)
 
     -- feedTelnet only performs injection while the telnet socket is unconnected;
-    -- otherwise it refuses with nil + a message. Its successful-injection and
-    -- prompt paths cannot be exercised in busted. The type-check happens before
-    -- the connection check, so the argument-type contract is still verifiable.
+    -- otherwise it refuses with nil + a message. That is the state --offline
+    -- leaves the profile in, so the injection path runs here against the real
+    -- telnet parser.
     describe("feedTelnet contract", function()
+
+        local function feedOrExplain(data)
+            local ok, msg = feedTelnet(data)
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+        end
+
+        -- every injection below leaves the buffer somewhere the specs after it
+        -- read from, and an assert that throws would otherwise skip the restore
+        after_each(function()
+            deselect()
+            feedTelnet("\r\n")
+            setConfig("specialForceGAOff", false)
+        end)
 
         it("raises an error when the data argument is not a string", function()
             -- a table is never string-coercible, unlike a number
             assert.has_error(function() feedTelnet({}) end)
+        end)
+
+        it("runs against a profile that reports no connection", function()
+            local _, _, connected = getConnectionInfo()
+            assert.is_false(connected, "getConnectionInfo() must not report an established connection")
+        end)
+
+        it("injects server data for the telnet parser to decode", function()
+            -- reading the colour back proves the bytes travelled through the
+            -- telnet parser rather than being appended as plain text
+            feedOrExplain("\27[31mSpecFedRedLine\27[0m\r\n")
+            assert.is_true(selectString("SpecFedRedLine", 1) >= 0, "the injected line did not reach the buffer")
+            assert.are.same(color_table.ansi_red, {getFgColor()})
+        end)
+
+        it("treats a line ended by IAC GA as a prompt", function()
+            feedOrExplain("SpecFedPrompt> <T_IAC><T_GA>")
+            assert.is_true(isPrompt(), "IAC GA should have marked the fed line a prompt")
+        end)
+
+        it("stops honouring IAC GA once the profile forces GA off", function()
+            setConfig("specialForceGAOff", true)
+            feedOrExplain("SpecGaForcedOff> <T_IAC><T_GA>")
+            assert.is_false(isPrompt(), "a forced-off GA must not mark the fed line a prompt")
         end)
 
         it("refuses to inject while the socket is not unconnected", function()
@@ -1021,10 +1058,9 @@ describe("Trigger processing", function()
 
     end)
 
-    -- Prompt pipeline. Prompt-line *firing* would need feedTelnet to inject an
-    -- IAC GA, but feedTelnet is refused here because the self-test socket is not
-    -- in the unconnected state (see the feedTelnet note above), so only the
-    -- creation contracts and isPrompt's shape are exercised offline.
+    -- Prompt pipeline. Only the creation contracts are exercised here; a prompt
+    -- trigger *firing* is still untested, and the feedTelnet block above shows
+    -- how to inject the IAC GA that would need.
     describe("prompt triggers and isPrompt", function()
 
         after_each(function()
@@ -1032,9 +1068,7 @@ describe("Trigger processing", function()
             _G.TrigSpec = nil
         end)
 
-        it("isPrompt reports false when no prompt has been marked", function()
-            -- no IAC GA is ever injected in this profile, so the current line is
-            -- never a prompt
+        it("isPrompt reports false when the cursor is not on a prompt line", function()
             assert.is_false(isPrompt())
         end)
 
@@ -1287,6 +1321,769 @@ describe("Trigger processing", function()
             killTrigger("SpecMLKeep")
             _G.MLKeep = nil
             assert.are.equal(3, fires, "fireLength should keep the trigger firing on the lines after it completed")
+        end)
+
+    end)
+
+    -- A colour-pattern trigger that is the child of a filter parent ("only pass
+    -- matches") has to fire when the filtered capture carries the wanted colours,
+    -- and only scan that capture. No Lua API builds that tree - only the perm*
+    -- family takes a parent name, and none of them makes a colour pattern - so
+    -- it comes out of a package fixture. A perl child rides along in the same
+    -- fixture: it is measured rather than scanned, which is what the multibyte
+    -- case below needs.
+    describe("colour trigger children of a filter parent", function()
+
+        local packageName = "mudlet-spec-colorfilter"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "Trigger_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        if not os.getenv("MUDLET_TEST_MODE") then
+            it("needs test mode", function()
+                pending("installing the filter-tree fixture needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+            end)
+            return
+        end
+
+        local function packageInstalled()
+            for _, entry in ipairs(getPackages()) do
+                if entry == packageName then
+                    return true
+                end
+            end
+            return false
+        end
+
+        local function waitUntil(condition, milliseconds)
+            local waited = 0
+            while waited < milliseconds do
+                if condition() then
+                    return true
+                end
+                pumpEvents(50)
+                waited = waited + 50
+            end
+            return condition() and true or false
+        end
+
+        -- Uninstalling queues an asynchronous profile save, and while a save is
+        -- running an uninstall is refused outright and an install is postponed,
+        -- so both are asked again until they take. A postponed install answers
+        -- even a path it would otherwise refuse with a bare true, which is how a
+        -- spec can tell a save is still going - at the price of one console
+        -- error line per probe when the save ends and the empty path is retried.
+        local function waitForProfileSaveToPass()
+            return waitUntil(function() return installPackage("") == nil end, 5000)
+        end
+
+        local previousEncoding
+
+        setup(function()
+            -- the multibyte block below is not encoding agnostic: feedTriggers
+            -- transcodes its UTF-8 argument into the server encoding, and under
+            -- anything else the capture stops being multibyte at all
+            previousEncoding = getServerEncoding()
+            assert.is_true(setServerEncoding("UTF-8"), "the profile has to be able to carry the multibyte capture below")
+            _G.ColorFilterSpec = {}
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled() then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+        end)
+
+        teardown(function()
+            if previousEncoding then
+                setServerEncoding(previousEncoding)
+            end
+            local reason
+            for _ = 1, 3 do
+                if not packageInstalled() then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = uninstallPackage(packageName)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_false(packageInstalled(), "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            _G.ColorFilterSpec = nil
+        end)
+
+        before_each(function()
+            _G.ColorFilterSpec = {}
+        end)
+
+        -- feedTriggers refuses text the server encoding cannot carry, which
+        -- would leave the assertions below reading a line that never arrived
+        local function feed(text)
+            local ok, message = feedTriggers(text)
+            assert.is_true(ok, "feedTriggers refused: " .. tostring(message))
+        end
+
+        it("fires a top-level colour trigger on the colour it was given", function()
+            local id = tempAnsiColorTrigger(3, -1, [[_G.ColorFilterSpec.topLevelFired = true]])
+            feed("\27[33mtop level control\27[0m\n")
+            killTrigger(id)
+            assert.is_true(_G.ColorFilterSpec.topLevelFired, "a top-level colour trigger should fire on yellow text")
+        end)
+
+        it("fires a colour child on a filter parent's yellow capture", function()
+            feed("\27[33mhello world\27[0m\n")
+            assert.is_true(_G.ColorFilterSpec.filterChildFired,
+                "a colour trigger child of a filter parent should fire on a yellow capture")
+        end)
+
+        it("scans only the parent's capture, not the whole line", function()
+            -- only "hello" is yellow while the parent passes just "world" on, so
+            -- the child must see no yellow at all
+            feed("\27[33mhello\27[0m world\n")
+            assert.is_nil(_G.ColorFilterSpec.captureChildFired,
+                "a colour child must not fire when the yellow text lies outside the parent's capture")
+
+            feed("hello \27[33mworld\27[0m\n")
+            assert.is_true(_G.ColorFilterSpec.captureChildFired,
+                "a colour child should fire when the parent's capture is yellow")
+        end)
+
+        it("offers a perl child the whole of a multibyte capture", function()
+            -- the child's pattern is anchored at both ends, so it only matches if
+            -- the capture it is offered runs to the end. The dragon is four UTF-8
+            -- bytes but two UTF-16 units (what QString::length() counts), and the
+            -- Cyrillic two bytes each, so a length taken in units rather than
+            -- bytes would stop the child short of its anchor.
+            feed("Цель: 🐉 Оружие: меч\n")
+            assert.are.equal("меч", _G.ColorFilterSpec.perlChildWeapon)
+        end)
+
+    end)
+
+    -- A trigger created from another trigger's script (tempTrigger() & Co.) still
+    -- gets to match the line being processed - room-capture scripts depend on it -
+    -- and a lineage of such triggers that keeps re-creating itself is stopped
+    -- rather than left to freeze the profile.
+    --
+    -- Block order is load-bearing. TriggerUnit reports an abort to the console at
+    -- most once every ten seconds, so every block that asserts the report is
+    -- absent runs before the first runaway, and the single block that reads the
+    -- report is that first runaway - of the whole suite, since nothing else in it
+    -- makes one. The later runaways read the stopped lineage itself instead,
+    -- which is not throttled. If anything ever does trip the budget earlier, the
+    -- absence assertions go quietly vacuous and "names the trigger in the abort
+    -- report" is what fails to say so.
+    describe("triggers created while a line is being processed", function()
+
+        -- TriggerUnit::scmMaxSameLineGenerations, which has no Lua accessor
+        local maxGenerations = 1000
+        local abortReport = "Trigger processing stopped to prevent a freeze"
+
+        local created = {}
+        local permanentNames = {}
+
+        local function track(id)
+            -- a nil here would not grow the table, so the trigger would be left
+            -- armed for the rest of the suite without anything saying so
+            assert(type(id) == "number", "arming a trigger did not return an id")
+            created[#created + 1] = id
+            return id
+        end
+
+        local function trackPermanent(name)
+            permanentNames[#permanentNames + 1] = name
+            return name
+        end
+
+        -- The report is printed onto the line the runaway text is still on, so
+        -- the mark is that line rather than the one after it.
+        local function consoleMark()
+            return getLastLineNumber("main")
+        end
+
+        -- The console wraps the report over several buffer lines and eats the
+        -- space it broke at, so both sides are matched with all whitespace gone.
+        local function consoleSince(mark)
+            local last = getLastLineNumber("main")
+            -- getLines() answers an out-of-range index with "ERROR: invalid line
+            -- number" rather than failing, which would make every scan below
+            -- match nothing and pass
+            assert.is_true(mark <= last, "the console buffer trimmed past the mark, so this scan would read outside it")
+            return (table.concat(getLines("main", mark, last + 1), ""):gsub("%s+", ""))
+        end
+
+        -- The report is a tr() string, so the blocks that assert it is absent
+        -- stop meaning anything if the wording changes; the one block that
+        -- asserts it is present is what fails to say so.
+        local function contains(haystack, needle)
+            return haystack:find((needle:gsub("%s+", "")), 1, true) ~= nil
+        end
+
+        before_each(function()
+            created = {}
+            permanentNames = {}
+            _G.SameLineSpec = {}
+        end)
+
+        after_each(function()
+            -- a runaway arms a thousand triggers that outlive their line, and
+            -- left behind every one of them would be scanned on every line the
+            -- rest of the suite feeds
+            for _, id in ipairs(created) do
+                killTrigger(id)
+            end
+            -- permanent items have no removal API, so they are switched off
+            -- instead; that state is saved, so re-running the suite against the
+            -- same profile finds them inert rather than firing. The return is
+            -- not checked because a child of a temporary parent goes when its
+            -- parent is killed above, and answers "not found" here.
+            for _, name in ipairs(permanentNames) do
+                disableTrigger(name)
+            end
+            created = {}
+            permanentNames = {}
+            _G.SameLineSpec = {}
+        end)
+
+        teardown(function()
+            _G.SameLineSpec = nil
+        end)
+
+        it("lets a temp trigger created in a trigger match the current line", function()
+            local captured = {}
+            track(tempRegexTrigger("^Room 74042", function()
+                track(tempRegexTrigger("^(.*)$", function() captured[#captured + 1] = matches[2] end, 200))
+            end))
+
+            feedTriggers("Room 74042: The Bitter Almond Grove\n")
+            feedTriggers("Exits: North South West\n")
+
+            assert.are.equal("Room 74042: The Bitter Almond Grove|Exits: North South West", table.concat(captured, "|"),
+                "the temp trigger created on the room title line should capture that same line first, then the next line")
+        end)
+
+        it("offers a new trigger the current line after the existing ones", function()
+            local order = {}
+            track(tempRegexTrigger("^o$", function()
+                order[#order + 1] = "first"
+                track(tempRegexTrigger("^o$", function() order[#order + 1] = "created" end))
+            end))
+            track(tempRegexTrigger("^o$", function() order[#order + 1] = "second" end))
+
+            feedTriggers("o\n")
+
+            assert.are.equal("first,second,created", table.concat(order, ","),
+                "the mid-pass trigger should fire on the current line after all pre-existing triggers")
+        end)
+
+        it("lets a chain of creations all match the current line", function()
+            local chain = {}
+            track(tempRegexTrigger("^c$", function()
+                chain[#chain + 1] = "creator"
+                track(tempRegexTrigger("^c$", function()
+                    chain[#chain + 1] = "A"
+                    track(tempRegexTrigger("^c$", function() chain[#chain + 1] = "B" end))
+                end))
+            end))
+
+            feedTriggers("c\n")
+
+            assert.are.equal("creator,A,B", table.concat(chain, ","),
+                "each generation of mid-pass triggers should still match the current line")
+        end)
+
+        it("spends a single shot on the line that created it", function()
+            local expiryLine = ""
+            track(tempRegexTrigger("^e", function()
+                track(tempRegexTrigger("^(.*)$", function() expiryLine = expiryLine .. matches[2] .. ";" end, 1))
+            end, 1))
+
+            feedTriggers("e one\n")
+            feedTriggers("e two\n")
+
+            assert.are.equal("e one;", expiryLine,
+                "the single-shot temp trigger should fire once, on the line that created it")
+        end)
+
+        it("starts a mid-pass line trigger on the current line", function()
+            local lineGrabs = {}
+            track(tempRegexTrigger("^lstart$", function()
+                track(tempLineTrigger(0, 2, function() lineGrabs[#lineGrabs + 1] = getCurrentLine() end))
+            end, 1))
+
+            feedTriggers("lstart\n")
+            feedTriggers("second\n")
+            feedTriggers("third\n")
+
+            assert.are.equal("lstart,second", table.concat(lineGrabs, ","),
+                "the mid-pass line trigger should grab the creating line and the one after it")
+        end)
+
+        it("matches both the nested line and the outer one", function()
+            local nested = {}
+            track(tempRegexTrigger("^outer$", function()
+                track(tempRegexTrigger("^(.*)$", function() nested[#nested + 1] = matches[2] end, 10))
+                feedTriggers("inner\n")
+            end, 1))
+
+            feedTriggers("outer\n")
+
+            assert.are.equal("inner,outer", table.concat(nested, ","),
+                "the mid-pass trigger should match the nested line first, then the outer line it was created on")
+        end)
+
+        it("leaves a finite creation chain alone", function()
+            local fires = 0
+            local step
+            step = function()
+                fires = fires + 1
+                if fires < 10 then
+                    track(tempRegexTrigger("^chain$", step, 1))
+                end
+            end
+            track(tempRegexTrigger("^chain$", step, 1))
+
+            local mark = consoleMark()
+            feedTriggers("chain\n")
+
+            assert.are.equal(10, fires, "all ten generations of the finite chain should match the current line")
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a chain that ends on its own must not trip the same-line generation budget")
+        end)
+
+        it("does not stop a batch of unrelated creations", function()
+            -- each of them starts a creation chain of its own, and none of those
+            -- chains ever gets a second link
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^bulkgate$", function()
+                for _ = 1, bulkCount do
+                    track(tempRegexTrigger("^bulkpay$", function() fires = fires + 1 end))
+                end
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("bulkgate\n")
+            feedTriggers("bulkpay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a batch of unrelated triggers must not be mistaken for a trigger re-creating itself")
+            assert.are.equal(bulkCount, fires, "every trigger armed on the previous line should survive and fire")
+        end)
+
+        it("keeps both sets when two scripts arm past the budget between them", function()
+            -- anything armed from a script that predates the line starts a
+            -- lineage of its own, so neither script can exhaust the other's
+            local eachCount = (maxGenerations / 2) + 1
+            local firesA, firesB = 0, 0
+            track(tempRegexTrigger("^sharedgate$", function()
+                for _ = 1, eachCount do
+                    track(tempRegexTrigger("^payA$", function() firesA = firesA + 1 end))
+                end
+            end, 1))
+            track(tempRegexTrigger("^sharedgate$", function()
+                for _ = 1, eachCount do
+                    track(tempRegexTrigger("^payB$", function() firesB = firesB + 1 end))
+                end
+            end, 1))
+
+            feedTriggers("sharedgate\n")
+            feedTriggers("payA\n")
+            feedTriggers("payB\n")
+
+            assert.are.equal(eachCount, firesA, "the first script should keep every trigger it armed")
+            assert.are.equal(eachCount, firesB, "the second script should keep every trigger it armed")
+        end)
+
+        it("does not stop a batch armed by a trigger created on the same line", function()
+            -- creator and batch share a lineage here, which is the room-capture
+            -- shape: the room-title trigger creates the capture trigger, and the
+            -- capture trigger is what arms the batch
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^deepgate$", function()
+                track(tempRegexTrigger("^deepgate$", function()
+                    for _ = 1, bulkCount do
+                        track(tempRegexTrigger("^deeppay$", function() fires = fires + 1 end))
+                    end
+                end, 1))
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("deepgate\n")
+            feedTriggers("deeppay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a batch is one generation wherever it is armed from")
+            assert.are.equal(bulkCount, fires,
+                "every trigger armed by a trigger created on the same line should survive and fire")
+        end)
+
+        it("does not stop a batch of permanent creations", function()
+            -- the more painful loss: a "rebuild my triggers when the game says X"
+            -- routine arms permanent triggers in bulk
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            _G.SameLineSpec.permBulkStep = function() fires = fires + 1 end
+            _G.SameLineSpec.armPermBulk = function()
+                for i = 1, bulkCount do
+                    permRegexTrigger(trackPermanent("SpecPermBulk" .. i), "", {"^permpay$"}, [[_G.SameLineSpec.permBulkStep()]])
+                end
+            end
+            track(tempRegexTrigger("^permgate$", function() _G.SameLineSpec.armPermBulk() end, 1))
+
+            feedTriggers("permgate\n")
+            feedTriggers("permpay\n")
+
+            assert.are.equal(bulkCount, fires,
+                "every permanent trigger armed on the previous line should survive and fire")
+            assert.are.equal(1, isActive("SpecPermBulk" .. bulkCount, "trigger"),
+                "the permanent triggers should be left switched on")
+        end)
+
+        it("leaves a chain of exactly the budget's length alone", function()
+            -- the trip is on the generation after this one, which the runaway
+            -- block below pins from the other side: both land on the same fire
+            -- count, so what tells them apart is whether the lineage was stopped
+            local fires = 0
+            local armed = {}
+            local step
+            step = function()
+                fires = fires + 1
+                if fires <= maxGenerations then
+                    armed[#armed + 1] = track(tempRegexTrigger("^boundline$", step, 1))
+                end
+            end
+            armed[#armed + 1] = track(tempRegexTrigger("^boundline$", step, 1))
+
+            local mark = consoleMark()
+            feedTriggers("boundline\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a chain of exactly the budget's length ends on its own and must not be stopped")
+            assert.are.equal(maxGenerations + 1, fires, "the chain should run to its own end")
+            assert.are.equal(maxGenerations + 1, #armed, "the chain should stop arming of its own accord")
+        end)
+
+        it("starts fresh chains for a trigger that outlived its line", function()
+            -- otherwise it would carry its creator's chain around for the rest of
+            -- the session
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^egate$", function()
+                track(tempRegexTrigger("^esecond$", function()
+                    for _ = 1, bulkCount do
+                        track(tempRegexTrigger("^epay$", function() fires = fires + 1 end))
+                    end
+                end, 1))
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("egate\n")
+            feedTriggers("esecond\n")
+            feedTriggers("epay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a trigger created on an earlier line is not part of a chain any more and must arm freely")
+            assert.are.equal(bulkCount, fires, "every trigger armed on the later line should survive and fire")
+        end)
+
+        it("does not stop a batch armed inside a nested pass", function()
+            -- creations made inside a nested pass are appended to the same list
+            -- the outer pass is walking, so a batch armed there is one generation
+            -- just the same
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^crossout$", function()
+                track(tempRegexTrigger("^crossin$", function()
+                    for _ = 1, bulkCount do
+                        track(tempRegexTrigger("^crosspay$", function() fires = fires + 1 end))
+                    end
+                end, 1))
+                feedTriggers("crossin\n")
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("crossout\n")
+            feedTriggers("crosspay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a batch armed inside a nested pass is still one generation")
+            assert.are.equal(bulkCount, fires,
+                "every trigger armed inside the nested pass should survive and fire")
+        end)
+
+        local reportedAt
+
+        -- The first runaway of the run, so the report is not throttled yet and
+        -- this is the one block that can read it.
+        it("names the trigger in the abort report", function()
+            local armNamed
+            armNamed = function()
+                track(tempComplexRegexTrigger("hpWatcher", "^hpnamed$", armNamed, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+            end
+            armNamed()
+
+            local mark = consoleMark()
+            feedTriggers("hpnamed\n")
+            local reported = consoleSince(mark)
+
+            reportedAt = os.time()
+            assert.is_true(contains(reported, abortReport), "the abort should be reported to the console")
+            assert.is_true(contains(reported, "trigger 'hpWatcher'"),
+                "the report should name the trigger that keeps re-creating itself")
+        end)
+
+        -- Immediately after the block above, so the ten-second window it opened
+        -- is still shut. Everything below depends on that window, and this is
+        -- where it is checked rather than assumed.
+        it("reports a second runaway within the throttle window only once", function()
+            local fires = 0
+            local arm
+            arm = function()
+                track(tempRegexTrigger("^throttled$", function()
+                    fires = fires + 1
+                    arm()
+                end, 1))
+            end
+            arm()
+
+            local mark = consoleMark()
+            feedTriggers("throttled\n")
+
+            assert.are.equal(1 + maxGenerations, fires, "the second runaway should be stopped just the same")
+            -- a runner slow enough to have spent the window between the two
+            -- blocks has nothing to say about the throttle, rather than a
+            -- wall-clock failure to report
+            if reportedAt and os.time() - reportedAt < 9 then
+                assert.is_false(contains(consoleSince(mark), abortReport),
+                    "a runaway whose creator outlives the line trips on every matching line, and repeating the report would bury the game text")
+            end
+        end)
+
+        it("stops a trigger that re-creates itself", function()
+            -- the naive "one-shot that re-arms itself at the end of its own
+            -- handler" is the shape users write; without the budget it hangs
+            local fires = 0
+            local armed = {}
+            local arm
+            arm = function()
+                armed[#armed + 1] = track(tempRegexTrigger("^hploop$", function()
+                    fires = fires + 1
+                    arm()
+                end, 1))
+            end
+            arm()
+
+            feedTriggers("hploop\n")
+
+            assert.are.equal(1 + maxGenerations, fires,
+                "one fire from the trigger already there, then one per budgeted creation")
+            assert.are.equal(2 + maxGenerations, #armed, "the generation over the budget is created before it is refused")
+            assert.are.equal(0, isActive(armed[#armed], "trigger"),
+                "the generation that tripped the budget should have been stopped, not left armed")
+        end)
+
+        it("charges each line its own budget", function()
+            -- without disowning what the loop created, each line would cost a
+            -- multiple of the one before it and the freeze would only be postponed
+            local fires = 0
+            local arm
+            arm = function()
+                track(tempRegexTrigger("^kept$", function()
+                    fires = fires + 1
+                    arm()
+                end))
+            end
+            arm()
+
+            feedTriggers("kept\n")
+            feedTriggers("kept\n")
+
+            assert.are.equal(2 * (1 + maxGenerations), fires,
+                "the second line should cost the same as the first, not a multiple of it")
+        end)
+
+        it("stops a permanent trigger that re-creates itself without deleting it", function()
+            -- permanent triggers are saved with the profile, so they are stopped
+            -- with deactivate(), which leaves the user-active state XMLexport
+            -- writes alone
+            local name = trackPermanent("SpecSameLinePermLoop")
+            local fires = 0
+            _G.SameLineSpec.armPerm = function()
+                permRegexTrigger(name, "", {"^permloop$"}, [[_G.SameLineSpec.permStep()]])
+            end
+            _G.SameLineSpec.permStep = function()
+                fires = fires + 1
+                _G.SameLineSpec.armPerm()
+            end
+            local existedBefore = exists(name, "trigger")
+            local activeBefore = isActive(name, "trigger")
+            _G.SameLineSpec.armPerm()
+
+            feedTriggers("permloop\n")
+
+            assert.are.equal(1 + maxGenerations, fires, "the re-arming permanent trigger should fire once per budgeted creation")
+            assert.are.equal(activeBefore + 1, isActive(name, "trigger"),
+                "only the trigger that predates the line should still be active")
+            assert.are.equal(existedBefore + 2 + maxGenerations, exists(name, "trigger"),
+                "the stopped permanent triggers should still exist - stopping them is not deleting them")
+        end)
+
+        it("spares triggers another script armed on the same line", function()
+            local innocentFires = 0
+            local runaway = {}
+            local armRunaway
+            armRunaway = function()
+                runaway[#runaway + 1] = track(tempRegexTrigger("^runline$", armRunaway, 1))
+            end
+            armRunaway()
+            track(tempRegexTrigger("^runline$", function()
+                track(tempRegexTrigger("^innocent$", function() innocentFires = innocentFires + 1 end))
+            end, 1))
+
+            feedTriggers("runline\n")
+            feedTriggers("innocent\n")
+
+            -- pin the chain length first: isActive() answers 0 for an id that no
+            -- longer exists too, so on its own it would also be happy with a
+            -- chain that never got past its first link
+            assert.are.equal(2 + maxGenerations, #runaway, "the runaway should have re-created itself once per budgeted generation")
+            assert.are.equal(0, isActive(runaway[#runaway], "trigger"), "the self-recreating chain should still be stopped")
+            assert.are.equal(1, innocentFires,
+                "the trigger armed by an unrelated script on the same line should survive the runaway's abort and fire")
+        end)
+
+        it("stops a runaway that crosses into a nested pass whole", function()
+            -- the lineage has members either side of the nested pass's first-node
+            -- index, so stopping it scans the whole list rather than the tail of
+            -- the tripping pass; scanning only the tail leaves the first link
+            -- alive and the outer pass trips on the same lineage all over again
+            local nestFires, nestSafeFires = 0, 0
+            local armNested
+            armNested = function()
+                track(tempRegexTrigger("^nestin$", function()
+                    nestFires = nestFires + 1
+                    armNested()
+                end))
+            end
+            track(tempRegexTrigger("^nestout$", function()
+                armNested()
+                track(tempRegexTrigger("^nestsafe$", function() nestSafeFires = nestSafeFires + 1 end))
+                feedTriggers("nestin\n")
+            end, 1))
+
+            feedTriggers("nestout\n")
+            local firesInsideTheNestedPass = nestFires
+            nestFires = 0
+            feedTriggers("nestin\n")
+            feedTriggers("nestsafe\n")
+
+            assert.are.equal(maxGenerations, firesInsideTheNestedPass,
+                "the runaway should cost one budget, not one per pass the lineage is spread across")
+            assert.are.equal(0, nestFires, "no member of the stopped lineage should be left armed, wherever in the list it sat")
+            assert.are.equal(1, nestSafeFires,
+                "a trigger armed by an unrelated script on the outer line should survive the nested pass's abort")
+        end)
+
+        it("counts a folder child's creations against its root", function()
+            -- only root triggers carry a lineage, so a trigger sitting in a folder
+            -- creates on the folder's behalf. Reading the child's own (always
+            -- empty) lineage instead would start a fresh one every round, which
+            -- never deepens and so never trips.
+            local fires, generation = 0, 0
+            _G.SameLineSpec.makeFolderGen = function()
+                generation = generation + 1
+                local folder = trackPermanent("SpecFGen" .. generation)
+                permGroup(folder, "trigger")
+                permRegexTrigger(trackPermanent("SpecFChild" .. generation), folder, {"^folderloop$"}, [[_G.SameLineSpec.folderStep()]])
+            end
+            _G.SameLineSpec.folderStep = function()
+                fires = fires + 1
+                _G.SameLineSpec.makeFolderGen()
+            end
+            _G.SameLineSpec.makeFolderGen()
+
+            feedTriggers("folderloop\n")
+
+            assert.are.equal(1 + maxGenerations, fires,
+                "the folder's lineage should deepen by one per round, so the generation budget is what ends it")
+            assert.are.equal(2 + maxGenerations, generation, "the generation over the budget is created before it is refused")
+            assert.is_true(exists("SpecFGen" .. generation, "trigger") >= 1, "the last folder should have been created")
+            assert.are.equal(0, isActive("SpecFGen" .. generation, "trigger"),
+                "the folder that tripped the budget should have been switched off, not left armed")
+        end)
+
+        it("counts a filter chain child's creations against its root", function()
+            -- the same for a filter chain, where the child is reached through the
+            -- parent's capture rather than by the root list passing data down
+            local fires, generation = 0, 0
+            _G.SameLineSpec.makeFilterGen = function()
+                generation = generation + 1
+                local parent = "SpecFiltP" .. generation
+                track(tempComplexRegexTrigger(parent, "^(filterloop)$", "", 0, 0, 0, 1, 0, 0, 0, 0, 0, 0))
+                permRegexTrigger(trackPermanent("SpecFiltC" .. generation), parent, {"filterloop"}, [[_G.SameLineSpec.filterStep()]])
+            end
+            _G.SameLineSpec.filterStep = function()
+                fires = fires + 1
+                _G.SameLineSpec.makeFilterGen()
+            end
+            _G.SameLineSpec.makeFilterGen()
+
+            feedTriggers("filterloop\n")
+
+            assert.are.equal(1 + maxGenerations, fires,
+                "the filter parent's lineage should deepen by one per round, so the generation budget is what ends it")
+            assert.are.equal(2 + maxGenerations, generation, "the generation over the budget is created before it is refused")
+            assert.are.equal(0, exists("SpecFiltP" .. generation, "trigger"),
+                "the temporary filter parent that tripped the budget should have been removed")
+        end)
+
+        it("leaves the outer line's own triggers alone when a nested pass aborts", function()
+            local seen = {}
+            local inner = {}
+            local armInner
+            armInner = function()
+                inner[#inner + 1] = track(tempRegexTrigger("^inner$", armInner, 1))
+            end
+            armInner()
+            track(tempRegexTrigger("^outer$", function()
+                track(tempRegexTrigger("^(.*)$", function() seen[#seen + 1] = matches[2] end, 10))
+                feedTriggers("inner\n")
+            end, 1))
+
+            feedTriggers("outer\n")
+
+            assert.are.equal(2 + maxGenerations, #inner, "the runaway should have re-created itself once per budgeted generation")
+            assert.are.equal(0, isActive(inner[#inner], "trigger"), "the runaway in the nested pass should be stopped")
+            assert.are.equal("inner,outer", table.concat(seen, ","),
+                "the capture trigger created by the outer line should survive the nested pass's abort and still match the outer line")
+        end)
+
+        it("stops a runaway driven by server text", function()
+            -- not a feedTriggers() curiosity: server text takes the same path
+            local fires = 0
+            local armed = {}
+            local arm
+            arm = function()
+                armed[#armed + 1] = track(tempRegexTrigger("^HP: 100/100$", function()
+                    fires = fires + 1
+                    arm()
+                end, 1))
+            end
+            arm()
+
+            local ok, message = feedTelnet("HP: 100/100\r\n")
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+
+            assert.are.equal(1 + maxGenerations, fires, "server text should reach the same-line generation budget")
+            assert.are.equal(0, isActive(armed[#armed], "trigger"),
+                "the generation that tripped the budget should have been stopped, not left armed")
         end)
 
     end)

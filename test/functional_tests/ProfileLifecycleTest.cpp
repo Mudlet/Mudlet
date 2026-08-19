@@ -36,6 +36,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -59,14 +60,9 @@ extern "C" {
 #endif
 }
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileLifecycleTest();
+using namespace std::chrono_literals;
 
 class ProfileLifecycleTest : public QObject
 {
@@ -226,27 +222,7 @@ private:
         const QString profileName = mFirstProfile;
         const QString address = mLocalhost;
         const QString port = mPort;
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        QVERIFY2(spy.wait(csmConnectBudgetMs), "the first profile took too long to load");
-        mpFirstHost = mudlet::self()->getActiveHost();
+        mpFirstHost = TestProfile::create(profileName, address, port);
         QVERIFY2(mpFirstHost, "no active host after creating the first profile");
         // otherwise closing a profile asks whether to save it, and the modal
         // question would hang the test
@@ -309,7 +285,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForProfileLifecycleTest();
 
         QVERIFY(mConfigDir.isValid());
         // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in that makes setupConfig()
@@ -559,18 +534,21 @@ private slots:
     // table through the Lua registry, nothing survives the trip to another
     // profile that cannot be turned into a string.
     //
-    // The table is passed as the very first argument on purpose. Rejecting one
-    // is a lua_error(), which longjmps straight out of the C function, so the
-    // TEvent being filled in on the stack is never destroyed and whatever it
-    // has already collected leaks. Refusing argument #1 is the one case that
-    // has collected nothing yet - a leaking case here would fail the whole
-    // binary under LeakSanitizer, so the realistic
-    // raiseGlobalEvent('name', {}) form stays untested until that is fixed.
+    // Refusing an argument is a lua_error(), which longjmps straight out of the
+    // C function, so a TEvent being filled in on the stack there would never be
+    // destroyed and whatever it had collected would leak. The named event with a
+    // table after it is the case that would strand a partly filled one if the
+    // arguments stopped being vetted first, and LeakSanitizer fails the whole
+    // binary if it ever does.
     void test_raiseGlobalEventRefusesArgumentsItCannotCarry()
     {
         const QString tableError = runLua(mpFirstHost, qsl("raiseGlobalEvent({})"));
         QVERIFY2(!tableError.isNull(), "raiseGlobalEvent() accepted a table");
         QVERIFY2(tableError.contains(qsl("bad argument type #1")), qPrintable(tableError));
+
+        const QString lateTableError = runLua(mpFirstHost, qsl("raiseGlobalEvent('lifecycleUncarryable', 'text', {})"));
+        QVERIFY2(!lateTableError.isNull(), "raiseGlobalEvent() accepted a table after the event name");
+        QVERIFY2(lateTableError.contains(qsl("bad argument type #3")), qPrintable(lateTableError));
 
         const QString noNameError = runLua(mpFirstHost, qsl("raiseGlobalEvent()"));
         QVERIFY2(!noNameError.isNull(), "raiseGlobalEvent() accepted a call with no event name");
@@ -665,20 +643,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileLifecycleTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileLifecycleTest.moc"
-QTEST_MAIN(ProfileLifecycleTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileLifecycleTest)

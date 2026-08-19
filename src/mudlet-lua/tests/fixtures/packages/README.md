@@ -1,8 +1,9 @@
 # Package fixtures
 
-Fixture packages and modules for `Package_spec.lua`. They are deliberately tiny
-(the largest archive is about 1 KB) and every one of them is named
-`mudlet-spec-*` so anything they leave behind is obviously test-owned.
+Fixture packages and modules for `Package_spec.lua`, plus one for
+`Trigger_spec.lua`. They are deliberately tiny (the largest archive is about
+1 KB) and every one of them is named `mudlet-spec-*` so anything they leave
+behind is obviously test-owned.
 
 `sources/` holds the readable source of each fixture; the `.mpackage` files next
 to this README are those directories zipped up. `.mpackage` files are zip
@@ -30,3 +31,4 @@ deliberately.
 | `mudlet-spec-emptyarchive` | archive with neither `config.lua` nor a package XML |
 | `mudlet-spec-notazip.mpackage` | not a zip archive at all, for the unpacking error path |
 | `sources/mudlet-spec-xmlonly` | bare package XML, installed without any archive around it |
+| `sources/mudlet-spec-colorfilter` | bare package XML with colour-pattern and perl children under filter parents; the colour children are the part no Lua API can build |

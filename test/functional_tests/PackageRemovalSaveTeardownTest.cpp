@@ -49,6 +49,7 @@
 #include <chrono>
 #include <zip.h>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "AliasUnit.h"
 #include "HostManager.h"
@@ -57,14 +58,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForPackageRemovalSaveTeardownTest();
+using namespace std::chrono_literals;
 
 class PackageRemovalSaveTeardownTest : public QObject
 {
@@ -110,30 +106,7 @@ private:
     // Utility function to manually start a profile like a user would do via the GUI
     void startProfile(const QString& profileName, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(profileName, address, port);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
@@ -177,8 +150,6 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForPackageRemovalSaveTeardownTest();
-
         // Keep the test hermetic: point the config dir resolution at a temporary
         // directory instead of the user's real profiles - one of the tests below
         // drives an archive that tries to have the profiles folder deleted.
@@ -384,20 +355,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForPackageRemovalSaveTeardownTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "PackageRemovalSaveTeardownTest.moc"
-QTEST_MAIN(PackageRemovalSaveTeardownTest)
+MUDLET_GROUPED_TEST_MAIN(PackageRemovalSaveTeardownTest)

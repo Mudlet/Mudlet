@@ -17,8 +17,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -28,23 +31,22 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // TBuffer::wrapLine() rebuilds every line from its start line to the end of the
 // buffer, and its callers rely on more than the text coming back out intact:
 // the count it returns positions the user cursor and the repaint range, and the
 // timestamps and prompt flags it carries over decide what the timestamp column
-// and TConsole::printCommand() do next. These lock all of that down.
+// and TConsole::printCommand() do next. These lock all of that down, along with
+// the one thing about the server-wrap flush that a spec cannot sample in time:
+// that the line it commits is painted rather than appended.
 class WrapLineRewrapTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = qsl("Test-WrapLineRewrap");
     QString mPort; // assigned the stub's actual loopback port in init()
@@ -53,8 +55,32 @@ private:
     // U+6F22 U+5B57 - East Asian Wide, so two columns are needed per glyph
     const QString mWideText = QString(QChar(0x6F22)) + QChar(0x5B57);
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -66,6 +92,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -310,6 +337,51 @@ private slots:
         QVERIFY2(log.contains(qsl("and a short one")), "the line after the wrapped one is missing from the log");
     }
 
+    // A line the server-wrap undoing held back for a continuation is committed
+    // by a flush timer once the game goes quiet, and that commit has to go
+    // through the painted path rather than appending: only showNewLines()
+    // advances buffer.mCursorY, so it having caught up with the buffer is what
+    // tells the two apart. It has to be read the moment the flush returns
+    // rather than polled for - cTelnet's posting timer calls finalize() as well
+    // and repaints within a tick, so any wait long enough to see the line
+    // appear is also long enough to lose the evidence.
+    void test_aHeldLineIsPaintedWhenTheFlushTimerCommitsIt()
+    {
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        TMainConsole* console = host->mpConsole;
+        // keep Mudlet's own display wrap out of the way, so the held line is
+        // one buffer line to look for
+        console->setWrapAt(500);
+
+        // 70 characters, inside the join band for a wrap column of 80, and
+        // nothing follows it - so it is held back for a continuation that never
+        // comes and only the flush timer can commit it
+        const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
+        runLua(qsl("feedTelnet('%1\\n')").arg(heldLine));
+
+        auto* flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
+        QVERIFY2(flushTimer && flushTimer->isActive(), "the full-width line was not held back for a continuation");
+
+        int sizeAtFlush = -1;
+        int cursorAtFlush = -1;
+        connect(flushTimer, &QTimer::timeout, this, [&]() {
+            sizeAtFlush = console->buffer.size();
+            cursorAtFlush = console->buffer.mCursorY;
+        });
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return bufferHasLine(console, heldLine);
+                         },
+                         5000),
+                 "held full-width line was not flushed after the game went quiet");
+        QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
+        QCOMPARE(cursorAtFlush, sizeAtFlush);
+    }
+
     // The bounds check lets startLine == buffer.size() through, so the empty
     // range has to answer 0 and leave the buffer alone.
     void test_anEmptyRangeChangesNothing()
@@ -370,29 +442,7 @@ private:
 
     void startProfile()
     {
-        QTimer::singleShot(0, qApp, [this]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -432,10 +482,18 @@ private:
     // wrapping pads lines out with indentation
     static QString textIgnoringIndentation(TConsole* console) { return joinedText(console).remove(QChar::Space); }
 
-    // Takes the profile offline (feedTelnet() needs that) and turns on
-    // plain-text logging to a known file name, without timestamps so the log
-    // holds nothing but the wrapped text.
-    Host* startLoggingProfile()
+    static bool bufferHasLine(TConsole* console, const QString& text)
+    {
+        for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
+            if (console->buffer.line(i) == text) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // feedTelnet() only injects while the telnet socket is unconnected
+    Host* startOfflineProfile()
     {
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
@@ -449,6 +507,17 @@ private:
                     },
                     5000)) {
             qWarning() << "Profile did not go offline in time; feedTelnet() calls will fail";
+        }
+        return host;
+    }
+
+    // Turns on plain-text logging to a known file name, without timestamps so
+    // the log holds nothing but the wrapped text.
+    Host* startLoggingProfile()
+    {
+        auto* host = startOfflineProfile();
+        if (!host) {
+            return nullptr;
         }
 
         host->mLogDir.clear();
@@ -483,20 +552,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "WrapLineRewrapTest.moc"
-QTEST_MAIN(WrapLineRewrapTest)
+MUDLET_GROUPED_TEST_MAIN(WrapLineRewrapTest)

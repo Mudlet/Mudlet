@@ -405,6 +405,10 @@ int main(int argc, char* argv[])
             QStringList() << qsl("o") << qsl("only"), qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
+    // long-only, as -o is taken by --only just above
+    const QCommandLineOption openOffline(qsl("offline"), qsl("Open the profiles loaded at startup without connecting to their game server"));
+    parser.addOption(openOffline);
+
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
@@ -446,6 +450,10 @@ int main(int argc, char* argv[])
                                                           "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                           "                                    predefined game, may be repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --offline                    open the profiles loaded at startup\n"
+                                                          "                                    without connecting to their game\n"
+                                                          "                                    server."));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --steammode                  adjusts Mudlet settings to match\n"
                                                           "                                    Steam's requirements."));
@@ -623,6 +631,7 @@ int main(int argc, char* argv[])
     }
 
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
+    const bool offlineProfiles = parser.isSet(openOffline);
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
@@ -1084,7 +1093,7 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri, offlineProfiles]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
@@ -1100,7 +1109,7 @@ int main(int argc, char* argv[])
         }
 
         // Always load auto-login profiles first
-        mudlet::self()->startAutoLogin(cliProfiles);
+        mudlet::self()->startAutoLogin(cliProfiles, offlineProfiles);
 
         // Then handle telnet URI if provided
         if (!telnetUri.isEmpty()) {

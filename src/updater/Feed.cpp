@@ -86,6 +86,16 @@ QUrl Feed::getUrl() const
     return mUrl;
 }
 
+QString Feed::getOwner() const
+{
+    return mOwner;
+}
+
+QString Feed::getRepo() const
+{
+    return mRepo;
+}
+
 QList<Release> Feed::getReleases() const
 {
     return mReleases;
@@ -422,7 +432,10 @@ void Feed::handleDownloadReadyRead()
         if (extensionPos > -1) {
             fileName.insert(extensionPos, qsl("-XXXXXX"));
         }
-        mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/") + fileName);
+        // The prefix is what lets Updater::cleanupStaleUpdateFiles() recognise
+        // these later: the download outlives this object (setAutoRemove(false)
+        // below) and the name comes from the redirect, which is a bare GUID.
+        mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/mudlet-update-") + fileName);
         if (!mDownloadFile->open()) {
             qWarning() << "Failed to create temporary file for download:" << mDownloadFile->errorString();
             //: Error shown when a temporary file cannot be created for the update download. %1 is the system error message.

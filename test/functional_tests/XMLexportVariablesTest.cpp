@@ -36,8 +36,11 @@
  * Run with: ctest -R XMLexportVariablesTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
@@ -65,28 +68,44 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForXMLexportVariablesTest();
+#include "GroupedTest.h"
 
 class XMLexportVariablesTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgTriggerEditor* mpEditor = nullptr;
     const QString mHostname = "XMLexportVars-Test";
     const QString mLocalhost = "localhost";
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForXMLexportVariablesTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         // port 0 asks the OS for an ephemeral port, so parallel test runs
@@ -95,6 +114,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -111,8 +131,13 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // A saved variable whose Lua value only comes into existence after the
@@ -266,6 +291,34 @@ private slots:
         vu->savedVars.remove(qsl("untickedMemberTable"));
         vu->savedVars.remove(qsl("untickedMemberTable.kept"));
         QCOMPARE(luaL_dostring(L, "untickedMemberTable = nil"), 0);
+    }
+
+    // A global is free to hold a dot in its own name, and savedVars is keyed by
+    // the dotted path - so such a global reads exactly like a member of a table
+    // of that path. The save used to write that global out under the member's
+    // entry, which handed the next session the wrong variable's value (#9954).
+    void test_globalWithADotInItsNameIsNotExportedUnderAMembersSavedName()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "dottedNameTable = {member = 'the member value'} "
+                               "_G['dottedNameTable.member'] = 'the unrelated global value'"),
+                 0);
+        // what ticking the table and its member in the Variables view records
+        vu->savedVars.insert(qsl("dottedNameTable"));
+        vu->savedVars.insert(qsl("dottedNameTable.member"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("the member value")), "the member the user ticked has to be exported");
+        QVERIFY2(!xml.contains(qsl("the unrelated global value")), "the unrelated global of that dotted name must not be exported in its place");
+
+        vu->savedVars.remove(qsl("dottedNameTable"));
+        vu->savedVars.remove(qsl("dottedNameTable.member"));
+        QCOMPARE(luaL_dostring(L, "dottedNameTable = nil _G['dottedNameTable.member'] = nil"), 0);
     }
 
     // A member table beyond the 10,000-item save limit must not ride along -
@@ -1104,29 +1157,7 @@ private:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(2000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -1149,20 +1180,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForXMLexportVariablesTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "XMLexportVariablesTest.moc"
-QTEST_MAIN(XMLexportVariablesTest)
+MUDLET_GROUPED_TEST_MAIN(XMLexportVariablesTest)

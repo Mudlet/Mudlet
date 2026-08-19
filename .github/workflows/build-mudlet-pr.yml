@@ -60,7 +60,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
             gcc_compiler_version: 10
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
@@ -69,13 +69,13 @@ jobs:
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-14
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -131,7 +131,7 @@ jobs:
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
-          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
+          brew install libzzip libzip ccache assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
           brew_pid=$!
           ( sleep 120 && kill $brew_pid 2>/dev/null ) &
           watcher_pid=$!
@@ -195,13 +195,10 @@ jobs:
         sudo apt-get update
 
         # Install all required dependencies
-        # imagemagick is for the desktop screenshot
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install \
           ccache \
-          expect \
           g++-${{matrix.gcc_compiler_version}} \
-          imagemagick \
           libassimp-dev \
           libboost-dev \
           libcurl4-openssl-dev \
@@ -335,7 +332,6 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        sudo apt-get -y install pcre2-utils
         ${{github.workspace}}/CI/validate_deployment.sh
         ${{github.workspace}}/CI/set-build-info.sh
 
@@ -344,7 +340,6 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        brew install pcre2
         ${{github.workspace}}/CI/validate_deployment.sh
         ${{github.workspace}}/CI/set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
@@ -396,12 +391,6 @@ jobs:
 
     - name: check ccache stats post build
       run: ccache --show-stats
-
-    # a mold that never got installed just makes the compiler fall back to the
-    # system ld, which builds fine and quietly costs three minutes a run
-    - name: (Linux) Confirm the build used mold
-      if: runner.os == 'Linux'
-      run: readelf -p .comment ${{runner.workspace}}/b/ninja/src/mudlet | grep -q mold
 
     - name: install dependencies for packaging/tests
       run: |
@@ -615,7 +604,7 @@ jobs:
       # wall-clock time, so the suite needs a budget of its own: the run itself
       # takes ~75s, and the rest is headroom for a slow runner stretching those.
       timeout-minutes: 6
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
@@ -662,7 +651,7 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       # The suite alone can run past a minute on the slower Intel runners
       timeout-minutes: 3
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1

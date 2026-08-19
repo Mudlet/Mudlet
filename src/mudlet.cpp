@@ -4790,7 +4790,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
     }
 }
 
-void mudlet::startAutoLogin(const QStringList& cliProfiles)
+void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
 {
     QElapsedTimer timer;
     timer.start();
@@ -4816,7 +4816,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
         if (!hostName.isEmpty()) {
             QElapsedTimer timer;
             timer.start();
-            doAutoLogin(hostName);
+            doAutoLogin(hostName, offline);
             hostList.removeOne(hostName);
             loadedProfiles++;
             qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed() / 1000.0 << "seconds";
@@ -4828,7 +4828,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
         if (val.toInt() == Qt::Checked) {
             QElapsedTimer timer;
             timer.start();
-            doAutoLogin(hostName);
+            doAutoLogin(hostName, offline);
             loadedProfiles++;
             qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed() / 1000.0 << "seconds";
         }
@@ -4936,7 +4936,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->hide();
 }
 
-void mudlet::doAutoLogin(const QString& profile_name)
+void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
 {
     if (profile_name.isEmpty()) {
         return;
@@ -4947,9 +4947,9 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    loadProfile(profile_name, true);
+    loadProfile(profile_name, !offline);
 
-    slot_connectionDialogueFinished(profile_name, true);
+    slot_connectionDialogueFinished(profile_name, !offline);
     enableToolbarButtons();
 }
 
@@ -5107,7 +5107,16 @@ void mudlet::handleTelnetUri(const QString& uri)
     }
 
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
-    doAutoLogin(profileName);
+    // a telnet:// URI is an explicit request to connect, so --offline does not apply to it
+    doAutoLogin(profileName, false);
+
+    // doAutoLogin() skips a profile that is already open, which with --offline
+    // leaves it loaded but never dialled, so the URI is honoured here instead.
+    // A profile it just connected is past UnconnectedState by now.
+    Host* pHost = mHostManager.getHost(profileName);
+    if (pHost && pHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState) {
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+    }
 
     // Reset flag after telnet:// or telnets:// URI processing is complete
     mProcessingTelnetUri = false;
@@ -5209,6 +5218,10 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         raise();
         activateWindow();
     } else {
+        // no connectIt() on this path, so the telnet parser would otherwise run
+        // on the defaults rather than on the profile's own settings
+        pHost->mTelnet.cacheHostSettings();
+
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
 

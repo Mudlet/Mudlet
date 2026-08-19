@@ -29,11 +29,16 @@
  * Run with: ctest -R VariableEditorWriteBackTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "ProfileTestHelper.h"
 #include "Host.h"
+#include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "VarUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -41,6 +46,8 @@
 #include "dlgVarsMainArea.h"
 #include "mudlet.h"
 
+#include <QDropEvent>
+#include <QMimeData>
 #include <QTreeWidget>
 
 extern "C" {
@@ -55,18 +62,15 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForVariableEditorWriteBackTest();
+#include "GroupedTest.h"
 
 class VariableEditorWriteBackTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgTriggerEditor* mpEditor = nullptr;
@@ -74,10 +78,29 @@ private:
     const QString mHostname = "VariableEditorWriteBack-Test";
     const QString mLocalhost = "localhost";
 
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForVariableEditorWriteBackTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         // port 0 asks the OS for an ephemeral port, so parallel test runs
@@ -86,6 +109,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -106,8 +130,13 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // Selecting a member whose key the tree can only name approximately and
@@ -294,7 +323,154 @@ private slots:
         execLua(qsl("stringKeyGlobal = nil stringKeyDecoy = nil"));
     }
 
+    // Dropping an item somewhere else in the Variables view rearranges the view
+    // and nothing else - the variable stays in the table Lua has it in - so the
+    // view does not offer the move at all (#9958).
+    void test_theVariablesTreeDoesNotOfferAMoveItCannotMake()
+    {
+        QCOMPARE(mpVariablesTree->dragDropMode(), QAbstractItemView::NoDragDrop);
+        QVERIFY2(!mpVariablesTree->dragEnabled(), "the Variables view still lets an item be picked up, and a move it makes is not made in Lua");
+        QVERIFY2(!mpVariablesTree->acceptDrops(), "the Variables view still takes drops");
+        QVERIFY2(!mpVariablesTree->viewport()->acceptDrops(), "the viewport is what the window system asks about a drop, and it still says yes");
+
+        // the other views do carry a move through to what they are showing, so
+        // this must not have taken the drag away from all of them
+        QTreeWidget* pTriggers = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_triggers"));
+        QVERIFY2(pTriggers, "the editor has no triggers tree widget");
+        QCOMPARE(pTriggers->dragDropMode(), QAbstractItemView::InternalMove);
+        QVERIFY2(pTriggers->dragEnabled(), "the Triggers view lost the drag it can carry through");
+    }
+
+    // ...and a drop that arrives at the widget anyway moves nothing. Note this
+    // stands on its own only so far: QDropEvent takes its source() from the drag
+    // currently in flight, so a synthesised one is sourceless and QTreeWidget
+    // declines to move for it whatever the drop mode is. The widget state above
+    // is what stops a real drag.
+    void test_aDropOnTheVariablesTreeMovesNothing()
+    {
+        execLua(qsl("dropTargetTable = {} droppedGlobal = 'dropped value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pTarget = findVariableItem({qsl("dropTargetTable")});
+        QVERIFY2(pTarget, "the Variables view did not show the table to drop onto");
+        QTreeWidgetItem* pDragged = findVariableItem({qsl("droppedGlobal")});
+        QVERIFY2(pDragged, "the Variables view did not show the variable to drag");
+
+        mpVariablesTree->expandItem(mpVariablesTree->topLevelItem(0));
+        mpVariablesTree->scrollToItem(pTarget);
+        const QRect targetRect = mpVariablesTree->visualItemRect(pTarget);
+        QVERIFY2(!targetRect.isEmpty(), "the tree has not laid the target out, so the drop would land nowhere");
+
+        selectVariable(pDragged);
+        const QModelIndex draggedIndex = mpVariablesTree->currentIndex();
+        QVERIFY2(draggedIndex.isValid(), "the tree has no model index for the variable being dragged");
+        QScopedPointer<QMimeData> mimeData(mpVariablesTree->model()->mimeData({draggedIndex}));
+        QVERIFY2(mimeData, "the tree gave nothing to carry in the drop");
+        QDropEvent dropEvent(targetRect.center(), Qt::MoveAction, mimeData.data(), Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(mpVariablesTree->viewport(), &dropEvent);
+
+        QVERIFY2(!dropEvent.isAccepted(), "the Variables view took a drop it cannot carry through to Lua");
+        QCOMPARE(pTarget->childCount(), 0);
+        QCOMPARE(luaMemberCount(qsl("dropTargetTable")), 0);
+        QVERIFY2(luaHolds(qsl("droppedGlobal"), qsl("dropped value")), "the variable did not stay where Lua has it");
+
+        execLua(qsl("dropTargetTable = nil droppedGlobal = nil"));
+    }
+
+    // The key type shown belongs to the variable selected, and a boolean key is
+    // a key type of its own: showing the one the variable looked at before it
+    // had says something untrue about this one (#9959).
+    void test_aBooleanKeyedMemberNamesItsOwnKeyType()
+    {
+        execLua(qsl("booleanKeyTable = {[true] = 'boolean member value', [2] = 'integer member value'} booleanKeyDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pBooleanMember = findVariableItem({qsl("booleanKeyTable"), qsl("true")});
+        QVERIFY2(pBooleanMember, "the Variables view did not show the member under its boolean key");
+        QTreeWidgetItem* pIntegerMember = findVariableItem({qsl("booleanKeyTable"), qsl("2")});
+        QVERIFY2(pIntegerMember, "the Variables view did not show the member under its integer key");
+        QTreeWidgetItem* pStringKeyed = findVariableItem({qsl("booleanKeyDecoy")});
+        QVERIFY2(pStringKeyed, "the Variables view did not show the string-keyed variable");
+
+        selectVariable(pIntegerMember);
+        selectVariable(pBooleanMember);
+        const QString afterAnIntegerKey = keyTypeShown();
+
+        selectVariable(pStringKeyed);
+        selectVariable(pBooleanMember);
+        const QString afterAStringKey = keyTypeShown();
+
+        QCOMPARE(afterAStringKey, afterAnIntegerKey);
+        QVERIFY2(afterAnIntegerKey.contains(qsl("boolean"), Qt::CaseInsensitive),
+                 qPrintable(qsl("the key type shown for a boolean key was \"%1\", which does not name a boolean").arg(afterAnIntegerKey)));
+
+        selectVariable(pStringKeyed);
+        execLua(qsl("booleanKeyTable = nil booleanKeyDecoy = nil"));
+    }
+
+    // ...and what is shown for it is a description, not an instruction: leaving
+    // the member alone leaves the key it is under boolean.
+    void test_leavingABooleanKeyedMemberKeepsItsKey()
+    {
+        execLua(qsl("booleanRoundTripTable = {[true] = 'boolean member value'} booleanRoundTripDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pMember = findVariableItem({qsl("booleanRoundTripTable"), qsl("true")});
+        QVERIFY2(pMember, "the Variables view did not show the member under its boolean key");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("booleanRoundTripDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pMember);
+        selectVariable(pDecoy);
+
+        QCOMPARE(luaMemberCount(qsl("booleanRoundTripTable")), 1);
+        QVERIFY2(luaHolds(qsl("booleanRoundTripTable[true]"), qsl("boolean member value")), "the member did not stay under the boolean key it was read from");
+
+        execLua(qsl("booleanRoundTripTable = nil booleanRoundTripDecoy = nil"));
+    }
+
+    // Qt's tristate cascade ticks rows the user cannot tick themselves, so a tick
+    // on a table's parent reaches a table the size limit rules out - and what may
+    // be saved has to be asked again rather than read off the check state
+    // (#9957). The parent of an oversized table is over the limit itself, so
+    // neither of them may be enrolled here.
+    void test_tickingTheParentOfAnOversizedTableSavesNeitherOfThem()
+    {
+        execLua(qsl("bypassHolder = {small = 1, big = {}} for i = 1, 10001 do bypassHolder.big[i] = i end"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pParent = findVariableItem({qsl("bypassHolder")});
+        QVERIFY2(pParent, "the Variables view did not show the holder table");
+        QTreeWidgetItem* pBig = findVariableItem({qsl("bypassHolder"), qsl("big")});
+        QVERIFY2(pBig, "the Variables view did not show the oversized table");
+
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        pVarUnit->savedVars.clear();
+        mpEditor->mpCurrentVarItem = nullptr; // nothing left over from an earlier test to be saved
+
+        // the real signal path: setCheckState() cascades down and each change
+        // reaches slot_variableChanged() through itemChanged
+        pParent->setCheckState(0, Qt::Checked);
+
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder")), "a table over the size limit was enrolled for saving by a tick on it");
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder.big")), "the oversized table was enrolled for saving through its parent");
+        QVERIFY2(pVarUnit->savedVars.contains(qsl("bypassHolder.small")), "a member that is saveable is still enrolled by the same tick");
+
+        // ...and neither does clicking the row afterwards, which finds it ticked
+        QCOMPARE(pBig->checkState(0), Qt::Checked);
+        mpEditor->slot_variableSelected(pBig);
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder.big")), "clicking a row left ticked from before enrolled the oversized table it stands for");
+        QVERIFY2(!pVarUnit->savedVars.contains(qsl("bypassHolder")), "...and its parent with it");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        pVarUnit->savedVars.clear();
+        execLua(qsl("bypassHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
 private:
+    QString keyTypeShown() const { return mpEditor->mpVarsMainArea->comboBox_variable_key_type->currentText(); }
+
     void execLua(const QString& code)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -384,29 +560,7 @@ private:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(2000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -429,20 +583,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForVariableEditorWriteBackTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "VariableEditorWriteBackTest.moc"
-QTEST_MAIN(VariableEditorWriteBackTest)
+MUDLET_GROUPED_TEST_MAIN(VariableEditorWriteBackTest)
