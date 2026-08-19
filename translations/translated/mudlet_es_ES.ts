@@ -10559,12 +10559,12 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2978"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>Migrando las contraseñas al almacenamiento seguro...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2985"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Migrando contraseñas a los perfiles...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3017"/>
@@ -10572,7 +10572,8 @@ Message on button in package manager initially and when the view is NOT the &quo
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede utilizar o crear el directorio para almacenar el mapa del otro perfil &quot;%1&quot;.Por favor, compruebe que tiene permisos/acceso a:&quot;%2&quot; 
+y que hay suficiente espacio. La operación de copia ha fallado.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3024"/>
@@ -10582,124 +10583,127 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3093"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Creando copia de seguridad del mapa actual, por favor, espere...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3103"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>No se ha podido crear la copia de seguridad del mapa; el guardado ha fallado.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3128"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
-      <translation type="unfinished"/>
+      <translation>No se ha podido copiar el mapa. ¡No se ha podido determinar con qué nombre de archivo se acaba de guardar!</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3140"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Copiando mapa a %1. Por favor, espere...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3146"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>No se ha podido copiar el mapa a %1, no ha sido posible copiar el nuevo archivo de mapa encima.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3150"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>El mapa se ha copiado correctamente al otro perfil %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3161"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa copiado; notificando ahora a los otros perfiles para que lo vuelvan a cargar.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3199"/>
       <source>Where should Mudlet save log files?</source>
-      <translation>Donde debe Mudlet guardar los archivos de registro?</translation>
+      <translation>¿Dónde debe Mudlet guardar los archivos de registro?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgProfilePreferences.cpp" line="3622"/>
       <source>%n selected - change destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n seleccionado - cambiar destino...</numerusform>
+        <numerusform>%n seleccionados - cambiar destinos...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3627"/>
       <source>pick destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</extracomment>
-      <translation type="unfinished"/>
+      <translation>seleccionar destinos...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3864"/>
       <source>Could not update themes: %1</source>
-      <translation>No se pudo actualizar temas: %1</translation>
+      <translation>No se han podido actualizar los temas: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3867"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Actualizando temas desde colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4045"/>
       <source>{missing, possibly recently deleted trigger item}</source>
-      <translation type="unfinished"/>
+      <translation>{falta el disparador, posiblemente eliminado recientemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4048"/>
       <source>{missing, possibly recently deleted alias item}</source>
-      <translation type="unfinished"/>
+      <translation>{falta el alias, posiblemente eliminado recientemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4051"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation type="unfinished"/>
+      <translation> {falta el script, posiblemente eliminado recientemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4054"/>
       <source>{missing, possibly recently deleted timer item}</source>
-      <translation type="unfinished"/>
+      <translation>{falta el temporizador, posiblemente eliminado recientemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4057"/>
       <source>{missing, possibly recently deleted key item}</source>
-      <translation type="unfinished"/>
+      <translation>{falta el atajo de teclado, posiblemente eliminado recientemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4060"/>
       <source>{missing, possibly recently deleted button item}</source>
-      <translation type="unfinished"/>
+      <translation>{falta el botón, posiblemente eliminado recientemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4189"/>
       <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
-      <translation type="unfinished"/>
+      <translation>El símbolo de sala aparecerá así si solo se utilizan símbolos (glifos) de la fuente específica.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4194"/>
       <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
-      <translation type="unfinished"/>
+      <translation>El símbolo de sala aparecerá así si se pueden utilizar símbolos (glifos) de cualquier fuente.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4234"/>
       <source>How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>Cuántas salas de todo el mapa tienen este símbolo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4252"/>
       <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
-      <translation type="unfinished"/>
+      <translation>Las salas con este símbolo, hasta un máximo de treinta y dos; si hay más de esta cantidad, se indica pero no se muestran.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4260"/>
       <source>The symbol can be made entirely from glyphs in the specified font.</source>
-      <translation type="unfinished"/>
+      <translation>El símbolo se puede crear por completo a partir de símbolos (glifos) de la fuente especificada.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4278"/>
       <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
-      <translation type="unfinished"/>
+      <translation>El símbolo no se puede dibujar con ninguna de las fuentes del sistema. Esto se debe a que se introdujo una cadena no válida como símbolo para las salas indicadas, o bien el mapa se creó en un sistema diferente con un conjunto de fuentes disponibles distintas. Es posible que puedas solucionar esto instalando una fuente adicional mediante el método adecuado para este sistema, o editando el mapa para utilizar un símbolo diferente. Esto último se puede realizar a través de un script de Lua utilizando las funciones &lt;i&gt;getRoomChar&lt;/i&gt; y &lt;i&gt;setRoomChar&lt;/i&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4371"/>
@@ -10735,7 +10739,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="4383"/>
       <source>Party max</source>
       <extracomment>Discord Rich Presence maximum party size</extracomment>
-      <translation type="unfinished"/>
+      <translation>Límite máximo del grupo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4385"/>
@@ -10746,73 +10750,73 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="5000"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Definir el color exterior del marcador de posición del jugador.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="5000"/>
       <source>Set inner color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Definir color interior del marcador de posición del jugador.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="180"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esta opción establece el formato del nombre del registro.&lt;/p&gt;&lt;p&gt;Si se selecciona &lt;i&gt;Nombre de archivo personalizado&lt;/i&gt;, puedes establecer un nombre de archivo propio. (Los registros se añadirán al final si ya existe un archivo de registro con el mismo nombre).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="767"/>
       <source>%1 - not recognised</source>
-      <translation type="unfinished"/>
+      <translation>%1 - no reconocido</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="781"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet no reconoce el código &quot;%1&quot;. ¡Por favor, infórmalo a los desarrolladores de Mudlet para que puedan describirlo correctamente en futuras versiones de Mudlet!&lt;/p&gt;&lt;p&gt;El archivo &lt;tt&gt;%2.dic&lt;/tt&gt; (y su archivo de afijos complementario &lt;tt&gt;.aff&lt;/tt&gt;) todavía se puede usar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="798"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>No se han encontrado archivos de diccionario de Hunspell; la corrección ortográfica no estará disponible.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="919"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="922"/>
       <source>Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any &quot;Nickname&quot; that you may have set for a particular Server.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet solo mostrará la información de Rich Presence mientras utilices este nombre de usuario de Discord (útil si tienes varias cuentas de Discord). Déjalo vacío para mostrarlo en cualquier cuenta de Discord con la que inicies sesión. Este debe ser el nombre de usuario único de Discord que utiliza un conjunto restringido de caracteres ASCII en minúsculas, y no un &quot;Apodo&quot; que hayas configurado para un servidor en particular.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="931"/>
       <source>This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.</source>
-      <translation type="unfinished"/>
+      <translation>Este es el nombre de usuario único que utiliza un conjunto restringido de caracteres para la cuenta de Discord, y no necesariamente el apodo que hayas configurado para un servidor en particular.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="933"/>
       <source>(Not connected)</source>
-      <translation type="unfinished"/>
+      <translation>(No conectado)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2109"/>
       <source>[ WARN ]  - Could not clear the stored media: %1.</source>
       <extracomment>Shown after the &quot;Clear stored media&quot; button in preferences fails to empty the profile&apos;s media directory. %1 is the reason, which is not translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - No se han podido borrar los archivos multimedia almacenados: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2821"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede cargar el archivo de mapa JSON: %1, motivo: %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2861"/>
       <source>Any map file (*.dat *.json *.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Cualquier archivo del mapa (*.dat *.json *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2862"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="2895"/>
       <source>Mudlet binary map (*.dat)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa binario de Mudlet (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2863"/>
