@@ -1765,19 +1765,19 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("setMapBackgroundColor is read back by getMapBackgroundColor", function()
       assert.is_true(setMapBackgroundColor(12, 34, 56, 78))
-      assert.same({12, 34, 56, 78}, {getMapBackgroundColor()})
+      assert.are.same({12, 34, 56, 78}, {getMapBackgroundColor()})
     end)
 
     it("a background set without an alpha is opaque", function()
       assert.is_true(setMapBackgroundColor(12, 34, 56, 78))
       assert.is_true(setMapBackgroundColor(9, 8, 7))
-      assert.same({9, 8, 7, 255}, {getMapBackgroundColor()})
+      assert.are.same({9, 8, 7, 255}, {getMapBackgroundColor()})
     end)
 
     it("setMapRoomExitsColor is read back by getMapRoomExitsColor", function()
       -- three components, not four: the exit colour carries no alpha either way
       assert.is_true(setMapRoomExitsColor(21, 43, 65))
-      assert.same({21, 43, 65}, {getMapRoomExitsColor()})
+      assert.are.same({21, 43, 65}, {getMapRoomExitsColor()})
     end)
 
     it("a component outside 0-255 is refused and changes nothing", function()
@@ -1789,13 +1789,13 @@ describe("Tests mapper functions against a shared fixture", function()
         assert.is_string(err)
         assert.is_truthy(err:find("needs to be between 0-255", 1, true), err)
       end
-      assert.same({10, 20, 30, 40}, {getMapBackgroundColor()})
+      assert.are.same({10, 20, 30, 40}, {getMapBackgroundColor()})
 
       assert.is_true(setMapRoomExitsColor(11, 22, 33))
       local exitsOk, exitsErr = setMapRoomExitsColor(11, 22, 999)
       assert.is_nil(exitsOk)
       assert.is_string(exitsErr)
-      assert.same({11, 22, 33}, {getMapRoomExitsColor()})
+      assert.are.same({11, 22, 33}, {getMapRoomExitsColor()})
     end)
 
     it("a component that is not a number hard-errors", function()
@@ -1817,16 +1817,17 @@ describe("Tests mapper functions against a shared fixture", function()
   describe("Tests setDefaultAreaVisible", function()
     -- The flag itself has no Lua readback: TMap::mShowDefaultArea is read by
     -- the mapper's area list, the map view's painting and the preferences
-    -- checkbox, and by no Lua function at all. What a spec can hold onto is
-    -- therefore the call's own contract.
+    -- checkbox, and by no Lua function other than this setter's own fixup.
+    -- What a spec can hold onto is therefore the call's own contract.
     teardown(function()
       setDefaultAreaVisible(true)
     end)
 
     it("reports success while the mapper widget is up", function()
       assert.is_true(setDefaultAreaVisible(false))
-      -- and again the other way, which is the corner case the fixup inside
-      -- guards: re-enabling while the widget sits on the default area
+      -- and again the other way, which must also report success. This does not
+      -- reach the combo box fixup inside: that needs the 2D map parked on the
+      -- default area, and the fixture's rooms are all in named ones.
       assert.is_true(setDefaultAreaVisible(true))
     end)
 

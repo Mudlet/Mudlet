@@ -1343,10 +1343,12 @@ describe("Media playback effects with a generated sound file", function()
     end
     -- TMedia::releaseMediaSourceAfterEvents() ends a playback one event-loop
     -- turn late, so that a looping track's EndOfMedia can still restart it
-    -- (#9566). sysMediaFinished is raised from inside the stop, so no event can
-    -- see that deferral; the closing caption is the other half of the same
-    -- ending and is printed by the deferred turn itself. Closed captions are
-    -- off by default, so turning them on is what makes it reachable at all.
+    -- (#9566). No event can see that deferral - on a backend that reports the
+    -- stop synchronously sysMediaFinished is raised from inside the call, and
+    -- on one that does not it merely arrives later - but the closing caption is
+    -- the other half of the same ending, and the deferred turn is what prints
+    -- it. Closed captions are off by default, so turning them on is what makes
+    -- it reachable at all.
     local captionKey = "busted-caption-deferred"
     local wasCaptioned = getConfig("enableClosedCaption")
     assert.is_true(setConfig("enableClosedCaption", true))
@@ -1429,6 +1431,11 @@ describe("Media playback effects with a generated sound file", function()
     onCleanup(function() feedGmcp("Client.Media.Stop {}") end)
   end
 
+  -- The profile's "accept media from the game" preference gates parseGMCP() and
+  -- has no getConfig key to read it back with, so a profile that has it turned
+  -- off would fail the specs below with nothing but a bare timeout to go on.
+  local gmcpRefused = "no sysMediaStarted for a Client.Media message - is the profile set to accept media from the game?"
+
   it("a Client.Media.Play message plays the file it names and reports it", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1439,7 +1446,7 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-play", "tag": "busted-gmcp-tag"}')
 
     local event, file, _, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
-    assert.equals("sysMediaStarted", event)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
     assert.equals(longSoundFile, file)
     -- a message that names no type is played as a sound
     assert.equals("sound", mediaType)
@@ -1461,7 +1468,7 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "music", "key": "busted-gmcp-music"}')
 
     local event, _, _, mediaType, key = waitForEvent("sysMediaStarted", 5000)
-    assert.equals("sysMediaStarted", event)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
     assert.equals("music", mediaType)
     assert.equals("busted-gmcp-music", key)
   end)
@@ -1477,7 +1484,7 @@ describe("Media playback effects with a generated sound file", function()
     stopGmcpMediaAfterwards()
 
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-stopped"}')
-    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
     assert.equals(0, #finished)
 
     feedGmcp("Client.Media.Stop {}")
@@ -1499,7 +1506,7 @@ describe("Media playback effects with a generated sound file", function()
     stopGmcpMediaAfterwards()
 
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-paused"}')
-    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
 
     -- a key that matches nothing leaves it playing
     feedGmcp('Client.Media.Pause {"key": "busted-gmcp-pause-absent"}')

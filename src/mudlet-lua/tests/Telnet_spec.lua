@@ -155,8 +155,10 @@ describe("Tests addSupportedTelnetOption", function()
   -- cannot be asserted here.
 
   it("returns nothing for an option number it accepts", function()
-    -- 200 is unassigned, so registering it changes nothing any other spec sees
-    assert.is_nil(addSupportedTelnetOption(200))
+    -- 137 is an option Mudlet has no handler for, so registering it only adds
+    -- a map entry that no negotiation in this offline run will consult. Do not
+    -- reach for a round number here: 200 is ATCP and 201 is GMCP.
+    assert.is_nil(addSupportedTelnetOption(137))
   end)
 
   it("raises a Lua error when the option is missing or not a number", function()
