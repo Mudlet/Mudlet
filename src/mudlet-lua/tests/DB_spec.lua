@@ -2095,22 +2095,24 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"autocommitted", "committed"}, names())
     end)
 
-    it("_commit and _rollback answer true on a database that is open", function()
+    it("_commit and _rollback answer true and an empty message while the database is open", function()
       mydb:_begin()
-      db:add(mydb.sheet, {name = "kept"})
-      assert.is_true(mydb:_commit())
-      db:add(mydb.sheet, {name = "dropped"})
-      assert.is_true(mydb:_rollback())
+      local ok, msg = mydb:_commit()
+      assert.is_true(ok)
+      assert.are.equal("", msg)
+      ok, msg = mydb:_rollback()
+      assert.is_true(ok)
+      assert.are.equal("", msg)
       mydb:_end()
-      assert.are.same({"committed", "kept"}, names())
     end)
 
-    -- db:close leaves the handle db:get_database already handed out behind, so
-    -- these are reachable with no connection to work on
+    -- db:close keeps the schema, so the handle db:create handed back stays
+    -- usable with no connection left behind it
     it("_commit answers false and says so once the database is closed", function()
       db:close(dbName)
       local ok, msg = mydb:_commit()
       assert.is_false(ok)
+      assert.is_true(string.find(msg, "commit", 1, true) ~= nil)
       assert.is_true(string.find(msg, "closed", 1, true) ~= nil)
       assert.is_true(string.find(msg, dbName, 1, true) ~= nil)
     end)
@@ -2119,8 +2121,42 @@ describe("Tests DB.lua functions", function()
       db:close(dbName)
       local ok, msg = mydb:_rollback()
       assert.is_false(ok)
+      assert.is_true(string.find(msg, "roll back", 1, true) ~= nil)
       assert.is_true(string.find(msg, "closed", 1, true) ~= nil)
       assert.is_true(string.find(msg, dbName, 1, true) ~= nil)
+    end)
+
+    -- db:get_database keeps handing out handles for a closed database, so the
+    -- guard has to hold for one obtained after the close as well as before it
+    it("_commit answers false on a handle taken out after the close", function()
+      db:close(dbName)
+      local ok, msg = db:get_database(dbName):_commit()
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, "closed", 1, true) ~= nil)
+    end)
+
+    it("_commit answers false when the database engine refuses the commit", function()
+      -- a second connection part way through reading holds the lock the COMMIT
+      -- needs, which is how a full disk or a second Mudlet on the same profile
+      -- shows up: the connection is fine, the work just does not land
+      local reader_env = luasql.sqlite3()
+      local reader = reader_env:connect(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      local cursor = reader:execute("SELECT name FROM sheet")
+      cursor:fetch()
+
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "blocked"})
+      local ok, msg = mydb:_commit()
+      mydb:_rollback()
+      mydb:_end()
+
+      cursor:close()
+      reader:close()
+      reader_env:close()
+
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, dbName, 1, true) ~= nil)
+      assert.are.same({"committed"}, names())
     end)
   end)
 

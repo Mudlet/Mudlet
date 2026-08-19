@@ -2207,16 +2207,21 @@ end
 
 --- Commits the work done on this database since the last commit.
 --- @return boolean result Returns true in case of success and false otherwise.
---- @return string message Why the work was not committed.
+--- @return string message Why the work was not committed, empty when it was.
 function db.Database:_commit()
-  -- a handle db:get_database handed out outlives db:close, which leaves only
-  -- the connection behind, so there may be nothing here to commit on
+  -- db:close drops the connection but keeps the schema, so a database handle
+  -- stays usable with nothing left behind it to commit on
   local conn = db.__conn[self._db_name]
   if not conn then
-    return false, "can not commit "..self._db_name.." because the database is closed.  Call db:create to open it again."
+    return false, "can not commit "..self._db_name.." because the database is closed."
   end
 
-  conn:commit()
+  -- db:create turns the driver's own autocommit off, so nothing lands until a
+  -- commit goes through and a refused one loses the work without saying so
+  local committed, err = conn:commit()
+  if not committed then
+    return false, "can not commit "..self._db_name..": "..tostring(err)
+  end
 
   return true, ""
 end
@@ -2225,14 +2230,17 @@ end
 
 --- Discards the work done on this database since the last commit.
 --- @return boolean result Returns true in case of success and false otherwise.
---- @return string message Why the work was not rolled back.
+--- @return string message Why the work was not rolled back, empty when it was.
 function db.Database:_rollback()
   local conn = db.__conn[self._db_name]
   if not conn then
-    return false, "can not roll back "..self._db_name.." because the database is closed.  Call db:create to open it again."
+    return false, "can not roll back "..self._db_name.." because the database is closed."
   end
 
-  conn:rollback()
+  local rolled_back, err = conn:rollback()
+  if not rolled_back then
+    return false, "can not roll back "..self._db_name..": "..tostring(err)
+  end
 
   return true, ""
 end
