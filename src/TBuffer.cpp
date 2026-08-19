@@ -435,6 +435,11 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     if (batch >= requestedLinesLimit) {
         batch = requestedLinesLimit / 10;
     }
+    // shrinkBuffer() pops one line per batch step, so a batch of none at all
+    // switches trimming off and lets the buffer grow past its limit
+    if (batch < 1) {
+        batch = 1;
+    }
     // clip the maximum to something reasonable that the machine can handle
     auto max = getMaxBufferSize();
     if (requestedLinesLimit > max) {
@@ -2689,8 +2694,12 @@ void TBuffer::decodeSGR(const QString& sequence)
                     // {presumably 2 would be a double underline and 1
                     // the normal single underline) by sending e.g.:
                     // ESC[...;4:3;...m - that is handled above in the colon
-                    // sub-string separated part:
+                    // sub-string separated part. Plain 4 is that convention's
+                    // single underline, so it has to drop any style already set:
                     mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
                 case 5:
                     mBlink = true;
@@ -3730,31 +3739,65 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     qDebug() << "[OSC] Query string:" << queryString;
 #endif
 
-    // Decode the query string first, since the server percent-encodes the entire URL
-    QString decodedQueryString = QUrl::fromPercentEncoding(queryString.toUtf8());
-#if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "[OSC] Decoded query string:" << decodedQueryString;
-#endif
-
-    // Extract config= and preset= from the query string.
-    // The config value is JSON which may contain '&' characters inside strings,
-    // so we use brace-depth counting to find where the JSON object ends rather
-    // than naively splitting on '&'.
+    // Extract config= and preset= from the query string, splitting it into parameters first
+    // and decoding only the values (RFC 3986 2.4). Decoding the whole query first would turn
+    // an escaped name - %63%6F%6E%66%69%67, the escape servers are told to use for a literal
+    // "config" in a web URL - back into "config" and consume it as styling. So a key counts
+    // as reserved only when it is raw and literal, which is the same key decodeOSC() compares
+    // when deciding what to strip out of the URL it opens: both leave an escaped name as URL
+    // data. The two still divide the query into parameters differently, as decodeOSC() splits
+    // on '&' alone and the brace matching below does not.
     QString configJson;
     QString presetName;
-    QString remaining = decodedQueryString;
+    QString remaining = queryString;
 
     while (!remaining.isEmpty()) {
-        // Find config={...} using brace matching
-        if (remaining.startsWith(qsl("config={"))) {
-            int braceStart = 7; // length of "config="
+        const int ampPos = remaining.indexOf('&');
+        const int paramEnd = (ampPos == -1) ? remaining.size() : ampPos;
+        const QString laterParams = (ampPos == -1) ? QString() : remaining.mid(ampPos + 1);
+
+        // Accept '%3D' as the key/value separator as well, matching decodeOSC()
+        const int literalEq = remaining.indexOf('=');
+        const int encodedEq = remaining.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
+        int eqPos = -1;
+        int eqLength = 0;
+        if (literalEq >= 0 && literalEq < paramEnd && (encodedEq < 0 || literalEq < encodedEq)) {
+            eqPos = literalEq;
+            eqLength = 1;
+        } else if (encodedEq >= 0 && encodedEq < paramEnd) {
+            eqPos = encodedEq;
+            eqLength = 3;
+        }
+
+        if (eqPos < 0) {
+            remaining = laterParams;
+            continue;
+        }
+
+        const QString key = remaining.left(eqPos);
+        const int valueStart = eqPos + eqLength;
+
+        if (key != qsl("config")) {
+            if (key == qsl("preset")) {
+                presetName = QUrl::fromPercentEncoding(remaining.mid(valueStart, paramEnd - valueStart).toUtf8());
+            }
+            remaining = laterParams;
+            continue;
+        }
+
+        // A config value sent as unencoded JSON can carry '&' inside its strings, so find
+        // where the object ends by brace depth rather than at the next '&'
+        int valueEnd = paramEnd;
+        if (valueStart < remaining.size() && remaining.at(valueStart) == '{') {
             int depth = 0;
             bool inString = false;
             bool escaped = false;
-            int end = -1;
+            // Stands if the scan finds no closing brace: the JSON is malformed, so take the
+            // rest as config and let the parser handle it
+            valueEnd = remaining.size();
 
-            for (int i = braceStart; i < remaining.size(); ++i) {
-                QChar ch = remaining.at(i);
+            for (int i = valueStart; i < remaining.size(); ++i) {
+                const QChar ch = remaining.at(i);
                 if (escaped) {
                     escaped = false;
                     continue;
@@ -3773,41 +3816,17 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
                     } else if (ch == '}') {
                         --depth;
                         if (depth == 0) {
-                            end = i + 1;
+                            valueEnd = i + 1;
                             break;
                         }
                     }
                 }
             }
-
-            if (end > braceStart) {
-                configJson = remaining.mid(braceStart, end - braceStart);
-                // Skip past the JSON and any trailing '&'
-                remaining = (end < remaining.size() && remaining.at(end) == '&') ? remaining.mid(end + 1) : remaining.mid(end);
-            } else {
-                // Malformed JSON - take the rest as config and let the parser handle it
-                configJson = remaining.mid(braceStart);
-                remaining.clear();
-            }
-            continue;
         }
 
-        // Find the next '&' for non-config parameters
-        int ampPos = remaining.indexOf('&');
-        QString param = (ampPos == -1) ? remaining : remaining.left(ampPos);
-        remaining = (ampPos == -1) ? QString() : remaining.mid(ampPos + 1);
-
-        int eqPos = param.indexOf('=');
-        if (eqPos == -1) {
-            continue;
-        }
-
-        QString key = param.left(eqPos);
-        QString value = param.mid(eqPos + 1);
-
-        if (key == qsl("preset")) {
-            presetName = value;
-        }
+        configJson = QUrl::fromPercentEncoding(remaining.mid(valueStart, valueEnd - valueStart).toUtf8());
+        // Skip past the value and any trailing '&'
+        remaining = (valueEnd < remaining.size() && remaining.at(valueEnd) == '&') ? remaining.mid(valueEnd + 1) : remaining.mid(valueEnd);
     }
 
 #if defined(DEBUG_OSC_PROCESSING)

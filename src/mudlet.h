@@ -217,7 +217,7 @@ public:
     void restoreFloatingDockGeometries();
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
-    void doAutoLogin(const QString&);
+    void doAutoLogin(const QString&, bool offline);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
     void updateMainWindowTitle();
@@ -326,7 +326,7 @@ public:
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:
     void showOptionsDialog(const QString&, Host* = nullptr);
-    void startAutoLogin(const QStringList&);
+    void startAutoLogin(const QStringList&, bool offline = false);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
     void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }

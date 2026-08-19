@@ -57,6 +57,9 @@ public:
     void setMaxVersion(const QString& version);
     void setPreviousVersion(const QString& version);
 
+    // The download this dialog will reuse on the next launch instead of
+    // fetching it again - Updater's cleanup has to leave it alone (#9985)
+    static QString pendingDownloadPath(QSettings* settings);
     static bool autoDownloadEnabled(QVariant defaultValue, QSettings* settings);
     static bool autoDownloadEnabled(QSettings* settings);
     static void enableAutoDownload(bool enabled, QSettings* settings);
@@ -86,6 +89,7 @@ private:
     QSettings* mSettings;
     void replaceAppVars(QString& string);
     QString generateChangelogDocument();
+    QString generateCompareLink() const;
 
     void disableButtons(bool disable = true);
     void resetUi();

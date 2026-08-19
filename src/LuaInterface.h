@@ -79,11 +79,12 @@ public:
     bool loadKey(lua_State*, TVar*);
     // pushes the value on success, and nothing on any failure
     bool loadValue(lua_State*, TVar*, int);
-    bool setCValue(QList<TVar*>);
     bool setValue(TVar*);
     void deleteVar(TVar*);
-    void renameCVar(QList<TVar*>);
-    void renameVar(TVar*);
+    bool renameCVar(QList<TVar*>);
+    // false when the rename did not happen - the variable keeps the name it had
+    // and the node keeps naming it, which the caller has to tell the user about
+    bool renameVar(TVar*);
     void createVar(TVar*);
     // whether a variable can be written back through the name the tree gave it,
     // which the editor asks before writing - the write paths themselves do not
@@ -104,6 +105,9 @@ private:
     TVar* resetVariableTree();
     bool readSavedVars();
     void addSavedRootsMissingFromTheTree();
+    bool pushKey(TVar*, const QString& name, const int keyType);
+    bool pushOwningTable(const QList<TVar*>&);
+    bool newNameIsFree(TVar*);
 
     int depth = 0;
     lua_State* mL;

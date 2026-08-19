@@ -50,6 +50,26 @@ VarUnit::VarUnit()
 // unref into a freed state would crash. The registry entry dies with the state.
 VarUnit::~VarUnit() = default;
 
+// A global may hold a dot in its own name - _G["mod.count"] - and the dotted name
+// everything here is keyed by then reads exactly like the path of member "count"
+// inside table "mod". Those are two different variables, so for such a root that
+// name is not an identity: what a hiding walk recorded, and what a save was told
+// to keep, was the member path, and answering the root from it hid the root out
+// of the Variables view and gave it the member's saved state (#9954).
+//
+// Only the sets Mudlet itself writes are fenced off. hiddenByUser stays keyed by
+// the colliding name because dlgTriggerEditor::slot_hideVariable() records the
+// user's own hide through addHidden(var, 1), which writes that very string for a
+// dotted root - refusing to answer it would make hiding such a root impossible,
+// where the ambiguity that remains is between two hides the user asked for.
+// A hidden table is also still recognised by identity in isHidden() below, which
+// no name collision reaches.
+bool VarUnit::rootNameReadsAsAMemberPath(TVar* var) const
+{
+    TVar* pParent = var ? var->getParent() : nullptr;
+    return pParent && pParent->getName() == qsl("_G") && var->getName().contains(QLatin1Char('.'));
+}
+
 bool VarUnit::isHidden(TVar* var)
 {
     if (var->getName() == qsl("_G")) { // we never hide global
@@ -69,7 +89,7 @@ bool VarUnit::isHidden(TVar* var)
         forgetHiddenTableAddress(var->pValue);
     }
     const QString fullName = shortVarName(var).join(qsl("."));
-    if (hidden.contains(fullName)) {
+    if (hidden.contains(fullName) && !rootNameReadsAsAMemberPath(var)) {
         return true;
     }
     return hiddenByUser.contains(fullName);
@@ -210,6 +230,10 @@ void VarUnit::releaseAnchorSlot(int slot)
 }
 
 
+// A name on its own cannot say whether it is a dotted root's or a member path's,
+// so this overload cannot make the distinction the TVar one does. It is only
+// asked about the names in savedVars (Host::hideMudletsVariables()), which a
+// dotted root can no longer get into - see addSavedVar().
 bool VarUnit::isHidden(const QString& fullname)
 {
     if (fullname == QLatin1String("_G")) { // we never hide global
@@ -234,16 +258,26 @@ void VarUnit::clearPointers()
     mPointers.clear();
 }
 
+// The same question as the TVar overload below, asked of the row in the
+// Variables view standing for that variable - so it has to give the same answer.
+// It used to leave out the size limit, and Qt's tristate cascade ticks a child
+// whose ItemIsUserCheckable flag buildVarTree() stripped, so a table over the
+// limit reached by ticking its parent stayed ticked, went into savedVars and was
+// written into the profile (#9957).
 bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
 {
-    auto var = getWVar(pWidgetItem);
+    TVar* var = getWVar(pWidgetItem);
 
-    return !(!var || var->getValueType() == 6 || var->isReference());
+    return var && shouldSave(var);
 }
 
 bool VarUnit::shouldSave(TVar* var)
 {
     if (var->getValueType() == 6 || var->isReference()) {
+        return false;
+    }
+
+    if (rootNameReadsAsAMemberPath(var)) {
         return false;
     }
 
@@ -284,6 +318,12 @@ QString VarUnit::getUnsaveableReason(TVar* var)
     if (var->isReference()) {
         //: Tooltip explaining why a referenced variable cannot be saved
         return tr("Referenced variables cannot be saved.");
+    }
+
+    if (rootNameReadsAsAMemberPath(var)) {
+        //: Tooltip explaining why a global whose own name contains a dot cannot be saved
+        return tr("Saved variables are remembered by their dotted path, so a global with a dot in its own name "
+                  "cannot be told apart from a member of a table and cannot be saved.");
     }
 
     if (var->getValueType() == LUA_TTABLE) {
@@ -462,8 +502,67 @@ void VarUnit::removeHidden(const QString& name)
     // does not remove the reference from TVar, similar to addHidden()
 }
 
+// The exact names the rename moves: the variable's own and its real
+// descendants', read off the tree rather than matched as string prefixes. A
+// sibling whose own key holds a dot ("a.b" beside member "a") joins to the very
+// path a descendant of "a" would have, and a prefix rule would drag that
+// sibling's marks onto a name nothing has.
+static void collectRenamedPaths(TVar* var, const QString& oldPath, const QString& newPath, QHash<QString, QString>& renames)
+{
+    renames.insert(oldPath, newPath);
+    for (TVar* child : var->getChildren(false)) {
+        collectRenamedPaths(child, oldPath + QLatin1Char('.') + child->getName(), newPath + QLatin1Char('.') + child->getName(), renames);
+    }
+}
+
+static void renameNameKeyedEntries(QSet<QString>& names, const QHash<QString, QString>& renames)
+{
+    for (auto it = renames.constBegin(); it != renames.constEnd(); ++it) {
+        if (names.remove(it.key())) {
+            names.insert(it.value());
+        }
+    }
+}
+
+// Everything name-keyed this unit remembers about a variable it remembers by the
+// dotted name the tree gave it, so a rename has to take those memberships with
+// it. Left behind, a saved or hidden mark keeps answering for the old name, and
+// catches whichever unrelated variable is born under it next; the renamed
+// variable meanwhile loses the mark the user put on it. Renaming a table moves
+// what is remembered about its members as well - exactly its members, walked
+// from the tree, so an entry that merely reads like a member's path stays put.
+void VarUnit::renameVariableBookkeeping(TVar* var, const QString& oldFullName, const QString& newFullName)
+{
+    if (!var || oldFullName == newFullName || oldFullName.isEmpty() || newFullName.isEmpty()) {
+        return;
+    }
+    QHash<QString, QString> renames;
+    collectRenamedPaths(var, oldFullName, newFullName, renames);
+    renameNameKeyedEntries(savedVars, renames);
+    renameNameKeyedEntries(hidden, renames);
+    renameNameKeyedEntries(hiddenByUser, renames);
+    // Only the name has changed: the tables are the same tables, so their
+    // addresses are still identities and their anchors still answer for them.
+    // Forgetting the identities here instead would leave them hidden by name
+    // alone.
+    for (auto it = renames.constBegin(); it != renames.constEnd(); ++it) {
+        const auto found = mHiddenTableByName.constFind(it.key());
+        if (found != mHiddenTableByName.constEnd()) {
+            const void* table = found.value();
+            mHiddenTableByName.erase(found);
+            mHiddenTableByName.insert(it.value(), table);
+        }
+    }
+}
+
 void VarUnit::addSavedVar(TVar* var)
 {
+    if (rootNameReadsAsAMemberPath(var)) {
+        // savedVars would key it by the member path's name, so the entry would
+        // mark that member saved instead. shouldSave() refuses such a root, so
+        // the Variables view never offers this in the first place.
+        return;
+    }
     const QString fullName = shortVarName(var).join(qsl("."));
     var->saved = true;
     savedVars.insert(fullName);
@@ -471,13 +570,22 @@ void VarUnit::addSavedVar(TVar* var)
 
 void VarUnit::removeSavedVar(TVar* var)
 {
-    const QString fullName = shortVarName(var).join(qsl("."));
-    savedVars.remove(fullName);
     var->saved = false;
+    if (rootNameReadsAsAMemberPath(var)) {
+        // ...and taking that entry out again would un-save the member, which
+        // clicking such a root's row in the Variables view used to do
+        return;
+    }
+    savedVars.remove(shortVarName(var).join(qsl(".")));
 }
 
 bool VarUnit::isSaved(TVar* var)
 {
+    if (rootNameReadsAsAMemberPath(var)) {
+        // nothing keyed by this name is about this root: the entry belongs to
+        // the member path, and addSavedVar() will not put such a root there
+        return false;
+    }
     const QString fullName = shortVarName(var).join(qsl("."));
     return (savedVars.contains(fullName) || var->saved);
 }
