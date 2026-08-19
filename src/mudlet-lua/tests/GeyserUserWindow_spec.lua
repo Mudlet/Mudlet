@@ -486,7 +486,7 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.same({x = 30, y = 40, width = 220, height = 160}, geometry("guwFloatBack"))
     end)
 
-    it("takes a hidden window's dock position without putting it on screen", function()
+    it("records the position of a window that is hidden", function()
       local userWindow = track(Geyser.UserWindow:new({name = "guwDockHidden", x = 10, y = 20, width = 200, height = 150}))
       floatAgain(userWindow)
       userWindow:hide()
@@ -494,6 +494,14 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal("right", userWindow.dockPosition)
       assert.is_true(userWindow.hidden)
     end)
+
+    -- setDockPosition reopens the dock, so a hidden user window comes back on
+    -- screen while self.hidden stays true. Geyser.Container:hide() skips the
+    -- widget for anything that already believes itself hidden, so hide() is
+    -- then a no-op and the window cannot be put away again without show()ing
+    -- it first. Recorded rather than asserted, so that fixing it does not have
+    -- to fight a spec.
+    pending("Geyser.UserWindow:setDockPosition leaving a hidden window hidden - it reopens the dock and leaves self.hidden true, which makes the window unhideable until it is shown once")
   end)
 
   pending("Geyser.UserWindow:setDockPosition docking the window against the edge it names - which edge a user window ended up docked to, and whether it docks by itself when dragged, are not readable from Lua")

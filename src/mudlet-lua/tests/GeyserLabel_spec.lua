@@ -434,13 +434,16 @@ describe("Tests functionality of Geyser.Label widget state", function()
     end)
 
     it("autoAdjustSize fits the dimensions that are auto sized", function()
-      local width, height = label:getSizeHint()
       label.autoHeight = true
+      local _, height = label:getSizeHint()
       label:autoAdjustSize()
       assert.are.same({x = 0, y = 0, width = 400, height = height}, geometry("glsHint"))
+      -- the hint is re-read, because the height it just took can move the width
+      -- Qt suggests for the same text
       label.autoWidth = true
+      local width, secondHeight = label:getSizeHint()
       label:autoAdjustSize()
-      assert.are.same({x = 0, y = 0, width = width, height = height}, geometry("glsHint"))
+      assert.are.same({x = 0, y = 0, width = width, height = secondHeight}, geometry("glsHint"))
     end)
 
     it("disableAutoAdjustSize leaves the size alone again", function()
@@ -1152,10 +1155,10 @@ describe("Tests Geyser.Label movies, callbacks and nesting", function()
   end)
 end)
 
--- The label's font, hyperlink styling and tooltip. None of the three has a
--- getter in Mudlet, so what is read back is the object's own bookkeeping and
--- what the wrapper handed the global - which is where Geyser's own defaults
--- (an underline unless one is refused, a ten second tooltip) live.
+-- The label's font, hyperlink styling and tooltip. Only the tooltip has a
+-- getter, so the other two are read back from the object's own bookkeeping and
+-- from what the wrapper handed the global - which is where Geyser's own
+-- default of an underline unless one is refused lives.
 describe("Tests Geyser.Label font, link style and tooltip", function()
   local created
 
@@ -1268,12 +1271,22 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       label = track(Geyser.Label:new({name = "glfToolTip", x = 0, y = 0, width = 200, height = 50}))
     end)
 
-    it("remembers the text and the duration, defaulting the duration to ten", function()
+    it("puts the text on the widget and remembers it", function()
+      assert.are.equal("", getLabelToolTip("glfToolTip"))
+      label:setToolTip("what this does")
+      assert.are.equal("what this does", getLabelToolTip("glfToolTip"))
+      assert.are.equal("what this does", label.toolTip)
+      label:setToolTip("and now this")
+      assert.are.equal("and now this", getLabelToolTip("glfToolTip"))
+    end)
+
+    it("defaults the duration to ten seconds", function()
+      -- the duration is not part of what getLabelToolTip reports, so the
+      -- default Geyser fills in is watched on the way to the global
       local toolTip = spy.on(_G, "setLabelToolTip")
       finally(function() toolTip:revert() end)
 
       label:setToolTip("what this does")
-      assert.are.equal("what this does", label.toolTip)
       assert.are.equal(10, label.toolTipDuration)
       assert.spy(toolTip).was.called_with("glfToolTip", "what this does", 10)
 
@@ -1282,14 +1295,13 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.spy(toolTip).was.called_with("glfToolTip", "and now this", 3)
     end)
 
-    it("forgets both again on reset", function()
-      local reset = spy.on(_G, "resetLabelToolTip")
-      finally(function() reset:revert() end)
-
+    it("takes the tooltip off the widget again on reset", function()
       label:setToolTip("temporary", 1)
+      assert.are.equal("temporary", getLabelToolTip("glfToolTip"))
+
       label:resetToolTip()
 
-      assert.spy(reset).was.called_with("glfToolTip")
+      assert.are.equal("", getLabelToolTip("glfToolTip"))
       assert.is_nil(label.toolTip)
       assert.is_nil(label.toolTipDuration)
     end)
@@ -1299,6 +1311,9 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
         name = "glfToolTipCons", x = 0, y = 0, width = 40, height = 20,
         toolTip = "from the constructor", toolTipDuration = 7,
       }))
+      -- the constraint copy alone would leave toolTip looking right, so the
+      -- widget is what says the constructor applied it
+      assert.are.equal("from the constructor", getLabelToolTip("glfToolTipCons"))
       assert.are.equal("from the constructor", built.toolTip)
       assert.are.equal(7, built.toolTipDuration)
     end)

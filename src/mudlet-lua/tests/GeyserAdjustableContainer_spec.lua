@@ -1284,7 +1284,7 @@ describe("Tests the cost of resizing an Adjustable.Container by its edge", funct
     -- undone from the same one: a second call would drop the first, leaving
     -- every later spec running against a mouse frozen at (500, 400)
     finally(function()
-      container:onRelease(container.adjLabel, event)
+      pcall(function() container:onRelease(container.adjLabel, event) end)
       geyser.getMousePosition = realGetMousePosition
     end)
     container:onRelease(container.adjLabel, event)
@@ -1345,6 +1345,10 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   before_each(function()
     containers = {}
     borderBefore = getBorderLeft()
+    -- the border a container reserves is the widest reservation on that edge,
+    -- so an exact comparison below is only meaningful while this block owns it
+    assert.is_true(table.is_empty(Adjustable.Container.Attached.left or {}),
+                   "something outside this file is attached to the left border")
     topLevelBefore = {}
     for name in pairs(Geyser.windowList) do
       topLevelBefore[name] = true
@@ -1358,16 +1362,23 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       killTimer(Geyser.Label.closeAllTimer)
       Geyser.Label.closeAllTimer = nil
     end
+    -- pcall, because a raise in one teardown would otherwise strand every
+    -- container after it, each still holding a border reservation and a live
+    -- sysWindowResizeEvent handler
+    local teardownError
     for index = #containers, 1, -1 do
       local container = containers[index]
-      if container.attached then
-        container:detach()
-      end
-      container:deleteSaveFile()
-      container:deleteSaveFile(scratchDir)
-      if Adjustable.Container.all[container.name] == container then
-        container:delete()
-      end
+      local ok, err = pcall(function()
+        if container.attached then
+          container:detach()
+        end
+        container:deleteSaveFile()
+        container:deleteSaveFile(scratchDir)
+        if Adjustable.Container.all[container.name] == container then
+          container:delete()
+        end
+      end)
+      teardownError = teardownError or (not ok and err)
       Adjustable.Container.all[container.name] = nil
       local registered = table.index_of(Adjustable.Container.all_windows, container.name)
       if registered then
@@ -1397,6 +1408,9 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     -- last, because detaching above is what hands the border back: a restore
     -- from an inner after_each would run before that and net nothing
     setBorderLeft(borderBefore)
+    if teardownError then
+      error(teardownError)
+    end
   end)
 
   describe("Adjustable.Container:adjustBorder/setBorderMargin/resetBorder", function()
@@ -1478,8 +1492,9 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_true(getBorderLeft() > 0)
       container:detach()
       assert.are.equal(0, getBorderLeft())
-      -- and a border nothing was ever attached to is left alone
-      assert.has_no.errors(function() container:resetBorder("top") end)
+      -- and asking again is idempotent rather than reserving anything back
+      container:resetBorder("left")
+      assert.are.equal(0, getBorderLeft())
     end)
   end)
 
@@ -1548,21 +1563,32 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     -- the border is re-measured off a timer rather than on the resize event,
     -- because setting a border raises another resize event and doing the work
     -- inline would loop
+    -- resizeBorder does not keep the id of the timer it arms, so nothing can
+    -- kill one: the timer is stubbed out rather than spied on, or every spec
+    -- here would leave one to fire on a deleted container 0.2s later
+    local function countTimers()
+      local armed = 0
+      local realTempTimer = tempTimer
+      _G.tempTimer = function() armed = armed + 1 return -1 end
+      finally(function() _G.tempTimer = realTempTimer end)
+      return function() return armed end
+    end
+
     it("arms a timer the first time the window size is seen to have changed", function()
       local container = make("gapResizeBorder")
-      local timer = spy.on(_G, "tempTimer")
-      finally(function() timer:revert() end)
+      local armed = countTimers()
 
       container:resizeBorder()
-      assert.spy(timer).was.called(1)
+      assert.are.equal(1, armed())
 
       -- the size has not moved since, so a second event has nothing to do
       container:resizeBorder()
-      assert.spy(timer).was.called(1)
+      assert.are.equal(1, armed())
     end)
 
     it("remembers the size it last saw", function()
       local container = make("gapResizeRemembers")
+      countTimers()
       local mainWidth, mainHeight = getMainWindowSize()
       container:resizeBorder()
       assert.are.equal(mainWidth, container.old_w_value)
@@ -1702,17 +1728,35 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   end)
 
   describe("Adjustable.Container:enableAutoSave/disableAutoSave", function()
-    it("registers and unregisters the handler that saves on exit", function()
+    -- killAnonymousEventHandler answers nil and "Handler with ID 'n' not
+    -- found." for an id it no longer holds, which is how a registration can be
+    -- told apart from a dead one without raising sysExitEvent
+    local function handlerAlive(id)
+      if not id then
+        return false
+      end
+      if killAnonymousEventHandler(id) then
+        return true
+      end
+      return false
+    end
+
+    it("registers a handler that saves on exit, and kills it again", function()
       local container = make("gapAutoSave")
       -- made with autoSave off, so there is nothing registered to begin with
       assert.is_false(container.autoSave)
+      assert.is_nil(container.autoSaveHandler)
 
       container:enableAutoSave()
       assert.is_true(container.autoSave)
-      assert.is_not_nil(container.autoSaveHandler)
+      local handler = container.autoSaveHandler
+      assert.is_not_nil(handler)
 
       container:disableAutoSave()
       assert.is_false(container.autoSave)
+      -- the handler is really gone rather than only flagged off
+      assert.is_false(handlerAlive(handler))
+      container.autoSaveHandler = nil
     end)
 
     it("keeps the one handler it already has rather than stacking a second", function()
@@ -1722,7 +1766,16 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:enableAutoSave()
       assert.are.equal(handler, container.autoSaveHandler)
       container:disableAutoSave()
+      container.autoSaveHandler = nil
     end)
+
+    -- disableAutoSave kills the handler but leaves its id on the container, and
+    -- enableAutoSave only registers when autoSaveHandler is nil. Turning auto
+    -- saving off and on again therefore leaves the container claiming autoSave
+    -- is true with nothing registered behind it, so its layout is silently not
+    -- written at exit. Recorded rather than asserted, so that fixing it does
+    -- not have to fight a spec.
+    pending("Adjustable.Container:enableAutoSave registering again after disableAutoSave - the killed handler's id is left behind, so the second enable short-circuits and nothing saves on exit")
   end)
 
   describe("Adjustable.Container lock styles", function()

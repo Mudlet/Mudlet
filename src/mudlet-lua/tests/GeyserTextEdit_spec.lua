@@ -181,9 +181,13 @@ describe("Tests functionality of Geyser.TextEdit", function()
       assert.are.equal("QPlainTextEdit { color: #eee; }", editor.stylesheet)
       assert.spy(styleSheet).was.called_with("gteProps", "QPlainTextEdit { color: #eee; }")
 
+      -- called_with is satisfied by any recorded call, so the second one is
+      -- read off the spy directly: the remembered sheet has to be what it sent
       editor:setStyleSheet()
       assert.spy(styleSheet).was.called(2)
-      assert.spy(styleSheet).was.called_with("gteProps", "QPlainTextEdit { color: #eee; }")
+      local second = styleSheet.calls[2].vals
+      assert.are.equal("gteProps", second[1])
+      assert.are.equal("QPlainTextEdit { color: #eee; }", second[2])
     end)
 
     it("none of the setters disturbs the text", function()
