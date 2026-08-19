@@ -3200,9 +3200,14 @@ describe("Tests db:create with a single column name as _index", function()
     local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "citty"}})
     assert.is_truthy(string.find(warnings, '_index names "citty", which is not one of the sheet\'s columns', 1, true))
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
-    -- the typo left the sheet asking for no index it can have, so the one it
-    -- used to have is orphaned like any other index no longer asked for
-    assert.are.same({}, indexNames("people"))
+    -- and the index the sheet had is still there: what is left of _index is no
+    -- longer the whole set it asked for, so nothing is pruned against it
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+
+    -- only for as long as the typo is there, though: a sheet that asks for an
+    -- index it can have prunes the ones it no longer asks for, as ever
+    db:create(dbName, {people = {name = "", city = "", _index = "name"}})
+    assert.are.same({db:_index_name("people", "name")}, indexNames("people"))
   end)
 
   it("warns about a typo in a list or a compound index too", function()
@@ -3216,8 +3221,9 @@ describe("Tests db:create with a single column name as _index", function()
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, '_index names "citty"', 1, true))
     -- a compound index is wanted whole: an index on the half of it that names a
-    -- real column is not the one that was asked for
-    assert.are.same({}, indexNames("people"))
+    -- real column is not the one that was asked for, and the single-column index
+    -- the sheet already had is not dropped over it either
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
   end)
 
   it("warns about a sort direction where a column name belongs", function()
