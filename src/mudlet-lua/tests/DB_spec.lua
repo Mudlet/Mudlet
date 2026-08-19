@@ -3176,59 +3176,81 @@ describe("Tests db:create with a single column name as _index", function()
     assert.are.equal("Bob", rows[1].name)
   end)
 
-  it("refuses a column the sheet does not have, keeping the indexes it had", function()
-    -- an index on a column that is not there can never be created, and taking
-    -- the typo for the wanted set would drop the indexes the sheet did have
+  -- db:create reports an index it cannot make through printError and carries
+  -- on, so what it says is collected rather than caught
+  local function createCollectingWarnings(sheets)
+    local collected = {}
+    -- through _G: a spec file's globals are its own, so plain assignment would
+    -- leave db:create with the printError it already has
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = db:create(dbName, sheets)
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  it("warns about a column the sheet does not have instead of refusing the sheet", function()
+    -- an index on a column that is not there can never be created, but the rest
+    -- of the sheet is sound and its data is reachable without the index
     db:create(dbName, {people = {name = "", city = "", _index = "city"}})
     assert.are.equal(1, #indexNames("people"))
 
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = "citty"}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "citty", which is not one of the sheet\'s columns', 1, true))
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "citty"}})
+    assert.is_truthy(string.find(warnings, '_index names "citty", which is not one of the sheet\'s columns', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+    -- and the index the sheet had is still there: what is left of _index is no
+    -- longer the whole set it asked for, so nothing is pruned against it
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+
+    -- only for as long as the typo is there, though: a sheet that asks for an
+    -- index it can have prunes the ones it no longer asks for, as ever
+    db:create(dbName, {people = {name = "", city = "", _index = "name"}})
+    assert.are.same({db:_index_name("people", "name")}, indexNames("people"))
+  end)
+
+  it("warns about a typo in a list or a compound index too", function()
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {"city", "citty"}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_index names "citty"', 1, true))
+    -- only the entry that names the column which is not there is dropped
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+
+    mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {{"city", "citty"}}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_index names "citty"', 1, true))
+    -- a compound index is wanted whole: an index on the half of it that names a
+    -- real column is not the one that was asked for, and the single-column index
+    -- the sheet already had is not dropped over it either
     assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
   end)
 
-  it("refuses a typo in a list or a compound index too", function()
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = {"city", "citty"}}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "citty"', 1, true))
-
-    ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = {{"city", "citty"}}}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "citty"', 1, true))
-  end)
-
-  it("refuses a sort direction where a column name belongs", function()
+  it("warns about a sort direction where a column name belongs", function()
     -- db:_sql_columns would render "name" desc, but db:_index_valid refuses the
     -- entry, so an index with a sort direction has never been created: saying so
     -- beats leaving the sheet with no index and no complaint
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = {{"name", "desc"}}}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, "an index takes column names only, not a sort direction", 1, true))
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {{"name", "desc"}}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, "an index takes column names only, not a sort direction", 1, true))
+    assert.are.same({}, indexNames("people"))
 
-    -- a sheet that really has a column of that name is not refused; what
+    -- a sheet that really has a column of that name is not warned about; what
     -- db:_sql_columns then makes of it is that function's business
-    assert.is_table(db:create(dbName, {people = {name = "", desc = "", _index = {{"name", "desc"}}}}))
+    local other, otherWarnings = createCollectingWarnings({people = {name = "", desc = "", _index = {{"name", "desc"}}}})
+    assert.is_table(other)
+    assert.are.equal("", otherWarnings)
   end)
 
-  it("refuses the _row_id no sheet definition names either", function()
+  it("warns about the _row_id no sheet definition names either", function()
     -- the sheet is given one, but no definition declares it: it is not there to
     -- index on the db:create that makes the sheet, and db:_drop_orphaned_indexes
     -- cannot match the leading underscore, so an index on it was dropped and
     -- made again on every db:create after that
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = "_row_id"}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "_row_id"', 1, true))
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "_row_id"}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_index names "_row_id"', 1, true))
+    assert.are.same({}, indexNames("people"))
   end)
 end)
 
