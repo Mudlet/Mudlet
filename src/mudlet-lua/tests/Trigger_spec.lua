@@ -1058,12 +1058,23 @@ describe("Trigger processing", function()
 
     end)
 
-    -- Prompt pipeline. Only the creation contracts are exercised here; a prompt
-    -- trigger *firing* is still untested, and the feedTelnet block above shows
-    -- how to inject the IAC GA that would need.
+    -- Prompt pipeline, driven through the real telnet parser: a prompt trigger
+    -- matches on the line having been marked a prompt and on nothing else, so
+    -- feedTriggers() can never fire one and the IAC GA the feedTelnet block
+    -- above injects is the only way in.
     describe("prompt triggers and isPrompt", function()
 
+        -- Killed here rather than at the end of the spec that made it: a
+        -- prompt trigger has no pattern to be choosy about, so one left behind
+        -- by a failed assertion would fire on every prompt the rest of the
+        -- suite feeds.
+        local liveTriggerId
+
         after_each(function()
+            if liveTriggerId then
+                killTrigger(liveTriggerId)
+                liveTriggerId = nil
+            end
             disableTrigger("SpecPermPrompt")
             _G.TrigSpec = nil
         end)
@@ -1100,6 +1111,27 @@ describe("Trigger processing", function()
             assert.is_nil(id)
             assert.is_string(err)
             assert.is_truthy(err:find("greater than zero", 1, true), "got: " .. tostring(err))
+        end)
+
+        it("tempPromptTrigger fires on a line the server ended with IAC GA", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function() _G.TrigSpec.fired = _G.TrigSpec.fired + 1 end)
+            assert.is_number(liveTriggerId)
+
+            local ok, msg = feedTelnet("SpecPromptFires> <T_IAC><T_GA>")
+            local afterPrompt = _G.TrigSpec.fired
+            -- the GA leaves the prompt line open, and the specs after this one
+            -- read the buffer
+            feedTelnet("\r\n")
+            -- an ordinary line carries no prompt mark, so it must leave the
+            -- count where the prompt put it
+            feedTelnet("SpecPromptOrdinaryLine\r\n")
+            local afterOrdinary = _G.TrigSpec.fired
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, afterPrompt, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(1, afterOrdinary, "the prompt trigger fired on a line that was not a prompt")
         end)
 
     end)

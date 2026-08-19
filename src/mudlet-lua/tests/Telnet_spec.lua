@@ -144,3 +144,23 @@ describe("Tests telnet subnegotiation handling", function()
     assert.is_nil(displayed:find("SUBNEG_LEAK_MARKER", 1, true), "subnegotiation payload past the size cap leaked into the display instead of being dropped until IAC SE")
   end)
 end)
+
+describe("Tests addSupportedTelnetOption", function()
+  -- Only the argument contract is reachable. What the call changes is the
+  -- reply cTelnet writes back when the server offers that option - IAC DO
+  -- rather than IAC DONT - and the option bit that goes with it, which nothing
+  -- outside further negotiation and the editor's statistics report ever reads.
+  -- Bytes sent to the server are not observable from Lua, and the report is
+  -- reachable only from a button in the editor, so the acceptance itself
+  -- cannot be asserted here.
+
+  it("returns nothing for an option number it accepts", function()
+    -- 200 is unassigned, so registering it changes nothing any other spec sees
+    assert.is_nil(addSupportedTelnetOption(200))
+  end)
+
+  it("raises a Lua error when the option is missing or not a number", function()
+    assert.has_error(function() addSupportedTelnetOption() end)
+    assert.has_error(function() addSupportedTelnetOption("mssp") end)
+  end)
+end)
