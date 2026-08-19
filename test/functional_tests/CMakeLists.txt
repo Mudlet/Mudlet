@@ -33,6 +33,7 @@ endif()
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
+    FrontendRefreshSeamTest.cpp
     GlyphOverflowTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
@@ -339,6 +340,10 @@ set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
 # a loaded machine even though the file runs in ~2s
 set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
+
+# FrontendRefreshSeamTest creates a fresh profile per test method, and one of them waits out the
+# post-load tab indicator refresh before it can prove anything, so it needs a longer timeout
+set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
