@@ -318,6 +318,21 @@ end
 --- any columns or indexes which didn't exist before to that database. If the database already has all the
 --- specified columns and indexes, it will do nothing. <br/><br/>
 ---
+--- Because it is meant to run unguarded, a fault in the schema is only fatal when it has to be,
+--- and where that line falls depends on what the faulty part holds. Something derived can be left
+--- out and reported: an _index naming a column the sheet does not declare is skipped rather than
+--- refused, because every row stays reachable without the index. A column is not derived. A sheet
+--- built without one takes writes to it silently, since db:add reports the rejected INSERT the
+--- same way and returns nil, which callers do not check, so a script can record nothing for weeks
+--- with no sign of it. A fault that would cost the sheet a column therefore stays fatal, and its
+--- message names the key so the fix is obvious. A value whose shape no sheet can be built from is
+--- refused as well, whatever it holds: a malformed _index, _unique or _violations leaves nothing to
+--- skip and nothing to build from. <br/><br/>
+---
+--- Note when weighing that up that printError is a quiet channel: it reaches the editor's Errors
+--- tab, which is hidden until the user opens it, and the main console only when they have turned
+--- on echoing Lua errors. <br/><br/>
+---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
 --- Mudlet configuration directory. <br/><br/>
 ---
@@ -365,12 +380,17 @@ end
 ---   A sheet may also be given as a plain list of its column names, which then all
 ---   hold text and default to "". The sheet options are keys rather than list members,
 ---   so they work there too: enemies = {"name", "city", _index = "city"}
+---   An _index entry naming a column the sheet does not have cannot be created, so
+---   that entry is skipped and a warning is printed, while everything else the
+---   sheet asks for is made as usual. The indexes the sheet already has are left
+---   alone in that case, since what is left of _index is no longer the whole set
+---   it asked for.
 function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
   end
 
-  local is_valid, msgs = true, {}
+  local is_valid, msgs, warnings = true, {}, {}
   local schema = {}
   db_name = db:safe_name(db_name)
 
@@ -383,6 +403,7 @@ function db:create(db_name, sheets, force)
   for sheet_name, sheet in pairs(sheets) do
     local columns = {}
     local options = {}
+    local has_skipped_index = false
 
     -- the sheet was provided in {"column1", "column2"} format
     if sheet[1] ~= nil then
@@ -458,40 +479,65 @@ function db:create(db_name, sheets, force)
         options._index = { options._index }
       end
 
-      -- An index on a column this sheet does not declare is refused rather than
-      -- carried: db:_migrate_indexes cannot make the index a typo asks for, and
-      -- a typo that replaced the only entry leaves db:_drop_orphaned_indexes
-      -- treating it as the whole wanted set, dropping the index the sheet did
-      -- have. The shapes _validate_index refused above are left to it to report.
+      -- An index on a column this sheet does not declare is dropped from the
+      -- wanted set and reported rather than carried: db:_migrate_indexes cannot
+      -- make the index a typo asks for, and leaving the entry in place has
+      -- db:_drop_orphaned_indexes take the typo for part of the wanted set. It
+      -- is a warning rather than an error because the rest of the sheet is
+      -- sound and its data is reachable without the index, so a script that has
+      -- lived with the stray name goes on working. What is left of _index is no
+      -- longer everything the sheet asked for, though, so the sheet is marked
+      -- for db:_drop_orphaned_indexes to leave the indexes it has alone. The
+      -- shapes _validate_index refused above are left to it to report.
       if type(options._index) == "table" then
+        local wanted = {}
+
         for _, index_entry in ipairs(options._index) do
           local index_columns = type(index_entry) == "table" and index_entry or {index_entry}
+          local unknown_column
+
           for _, column_name in ipairs(index_columns) do
-            if type(column_name) == "string" and columns[column_name] == nil then
-              local lowered = column_name:lower()
-              is_valid = false
-              if column_name == "_row_id" then
-                table.insert(msgs, "db:create - "..sheet_name.." - _index names \"_row_id\", which is the "..
-                  "key every sheet is given rather than one of its own columns.")
-              elseif lowered == "asc" or lowered == "desc" then
-                -- db:_sql_columns would build the ordering term, but
-                -- db:_index_valid refuses it, so the index was never made
-                table.insert(msgs, "db:create - "..sheet_name.." - _index names \""..column_name..
-                  "\", and an index takes column names only, not a sort direction.")
-              else
-                table.insert(msgs, "db:create - "..sheet_name.." - _index names \""..column_name..
-                  "\", which is not one of the sheet's columns.")
-              end
+            if not unknown_column and type(column_name) == "string" and columns[column_name] == nil then
+              unknown_column = column_name
+            end
+          end
+
+          -- one unknown column costs the whole entry: a compound index on the
+          -- rest of its columns is not the one that was asked for
+          if not unknown_column then
+            wanted[#wanted + 1] = index_entry
+          else
+            has_skipped_index = true
+
+            if unknown_column == "_row_id" then
+              table.insert(warnings, "db:create - "..sheet_name.." - _index names \"_row_id\", which is the "..
+                "key every sheet is given rather than one of its own columns: that index is skipped.")
+            elseif unknown_column:lower() == "asc" or unknown_column:lower() == "desc" then
+              -- db:_sql_columns would build the ordering term, but
+              -- db:_index_valid refuses it, so the index was never made
+              table.insert(warnings, "db:create - "..sheet_name.." - _index names \""..unknown_column..
+                "\", and an index takes column names only, not a sort direction: that index is skipped.")
+            else
+              table.insert(warnings, "db:create - "..sheet_name.." - _index names \""..unknown_column..
+                "\", which is not one of the sheet's columns: that index is skipped.")
             end
           end
         end
+
+        options._index = wanted
       end
     end
 
-    schema[sheet_name] = { columns = columns, options = options }
+    schema[sheet_name] = { columns = columns, options = options, has_skipped_index = has_skipped_index }
   end
 
   assert(is_valid, table.concat(msgs, "\n"))
+
+  -- after the assert: what is wrong with the schema comes before what was left
+  -- out of it, and a sheet that never got made has nothing to warn about
+  for _, warning in ipairs(warnings) do
+    printError(warning, true, false)
+  end
 
   if not db:_isActiveDBName(db_name) then
     db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
@@ -1005,6 +1051,15 @@ end
 -- Conditionally drops orphaned indexes.
 function db:_drop_orphaned_indexes(conn, s_name, schema)
   local cur, err;
+
+  -- db:create dropped an _index entry naming a column the sheet does not have,
+  -- so what is left of _index is not the whole set the sheet asked for and
+  -- pruning against it would take the indexes the typo never mentioned with it.
+  -- Nothing is dropped this time round; the create that spells the column right
+  -- prunes as usual.
+  if schema.has_skipped_index then
+    return true, nil
+  end
 
   local sql = ([[
     SELECT

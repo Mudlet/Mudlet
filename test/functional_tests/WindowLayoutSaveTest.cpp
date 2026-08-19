@@ -30,6 +30,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -68,8 +69,6 @@ private:
     // than inside one, so this test gets a configuration directory of its own
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
-
-    static bool portableMarkerPresent() { return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())); }
 
     // Returns the Lua error, or a null QString when the chunk ran
     QString runLua(const QString& code) const
@@ -158,9 +157,13 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-        QDir(path).removeRecursively();
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            QDir(path).removeRecursively();
+            delete mudlet::self();
+        }
         if (mSavedXdgConfigHome.isEmpty()) {
             qunsetenv("XDG_CONFIG_HOME");
         } else {

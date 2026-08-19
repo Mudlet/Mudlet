@@ -35,6 +35,7 @@
 #include <QPushButton>
 #include <QScrollBar>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -52,6 +53,10 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         QVERIFY(mConfigDir.isValid());
         // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in marker, without which
         // setupConfig() would keep using a legacy ~/.config/mudlet

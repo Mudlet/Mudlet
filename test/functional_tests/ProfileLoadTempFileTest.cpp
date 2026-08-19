@@ -40,6 +40,7 @@
 
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -98,13 +99,6 @@ private:
             return false;
         }
         return file.setFileTime(when, QFileDevice::FileModificationTime);
-    }
-
-    // setupConfig() prefers a portable.txt marker over the XDG override; skip
-    // rather than report a baffling failure if one is present:
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
 private slots:

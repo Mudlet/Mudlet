@@ -37,6 +37,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
@@ -149,12 +150,6 @@ private:
                 {"coroutine", qsl("qaCoroutine"), qsl("qaCoroutine = {a = 1, co = coroutine.create(function() end)}"), {}, emptyTableCheck(qsl("qaCoroutine"))},
                 {"array and hash with a function", qsl("qaArrayHash"), qsl("qaArrayHash = {1, 2, function() end, x = 1}"), {}, emptyTableCheck(qsl("qaArrayHash"))},
         };
-    }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
 private slots:

@@ -36,6 +36,7 @@
 #include <QTemporaryFile>
 #include <QXmlStreamReader>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -79,6 +80,10 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
         QVERIFY(mConfigDir.isValid());
@@ -229,7 +234,9 @@ private slots:
 
         lua_State* L = luaL_newstate();
         QVERIFY(L);
-        auto closeState = qScopeGuard([L]() { lua_close(L); });
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
 
         int compiled = 0;
         for (const QString& package : packages) {

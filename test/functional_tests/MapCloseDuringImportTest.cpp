@@ -50,6 +50,7 @@
 
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -123,6 +124,10 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         QVERIFY(mConfigDir.isValid());
         QVERIFY(mSaveDir.isValid());
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");

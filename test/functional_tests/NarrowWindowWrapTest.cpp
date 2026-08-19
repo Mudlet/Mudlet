@@ -25,6 +25,7 @@
 #include <functional>
 #include <thread>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -58,12 +59,6 @@ private:
     const QString mMiniConsole = "wrapTest";
     // U+6F22 U+5B57 - East Asian Wide, so two columns are needed per glyph
     const QString mWideText = QString(QChar(0x6F22)) + QChar(0x5B57);
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase()

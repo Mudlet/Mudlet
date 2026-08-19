@@ -21,6 +21,7 @@
 #include <QPushButton>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "TFeatureCallout.h"
 #include "enums.h"
 #include "mudlet.h"
@@ -46,12 +47,6 @@ private:
     const QString mFeatureId = qsl("test-callout");
     QWidget* mpWindow = nullptr;
     QCheckBox* mpAnchor = nullptr;
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     QString dismissedKey() const { return qsl("whatsNew/%1/dismissed").arg(mFeatureId); }
 

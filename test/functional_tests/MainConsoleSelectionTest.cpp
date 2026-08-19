@@ -22,6 +22,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -79,12 +80,6 @@ private:
         const QPointF globalPos = w->mapToGlobal(localPos.toPoint());
         QMouseEvent event(type, localPos, globalPos, button, buttons, Qt::NoModifier);
         QApplication::sendEvent(w, &event);
-    }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
 private slots:

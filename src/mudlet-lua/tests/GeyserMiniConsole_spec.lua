@@ -403,6 +403,12 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       assert.are.equal("blue line", firstLine())
     end)
 
+    it("creplaceLine swaps the line with a named colour", function()
+      console:creplaceLine("<red>named line")
+      assert.are.equal("named line", firstLine())
+      assert.are.same(color_table["red"], getTextFormat("gmcReplace").foreground)
+    end)
+
     it("fg and bg colour what is echoed next", function()
       console:clear()
       console:fg("red")
@@ -491,6 +497,39 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       assert.are.equal("hex link", currentLine())
     end)
 
+    it("inserts a plain link and a plain popup at the cursor", function()
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:insertLink("C", "send('x')", "hint", true)
+      console:moveCursor(0, 0)
+      assert.are.equal("ACB", currentLine())
+
+      console:clear()
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:insertPopup("D", {"send('one')"}, {"first"}, true)
+      console:moveCursor(0, 0)
+      assert.are.equal("ADB", currentLine())
+    end)
+
+    it("inserts decimal and hex popups at the cursor", function()
+      local commands = {"send('one')", "send('two')"}
+      local hints = {"first", "second"}
+
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:dinsertPopup("<0,255,0>D", commands, hints, true)
+      console:moveCursor(0, 0)
+      assert.are.equal("ADB", currentLine())
+
+      console:clear()
+      console:echo("AB\n")
+      console:moveCursor(1, 0)
+      console:hinsertPopup("#0000ffE", commands, hints, true)
+      console:moveCursor(0, 0)
+      assert.are.equal("AEB", currentLine())
+    end)
+
     it("inserts colour, decimal and hex links at the cursor", function()
       console:echo("AB\n")
       console:moveCursor(1, 0)
@@ -552,6 +591,306 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       assert.spy(setLinkSpy).was.called_with("gmcLinks", "send('x')", "hint")
       console:moveCursor(0, 0)
       assert.are.equal("clickable", currentLine())
+    end)
+  end)
+
+  -- Every one of these is a one line wrapper around the Mudlet global of the
+  -- same name, so what each spec pins is that the wrapper reaches this console
+  -- rather than the main window: a wrapper that forgot self.name would answer
+  -- from the main console and look plausible.
+  describe("Geyser.MiniConsole buffer getters", function()
+    local console
+
+    before_each(function()
+      console = track(Geyser.MiniConsole:new({name = "gmcGetters", x = 0, y = 0, width = 400, height = 200}))
+      console:setWrap(60)
+      console:echo("alpha\nbeta\ngamma\n")
+    end)
+
+    it("counts the lines it holds and names the last one", function()
+      -- getLineCount answers the index of the console's last line, and the
+      -- trailing newline leaves an empty line after "gamma"
+      assert.are.equal(3, console:getLineCount())
+      assert.are.equal(3, console:getLastLineNumber())
+      assert.are.equal(getLineCount("gmcGetters"), console:getLineCount())
+    end)
+
+    it("reports where the cursor is", function()
+      console:moveCursor(0, 1)
+      assert.are.equal(1, console:getLineNumber())
+      assert.are.equal(0, console:getColumnNumber())
+      console:moveCursor(2, 1)
+      assert.are.equal(2, console:getColumnNumber())
+    end)
+
+    it("hands back a range of lines and the one under the cursor", function()
+      -- the range is walked forwards from the first line for as many lines as
+      -- the two are apart, so the last line asked for is not included
+      assert.are.same({"alpha", "beta"}, console:getLines(0, 2))
+      assert.are.same({"alpha", "beta", "gamma"}, console:getLines(0, 3))
+      console:moveCursor(0, 1)
+      console:selectCurrentLine()
+      assert.are.equal("beta", console:getCurrentLine())
+    end)
+
+    it("selectSection selects part of a line and getSelection reads it back", function()
+      console:moveCursor(0, 0)
+      assert.is_true(console:selectSection(1, 3))
+      assert.are.equal("lph", console:getSelection())
+    end)
+
+    it("getTextFormat describes the selected text", function()
+      console:clear()
+      console:setFgColor(255, 0, 0)
+      console:setBold(true)
+      console:echo("formatted\n")
+      console:moveCursor(0, 0)
+      console:selectCurrentLine()
+      local format = console:getTextFormat()
+      assert.are.same({255, 0, 0}, format.foreground)
+      assert.is_true(format.bold)
+    end)
+
+    it("reports the wrap it was set to and the font size it is drawn at", function()
+      assert.are.equal(60, console:getWindowWrap())
+      console:setFontSize(14)
+      assert.are.equal(14, console:getFontSize())
+    end)
+
+    it("reports how many characters fit across it and how many rows down", function()
+      local charWidth, charHeight = console:calcFontSize()
+      assert.is_true(charWidth > 0 and charHeight > 0)
+      assert.are.same({calcFontSize("gmcGetters")}, {console:calcFontSize()})
+      -- the counts follow the console's own size, so a narrower console has to
+      -- report fewer columns rather than the main window's
+      local columns, rows = console:getColumnCount(), console:getRowCount()
+      assert.is_true(columns > 0 and rows > 0)
+      console:resize(100, 200)
+      assert.is_true(console:getColumnCount() < columns)
+    end)
+  end)
+
+  -- The first scroll of a console opens its split view, and that one is
+  -- applied on the next turn of the event loop rather than on the call, so
+  -- every reading here is taken after pumping. Opening the split also shortens
+  -- the upper pane, and that first scroll compensates for it by the height of
+  -- the pane that appeared, so only the first scroll of a console lands above
+  -- the line it asked for - hence openSplit() below. Later scrolls go through
+  -- the pane that is already there, synchronously and to the exact line.
+  describe("Geyser.MiniConsole scrolling", function()
+    local console
+
+    local function openSplit()
+      console:scrollTo(50)
+      pumpEvents(50)
+    end
+
+    before_each(function()
+      console = track(Geyser.MiniConsole:new({name = "gmcScroll", x = 0, y = 0, width = 400, height = 200}))
+      for index = 1, 60 do
+        console:echo("line " .. index .. "\n")
+      end
+    end)
+
+    it("scrollingActive follows enableScrolling and disableScrolling", function()
+      assert.is_true(console:scrollingActive())
+      console:disableScrolling()
+      assert.is_false(console.scrolling)
+      assert.is_false(console:scrollingActive())
+      console:enableScrolling()
+      assert.is_true(console.scrolling)
+      assert.is_true(console:scrollingActive())
+    end)
+
+    it("starts at the end of its buffer", function()
+      assert.are.equal(console:getLastLineNumber(), console:getScroll())
+    end)
+
+    -- how far above the asked for line the first scroll lands is the height of
+    -- the split pane that just appeared, which no Lua getter reports, so what
+    -- is pinned is that the console scrolled back and did not overshoot past
+    -- the line it was given
+    it("scrolls back on the first scroll, which is what opens the split", function()
+      local atTheEnd = console:getScroll()
+      console:scrollTo(50)
+      pumpEvents(50)
+      local scrolled = console:getScroll()
+      assert.is_true(scrolled < atTheEnd, "the console did not scroll back at all")
+      assert.is_true(scrolled > 0 and scrolled <= 50,
+                     "the first scroll landed at " .. scrolled .. ", which is not at or above line 50")
+    end)
+
+    it("scrolls to the line it is given once the split is open", function()
+      openSplit()
+      console:scrollTo(20)
+      pumpEvents(50)
+      assert.are.equal(20, console:getScroll())
+      console:scrollTo(35)
+      pumpEvents(50)
+      assert.are.equal(35, console:getScroll())
+    end)
+
+    it("scrollUp and scrollDown walk from where it already is", function()
+      openSplit()
+      console:scrollTo(30)
+      pumpEvents(50)
+      console:scrollUp(5)
+      pumpEvents(50)
+      assert.are.equal(25, console:getScroll())
+      console:scrollDown(10)
+      pumpEvents(50)
+      assert.are.equal(35, console:getScroll())
+    end)
+
+    it("scrollUp and scrollDown move one line when given no count", function()
+      openSplit()
+      console:scrollTo(30)
+      pumpEvents(50)
+      console:scrollUp()
+      pumpEvents(50)
+      assert.are.equal(29, console:getScroll())
+      console:scrollDown()
+      pumpEvents(50)
+      assert.are.equal(30, console:getScroll())
+    end)
+
+    it("scrollUp will not walk back past the top of the buffer", function()
+      openSplit()
+      console:scrollTo(3)
+      pumpEvents(50)
+      console:scrollUp(500)
+      pumpEvents(50)
+      assert.are.equal(0, console:getScroll())
+    end)
+
+    it("scrollTo with no line goes back to the end", function()
+      openSplit()
+      console:scrollTo(20)
+      pumpEvents(50)
+      assert.are.equal(20, console:getScroll())
+      console:scrollTo()
+      pumpEvents(50)
+      assert.are.equal(console:getLastLineNumber(), console:getScroll())
+    end)
+
+    it("will not scroll a console that has scrolling turned off", function()
+      console:disableScrolling()
+      local atTheEnd = console:getScroll()
+      console:scrollTo(10)
+      pumpEvents(50)
+      assert.are.equal(atTheEnd, console:getScroll())
+    end)
+  end)
+
+  describe("Geyser.MiniConsole scroll bars", function()
+    it("enableScrollBar and disableScrollBar put the bar on the widget", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBar", x = 0, y = 0, width = 300, height = 100}))
+      -- a console the constructor was given no scrollBar constraint has one
+      -- turned off, which is what makes the enable below observable
+      assert.is_false(getScrollBarVisible("gmcScrollBar"))
+      console:enableScrollBar()
+      assert.is_true(console.scrollBar)
+      assert.is_true(getScrollBarVisible("gmcScrollBar"))
+      console:disableScrollBar()
+      assert.is_false(console.scrollBar)
+      assert.is_false(getScrollBarVisible("gmcScrollBar"))
+    end)
+
+    -- turning the bar on also has to re-derive an auto wrap, because
+    -- resetAutoWrap keeps 15 pixels clear for it and the text would otherwise
+    -- run under it
+    it("enableScrollBar takes room off the wrap and disableScrollBar gives it back", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBarWrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true}))
+      local charWidth = calcFontSize("gmcScrollBarWrap")
+
+      console:enableScrollBar()
+      assert.are.equal(math.floor((300 - 15) / charWidth), getWindowWrap("gmcScrollBarWrap"))
+
+      console:disableScrollBar()
+      assert.are.equal(math.floor(300 / charWidth), getWindowWrap("gmcScrollBarWrap"))
+    end)
+
+    it("the horizontal scroll bar is remembered on the object and reaches Mudlet", function()
+      -- getScrollBarVisible reports the vertical bar only, and a horizontal one
+      -- costs no width either, so it leaves nothing readable behind: the
+      -- delegation is what can be checked
+      local enable = spy.on(_G, "enableHorizontalScrollBar")
+      local disable = spy.on(_G, "disableHorizontalScrollBar")
+      finally(function() enable:revert() disable:revert() end)
+      local console = track(Geyser.MiniConsole:new({name = "gmcHScrollBar", x = 0, y = 0, width = 300, height = 100}))
+
+      console:enableHorizontalScrollBar()
+      assert.is_true(console.horizontalScrollBar)
+      assert.spy(enable).was.called_with("gmcHScrollBar")
+
+      console:disableHorizontalScrollBar()
+      assert.is_false(console.horizontalScrollBar)
+      assert.spy(disable).was.called_with("gmcHScrollBar")
+    end)
+
+    it("takes the scroll bar constraint it was built with", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBarCons", x = 0, y = 0, width = 300, height = 100, scrollBar = true, horizontalScrollBar = true}))
+      assert.is_true(console.scrollBar)
+      assert.is_true(console.horizontalScrollBar)
+      assert.is_true(getScrollBarVisible("gmcScrollBarCons"))
+    end)
+  end)
+
+  describe("Geyser.MiniConsole:reposition", function()
+    it("re-derives the auto wrap after the console has been placed again", function()
+      local container = track(Geyser.Container:new({name = "gmcRepositionBox", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({name = "gmcReposition", x = 0, y = 0, width = "100%", height = "100%", autoWrap = true}, container))
+      local charWidth = calcFontSize("gmcReposition")
+      assert.are.equal(math.floor(300 / charWidth), getWindowWrap("gmcReposition"))
+
+      container:resize(150, 100)
+      container:reposition()
+
+      assert.are.equal(math.floor(150 / charWidth), getWindowWrap("gmcReposition"))
+      assert.are.equal(math.floor(150 / charWidth), console.wrapAt)
+    end)
+
+    it("leaves a manually wrapped console's wrap alone", function()
+      local container = track(Geyser.Container:new({name = "gmcNoRewrapBox", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({name = "gmcNoRewrap", x = 0, y = 0, width = "100%", height = "100%"}, container))
+      console:setWrap(23)
+      container:resize(150, 100)
+      container:reposition()
+      assert.are.equal(23, getWindowWrap("gmcNoRewrap"))
+    end)
+  end)
+
+  describe("Geyser.MiniConsole:setFont/resetFormat", function()
+    it("setFont changes the family and remembers it", function()
+      -- Ubuntu Mono ships with Mudlet, so it is there on every platform, and it
+      -- is not the console default, so a family that never reached the widget
+      -- still fails this
+      local console = track(Geyser.MiniConsole:new({name = "gmcSetFont", x = 0, y = 0, width = 300, height = 100}))
+      assert.are_not.equal("Ubuntu Mono", getFont("gmcSetFont"))
+      console:setFont("Ubuntu Mono")
+      assert.are.equal("Ubuntu Mono", getFont("gmcSetFont"))
+      assert.are.equal("Ubuntu Mono", console.font)
+    end)
+
+    it("resetFormat puts the colours and attributes back to the defaults", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcResetFormat", x = 0, y = 0, width = 300, height = 100}))
+      console:setTextFormat(10, 20, 30, 200, 100, 50, true, true, true)
+      console:echo("styled\n")
+
+      console:resetFormat()
+      console:echo("plain\n")
+
+      console:moveCursor(0, 1)
+      console:selectCurrentLine()
+      local format = console:getTextFormat()
+      assert.is_false(format.bold)
+      assert.is_false(format.underline)
+      assert.is_false(format.italic)
+      -- and the styled line above is untouched, so this really was a reset of
+      -- what comes next rather than a rewrite of the buffer
+      console:moveCursor(0, 0)
+      console:selectCurrentLine()
+      assert.is_true(console:getTextFormat().bold)
     end)
   end)
 
