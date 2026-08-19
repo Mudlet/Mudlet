@@ -338,7 +338,8 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
 
     QString gplText(qsl("<h1>GNU GENERAL PUBLIC LICENSE</h1>"
                           "<h2>Version 3, 29 June 2007</h2>"
-                          "<h3 style='text-align: left;'>Copyright © 2007 Free Software Foundation, Inc. <a href=\"https://fsf.org\">https://fsf.org</a></h3>"
+                          "<h3 style='text-align: center;'>Copyright © 2007 Free Software Foundation, Inc.<br>"
+                          "<a href=\"https://fsf.org\">https://fsf.org</a></h3>"
                           "<p>Everyone is permitted to copy and distribute verbatim copies of this license "
                           "document, but changing it is not allowed.</p>"
                           "<h4>Preamble</h4>"
@@ -908,7 +909,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
                            "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
 
-#if defined(INCLUDE_UPDATER) || defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
+#if ! defined(INCLUDE_UPDATER) || defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
     // This uses curly double quotes “ = &#8220; and ” = &#8221;
     QString APACHE2_Body(
             qsl("<h4>Apache Licence</h4>"
@@ -916,15 +917,47 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                 "<a href='https://www.apache.org/licenses/'>https://www.apache.org/licenses/</a></h4>"
                 "<p>TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION</p>"
                 "<h4>1. Definitions.</h4>"
-                "<p>“License” shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.</p>"
-                "<p>“Licensor” shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.</p>"
-                "<p>“Legal Entity” shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, “control” means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.</p>"
-                "<p>“You” (or “Your”) shall mean an individual or Legal Entity exercising permissions granted by this License.</p>"
-                "<p>“Source” form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.</p>"
-                "<p>“Object” form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.</p>"
-                "<p>“Work” shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).</p>"
-                "<p>“Derivative Works” shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.</p>"
-                "<p>“Contribution” shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, “submitted” means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as “Not a Contribution.”</p>"
+                "<p>“License” shall mean the terms and conditions for use, reproduction, and "
+                "distribution as defined by Sections 1 through 9 of this document.</p>"
+                "<p>“Licensor” shall mean the copyright owner or entity authorized by the "
+                "copyright owner that is granting the License.</p>"
+                "<p>“Legal Entity” shall mean the union of the acting entity and all other "
+                "entities that control, are controlled by, or are under common control with "
+                "that entity. For the purposes of this definition, “control” means (i) the "
+                "power, direct or indirect, to cause the direction or management of such entity, "
+                "whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or "
+                "more of the outstanding shares, or (iii) beneficial ownership of such entity.</p>"
+                "<p>“You” (or “Your”) shall mean an individual or Legal Entity exercising "
+                "permissions granted by this License.</p>"
+                "<p>“Source” form shall mean the preferred form for making modifications, "
+                "including but not limited to software source code, documentation source, and "
+                "configuration files.</p>"
+                "<p>“Object” form shall mean any form resulting from mechanical transformation "
+                "or translation of a Source form, including but not limited to compiled object "
+                "code, generated documentation, and conversions to other media types.</p>"
+                "<p>“Work” shall mean the work of authorship, whether in Source or Object form, "
+                "made available under the License, as indicated by a copyright notice that is "
+                "included in or attached to the work (an example is provided in the Appendix "
+                "below).</p>"
+                "<p>“Derivative Works” shall mean any work, whether in Source or Object form, "
+                "that is based on (or derived from) the Work and for which the editorial "
+                "revisions, annotations, elaborations, or other modifications represent, as a "
+                "whole, an original work of authorship. For the purposes of this License, "
+                "Derivative Works shall not include works that remain separable from, or merely "
+                "link (or bind by name) to the interfaces of, the Work and Derivative Works "
+                "thereof.</p>"
+                "<p>“Contribution” shall mean any work of authorship, including the original "
+                "version of the Work and any modifications or additions to that Work or "
+                "Derivative Works thereof, that is intentionally submitted to Licensor for "
+                "inclusion in the Work by the copyright owner or by an individual or Legal "
+                "Entity authorized to submit on behalf of the copyright owner. For the purposes "
+                "of this definition, “submitted” means any form of electronic, verbal, or "
+                "written communication sent to the Licensor or its representatives, including "
+                "but not limited to communication on electronic mailing lists, source code "
+                "control systems, and issue tracking systems that are managed by, or on behalf "
+                "of, the Licensor for the purpose of discussing and improving the Work, but "
+                "excluding communication that is conspicuously marked or otherwise designated "
+                "in writing by the copyright owner as “Not a Contribution.”</p>"
                 "<p>“Contributor” shall mean Licensor and any individual or Legal Entity on "
                 "behalf of whom a Contribution has been received by Licensor and subsequently "
                 "incorporated within the Work.</p>"
@@ -960,7 +993,18 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                 "the Work, excluding those notices that do not pertain to any part of the "
                 "Derivative Works; and</li>"
                 "<li>If the Work includes a “NOTICE” text file as part of its "
-                "distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.</li></ol>"
+                "distribution, then any Derivative Works that You distribute must include a "
+                "readable copy of the attribution notices contained within such NOTICE file, "
+                "excluding those notices that do not pertain to any part of the Derivative "
+                "Works, in at least one of the following places: within a NOTICE text file "
+                "distributed as part of the Derivative Works; within the Source form or "
+                "documentation, if provided along with the Derivative Works; or, within a "
+                "display generated by the Derivative Works, if and wherever such third-party "
+                "notices normally appear. The contents of the NOTICE file are for informational "
+                "purposes only and do not modify the License. You may add Your own attribution "
+                "notices within Derivative Works that You distribute, alongside or as an "
+                "addendum to the NOTICE text from the Work, provided that such additional "
+                "attribution notices cannot be construed as modifying the License.</li></ol>"
                 "<p>You may add Your own copyright statement to Your modifications and may provide "
                 "additional or different license terms and conditions for use, reproduction, or "
                 "distribution of Your modifications, or for any such Derivative Works as a whole, "
@@ -1214,7 +1258,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #endif // defined(Q_OS_MACOS)
 
     QString edbeeHeader(tr("<h2><u>Edbee - multi-feature editor widget</u></h2>"
-                           "<h3>Copyright © 2012-2025 by Rick Blommers</h3>"));
+                           "<h3>Copyright © 2012-2026 by Rick Blommers</h3>"));
 
     QString edbeeSuppliment(tr("The <b>edbee-lib</b> widget itself incorporates another component with a licence that must be noted as well, it is:"));
 
@@ -1250,11 +1294,11 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                              "<h3>Copyright © 2017 Discord, Inc.</h3>"));
 
     QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
-                                 "<h3>Copyright © 2011-2019 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
+                                 "<h3>Copyright © 2011-2026 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
 
     QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>"
                                    "Github: <a href=\"https://github.com/KDAB/KDToolBox\">KDToolBox</a></h2>"
-                                   "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.comF&gt;.</h3>"));
+                                   "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.com&gt;.</h3>"));
 
     QString Utf8_filenamesHeader(tr("<h2><u>utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows</u><br>"
                                     "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h2>"
@@ -1350,8 +1394,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     license_3rdParty_texts.append(qsl("<hr>%37%38")
                                   .arg(QtKeyChainHeader,                       // 37 - QtKeyChain header - translatable
-                                       BSD2Clause_Body                         // 38 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
-                                       .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
+                                       BSD3Clause_Body                         // 38 - QtKeyChain body BSD3 ("AUTHOR") - not translatable
+                                       .arg(QLatin1String("The name of the author may not"),
+                                            QLatin1String("AUTHOR"),
+                                            QLatin1String("AUTHOR"))));
 
     license_3rdParty_texts.append(qsl("<hr>%39%40")
                                   .arg(SingleConnectHeader,                    // 39 - singleshot_connect header - translatable
