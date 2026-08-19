@@ -32,6 +32,7 @@
 #include <QTabBar>
 #include <QTabWidget>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TGameDetails.h"
 #include "dlgConnectionProfiles.h"
@@ -88,6 +89,10 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         QVERIFY(mConfigDir.isValid());
         // pre-create $XDG_CONFIG_HOME/mudlet/profiles so setupConfig() adopts it
         // and the test never touches the real profiles or settings

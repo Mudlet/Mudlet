@@ -30,6 +30,7 @@
 
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -46,13 +47,6 @@ private:
     const QString mKeeper = qsl("QA Keeper");
 
     QString profilePath(const QString& profile) const { return mudlet::getMudletPath(enums::profileHomePath, profile); }
-
-    // setupConfig() consults portable.txt ahead of the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest)
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     void makeProfileWithSavedGame(const QString& profile) const
     {

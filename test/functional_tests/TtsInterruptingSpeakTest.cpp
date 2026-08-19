@@ -43,6 +43,7 @@
 
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -93,6 +94,10 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         QVERIFY(mConfigDir.isValid());
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));

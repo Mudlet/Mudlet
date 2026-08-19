@@ -47,6 +47,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -92,11 +93,6 @@ private:
     const QString mMiniconsoleName = qsl("switchSpecMiniconsole");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
-
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
 

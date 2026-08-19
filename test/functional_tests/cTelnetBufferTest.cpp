@@ -50,6 +50,7 @@
 #include <cstring>
 #include <memory>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
@@ -90,12 +91,6 @@ private:
             }
         }
         return false;
-    }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
 private slots:

@@ -49,6 +49,7 @@
 #include <chrono>
 #include <zip.h>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "AliasUnit.h"
@@ -150,6 +151,10 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         // Keep the test hermetic: point the config dir resolution at a temporary
         // directory instead of the user's real profiles - one of the tests below
         // drives an archive that tries to have the profiles folder deleted.
@@ -177,8 +182,12 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 

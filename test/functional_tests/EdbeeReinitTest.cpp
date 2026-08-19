@@ -31,6 +31,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -90,12 +91,6 @@ private:
         if (!spy2.wait(2000)) {
             QFAIL("Could not connect with the host.");
         }
-    }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
 private slots:

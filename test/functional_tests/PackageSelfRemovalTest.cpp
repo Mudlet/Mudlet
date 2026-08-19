@@ -50,6 +50,7 @@
 #include <QScopeGuard>
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "ActionUnit.h"
 #include "AliasUnit.h"
 #include "Host.h"
@@ -127,6 +128,10 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
         QVERIFY(mConfigDir.isValid());
