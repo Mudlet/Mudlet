@@ -110,6 +110,13 @@ describe("Tests MXP handling", function()
     it("resolves a custom entity to its non-ASCII value", function()
       assertLineShown("\27[1z<!ENTITY storm \"Гроза\">The &storm; rages", "The Гроза rages")
     end)
+
+    -- <HR> is not written out, it is fed back through the parser as a rule of
+    -- its own, so its width is the window's wrap column with a forty column floor
+    it("draws a horizontal rule as wide as the window wraps", function()
+      local width = math.max(getWindowWrap("main"), 40)
+      assertLineShown("\27[1zMXPRULE1<HR>MXPRULE2", ("-"):rep(width))
+    end)
   end)
 
   -- <DEST> hands the game a print sink other than the main window: everything
