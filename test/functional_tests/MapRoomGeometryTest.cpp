@@ -24,9 +24,10 @@
  *   - connectExitStubByDirection(), which picks the nearest room in a direction
  *     that has a stub pointing back, and is the only one of the three with a Lua
  *     route (connectExitStub() with a direction and no target room);
- *   - detectRoomCollisions(), which has no caller at all outside these tests -
- *     what the mapper actually draws collision borders from is
- *     TArea::getCollisionNodes() and the area grid index;
+ *   - detectRoomCollisions(), which has no caller at all outside these tests.
+ *     Nothing else uses it: the mapper's collision borders come from
+ *     TAreaGridIndex::roomsInViewportWithCollisions(), and Lua's
+ *     getCollisionLocationsInArea() from TArea::getCollisionNodes();
  *   - getColor(), which only T2DMap's painter and the room properties dialog
  *     call, so nothing reaches its environment-code arithmetic from Lua.
  *
@@ -87,12 +88,10 @@ private slots:
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
 
-        // A config root of this process's own. Sharing the developer's
-        // ~/.config/mudlet means sharing a profile list, so a second copy of
-        // this test running at the same time is told the name it types is
-        // already in use and never gets an enabled Connect button. Since #9712
-        // the opt-in that makes setupConfig() adopt a directory is
-        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        // A config root of this process's own, so this never reads or writes
+        // the developer's ~/.config/mudlet. Since #9712 the opt-in that makes
+        // setupConfig() adopt a directory is $XDG_CONFIG_HOME/mudlet/profiles,
+        // not the mudlet directory alone.
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
@@ -151,9 +150,12 @@ private slots:
         QCOMPARE(addRoomAt(5, areaId, 4, 0, 0), 5);
         // nearer than room 5, but in another area:
         QCOMPARE(addRoomAt(6, otherAreaId, 3, 0, 0), 6);
+        // qualifies in every way room 5 does, only further off - so it is the
+        // distance comparison rather than any of the filters that rejects it:
+        QCOMPARE(addRoomAt(7, areaId, 9, 0, 0), 7);
 
         pDB->getRoom(1)->setExitStub(DIR_EAST, true);
-        for (const int id : {3, 4, 5, 6}) {
+        for (const int id : {3, 4, 5, 6, 7}) {
             pDB->getRoom(id)->setExitStub(DIR_WEST, true);
         }
 
@@ -162,6 +164,35 @@ private slots:
         // ...and the room it reached gets the exit back:
         QCOMPARE(pDB->getRoom(5)->getWest(), 1);
         QCOMPARE(pDB->getRoom(6)->getWest(), -1);
+        QCOMPARE(pDB->getRoom(7)->getWest(), -1);
+    }
+
+    // North is the direction worth testing beside east. scmUnitVectors puts
+    // north at -y because that is the drawing direction, while room coordinates
+    // have north at +y - so the candidate test for a direction that moves along
+    // y accepts the offset whose sign DIFFERS from the unit vector's, the
+    // opposite of what the x and z tests do. A room laid out due north has to
+    // be found in spite of that.
+    void test_exitStubConnectsNorthwardsAcrossTheFlippedYAxis()
+    {
+        TRoomDB* pDB = map()->mpRoomDB.get();
+        const int areaId = pDB->addArea(qsl("Northward Area"));
+        QVERIFY(areaId > 0);
+
+        QCOMPARE(addRoomAt(1, areaId, 0, 0, 0), 1);
+        // north of room 1:
+        QCOMPARE(addRoomAt(2, areaId, 0, 3, 0), 2);
+        // south of it, and must not be picked:
+        QCOMPARE(addRoomAt(3, areaId, 0, -2, 0), 3);
+
+        pDB->getRoom(1)->setExitStub(DIR_NORTH, true);
+        pDB->getRoom(2)->setExitStub(DIR_SOUTH, true);
+        pDB->getRoom(3)->setExitStub(DIR_SOUTH, true);
+
+        QCOMPARE(map()->connectExitStubByDirection(1, DIR_NORTH), QString());
+        QCOMPARE(pDB->getRoom(1)->getNorth(), 2);
+        QCOMPARE(pDB->getRoom(2)->getSouth(), 1);
+        QCOMPARE(pDB->getRoom(3)->getSouth(), -1);
     }
 
     void test_exitStubConnectionReportsAnUnknownRoom()
@@ -227,11 +258,13 @@ private slots:
 
     void test_colorOfAnUnknownRoomIsInvalid() { QVERIFY(!map()->getColor(9999).isValid()); }
 
-    // An environment code the map has no entry for at all falls back to the
-    // first of the sixteen built-in colours. Note that this applies to the
-    // other fifteen codes too, so a room set straight to environment 16 is red
-    // rather than light black - the built-in codes past the first are only
-    // reachable through mEnvColors, which the next test uses.
+    // An environment code the map has no entry for in either of its two colour
+    // maps falls back to the first of the sixteen built-in colours. That covers
+    // the other fifteen built-in codes too, so a room set straight to
+    // environment 16 comes out red rather than light black: reaching the
+    // built-in codes past the first takes an mEnvColors entry, which the next
+    // test uses. A custom colour for the code is the other way past the
+    // fallback, which the one after that uses.
     void test_unmappedEnvironmentsFallBackToTheFirstColour()
     {
         const int areaId = map()->mpRoomDB->addArea(qsl("Colour Area"));
@@ -255,7 +288,7 @@ private slots:
     {
         const int areaId = map()->mpRoomDB->addArea(qsl("Mapped Colour Area"));
         QVERIFY(areaId > 0);
-        for (int id = 1; id <= 5; ++id) {
+        for (int id = 1; id <= 6; ++id) {
             QCOMPARE(addRoomAt(id, areaId, id, 0, 0), id);
             map()->mpRoomDB->getRoom(id)->environment = 50 + id;
         }
@@ -265,14 +298,21 @@ private slots:
         map()->mEnvColors[53] = 200;  // inside the 6x6x6 colour cube
         map()->mEnvColors[54] = 240;  // inside the greyscale ramp
         map()->mEnvColors[55] = 1000; // outside every range there is
+        // What a profile using setCustomEnvColor() alongside a game's own
+        // environment ids ends up with, the 257-272 set mapClear() restores
+        // included: the indirection lands on a code that has a custom colour.
+        map()->mEnvColors[56] = 257;
 
         QCOMPARE(map()->getColor(1), mpHost->mBlue_2);
         QCOMPARE(map()->getColor(2), mpHost->mLightBlack_2);
-        // 200 - 16 = 184; 184 / 36 = 5, (184 - 180) / 6 = 0, 184 - 180 = 4:
+        // 200 - 16 = 184; 184 / 36 = 5, (184 - 180) / 6 = 0, 184 - 180 = 4;
+        // then 5 and 4 scale to (5 - 1) * 40 + 95 = 255 and (4 - 1) * 40 + 95 =
+        // 215, while a 0 component stays 0:
         QCOMPARE(map()->getColor(3), QColor(255, 0, 215, 255));
         // (240 - 232) * 10 + 8 = 88:
         QCOMPARE(map()->getColor(4), QColor(88, 88, 88, 255));
         QVERIFY2(!map()->getColor(5).isValid(), "an unrenderable colour code produced a colour anyway");
+        QCOMPARE(map()->getColor(6), map()->mCustomEnvColors.value(257));
     }
 
     void test_customEnvironmentColoursWinOverTheFallback()

@@ -18,15 +18,22 @@
  ***************************************************************************/
 
 /*
- * Covers TMap::downloadMap() and the three slots that finish the job it starts -
- * slot_setDownloadProgress(), slot_downloadError() and slot_replyFinished() -
- * against a stub HTTP server standing in for a game's MMP map.
+ * Covers TMap::downloadMap() and the four slots that finish the job it starts -
+ * slot_setDownloadProgress(), slot_downloadError(), slot_downloadCancel() and
+ * slot_replyFinished() - against a stub HTTP server standing in for a game's
+ * MMP map.
  *
- * In production nothing but a widget starts one: the mapper's "Download from
- * game" menu item, the same button in the preferences' Mapper tab, and the map
- * context menu. There is no Lua entry point, so the busted suite cannot reach
- * any of this and the tests below call TMap directly, exactly as those three
- * widgets do.
+ * In production nothing but a widget starts one: the mapper's empty-state
+ * "Download from game" button, the map context menu, and the preferences'
+ * Mapper tab, which creates the mapper first if there is none. There is no Lua
+ * entry point, so the busted suite cannot reach any of this.
+ *
+ * All three of those callers therefore have a visible mapper, and
+ * createTransferProgress() puts progress on that widget when there is one. The
+ * tests below deliberately run with no mapper at all, which is the other branch:
+ * the standalone progress signals a frontend renders as its own dialog, and the
+ * one a hidden-mapper profile takes. The last test in the file creates a mapper
+ * and cannot be undone, which is why it is last.
  *
  * A real profile rather than a bare Host, because the interesting part of the
  * chain is what happens after the bytes land: the reply handler writes the file,
@@ -63,8 +70,6 @@
 
 #include <chrono>
 
-using namespace std::chrono_literals;
-
 namespace {
 
 // The shape I.R.E. games serve: a <map> document of areas and rooms, which is
@@ -87,8 +92,8 @@ const QByteArray scmMapXml = QByteArrayLiteral("<?xml version=\"1.0\" encoding=\
                                                " </rooms>\n"
                                                "</map>\n");
 
-// downloadMap() has no idea how big the file will be, so it seeds the progress
-// range with this until the reply reports a real total:
+// TMap::downloadMap() has no idea how big the file will be, so it seeds
+// mExpectedFileSize with this until the reply reports a real total:
 constexpr int scmAssumedFileSize = 4000000;
 
 } // namespace
@@ -104,10 +109,11 @@ public:
     enum class Answer {
         // 200 with a Content-Length, sent in one go
         Whole,
-        // 200 with a Content-Length, sent in two halves a beat apart, so the
-        // reply reports progress more than once
+        // 200 with a Content-Length, sent in halves a beat apart, so the reply
+        // reports progress more than once
         Chunked,
-        // 200 with no Content-Length, so the reply's total stays at -1
+        // 200 with no Content-Length, so the reply reports no total until the
+        // connection closes
         Unsized,
         // 200 with a Content-Length far larger than what is ever sent, so the
         // download stays in flight until the client gives up on it
@@ -144,7 +150,10 @@ private:
             connect(socket, &QTcpSocket::readyRead, this, [this, socket]() {
                 readRequest(socket);
             });
-            connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+            connect(socket, &QTcpSocket::disconnected, this, [this, socket]() {
+                mBuffers.remove(socket);
+                socket->deleteLater();
+            });
         }
     }
 
@@ -198,8 +207,9 @@ private:
         socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/xml\r\nContent-Length: " + QByteArray::number(length) + "\r\nConnection: close\r\n\r\n");
     }
 
-    // A beat between the parts, so the reply reports progress a known number of
-    // times rather than however many times loopback happens to split one write.
+    // A beat between the parts, so the reply reports progress at least once per
+    // part rather than however few times loopback happens to coalesce one write
+    // into. It is a floor, not an exact count.
     static void sendInParts(QTcpSocket* socket, const QByteArray& body, const int parts)
     {
         const qsizetype partSize = body.size() / parts;
@@ -260,6 +270,9 @@ private:
     {
         QString text;
         auto& buffer = mpHost->mpConsole->buffer;
+        // From the mark itself, not past it: every console message ends in a
+        // newline, so the line the mark names is the empty one the next message
+        // starts writing into rather than the previous test's last line.
         for (int i = mConsoleMark, last = buffer.getLastLineNumber(); i <= last; ++i) {
             text.append(buffer.line(i)).append(QChar::Space);
         }
@@ -268,9 +281,11 @@ private:
 
     bool consoleShows(const QString& needle) const { return consoleTextSinceMark().contains(needle); }
 
-    // The progress display closing is the last thing slot_replyFinished()'s
-    // cleanup does, on every one of its exits, so it is what "the download is
-    // over" means from outside.
+    // Every exit from slot_replyFinished() runs the same cleanup, and closing
+    // the progress display is the only part of it anything outside can see. The
+    // import flag is cleared just after, so waiting on the signal through the
+    // event loop - rather than reading the spy the instant it fires - is what
+    // makes "the download is over" true by the time this returns.
     bool runDownload(const QString& remoteUrl, const QString& localFileName = QString())
     {
         TMap* pMap = mpHost->mpMap.data();
@@ -393,6 +408,9 @@ private slots:
     {
         mpHost->mpMap->slot_downloadCancel();
         qApp->processEvents();
+        // Here rather than at the end of the case that sets it, so a failure
+        // part way through that case cannot leak it into the next one:
+        mpHost->mpMap->setMmpMapLocation(QString());
     }
 
     // The whole chain on a good day: request, save, parse, announce.
@@ -415,8 +433,8 @@ private slots:
         // cancel button has to go away between the two.
         QCOMPARE(disableCancelSpy.count(), 1);
 
-        // A download with no local name of its own lands on the profile's
-        // map.xml, inside this test's own config root:
+        // A download with no local name of its own and an URL ending in "xml"
+        // lands on the profile's map.xml, inside this test's own config root:
         const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile file(stored);
         QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
@@ -435,8 +453,10 @@ private slots:
         QVERIFY(!pMap->hasActiveTransferProgress());
     }
 
-    // The reply's own total only turns up after the first progress report, so
-    // the range starts as a guess and is corrected once.
+    // The first progress report always seeds the range from the guess without
+    // consulting the total it was handed, even when the reply knew its size all
+    // along - so a real total can only take effect on a later report, which is
+    // why this download is served in parts.
     void test_progressRangeStartsAsAGuessAndIsCorrectedFromTheReply()
     {
         TMap* pMap = mpHost->mpMap.data();
@@ -474,6 +494,10 @@ private slots:
         disconnect(mark);
         QVERIFY2(finished, "the map download never finished");
 
+        // Without a report that arrives while the total is still unknown AND
+        // the range already set, the guard below is never consulted and the
+        // rest of this would pass without testing anything:
+        QVERIFY2(phases.values >= 3, qPrintable(qsl("the reply reported progress %1 times, too few to reach the guard").arg(phases.values)));
         QVERIFY(phases.ranges >= 1);
         QCOMPARE(rangeSpy.at(0).at(1).toInt(), scmAssumedFileSize);
         for (int i = 0; i < phases.ranges; ++i) {
@@ -532,6 +556,13 @@ private slots:
     void test_downloadIsRefusedWhileAJsonOperationOwnsTheProgressDisplay()
     {
         TMap* pMap = mpHost->mpMap.data();
+        // A map with rooms in it, so the export the download interrupts is
+        // doing real work rather than writing an empty one - the case before
+        // this can leave the map cleared:
+        pMap->mapClear();
+        QVERIFY(pMap->mpRoomDB->addArea(qsl("Exported Area")) > 0);
+        QVERIFY(pMap->addRoom(1));
+        QVERIFY(pMap->setRoomArea(1, 1));
         QTemporaryDir jsonDir;
         QVERIFY(jsonDir.isValid());
         QSignalSpy exportStartSpy(pMap, &TMap::signal_mapJsonProgressStart);
@@ -575,15 +606,18 @@ private slots:
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after an invalid URL was refused, so the import flag was left set");
     }
 
-    // Abort is not an error, so it must not add an error line to the console on
-    // top of the alert the cancel itself posts.
+    // An abort is not a download error, so slot_downloadError() has to stay
+    // quiet about it and leave the console with only the alert the cancel posts.
     //
     // QNetworkReply::abort() delivers finished() synchronously, so the whole
     // chain has unwound by the time slot_downloadCancel() returns - no waiting
-    // needed. Note that it unwinds through the save-and-parse path rather than
-    // the error one, since slot_replyFinished() deliberately does not treat a
-    // cancel as an error, so the partial file is written and handed to the XML
-    // reader, which opens a progress display of its own for it.
+    // needed. It unwinds through the save-and-parse path rather than the error
+    // one, since slot_replyFinished() deliberately excludes a cancel from its
+    // error exit: what reaches the destination file is whatever the aborted
+    // reply still has to give, which is nothing, and the empty result is then
+    // handed to the map reader. So a second, different error line - about the
+    // parse - does follow, which is why the assertion below names the download
+    // error rather than looking for the absence of errors.
     void test_cancelStopsTheDownloadWithoutReportingAnError()
     {
         TMap* pMap = mpHost->mpMap.data();
@@ -601,6 +635,7 @@ private slots:
         QVERIFY2(consoleShows(qsl("canceled, on user's request")), qPrintable(consoleTextSinceMark()));
         QVERIFY2(!consoleShows(qsl("Map download encountered an error")), qPrintable(consoleTextSinceMark()));
         QVERIFY(!pMap->hasActiveTransferProgress());
+        QVERIFY2(mapDownloadEventCountIs(0), "a canceled download raised sysMapDownloadEvent");
 
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a canceled one was refused, so the import flag was left set");
     }
@@ -627,17 +662,32 @@ private slots:
         TMap* pMap = mpHost->mpMap.data();
         pMap->setMmpMapLocation(mpMapServer->url(qsl("/mmp.xml")));
 
-        TMap* map = pMap;
-        QSignalSpy closeSpy(map, &TMap::signal_mapProgressClose);
-        map->downloadMap();
-        QVERIFY2(closeSpy.count() == 1 || closeSpy.wait(15000), "the map download never finished");
+        QVERIFY2(runDownload(QString()), "the map download never finished");
 
         QCOMPARE(mpMapServer->requestedPaths(), QStringList{qsl("/mmp.xml")});
-        pMap->setMmpMapLocation(QString());
     }
 
-    // A URL that does not end in "xml" is a binary map file, which goes to
-    // TMainConsole::loadMap() rather than the XML reader.
+    // The game answers, but with a document that stops part way through - the
+    // shape a server cutting the response short produces. The reader has already
+    // cleared the map by the time the parse fails, so the least that has to be
+    // true is that the failure is reported, no download event goes out, and the
+    // next attempt is accepted.
+    void test_aTruncatedMapIsReportedAsAParseFailure()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        mpMapServer->serve(qsl("/truncated.xml"), QByteArrayLiteral("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<map>\n <areas>\n  <area id=\"1\" name=\"Half an"));
+
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/truncated.xml"))), "the map download never finished");
+
+        QVERIFY2(consoleShows(qsl("failure in parsing destination file")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(mapDownloadEventCountIs(0), "a map that failed to parse still raised sysMapDownloadEvent");
+        QVERIFY(!pMap->hasActiveTransferProgress());
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after an unparseable one was refused, so the import flag was left set");
+    }
+
+    // A destination file name that does not end in "xml" - which an URL not
+    // ending in "xml" is what gives it by default - is a binary map file, and
+    // goes to TMainConsole::loadMap() rather than the XML reader.
     //
     // Last on purpose: loadMap() creates the mapper widget, and from then on
     // TMap puts its progress on that widget instead of emitting the standalone
@@ -676,6 +726,7 @@ private slots:
         QCOMPARE(pRoom->y(), 4);
         QCOMPARE(pRoom->z(), 5);
         QVERIFY2(consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(mapDownloadEventCountIs(1), "the binary path did not raise sysMapDownloadEvent");
     }
 };
 

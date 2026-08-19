@@ -19,14 +19,17 @@
 
 /*
  * Covers TMap::retrieveMapFileStats(), which reads another profile's saved map
- * far enough to say what it holds without loading it. The preferences' Mapper
- * tab is its only caller - it fills in the "copy a map from another profile"
- * list - so there is no Lua route to it, and the tests below call it directly.
+ * far enough to say what it holds without loading it. Its one caller is
+ * dlgProfilePreferences::slot_copyMap(), behind the preferences' "copy to N
+ * destination(s)" button: before this profile's map is written into each
+ * destination, that destination's own last saved map is read for the room its
+ * player was standing in, so the copy does not move them. There is no Lua route
+ * to any of it, so the tests below call it directly.
  *
- * Reading somebody else's file with somebody else's serializer is the whole
- * point of it: the map it reports on must not become the map it is called on.
- * The player's room is looked up by profile name, so it also has to be the
- * requested profile's room rather than the reading profile's.
+ * Reading somebody else's file without becoming it is the whole point: the map
+ * reported on must not replace the map the call was made on, and the player
+ * room is keyed by profile name, so it has to be the requested profile's entry
+ * rather than the reading profile's.
  *
  * Run with: ctest -R MapFileStatsTest -V
  */
@@ -77,8 +80,8 @@ private:
 
     QString otherProfileMapDir() const { return mudlet::getMudletPath(enums::profileMapsPath, mOtherProfileName); }
 
-    // Two areas, four rooms, and a player room recorded against the profile the
-    // file claims to belong to.
+    // The player room has to be recorded against the profile the file will
+    // claim to belong to, since that is the entry the read looks up.
     void buildMapToSave() const
     {
         map()->mapClear();
@@ -101,8 +104,9 @@ private:
         map()->mRoomIdHash[mProfileName] = 1;
     }
 
-    // The same QDataStream setup TMainConsole::saveMap uses
-    bool writeMapFile(const QString& pathFileName) const
+    // The same QDataStream setup TMainConsole::saveMap uses. saveVersion 0 means
+    // the map's own; anything else has to be within mMinVersion..mMaxVersion.
+    bool writeMapFile(const QString& pathFileName, const int saveVersion = 0) const
     {
         QSaveFile file(pathFileName);
         if (!file.open(QIODevice::WriteOnly)) {
@@ -112,7 +116,7 @@ private:
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
-        return map()->serialize(out) && file.commit();
+        return map()->serialize(out, saveVersion) && file.commit();
     }
 
 private slots:
@@ -189,11 +193,19 @@ private slots:
         }
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
         const QString pathFileName = qsl("%1/20260819-01-01-01map").arg(otherProfileMapDir());
-        QVERIFY(writeMapFile(pathFileName));
+        // An older format than this build's own, so what comes back is read
+        // from the file rather than being this map's version by coincidence:
+        QVERIFY(writeMapFile(pathFileName, 19));
 
-        // What this map holds before the read, to compare against afterwards:
+        // Every one of the five answers has a counterpart in this map, so the
+        // live map is moved away from all of them before the read - otherwise a
+        // reader that returned its own state instead of the file's would pass:
+        QVERIFY(map()->addRoom(99));
+        QVERIFY(map()->setRoomArea(99, 1));
+        map()->mRoomIdHash[mOtherProfileName] = 99;
+        map()->mRoomIdHash[mProfileName] = 99;
         const int ownRoomCount = map()->mpRoomDB->getRoomMap().size();
-        const int ownPlayerRoom = map()->mRoomIdHash.value(mProfileName);
+        QCOMPARE(ownRoomCount, 5);
 
         QString latestFileName;
         int fileVersion = 0;
@@ -203,17 +215,24 @@ private slots:
         QVERIFY(map()->retrieveMapFileStats(mOtherProfileName, &latestFileName, &fileVersion, &roomId, &areaCount, &roomCount));
 
         QCOMPARE(latestFileName, pathFileName);
-        QCOMPARE(fileVersion, map()->mVersion);
-        // The player room recorded for the profile asked about, not for this one:
+        QCOMPARE(fileVersion, 19);
+        // The player room the file records for the profile asked about, not the
+        // one this map now holds for either profile:
         QCOMPARE(roomId, scmPlayerRoomId);
         // The two areas made above plus the default area every map carries:
         QCOMPARE(areaCount, 3);
         QCOMPARE(roomCount, 4);
 
+        // ...and reading it changed nothing here:
         QCOMPARE(map()->mpRoomDB->getRoomMap().size(), ownRoomCount);
-        QCOMPARE(map()->mRoomIdHash.value(mProfileName), ownPlayerRoom);
+        QCOMPARE(map()->mRoomIdHash.value(mProfileName), 99);
+        QCOMPARE(map()->mRoomIdHash.value(mOtherProfileName), 99);
+        QCOMPARE(map()->mVersion, map()->mDefaultVersion);
     }
 
+    // The pick is by modification time. The names deliberately sort the other
+    // way round, so a read that went by name - in either direction - would name
+    // the wrong file rather than happen to agree.
     void test_theMostRecentlyWrittenMapFileIsTheOneReported()
     {
         buildMapToSave();
@@ -221,26 +240,29 @@ private slots:
             return;
         }
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
-        const QString older = qsl("%1/20260101-01-01-01map").arg(otherProfileMapDir());
-        const QString newer = qsl("%1/20260819-01-01-01map").arg(otherProfileMapDir());
-        QVERIFY(writeMapFile(older));
-        QVERIFY(writeMapFile(newer));
+        const QString first = qsl("%1/20260819-01-01-01map").arg(otherProfileMapDir());
+        const QString second = qsl("%1/20260101-01-01-01map").arg(otherProfileMapDir());
+        QVERIFY(writeMapFile(first));
+        QVERIFY(writeMapFile(second));
 
         // Both were written in the same instant, so say which is which rather
         // than trust the filesystem's timestamp resolution:
-        QFile olderFile(older);
-        QVERIFY(olderFile.open(QIODevice::ReadWrite));
-        QVERIFY(olderFile.setFileTime(QDateTime::currentDateTime().addDays(-30), QFileDevice::FileModificationTime));
-        olderFile.close();
+        QFile firstFile(first);
+        QVERIFY(firstFile.open(QIODevice::ReadWrite));
+        QVERIFY(firstFile.setFileTime(QDateTime::currentDateTime().addDays(-30), QFileDevice::FileModificationTime));
+        firstFile.close();
 
         QString latestFileName;
         QVERIFY(map()->retrieveMapFileStats(mOtherProfileName, &latestFileName, nullptr, nullptr, nullptr, nullptr));
-        QCOMPARE(latestFileName, newer);
+        QCOMPARE(latestFileName, second);
     }
 
-    // A map saved by a newer Mudlet than this one: the version is all that can
-    // be said about it, and saying it is how the preferences dialog knows to
-    // refuse the copy rather than read a format it does not understand.
+    // A map saved by a newer Mudlet than this one: the read stops at the version
+    // rather than try to make sense of a layout it does not know, and the caller
+    // gets the version so it can say so. Which of the two early returns takes it
+    // depends on the build - a release or public test build stops as soon as the
+    // version is past mDefaultVersion, a development one goes on to compare it
+    // against mMaxVersion - but both leave everything after the version unread.
     void test_aMapFromANewerMudletIsReportedByVersionAlone()
     {
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
