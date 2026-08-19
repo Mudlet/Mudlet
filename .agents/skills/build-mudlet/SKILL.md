@@ -83,6 +83,60 @@ Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 Mudlet is a graphical desktop application; launching it opens a window. Variant presets put the
 binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build.
 
+## Claude Code on the web (remote sessions)
+
+The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
+apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
+than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug-nosan`
+preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
+commands work unchanged. On a warm container the hook finishes in seconds and a full build is
+mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
+versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
+The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
+linking is the bulk of a warm rebuild and mold shrinks it dramatically (PR #9927 measured a CI
+link tail of 4m13s → 29s). Keep that flag if you reconfigure the tree from scratch.
+Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
+
+Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted
+successes):
+
+- **C++ tests**: `QT_QPA_PLATFORM=offscreen ctest --preset linux-debug-nosan`. The functional
+  tests load `LuaGlobal.lua`, which needs the `--local` Lua rocks on `LUA_PATH`/`LUA_CPATH` —
+  the hook exports both; without them ~12 tests fail with `attempt to index global 'yajl'` or
+  `'rex'` errors.
+- **Lua specs (busted)**: `.claude/scripts/run-lua-tests.sh` — starts the HTTP/Discord/MMCP
+  fixtures from `CI/` and runs the self-test profile under xvfb exactly like the
+  "(Linux) Run Lua tests" CI step. Concurrent runs are safe (one per worktree, or even the
+  same tree): fixtures bind ephemeral ports handed over via a per-run temp directory, cleanup
+  kills only that run's fixture PIDs, and each run gets a private HOME so no two Mudlets — nor
+  leftovers of an aborted run — share the self-test profile's saved state. Sharing a profile
+  tree is not survivable: stale state fails ~38 Networking specs with "Expected objects to be
+  the same" at the `ensurePeer` assertion.
+- The egress proxy blocks GitHub codeload tarballs (403), so `luarocks install` of rocks whose
+  rockspecs point at tarballs fails; the hook falls back to `git clone` + `luarocks make`
+  (git-protocol GitHub access is allowed). `LuaSQL-SQLite3` must stay pinned at 2.6.1 — 2.8.0
+  breaks `DB.lua`'s `PRAGMA table_info` handling and errors 8 DB specs.
+- **Seeing and driving the real UI**: to verify a feature or fix visually, run Mudlet on a
+  virtual display and work it like a user — the hook installs the whole toolchain from
+  `docs/demo-videos.md` (xvfb, openbox, xdotool, imagemagick, ffmpeg):
+
+  ```bash
+  export DISPLAY=:78
+  Xvfb :78 -screen 0 1280x800x24 & sleep 2; openbox & sleep 1
+  HOME=$(mktemp -d) ./build-linux-debug-nosan/src/mudlet & sleep 8
+  xdotool mousemove <x> <y> click 1        # or: xdotool key Return, xdotool type "text"
+  import -window root /tmp/shot.png        # screenshot; read it to verify, then iterate
+  ```
+
+  A throwaway `HOME` keeps the real profile tree untouched. Screenshot after every
+  interaction — coordinates come from looking at the previous shot, not from guessing. The
+  same display serves `docs/demo-videos.md`'s before/after recording workflow via ffmpeg.
+  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only.
+
+The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
+Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
+modernised — do not reach for it in remote sessions.
+
 ## Pitfalls
 
 **Never pass `--parallel` without a job count on a Makefiles build.** `cmake --build . --parallel`

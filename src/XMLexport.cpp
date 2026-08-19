@@ -440,7 +440,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableMXP") = pHost->mEnableMXP ? "yes" : "no";
     host.append_attribute("mEnableNAWS") = pHost->mEnableNAWS ? "yes" : "no";
     host.append_attribute("mUndoServerWrap") = pHost->mUndoServerWrap ? "yes" : "no";
-    host.append_attribute("mServerWrapHintShown") = pHost->mServerWrapHintShown ? "yes" : "no";
     host.append_attribute("mEnableCHARSET") = pHost->mEnableCHARSET ? "yes" : "no";
     host.append_attribute("mEnableNEWENVIRON") = pHost->mEnableNEWENVIRON ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
@@ -786,7 +785,7 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     saveTimeUnit->savedVars = vu->savedVars;
     saveTimeUnit->hidden = vu->hidden;
     saveTimeUnit->hiddenByUser = vu->hiddenByUser;
-    saveTimeUnit->hiddenTables = vu->hiddenTables;
+    saveTimeUnit->shareHiddenTableAnchors(*vu);
     saveTimeInterface.getSavedVars();
 
     // A saved global with a value anywhere inside it that no save can carry (see

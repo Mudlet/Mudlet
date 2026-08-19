@@ -17,8 +17,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -29,12 +33,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // A multiline trigger's completed TMatchState used to stay in mConditionMap
 // while its script ran. Feeding text from that script re-enters trigger
@@ -42,6 +41,11 @@ void initializeQRCResources();
 // a second time, and erased it - leaving the outer frame reading a destroyed
 // state. Against the unfixed code the first case here does not merely fail, it
 // takes the process down with SIGSEGV.
+//
+// Only the two crash cases live here. Everything else about multiline state is
+// specced in Trigger_spec.lua, per docs/ai-instructions.md; what keeps these two
+// out of it is crash isolation, not sanitiser coverage - a SIGSEGV takes the
+// whole shared spec run down with it, where a functional test loses only itself.
 //
 // tempComplexRegexTrigger() is the only Lua function that can set the condition
 // line delta, which conditions arriving on separate lines need. The perm*Trigger
@@ -53,13 +57,33 @@ class MultilineTriggerReentrancyTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-MultilineTriggerReentrancy";
     QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -68,6 +92,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -130,62 +155,6 @@ private slots:
         QVERIFY2(bufferContains(qsl("FILTERFIRES=1#")), "a filtering multiline trigger did not fire exactly once across a nested feed");
     }
 
-    // Guards the other direction: moving the state out of mConditionMap before
-    // the script runs must not disturb ordinary multiline matching, and the
-    // captures gathered across the earlier lines must still reach the script.
-    void test_ordinaryMultilineTriggerStillFiresWithItsCaptures()
-    {
-        startProfile(mpHostname, mpLocalhost, mpPort);
-        auto* host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
-        host->mEchoLuaErrors = true;
-
-        host->getLuaInterpreter()->compileAndExecuteScript(qsl("plainFires = 0\n"
-                                                               "caps = ''\n"
-                                                               "local code = [=[\n"
-                                                               "  plainFires = plainFires + 1\n"
-                                                               "  caps = multimatches[1][2] .. ',' .. multimatches[2][2]\n"
-                                                               "]=]\n"
-                                                               "tempComplexRegexTrigger('MLP', [[^one (\\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)\n"
-                                                               "tempComplexRegexTrigger('MLP', [[^two (\\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)\n"
-                                                               "feedTriggers('one aaa\\n')\n"
-                                                               "feedTriggers('two bbb\\n')\n"
-                                                               "echo('PLAIN=' .. plainFires .. '/' .. caps .. '#\\n')\n"));
-
-        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        QVERIFY2(bufferContains(qsl("PLAIN=1/aaa,bbb#")), "an ordinary multiline trigger no longer fires once with the captures from both of its lines");
-    }
-
-    // A state whose window closes without completing must still be dropped, so
-    // the same lines arriving later start a fresh state rather than completing
-    // the stale one. Both sides are asserted: a count of zero alone would also be
-    // what a silently broken setup produces.
-    void test_expiredStateIsStillDiscarded()
-    {
-        startProfile(mpHostname, mpLocalhost, mpPort);
-        auto* host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
-        host->mEchoLuaErrors = true;
-
-        // A delta of 1 lets the state survive exactly one further line, so the
-        // consecutive pair completes it and the padded pair must not:
-        host->getLuaInterpreter()->compileAndExecuteScript(qsl("expiredFires = 0\n"
-                                                               "local code = [=[expiredFires = expiredFires + 1]=]\n"
-                                                               "tempComplexRegexTrigger('MLE', [[^first$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
-                                                               "tempComplexRegexTrigger('MLE', [[^second$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)\n"
-                                                               "feedTriggers('first\\n')\n"
-                                                               "feedTriggers('second\\n')\n"
-                                                               "echo('CONSECUTIVE=' .. expiredFires .. '#\\n')\n"
-                                                               "feedTriggers('first\\n')\n"
-                                                               "feedTriggers('padding\\n')\n"
-                                                               "feedTriggers('second\\n')\n"
-                                                               "echo('PADDED=' .. expiredFires .. '#\\n')\n"));
-
-        QCOMPARE(host->getTriggerUnit()->processingDepth(), 0);
-        QVERIFY2(bufferContains(qsl("CONSECUTIVE=1#")), "a multiline state within its line delta did not complete, so the case proves nothing about expiry");
-        QVERIFY2(bufferContains(qsl("PADDED=1#")), "a match state outlived its line delta, so a padded second condition completed it");
-    }
-
     void cleanup()
     {
         delete mpServer;
@@ -196,32 +165,10 @@ private slots:
 
 private:
     // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // TriggerSameLineMatchTest).
+    // TFeedTriggersRecursionTest).
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -257,20 +204,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "MultilineTriggerReentrancyTest.moc"
-QTEST_MAIN(MultilineTriggerReentrancyTest)
+MUDLET_GROUPED_TEST_MAIN(MultilineTriggerReentrancyTest)

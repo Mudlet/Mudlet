@@ -21,8 +21,12 @@
 // always-active trigger it arms is matched against every line the game sends.
 // This pins what that costs and that the capture layers still capture.
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -35,18 +39,15 @@
 #include <QTreeWidget>
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
+#include "GroupedTest.h"
 
 class StarterUiTriggerCostTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = qsl("Test-StarterUiTriggerCost");
     const QString mLocalhost = qsl("localhost");
@@ -64,7 +65,25 @@ private:
     static constexpr int kMaxGatePatterns = 20;
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -74,6 +93,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -248,9 +268,31 @@ private slots:
 
         // BaseUI.chatChannelNames has the last word on a captured tag, so this
         // line reaches no tab at all rather than only missing Channels.
-        QVERIFY(runLua(host, qsl("__starterUiCaptures = #BaseUI.recentCaptures")));
+        // recentCaptures is capped at ten and the corpus above already filled
+        // it, so its length would hold whatever happened.
+        QVERIFY(runLua(host, qsl("__starterUiAllLines = getLineCount('BaseUI_chat_all')")));
         feedLine(host, qsl("[inventory] a rusty sword"));
-        QVERIFY2(luaTrue(host, qsl("#BaseUI.recentCaptures == __starterUiCaptures")), "an unknown tag was captured as chat");
+        QVERIFY2(luaTrue(host, qsl("getLineCount('BaseUI_chat_all') == __starterUiAllLines")), "an unknown tag was captured as chat");
+
+        // No line above matches two shapes, so none of them trips routeChatLine's
+        // dedup on lastChatLine. "You tell the group, 'go now'" matches both the
+        // "You tell <someone>" and the "You tell the group" shapes. A copied
+        // line need not be one line in the tab, so the yardstick is measured
+        // rather than assumed, and the two lines are the same length so wrapping
+        // cannot separate them.
+        QVERIFY(runLua(host, routeChatLineCounterScript()));
+        QVERIFY(runLua(host, qsl("__starterUi.routed = 0\n__starterUiTellLines = getLineCount('BaseUI_chat_tells')")));
+        feedLine(host, qsl("Bob tells you, 'go now dude'"));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.routed == 1")), "the one-shape line matched more than one shape, so it is no yardstick for a line that does");
+        QVERIFY(runLua(host, qsl("__starterUiOneCapture = getLineCount('BaseUI_chat_tells') - __starterUiTellLines")));
+        QVERIFY2(luaTrue(host, qsl("__starterUiOneCapture > 0")), "a line matching one chat shape did not reach the Tells tab, so the comparison below proves nothing");
+
+        const int tellsBefore = expectedUnread.value(qsl("tells")) + 1;
+        QVERIFY(runLua(host, qsl("__starterUi.routed = 0\n__starterUiTellLines = getLineCount('BaseUI_chat_tells')")));
+        feedLine(host, qsl("You tell the group, 'go now'"));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.routed == 2")), "the tree no longer fires twice on this line, so the dedup below is never reached and proves nothing");
+        QVERIFY2(luaTrue(host, qsl("getLineCount('BaseUI_chat_tells') - __starterUiTellLines == __starterUiOneCapture")), "a line matching two chat shapes was copied into the Tells tab twice");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == %1").arg(QString::number(tellsBefore + 1))), "a line matching two chat shapes counted twice against the Tells tab");
 
         QVERIFY(runLua(host, chatShapeCoverageScript(corpus)));
         QVERIFY2(luaTrue(host, qsl("__starterUi.uncoveredShapes == 0")),
@@ -298,6 +340,91 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("__starterUi.shapeMismatch == nil")),
                  "the tree's shapes and the script's chatPatterns have drifted apart - chatLikeLine() would stop recognising a "
                  "line the tree routes, and the vitals layer would read it as a prompt. The first difference is in the error console");
+    }
+
+    // Nothing else here would notice the guard in refreshChatTabs() going away:
+    // BaseUI.unread and the tab text stay correct either way. What moves is the
+    // number of repaints, and what the labels are left showing.
+    void test_aCapturedLineRepaintsOnlyTheTabItChanged()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        feedLine(host, qsl("Bob tells you, 'hello there'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels ~= nil and BaseUI.chatTabLabels.tells ~= nil")), "a captured chat line did not build the chat dock");
+        QVERIFY(runLua(host, chatTabRepaintCounterScript()));
+
+        // Zero is also what wrappers that never took would report.
+        QVERIFY(runLua(host, qsl("BaseUI.chatTabLabels.all:echo('probe')\nBaseUI.chatTabLabels.all:setStyleSheet('background-color: #ff0000;')")));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 1")), "the echo counter never reached the labels, so every echo count below would read zero whatever happened");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.styles == 1")), "the setStyleSheet counter never reached the labels, so every style count below would read zero whatever happened");
+        QVERIFY(runLua(host, qsl("BaseUI.refreshChatTabs()")));
+
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0\nBaseUI.refreshChatTabs()")));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 0 and __starterUi.styles == 0")), "a refresh with nothing changed still repainted a tab");
+
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0")));
+        feedLine(host, qsl("Ann whispers to you, 'psst'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.tells == 2")), "the second tell did not reach the Tells tab");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 1")), "a captured chat line repainted a tab besides the one whose unread count moved");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.styles == 0")), "a captured chat line restyled a tab, though which tab is active had not changed");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_tells'):find('Tells (2)', 1, true) ~= nil")), "the Tells tab is not showing the unread count it counted");
+
+        // A guard that skips the right calls can still leave the wrong thing on
+        // screen, which only Qt's own copy shows. #4fc1e9 is theme.accent, the
+        // underline marking the active tab; #e8eef4 is theme.text and #96a0ab
+        // theme.textDim.
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all'):find('#4fc1e9', 1, true) ~= nil")), "the active tab is not wearing the accent that marks it active");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_tells'):find('#4fc1e9', 1, true) == nil")), "an inactive tab is wearing the active tab's accent");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('#e8eef4', 1, true) ~= nil")), "the active tab is not wearing theme.text");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_tells'):find('#96a0ab', 1, true) ~= nil")), "an inactive tab is not wearing theme.textDim");
+
+        // Two of the three, not all: the third was inactive and stays inactive.
+        // The tab left behind keeps its text and only its colour moves, so the
+        // colour clause is the one that has to fire for it.
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0\nBaseUI.selectChatTab('tells')")));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.styles == 2")), "switching tabs did not restyle both the tab left behind and the tab taken up");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 2")), "switching tabs did not re-echo both of them, so one kept the colour of the state it left");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels.tells.message == 'Tells'")), "the tab switched to kept its unread badge");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels.all.message == 'All'")), "the tab switched away from grew an unread badge it had not earned");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_tells'):find('#4fc1e9', 1, true) ~= nil")), "the tab switched to did not take on the active tab's accent");
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all'):find('#4fc1e9', 1, true) == nil")), "the tab switched away from kept the active tab's accent");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_tells'):find('#e8eef4', 1, true) ~= nil")), "the tab switched to did not take on theme.text");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('#96a0ab', 1, true) ~= nil")), "the tab switched away from kept theme.text");
+
+        // The guard reading a cache the previous refresh wrote.
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0")));
+        feedLine(host, qsl("Bob says, 'hello everyone'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.unread.all == 1")), "the line did not reach the All tab");
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 1 and __starterUi.styles == 0")), "a line arriving after a tab switch repainted more than the tab whose unread count moved");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('All (1)', 1, true) ~= nil")), "the All tab is not showing the unread count it grew after the switch");
+    }
+
+    // setLabelStyleSheet and echo reach these labels without telling Geyser, so
+    // its cache still describes a tab that no longer looks like that.
+    void test_aTabWrittenBehindGeysersBackIsPutRightAgain()
+    {
+        Host* host = startProfileWithStarterUi();
+        QVERIFY(host);
+        feedLine(host, qsl("Bob tells you, 'hello there'"));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels ~= nil and BaseUI.chatTabLabels.all ~= nil")), "a captured chat line did not build the chat dock");
+
+        // All is the active tab, so its unread count never moves and nothing else
+        // would ever repaint it.
+        QVERIFY(runLua(host, qsl("setLabelStyleSheet('BaseUI_tab_all', 'background-color: #ff0000;')\necho('BaseUI_tab_all', 'CLOBBERED')")));
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all') == 'background-color: #ff0000;'")), "the stylesheet never reached the label, so this proves nothing");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('CLOBBERED', 1, true) ~= nil")), "the text never reached the label, so this proves nothing");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.chatTabLabels.all.message == 'All'")), "Geyser noticed the write after all, so the guard would not need to read the label back");
+
+        QVERIFY(runLua(host, qsl("BaseUI.refreshChatTabs()")));
+        QVERIFY2(luaTrue(host, qsl("getLabelStyleSheet('BaseUI_tab_all'):find('#4fc1e9', 1, true) ~= nil")),
+                 "a tab restyled behind Geyser's back was left that way - the guard trusted a cache that no longer described the label");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('CLOBBERED', 1, true) == nil")),
+                 "a tab written behind Geyser's back kept the foreign text - the guard trusted a cache that no longer described the label");
+        QVERIFY2(luaTrue(host, qsl("getLabelText('BaseUI_tab_all'):find('All', 1, true) ~= nil")), "the tab was not given its own text back");
+
+        QVERIFY(runLua(host, chatTabRepaintCounterScript()));
+        QVERIFY(runLua(host, qsl("__starterUi.echoes, __starterUi.styles = 0, 0\nBaseUI.refreshChatTabs()")));
+        QVERIFY2(luaTrue(host, qsl("__starterUi.echoes == 0 and __starterUi.styles == 0")), "the tab was repainted on every refresh after being put right once");
     }
 
     // A game that sends chat over GMCP does not need the gates, but the next
@@ -510,6 +637,45 @@ private:
         }
     }
 
+    // Only a line matching two shapes reaches routeChatLine twice, and only then
+    // does the lastChatLine dedup have anything to do.
+    static QString routeChatLineCounterScript()
+    {
+        return qsl(R"LUA(
+__starterUi = __starterUi or {}
+__starterUi.routed = 0
+local routeChatLine = BaseUI.routeChatLine
+BaseUI.routeChatLine = function(...)
+  __starterUi.routed = __starterUi.routed + 1
+  return routeChatLine(...)
+end
+)LUA");
+    }
+
+    // Anything not going through :echo() or :setStyleSheet() - a rawEcho, a
+    // decho, a bare setLabelStyleSheet - is invisible here, which is why the
+    // assertions that matter read the label back from Qt as well. The wrappers
+    // go on the label instances, shadowing what they take from Geyser's class
+    // table, so the labels still paint exactly as they would have.
+    static QString chatTabRepaintCounterScript()
+    {
+        return qsl(R"LUA(
+__starterUi = __starterUi or {}
+__starterUi.echoes, __starterUi.styles = 0, 0
+for _, label in pairs(BaseUI.chatTabLabels) do
+  local echo, setStyleSheet = label.echo, label.setStyleSheet
+  label.echo = function(self, ...)
+    __starterUi.echoes = __starterUi.echoes + 1
+    return echo(self, ...)
+  end
+  label.setStyleSheet = function(self, ...)
+    __starterUi.styles = __starterUi.styles + 1
+    return setStyleSheet(self, ...)
+  end
+end
+)LUA");
+    }
+
     static QString treeShapeComparisonScript(const QStringList& treeShapes)
     {
         QStringList entries;
@@ -657,29 +823,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
     void startProfile()
     {
         const QString port = QString::number(mPort);
-        QTimer::singleShot(0, qApp, [this, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy loaded(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!loaded.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        Host* host = mudlet::self()->getActiveHost();
+        Host* host = TestProfile::create(mHostname, mLocalhost, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -720,20 +864,5 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "StarterUiTriggerCostTest.moc"
-QTEST_MAIN(StarterUiTriggerCostTest)
+MUDLET_GROUPED_TEST_MAIN(StarterUiTriggerCostTest)

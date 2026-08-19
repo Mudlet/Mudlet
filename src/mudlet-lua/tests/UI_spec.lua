@@ -1,4 +1,29 @@
 -- https://wiki.mudlet.org/w/Manual:UI_Functions
+
+-- How many things Mudlet is holding on to in the Lua registry. A function
+-- handed to one of the link or popup calls is anchored there as the call reads
+-- it, and counting is how these specs tell whether a call that then refused let
+-- go of it again.
+local function registryEntryCount()
+  local count = 0
+  for _ in pairs(debug.getregistry()) do
+    count = count + 1
+  end
+  return count
+end
+
+-- Counts the registry across 20 refusals, after one warm-up refusal: releasing
+-- a reference puts it on the registry's free list, and the first release is what
+-- creates that list, so a count taken across it grows even when nothing leaks.
+local function registryGrowthOver(refuseOnce)
+  refuseOnce()
+  local before = registryEntryCount()
+  for _ = 1, 20 do
+    refuseOnce()
+  end
+  return registryEntryCount() - before
+end
+
 describe("Tests UI functions", function()
 
   describe("Test the functionality of copy2decho", function()
@@ -1219,7 +1244,7 @@ describe("Tests UI functions", function()
       -- Check for any unexpected fields
       local expectedFields = {
         bold = true, italic = true, overline = true, reverse = true,
-        strikeout = true, underline = true, concealed = true,
+        strikeout = true, underline = true, underlineStyle = true, concealed = true,
         blinking = true, alternateFont = true, foreground = true, background = true
       }
       
@@ -2264,6 +2289,141 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  -- The colon form of SGR 4 carries the underline style in a sub-parameter, in
+  -- the kitty/VTE mapping TBuffer::decodeSGR documents - where the curly style
+  -- of 4:3 is the one Mudlet calls wavy. feedTelnet runs the bytes through
+  -- cTelnet::processSocketData, the decoder game data goes through, but only
+  -- while the profile's socket is unconnected: hence the disconnect below, and
+  -- CI starting Mudlet with --offline. Plain data lands in the main console,
+  -- which is what the reads rely on.
+  describe("getTextFormat underline styles", function()
+    local feedCount = 0
+
+    setup(function()
+      disconnect()
+    end)
+
+    -- Each call mints its own marker so a stale line from an earlier feed can
+    -- never be matched in its place.
+    local function formatAfter(sequence, trailer)
+      feedCount = feedCount + 1
+      local needle = string.format("USTYLE%03d", feedCount)
+      local fed, refusal = feedTelnet("\27[0m" .. sequence .. needle .. (trailer or "") .. "\r\n")
+      assert.is_true(fed, tostring(refusal) .. " - this block needs Mudlet started with --offline")
+
+      local lastLine = getLastLineNumber("main")
+      local firstLine = math.max(0, lastLine - 15)
+      local lines = getLines("main", firstLine, lastLine + 1)
+      for i = #lines, 1, -1 do
+        if lines[i]:find(needle, 1, true) then
+          assert.is_true(moveCursor("main", 0, firstLine + i - 1))
+          assert.is_true(selectString("main", needle, 1) >= 0)
+          -- getTextAttributes silently falls back to the cursor when nothing is
+          -- selected, so confirm the marker really is what is being read
+          assert.are.equal(needle, (getSelection("main")))
+          local format = getTextFormat("main")
+          deselect("main")
+          return format
+        end
+      end
+      error(needle .. " never reached the main console")
+    end
+
+    local rows = {
+      {what = "4:0 leaves the text without an underline", sequence = "\27[4:0m", underline = false, expected = "none"},
+      {what = "4:1 is a single underline", sequence = "\27[4:1m", underline = true, expected = "solid"},
+      -- Mudlet has no double underline of its own, so 4:2 renders as a single one
+      {what = "4:2 falls back to a single underline", sequence = "\27[4:2m", underline = true, expected = "solid"},
+      {what = "4:3 is a curly underline", sequence = "\27[4:3m", underline = true, expected = "wavy"},
+      {what = "4:4 is a dotted underline", sequence = "\27[4:4m", underline = true, expected = "dotted"},
+      {what = "4:5 is a dashed underline", sequence = "\27[4:5m", underline = true, expected = "dashed"},
+    }
+
+    for _, row in ipairs(rows) do
+      it("reports that " .. row.what, function()
+        local format = formatAfter(row.sequence)
+        assert.are.equal(row.underline, format.underline)
+        assert.are.equal(row.expected, format.underlineStyle)
+      end)
+    end
+
+    -- Applying a style over a curly underline has to clear the sibling flags,
+    -- otherwise the old style carries over into the new one
+    local transitions = {
+      {what = "4:0 after a curly underline turns the underline off", sequence = "\27[4:0m", underline = false, expected = "none"},
+      {what = "4:4 after a curly underline replaces it with a dotted one", sequence = "\27[4:4m", underline = true, expected = "dotted"},
+      {what = "4:5 after a curly underline replaces it with a dashed one", sequence = "\27[4:5m", underline = true, expected = "dashed"},
+      {what = "an out-of-range 4:6 after a curly underline turns the underline off", sequence = "\27[4:6m", underline = false, expected = "none"},
+    }
+
+    for _, row in ipairs(transitions) do
+      it("reports that " .. row.what, function()
+        local format = formatAfter("\27[4:3m" .. row.sequence)
+        assert.are.equal(row.underline, format.underline)
+        assert.are.equal(row.expected, format.underlineStyle)
+      end)
+    end
+
+    it("reports that the plain SGR 4 is still a solid underline", function()
+      local format = formatAfter("\27[4m")
+      assert.is_true(format.underline)
+      assert.are.equal("solid", format.underlineStyle)
+    end)
+
+    it("reports no style at all on text the game never underlined", function()
+      local format = formatAfter("")
+      assert.is_false(format.underline)
+      assert.are.equal("none", format.underlineStyle)
+    end)
+
+    -- The plain SGR 4 is the solid underline, so it has to replace whatever
+    -- style came before it instead of leaving that style in place
+    local plainOverStyle = {
+      {style = "curly", sequence = "\27[4:3m"},
+      {style = "dotted", sequence = "\27[4:4m"},
+      {style = "dashed", sequence = "\27[4:5m"},
+    }
+
+    for _, row in ipairs(plainOverStyle) do
+      it("reports that a plain SGR 4 after a " .. row.style .. " underline is a solid one", function()
+        local format = formatAfter(row.sequence .. "\27[4m")
+        assert.is_true(format.underline)
+        assert.are.equal("solid", format.underlineStyle)
+      end)
+    end
+
+    -- "none" cannot show whether the style flags were cleared along with the
+    -- underline, so put the underline back through a hyperlink instead: that
+    -- adds a plain underline to the cell without touching the parser's own
+    -- style flags, which a style left behind by the clearing sequence would
+    -- then win over
+    local solidLink = "\27]8;;https://example.com/?config={\"style\":{\"underline\":true}}\27\\"
+
+    for _, clearingSequence in ipairs({"\27[4:0m", "\27[4:6m"}) do
+      it("reports that a curly underline cleared by " .. clearingSequence:sub(3, -2) .. " does not come back", function()
+        local format = formatAfter("\27[4:3m" .. clearingSequence .. solidLink, "\27]8;;\27\\")
+        assert.is_true(format.underline)
+        assert.are.equal("solid", format.underlineStyle)
+      end)
+    end
+
+    -- A styled OSC 8 hyperlink adds its underline to the one SGR already put on
+    -- the cell without clearing it, so both flags are set at once and only the
+    -- painter's precedence decides which one is drawn
+    it("reports the style that wins on screen when a hyperlink adds a second one", function()
+      local link = "\27]8;;https://example.com/?config={\"style\":{\"underline\":\"wavy\"}}\27\\"
+      local format = formatAfter(link .. "\27[4:4m", "\27]8;;\27\\")
+      assert.is_true(format.underline)
+      assert.are.equal("wavy", format.underlineStyle)
+    end)
+
+    -- leave the telnet parser's pen and the main console's cursor as found
+    teardown(function()
+      feedTelnet("\27[0m\r\n")
+      moveCursorEnd("main")
+    end)
+  end)
+
   describe("echoLink, insertLink, setLink and popups", function()
     local win = "uiReadbackLink"
 
@@ -2337,8 +2497,97 @@ describe("Tests UI functions", function()
       assert.is_truthy(err:find("do not match up", 1, true))
     end)
 
+    it("a rejected echoPopup or insertPopup lets go of the functions it read", function()
+      local grewBy = registryGrowthOver(function()
+        echoPopup(win, "menu", {function() end, function() end}, {"one"})
+        insertPopup(win, "menu", {function() end, function() end}, {"one"})
+      end)
+      assert.are.equal(0, grewBy, ("the registry grew by %d over 40 refused calls"):format(grewBy))
+    end)
+
+    it("a popup naming no window lets go of the functions it read", function()
+      local absent = "uiReadbackNoSuchWindow"
+      local grewBy = registryGrowthOver(function()
+        echoPopup(absent, "menu", {function() end}, {"one"})
+        insertPopup(absent, "menu", {function() end}, {"one"})
+      end)
+      assert.are.equal(0, grewBy, ("the registry grew by %d over 40 refused calls"):format(grewBy))
+    end)
+
+    it("a link call naming no window lets go of the function it read", function()
+      local absent = "uiReadbackNoSuchWindow"
+      local grewBy = registryGrowthOver(function()
+        echoLink(absent, "text", function() end, "hint")
+        insertLink(absent, "text", function() end, "hint")
+        setLink(absent, function() end, "hint")
+      end)
+      assert.are.equal(0, grewBy, ("the registry grew by %d over 60 refused calls"):format(grewBy))
+    end)
+
     it("echoLink hard-errors when required arguments are missing", function()
       assert.is_false(pcall(echoLink))
+    end)
+  end)
+
+  -- echoLink takes the main console's link colour from the profile's
+  -- background and a miniconsole's from that console's own, so this block
+  -- drives the main console to cover the profile-background branch
+  describe("link colour against the console background", function()
+    local savedBg, savedWrap
+
+    -- WCAG relative luminance, so that "readable" is a measurement rather than
+    -- a preference about which blue looks nicer
+    local function relativeLuminance(rgb)
+      local function channel(value)
+        value = value / 255
+        if value <= 0.03928 then
+          return value / 12.92
+        end
+        return ((value + 0.055) / 1.055) ^ 2.4
+      end
+      return 0.2126 * channel(rgb[1]) + 0.7152 * channel(rgb[2]) + 0.0722 * channel(rgb[3])
+    end
+
+    local function contrastRatio(first, second)
+      local one, other = relativeLuminance(first), relativeLuminance(second)
+      return (math.max(one, other) + 0.05) / (math.min(one, other) + 0.05)
+    end
+
+    local function echoLinkAndReadItsFormat(text)
+      local line = getLastLineNumber("main")
+      echoLink(text, [[noop()]], "a link")
+      echo("\n")
+      assert.is_true(moveCursor("main", 0, line))
+      assert.is_true(selectString(text, 1) >= 0, "the link was not printed onto the line it was echoed on")
+      return getTextFormat("main")
+    end
+
+    setup(function()
+      -- getBackgroundColor() answers the console's own background and there is
+      -- no Lua reader for the profile's, but setBackgroundColor() writes both,
+      -- so this is the restore available
+      savedBg = {getBackgroundColor()}
+      savedWrap = getWindowWrap("main")
+      setWindowWrap("main", 500)
+    end)
+
+    teardown(function()
+      setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
+      setWindowWrap("main", savedWrap)
+      deselect()
+    end)
+
+    it("picks whichever link blue reads better against the console background", function()
+      setBackgroundColor(0, 0, 0)
+      local dark = echoLinkAndReadItsFormat("a link against a dark background")
+
+      setBackgroundColor(255, 255, 255)
+      local light = echoLinkAndReadItsFormat("a link against a light background")
+
+      assert.are_not.same(dark.foreground, light.foreground, "the link colour did not follow the console background at all")
+      assert.are.same({0, 0, 255}, light.foreground, "a light background did not keep the darker blue that reads best on it")
+      assert.is_true(contrastRatio(dark.foreground, dark.background) > 4.5, "the link does not contrast enough with a dark console background")
+      assert.is_true(contrastRatio(light.foreground, light.background) > 4.5, "the link does not contrast enough with a light console background")
     end)
   end)
 
@@ -2752,14 +3001,24 @@ describe("Tests UI functions", function()
     local src = "uiReadbackClipSrc"
     local dst = "uiReadbackClipDst"
 
+    local srcWrap, dstWrap
+
     setup(function()
       createMiniConsole(src, 0, 0, 400, 100)
       createMiniConsole(dst, 0, 110, 400, 100)
+      srcWrap, dstWrap = getWindowWrap(src), getWindowWrap(dst)
     end)
 
     before_each(function()
       clearWindow(src)
       clearWindow(dst)
+    end)
+
+    -- the wrapping tests below narrow these, and a failing assert must not carry
+    -- that into the next test
+    after_each(function()
+      setWindowWrap(src, srcWrap)
+      setWindowWrap(dst, dstWrap)
     end)
 
     teardown(function()
@@ -2781,6 +3040,112 @@ describe("Tests UI functions", function()
       moveCursor(dst, 0, 0)
       selectSection(dst, 0, 1)
       assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- copy() and appendBuffer() carry the line's per-character formatting
+    -- through appendFormatted(), where a character can be given its
+    -- neighbour's colour
+    it("appendBuffer keeps every colour run of a multi-coloured line", function()
+      decho(src, "<255,0,0:0,0,0>red<0,255,0:0,0,0>green<0,0,255:0,0,0>blue\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("redgreenblue", lines[1])
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 3, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 8, 1)
+      assert.are.same({0, 0, 255}, getTextFormat(dst).foreground)
+      -- the last character before each colour change, where an off-by-one in
+      -- the carried formatting shows
+      selectSection(dst, 2, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 7, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- "!osc8-docs" in text being echoed or received is an easter egg: it prints
+    -- a documentation banner instead of the line. A line already in a buffer is
+    -- being moved, not written, so copying it must not re-read it - the text
+    -- would be lost and the banner would land in the main console. The
+    -- injection is debounced to once a second, so nothing else may use the
+    -- phrase near this spec or the assertion below holds for that reason.
+    it("copies a line holding the documentation trigger phrase verbatim", function()
+      -- in two pieces, so putting the line into the source does not trip it
+      echo(src, "chat: !osc8-")
+      echo(src, "docs\n")
+      local mainLinesBefore = getLineCount()
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("chat: !osc8-docs", lines[1])
+      assert.are.equal(mainLinesBefore, getLineCount())
+    end)
+
+    -- copy() slices the line's text and its per-character formatting at the same
+    -- offset from the line's start, so the two can only be seen to disagree when
+    -- the selection does not begin at column 0
+    it("copies a partial selection that spans a colour change", function()
+      decho(src, "<255,0,0:0,0,0>redpart<0,255,0:0,0,0>greenpart\n")
+      moveCursor(src, 0, 0)
+      selectSection(src, 4, 6)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("artgre", lines[1])
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 2, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 3, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- appendFormatted() finishes with the same wrapLine() call the echo path
+    -- makes, so an appended line has to lay out exactly as an echoed one
+    it("appendBuffer wraps a long line the same way echoing it does", function()
+      local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
+      -- wide source so copy() takes the line whole, narrow destination so the
+      -- appended line has to wrap
+      setWindowWrap(src, 500)
+      setWindowWrap(dst, 40)
+      echo(src, long .. "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local appended = getLines(dst, 0, getLineCount(dst))
+      clearWindow(dst)
+      echo(dst, long .. "\n")
+      local echoed = getLines(dst, 0, getLineCount(dst))
+      assert.is_true(#appended > 1, "the destination did not wrap, so this proves nothing")
+      assert.are.same(echoed, appended)
+    end)
+
+    -- the carried formatting must not be able to move a wrap point
+    it("wraps a multi-coloured line where the same text uncoloured wraps", function()
+      local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
+      setWindowWrap(src, 500)
+      setWindowWrap(dst, 40)
+      -- the colour changes mid-word, so the boundary between the colours is
+      -- nowhere a wrap point could legitimately be
+      local split = math.floor(#long / 2) + 2
+      decho(src, "<255,0,0:0,0,0>" .. long:sub(1, split) .. "<0,255,0:0,0,0>" .. long:sub(split + 1) .. "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local coloured = getLines(dst, 0, getLineCount(dst))
+      clearWindow(dst)
+      echo(dst, long .. "\n")
+      local plain = getLines(dst, 0, getLineCount(dst))
+      assert.is_true(#coloured > 1, "the destination did not wrap, so this proves nothing")
+      assert.are.same(plain, coloured)
     end)
 
     -- An empty target has no line after the cursor's, so TConsole::paste()
@@ -5061,11 +5426,15 @@ describe("Label movies", function()
     end)
 
     it("a refused movie leaves no gif registered", function()
-      pending("the QMovie is made and handed to the gif tracker before the file is read, so a refused setMovie still leaves one counted in getProfileStats()")
+      local totalBefore = gifStats()
+      assert.is_nil(setMovie(label, notAGifFile))
+      assert.are.equal(totalBefore, gifStats())
+      assert.is_nil(setMovie(label, missingFile))
+      assert.are.equal(totalBefore, gifStats())
     end)
 
-    it("a refused movie over a working one leaves the label driving the dead movie", function()
-      pending("Host::setMovie calls setFileName on the label's live QMovie before it finds out the new file is not a movie, so the label keeps a movie the call said it would not have")
+    it("checking that the movie the label kept is the one that works", function()
+      pending("a label driving a movie with no frames in it answers every movie getter the same way as one that works - LabelMovieRefusalTest reads the QMovie itself")
     end)
 
     it("a refused movie leaves the label without a movie to drive", function()
@@ -5263,6 +5632,19 @@ describe("Console buffer size", function()
     assert.are.same({1000, 100}, {getConsoleBufferSize(console)})
   end)
 
+  it("a batch deletion size of none at all is raised to one line", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 0))
+    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    assert.is_true(setConsoleBufferSize(console, 100, -5))
+    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    for lineNumber = 1, 400 do
+      echo(console, ("buffer line %d\n"):format(lineNumber))
+    end
+    local lineCount = getLineCount(console)
+    assert.is_true(lineCount <= 110, "line count was " .. lineCount)
+  end)
+
   it("the buffer actually stops growing past the limit that was set", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 10))
@@ -5453,6 +5835,35 @@ describe("Main window size and saved layout", function()
     assert.is_true(tallHeight <= smallHeight + 300)
   end)
 
+  it("a main window that loses more than half its width is reported at the width it has", function()
+    if not resizableWindowAvailable() then
+      return
+    end
+    finally(restoreMainWindowSize)
+    setMainWindowSize(1600, 700)
+    pumpEvents(200)
+    local wideWidth = getMainWindowSize()
+    local wideColumns = getColumnCount("main")
+
+    setMainWindowSize(300, 700)
+    pumpEvents(200)
+    local narrowWidth = getMainWindowSize()
+    local narrowColumns = getColumnCount("main")
+
+    -- the main window has a minimum width of its own, so how narrow it really
+    -- became is read off the column count rather than assumed; that and
+    -- getMainWindowSize() have to tell the same story
+    if narrowColumns * 2 >= wideColumns then
+      pending("this display would not take the main window below half its width")
+      return
+    end
+    -- the console holds fewer than half the columns it did, so the width it
+    -- reports has to have more than halved with them; merely falling would also
+    -- be true of a size that only got part of the way down
+    assert.is_true(narrowWidth * 2 < wideWidth,
+      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(narrowWidth, wideWidth, wideColumns, narrowColumns))
+  end)
+
   it("the main window can be put back the size it was", function()
     if not resizableWindowAvailable() then
       return
@@ -5639,9 +6050,13 @@ describe("Toolbar buttons", function()
   local toolbar = "buttonSpecToolbar" .. suffix
   local pushDownButton = "buttonSpecPushDown" .. suffix
   local plainButton = "buttonSpecPlain" .. suffix
+  local floatingToolbar = "buttonSpecFloating" .. suffix
+  local floatingButton = "buttonSpecFloatingButton" .. suffix
   local packageFile = specFilePath(packageName .. ".xml")
 
-  local function actionXml(name, pushButton, isFolder)
+  -- location 0 is a button bar in the profile's window, location 4 the floating
+  -- setting that showToolBar() and hideToolBar() do not move
+  local function actionXml(name, pushButton, isFolder, location)
     return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
       <name>%s</name>
       <script></script>
@@ -5650,7 +6065,7 @@ describe("Toolbar buttons", function()
       <commandButtonDown></commandButtonDown>
       <icon></icon>
       <orientation>0</orientation>
-      <location>0</location>
+      <location>%s</location>
       <buttonRotation>0</buttonRotation>
       <sizeX>0</sizeX>
       <sizeY>0</sizeY>
@@ -5659,7 +6074,7 @@ describe("Toolbar buttons", function()
       <buttonFillerOffset>0</buttonFillerOffset>
       <posX>0</posX>
       <posY>0</posY>
-    ]]):format(isFolder, pushButton, name)
+    ]]):format(isFolder, pushButton, name, location or 0)
   end
 
   local function packageXml()
@@ -5671,6 +6086,9 @@ describe("Toolbar buttons", function()
       actionXml(toolbar, "no", "yes"),
       actionXml(pushDownButton, "yes", "no"), "</Action>",
       actionXml(plainButton, "no", "no"), "</Action>",
+      "</Action>",
+      actionXml(floatingToolbar, "no", "yes", 4),
+      actionXml(floatingButton, "no", "no"), "</Action>",
       "</Action>",
       [[</ActionPackage>]],
       [[</MudletPackage>]],
@@ -5866,41 +6284,61 @@ describe("Toolbar buttons", function()
   end)
 
   describe("showToolBar and hideToolBar", function()
-    -- both answer nothing at all, but they flip the active flag of the action
-    -- the toolbar was built from, which isActive() reads back. For a toolbar
-    -- that came out of a package that action is the package's own folder
-    -- rather than the toolbar, so the package's name is what they answer to
+    -- both flip the active flag of the toolbar's own action, which isActive()
+    -- reads back; whether the bar is on screen is not readable from Lua
     local function toolbarActive()
-      return isActive(packageName, "button")
+      return isActive(toolbar, "button")
     end
 
     after_each(function()
-      showToolBar(packageName)
+      showToolBar(toolbar)
     end)
 
     it("hideToolBar deactivates the toolbar and showToolBar activates it again", function()
       assert.are.equal(1, toolbarActive())
-      assert.are.equal(0, select("#", hideToolBar(packageName)))
+      assert.is_true(hideToolBar(toolbar))
       assert.are.equal(0, toolbarActive())
-      assert.are.equal(0, select("#", showToolBar(packageName)))
+      assert.is_true(showToolBar(toolbar))
       assert.are.equal(1, toolbarActive())
     end)
 
     it("hiding and showing repeatedly ends up where it started", function()
-      hideToolBar(packageName)
-      showToolBar(packageName)
-      hideToolBar(packageName)
-      showToolBar(packageName)
+      hideToolBar(toolbar)
+      showToolBar(toolbar)
+      hideToolBar(toolbar)
+      showToolBar(toolbar)
       assert.are.equal(1, toolbarActive())
       assert.is_true(setButtonStyleSheet(pushDownButton, ""))
     end)
 
     it("a name that is no toolbar is refused", function()
-      pending("both walk the toolbar list and do nothing at all when no name matches, so a typo is silent")
+      local absent = "toolbarNoSuchBar" .. suffix
+      local hideOk, hideErr = hideToolBar(absent)
+      assert.is_nil(hideOk)
+      assert.are.equal(("toolbar '%s' not found"):format(absent), hideErr)
+      local showOk, showErr = showToolBar(absent)
+      assert.is_nil(showOk)
+      assert.are.equal(("toolbar '%s' not found"):format(absent), showErr)
     end)
 
-    it("a packaged toolbar answering to its own name", function()
-      pending("regenerateEasyButtonBars builds a package's toolbars against the package's own action, so hideToolBar only answers to the package name and moves every toolbar in the package at once")
+    it("a floating toolbar is refused by name rather than reported missing", function()
+      local hideOk, hideErr = hideToolBar(floatingToolbar)
+      assert.is_nil(hideOk)
+      assert.are.equal(("toolbar '%s' is set to float, which showToolBar() and hideToolBar() do not move"):format(floatingToolbar), hideErr)
+      assert.are.equal(1, isActive(floatingToolbar, "button"))
+    end)
+
+    it("a packaged toolbar answers to its own name, leaving the package alone", function()
+      assert.is_true(hideToolBar(toolbar))
+      assert.are.equal(0, isActive(toolbar, "button"))
+      assert.are.equal(1, isActive(packageName, "button"))
+    end)
+
+    it("the name of the package a toolbar came in still moves it", function()
+      assert.is_true(hideToolBar(packageName))
+      assert.are.equal(0, toolbarActive())
+      assert.is_true(showToolBar(packageName))
+      assert.are.equal(1, toolbarActive())
     end)
 
     it("both hard-error on a non-string toolbar name", function()
@@ -6040,6 +6478,15 @@ describe("Command line actions and suggestions", function()
       assert.are.equal(('command line "%s" not found'):format(unknown), err)
     end)
 
+    it("still reads the command line name when something trails it", function()
+      -- clearing has no mandatory second argument, so argument 1 is the command
+      -- line name whatever follows it; the add and remove siblings only look
+      -- different because their last argument is the suggestion text
+      local ok, err = clearCmdLineSuggestions(unknown, "trailing")
+      assert.is_nil(ok)
+      assert.are.equal(('command line "%s" not found'):format(unknown), err)
+    end)
+
     it("hard-errors on a non-string command line name", function()
       local ok, err = pcall(clearCmdLineSuggestions, {})
       assert.is_false(ok)
@@ -6114,6 +6561,24 @@ describe("setPopup", function()
     assert.are.equal(('window "%s" not found'):format(unknown), err)
   end)
 
+  it("a refused call lets go of the functions it read", function()
+    local mismatchGrowth = registryGrowthOver(function()
+      setPopup(console, {function() end, function() end}, {"only one hint"})
+    end)
+    assert.are.equal(0, mismatchGrowth, ("the registry grew by %d over 20 size-mismatched calls"):format(mismatchGrowth))
+
+    local unknownGrowth = registryGrowthOver(function()
+      setPopup(unknown, {function() end}, {"first"})
+    end)
+    assert.are.equal(0, unknownGrowth, ("the registry grew by %d over 20 calls naming no window"):format(unknownGrowth))
+  end)
+
+  it("names the window before it counts the tables", function()
+    local ok, err = setPopup(unknown, {"one", "two"}, {"only one"})
+    assert.is_nil(ok)
+    assert.are.equal(('window "%s" not found'):format(unknown), err)
+  end)
+
   it("opening the popup menu and picking an entry", function()
     pending("the menu only opens on a real right-click - needs a functional test")
   end)
@@ -6144,9 +6609,8 @@ describe("Labels inside a user window", function()
   end)
 
   it("the label really is inside the user window, not the main window", function()
-    -- createLabel falls back to the main window without a word when the parent
-    -- window name matches nothing, so a spec that only reads the label back
-    -- would pass either way; hiding the parent is what tells them apart
+    -- reading the label back would pass wherever it ended up; hiding the parent
+    -- is what says which window it is in
     assert.is_true(windowVisible(label))
     hideWindow(userWindow)
     assert.is_false(windowVisible(label))
@@ -6155,7 +6619,21 @@ describe("Labels inside a user window", function()
   end)
 
   it("a parent window name that matches nothing is refused", function()
-    pending("createLabel puts the label in the main window and answers true when the parent window name is not a window")
+    local absentParent = "labelNoSuchParent" .. suffix
+    local orphan = "labelWithNoParent" .. suffix
+    local ok, err = createLabel(absentParent, orphan, 0, 0, 20, 10, 1)
+    assert.is_false(ok)
+    assert.are.equal(("window '%s' not found"):format(absentParent), err)
+    -- and no label was put in the main window instead
+    local deleteOk, deleteErr = deleteLabel(orphan)
+    assert.is_false(deleteOk)
+    assert.are.equal(("label name '%s' not found"):format(orphan), deleteErr)
+  end)
+
+  it("the main window is still a parent name it takes", function()
+    local mainLabel = "labelBackInTheMainWindow" .. suffix
+    finally(function() deleteLabel(mainLabel) end)
+    assert.is_true(createLabel("main", mainLabel, 0, 0, 20, 10, 1))
   end)
 
   it("echo puts text on a label that lives in a user window", function()

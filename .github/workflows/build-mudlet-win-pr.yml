@@ -200,7 +200,7 @@ jobs:
         fi
         echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
 
-        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
+        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test" --offline
 
     - name: Passed Lua tests
       shell: msys2 {0}

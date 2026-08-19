@@ -30,6 +30,7 @@
 #include <QPointer>
 #include <QString>
 #include <list>
+#include <utility>
 
 class Host;
 class mudlet;
@@ -46,15 +47,9 @@ public:
     explicit ActionUnit(Host*);
     ~ActionUnit();
 
-    std::list<TAction*> getActionRootNodeList()
-    {
-        return mActionRootNodeList;
-    }
+    std::list<TAction*> getActionRootNodeList() { return mActionRootNodeList; }
 
-    QMap<int, TAction*> getActionList()
-    {
-        return mActionMap;
-    }
+    QMap<int, TAction*> getActionList() { return mActionMap; }
 
     TAction* getAction(int id);
     TAction* findAction(const QString&);
@@ -84,8 +79,8 @@ public:
     void regenerateEasyButtonBars();
     void constructToolbar(TAction*, TToolBar* pToolBar);
     void constructToolbar(TAction*, TEasyButtonBar* pTB);
-    void showToolBar(const QString&);
-    void hideToolBar(const QString&);
+    std::pair<bool, QString> showToolBar(const QString&);
+    std::pair<bool, QString> hideToolBar(const QString&);
 
     QList<TAction*> uninstallList;
 
@@ -93,6 +88,9 @@ private:
     ActionUnit() = default;
 
     TAction* getActionPrivate(int id);
+    TAction* findEasyButtonBarAction(const QString& name);
+    bool namesAFloatingToolBar(const QString& name);
+    std::pair<bool, QString> setToolBarActive(const QString& name, const bool active);
     void addActionRootNode(TAction* pT, int parentPosition = -1, int childPosition = -1);
     void addAction(TAction* pT);
     void removeActionRootNode(TAction* pT);

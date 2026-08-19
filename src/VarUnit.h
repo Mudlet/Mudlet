@@ -36,6 +36,8 @@ class TVar;
 
 class QTreeWidgetItem;
 
+struct lua_State;
+
 
 class VarUnit
 {
@@ -70,9 +72,12 @@ public:
     void removeHidden(TVar* var);
     void removeHidden(const QString& name);
     bool isSaved(TVar*);
+    void renameVariableBookkeeping(TVar*, const QString& oldFullName, const QString& newFullName);
     void addPointer(const void*);
     void clearPointers();
     void clearHiddenTables();
+    void anchorHiddenTable(lua_State*, int valueIndex, const void* table);
+    void shareHiddenTableAnchors(const VarUnit&);
     QString getUnsaveableReason(TVar*);
     QSet<QString> hidden;
     QSet<QString> hiddenByUser;
@@ -80,21 +85,25 @@ public:
     // one of them reached under a name of the user's own is still recognised.
     // An address is only an identity while that table is alive, and Lua hands a
     // collected one's address back out, so a hidden table dropped since the last
-    // hiding walk can name a live one - which is what clearHiddenTables() bounds
-    // to a single walk. What it costs if that does happen is one ride-along
-    // member of a saved table, since a name the profile saves is checked before
-    // hiding is. Pinning each table with a registry reference would make it
-    // exact, at the price of keeping an uninstalled package's tables alive for
-    // the session.
-    // Travels with the private name map: assigning it alone (as the save-time
-    // copy does, which never un-hides anything) leaves un-hiding a no-op.
+    // hiding walk can name a live one - a fresh user variable landing on the
+    // address would vanish from the Variables view and from profile saves.
+    // isHidden() therefore checks the address against a weak anchor of the
+    // table (anchorHiddenTable()) before trusting it, which asks Lua whether
+    // that table is still alive without keeping it alive.
+    // Never assign this on its own - an identity is only usable alongside its
+    // anchor, so the save-time copy takes both at once through
+    // shareHiddenTableAnchors().
     QSet<const void*> hiddenTables;
     QSet<QString> savedVars;
 
 private:
+    bool rootNameReadsAsAMemberPath(TVar*) const;
     int countTableItems(TVar*);
     void rememberHiddenTable(TVar*, const QString& fullName);
     void forgetHiddenTable(const QString& fullName);
+    void forgetHiddenTableAddress(const void* table);
+    void releaseAnchorSlot(int slot);
+    bool hiddenTableStillAlive(const void* table) const;
     std::unique_ptr<TVar> base;
     QSet<QString> variableSet;
     // ?? variables
@@ -104,6 +113,18 @@ private:
     QSet<const void*> mPointers;
     // what un-hiding a name has to hand back to hiddenTables
     QHash<QString, const void*> mHiddenTableByName;
+    // The weak anchors behind hiddenTables: the interpreter they live in, the
+    // registry reference of a weak-valued table holding each hidden table, and
+    // which of its slots holds the table behind each address. 0 is not a value
+    // luaL_ref() hands out, so it stands for "no anchor" in mHiddenTableAnchors
+    // and in the slot values alike.
+    lua_State* mpAnchorState = nullptr;
+    int mHiddenTableAnchors = 0;
+    QHash<const void*, int> mHiddenTableSlots;
+    // false on a save-time copy, whose anchors are borrowed from the live unit
+    // (shareHiddenTableAnchors()): releasing them would pull the live unit's
+    // registry entries out from under it, so every luaL_unref is gated on this.
+    bool mOwnsAnchors = true;
 };
 
 #endif // MUDLET_VARUNIT_H
