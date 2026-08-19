@@ -14398,67 +14398,67 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1033"/>
       <source>Tibetan (India)</source>
-      <translation type="unfinished"/>
+      <translation>Tibetano (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1034"/>
       <source>Breton</source>
-      <translation type="unfinished"/>
+      <translation>Bretón</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1035"/>
       <source>Breton (France)</source>
-      <translation type="unfinished"/>
+      <translation>Bretón (Francia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1036"/>
       <source>Bosnian</source>
-      <translation type="unfinished"/>
+      <translation>Bosnio</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1037"/>
       <source>Bosnian (Bosnia/Herzegovina)</source>
-      <translation type="unfinished"/>
+      <translation>Bosnio (Bosnia/Herzegovina)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1038"/>
       <source>Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)</source>
-      <translation type="unfinished"/>
+      <translation>Bosnio (Bosnia/Herzegovina - Alfabeto cirílico)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1039"/>
       <source>Catalan</source>
-      <translation type="unfinished"/>
+      <translation>Catalán</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1040"/>
       <source>Catalan (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Catalán (España)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1041"/>
       <source>Catalan (Spain - Valencian)</source>
-      <translation type="unfinished"/>
+      <translation>Catalán (España - Valencia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1042"/>
       <source>Central Kurdish</source>
-      <translation type="unfinished"/>
+      <translation>Kurdo Central</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1043"/>
       <source>Central Kurdish (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>Kurdo Central (Iraq)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1044"/>
       <source>Czech</source>
-      <translation type="unfinished"/>
+      <translation>Checo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1045"/>
       <source>Czech (Czechia)</source>
-      <translation type="unfinished"/>
+      <translation>Checo (Chequia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1048"/>
@@ -14468,7 +14468,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1049"/>
       <source>Danish (Denmark)</source>
-      <translation type="unfinished"/>
+      <translation>Danés (Dinamarca)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1050"/>
@@ -14478,57 +14478,57 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1051"/>
       <source>German (Austria)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Austria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1052"/>
       <source>German (Austria, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Austria, revisado por F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1053"/>
       <source>German (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Bélgica)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1054"/>
       <source>German (Switzerland)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Suiza)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1055"/>
       <source>German (Switzerland, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Suiza, revisado por F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1056"/>
       <source>German (Germany/Belgium/Luxemburg)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Alemania/Bélgica/Luxemburgo)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1057"/>
       <source>German (Germany/Belgium/Luxemburg, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Alemania/Bélgica/Luxemburgo, revisado por F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1058"/>
       <source>German (Liechtenstein)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Liechtenstein)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1059"/>
       <source>German (Luxembourg)</source>
-      <translation type="unfinished"/>
+      <translation>Alemán (Luxemburgo)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1062"/>
       <source>Greek</source>
-      <translation type="unfinished"/>
+      <translation>Griego</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1063"/>
       <source>Greek (Greece)</source>
-      <translation type="unfinished"/>
+      <translation>Griego (Grecia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1064"/>
@@ -14538,50 +14538,50 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1065"/>
       <source>English (Antigua/Barbuda)</source>
-      <translation type="unfinished"/>
+      <translation>Inglés (Antigua/Barbuda)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1066"/>
       <source>English (Australia)</source>
-      <translation type="unfinished"/>
+      <translation>Inglés (Australia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1068"/>
       <source>English (Bahamas)</source>
-      <translation type="unfinished"/>
+      <translation>Inglés (Bahamas)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1069"/>
       <source>English (Botswana)</source>
-      <translation type="unfinished"/>
+      <translation>Inglés (Botswana)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1070"/>
       <source>English (Belize)</source>
-      <translation type="unfinished"/>
+      <translation>Inglés (Belice)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1007"/>
       <source>Arabic (Egypt)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Egipto)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
       <location filename="../src/mudlet.cpp" line="318"/>
       <location filename="../src/mudlet.cpp" line="731"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar perfil</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <location filename="../src/mudlet.cpp" line="323"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="377"/>
       <source>Mute</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="384"/>
@@ -14590,52 +14590,52 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
       <location filename="../src/mudlet.cpp" line="5296"/>
       <location filename="../src/mudlet.cpp" line="5299"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar todos los contenidos multimedia</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="390"/>
       <location filename="../src/mudlet.cpp" line="392"/>
       <location filename="../src/mudlet.cpp" line="5331"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar los sonidos de Mudlet (disparadores, scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="419"/>
       <source>Mudlet chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="420"/>
       <source>Open a link to the Mudlet server on Discord</source>
-      <translation type="unfinished"/>
+      <translation>Abrir un enlace al servidor Mudlet en Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="458"/>
       <source>Show Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar barra de herramientas principal</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="514"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>Reportar un problema</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="519"/>
       <source>Report bugs in the public test build to help us improve Mudlet.</source>
       <extracomment>Tooltip for Report Issue button in public test builds</extracomment>
-      <translation type="unfinished"/>
+      <translation>Reportar errores en la versión de prueba pública para ayudarnos a mejorar Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="528"/>
       <location filename="../src/mudlet.cpp" line="6114"/>
       <source>About Mudlet version, creators, and license.</source>
       <extracomment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in multiple places - please ensure all have the same translation).</extracomment>
-      <translation type="unfinished"/>
+      <translation>Acerca de la versión, los creadores y la licencia de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="538"/>
       <source>Full Screen</source>
-      <translation type="unfinished"/>
+      <translation>Pantalla completa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
@@ -14645,12 +14645,12 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="720"/>
       <source>Show Map</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar mapa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="721"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Línea de entrada compacta</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="722"/>
