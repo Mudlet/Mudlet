@@ -72,6 +72,7 @@ set(TELNET_GROUP_TEST_SOURCES
     GMCPCharLoginTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
+    CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
     TelnetReconnectStateTest.cpp
