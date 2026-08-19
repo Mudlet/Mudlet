@@ -11805,29 +11805,29 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="172"/>
       <source>My drink trigger</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the name of the trigger which reacts on &quot;You are thirsty&quot; with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mi disparador de bebida</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="174"/>
       <source>You are thirsty.</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the text from game which will be triggered on, and reacted to with &quot;drink water&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tienes sed.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="176"/>
       <source>drink water</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the command sent to game after we triggered on text &quot;You are thirsty.&quot; from game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Bebe agua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="183"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;Introduction to Triggers&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt; Introducción a los Dispararadores &lt;/a&gt;para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="208"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Introduction to Scripts&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Scripts&apos;&gt;Introducción a los Scripts&lt;/a&gt; para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="224"/>
@@ -11838,46 +11838,46 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="231"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Introduction to Timers&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Introducción a los Temporizadores&lt;/a&gt;  para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="241"/>
       <source>&lt;ol&gt;&lt;li&gt;Add a new group to create a &lt;strong&gt;button bar&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Add groups as &lt;strong&gt;menus&lt;/strong&gt; or sub-menus.&lt;/li&gt;&lt;li&gt;Add items as &lt;strong&gt;buttons&lt;/strong&gt; to a bar or menu.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;command&lt;/strong&gt; or script to execute when pressed.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the item. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Deactivated items are hidden, including all items they contain.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Click-down buttons:&lt;/strong&gt; Can define separate commands for press/release. Use getButtonState() to check state.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Button intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Añade un nuevo grupo para crear una &lt;&lt;strong&gt;barra de botones&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Añade grupos como &lt;strong&gt;menús&lt;/strong&gt; o submenús.&lt;/li&gt;&lt;li&gt;Añade elementos como &lt;strong&gt;botones&lt;/strong&gt; a una barra o menú.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; o script para ejecutar cuando se pulse.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el elemento. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Los elementos desactivados se ocultan, incluyendo todos los elementos que contienen.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Botones de clic (Click-down):&lt;/strong&gt; Pueden definir comandos independientes para presionar/soltar. Usa getButtonState() para comprobar su estado.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="252"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introduction to Buttons&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introducción a los botones&lt;/a> para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="267"/>
       <source>How to add a new keybinding from the input line</source>
       <extracomment>Name of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir una nueva combinación de teclas desde la línea de entrada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="276"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;Introduction to Keybindings&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Keybindings&apos;&gt;Introducción a las Combinaciones de Teclas&lt;/a&gt; para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="293"/>
       <source>How to add a new variable from the input line</source>
       <extracomment>Name of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir una nueva variable desde la línea de entrada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="300"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;Introduction to Variables&lt;/a&gt; for a detailed overview.</source>
-      <translation type="unfinished"/>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Variables&apos;&gt;Introducción a las Variables&lt;/a&gt; para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="331"/>
       <source>package item</source>
       <extracomment>Accessible description indicating an item belongs to a package, shown after the item name. Keep short, as it&apos;s appended to other descriptions like &quot;activated, package item&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>elemento del paquete</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="460"/>
@@ -11891,41 +11891,41 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="13296"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="13305"/>
       <source>Redo</source>
-      <translation type="unfinished"/>
+      <translation>Rehacer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="487"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1588"/>
       <source>Undo: %1 (%2)</source>
       <extracomment>Tooltip for undo action. %1 is the action being undone (e.g., &quot;Activate trigger &quot;foo&quot;&quot;), %2 is the keyboard shortcut</extracomment>
-      <translation type="unfinished"/>
+      <translation>Deshacer: %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="492"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1599"/>
       <source>Undo (%1)</source>
       <extracomment>Tooltip for undo action when no specific action. %1 is the keyboard shortcut</extracomment>
-      <translation type="unfinished"/>
+      <translation>Deshacer (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="501"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1593"/>
       <source>Redo: %1 (%2)</source>
       <extracomment>Tooltip for redo action. %1 is the action being redone (e.g., &quot;Activate trigger &quot;foo&quot;&quot;), %2 is the keyboard shortcut</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rehacer: %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="506"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1602"/>
       <source>Redo (%1)</source>
       <extracomment>Tooltip for redo action when no specific action. %1 is the keyboard shortcut</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rehacer (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="853"/>
       <source>Show/Hide Debug Console (%1) -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
       <extracomment>%1 is a keyboard shortcut, e.g. &apos;Ctrl+0&apos; on Windows/Linux or &apos;⌘0&apos; on macOS</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mostrar/ocultar la consola de depuración (%1) -&gt; el sistema irá &lt;b&gt;&lt;i&gt;más lento&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="868"/>
@@ -11935,70 +11935,72 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="966"/>
       <source>Create Module</source>
-      <translation type="unfinished"/>
+      <translation>Crear módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="968"/>
       <source>&lt;p&gt;Create a module from selected items&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Crear un módulo a partir de los elementos seleccionados&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="973"/>
       <source>&lt;p&gt;Saves your profile. (%1)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
       <extracomment>%1 is a keyboard shortcut, e.g. &apos;Ctrl+Shift+S&apos; on Windows/Linux or &apos;⌘⇧S&apos; on macOS</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Guarda tu perfil. (%1)&lt;/p&gt;&lt;p&gt;Guarda todo tu perfil (disparadores, alias, scripts, temporizadores, botones y teclas, pero no el mapa ni las configuraciones específicas de los scripts) en el disco de tu ordenador, de modo que en caso de una caída del ordenador o del programa, se conservarán todos los cambios que hayas realizado.&lt;/p&gt;&lt;p&gt;También realiza una copia de seguridad de tu perfil; puedes cargar una versión anterior del mismo al conectarte.&lt;/p&gt;&lt;p&gt;Si hubiera módulos marcados para ser &quot;&lt;i&gt;sincronizados&lt;/i&gt;&quot;, esto también hará que se guarden y se vuelvan a cargar en otros perfiles si estos también están activos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1260"/>
       <source>Whole word</source>
-      <translation type="unfinished"/>
+      <translation>Palabra completa</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1262"/>
       <source>Only match whole words</source>
-      <translation type="unfinished"/>
+      <translation>Solo coincidir con palabras completas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1748"/>
       <source>Text to find (anywhere in the game output)</source>
-      <translation type="unfinished"/>
+      <translation>Texto a buscar (en cualquier parte de la salida del juego)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1750"/>
       <source>Text to find (as a regular expression pattern)</source>
-      <translation type="unfinished"/>
+      <translation>Texto a buscar (como un patrón de expresión regular)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1752"/>
       <source>Text to find (from beginning of the line)</source>
-      <translation type="unfinished"/>
+      <translation>Texto a buscar (desde el principio de la línea)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1754"/>
       <source>Exact line to match</source>
-      <translation type="unfinished"/>
+      <translation>Línea exacta a coincidir</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1756"/>
       <source>Lua code to run (return true to match)</source>
-      <translation type="unfinished"/>
+      <translation>Código Lua a ejecutar (devuelve verdadero para coincidir)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4008"/>
       <source>&lt;p&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;No se pudo activar &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Tendrás que reactivarlo después de que se haya corregido el problema.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4115"/>
       <source>move items</source>
-      <translation type="unfinished"/>
+      <translation>Mover elementos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4308"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;No se pudo activar &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Tendrás que reactivarlo después de que se haya corregido el problema.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4456"/>
@@ -12007,17 +12009,18 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="4920"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;; %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;No se pudo activar &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;; %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Tendrás que reactivarlo después de que se haya corregido el problema.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5216"/>
       <source>table_variable</source>
-      <translation type="unfinished"/>
+      <translation>tabla_variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5216"/>
       <source>variable_name</source>
-      <translation type="unfinished"/>
+      <translation>nombre_variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5845"/>
@@ -12039,7 +12042,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="12898"/>
       <source>Default foreground color</source>
       <extracomment>Color trigger default foreground color button, ensure all three instances have the same text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Color de primer plano predeterminado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7598"/>
@@ -12047,7 +12050,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="12901"/>
       <source>Foreground color [ANSI %1]</source>
       <extracomment>Color trigger ANSI foreground color button, ensure all three instances have the same text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Color de primer plano [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7604"/>
@@ -12055,7 +12058,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="12958"/>
       <source>Background color ignored</source>
       <extracomment>Color trigger ignored background color button, ensure all three instances have the same text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Color de fondo ignorado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7608"/>
@@ -12063,7 +12066,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="12961"/>
       <source>Default background color</source>
       <extracomment>Color trigger default background color button, ensure all three instances have the same text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Color de fondo predeterminado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7612"/>
@@ -12071,7 +12074,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="12964"/>
       <source>Background color [ANSI %1]</source>
       <extracomment>Color trigger ANSI background color button, ensure all three instances have the same text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Color de fondo [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7793"/>
@@ -12082,7 +12085,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="13459"/>
       <source>keep</source>
       <extracomment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</extracomment>
-      <translation>conservar</translation>
+      <translation>mantener</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7822"/>
@@ -12093,7 +12096,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="8645"/>
       <source>Package item. Copy before editing to preserve changes.</source>
       <extracomment>First-time educational message for screen reader users about package items</extracomment>
-      <translation type="unfinished"/>
+      <translation>Elemento del paquete. Copiar antes de editar para conservar los cambios.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8347"/>
@@ -12109,7 +12112,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8399"/>
       <source>Button properties</source>
-      <translation>Propiedades Del Botón</translation>
+      <translation>Propiedades del botón</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8407"/>
