@@ -37,6 +37,29 @@
 
 using namespace std::chrono_literals;
 
+// A case-insensitive text.contains("<a ") answers the same, but it case-folds every
+// character it walks, and Lua UIs echo into labels on every prompt. Any whitespace
+// counts as the separator because HTML allows any; the styling pass in setText()
+// recognises only the ASCII ones, so an anchor split by a non-breaking space comes
+// out clickable but unstyled.
+static bool containsAnchorTag(const QString& text)
+{
+    qsizetype from = 0;
+    while (true) {
+        const qsizetype at = text.indexOf(QLatin1Char('<'), from);
+        // Too near the end for a tag name and a separator, and every later '<' is
+        // nearer still, so there is nothing left to find
+        if (at < 0 || at + 2 >= text.size()) {
+            return false;
+        }
+        const char16_t tagName = text.at(at + 1).unicode();
+        if ((tagName == u'a' || tagName == u'A') && text.at(at + 2).isSpace()) {
+            return true;
+        }
+        from = at + 1;
+    }
+}
+
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
 , mpHost(pH)
@@ -71,9 +94,11 @@ TLabel::~TLabel()
 
 void TLabel::setText(const QString& text)
 {
+    const bool hasAnchor = containsAnchorTag(text);
+
     // Enable TextBrowserInteraction only when the label contains hyperlinks
     // This prevents Qt's default context menu from appearing on labels without links
-    if (text.contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (hasAnchor) {
         setTextInteractionFlags(Qt::TextBrowserInteraction);
     } else {
         setTextInteractionFlags(Qt::NoTextInteraction);
@@ -82,7 +107,7 @@ void TLabel::setText(const QString& text)
     // If we have link styling configured and the text contains HTML links,
     // we need to inject inline styles because QTextDocument doesn't use
     // widget stylesheets or QPalette for link colors when a stylesheet exists
-    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && text.contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && hasAnchor) {
         QString styledText = text;
 
         // Replace all <a href="..."> tags with <a href="..." style="...">
@@ -90,7 +115,7 @@ void TLabel::setText(const QString& text)
         // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
         // uses this format. User-provided HTML outside this pattern will still render as
         // clickable links (Qt handles that), but won't receive custom styling.
-        QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
+        static const QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
         QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
 
         // Process matches in reverse order to avoid offset issues
@@ -194,7 +219,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 {
     // If the label has rich text with potential hyperlinks, let QLabel handle the event first
     // QLabel will emit linkActivated if a link was clicked
-    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
         QLabel::mousePressEvent(event);
         // If QLabel didn't accept the event, then it wasn't a link click
         if (event->isAccepted()) {
@@ -226,7 +251,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     // If the label has rich text with potential hyperlinks, let QLabel handle the event first
-    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
         QLabel::mouseReleaseEvent(event);
         // If QLabel accepted the event, it was handling a link click
         if (event->isAccepted()) {
@@ -314,7 +339,7 @@ void TLabel::setClickThrough(bool clickthrough)
         setTextInteractionFlags(Qt::NoTextInteraction);
     } else {
         // Re-enable text interaction only if the current text has hyperlinks
-        if (text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+        if (containsAnchorTag(text())) {
             setTextInteractionFlags(Qt::TextBrowserInteraction);
         } else {
             setTextInteractionFlags(Qt::NoTextInteraction);
@@ -369,7 +394,7 @@ void TLabel::clearVisitedLinks()
     mVisitedLinks.clear();
 
     QString currentText = text();
-    if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
         setText(currentText);
     }
 }
@@ -386,7 +411,7 @@ void TLabel::slot_linkActivated(const QString& link)
         // Refresh the label to update link colors
         // We need to re-apply the current text to trigger the styling update
         QString currentText = text();
-        if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
+        if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
             setText(currentText);
         }
     }

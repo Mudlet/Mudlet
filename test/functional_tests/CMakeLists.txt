@@ -34,6 +34,7 @@ endif()
 set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     GlyphOverflowTest.cpp
+    LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
