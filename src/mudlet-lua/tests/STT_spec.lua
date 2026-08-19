@@ -64,6 +64,27 @@ describe("stt bridge", function()
       assert.is_table(info.searchPaths)
     end)
 
+    it("answers every documented key, engine installed or not", function()
+      -- The keys a package probes before deciding what it can do must be
+      -- readable before anything is installed, which is exactly when it
+      -- probes. Only version and language are documented as appearing later.
+      local info = stt.getInfo()
+      assert.is_table(info.capabilities, "capabilities must be readable with no engine present")
+      assert.is_boolean(info.capabilities.biasing)
+      assert.is_boolean(info.capabilities.grammar)
+      assert.is_boolean(info.capabilities.words)
+      assert.is_boolean(info.capabilities.onDevice)
+      assert.is_number(info.silenceTimeout, "0 while disabled, not absent")
+      assert.is_number(info.audioLevel)
+      assert.is_string(info.sensitivity)
+    end)
+
+    it("reports a sensitivity from the documented set", function()
+      local modes = {short = true, default = true, long = true}
+      assert.is_true(modes[stt.getInfo().sensitivity] ~= nil,
+        "unexpected sensitivity: " .. tostring(stt.getInfo().sensitivity))
+    end)
+
     it("reports a state from the documented set", function()
       local states = {
         uninitialized = true, ready = true, listening = true,
@@ -80,12 +101,11 @@ describe("stt bridge", function()
       assert.are.equal(stt.isListening(), info.listening)
     end)
 
-    it("names no engine until one has been created", function()
-      if stt.getInfo().initialized then return end
-      -- Either no recognizer exists yet, or one does and must name itself
-      local backend = stt.getInfo().backend
-      assert.is_true(backend == "none" or #backend > 0,
-        "backend should be 'none' or a real engine name, got: " .. tostring(backend))
+    it("names the engine it would use", function()
+      -- Asserting "non-empty or the string none" was a test that could not
+      -- fail, since every string is one or the other. The contract worth
+      -- holding is that the name is one this build actually has.
+      assert.are.equal("Vosk", stt.getInfo().backend)
     end)
   end)
 

@@ -57,7 +57,12 @@ public:
     // Stop delivering audio after this many milliseconds of continuous
     // silence, announced via silenceTimedOut(). 0 (the default) disables the
     // timeout entirely, preserving open-ended capture.
-    void setSilenceTimeout(int msec) { mSilenceTimeoutMsec = qMax(0, msec); }
+    // Enabling this mid-session restarts the clock rather than judging the
+    // session so far: the silence measurement only runs while a timeout is
+    // set, so a session that began without one has been accumulating silence
+    // since it started and would otherwise time out on the very next chunk -
+    // ending an utterance the moment the timeout was configured.
+    void setSilenceTimeout(int msec);
     int silenceTimeout() const { return mSilenceTimeoutMsec; }
 
     // The delivery format: pcm() payloads are this rate, mono, Int16

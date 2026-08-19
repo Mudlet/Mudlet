@@ -140,6 +140,17 @@ bool SpeechAudioCapture::start()
     return true;
 }
 
+void SpeechAudioCapture::setSilenceTimeout(int msec)
+{
+    const int previous = mSilenceTimeoutMsec;
+    mSilenceTimeoutMsec = qMax(0, msec);
+
+    if (mSilenceTimeoutMsec > 0 && previous == 0 && active()) {
+        mSmoothedLevel = 0.0f;
+        mSinceVoiced.restart();
+    }
+}
+
 void SpeechAudioCapture::stop()
 {
     teardown();

@@ -264,8 +264,9 @@ int TLuaInterpreter::sttIsInitialized(lua_State* L)
 
 // stt.getInfo()
 // Get information about the speech recognition backend.
-// Returns a table with: backend, version, available, initialized, listening,
-// state, language, modelPath, searchPaths
+// The keys and their meanings are specified in docs/stt-api.md rather than
+// listed again here, because a second copy of that list has already drifted
+// once behind the keys this function actually sets.
 int TLuaInterpreter::sttGetInfo(lua_State* L)
 {
     auto* pMudlet = mudlet::self();
@@ -282,94 +283,81 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     lua_pushboolean(L, VoskRecognizer::isLibraryAvailable());
     lua_settable(L, -3);
 
-    if (pMudlet) {
-        auto* pRecognizer = pMudlet->speechRecognizer();
-        if (pRecognizer) {
-            // Version
-            lua_pushstring(L, "version");
-            lua_pushstring(L, pRecognizer->backendVersion().toUtf8().constData());
-            lua_settable(L, -3);
+    // Every key below is answered whether or not a recognizer exists. A
+    // package reads these to decide what it can do, and it reads them before
+    // anything is installed - which was exactly when they were absent, so the
+    // documented probe getInfo().capabilities.words was a nil index on any
+    // machine without an engine.
+    auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
 
-            // Initialized
-            lua_pushstring(L, "initialized");
-            lua_pushboolean(L, pRecognizer->isInitialized());
-            lua_settable(L, -3);
+    lua_pushstring(L, "initialized");
+    lua_pushboolean(L, pRecognizer && pRecognizer->isInitialized());
+    lua_settable(L, -3);
 
-            // Listening
-            lua_pushstring(L, "listening");
-            lua_pushboolean(L, pRecognizer->isListening());
-            lua_settable(L, -3);
+    lua_pushstring(L, "listening");
+    lua_pushboolean(L, pRecognizer && pRecognizer->isListening());
+    lua_settable(L, -3);
 
-            // Current language
-            lua_pushstring(L, "language");
-            lua_pushstring(L, pRecognizer->currentLanguage().toUtf8().constData());
-            lua_settable(L, -3);
+    // Engine state, which distinguishes Error from Uninitialized - both of
+    // which report initialized == false
+    lua_pushstring(L, "state");
+    lua_pushstring(L, speechRecognizerStateName(pRecognizer ? pRecognizer->state() : SpeechRecognizer::State::Uninitialized));
+    lua_settable(L, -3);
 
-            // Engine state, which distinguishes Error from Uninitialized -
-            // both of which report initialized == false
-            lua_pushstring(L, "state");
-            lua_pushstring(L, speechRecognizerStateName(pRecognizer->state()));
-            lua_settable(L, -3);
+    // Path of the model actually in use, as opposed to the directory models
+    // are installed into that stt.getModelPath() reports
+    lua_pushstring(L, "modelPath");
+    lua_pushstring(L, pRecognizer ? pRecognizer->modelPath().toUtf8().constData() : "");
+    lua_settable(L, -3);
 
-            // Path of the model actually in use, as opposed to the directory
-            // models are installed into that stt.getModelPath() reports
-            lua_pushstring(L, "modelPath");
-            lua_pushstring(L, pRecognizer->modelPath().toUtf8().constData());
-            lua_settable(L, -3);
+    // Milliseconds of continuous silence before listening stops
+    // automatically; 0 while the timeout is disabled
+    lua_pushstring(L, "silenceTimeout");
+    lua_pushinteger(L, pRecognizer ? pRecognizer->silenceTimeout() : 0);
+    lua_settable(L, -3);
 
-            // Milliseconds of continuous silence before listening stops
-            // automatically; 0 while the timeout is disabled
-            lua_pushstring(L, "silenceTimeout");
-            lua_pushinteger(L, pRecognizer->silenceTimeout());
-            lua_settable(L, -3);
+    // Smoothed level of recent input, so a caller can tell a misheard phrase
+    // from one that barely arrived
+    lua_pushstring(L, "audioLevel");
+    lua_pushnumber(L, pRecognizer ? pRecognizer->audioLevel() : 0.0f);
+    lua_settable(L, -3);
 
-            // Level last heard from the microphone, so a caller can tell a
-            // misheard phrase from one that barely arrived
-            lua_pushstring(L, "audioLevel");
-            lua_pushnumber(L, pRecognizer->audioLevel());
-            lua_settable(L, -3);
+    // How quickly the engine calls an utterance finished
+    lua_pushstring(L, "sensitivity");
+    lua_pushstring(L, pRecognizer ? speechSensitivityName(pRecognizer->sensitivity()) : "default");
+    lua_settable(L, -3);
 
-            // How quickly the engine calls an utterance finished
-            lua_pushstring(L, "sensitivity");
-            lua_pushstring(L, speechSensitivityName(pRecognizer->sensitivity()));
-            lua_settable(L, -3);
+    // What this backend can do, so packages adapt rather than guess:
+    // biasing/grammar govern whether setVocabulary reaches the engine, words
+    // whether sysSTTWords fires, onDevice whether audio stays on this machine.
+    // With no engine every answer is false, including onDevice: there is no
+    // backend to make a privacy guarantee, and claiming one nobody gave is
+    // the wrong way to be wrong.
+    lua_pushstring(L, "capabilities");
+    lua_newtable(L);
+    lua_pushstring(L, "biasing");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsBiasing());
+    lua_settable(L, -3);
+    lua_pushstring(L, "grammar");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsGrammar());
+    lua_settable(L, -3);
+    lua_pushstring(L, "words");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsWordResults());
+    lua_settable(L, -3);
+    lua_pushstring(L, "onDevice");
+    lua_pushboolean(L, pRecognizer && pRecognizer->onDevice());
+    lua_settable(L, -3);
+    lua_settable(L, -3);
 
-            // What this backend can do, so packages adapt rather than guess:
-            // biasing/grammar govern whether setVocabulary reaches the
-            // engine, words whether sysSTTWords fires, onDevice whether audio
-            // stays on this machine
-            lua_pushstring(L, "capabilities");
-            lua_newtable(L);
-            lua_pushstring(L, "biasing");
-            lua_pushboolean(L, pRecognizer->supportsBiasing());
-            lua_settable(L, -3);
-            lua_pushstring(L, "grammar");
-            lua_pushboolean(L, pRecognizer->supportsGrammar());
-            lua_settable(L, -3);
-            lua_pushstring(L, "words");
-            lua_pushboolean(L, pRecognizer->supportsWordResults());
-            lua_settable(L, -3);
-            lua_pushstring(L, "onDevice");
-            lua_pushboolean(L, pRecognizer->onDevice());
-            lua_settable(L, -3);
-            lua_settable(L, -3);
-        } else {
-            lua_pushstring(L, "initialized");
-            lua_pushboolean(L, false);
-            lua_settable(L, -3);
+    // Only meaningful once an instance exists, and documented as such
+    if (pRecognizer) {
+        lua_pushstring(L, "version");
+        lua_pushstring(L, pRecognizer->backendVersion().toUtf8().constData());
+        lua_settable(L, -3);
 
-            lua_pushstring(L, "listening");
-            lua_pushboolean(L, false);
-            lua_settable(L, -3);
-
-            lua_pushstring(L, "state");
-            lua_pushstring(L, speechRecognizerStateName(SpeechRecognizer::State::Uninitialized));
-            lua_settable(L, -3);
-
-            lua_pushstring(L, "modelPath");
-            lua_pushstring(L, "");
-            lua_settable(L, -3);
-        }
+        lua_pushstring(L, "language");
+        lua_pushstring(L, pRecognizer->currentLanguage().toUtf8().constData());
+        lua_settable(L, -3);
     }
 
     lua_pushstring(L, "searchPaths");
@@ -475,20 +463,20 @@ int TLuaInterpreter::sttClose(lua_State* L)
 // Returns true, or nil + error message on failure.
 int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
 {
-    const int msec = getVerifiedInt(L, __func__, 1, "milliseconds");
+    const int msec = getVerifiedInt(L, "stt.setSilenceTimeout", 1, "milliseconds");
     if (msec < 0) {
-        return warnArgumentValue(L, __func__, qsl("milliseconds must be 0 (disabled) or greater, got %1").arg(msec));
+        return warnArgumentValue(L, "stt.setSilenceTimeout", qsl("milliseconds must be 0 (disabled) or greater, got %1").arg(msec));
     }
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
+        return warnArgumentValue(L, "stt.setSilenceTimeout", "mudlet instance not available");
     }
 
     pMudlet->initSpeechRecognition();
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
-        return warnArgumentValue(L, __func__, "failed to create speech recognizer");
+        return warnArgumentValue(L, "stt.setSilenceTimeout", "failed to create speech recognizer");
     }
 
     pRecognizer->setSilenceTimeout(msec);
@@ -504,7 +492,7 @@ int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
 // Returns true, or nil + error message on failure.
 int TLuaInterpreter::sttSetSensitivity(lua_State* L)
 {
-    const QString mode = getVerifiedString(L, __func__, 1, "sensitivity").toLower();
+    const QString mode = getVerifiedString(L, "stt.setSensitivity", 1, "sensitivity").toLower();
 
     SpeechRecognizer::Sensitivity sensitivity;
     if (mode == QLatin1String("short")) {
@@ -514,18 +502,18 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
     } else if (mode == QLatin1String("long")) {
         sensitivity = SpeechRecognizer::Sensitivity::Long;
     } else {
-        return warnArgumentValue(L, __func__, qsl(R"(sensitivity must be "short", "default" or "long", got "%1")").arg(mode));
+        return warnArgumentValue(L, "stt.setSensitivity", qsl(R"(sensitivity must be "short", "default" or "long", got "%1")").arg(mode));
     }
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
+        return warnArgumentValue(L, "stt.setSensitivity", "mudlet instance not available");
     }
 
     pMudlet->initSpeechRecognition();
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
-        return warnArgumentValue(L, __func__, "failed to create speech recognizer");
+        return warnArgumentValue(L, "stt.setSensitivity", "failed to create speech recognizer");
     }
 
     pRecognizer->setSensitivity(sensitivity);
@@ -564,13 +552,13 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
+        return warnArgumentValue(L, "stt.setVocabulary", "mudlet instance not available");
     }
 
     pMudlet->initSpeechRecognition();
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
-        return warnArgumentValue(L, __func__, "failed to create speech recognizer");
+        return warnArgumentValue(L, "stt.setVocabulary", "failed to create speech recognizer");
     }
 
     lua_pushboolean(L, pRecognizer->setVocabulary(words));
@@ -628,6 +616,8 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
         }
     }
 
+    // The unload may be refused while something still holds the module; the
+    // probe below then reports what is actually loadable either way
     VoskRecognizer::resetLibraryLoadState();
     lua_pushboolean(L, VoskRecognizer::isLibraryAvailable());
     return 1;
@@ -651,7 +641,10 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
         }
     }
 
-    VoskRecognizer::resetLibraryLoadState();
+    if (!VoskRecognizer::resetLibraryLoadState()) {
+        return warnArgumentValue(L, "stt.unloadLibrary", "the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet", true);
+    }
+
     lua_pushboolean(L, true);
     return 1;
 }

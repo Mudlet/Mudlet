@@ -223,11 +223,14 @@ bool VoskRecognizer::isLibraryAvailable()
     return isVoskAvailable();
 }
 
-void VoskRecognizer::resetLibraryLoadState()
+bool VoskRecognizer::resetLibraryLoadState()
 {
-    // Unload library if it was loaded
-    if (sVoskLibrary.isLoaded()) {
-        sVoskLibrary.unload();
+    // Whether the module actually went. QLibrary::unload() refuses while
+    // anything still holds it mapped, and reporting success then is how a
+    // caller comes to delete a file the loader has not let go of - the exact
+    // failure on Windows that stt.unloadLibrary() exists to avoid.
+    if (sVoskLibrary.isLoaded() && !sVoskLibrary.unload()) {
+        return false;
     }
 
     // Reset state flags to allow fresh detection
@@ -247,6 +250,7 @@ void VoskRecognizer::resetLibraryLoadState()
     s_vosk_set_log_level = nullptr;
     s_vosk_recognizer_set_endpointer_mode = nullptr;
     s_vosk_recognizer_set_words = nullptr;
+    return true;
 }
 
 QString VoskRecognizer::userLibraryPath()
@@ -288,19 +292,25 @@ QString VoskRecognizer::backendVersion() const
 bool VoskRecognizer::initialize(const QString& modelPath)
 {
     if (!loadVoskLibrary()) {
-        emit errorOccurred(tr("Vosk library not available"));
         setState(State::Error);
+        emit errorOccurred(tr("Vosk library not available"));
         return false;
     }
 
-    // Release any existing resources
+    // Loading a model over a running session would free the decoder while the
+    // device stayed open: audio kept arriving with nothing to decode it, the
+    // state said Ready, and no stop() or close() could reach the microphone
+    // again because both check isListening() first. The recording light stayed
+    // on for the rest of the session.
+    mpCapture->stop();
+
     releaseVoskResources();
 
     // Check that the model path exists
     QDir modelDir(modelPath);
     if (!modelDir.exists()) {
-        emit errorOccurred(tr("Model path does not exist: %1").arg(modelPath));
         setState(State::Error);
+        emit errorOccurred(tr("Model path does not exist: %1").arg(modelPath));
         return false;
     }
 
@@ -310,8 +320,8 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // Load the Vosk model
     mVoskModel = s_vosk_model_new(modelPath.toUtf8().constData());
     if (!mVoskModel) {
-        emit errorOccurred(tr("Failed to load Vosk model from: %1").arg(modelPath));
         setState(State::Error);
+        emit errorOccurred(tr("Failed to load Vosk model from: %1").arg(modelPath));
         return false;
     }
 
@@ -320,8 +330,8 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     if (!mVoskRecognizer) {
         s_vosk_model_free(mVoskModel);
         mVoskModel = nullptr;
-        emit errorOccurred(tr("Failed to create Vosk recognizer"));
         setState(State::Error);
+        emit errorOccurred(tr("Failed to create Vosk recognizer"));
         return false;
     }
 
@@ -332,8 +342,8 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         qDebug() << "VoskRecognizer: Applied endpointer mode" << static_cast<int>(mEndpointerMode);
 #endif
     }
-    // Not conditional on mWordsEnabled: the word timings are needed to tell a
-    // phantom leading word from a spoken one, whatever the display preference is
+    // Always requested: leadingWordIsPhantom() needs the timings to tell a
+    // phantom leading word from a spoken one
     if (s_vosk_recognizer_set_words) {
         s_vosk_recognizer_set_words(mVoskRecognizer, 1);
 #ifdef DEBUG_STT
@@ -366,6 +376,7 @@ void VoskRecognizer::startListening()
         // returns void, so silence here reads to the caller as a successful start
         if (mState == State::Uninitialized) {
             //: Shown when speech recognition is asked to listen before a language model is loaded
+            setState(State::Error);
             emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
         } else if (mState == State::Error) {
             //: Shown when speech recognition is asked to listen while it is in an error state
@@ -397,7 +408,10 @@ void VoskRecognizer::startListening()
                 weakThis->startListeningInternal();
             } else {
                 qWarning() << "VoskRecognizer: Microphone permission denied by user";
-                emit weakThis->errorOccurred(QObject::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
+                // VoskRecognizer::tr, not QObject::tr: the lambda is not a member, and
+                // the default context would file this identical string a second
+                // time for translators to translate twice
+                emit weakThis->errorOccurred(VoskRecognizer::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
                 weakThis->setState(State::Error);
             }
         });
@@ -407,7 +421,6 @@ void VoskRecognizer::startListening()
     case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
         emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-        setState(State::Error);
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;
@@ -433,16 +446,16 @@ void VoskRecognizer::startListeningInternal()
     }
 
     if (!mVoskModel) {
-        emit errorOccurred(tr("Failed to initialize speech recognition"));
         setState(State::Error);
+        emit errorOccurred(tr("Failed to initialize speech recognition"));
         return;
     }
 
     mVoskRecognizer = s_vosk_recognizer_new(mVoskModel, static_cast<float>(VOSK_SAMPLE_RATE));
     if (!mVoskRecognizer) {
         qWarning() << "VoskRecognizer: Failed to recreate recognizer";
-        emit errorOccurred(tr("Failed to initialize speech recognition"));
         setState(State::Error);
+        emit errorOccurred(tr("Failed to initialize speech recognition"));
         return;
     }
 
@@ -451,9 +464,8 @@ void VoskRecognizer::startListeningInternal()
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
     }
 
-    // Always on, whatever the user's confidence-highlighting preference: the word
-    // timings are what tell a phantom leading word from a spoken one. The
-    // preference governs whether that detail is shown, not whether it is asked for.
+    // Always requested, for the same reason as in initialize(): without the
+    // timings a phantom leading word cannot be told from a spoken one
     if (s_vosk_recognizer_set_words) {
         s_vosk_recognizer_set_words(mVoskRecognizer, 1);
     }
@@ -537,7 +549,13 @@ void VoskRecognizer::stopListening()
         }
     }
 
-    setState(State::Ready);
+    // Only if this call still owns the session. setState(Processing) above
+    // reaches Lua synchronously, so a handler for that state change can have
+    // closed the recognizer while this call was inside the decoder; saying
+    // Ready on top of that would claim a loaded model that has been freed.
+    if (mState == State::Processing) {
+        setState(State::Ready);
+    }
 }
 
 void VoskRecognizer::resetUtterance()
@@ -706,8 +724,8 @@ void VoskRecognizer::slot_captureError(const QString& message)
 {
     // The capture component has already torn its device down; the recognizer
     // just surfaces the fault and leaves Listening
-    emit errorOccurred(message);
     setState(State::Error);
+    emit errorOccurred(message);
 }
 
 float VoskRecognizer::calculateAudioLevel(const QByteArray& data) const
@@ -750,6 +768,9 @@ void VoskRecognizer::releaseVoskResources()
 
 void VoskRecognizer::releaseResources()
 {
+    // Same reason as initialize(): the device has to go before the decoder,
+    // or a caller is left with a live microphone it has no call to close
+    mpCapture->stop();
     releaseVoskResources();
     setState(State::Uninitialized);
 }

@@ -98,8 +98,10 @@ public:
     // Check if the Vosk library is available (can be loaded)
     static bool isLibraryAvailable();
 
-    // Reset library load state to allow re-checking (e.g., after installation)
-    static void resetLibraryLoadState();
+    // Unload the library and forget everything resolved from it, so a later
+    // probe starts fresh. False when the module would not unload, which means
+    // its file is still mapped and cannot be replaced yet.
+    static bool resetLibraryLoadState();
 
     // Get the list of paths where Vosk library is searched
     static QStringList librarySearchPaths();
