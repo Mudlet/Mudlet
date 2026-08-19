@@ -38,8 +38,9 @@
  * Built from src/updater/SemVer.cpp rather than linked against the Mudlet
  * library, because the library only contains it when configured with
  * USE_UPDATER - and CI's -testing builds are configured without it. Like
- * ReleaseChangelogSpanTest that means no utils.h, hence QStringLiteral rather
- * than qsl().
+ * ReleaseChangelogSpanTest this file includes no utils.h of its own, so qsl()
+ * is out of scope here and the literals below are QStringLiteral. SemVer.cpp
+ * does include it, which is what the target's Qt6::Widgets link is for.
  *
  * Run with: ctest -R SemVerTest -V
  */
