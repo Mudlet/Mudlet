@@ -318,13 +318,18 @@ end
 --- any columns or indexes which didn't exist before to that database. If the database already has all the
 --- specified columns and indexes, it will do nothing. <br/><br/>
 ---
---- Because it is meant to run unguarded, a fault in the schema is only fatal when it has to be.
---- A schema whose shape no sheet can be built from is a hard error: a malformed _index, _unique
---- or _violations value is refused and cancels the script. A schema that is sound but asks for
---- something which cannot be honoured, such as an _index on a column the sheet does not declare,
---- has that part skipped and reported through printError instead, so the sheet and the data in it
---- stay reachable. Keep new validation on that side of the line: a database the user can no longer
---- open costs more than the mistake being reported. <br/><br/>
+--- Because it is meant to run unguarded, a fault in the schema is only fatal when it has to be,
+--- and where that line falls depends on what the faulty part holds. Something derived can be left
+--- out and reported: an _index naming a column the sheet does not declare is skipped rather than
+--- refused, because every row stays reachable without the index. A column is not derived. A sheet
+--- built without one takes writes to it silently, since db:add reports the rejected INSERT the
+--- same way and returns nil, which callers do not check, so a script can record nothing for weeks
+--- with no sign of it. A fault that would cost the sheet a column therefore stays fatal, and its
+--- message names the key so the fix is obvious. <br/><br/>
+---
+--- Note when weighing that up that printError is a quiet channel: it reaches the editor's Errors
+--- tab, which is hidden until the user opens it, and the main console only when they have turned
+--- on echoing Lua errors. <br/><br/>
 ---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
 --- Mudlet configuration directory. <br/><br/>
