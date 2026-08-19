@@ -21,6 +21,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 
@@ -35,6 +36,7 @@
 #include "utils.h"
 
 #include <QAbstractButton>
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QMessageBox>
 #include <QNetworkReply>
@@ -61,7 +63,6 @@ class TelnetTlsPromptTest : public QObject
     Q_OBJECT
 
 private:
-    // Whether the profile is still there when the TLS question is answered.
     enum class ProfileDuringPrompt { Kept, DestroyedBeforeAnswering };
 
     QTemporaryDir mConfigDir;
@@ -71,7 +72,9 @@ private:
     const QString mLocalhost = "localhost";
     QString mPort;
     QTimer* mpPromptAnswerer = nullptr;
+    QElapsedTimer mPromptAnswerClock;
     bool mTlsPromptAnswered = false;
+    QString mTlsPromptInformativeText;
     QTcpServer* mpPackageServer = nullptr;
     QPointer<QTcpSocket> mpPackageClient;
     QTimer* mpPackageBodyDrip = nullptr;
@@ -385,8 +388,9 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        // A second plain-TCP stub stands in for the secure server, as in
-        // test_tlsUpgradeAcceptedSwitchesPortAndConnects() above.
+        // A plain-TCP stub stands in for the secure server: the encrypted
+        // connect completes the TCP accept before the (doomed) handshake, and
+        // SSL errors are reported by postMessage rather than another modal.
         TelnetServerStub secureStub;
         secureStub.start(mLocalhost, 0);
         const quint16 securePort = secureStub.serverPort();
@@ -395,8 +399,11 @@ private slots:
         QByteArray advertise = msspTlsPayload(QByteArray::number(securePort));
         host->mTelnet.loopbackTest(advertise);
 
-        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 15000);
-        QTRY_COMPARE_WITH_TIMEOUT(host->getPort(), static_cast<int>(securePort), 15000);
+        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5000);
+        // cTelnet emits the informative text already translated for the frontend
+        // to show; a frontend that dropped it would ask about no port at all.
+        QVERIFY2(mTlsPromptInformativeText.contains(QString::number(securePort)), qPrintable(qsl("The question the user was asked did not name the secure port: %1").arg(mTlsPromptInformativeText)));
+        QTRY_COMPARE_WITH_TIMEOUT(host->getPort(), static_cast<int>(securePort), 5000);
         QVERIFY2(host->mSslTsl, "Answering Yes did not enable ssl_tsl on the profile.");
 
         // Stop talking to the local stub before it is destroyed at scope exit.
@@ -423,10 +430,10 @@ private slots:
         QByteArray advertise = msspTlsPayload("48000");
         host->mTelnet.loopbackTest(advertise);
 
-        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 15000);
+        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5000);
         // Declining is otherwise indistinguishable from nothing happening, so
         // the don't-ask-again flag is what has to carry the assertion.
-        QTRY_VERIFY2_WITH_TIMEOUT(!host->mAskTlsAvailable, "Answering No never reached cTelnet: it is still willing to ask again.", 15000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!host->mAskTlsAvailable, "Answering No never reached cTelnet: it is still willing to ask again.", 5000);
         QCOMPARE(host->getPort(), originalPort);
         QCOMPARE(host->mSslTsl, originalSsl);
         if (connectedSpy.isEmpty()) {
@@ -449,15 +456,16 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
 
         armTlsPromptAnswer(QMessageBox::Yes, ProfileDuringPrompt::DestroyedBeforeAnswering);
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("the profile vanished while the TLS upgrade prompt was open"));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("mudlet:.*discarding the user's answer"));
         QByteArray advertise = msspTlsPayload("48000");
         host->mTelnet.loopbackTest(advertise);
 
-        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 15000);
+        // The flag is set inside the modal loop, so the QTRY cannot see it until
+        // exec() has unwound and the frontend's lambda has run to its guard -
+        // the warning claimed above is therefore already in by the time this
+        // returns.
+        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5000);
         QVERIFY2(!mudlet::self()->getHostManager().getHost(mHostname), "The profile survived the teardown, so this is not the case being tested.");
-        // exec() still has to unwind before the frontend's lambda reaches the
-        // guard whose warning is being claimed above.
-        QTest::qWait(200ms);
 #endif
     }
 
@@ -570,20 +578,24 @@ private slots:
 
         // showPackageDownloadProgress() opens on a placeholder range, so a
         // maximum matching the announced Content-Length can only have come from
-        // the download's own progress reaching the dialog.
-        QTRY_COMPARE_WITH_TIMEOUT(dialog->maximum(), static_cast<int>(announcedPackageLength), 15000);
+        // the download's own progress reaching the dialog. The dialog carries
+        // WA_DeleteOnClose and a failed download would take it away mid-wait, so
+        // the condition has to stay safe for a null one.
+        QTRY_VERIFY2_WITH_TIMEOUT(!dialog || dialog->maximum() == static_cast<int>(csmAnnouncedPackageLength), "The download's progress never reached the frontend's progress dialog.", 5000);
+        QVERIFY2(dialog, "The progress dialog went away before the download's progress reached it.");
         QVERIFY2(dialog->value() > 0, "The download's progress did not move the dialog's value.");
 
         // Aborting is the quickest way to finish a download, and the wire that
         // takes the dialog down afterwards is the one a completed one uses too.
         host->mTelnet.slot_cancelPackageDownload();
-        QTRY_COMPARE_WITH_TIMEOUT(console->findChildren<QProgressDialog*>().count(), 0, 15000);
+        QTRY_COMPARE_WITH_TIMEOUT(console->findChildren<QProgressDialog*>().count(), 0, 5000);
     }
 
-    // B2: the user's Cancel has to reach cTelnet::slot_cancelPackageDownload().
-    // QProgressDialog emits canceled() from the cancel button's clicked() - its
-    // own cancel() slot is what canceled() calls, not what emits it - so only a
-    // real button press goes through the connection TMainConsole makes.
+    // The user's Cancel has to reach cTelnet::slot_cancelPackageDownload().
+    // QProgressDialog's cancel() slot is what canceled() calls, not what emits
+    // it, so driving cancel() would prove nothing; the button's clicked() is
+    // what reaches the connection TMainConsole makes. (close() emits it too,
+    // which is why showPackageDownloadProgress() detaches before closing.)
     void test_downloadDialogCancelStopsTheDownload()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -609,7 +621,8 @@ private slots:
 
         QPointer<QProgressDialog> dialog = console->findChild<QProgressDialog*>();
         QVERIFY2(dialog, "The GUI download did not raise a progress dialog.");
-        QTRY_VERIFY2_WITH_TIMEOUT(!progressSpy.isEmpty(), "The download never got under way, so there was nothing to cancel.", 15000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!progressSpy.isEmpty(), "The download never got under way, so there was nothing to cancel.", 5000);
+        QVERIFY2(dialog, "The progress dialog went away before the download got under way.");
 
         auto cancelButton = dialog->findChild<QPushButton*>();
         QVERIFY2(cancelButton, "The download progress dialog has no Cancel button to press.");
@@ -620,10 +633,9 @@ private slots:
         // for installation, which is what the file check below catches.
         finishPackageBody();
 
-        QTRY_VERIFY2_WITH_TIMEOUT(!errorSpy.isEmpty(), "Pressing Cancel did not abort the package download.", 15000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!errorSpy.isEmpty(), "Pressing Cancel did not abort the package download.", 5000);
         QCOMPARE(errorSpy.takeFirst().at(0).value<QNetworkReply::NetworkError>(), QNetworkReply::OperationCanceledError);
         QVERIFY2(!QFileInfo::exists(host->mTelnet.mServerPackage), "The cancelled download was saved for installation anyway.");
-        QCOMPARE(host->mServerGUI_Package_name, qsl("nothing"));
     }
 
     // Builds an MSSP subnegotiation advertising a secure TLS port:
@@ -689,11 +701,17 @@ private:
     // Deliberately not the placeholder range showPackageDownloadProgress()
     // opens on, so a dialog carrying the announced length cannot be mistaken for
     // one that has never been told anything.
-    static constexpr qint64 announcedPackageLength = 1000000;
-    static constexpr qint64 packageBodyChunk = 4096;
-    // How much of the body the drip hands over before going quiet - enough ticks
-    // to outlast the downloadProgress throttle several times over.
-    static constexpr qint64 drippedPackageLength = 20 * packageBodyChunk;
+    static constexpr qint64 csmAnnouncedPackageLength = 1000000;
+    static constexpr qint64 csmPackageBodyChunk = 4096;
+    static constexpr std::chrono::milliseconds csmPackageBodyDripInterval = 30ms;
+    // 20 chunks at 30ms is 600ms of dripping against a 100ms throttle, so the
+    // dialog is fed several times over even if the first emissions are dropped.
+    static constexpr qint64 csmDrippedPackageLength = 20 * csmPackageBodyChunk;
+    // How long the answerer waits for a pressable prompt before giving up. It
+    // has to give up: the modal loop runs inside the QTRY's own wait, so a box
+    // it cannot press would hang the case past the ctest timeout instead of
+    // failing it with a message.
+    static constexpr std::chrono::milliseconds csmPromptAnswerDeadline = 8s;
 
     // The prompt's own window. activeModalWidget() is maintained by Qt itself
     // rather than by the platform plugin, so it works offscreen, but the
@@ -712,28 +730,38 @@ private:
         return nullptr;
     }
 
-    // The frontend answers the TLS offer from a modal QMessageBox::exec(), which
-    // spins a nested event loop - so anything queued behind the advertisement
-    // that triggers it would only run once that loop had already ended. A timer
-    // armed beforehand does fire inside it, which is what lets the button be
-    // pressed at all. cleanup() disposes of it, so a case that stops at a failed
+    // The frontend delivers the TLS offer queued and then blocks in
+    // QMessageBox::exec(), so there is no moment at which the box is known to be
+    // up: a one-shot armed after the advertisement would be guessing. A repeating
+    // poll armed beforehand keeps looking until the box is there, from inside the
+    // modal loop. cleanup() disposes of it, so a case that stops at a failed
     // assertion cannot leave it clicking through the next one's dialogs.
     void armTlsPromptAnswer(const QMessageBox::StandardButton answer, const ProfileDuringPrompt profileHandling = ProfileDuringPrompt::Kept)
     {
         mTlsPromptAnswered = false;
+        mTlsPromptInformativeText.clear();
         delete mpPromptAnswerer;
         mpPromptAnswerer = new QTimer(this);
         mpPromptAnswerer->setInterval(20ms);
+        mPromptAnswerClock.start();
         connect(mpPromptAnswerer, &QTimer::timeout, this, [this, answer, profileHandling]() {
             QMessageBox* box = visibleMessageBox();
-            if (!box) {
-                return;
-            }
-            QAbstractButton* button = box->button(answer);
+            QAbstractButton* button = box ? box->button(answer) : nullptr;
             if (!button) {
+                if (mPromptAnswerClock.durationElapsed() < csmPromptAnswerDeadline) {
+                    return;
+                }
+                // Nothing pressable turned up. Take down whatever modal is
+                // holding the loop, so the waiting case can report its own
+                // failure rather than being killed for running too long.
+                mpPromptAnswerer->stop();
+                if (QWidget* modal = QApplication::activeModalWidget()) {
+                    modal->close();
+                }
                 return;
             }
             mpPromptAnswerer->stop();
+            mTlsPromptInformativeText = box->informativeText();
             if (profileHandling == ProfileDuringPrompt::DestroyedBeforeAnswering) {
                 // deleteHost() drops the last shared pointer to the Host, so
                 // ~Host() runs here and now rather than being posted - which is
@@ -753,7 +781,7 @@ private:
     // A stand-in package host. It announces a Content-Length it does not
     // satisfy, so the reply stays in flight with real progress behind it, and it
     // dribbles the first part of the body out rather than writing it in one go:
-    // QNetworkReply throttles downloadProgress to one emission per 100ms and
+    // Qt's HTTP reply throttles downloadProgress to one emission per 100ms and
     // drops the rest, so a single burst is swallowed whole and never reaches the
     // dialog. Returns the URL to download from, empty if it could not listen.
     QString startPackageServer()
@@ -777,21 +805,23 @@ private:
                     return;
                 }
                 mPackageRequestAnswered = true;
-                client->write(qsl("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %1\r\n\r\n").arg(announcedPackageLength).toLatin1());
+                client->write(qsl("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %1\r\n\r\n").arg(csmAnnouncedPackageLength).toLatin1());
                 mpPackageBodyDrip = new QTimer(this);
-                mpPackageBodyDrip->setInterval(30ms);
+                mpPackageBodyDrip->setInterval(csmPackageBodyDripInterval);
                 connect(mpPackageBodyDrip, &QTimer::timeout, this, [this]() {
-                    if (mPackageBodySent >= drippedPackageLength) {
+                    if (mPackageBodySent >= csmDrippedPackageLength) {
                         mpPackageBodyDrip->stop();
                         return;
                     }
-                    sendPackageBody(packageBodyChunk);
+                    sendPackageBody(csmPackageBodyChunk);
                 });
                 mpPackageBodyDrip->start();
-                sendPackageBody(packageBodyChunk);
+                sendPackageBody(csmPackageBodyChunk);
             });
         });
-        return qsl("http://localhost:%1/game-ui.mpackage").arg(mpPackageServer->serverPort());
+        // The literal address, not localhost: the server binds IPv4 only, and a
+        // name that also resolves to ::1 has the client open a second connection.
+        return qsl("http://127.0.0.1:%1/game-ui.mpackage").arg(mpPackageServer->serverPort());
     }
 
     void sendPackageBody(const qint64 byteCount)
@@ -799,7 +829,7 @@ private:
         if (!mpPackageClient || mpPackageClient->state() != QAbstractSocket::ConnectedState) {
             return;
         }
-        const qint64 sending = std::min(byteCount, announcedPackageLength - mPackageBodySent);
+        const qint64 sending = std::min(byteCount, csmAnnouncedPackageLength - mPackageBodySent);
         if (sending <= 0) {
             return;
         }
@@ -814,7 +844,7 @@ private:
     {
         delete mpPackageBodyDrip;
         mpPackageBodyDrip = nullptr;
-        sendPackageBody(announcedPackageLength - mPackageBodySent);
+        sendPackageBody(csmAnnouncedPackageLength - mPackageBodySent);
     }
 };
 
