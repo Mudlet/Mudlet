@@ -38,6 +38,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
     MxpFramePlacementTest.cpp
+    LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     ProfileSwitchMiniconsoleTest.cpp

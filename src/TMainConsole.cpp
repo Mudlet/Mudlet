@@ -660,7 +660,11 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->setContentsMargins(0, 0, 0, 0);
         pL->move(x, y);
         pL->show();
-        mpHost->setBackgroundColor(name, 32, 32, 32, 255);
+        if (fillBackground) {
+            mpHost->setBackgroundColor(name, 32, 32, 32, 255);
+        } else {
+            mpHost->setBackgroundColor(name, 0, 0, 0, 0);
+        }
         return pL;
     }
 

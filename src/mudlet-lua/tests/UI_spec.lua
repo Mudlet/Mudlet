@@ -3998,6 +3998,80 @@ describe("Window and label state", function()
     end
   end)
 
+  -- setLabelStyleSheet() replaces the label's whole stylesheet, so the colour
+  -- setBackgroundColor() asked for has to be held somewhere that survives it
+  describe("label background colour against the stylesheet", function()
+    local created = {}
+
+    local function label(base, fillBg)
+      local labelName = name(base)
+      createLabel(labelName, 10, 10, 60, 30, fillBg)
+      created[#created + 1] = labelName
+      return labelName
+    end
+
+    after_each(function()
+      for _, labelName in ipairs(created) do
+        deleteLabel(labelName)
+      end
+      created = {}
+    end)
+
+    it("survives a stylesheet that carries no background of its own", function()
+      local target = label("wlsBgKeep", 1)
+      setBackgroundColor(target, 10, 20, 30, 255)
+      setLabelStyleSheet(target, "qproperty-alignment: 'AlignHCenter';")
+      assert.are.same({10, 20, 30, 255}, {getBackgroundColor(target)})
+    end)
+
+    it("keeps a fully transparent background transparent across a stylesheet", function()
+      local target = label("wlsBgTransparent", 1)
+      setBackgroundColor(target, 0, 0, 0, 0)
+      setLabelStyleSheet(target, "padding: 2px;")
+      assert.are.same({0, 0, 0, 0}, {getBackgroundColor(target)})
+    end)
+
+    it("lets a background in the stylesheet be overridden afterwards", function()
+      local target = label("wlsBgOverride", 1)
+      setLabelStyleSheet(target, "background-color: rgb(1, 2, 3);")
+      setBackgroundColor(target, 40, 50, 60, 255)
+      assert.are.same({40, 50, 60, 255}, {getBackgroundColor(target)})
+      assert.are.equal("background-color: rgba(40, 50, 60, 255);", getLabelStyleSheet(target))
+    end)
+
+    it("keeps reporting the colour that was set, not one a stylesheet brought", function()
+      local target = label("wlsBgFromStyleSheet", 1)
+      setBackgroundColor(target, 40, 50, 60, 255)
+      setLabelStyleSheet(target, "background-color: rgb(11, 22, 33);")
+      assert.are.same({40, 50, 60, 255}, {getBackgroundColor(target)})
+    end)
+
+    it("survives resetLinkStyle", function()
+      local target = label("wlsBgLinkStyle", 1)
+      setBackgroundColor(target, 10, 20, 30, 255)
+      setLinkStyle(target, "red", "blue", true)
+      resetLinkStyle(target)
+      assert.are.same({10, 20, 30, 255}, {getBackgroundColor(target)})
+    end)
+
+    it("leaves selection-background-color alone", function()
+      local target = label("wlsBgSelection", 1)
+      setLabelStyleSheet(target, "selection-background-color: rgb(1, 2, 3);")
+      setBackgroundColor(target, 70, 80, 90, 255)
+      assert.are.equal("selection-background-color: rgb(1, 2, 3);\nbackground-color: rgba(70, 80, 90, 255);", getLabelStyleSheet(target))
+    end)
+
+    it("starts a label asked not to fill its background transparent", function()
+      local target = label("wlsBgNoFill", 0)
+      assert.are.same({0, 0, 0, 0}, {getBackgroundColor(target)})
+    end)
+
+    it("starts a label that fills its background on the default grey", function()
+      local target = label("wlsBgFill", 1)
+      assert.are.same({32, 32, 32, 255}, {getBackgroundColor(target)})
+    end)
+  end)
+
   describe("label callback setters", function()
     local label = name("wlsCallbackLabel")
 
