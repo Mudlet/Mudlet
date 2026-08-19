@@ -88,6 +88,26 @@ static bool leadingWordIsPhantom(const QJsonArray& words)
     return duration >= MIN_PHANTOM_LEADING_WORD_SECONDS;
 }
 
+// Word detail for a final result, as the sysSTTWords schema describes it.
+// skipLeading drops the first word for a result whose leading word was struck
+// from the text: the two are emitted together and describing different
+// sequences would make the word list evidence for a phrase nobody was told
+// about.
+static QVariantList wordsFromResult(const QJsonArray& words, const bool skipLeading)
+{
+    QVariantList wordsList;
+    for (int index = skipLeading ? 1 : 0; index < words.size(); ++index) {
+        const QJsonObject wordObject = words.at(index).toObject();
+        QVariantMap wordData;
+        wordData[qsl("word")] = wordObject.value(QLatin1String("word")).toString();
+        wordData[qsl("conf")] = wordObject.value(QLatin1String("conf")).toDouble();
+        wordData[qsl("start")] = wordObject.value(QLatin1String("start")).toDouble();
+        wordData[qsl("end")] = wordObject.value(QLatin1String("end")).toDouble();
+        wordsList.append(wordData);
+    }
+    return wordsList;
+}
+
 VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
@@ -493,9 +513,12 @@ void VoskRecognizer::stopListening()
                     // Strip a leading hallucination word only when its timing says it
                     // was never spoken - otherwise a phrase genuinely beginning "a",
                     // "an" or "to" loses its first word
+                    bool strippedLeadingWord = false;
                     if (leadingWordIsPhantom(obj.value(QLatin1String("result")).toArray())) {
+                        const QString beforeStripping = text;
                         text.replace(*kLeadingHallucinationRx, QString());
                         text = text.trimmed();
+                        strippedLeadingWord = (text != beforeStripping);
                     }
 
                     if (!text.isEmpty()) {
@@ -503,18 +526,8 @@ void VoskRecognizer::stopListening()
 
                         // Word-level detail accompanies this final too - the
                         // silence timeout makes this the common path, not the
-                        // exception
-                        const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
-                        QVariantList wordsList;
-                        for (const QJsonValue& wordValue : wordsArray) {
-                            const QJsonObject wordObject = wordValue.toObject();
-                            QVariantMap wordData;
-                            wordData[qsl("word")] = wordObject.value(QLatin1String("word")).toString();
-                            wordData[qsl("conf")] = wordObject.value(QLatin1String("conf")).toDouble();
-                            wordData[qsl("start")] = wordObject.value(QLatin1String("start")).toDouble();
-                            wordData[qsl("end")] = wordObject.value(QLatin1String("end")).toDouble();
-                            wordsList.append(wordData);
-                        }
+                        // exception - and describes the text as emitted
+                        const QVariantList wordsList = wordsFromResult(obj.value(QLatin1String("result")).toArray(), strippedLeadingWord);
                         if (!wordsList.isEmpty()) {
                             emit wordsResult(wordsList);
                         }
@@ -622,9 +635,12 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
                     // Strip a leading hallucination word only when its timing says it
                     // was never spoken - otherwise a phrase genuinely beginning "a",
                     // "an" or "to" loses its first word
+                    bool strippedLeadingWord = false;
                     if (leadingWordIsPhantom(obj.value(QLatin1String("result")).toArray())) {
+                        const QString beforeStripping = text;
                         text.replace(*kLeadingHallucinationRx, QString());
                         text = text.trimmed();
+                        strippedLeadingWord = (text != beforeStripping);
                     }
 
                     if (!text.isEmpty()) {
@@ -633,19 +649,11 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
 #endif
                         emit finalResult(text);
 
-                        // Emit word-level results with confidence if available and enabled
+                        // Word-level detail for the text just emitted, which is
+                        // not the text Vosk returned when a leading word was
+                        // struck from it
                         if (obj.contains(QLatin1String("result"))) {
-                            const QJsonArray wordsArray = obj.value(QLatin1String("result")).toArray();
-                            QVariantList wordsList;
-                            for (const QJsonValue& wordVal : wordsArray) {
-                                const QJsonObject wordObj = wordVal.toObject();
-                                QVariantMap wordData;
-                                wordData[qsl("word")] = wordObj.value(QLatin1String("word")).toString();
-                                wordData[qsl("conf")] = wordObj.value(QLatin1String("conf")).toDouble();
-                                wordData[qsl("start")] = wordObj.value(QLatin1String("start")).toDouble();
-                                wordData[qsl("end")] = wordObj.value(QLatin1String("end")).toDouble();
-                                wordsList.append(wordData);
-                            }
+                            const QVariantList wordsList = wordsFromResult(obj.value(QLatin1String("result")).toArray(), strippedLeadingWord);
                             if (!wordsList.isEmpty()) {
                                 emit wordsResult(wordsList);
                             }

@@ -29,7 +29,7 @@ Design contract, before the tables:
 | Function | Returns | Behaviour |
 | --- | --- | --- |
 | `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. With no argument, uses the default installed model; errors clearly when none exists. |
-| `stt.start()` | `true` \| `nil, error` | Begin listening. Refusals from `error`/`processing`/`uninitialized` states raise `sysSTTError` with the reason; starting while already listening succeeds silently. |
+| `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client may have to ask the operating system for microphone permission first, and the outcome then arrives as `sysSTTStateChanged`. A request that is refused outright — no model, a phrase still processing, a microphone that will not open, permission denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening succeeds silently. |
 | `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. |
 | `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
 | `stt.close()` | `true` | Release the model and native resources; state returns to `uninitialized`. Safe when nothing is initialized. |
@@ -100,7 +100,7 @@ the one argument type every client event system carries.
 | --- | --- | --- |
 | `sysSTTPartialResult` | text so far | During recognition; may revise as more audio arrives. Never final. |
 | `sysSTTResult` | final text | An utterance completed — by endpointing, `stt.stop()`, or the silence timeout. The consumer's cue to act on the text. |
-| `sysSTTWords` | JSON string | Alongside each `sysSTTResult`, on backends whose `words` capability is true. Schema below. |
+| `sysSTTWords` | JSON string | Alongside each `sysSTTResult`, on backends whose `words` capability is true. Describes **the text as emitted**: an implementation that drops a word from the result must drop it here too, or the two events describe different phrases. Schema below. |
 | `sysSTTStateChanged` | state name | Any transition between the five states. |
 | `sysSTTError` | translated message | Anything the user should know went wrong: refusals to start, capture faults, model failures. The state moves to `error` for faults, but refusal messages can arrive without a state change. |
 

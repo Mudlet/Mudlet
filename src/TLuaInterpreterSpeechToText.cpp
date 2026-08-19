@@ -66,6 +66,17 @@ static const char* speechSensitivityName(const SpeechRecognizer::Sensitivity sen
     return "default";
 }
 
+// Whether a startListening() request was accepted. The call returns nothing
+// and can refuse - a phrase still being processed, a microphone that will not
+// open, permission denied - so the state afterwards is what says whether
+// anything is going to happen. Ready means accepted but not yet listening:
+// macOS asks for microphone permission asynchronously the first time, and the
+// answer arrives through sysSTTStateChanged rather than from this call.
+static bool speechStartAccepted(const SpeechRecognizer* pRecognizer)
+{
+    return pRecognizer->isListening() || pRecognizer->state() == SpeechRecognizer::State::Ready;
+}
+
 // stt.init([modelPath])
 // Initialize speech recognition with a language model.
 // modelPath is optional - falls back to SpeechRecognizerFactory::defaultModelPath().
@@ -138,6 +149,11 @@ int TLuaInterpreter::sttStart(lua_State* L)
     }
 
     pRecognizer->startListening();
+    if (!speechStartAccepted(pRecognizer)) {
+        // The recognizer has already said why through sysSTTError; what
+        // matters here is not telling the caller that recording began
+        return warnArgumentValue(L, funcName.toUtf8().constData(), "could not start listening - the sysSTTError event carries the reason");
+    }
 
     lua_pushboolean(L, true);
     return 1;
@@ -192,6 +208,9 @@ int TLuaInterpreter::sttToggle(lua_State* L)
         lua_pushboolean(L, false);
     } else {
         pRecognizer->startListening();
+        if (!speechStartAccepted(pRecognizer)) {
+            return warnArgumentValue(L, funcName.toUtf8().constData(), "could not start listening - the sysSTTError event carries the reason");
+        }
         lua_pushboolean(L, true);
     }
 
