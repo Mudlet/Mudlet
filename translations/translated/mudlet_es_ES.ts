@@ -14210,7 +14210,11 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
 &lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled, will, when the module in &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt;, cause it to be then reloaded into all profiles which also are using the same file that contains the module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;&lt;p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Los módulos son una forma de utilizar un paquete común en múltiples sesiones, a diferencia de los paquetes, que se instalan por perfil.&lt;/p&gt; Los módulos se cargan en orden de prioridad ascendente (el 1 se cargará antes que el 2, y así sucesivamente); los módulos que tengan la misma prioridad se cargarán en orden alfabético.&lt;/p&gt;
+&lt;p&gt;Los módulos con prioridad negativa se cargarán antes que los paquetes de scripts.&lt;/p&gt;&lt;p&gt;La opción &lt;b&gt;&lt;i&gt;Sincronizar&lt;/i&gt;&lt;/b&gt;, si está activada, hará que cuando el módulo de &lt;b&gt;este perfil&lt;/b&gt; se guarde &lt;b&gt;en el disco&lt;/b&gt;, se vuelva a cargar automáticamente en todos los demás perfiles que también utilicen el mismo archivo que contiene el módulo. Para hacer que varios perfiles utilicen el mismo módulo, instálalo en cada perfil a través de este gestor de módulos (el cual debe abrirse cuando el perfil en cuestión sea el que esté actualmente en primer plano).&lt;/p&gt;&lt;p&gt;
+&lt;p&gt;Por cada operación de guardado, se crea una copia de seguridad de los módulos en un directorio llamado &lt;i&gt;moduleBackups&lt;/i&gt;, dentro del directorio de tu perfil de Mudlet.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="147"/>
@@ -14225,7 +14229,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/module_manager.ui" line="167"/>
       <source>Module Help</source>
-      <translation type="unfinished"/>
+      <translation>Ayuda del módulo</translation>
     </message>
   </context>
   <context>
@@ -14234,22 +14238,22 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
       <location filename="../src/mudlet.cpp" line="999"/>
       <source>Afrikaans</source>
       <extracomment>In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a &apos;-&apos; Chinese is an exception!</extracomment>
-      <translation type="unfinished"/>
+      <translation>Afrikáans</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1000"/>
       <source>Afrikaans (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Afrikáans (Sudáfrica)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1001"/>
       <source>Aragonese</source>
-      <translation type="unfinished"/>
+      <translation>Aragonés</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1002"/>
       <source>Aragonese (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Aragonés (España)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1003"/>
@@ -14259,137 +14263,137 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1004"/>
       <source>Arabic (United Arab Emirates)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Emiratos Árabes Unidos)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1005"/>
       <source>Arabic (Bahrain)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Baréin)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1006"/>
       <source>Arabic (Algeria)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Argelia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1008"/>
       <source>Arabic (India)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1009"/>
       <source>Arabic (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Iraq)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1010"/>
       <source>Arabic (Jordan)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Jordania)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1011"/>
       <source>Arabic (Kuwait)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Kuwait)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1012"/>
       <source>Arabic (Lebanon)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Líbano)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1013"/>
       <source>Arabic (Libya)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Libia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1014"/>
       <source>Arabic (Morocco)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Marruecos)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1015"/>
       <source>Arabic (Oman)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Omán)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1016"/>
       <source>Arabic (Qatar)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Catar)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1017"/>
       <source>Arabic (Saudi Arabia)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Arabia Saudita)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1018"/>
       <source>Arabic (Sudan)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Sudan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1019"/>
       <source>Arabic (Syria)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Siria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1020"/>
       <source>Arabic (Tunisia)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Túnez)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1021"/>
       <source>Arabic (Yemen)</source>
-      <translation type="unfinished"/>
+      <translation>Árabe (Yemen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1022"/>
       <source>Belarusian</source>
-      <translation type="unfinished"/>
+      <translation>Bielorruso</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1023"/>
       <source>Belarusian (Belarus)</source>
-      <translation type="unfinished"/>
+      <translation>Bielorruso (Bielorrusia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1024"/>
       <source>Belarusian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>Bielorruso (Rusia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1025"/>
       <source>Bulgarian</source>
-      <translation type="unfinished"/>
+      <translation>Búlgaro</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1026"/>
       <source>Bulgarian (Bulgaria)</source>
-      <translation type="unfinished"/>
+      <translation>Búlgaro (Bulgaria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1027"/>
       <source>Bangla</source>
-      <translation type="unfinished"/>
+      <translation>Bengalí</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1028"/>
       <source>Bangla (Bangladesh)</source>
-      <translation type="unfinished"/>
+      <translation>Bengalí (Bangladesh)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1029"/>
       <source>Bangla (India)</source>
-      <translation type="unfinished"/>
+      <translation>Bengalí (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1030"/>
       <source>Tibetan</source>
-      <translation type="unfinished"/>
+      <translation>Tibetano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1032"/>
       <source>Tibetan (China)</source>
-      <translation type="unfinished"/>
+      <translation>Tibetano (China)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1033"/>
