@@ -18,8 +18,8 @@
  ***************************************************************************/
 
 // NEW_ENVIRON (RFC 1572) and its MNES profile
-// (https://tintin.mudhalla.net/protocols/mnes/) are the one out-of-band
-// protocol whose whole point is what Mudlet *sends*: a game asks for variables
+// (https://tintin.mudhalla.net/protocols/mnes/) are the out-of-band protocol
+// where nearly all the behaviour is in what Mudlet *sends*: a game asks for variables
 // and every answer, every "I do not maintain that one", and every later INFO
 // update goes out on the wire, where nothing inside the client can see it. So
 // these tests read the bytes off a recording server rather than off Mudlet, and
@@ -156,9 +156,17 @@ private:
                 },
                 10000);
         if (!arrived) {
-            qWarning() << "the TIMING_MARK marker never came back, so what follows may be an incomplete capture";
+            // Mudlet answers a DO TIMING_MARK whatever else is going on, so this
+            // is never a slow reply - the connection is gone and every "nothing
+            // was sent" below would pass for the wrong reason.
+            QTest::qFail("the telnet marker never came back, so the capture is worthless", __FILE__, __LINE__);
+            return {};
         }
-        QByteArray stream = mpServer->received();
+        const QByteArray stream = mpServer->received();
+        // Cleared here rather than by the caller: a second call would otherwise
+        // match the first call's marker, skip its wait and hand back the earlier
+        // request's bytes.
+        mpServer->forgetReceived();
         // The marker belongs to the wait, not to the request under test.
         const int markerAt = stream.indexOf(marker);
         return markerAt >= 0 ? stream.left(markerAt) : stream;
@@ -168,8 +176,10 @@ private:
     QList<Subnegotiation> newEnvironReplies() { return subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_NEW_ENVIRON)); }
 
 
-    // Turns the protocol on the way a game does, and leaves the recorder empty
-    // so the test only sees what its own request produced.
+    // Turns the protocol on the way a game does, and clears the recorder. The DO
+    // that answers it can still land afterwards, which is why the assertions
+    // below filter to NEW_ENVIRON subnegotiations rather than reading the raw
+    // stream.
     void enableNewEnviron()
     {
         announce(TN_WILL, OPT_NEW_ENVIRON);
@@ -214,6 +224,20 @@ private:
             return {};
         }
         return variablesIn(payload.mid(1));
+    }
+
+    // How many hyperlink capabilities are on offer, counted off the advertised
+    // set rather than hard-coded, so one added later does not need this updating.
+    int advertisedHyperlinkVariables() const
+    {
+        const QMap<QString, QPair<bool, QString>> newEnvironDataMap = mpHost->mTelnet.getNewEnvironDataMap();
+        int advertised = 0;
+        for (auto it = newEnvironDataMap.cbegin(); it != newEnvironDataMap.cend(); ++it) {
+            if (it.key().startsWith(qsl("OSC_HYPERLINKS"))) {
+                ++advertised;
+            }
+        }
+        return advertised;
     }
 
     static EnvironVariable variableNamed(const QList<EnvironVariable>& variables, const QByteArray& name)
@@ -322,7 +346,10 @@ private slots:
         QCOMPARE(replies.first().payload.at(0), NEW_ENVIRON_IS);
 
         const QList<EnvironVariable> variables = variablesIn(replies.first().payload.mid(1));
-        QVERIFY2(variables.size() > 20, qPrintable(qsl("a bare SEND returned only %1 variables").arg(variables.size())));
+        // Exactly the advertised set, so a variable dropped from the reply is a
+        // failure rather than a number that still clears a loose floor.
+        QCOMPARE(variables.size(), mpHost->mTelnet.getNewEnvironDataMap().size());
+        QVERIFY2(variables.size() > 20, qPrintable(qsl("only %1 variables are advertised at all, so the comparison above proves little").arg(variables.size())));
 
         for (const EnvironVariable& variable : variables) {
             QVERIFY2(variable.type == NEW_ENVIRON_USERVAR, qPrintable(qsl("%1 was sent as a well-known VAR, which needs an opt-in").arg(QString::fromLatin1(variable.name))));
@@ -400,7 +427,7 @@ private slots:
         const QList<Subnegotiation> uservarReplies = newEnvironReplies();
         QCOMPARE(uservarReplies.size(), 1);
         const QList<EnvironVariable> uservars = variablesIn(uservarReplies.first().payload.mid(1));
-        QVERIFY2(uservars.size() > 20, qPrintable(qsl("a bare USERVAR returned only %1 variables").arg(uservars.size())));
+        QCOMPARE(uservars.size(), mpHost->mTelnet.getNewEnvironDataMap().size());
 
         mpServer->forgetReceived();
         requestSend(QByteArray(1, NEW_ENVIRON_VAR));
@@ -413,6 +440,14 @@ private slots:
     // A game may put any byte in a variable name, the protocol's own delimiters
     // included, as long as it quotes them - and the echo has to quote them right
     // back or the reply reads as several variables at the far end.
+    //
+    // The quoting is asserted on the raw capture rather than on the decoded name:
+    // an IAC that lost its doubling decodes to the same name, so only the bytes
+    // themselves can say whether it was quoted. NEW_ENVIRON_ESC quoting is not
+    // undone on the receive side, so the name that comes back carries the ESC
+    // bytes the game sent - that is Mudlet's behaviour today rather than what
+    // RFC 1572 asks for, and this pins it so a conformance fix is a deliberate
+    // change to this test and not a surprise.
     void test_specialBytesInARequestedNameAreQuotedInTheReply()
     {
         enableNewEnviron();
@@ -424,16 +459,90 @@ private slots:
         rawName.append('A').append(static_cast<char>(TN_IAC)).append(static_cast<char>(TN_IAC)).append('B').append(NEW_ENVIRON_ESC).append('C').append(NEW_ENVIRON_VAL).append('D');
         requestSend(named(NEW_ENVIRON_USERVAR, rawName));
 
+        const QByteArray wire = sentBytes();
+
+        // What a game reads off the socket: IAC doubled again for telnet, ESC
+        // and VAL each quoted with an ESC for NEW_ENVIRON.
+        QByteArray expectedOnTheWire;
+        expectedOnTheWire.append('A')
+                .append(static_cast<char>(TN_IAC))
+                .append(static_cast<char>(TN_IAC))
+                .append('B')
+                .append(NEW_ENVIRON_ESC)
+                .append(NEW_ENVIRON_ESC)
+                .append('C')
+                .append(NEW_ENVIRON_ESC)
+                .append(NEW_ENVIRON_VAL)
+                .append('D');
+        QVERIFY2(wire.contains(expectedOnTheWire), qPrintable(qsl("the reply did not quote the name it echoed; it reads %1").arg(QString::fromLatin1(wire.toHex(' ')))));
+
+        const QList<Subnegotiation> replies = subnegotiationsFor(wire, static_cast<unsigned char>(OPT_NEW_ENVIRON));
+        QCOMPARE(replies.size(), 1);
+        const QList<EnvironVariable> variables = variablesIn(replies.first().payload.mid(1));
+        QCOMPARE(variables.size(), 1);
+
         QByteArray expectedName;
         expectedName.append('A').append(static_cast<char>(TN_IAC)).append('B').append(NEW_ENVIRON_ESC).append('C').append(NEW_ENVIRON_VAL).append('D');
+        QCOMPARE(variables.first().name, expectedName);
+        QVERIFY2(!variables.first().hasValue, "a name full of delimiters was matched against a variable Mudlet maintains");
+    }
+
+    // A game asks for several variables in one SEND far more often than for one,
+    // and the parser carries state between them - the name it has collected is
+    // only flushed when the next type byte arrives. Asking for one name at a time
+    // never runs that flush.
+    void test_severalNamesInOneRequestAreAllAnswered()
+    {
+        enableNewEnviron();
+        requestSend(named(NEW_ENVIRON_USERVAR, "CHARSET") + named(NEW_ENVIRON_USERVAR, "ANSI") + named(NEW_ENVIRON_USERVAR, "TRUECOLOR"));
 
         QString problem;
         const QList<EnvironVariable> variables = soleReplyVariables(NEW_ENVIRON_IS, problem);
         QVERIFY2(problem.isEmpty(), qPrintable(problem));
-        QCOMPARE(variables.size(), 1);
-        const EnvironVariable variable = variables.first();
-        QCOMPARE(variable.name, expectedName);
-        QVERIFY2(!variable.hasValue, "a name full of delimiters was matched against a variable Mudlet maintains");
+        QCOMPARE(variables.size(), 3);
+        QCOMPARE(variableNamed(variables, "CHARSET").value, QByteArray("UTF-8"));
+        QCOMPARE(variableNamed(variables, "ANSI").value, QByteArray("1"));
+        QCOMPARE(variableNamed(variables, "TRUECOLOR").value, QByteArray("1"));
+    }
+
+    // The two namespaces in one request, which is where the parser has to keep
+    // track of which type the name it is collecting belongs to.
+    void test_aRequestMixingBothNamespacesKeepsThemApart()
+    {
+        enableNewEnviron();
+        requestSend(named(NEW_ENVIRON_VAR, "CHARSET") + named(NEW_ENVIRON_USERVAR, "ANSI"));
+
+        QString problem;
+        const QList<EnvironVariable> variables = soleReplyVariables(NEW_ENVIRON_IS, problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(variables.size(), 2);
+
+        const EnvironVariable wellKnown = variableNamed(variables, "CHARSET");
+        QCOMPARE(wellKnown.type, NEW_ENVIRON_VAR);
+        QVERIFY2(!wellKnown.hasValue, "a name asked for under the well-known type came back with the USERVAR value");
+
+        const EnvironVariable userVar = variableNamed(variables, "ANSI");
+        QCOMPARE(userVar.type, NEW_ENVIRON_USERVAR);
+        QCOMPARE(userVar.value, QByteArray("1"));
+    }
+
+    // The other half of negotiation: a game that asks Mudlet to turn NEW_ENVIRON
+    // on, rather than offering to, and then withdraws its request.
+    void test_aRequestToEnableIsAnsweredAndCanBeWithdrawn()
+    {
+        announce(TN_DO, OPT_NEW_ENVIRON);
+        QVERIFY2(mpHost->mTelnet.isNewEnvironEnabled(), "a DO NEW-ENVIRON did not turn the protocol on");
+        QByteArray expected;
+        expected.append(TN_IAC).append(TN_WILL).append(OPT_NEW_ENVIRON);
+        QVERIFY2(sentBytes().contains(expected), "Mudlet did not answer DO NEW-ENVIRON with WILL");
+
+        mpServer->forgetReceived();
+        announce(TN_DONT, OPT_NEW_ENVIRON);
+        QVERIFY2(!mpHost->mTelnet.isNewEnvironEnabled(), "a DONT NEW-ENVIRON left the protocol on");
+
+        mpServer->forgetReceived();
+        requestSend({});
+        QVERIFY2(newEnvironReplies().isEmpty(), "Mudlet kept answering NEW_ENVIRON after the game withdrew its request");
     }
 
     // Two malformed requests that must produce nothing rather than a reply built
@@ -449,6 +558,12 @@ private slots:
         mpServer->forgetReceived();
         feed(subnegotiation(OPT_NEW_ENVIRON, QByteArray(1, NEW_ENVIRON_IS) + named(NEW_ENVIRON_VAR, "CHARSET")));
         QVERIFY2(newEnvironReplies().isEmpty(), "a NEW_ENVIRON request that was not a SEND was answered");
+
+        // The control: a well-formed request over the same connection is still
+        // answered, so neither silence above can be the capture having died.
+        mpServer->forgetReceived();
+        requestSend(named(NEW_ENVIRON_USERVAR, "CHARSET"));
+        QCOMPARE(newEnvironReplies().size(), 1);
     }
 
     // Nothing at all goes out once the game has withdrawn the option, neither an
@@ -537,7 +652,8 @@ private slots:
         QCOMPARE(replies.first().payload.at(0), NEW_ENVIRON_INFO);
 
         const QList<EnvironVariable> variables = variablesIn(replies.first().payload.mid(1));
-        QVERIFY2(variables.size() > 5, qPrintable(qsl("only %1 hyperlink variables were announced").arg(variables.size())));
+        QCOMPARE(variables.size(), advertisedHyperlinkVariables());
+        QVERIFY2(advertisedHyperlinkVariables() > 10, "too few hyperlink capabilities are advertised for the comparison above to prove anything");
         for (const EnvironVariable& variable : variables) {
             QVERIFY2(variable.name.startsWith("OSC_HYPERLINKS"), qPrintable(qsl("%1 rode along with the hyperlink update").arg(QString::fromLatin1(variable.name))));
             QCOMPARE(variable.value, QByteArray("0"));
@@ -545,8 +661,7 @@ private slots:
     }
 
     // MNES narrows the advertised set to five names and moves them into the
-    // well-known namespace, which is the whole difference between the two
-    // protocols on the wire.
+    // well-known namespace.
     void test_mnesAnswersItsFiveVariablesAsWellKnownOnes()
     {
         mpHost->mEnableMNES = true;
@@ -570,7 +685,8 @@ private slots:
 
     // Under MNES a name outside that set is not Mudlet's to answer at all, while
     // one inside it that Mudlet chooses not to supply is answered as maintained
-    // but empty. IPADDRESS is the deliberate example of the second.
+    // but empty. IPADDRESS reaches the second path by being in the MNES name list
+    // and absent from the data map.
     void test_mnesAnswersOnlyMnesNames()
     {
         mpHost->mEnableMNES = true;

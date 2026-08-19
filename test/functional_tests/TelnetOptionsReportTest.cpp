@@ -20,15 +20,14 @@
 // cTelnet::decodeOption() names every telnet option Mudlet can meet, and the
 // "Telnet Options:" block of the statistics report is its only caller outside
 // the DEBUG_TELNET builds - so what a player is shown when they ask what was
-// negotiated is exactly this table. Nothing exercised it, which left the whole
-// switch (and the report that reads it) at zero coverage: an option constant
-// renumbered on one side only would have been reported under the wrong name
-// with nothing to say so.
+// negotiated is exactly this table, and an option constant renumbered on one
+// side only is reported under the wrong name with nothing to say so.
 //
-// The report is driven from heAnnouncedState, which processTelnetCommand() sets
-// for every option a server announces - including ones Mudlet goes on to refuse
-// - so announcing the whole 0-255 range in one pass reaches every arm of the
-// switch, the unofficial numbers and the UNKNOWN fallback included.
+// The report lists an option that either side announced. The sweep below leans
+// on the server half, heAnnouncedState, which processTelnetCommand() sets for
+// every option a server announces - including ones Mudlet goes on to refuse - so
+// announcing the whole 0-255 range in one pass reaches every arm of the switch,
+// the unofficial numbers and the UNKNOWN fallback included.
 
 #include <QFileInfo>
 #include <QTemporaryDir>
@@ -59,7 +58,7 @@ private:
     Host* mpHost = nullptr;
     const QString mHostname = qsl("Test-Telnet-Options-Report");
     const QString mLocalhost = qsl("localhost");
-    QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
+    QString mPort;
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -169,7 +168,6 @@ private slots:
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
-        // An ephemeral OS-assigned port, so concurrent test runs cannot collide.
         mpServer->start(mLocalhost, 0);
         QVERIFY2(mpServer->isListening(), "TelnetServerStub failed to bind a loopback port");
         mPort = QString::number(mpServer->serverPort());
@@ -260,6 +258,11 @@ private slots:
 
         const QString report = mpHost->mTelnet.assembleTelnetOptionsReport();
         QCOMPARE(report.count(QLatin1Char('\n')), 256);
+
+        // TTYPE was announced by Mudlet in the test above and by the server here,
+        // so its line is the one that carries both halves - the join nothing else
+        // in this file reaches.
+        QCOMPARE(lineFor(report, qsl("TTYPE (24)")), qsl("  TTYPE (24): server enabled, client enabled"));
 
         const QHash<int, QString> named = expectedOptionNames();
         for (int option = 0; option <= 255; ++option) {

@@ -33,8 +33,8 @@
 // all, which is checked by following it with a well-formed one and finding only
 // that one's request. Playback itself is out of reach without an audio backend,
 // so the parameters that only ever reach the player (volume, loops, priority,
-// continue and tag) are exercised for their effect on the request rather than
-// asserted one by one.
+// continue and tag) are exercised only far enough to show they do not stop the
+// file being fetched.
 
 #include <QFileInfo>
 #include <QStringList>
@@ -76,13 +76,19 @@ public:
                 return;
             }
             connect(socket, &QTcpSocket::readyRead, this, [this, socket]() {
-                const QByteArray request = socket->readAll();
+                // Accumulated rather than read once: a request line split across
+                // two reads would otherwise be dropped without a trace, and the
+                // test would blame Mudlet for a request the stub lost.
+                QByteArray request = socket->property("request").toByteArray();
+                request.append(socket->readAll());
                 const int requestLineEnd = request.indexOf("\r\n");
-                if (requestLineEnd > 0) {
-                    const QList<QByteArray> parts = request.left(requestLineEnd).split(' ');
-                    if (parts.size() >= 2) {
-                        mRequestedPaths.append(QString::fromLatin1(parts.at(1)));
-                    }
+                if (requestLineEnd < 0) {
+                    socket->setProperty("request", request);
+                    return;
+                }
+                const QList<QByteArray> parts = request.left(requestLineEnd).split(' ');
+                if (parts.size() >= 2) {
+                    mRequestedPaths.append(QString::fromLatin1(parts.at(1)));
                 }
                 socket->write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
                 socket->disconnectFromHost();
@@ -92,15 +98,17 @@ public:
     }
 
     // Port 0: an ephemeral port, so concurrent test runs cannot collide.
-    bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
+    [[nodiscard]] bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
     quint16 serverPort() const { return mServer.serverPort(); }
 
     QStringList requestedPaths() const { return mRequestedPaths; }
     void forgetRequests() { mRequestedPaths.clear(); }
 
 private:
-    QTcpServer mServer;
+    // The path list is declared first so it outlives the server, and with it the
+    // accepted sockets whose read handlers write into it.
     QStringList mRequestedPaths;
+    QTcpServer mServer;
 };
 
 class TelnetAtcpMspTest : public QObject
@@ -173,8 +181,8 @@ private:
         return value;
     }
 
-    // The composer is a top-level window of its own rather than a child of the
-    // Host, so this is the only way to see whether one is up.
+    // Scanned off the top-level widgets rather than read from cTelnet::mpComposer,
+    // so a window the pointer has already let go of still shows up.
     static QList<dlgComposer*> openComposers()
     {
         QList<dlgComposer*> found;
@@ -267,6 +275,7 @@ private slots:
     {
         QVERIFY(mpHost);
         mpHost->mEnableMSP = true;
+        mpHost->mEnableGMCP = true;
         // Every media message is answered by the local stub rather than by a
         // lookup of "www.localhost", which is where an MSP message with no URL
         // of its own would otherwise send Mudlet.
@@ -276,8 +285,8 @@ private slots:
     }
 
     // The single-line form: everything up to the first space is the variable,
-    // the rest its value, and the dots come out of the name because Lua cannot
-    // index "Room.Brief" as one key.
+    // the rest its value, and the dots come out of the name so a script can write
+    // atcp.RoomBrief.
     void test_singleLineAtcpReachesTheLuaTable()
     {
         feedAtcp("Room.Brief Cave entrance");
@@ -301,8 +310,8 @@ private slots:
         QCOMPARE(atcpValue(qsl("CharStatus")), qsl("ready hp:100"));
     }
 
-    // Room.Num is the one ATCP variable cTelnet acts on itself: it is what tells
-    // the mapper which room the player is in.
+    // Room.Num is the one ATCP variable that both reaches the Lua table and moves
+    // state inside cTelnet: it is what tells the mapper where the player is.
     void test_roomNumMovesTheMapper()
     {
         QVERIFY2(mpHost->mpMap, "the profile has no map, so there is nothing for Room.Num to move");
@@ -311,8 +320,9 @@ private slots:
         QCOMPARE(mpHost->mpMap->mRoomIdHash.value(mHostname), 4242);
     }
 
-    // The one thing ATCP sends back. A game that asks for it and gets nothing
-    // has no way to know what it is talking to.
+    // The only thing Mudlet sends unprompted in reply to an incoming ATCP
+    // message. A game that asks for it and gets nothing has no way to know what
+    // it is talking to.
     void test_authRequestIsAnsweredWithTheClientHandshake()
     {
         feedAtcp("Auth.Request");
@@ -372,9 +382,9 @@ private slots:
     // a backslash or a line break cannot end the message early.
     void test_savingTheComposerQuotesTheBufferItSendsBack()
     {
-        // The buffer goes back over whichever of the two protocols is live, and
-        // GMCP is the one a profile prefers - but only once a game has offered
-        // it, which the recording server never does on its own.
+        // The preference picks the protocol and the negotiated flag then has to
+        // agree, so GMCP has to be both preferred (it is, by default) and offered
+        // - which the recording server never does on its own.
         announce(TN_WILL, static_cast<char>(OPT_GMCP));
         QVERIFY2(mpHost->mTelnet.isGMCPEnabled(), "GMCP did not turn on, so the composer had nothing to send its buffer over");
         // Turning GMCP on makes Mudlet introduce itself over it, so wait that
@@ -398,8 +408,44 @@ private slots:
                  "saving the composer sent no GMCP message");
         const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_GMCP);
         QCOMPARE(sent.size(), 1);
-        // moc does not understand raw string literals, so this stays escaped:
+        // moc mis-lexes this particular raw string - the quotes inside it leave it
+        // thinking the class is still inside a string, and it then emits no meta
+        // object at all - so it stays escaped. Raw strings are fine elsewhere.
         QCOMPARE(sent.first().payload, QByteArray("IRE.Composer.SetBuffer \"a \\\"quoted\\\" back\\\\slash\\nand a second line\""));
+
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5000),
+                 "saving the composer left its window behind");
+    }
+
+    // The other arm of the same save: a profile with GMCP turned off sends the
+    // buffer as ATCP instead, in a completely different shape - and with no
+    // quoting at all, which is what an ATCP-only game receives.
+    void test_savingTheComposerFallsBackToAtcpWithGmcpOff()
+    {
+        mpHost->mEnableGMCP = false;
+        announce(TN_WILL, static_cast<char>(OPT_ATCP));
+        QVERIFY2(mpHost->mTelnet.isATCPEnabled(), "ATCP did not turn on, so the composer had nothing to send its buffer over");
+        waitForEverythingSentSoFar();
+        mpServer->forgetReceived();
+
+        feedAtcp("Client.Compose Note");
+        QCOMPARE(openComposers().size(), 1);
+        mpHost->mTelnet.atcpComposerSave(qsl("a \"quoted\" line"));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !subnegotiationsFor(mpServer->received(), OPT_ATCP).isEmpty();
+                         },
+                         10000),
+                 "saving the composer sent no ATCP message");
+        const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_ATCP);
+        QCOMPARE(sent.size(), 1);
+        QCOMPARE(sent.first().payload, QByteArray("olesetbuf \n a \"quoted\" line\n"));
+        QVERIFY2(mpServer->received().contains("*s\n"), "the ATCP save did not tell the game the buffer was submitted");
 
         QVERIFY2(QTest::qWaitFor(
                          []() {
@@ -477,14 +523,24 @@ private slots:
         QCOMPARE(mpMediaServer->requestedPaths(), QStringList({qsl("/msp/bark.wav")}));
     }
 
-    // A server-supplied file name that climbs out of the profile's media
-    // directory must not be fetched, since fetching it is what would write it
-    // there.
-    void test_aFileNameThatEscapesTheMediaDirectoryIsRefused()
+    // A server-supplied file name that names somewhere other than inside the
+    // profile's media directory must not be fetched, since fetching it is what
+    // would write it there.
+    void test_aFileNameOutsideTheMediaDirectoryIsRefused_data()
     {
-        feedMsp("!!SOUND(../escape.wav)");
+        QTest::addColumn<QByteArray>("message");
+
+        QTest::newRow("parent directory traversal") << QByteArray("!!SOUND(../escape.wav)");
+        QTest::newRow("absolute path") << QByteArray("!!SOUND(/tmp/escape.wav)");
+    }
+
+    void test_aFileNameOutsideTheMediaDirectoryIsRefused()
+    {
+        QFETCH(QByteArray, message);
+
+        feedMsp(message);
         feedMsp("!!SOUND(sentinel.wav)");
-        QVERIFY2(waitForMediaRequests(1), "the sentinel after the traversal attempt fetched nothing");
+        QVERIFY2(waitForMediaRequests(1), "the sentinel after the refused file name fetched nothing");
         settleMediaRequests();
         QCOMPARE(mpMediaServer->requestedPaths(), QStringList({qsl("/msp/sentinel.wav")}));
     }

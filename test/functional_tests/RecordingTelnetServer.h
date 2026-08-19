@@ -34,9 +34,11 @@
 // several out-of-band protocols (NEW_ENVIRON above all) are only observable in
 // what Mudlet replies with.
 //
-// Deliberately no Q_OBJECT: it declares no signals or slots of its own, so
-// connecting to lambdas is enough and the header stays usable from more than one
-// test in the same binary without a moc step.
+// Deliberately no Q_OBJECT: there is no matching .cpp for AUTOMOC to attach a moc
+// step to (TelnetServerStub.h gets away with it only because TelnetServerStub.cpp
+// is in FUNCTIONAL_TEST_UTILS), and the class declares no signals or slots of its
+// own, so connecting to lambdas with itself as context is enough. Adding a signal
+// later would fail at link rather than at compile.
 class RecordingTelnetServer : public QObject
 {
 public:
@@ -55,16 +57,20 @@ public:
         });
     }
 
-    // Port 0: an ephemeral port, so concurrent test runs cannot collide.
-    bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
+    // Port 0: an ephemeral port, so concurrent test runs cannot collide. An
+    // unchecked failure here reads much later as a connection that never
+    // arrives, since serverPort() then answers 0.
+    [[nodiscard]] bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
     quint16 serverPort() const { return mServer.serverPort(); }
 
     QByteArray received() const { return mReceived; }
     void forgetReceived() { mReceived.clear(); }
 
 private:
-    QTcpServer mServer;
+    // The buffer is declared first so it outlives the server, and with it the
+    // accepted sockets whose read handlers write into it.
     QByteArray mReceived;
+    QTcpServer mServer;
 };
 
 // One IAC SB ... IAC SE block, with the escaped IAC pairs collapsed.
@@ -74,13 +80,31 @@ struct Subnegotiation
     QByteArray payload;
 };
 
-// Every subnegotiation in a captured stream, in the order it was sent.
+// Every subnegotiation in a captured stream, in the order it was sent. Ordinary
+// data around them is skipped, including the doubled IAC Mudlet writes for a
+// literal 0xFF - which would otherwise read as the start of a block whenever the
+// byte after it happened to be SB.
 inline QList<Subnegotiation> subnegotiationsIn(const QByteArray& stream)
 {
+    const auto byteAt = [&stream](const int index) {
+        return static_cast<unsigned char>(stream.at(index));
+    };
+    constexpr auto iac = static_cast<unsigned char>(TN_IAC);
+    constexpr auto sb = static_cast<unsigned char>(TN_SB);
+    constexpr auto se = static_cast<unsigned char>(TN_SE);
+
     QList<Subnegotiation> found;
     int i = 0;
     while (i + 1 < stream.size()) {
-        if (static_cast<unsigned char>(stream.at(i)) != static_cast<unsigned char>(TN_IAC) || static_cast<unsigned char>(stream.at(i + 1)) != static_cast<unsigned char>(TN_SB)) {
+        if (byteAt(i) != iac) {
+            ++i;
+            continue;
+        }
+        if (byteAt(i + 1) == iac) {
+            i += 2;
+            continue;
+        }
+        if (byteAt(i + 1) != sb) {
             ++i;
             continue;
         }
@@ -88,25 +112,39 @@ inline QList<Subnegotiation> subnegotiationsIn(const QByteArray& stream)
             break;
         }
         Subnegotiation subnegotiation;
-        subnegotiation.option = static_cast<unsigned char>(stream.at(i + 2));
+        subnegotiation.option = byteAt(i + 2);
         int j = i + 3;
         bool terminated = false;
+        bool truncated = false;
         while (j < stream.size()) {
-            if (static_cast<unsigned char>(stream.at(j)) == static_cast<unsigned char>(TN_IAC) && j + 1 < stream.size()) {
-                const unsigned char next = static_cast<unsigned char>(stream.at(j + 1));
-                if (next == static_cast<unsigned char>(TN_SE)) {
+            if (byteAt(j) == iac) {
+                if (j + 1 >= stream.size()) {
+                    break;
+                }
+                const unsigned char next = byteAt(j + 1);
+                if (next == se) {
                     terminated = true;
                     j += 2;
                     break;
                 }
-                if (next == static_cast<unsigned char>(TN_IAC)) {
+                if (next == iac) {
                     subnegotiation.payload.append(static_cast<char>(TN_IAC));
                     j += 2;
                     continue;
                 }
+                if (next == sb) {
+                    // The next block has begun, so this one lost its terminator:
+                    // drop it rather than swallowing its successor's bytes.
+                    truncated = true;
+                    break;
+                }
             }
             subnegotiation.payload.append(stream.at(j));
             ++j;
+        }
+        if (truncated) {
+            i = j;
+            continue;
         }
         if (!terminated) {
             // A subnegotiation still arriving: leave it for the next capture
@@ -119,7 +157,6 @@ inline QList<Subnegotiation> subnegotiationsIn(const QByteArray& stream)
     return found;
 }
 
-// The subnegotiations for one option only.
 inline QList<Subnegotiation> subnegotiationsFor(const QByteArray& stream, const unsigned char option)
 {
     QList<Subnegotiation> found;

@@ -301,8 +301,8 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
 # TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
-# full profile against a loopback server, and the MSP half of the last waits out
-# real HTTP requests, so the 60s default is too tight under a sanitizer
+# full profile, which is nearly all of their runtime and the part a sanitizer and
+# a loaded runner stretch, so they get the same headroom as their neighbours
 set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
