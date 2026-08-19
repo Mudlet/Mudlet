@@ -238,7 +238,6 @@ private:
     const QString mLocalhost = qsl("localhost");
     int mConsoleMark = 0;
     QByteArray mPaddedMapXml;
-    QByteArray mBinaryMap;
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -659,8 +658,7 @@ private slots:
             out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         QVERIFY(pMap->serialize(out));
-        mBinaryMap = serialized;
-        mpMapServer->serve(qsl("/map.dat"), mBinaryMap);
+        mpMapServer->serve(qsl("/map.dat"), serialized);
 
         pMap->mapClear();
         QVERIFY(pMap->mpRoomDB->isEmpty());
