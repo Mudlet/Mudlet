@@ -1405,15 +1405,22 @@ end
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional)
--- @return true, or false plus an error message when the parent could not be found
+-- @param index of the new menu item (optional). Not usable together with a nested
+--        parent: an item is named for the parent it sits in, so the index lookup
+--        misses and raises.
+-- @return true, or false plus a message when the item cannot be added
 function Geyser.Label:addMenuLabel(name, parent, index)
+  if type(name) ~= "string" then
+    return false, "addMenuLabel: needs the name of the item to add as a string, got "..type(name)
+  end
+
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
 
-  -- findMenuElement answers nil plus a message rather than nil plus nil, so the
-  -- element it did not find is what tells a missing parent apart from a found
-  -- one. A parent declared without a submenu table for its children is a miss
-  -- here too, because there is no table to hang the new item off.
+  -- findMenuElement reports failure as nil plus a message, so the second return
+  -- is a string rather than nil when it fails and cannot be tested for absence -
+  -- the element is what has to be checked. With findParent set it only answers
+  -- for a parent that is followed by a submenu table, so a parent declared
+  -- without one lands here as well: appending to it has nowhere to go.
   if parent and not menuElement then
     return false, "addMenuLabel: Couldn't find menu parent "..parent
   end

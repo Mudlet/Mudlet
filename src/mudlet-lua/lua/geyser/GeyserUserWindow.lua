@@ -61,11 +61,11 @@ end
 function Geyser.UserWindow:setDockPosition(pos)
   self.dockPosition = pos
   local docked = openUserWindow(self.name, false, self.autoDock, pos)
-  -- reopening the dock puts the window back on screen whether it was hidden or
-  -- not, so a window that still believes itself hidden is shown properly rather
-  -- than left desynced: Geyser.Container:hide() skips anything already hidden,
-  -- which would otherwise make the next hide() do nothing
-  if self.hidden or self.auto_hidden then
+  -- opening the dock brings the window back on screen, so leaving self.hidden
+  -- set would make the next hide() a no-op: Geyser.Container:hide() skips the
+  -- widget for anything that already believes itself hidden. auto_hidden is
+  -- deliberately left alone: clearing that one is the container cascade's job.
+  if self.hidden then
     self:show()
   end
   return docked

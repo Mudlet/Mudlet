@@ -1449,9 +1449,19 @@ describe("Tests Geyser.Label right click menus", function()
 
       local element, submenu = other:findMenuElement("A.B", other.rightClickMenu, true)
 
-      assert.are.equal(other:findMenuElement("A.B"), element)
-      -- B's own children, not the table B itself is an entry in
+      -- the submenu hanging off B, not the submenu B is itself listed in
       assert.are.same({"C"}, submenu)
+      assert.are.equal(other:findMenuElement("A.B"), element)
+    end)
+
+    it("names an item for the parent it sits in, not for its whole path", function()
+      -- this is what makes an item added under "A.B" answer to "B.D", and it is
+      -- why a name with more than one dot in it never resolves
+      local other = Geyser.Label:new({name = "glmDeepName", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B", {"C"}}}})
+
+      assert.is_not_nil(other:findMenuElement("B.C"))
+      assert.is_nil(other:findMenuElement("A.B.C"))
     end)
   end)
 
@@ -1514,7 +1524,7 @@ describe("Tests Geyser.Label right click menus", function()
     end)
 
     it("adds an item at the index it is given", function()
-      label:addMenuLabel("Fourth", nil, 2)
+      assert.is_true(label:addMenuLabel("Fourth", nil, 2))
       assert.are.same({"First", "Fourth", "Second", "Third"}, menuOrder())
     end)
 
@@ -1554,21 +1564,32 @@ describe("Tests Geyser.Label right click menus", function()
       assert.is_true(added)
     end)
 
+    it("reports a name it cannot make an item out of", function()
+      -- without this the menu takes the value as an entry and answers true, so
+      -- the caller is told an item was added that createMenuItems then skips
+      local added, message = label:addMenuLabel(5)
+
+      assert.is_false(added)
+      assert.is_truthy(message:find("addMenuLabel: needs the name of the item to add", 1, true))
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
     it("reports a parent it cannot find rather than raising", function()
       local added, message = label:addMenuLabel("Child", "Nowhere")
 
       assert.is_false(added)
-      assert.are.equal("addMenuLabel: Couldn't find menu parent Nowhere", message)
+      assert.is_truthy(message:find("addMenuLabel: Couldn't find menu parent Nowhere", 1, true))
       assert.are.same({"First", "Second", "Third"}, menuOrder())
     end)
 
     it("reports a parent that was declared without a submenu", function()
-      -- "Second" is a plain entry rather than one followed by a table of its
-      -- children, so there is nothing to add an item to
+      -- addMenuLabel appends to a submenu, it does not make one, so "Second" -
+      -- a plain entry rather than one followed by a table of its children - is
+      -- refused
       local added, message = label:addMenuLabel("Child", "Second")
 
       assert.is_false(added)
-      assert.are.equal("addMenuLabel: Couldn't find menu parent Second", message)
+      assert.is_truthy(message:find("addMenuLabel: Couldn't find menu parent Second", 1, true))
       assert.are.same({"First", "Second", "Third"}, menuOrder())
       assert.is_nil(label:findMenuElement("Second.Child"))
     end)
@@ -1580,7 +1601,7 @@ describe("Tests Geyser.Label right click menus", function()
       local added, message = other:addMenuLabel("D", "A.B")
 
       assert.is_false(added)
-      assert.are.equal("addMenuLabel: Couldn't find menu parent A.B", message)
+      assert.is_truthy(message:find("addMenuLabel: Couldn't find menu parent A.B", 1, true))
       assert.is_nil(other:findMenuElement("B.D"))
       assert.is_nil(other:findMenuElement("A.D"))
     end)
