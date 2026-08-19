@@ -10268,145 +10268,148 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="3617"/>
       <source>copy to %n destination(s)</source>
       <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Copiar en %n destino</numerusform>
+        <numerusform>Copiar en %n destinos</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="411"/>
       <source>Migrated %1...</source>
       <extracomment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</extracomment>
-      <translation type="unfinished"/>
+      <translation>Migrado %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="735"/>
       <source>Enable spell check using Mudlet dictionary:</source>
       <extracomment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>Activar el corrector ortográfico usando el diccionario de Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="738"/>
       <source>Enable spell check using System dictionary:</source>
       <extracomment>On *nix systems where we find the system ones we use them</extracomment>
-      <translation type="unfinished"/>
+      <translation>Activar corrector ortográfico usando el diccionario del sistema:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="853"/>
       <source>&lt;p&gt;Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Usar el tamaño de búfer máximo que su sistema pueda manejar (%1 líneas). Esto se calculará en función de la memoria disponible.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1003"/>
       <source>Protocols</source>
-      <translation type="unfinished"/>
+      <translation>Protocolos</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1012"/>
       <source>GMCP: Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP: Protocolo genérico de comunicación del MUD</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1025"/>
       <source>MSDP: Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP: Protocolo de datos de servidores del MUD</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1035"/>
       <source>MSSP: Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP: Protocolo de estado de servidores del MUD</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1030"/>
       <source>MSP: Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP: Protocolo de sonido del MUD</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1045"/>
       <source>MXP: Mud eXtension Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MXP: Protocolo de extensión del MUD</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1040"/>
       <source>MTTS: Mud Terminal Type Standard</source>
-      <translation type="unfinished"/>
+      <translation>MTTS: Estándar de tipo de terminal del MUD</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="245"/>
       <source>&lt;p&gt;Hide success messages in Central Debug Console for timers with intervals below this threshold. Error messages always display.&lt;/p&gt;</source>
       <extracomment>Tooltip for timer debug output minimum interval</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ocultar los mensajes de éxito en la Consola Central de Depuración para los temporizadores con intervalos inferiores a este límite. Los mensajes de error se muestran siempre.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="249"/>
       <source>Show all map symbols, their Unicode code-points, font availability, and which rooms use them.</source>
       <extracomment>Tooltip for show glyph usage button</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mostrar todos los símbolos del mapa, sus puntos de código Unicode, la disponibilidad de fuentes y qué salas los usan.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="253"/>
       <source>Use only the selected font (may show � for missing symbols) or allow fallback fonts for better coverage.</source>
       <extracomment>Tooltip for map symbol font usage option</extracomment>
-      <translation type="unfinished"/>
+      <translation>Usar solo la fuente seleccionada (puede mostrar � para los símbolos que falten) o permitir fuentes de sustitución para una mejor cobertura.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="255"/>
       <source>&lt;p&gt;Run all matching keybindings instead of just the first one. Disable for compatibility with pre-3.9.0 scripts.&lt;/p&gt;</source>
       <extracomment>Tooltip for run all keybindings option</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ejecutar todas las combinaciones de teclas coincidentes en lugar de solo la primera. Desactívelo para mantener la compatibilidad con scripts anteriores a la versión 3.9.0.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="258"/>
       <source>&lt;p&gt;Controls display width for ambiguous East Asian characters. Auto-detects correct width for most encodings (default), or choose narrow/wide.&lt;/p&gt;</source>
       <extracomment>Tooltip for East Asian ambiguous width character option</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Controla el ancho de pantalla para caracteres ambiguos de Asia Oriental. Detecta automáticamente el ancho correcto para la mayoría de las codificaciones (predeterminado), o elige el estrecho/ancho.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="261"/>
       <source>&lt;p&gt;Enable context menu to analyze UTF-16/UTF-8 encoding of selected text. Useful for identifying multi-byte characters.&lt;/p&gt;</source>
       <extracomment>Tooltip for text analyzer option</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Permitir que el menú contextual analice la codificación UTF-16/UTF-8 del texto seleccionado. Útil para identificar caracteres multi-byte.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="264"/>
       <source>&lt;p&gt;Control menu icon display: on, off, or auto (system default). May require restart.&lt;/p&gt;</source>
       <extracomment>Tooltip for show icons on menus option</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Controla la visualización de los iconos del menú: activado, desactivado o automático (predeterminado del sistema). Puede requerir reiniciar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="935"/>
       <source>The Discord desktop app must be running for Rich Presence to work. Browser and mobile clients are not supported.</source>
       <extracomment>Tooltip shown when Discord Rich Presence cannot detect a logged-in user</extracomment>
-      <translation type="unfinished"/>
+      <translation>La aplicación de escritorio de Discord debe estar ejecutándose para que funcione Rich Presence. No se admiten clientes móviles ni de navegador.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1007"/>
       <source>CHARSET: Character Encoding Standard</source>
-      <translation type="unfinished"/>
+      <translation>CHARSET: Estándar de codificación de caractere</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1017"/>
       <source>MNES: Mud New-Environ Standard</source>
-      <translation type="unfinished"/>
+      <translation>MNES: Estándar de nuevo entorno del MUD</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1021"/>
       <source>MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables including OSC link support.</source>
       <extracomment>Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON</extracomment>
-      <translation type="unfinished"/>
+      <translation>MNES utiliza la misma opción de telnet que NEW-ENVIRON, por lo que solo uno puede estar activo. MNES envía un conjunto mínimo de variables, mientras que NEW-ENVIRON envía variables extendidas, incluyendo soporte para enlaces OSC.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1050"/>
       <source>NAWS: Negotiate About Window Size</source>
-      <translation type="unfinished"/>
+      <translation>NAWS: Negociación del tamaño de la ventana</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1055"/>
       <source>NEW-ENVIRON: Client Variables Standard</source>
-      <translation type="unfinished"/>
+      <translation>NEW-ENVIRON: Estándar de variables del cliente</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1060"/>
       <source>NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set.</source>
       <extracomment>Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES</extracomment>
-      <translation type="unfinished"/>
+      <translation>NEW-ENVIRON utiliza la misma opción de telnet que MNES, por lo que solo uno puede estar activo. NEW-ENVIRON envía variables extendidas, incluyendo soporte para enlaces OSC, mientras que MNES envía un conjunto mínimo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1115"/>
@@ -10426,102 +10429,102 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1363"/>
       <source>unknown error</source>
-      <translation type="unfinished"/>
+      <translation>error desconocido</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1364"/>
       <source>This profile could not be loaded correctly (%1). Settings cannot be saved. Close the profile and try loading an older version from &apos;Connect - Options - Profile history&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>Este perfil no se ha podido cargar correctamente (%1). No se pueden guardar los ajustes. Cierra el perfil e intenta cargar una versión anterior desde &apos;Conectar - Opciones - Historial del perfil&apos;.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1541"/>
       <source>Tab will switch between the input line and main window, and also step through hyperlinks while in caret mode. Ctrl+] and Ctrl+[ navigate links without conflicting with pane-switching. Press Enter or Space to activate the focused link, and the Menu key or Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest content or Ctrl+Home to jump to the start of the buffer.</source>
       <extracomment>Screen-reader hint when the user picks Tab as the caret-mode pane-switching key, warning Tab is shared with hyperlink navigation and explaining how to activate links, open their menu, and jump to latest content. Do not translate the key names &quot;Tab&quot;, &quot;Ctrl+]&quot;, &quot;Ctrl+[&quot;, &quot;Enter&quot;, &quot;Space&quot;, &quot;Menu&quot;, &quot;Shift+F10&quot;, &quot;Ctrl+End&quot; or &quot;Ctrl+Home&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>El tabulador cambiará entre la línea de comandos y la ventana principal, y también pasará por los hipervínculos mientras esté en el modo cursor. Ctrl+] y Ctrl+[ permiten navegar por los enlaces sin entrar en conflicto con el cambio de paneles. Pulsa Intro o Espacio para activar el enlace enfocado, y la tecla Menú o Shift+F10 para abrir su menú contextual. Pulsa Ctrl+Fin para saltar al contenido más reciente o Ctrl+Inicio para saltar al principio del búfer.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1546"/>
       <source>In caret mode, use Ctrl+] for the next hyperlink and Ctrl+[ for the previous hyperlink. Press Enter or Space to activate the focused link, and the Menu key or Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest content or Ctrl+Home to jump to the start of the buffer.</source>
       <extracomment>Screen-reader hint when the user picks any caret-mode pane-switching key other than Tab, explaining how to navigate, activate and open menus on hyperlinks, and jump to latest content. Do not translate the key names &quot;Ctrl+]&quot;, &quot;Ctrl+[&quot;, &quot;Enter&quot;, &quot;Space&quot;, &quot;Menu&quot;, &quot;Shift+F10&quot;, &quot;Ctrl+End&quot; or &quot;Ctrl+Home&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>En el modo cursor, usa Ctrl+] para el siguiente hipervínculo y Ctrl+[ para el hipervínculo anterior. Pulsa Intro o Espacio para activar el enlace enfocado, y la tecla Menú o Shift+F10 para abrir su menú contextual. Pulsa Ctrl+Fin para saltar al contenido más reciente o Ctrl+Inicio para saltar al principio del búfer.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1642"/>
       <source>Warning: &apos;%1&apos; and &apos;%2&apos; now share the shortcut %3 - neither will work until one of them is changed.</source>
       <extracomment>Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Advertencia: '%1' y '%2' ahora comparten el atajo %3; ninguno funcionará hasta que se cambie uno de ellos.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1649"/>
       <source>Warning: %1 now share the shortcut %2 - none of them will work until they are changed.</source>
       <extracomment>Inline warning on the shortcuts preferences page when three or more actions have been given the same shortcut. %1 is the list of action names (each already quoted), %2 is the shortcut itself.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Advertencia: %1 ahora comparte el atajo %2; ninguno de ellos funcionará hasta que se cambie.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1660"/>
       <source>Shortcut conflict resolved.</source>
       <extracomment>Screen-reader announcement when editing the shortcuts removed the last duplicated assignment.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Conflicto de atajos resuelto.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2114"/>
       <source>[  OK  ]  - The stored media files for this profile have been cleared.</source>
       <extracomment>Shown after the &quot;Clear stored media&quot; button in preferences empties the profile&apos;s media directory.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Se han borrado los archivos multimedia almacenados para este perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2207"/>
       <source>Pick color</source>
       <extracomment>Generic pick color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Escoge el color</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2510"/>
       <source>Forget saved sign-in?</source>
       <extracomment>Title of the dialog asking the user to confirm removing their saved sign-in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>¿Eliminar el inicio de sesión guardado?</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2512"/>
       <source>This will remove the saved sign-in for this profile. You will need to sign in again next time. Continue?</source>
       <extracomment>Body of the dialog asking the user to confirm removing their saved sign-in; they will need to sign in again next time.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Esto eliminará el inicio de sesión guardado para este perfil. Deberá iniciar sesión de nuevo la próxima vez. ¿Continuar?</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2531"/>
       <source>The saved sign-in has been forgotten.</source>
       <extracomment>Shown after the user&apos;s saved sign-in has actually been removed.</extracomment>
-      <translation type="unfinished"/>
+      <translation>El inicio de sesión guardado ha sido eliminado.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2535"/>
       <source>[  OK  ]  - The saved sign-in for this profile has been forgotten.</source>
       <extracomment>Shown in the main console after the user&apos;s saved sign-in has actually been removed.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Se ha eliminado el inicio de sesión guardado para este perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2540"/>
       <source>Could not remove the saved sign-in; it may still be present.</source>
       <extracomment>Shown when removing the saved sign-in failed, so it may still be present.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se ha podido eliminar el inicio de sesión guardado; es posible que aún esté presente.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2544"/>
       <source>[ WARN ]  - Could not remove the saved sign-in; it may still be present.</source>
       <extracomment>Shown in the main console when removing the saved sign-in failed, so it may still be present.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - No se ha podido eliminar el inicio de sesión guardado; es posible que aún esté presente.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2550"/>
       <source>No changes were made to the saved sign-in.</source>
       <extracomment>Shown when the user cancels removing their saved sign-in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se realizaron cambios en el inicio de sesión guardado.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2552"/>
       <source>[ INFO ]  - Cancelled: no changes were made to the saved sign-in.</source>
       <extracomment>Shown in the main console when the user cancels removing their saved sign-in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Cancelado: no se realizaron cambios en el inicio de sesión guardado.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2834"/>
@@ -10614,7 +10617,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3199"/>
       <source>Where should Mudlet save log files?</source>
-      <translation>Dónde debe Mudlet guardar los archivos de registro?</translation>
+      <translation>Donde debe Mudlet guardar los archivos de registro?</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgProfilePreferences.cpp" line="3622"/>
