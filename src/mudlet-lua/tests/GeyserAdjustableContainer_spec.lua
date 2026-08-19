@@ -1869,6 +1869,23 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(itemCount, #container.customItems)
     end)
 
+    it("newCustomItem says which menu parent is missing", function()
+      -- addMenuLabel answers rather than raising, so without that answer being
+      -- checked this comes out as a nil index on the line after it
+      local container = make("gapCustomItemNoParent")
+      -- take the submenu table away from "customItemsLabel", so it is still in
+      -- the menu but has nowhere to put a child. Removing the label itself
+      -- instead would orphan that table, and findMenuElement recurses forever
+      -- on a submenu whose parent entry is gone.
+      local menuItems = container.adjLabel.rightClickMenu.MenuItems
+      table.remove(menuItems, table.index_of(menuItems, "customItemsLabel") + 1)
+
+      local ok, message = pcall(function() container:newCustomItem("gapOrphan", function() end) end)
+
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("Couldn't find menu parent customItemsLabel", 1, true))
+    end)
+
     it("customMenu does nothing while the container is minimized", function()
       local container = make("gapCustomMinimized")
       local runs = 0
