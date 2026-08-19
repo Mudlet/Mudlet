@@ -56,7 +56,7 @@ public:
     static QList<Backend> availableBackends();
 
     // Check if a specific backend is available.
-    static bool isBackendAvailable(Backend backend);
+    static bool backendAvailable(Backend backend);
 
     // Get human-readable display name for a backend.
     static QString backendDisplayName(Backend backend);

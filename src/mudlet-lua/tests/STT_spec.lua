@@ -87,8 +87,8 @@ describe("stt bridge", function()
 
     it("reports a state from the documented set", function()
       local states = {
-        uninitialized = true, ready = true, listening = true,
-        processing = true, error = true,
+        uninitialized = true, ready = true, starting = true,
+        listening = true, processing = true, error = true,
       }
       assert.is_true(states[stt.getInfo().state] ~= nil,
         "unexpected state: " .. tostring(stt.getInfo().state))

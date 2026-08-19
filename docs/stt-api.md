@@ -29,7 +29,7 @@ Design contract, before the tables:
 | Function | Returns | Behaviour |
 | --- | --- | --- |
 | `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. With no argument, uses the default installed model; errors clearly when none exists. |
-| `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client may have to ask the operating system for microphone permission first, and the outcome then arrives as `sysSTTStateChanged`. A request that is refused outright — no model, a phrase still processing, a microphone that will not open, permission denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening succeeds silently. |
+| `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client that must ask permission first reports `starting`, and the outcome arrives as `sysSTTStateChanged`. A request refused outright — no model, a phrase still processing, a microphone that will not open, permission already denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening, or while `starting`, succeeds without asking twice. |
 | `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. |
 | `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
 | `stt.close()` | `true` | Release the model and native resources; state returns to `uninitialized`. Safe when nothing is initialized. |
@@ -70,7 +70,7 @@ archives — but it is not part of the `stt` namespace.
 | `available` | boolean | Engine present and loadable. |
 | `initialized` | boolean | Model loaded. |
 | `listening` | boolean | Capturing now. |
-| `state` | string | `"uninitialized"`, `"ready"`, `"listening"`, `"processing"`, `"error"`. Distinguishes `error` from `uninitialized`, which `initialized` alone cannot. |
+| `state` | string | `"uninitialized"`, `"ready"`, `"starting"`, `"listening"`, `"processing"`, `"error"`. Distinguishes `error` from `uninitialized`, which `initialized` alone cannot. `"starting"` means listening was asked for and something outside the client — permission, typically — has still to answer; a consumer shows "waiting" rather than "listening". |
 | `modelPath` | string | The model actually loaded (empty when none) — not the install directory. |
 | `silenceTimeout` | integer | Current timeout in ms; `0` while disabled. |
 | `audioLevel` | number | Level last received from the microphone, `0.0`–`1.0`; `0` while not listening. Sampled during speech, it distinguishes a phrase the engine misheard from one it barely received — failures that look identical in the text and need opposite remedies. |

@@ -38,9 +38,17 @@ public:
     enum class State {
         Uninitialized, // No model loaded
         Ready,         // Model loaded, not listening
-        Listening,     // Actively capturing and processing audio
-        Processing,    // Processing final audio after stop
-        Error          // An error occurred
+        // Asked to listen, not yet listening: something outside this process
+        // has to answer first, and the answer is not synchronous. Permission
+        // to use a microphone is the usual reason - macOS asks the player the
+        // first time, and a browser asks on every session - which is why this
+        // is a state of the contract rather than a quirk of one platform. A
+        // consumer shows "waiting", and a second request while here is
+        // refused rather than asked twice.
+        Starting,
+        Listening,  // Actively capturing and processing audio
+        Processing, // Processing final audio after stop
+        Error       // An error occurred
     };
     Q_ENUM(State)
 
@@ -124,9 +132,12 @@ public:
     virtual State state() const = 0;
 
     // Convenience methods
-    bool isListening() const { return state() == State::Listening; }
-    bool isReady() const { return state() == State::Ready; }
-    bool isInitialized() const { return state() != State::Uninitialized && state() != State::Error; }
+    bool listening() const { return state() == State::Listening; }
+    bool ready() const { return state() == State::Ready; }
+    bool initialized() const { return state() != State::Uninitialized && state() != State::Error; }
+    // Asked to listen and not yet refused: either already listening, or still
+    // waiting on the permission that decides it
+    bool starting() const { return state() == State::Starting; }
 
     // Whether the backend currently holds live native resources (e.g. handles
     // into a dynamically-loaded library) that must be released before that
@@ -163,7 +174,7 @@ public:
     virtual QString backendVersion() const = 0;
 
     // Check if the backend is available (library loaded, etc.)
-    virtual bool isBackendAvailable() const = 0;
+    virtual bool backendAvailable() const = 0;
 
     // === Recognition Settings ===
 

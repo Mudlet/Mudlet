@@ -39,6 +39,8 @@ static const char* speechRecognizerStateName(const SpeechRecognizer::State state
     switch (state) {
     case SpeechRecognizer::State::Ready:
         return "ready";
+    case SpeechRecognizer::State::Starting:
+        return "starting";
     case SpeechRecognizer::State::Listening:
         return "listening";
     case SpeechRecognizer::State::Processing:
@@ -69,12 +71,12 @@ static const char* speechSensitivityName(const SpeechRecognizer::Sensitivity sen
 // Whether a startListening() request was accepted. The call returns nothing
 // and can refuse - a phrase still being processed, a microphone that will not
 // open, permission denied - so the state afterwards is what says whether
-// anything is going to happen. Ready means accepted but not yet listening:
-// macOS asks for microphone permission asynchronously the first time, and the
-// answer arrives through sysSTTStateChanged rather than from this call.
+// anything is going to happen. Starting means accepted but not yet listening,
+// because something outside the process has still to answer; the outcome
+// arrives through sysSTTStateChanged rather than from this call.
 static bool speechStartAccepted(const SpeechRecognizer* pRecognizer)
 {
-    return pRecognizer->isListening() || pRecognizer->state() == SpeechRecognizer::State::Ready;
+    return pRecognizer->listening() || pRecognizer->starting();
 }
 
 // stt.init([modelPath])
@@ -138,11 +140,11 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName.toUtf8().constData(), "speech recognizer not initialized - call stt.init() first");
     }
 
-    if (!pRecognizer->isInitialized()) {
+    if (!pRecognizer->initialized()) {
         return warnArgumentValue(L, funcName.toUtf8().constData(), "speech recognizer not initialized with a model - call stt.init() first");
     }
 
-    if (pRecognizer->isListening()) {
+    if (pRecognizer->listening()) {
         // Already listening, nothing to do
         lua_pushboolean(L, true);
         return 1;
@@ -178,7 +180,7 @@ int TLuaInterpreter::sttStop(lua_State* L)
         return 1;
     }
 
-    if (pRecognizer->isListening()) {
+    if (pRecognizer->listening()) {
         pRecognizer->stopListening();
     }
 
@@ -199,11 +201,11 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     }
 
     auto* pRecognizer = pMudlet->speechRecognizer();
-    if (!pRecognizer || !pRecognizer->isInitialized()) {
+    if (!pRecognizer || !pRecognizer->initialized()) {
         return warnArgumentValue(L, funcName.toUtf8().constData(), "speech recognizer not initialized - call stt.init() first");
     }
 
-    if (pRecognizer->isListening()) {
+    if (pRecognizer->listening()) {
         pRecognizer->stopListening();
         lua_pushboolean(L, false);
     } else {
@@ -233,7 +235,7 @@ int TLuaInterpreter::sttIsListening(lua_State* L)
     }
 
     auto* pRecognizer = pMudlet->speechRecognizer();
-    lua_pushboolean(L, pRecognizer && pRecognizer->isListening());
+    lua_pushboolean(L, pRecognizer && pRecognizer->listening());
     return 1;
 }
 
@@ -242,7 +244,7 @@ int TLuaInterpreter::sttIsListening(lua_State* L)
 // Returns true if available, false otherwise.
 int TLuaInterpreter::sttIsAvailable(lua_State* L)
 {
-    lua_pushboolean(L, VoskRecognizer::isLibraryAvailable());
+    lua_pushboolean(L, VoskRecognizer::libraryAvailable());
     return 1;
 }
 
@@ -258,7 +260,7 @@ int TLuaInterpreter::sttIsInitialized(lua_State* L)
     }
 
     auto* pRecognizer = pMudlet->speechRecognizer();
-    lua_pushboolean(L, pRecognizer && pRecognizer->isInitialized());
+    lua_pushboolean(L, pRecognizer && pRecognizer->initialized());
     return 1;
 }
 
@@ -280,7 +282,7 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
 
     // Library available
     lua_pushstring(L, "available");
-    lua_pushboolean(L, VoskRecognizer::isLibraryAvailable());
+    lua_pushboolean(L, VoskRecognizer::libraryAvailable());
     lua_settable(L, -3);
 
     // Every key below is answered whether or not a recognizer exists. A
@@ -291,11 +293,11 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
 
     lua_pushstring(L, "initialized");
-    lua_pushboolean(L, pRecognizer && pRecognizer->isInitialized());
+    lua_pushboolean(L, pRecognizer && pRecognizer->initialized());
     lua_settable(L, -3);
 
     lua_pushstring(L, "listening");
-    lua_pushboolean(L, pRecognizer && pRecognizer->isListening());
+    lua_pushboolean(L, pRecognizer && pRecognizer->listening());
     lua_settable(L, -3);
 
     // Engine state, which distinguishes Error from Uninitialized - both of
@@ -444,7 +446,7 @@ int TLuaInterpreter::sttClose(lua_State* L)
     if (pMudlet) {
         auto* pRecognizer = pMudlet->speechRecognizer();
         if (pRecognizer) {
-            if (pRecognizer->isListening()) {
+            if (pRecognizer->listening()) {
                 pRecognizer->cancel();
             }
             pRecognizer->releaseResources();
@@ -604,14 +606,14 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     auto* pMudlet = mudlet::self();
     if (pMudlet) {
         auto* pRecognizer = pMudlet->speechRecognizer();
-        // isInitialized() is false in State::Error, but Error can still be
+        // initialized() is false in State::Error, but Error can still be
         // reached with live native handles (e.g. a failure partway through
         // startListeningInternal() after the native recognizer was already
         // allocated), so check hasLiveNativeResources() directly rather than
         // relying on state alone. A failed initialize() before any handle was
         // allocated also leaves the recognizer in Error, and that case must
         // stay reloadable since it's exactly what stt.reloadLibrary() is for.
-        if (pRecognizer && (pRecognizer->isListening() || pRecognizer->isInitialized() || pRecognizer->hasLiveNativeResources())) {
+        if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
             return warnArgumentValue(L, __func__, "cannot reload the speech recognition library while it is in use, close speech recognition first", true);
         }
     }
@@ -619,7 +621,7 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // The unload may be refused while something still holds the module; the
     // probe below then reports what is actually loadable either way
     VoskRecognizer::resetLibraryLoadState();
-    lua_pushboolean(L, VoskRecognizer::isLibraryAvailable());
+    lua_pushboolean(L, VoskRecognizer::libraryAvailable());
     return 1;
 }
 
@@ -636,7 +638,7 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
         auto* pRecognizer = pMudlet->speechRecognizer();
         // Same guard as stt.reloadLibrary(): see the comment there for why
         // hasLiveNativeResources() is checked rather than state alone.
-        if (pRecognizer && (pRecognizer->isListening() || pRecognizer->isInitialized() || pRecognizer->hasLiveNativeResources())) {
+        if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
             return warnArgumentValue(L, __func__, "cannot unload the speech recognition library while it is in use, close speech recognition first", true);
         }
     }

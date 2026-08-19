@@ -210,7 +210,7 @@ bool VoskRecognizer::loadVoskLibrary()
     return true;
 }
 
-bool VoskRecognizer::isVoskAvailable()
+bool VoskRecognizer::voskAvailable()
 {
     if (!sLibraryLoadAttempted) {
         loadVoskLibrary();
@@ -218,9 +218,9 @@ bool VoskRecognizer::isVoskAvailable()
     return sLibraryLoaded;
 }
 
-bool VoskRecognizer::isLibraryAvailable()
+bool VoskRecognizer::libraryAvailable()
 {
-    return isVoskAvailable();
+    return voskAvailable();
 }
 
 bool VoskRecognizer::resetLibraryLoadState()
@@ -278,9 +278,9 @@ QStringList VoskRecognizer::librarySearchPaths()
     return paths;
 }
 
-bool VoskRecognizer::isBackendAvailable() const
+bool VoskRecognizer::backendAvailable() const
 {
-    return isVoskAvailable();
+    return voskAvailable();
 }
 
 QString VoskRecognizer::backendVersion() const
@@ -293,6 +293,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
 {
     if (!loadVoskLibrary()) {
         setState(State::Error);
+        //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
         emit errorOccurred(tr("Vosk library not available"));
         return false;
     }
@@ -300,7 +301,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // Loading a model over a running session would free the decoder while the
     // device stayed open: audio kept arriving with nothing to decode it, the
     // state said Ready, and no stop() or close() could reach the microphone
-    // again because both check isListening() first. The recording light stayed
+    // again because both check listening() first. The recording light stayed
     // on for the rest of the session.
     mpCapture->stop();
 
@@ -310,6 +311,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     QDir modelDir(modelPath);
     if (!modelDir.exists()) {
         setState(State::Error);
+        //: Shown when a speech model cannot be found; %1 is the folder that was looked for
         emit errorOccurred(tr("Model path does not exist: %1").arg(modelPath));
         return false;
     }
@@ -321,6 +323,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     mVoskModel = s_vosk_model_new(modelPath.toUtf8().constData());
     if (!mVoskModel) {
         setState(State::Error);
+        //: Shown when a speech model folder exists but could not be loaded; %1 is that folder
         emit errorOccurred(tr("Failed to load Vosk model from: %1").arg(modelPath));
         return false;
     }
@@ -331,6 +334,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         s_vosk_model_free(mVoskModel);
         mVoskModel = nullptr;
         setState(State::Error);
+        //: Shown when a speech model loaded but the recognizer using it could not be created
         emit errorOccurred(tr("Failed to create Vosk recognizer"));
         return false;
     }
@@ -399,6 +403,12 @@ void VoskRecognizer::startListening()
         // requestAccess() dispatches its callback to the main queue, so this runs
         // on the main thread already. Use QPointer to safely handle the case where
         // VoskRecognizer is destroyed before the permission callback arrives.
+        //
+        // Starting first, so the guard at the top of this function refuses a
+        // second request while the player is still looking at the first one -
+        // two dialogs, then two callbacks, the later of which would rebuild
+        // the recognizer and restart capture underneath the earlier.
+        setState(State::Starting);
         QPointer<VoskRecognizer> weakThis = this;
         MacMicrophonePermission::requestAccess([weakThis](bool granted) {
             if (!weakThis) {
@@ -411,6 +421,7 @@ void VoskRecognizer::startListening()
                 // VoskRecognizer::tr, not QObject::tr: the lambda is not a member, and
                 // the default context would file this identical string a second
                 // time for translators to translate twice
+                //: Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
                 emit weakThis->errorOccurred(VoskRecognizer::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
                 weakThis->setState(State::Error);
             }
@@ -420,6 +431,7 @@ void VoskRecognizer::startListening()
     case MacMicrophonePermission::AuthorizationStatus::Denied:
     case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
+        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
         emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
@@ -447,6 +459,7 @@ void VoskRecognizer::startListeningInternal()
 
     if (!mVoskModel) {
         setState(State::Error);
+        //: Shown when speech recognition could not be prepared for listening
         emit errorOccurred(tr("Failed to initialize speech recognition"));
         return;
     }
@@ -455,6 +468,7 @@ void VoskRecognizer::startListeningInternal()
     if (!mVoskRecognizer) {
         qWarning() << "VoskRecognizer: Failed to recreate recognizer";
         setState(State::Error);
+        //: Shown when speech recognition could not be prepared for listening
         emit errorOccurred(tr("Failed to initialize speech recognition"));
         return;
     }
@@ -809,6 +823,7 @@ bool VoskRecognizer::setLanguage(const QString& languageCode)
     // Find a model that supports the requested language
     const QString modelPath = findModelPathForLanguage(languageCode);
     if (modelPath.isEmpty()) {
+        //: Shown when a speech language is chosen with no model installed for it; %1 is a language code such as en-US
         emit errorOccurred(tr("No installed model found for language: %1").arg(languageCode));
         return false;
     }

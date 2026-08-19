@@ -82,7 +82,7 @@ public:
 
     QString backendName() const override { return QStringLiteral("Vosk"); }
     QString backendVersion() const override;
-    bool isBackendAvailable() const override;
+    bool backendAvailable() const override;
 
     // SpeechRecognizer sensitivity interface (maps to EndpointerMode)
     void setSensitivity(Sensitivity sensitivity) override;
@@ -93,10 +93,10 @@ public:
     EndpointerMode endpointerMode() const { return mEndpointerMode; }
 
     // Static method to check if Vosk library is available on this system
-    static bool isVoskAvailable();
+    static bool voskAvailable();
 
     // Check if the Vosk library is available (can be loaded)
-    static bool isLibraryAvailable();
+    static bool libraryAvailable();
 
     // Unload the library and forget everything resolved from it, so a later
     // probe starts fresh. False when the module would not unload, which means
