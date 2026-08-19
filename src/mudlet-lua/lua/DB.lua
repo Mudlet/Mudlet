@@ -2205,16 +2205,36 @@ end
 
 
 
+--- Commits the work done on this database since the last commit.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the work was not committed.
 function db.Database:_commit()
+  -- a handle db:get_database handed out outlives db:close, which leaves only
+  -- the connection behind, so there may be nothing here to commit on
   local conn = db.__conn[self._db_name]
+  if not conn then
+    return false, "can not commit "..self._db_name.." because the database is closed.  Call db:create to open it again."
+  end
+
   conn:commit()
+
+  return true, ""
 end
 
 
 
+--- Discards the work done on this database since the last commit.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the work was not rolled back.
 function db.Database:_rollback()
   local conn = db.__conn[self._db_name]
+  if not conn then
+    return false, "can not roll back "..self._db_name.." because the database is closed.  Call db:create to open it again."
+  end
+
   conn:rollback()
+
+  return true, ""
 end
 
 
