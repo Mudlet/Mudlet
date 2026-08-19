@@ -10823,39 +10823,39 @@ reason: %2.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2896"/>
       <source>Mudlet JSON map (*.json)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa JSON de Mudlet (*.json)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2864"/>
       <source>Mudlet XML map (*.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa XML de Mudlet (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2865"/>
       <source>Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Cualquier archivo (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4222"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esta es la secuencia de números hexadecimales que utiliza el consorcio Unicode para identificar los grafemas necesarios para crear el símbolo. Estos números se pueden utilizar para determinar con precisión qué se debe dibujar, incluso si algunas fuentes tienen glifos idénticos para diferentes puntos de código o combinaciones de los mismos.&lt;/p&gt;&lt;p&gt;Las utilidades de introducción de caracteres, como &lt;i&gt;charmap.exe&lt;/i&gt; en &lt;i&gt;Windows&lt;/i&gt; o &lt;i&gt;gucharmap&lt;/i&gt;en muchos sistemas operativos de tipo Unix, también emplean estos números, los cuales abarcan desde U+0020 {Space} hasta U+10FFFD, el último número utilizable en el&lt;i&gt;Plano de Uso Privado 16&lt;&lt;/i&gt;, mediante la mayoría de los registros escritos que ha dejado la humanidad.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4246"/>
       <source>more - not shown...</source>
-      <translation type="unfinished"/>
+      <translation>más - no mostrar...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4269"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El símbolo no se puede crear por completo a partir de glifos de la fuente especificada, pero sí es posible utilizando otras fuentes del sistema. Desmarque la opción &lt;i&gt;Usar solo símbolos (glifos) de la fuente seleccionada&lt;/i&gt; o intente elegir otra fuente que sí tenga los glifos necesarios.&lt;/p&gt;&lt;p&gt;&lt;i&gt;No es necesario cerrar esta tabla para probar otra fuente; si la cambia en el diálogo de preferencias principales, esta tabla se actualizará tras un breve demora.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4423"/>
       <source>Map symbol usage - %1</source>
-      <translation type="unfinished"/>
+      <translation>Uso de símbolos del mapa - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4533"/>
@@ -10870,54 +10870,54 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4535"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd (concatenar registros diarios, ej. 1970-01-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4536"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM (concatenar registros mensuales, ej. 1970-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4539"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd#HH-mm-ss (ej. 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4540"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-ddTHH-mm-ss (ej. 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4541"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM-dd (concatenar registros diarios, ej. 1970-01-01.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4542"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-MM (concatenar registros mensuales, ej. 1970-01.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="5077"/>
       <source>New: undo the game&apos;s own wrapping</source>
       <extracomment>Title of a balloon pointing out a newly added feature</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nuevo: deshacer el ajuste de línea del propio juego</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="5079"/>
       <source>Games that wrap their own lines make triggers fiddly. Mudlet can now undo that wrapping, so triggers always see whole lines.</source>
       <extracomment>Body of the balloon, anchored to the option that rejoins lines the game server wrapped itself so that triggers match whole lines</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los juegos que ajustan sus propias líneas hacen que los disparadores sean complicados de configurar. Mudlet ahora puede deshacer ese ajuste para que los disparadores siempre se vean líneas completas.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="5131"/>
       <source>Deleting map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Eliminando mapa, espere por favor...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="5140"/>
       <source>Deleted map.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa eliminado.</translation>
     </message>
   </context>
   <context>
@@ -10926,116 +10926,116 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="276"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
-      <translation type="unfinished"/>
+      <translation>(roomID)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="277"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
-      <translation type="unfinished"/>
+      <translation>(Comando o script LUA)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="442"/>
       <location filename="../src/dlgRoomExits.cpp" line="446"/>
       <location filename="../src/dlgRoomExits.cpp" line="1025"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala a la que se dirige esta salida especial.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="448"/>
       <location filename="../src/dlgRoomExits.cpp" line="1844"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
-      <translation type="unfinished"/>
+      <translation>Evitar que se cree una ruta a través de esta salida, equivalente a una carga de salida infinita.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1009"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Aquí se espera la roomID de la sala a la que conduce esta salida especial. Si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;save&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1020"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>El número introducido no es válido. Si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;save&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1021"/>
       <source>Set the number of the room that this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala a la que conduce esta salida especial.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1035"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>No se ha introducido ningún comando ni script de Lua; si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;>save&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1082"/>
       <location filename="../src/dlgRoomExits.cpp" line="1091"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Salida a &quot;%1&quot; en el área: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1650"/>
       <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
       <extracomment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Este es el número de ID de esta sala; esta &lt;b&gt;sala está bloqueada&lt;/b&gt;, por lo que no se utilizará en absoluto para los movimientos rápidos (speed-walks).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1102"/>
       <location filename="../src/dlgRoomExits.cpp" line="1113"/>
       <source>Exit to unnamed room in area: &quot;%1&quot;, is valid.</source>
-      <translation type="unfinished"/>
+      <translation>Salida a una sala sin nombre en el área: &quot;%1&quot;, es válida.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="454"/>
       <location filename="../src/dlgRoomExits.cpp" line="1851"/>
       <source>Positive value overrides room weight; zero uses default.</source>
       <extracomment>Tooltip for exit weight column</extracomment>
-      <translation type="unfinished"/>
+      <translation>Un valor positivo anula la carga de la sala; cero utiliza el valor predeterminado.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="458"/>
       <location filename="../src/dlgRoomExits.cpp" line="1861"/>
       <source>No door symbol drawn on the 2D map for this exit.</source>
       <extracomment>Tooltip for no door symbol option</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se dibuja ningún símbolo de la puerta en el mapa 2D para esta salida.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="461"/>
       <location filename="../src/dlgRoomExits.cpp" line="1863"/>
       <source>Green (open) door symbol drawn on the 2D map.</source>
       <extracomment>Tooltip for open door symbol option</extracomment>
-      <translation type="unfinished"/>
+      <translation>Símbolo de puerta verde (abierta) dibujado en el mapa 2D.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="464"/>
       <location filename="../src/dlgRoomExits.cpp" line="1865"/>
       <source>Orange (closed) door symbol drawn on the 2D map.</source>
       <extracomment>Tooltip for closed door symbol option</extracomment>
-      <translation type="unfinished"/>
+      <translation>Símbolo de puerta naranja (cerrada) dibujado en el mapa 2D.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="467"/>
       <location filename="../src/dlgRoomExits.cpp" line="1867"/>
       <source>Red (locked) door symbol drawn on the 2D map.</source>
       <extracomment>Tooltip for locked door symbol option</extracomment>
-      <translation type="unfinished"/>
+      <translation>Símbolo de puerta roja (bloqueada) dibujado en el mapa 2D.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1030"/>
       <source>Invalid room ID: exit will be deleted on save.</source>
       <extracomment>Tooltip for invalid room ID in special exits</extracomment>
-      <translation type="unfinished"/>
+      <translation>ID de la sala no válida: la salida se eliminará al guardar.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1037"/>
       <source>Some mapper scripts may require prefixing the keyword &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>Algunos scripts del mapa pueden requerir anteponer la palabra clave &quot;script:&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1107"/>
       <location filename="../src/dlgRoomExits.cpp" line="1118"/>
       <source>Exit to unnamed room is valid.</source>
-      <translation type="unfinished"/>
+      <translation>La salida a una sala sin nombre es válida.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
@@ -11043,7 +11043,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1421"/>
       <location filename="../src/dlgRoomExits.cpp" line="1680"/>
       <source>Set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al noroeste de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1252"/>
@@ -11051,7 +11051,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1427"/>
       <location filename="../src/dlgRoomExits.cpp" line="1692"/>
       <source>Set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al norte de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1268"/>
@@ -11059,7 +11059,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1434"/>
       <location filename="../src/dlgRoomExits.cpp" line="1704"/>
       <source>Set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al noreste de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1284"/>
@@ -11067,7 +11067,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1441"/>
       <location filename="../src/dlgRoomExits.cpp" line="1716"/>
       <source>Set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala arriba de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1300"/>
@@ -11075,7 +11075,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1447"/>
       <location filename="../src/dlgRoomExits.cpp" line="1728"/>
       <source>Set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al oeste de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1316"/>
@@ -11083,7 +11083,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1453"/>
       <location filename="../src/dlgRoomExits.cpp" line="1740"/>
       <source>Set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al este de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1332"/>
@@ -11091,7 +11091,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1467"/>
       <location filename="../src/dlgRoomExits.cpp" line="1752"/>
       <source>Set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala abajo de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1348"/>
@@ -11099,7 +11099,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1474"/>
       <location filename="../src/dlgRoomExits.cpp" line="1764"/>
       <source>Set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al suroeste de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
@@ -11107,7 +11107,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1480"/>
       <location filename="../src/dlgRoomExits.cpp" line="1776"/>
       <source>Set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al sur de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1380"/>
@@ -11115,7 +11115,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1487"/>
       <location filename="../src/dlgRoomExits.cpp" line="1788"/>
       <source>Set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala al sureste de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1396"/>
@@ -11123,7 +11123,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1494"/>
       <location filename="../src/dlgRoomExits.cpp" line="1800"/>
       <source>Set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation> Establecer el número de la sala dentro de esta</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1412"/>
@@ -11131,13 +11131,13 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1501"/>
       <location filename="../src/dlgRoomExits.cpp" line="1812"/>
       <source>Set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el número de la sala fuera de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1086"/>
       <location filename="../src/dlgRoomExits.cpp" line="1095"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Salir a &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1084"/>
@@ -11146,7 +11146,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1109"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <extracomment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;La salan está bloqueada&lt;/b&gt;; no se utilizará para movimientos rápidos (speed-walks) en ninguna de las salidas que conduzca a esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1093"/>
@@ -11157,13 +11157,13 @@ reason: %2.</source>
       <extracomment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not
 ----------
 Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Peso de la &lt;b&gt;sala&lt;/b&gt; de destino: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1198"/>
       <location filename="../src/dlgRoomExits.cpp" line="1615"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation type="unfinished"/>
+      <translation>Borrar la salida provisional de esta salida para introducir un Id de sala de salida.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
@@ -11179,17 +11179,17 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomExits.cpp" line="1396"/>
       <location filename="../src/dlgRoomExits.cpp" line="1412"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>El número introducido no es válido.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1660"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>Salidas de la sala: &quot;%1&quot; [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1662"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation type="unfinished"/>
+      <translation>Salidas del Id de la sala: %1 [*]</translation>
     </message>
   </context>
   <context>
@@ -11212,7 +11212,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="618"/>
       <source>Delete room color</source>
       <extracomment>This action deletes a color from the list of all room colors</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eliminar el color de sala</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="646"/>
@@ -11236,12 +11236,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="714"/>
       <source>Set border color</source>
       <extracomment>Title for the color picker dialog when selecting a room border color</extracomment>
-      <translation type="unfinished"/>
+      <translation>Establecer el color de borde</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el color del símbolo</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="193"/>
