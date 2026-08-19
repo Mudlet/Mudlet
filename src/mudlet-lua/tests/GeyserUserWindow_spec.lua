@@ -486,22 +486,64 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.same({x = 30, y = 40, width = 220, height = 160}, geometry("guwFloatBack"))
     end)
 
-    it("records the position of a window that is hidden", function()
+    -- Opening the dock is what puts a window at a position, and it brings the
+    -- window back on screen with it. That is the visible behaviour packages
+    -- dock against, so the flags are what follow the window rather than the
+    -- other way around.
+    it("brings a hidden window back with it rather than leaving it half hidden", function()
       local userWindow = track(Geyser.UserWindow:new({name = "guwDockHidden", x = 10, y = 20, width = 200, height = 150}))
       floatAgain(userWindow)
       userWindow:hide()
+      assert.is_false(windowVisible("guwDockHidden"))
+
       userWindow:setDockPosition("right")
+
       assert.are.equal("right", userWindow.dockPosition)
-      assert.is_true(userWindow.hidden)
+      assert.is_true(windowVisible("guwDockHidden"))
+      assert.is_false(userWindow.hidden)
     end)
 
-    -- setDockPosition reopens the dock, so a hidden user window comes back on
-    -- screen while self.hidden stays true. Geyser.Container:hide() skips the
-    -- widget for anything that already believes itself hidden, so hide() is
-    -- then a no-op and the window cannot be put away again without show()ing
-    -- it first. Recorded rather than asserted, so that fixing it does not have
-    -- to fight a spec.
-    pending("Geyser.UserWindow:setDockPosition leaving a hidden window hidden - it reopens the dock and leaves self.hidden true, which makes the window unhideable until it is shown once")
+    it("leaves a window it brought back hideable again", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockRehide", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:hide()
+      userWindow:setDockPosition("right")
+
+      -- Geyser.Container:hide() skips the widget for anything that already
+      -- believes itself hidden, so a stale flag here makes this a no-op
+      userWindow:hide()
+
+      assert.is_true(userWindow.hidden)
+      assert.is_false(windowVisible("guwDockRehide"))
+    end)
+
+    it("brings the children of a hidden window back with it", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockChild", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      local label = track(Geyser.Label:new({name = "guwDockChildLabel", x = 0, y = 0, width = "100%", height = "100%"}, userWindow))
+      userWindow:hide()
+      assert.is_false(windowVisible("guwDockChildLabel"))
+
+      userWindow:setDockPosition("right")
+
+      assert.is_true(windowVisible("guwDockChildLabel"))
+      assert.is_false(label.auto_hidden)
+    end)
+
+    it("leaves a window that was never hidden alone", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockVisible", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      local label = track(Geyser.Label:new({name = "guwDockVisibleLabel", x = 0, y = 0, width = "50%", height = "50%"}, userWindow))
+      label:hide()
+
+      userWindow:setDockPosition("right")
+
+      -- a child put away by hand stays away: only the window's own stale flag
+      -- is what setDockPosition is allowed to clear
+      assert.is_true(label.hidden)
+      assert.is_false(windowVisible("guwDockVisibleLabel"))
+      assert.is_false(userWindow.hidden)
+    end)
   end)
 
   pending("Geyser.UserWindow:setDockPosition docking the window against the edge it names - which edge a user window ended up docked to, and whether it docks by itself when dragged, are not readable from Lua")

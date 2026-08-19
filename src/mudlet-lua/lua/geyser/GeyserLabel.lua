@@ -1344,7 +1344,7 @@ function Geyser.Label:findMenuElement(name, parent, findParent)
     end
     if type(item) == "table" then
       local itemParent = menu[i-1]
-      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent])
+      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent], findParent)
       if element then
         return element, menuTable
       end
@@ -1406,11 +1406,16 @@ end
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
 -- @param index of the new menu item (optional)
+-- @return true, or false plus an error message when the parent could not be found
 function Geyser.Label:addMenuLabel(name, parent, index)
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
 
-  if parent and not menuParent then
-    error ("showMenuLabel: Couldn't find menu parent "..parent)
+  -- findMenuElement answers nil plus a message rather than nil plus nil, so the
+  -- element it did not find is what tells a missing parent apart from a found
+  -- one. A parent declared without a submenu table for its children is a miss
+  -- here too, because there is no table to hang the new item off.
+  if parent and not menuElement then
+    return false, "addMenuLabel: Couldn't find menu parent "..parent
   end
 
   menuElement = menuElement or self.rightClickMenu
@@ -1433,6 +1438,8 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   if index then
     self:changeMenuIndex(parent..name, index)
   end
+
+  return true
 end
 
 --- changes a right click menu items index

@@ -1442,6 +1442,17 @@ describe("Tests Geyser.Label right click menus", function()
     it("hands back nothing at all when it is given no name", function()
       assert.is_nil(label:findMenuElement())
     end)
+
+    it("hands back a nested item's own submenu when it is asked for a parent", function()
+      local other = Geyser.Label:new({name = "glmFindParent", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B", {"C"}}}})
+
+      local element, submenu = other:findMenuElement("A.B", other.rightClickMenu, true)
+
+      assert.are.equal(other:findMenuElement("A.B"), element)
+      -- B's own children, not the table B itself is an entry in
+      assert.are.same({"C"}, submenu)
+    end)
   end)
 
   describe("Geyser.Label:setMenuAction", function()
@@ -1497,7 +1508,7 @@ describe("Tests Geyser.Label right click menus", function()
 
   describe("Geyser.Label:addMenuLabel", function()
     it("adds an item at the end of the menu", function()
-      label:addMenuLabel("Fourth")
+      assert.is_true(label:addMenuLabel("Fourth"))
       assert.are.same({"First", "Second", "Third", "Fourth"}, menuOrder())
       assert.is_not_nil(label:findMenuElement("Fourth"))
     end)
@@ -1528,16 +1539,51 @@ describe("Tests Geyser.Label right click menus", function()
       assert.is_false(menuItem("Second").ignore)
     end)
 
-    -- addMenuLabel means to report a parent it cannot find, but the guard it
-    -- does that with is dead: findMenuElement answers nil plus an error message
-    -- rather than nil plus nil, so `not menuParent` is never true and the
-    -- message is then used as the table to append the new item to. Both a
-    -- parent that is not in the menu and one that was declared without a
-    -- submenu therefore come out as "attempt to index local 'menuParent' (a
-    -- string value)" from inside GeyserLabel.lua.
-    pending("Geyser.Label:addMenuLabel reporting a parent it cannot find - the guard is dead, so it raises a Lua indexing error from inside Geyser instead of its own message")
+    it("adds an item under a nested parent named by its full path", function()
+      local other = Geyser.Label:new({name = "glmDeep", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B", {"C"}}}})
 
-    pending("Geyser.Label:addMenuLabel putting an item under a parent that has no submenu yet - same dead guard, so it raises rather than making the submenu")
+      local added = other:addMenuLabel("D", "A.B")
+
+      -- an item is named for the parent it sits in, so D under B is "B.D"
+      local child = other:findMenuElement("B.D")
+      assert.is_not_nil(child, "D was not put inside B")
+      assert.are.equal(other:findMenuElement("A.B"), child.nestParent)
+      -- and it is not a second entry beside B, in A's own submenu
+      assert.is_nil(other:findMenuElement("A.D"), "D was put beside B instead of inside it")
+      assert.is_true(added)
+    end)
+
+    it("reports a parent it cannot find rather than raising", function()
+      local added, message = label:addMenuLabel("Child", "Nowhere")
+
+      assert.is_false(added)
+      assert.are.equal("addMenuLabel: Couldn't find menu parent Nowhere", message)
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
+    it("reports a parent that was declared without a submenu", function()
+      -- "Second" is a plain entry rather than one followed by a table of its
+      -- children, so there is nothing to add an item to
+      local added, message = label:addMenuLabel("Child", "Second")
+
+      assert.is_false(added)
+      assert.are.equal("addMenuLabel: Couldn't find menu parent Second", message)
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      assert.is_nil(label:findMenuElement("Second.Child"))
+    end)
+
+    it("reports a nested parent that was declared without a submenu", function()
+      local other = Geyser.Label:new({name = "glmDeepLeaf", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B"}}})
+
+      local added, message = other:addMenuLabel("D", "A.B")
+
+      assert.is_false(added)
+      assert.are.equal("addMenuLabel: Couldn't find menu parent A.B", message)
+      assert.is_nil(other:findMenuElement("B.D"))
+      assert.is_nil(other:findMenuElement("A.D"))
+    end)
   end)
 
   describe("Geyser.Label:changeMenuIndex", function()

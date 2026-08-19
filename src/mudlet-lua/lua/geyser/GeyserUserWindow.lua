@@ -60,7 +60,15 @@ end
 --@param pos possible positions are "top", "bottom","left", "right" and "floating"
 function Geyser.UserWindow:setDockPosition(pos)
   self.dockPosition = pos
-  return openUserWindow(self.name, false, self.autoDock, pos)
+  local docked = openUserWindow(self.name, false, self.autoDock, pos)
+  -- reopening the dock puts the window back on screen whether it was hidden or
+  -- not, so a window that still believes itself hidden is shown properly rather
+  -- than left desynced: Geyser.Container:hide() skips anything already hidden,
+  -- which would otherwise make the next hide() do nothing
+  if self.hidden or self.auto_hidden then
+    self:show()
+  end
+  return docked
 end
 
 --- Enables the automatic docking at the borders if it was previously disabled
