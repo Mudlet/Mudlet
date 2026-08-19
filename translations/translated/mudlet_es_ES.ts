@@ -13390,25 +13390,30 @@ less likely to be useful for normal use of this application:</source>
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
-      <translation type="unfinished"/>
+      <translation>       --dograb                     ignora cualquier -nograb implícito o explícito.
+                                    ---dograb tiene prioridad sobre --nograb incluso cuando --nograb está al final de
+                                     la línea de comandos.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="461"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                      la aplicación nunca debe capturar el ratón ni el
+                                     teclado. Esta opción se activa por defecto cuando Mudlet se
+                                    está ejecutando en el depurador gdb bajo Linux</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="466"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb               la aplicación nunca debe capturar el ratón ni el                                    
+                                    teclado.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="470"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>       --reverse                   establece la dirección del diseño de la aplicación de derecha a izquierda.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="471"/>
@@ -13419,12 +13424,18 @@ less likely to be useful for normal use of this application:</source>
                                     option. You can also set the style for all Qt
                                     applications by setting the QT_STYLE_OVERRIDE environment
                                     variable.</source>
-      <translation type="unfinished"/>
+      <translation>       --style=style                establece el estilo de la interfaz gráfica (GUI) de la aplicación. Los valores posibles dependen de la                                 
+                                    configuración de tu sistema.  Si Qt se compiló con 
+                                    estilos adicionales o tiene estilos adicionales como complementos
+                                    estos estaran disponibles para la linea de comandos -style.
+                                    También puedes establecer el estilo para todas
+                                    las aplicaciones Qt configurando la variable de entorno QT_STYLE_OVERRIDE.
+                                    </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="479"/>
       <source>       --style style                is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --style style         establece el estilo de la interfaz gráfica (GUI) de la aplicación.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="480"/>
@@ -13432,12 +13443,16 @@ less likely to be useful for normal use of this application:</source>
                                     The value must be a path to a file that contains the
                                     Style Sheet. Note: Relative URLs in the Style Sheet file
                                     are relative to the Style Sheet file&apos;s path.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet=stylesheet      establece la hoja de estilo de la aplicación.
+                                    El valor debe ser la ruta a un archivo que contenga
+                                    la hoja estilo. Nota: Las URL relativas en el archivo de la hoja de estilos
+                                    son relativas a la ruta del propio archivo de la hoja de estilo.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="486"/>
       <source>       --stylesheet stylesheet      is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet stylesheet      coincide con lo detallado arriba.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="489"/>
@@ -13445,14 +13460,19 @@ less likely to be useful for normal use of this application:</source>
                                     immediately and not use buffer optimization. It makes the
                                     program easier to debug and often much slower. The --sync
                                     option is only valid for the X11 version of Qt.</source>
-      <translation type="unfinished"/>
+      <translation>       --sync                       fuerza al servidor X a ejecutar cada solicitud del cliente X
+                                    de inmediato y sin utilizar la optimización de búfer. Hace que
+                                     el programa sea más fácil de depurar y, a menudo, mucho más lento. 
+                                    La opción --sync solo es válida para la versión X11 de Qt.version of Qt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="495"/>
       <source>       --widgetcount                prints debug message at the end about number of widgets
                                     left undestroyed and maximum number of widgets existing
                                     at the same time.</source>
-      <translation type="unfinished"/>
+      <translation>       --widgetcount    muestra un mensaje de depuración al finalizar sobre la cantidad de widgets 
+                                    que quedaron sin destruir y el número máximo de widgets que existieron
+                                    al mismo tiempo.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="499"/>
@@ -13460,7 +13480,11 @@ less likely to be useful for normal use of this application:</source>
                                     specified port. The number is the port value and block is
                                     optional and will make the application wait until a
                                     debugger connects to it.</source>
-      <translation type="unfinished"/>
+      <translation>       --qmljsdebugger=1234[,block] activa el depurador de QML/JS con un
+                                     puerto especificado. El número es el valor del puerto y el bloque es
+                                    es opcional y hará que la aplicación espere hasta que
+                                    depurador se conecte a ella.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="504"/>
@@ -13491,7 +13515,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="441"/>
       <source>       -s, --splashscreen           show splashscreen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -s, --splashscreen           mostrar pantalla de inicio al arrancar</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="507"/>
@@ -13513,7 +13537,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="524"/>
       <source>Copyright © 2008-2026  Mudlet developers</source>
-      <translation>Copyright ©️ 2008-2026 Desarrolladores Mudlet</translation>
+      <translation>Copyright © 2008-2026 Desarrolladores Mudlet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="525"/>
@@ -13603,27 +13627,27 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="207"/>
       <source>&lt;p&gt;Configure connection details of, and make a connection to, game servers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Configura los detalles de conexión y conéctate a...&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="215"/>
       <source>&lt;p&gt;Disconnect from the current game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Desconéctate del servidor de juego actual.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="223"/>
       <source>&lt;p&gt;Disconnect and then reconnect to the current game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Desconéctate y vuelve a conectarte.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="231"/>
       <source>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Configura los ajustes globales de la aplicación Mudlet y los del perfil actual.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
       <source>&lt;p&gt;Opens the Editor for the different types of things that can be scripted by the user.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abre el editor para los diferentes elementos que el usuario puede programar mediante scripts.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="247"/>
@@ -13633,133 +13657,133 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
       <source>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Muestra los errores de los scripts que tienes en ejecución.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>&lt;p&gt;About Mudlet version, creators, and license.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in multiple places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Acerca de la versión de Mudlet, creadores y licencia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
       <source>Take a UI tour</source>
-      <translation type="unfinished"/>
+      <translation>Realizar una visita guiada</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="285"/>
       <source>&lt;p&gt;Shows a short interactive tour of the most important parts of Mudlet&apos;s interface.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Muestra una breve visita interactiva por las partes más importantes de la interfaz de Mudlet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="293"/>
       <source>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abre una colección (en línea) de &quot;videotutoriales educativos de Mudlet&quot; en el navegador web de tu sistema.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="301"/>
       <source>&lt;p&gt;Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Carga una sesión de juego guardada previamente que se puede utilizar para probar los sistemas Lua de Mudlet (¡fuera de línea!).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="309"/>
       <source>&lt;p&gt;Opens the (on-line) Mudlet Forum in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abre el foro (en línea) de Mudlet en el navegador web de tu sistema.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="322"/>
       <source>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Abre una conexión a un servidor IRC (LiberaChat) en el navegador web de tu sistema.</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
       <source>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Muestra u oculta el mapa del juego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="338"/>
       <source>&lt;p&gt;Install and remove collections of Mudlet lua items (packages).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Instala y elimina colecciones de elementos Lua de Mudlet (paquetes).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="346"/>
       <source>&lt;p&gt;Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Instala y elimina colecciones (compartibles y sincronizables) de elementos Lua de Mudlet (módulos).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
       <source>Package exporter</source>
-      <translation type="unfinished"/>
+      <translation>Exportador de paquetes</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="354"/>
       <source>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Reúne y empaqueta colecciones de elementos Lua de Mudlet y otros recursos en un módulo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
       <source>Multiview</source>
-      <translation type="unfinished"/>
+      <translation>Multivista</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="488"/>
       <source>Timestamps</source>
-      <translation type="unfinished"/>
+      <translation>Marcas de tiempo</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="496"/>
       <source>Record replay</source>
-      <translation type="unfinished"/>
+      <translation>Grabar reproducción</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="504"/>
       <source>Record log</source>
-      <translation type="unfinished"/>
+      <translation>Grabar registro</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="512"/>
       <source>Emergency stop</source>
-      <translation type="unfinished"/>
+      <translation>Parada de emergencia</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="515"/>
       <source>&lt;p&gt;Toggle all triggers, aliases, timers, etc. on or off&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Activa o desactiva todos los disparadores, alias, temporizadores, etc.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="520"/>
       <source>New map window</source>
-      <translation type="unfinished"/>
+      <translation>Nueva ventana de mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="523"/>
       <source>&lt;p&gt;Open an additional map view window for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abre una ventana de vista de mapa adicional para el perfil actual.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="390"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar todos los contenidos multimedia</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="393"/>
       <source>&lt;p&gt;Mutes all media played.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Silencia todos los contenidos multimedia que se estén reproduciendo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="404"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar los sonidos de Mudlet (disparadores, scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="407"/>
       <source>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Silencia los contenidos multimedia reproducidos por la API de Lua y los scripts.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="435"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ocultar/mostrar el área de búsqueda y los botones en la parte inferior de la pantalla.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="440"/>
@@ -13769,58 +13793,58 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="443"/>
       <source>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abre un enlace a Discord.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="451"/>
       <source>Discord help channel</source>
-      <translation type="unfinished"/>
+      <translation>Canal de ayuda de Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="454"/>
       <source>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abrir un enlace al servidor de Mudlet en Discord.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="459"/>
       <location filename="../src/ui/main_window.ui" line="462"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>Reportar un problema</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="465"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>La versión de prueba pública te ofrece las funciones más recientes de forma más rápida, y nos ayudas a encontrar problemas en ellas en menos tiempo. ¿Has notado algo extraño? ¡Háznoslo saber lo antes posible!</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="470"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="475"/>
       <source>Close Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="483"/>
       <source>Show changelog</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar historial de cambios</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="491"/>
       <source>&lt;p&gt;Toggle time stamps on the main console.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Activa o desactiva las marcas de tiempo en la consola principal.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="499"/>
       <source>&lt;p&gt;Toggle recording of replays.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Activa o desactiva la grabación de reproducciones.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="507"/>
       <source>&lt;p&gt;Toggle logging facilities.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Activa o desactiva las funciones de registro.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="212"/>
@@ -13860,17 +13884,17 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="271"/>
       <source>About Mudlet</source>
-      <translation>Acerca De Mudlet</translation>
+      <translation>Acerca de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abrir una ventana de editor de texto libre para este perfil que se guarda entre sesiones.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
       <source>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abrir el manual de Mudlet en tu navegador web.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="290"/>
@@ -13911,27 +13935,27 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
       <location filename="../src/ui/main_window.ui" line="368"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Divide la pantalla de Mudlet para mostrar múltiples perfiles a la vez; se desactiva cuando hay menos de dos cargados.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="379"/>
       <source>Fullscreen</source>
-      <translation type="unfinished"/>
+      <translation>Pantalla completa</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="418"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Silenciar sonidos del juego (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="421"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Silenciar los contenidos multimedia reproducidos por el juego (MCMP, MSP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="432"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Línea de entrada compacta</translation>
     </message>
   </context>
   <context>
@@ -13939,7 +13963,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="20"/>
       <source>Map label</source>
-      <translation type="unfinished"/>
+      <translation>Etiqueta del mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
@@ -13949,17 +13973,17 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
       <source>Text</source>
-      <translation type="unfinished"/>
+      <translation>Texto</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="54"/>
       <source>Image</source>
-      <translation type="unfinished"/>
+      <translation>Imagen</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="62"/>
       <source>Image:</source>
-      <translation type="unfinished"/>
+      <translation>Imagen:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="79"/>
@@ -13970,17 +13994,17 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="86"/>
       <source>Stretch image</source>
-      <translation type="unfinished"/>
+      <translation>Estirar imagen</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="93"/>
       <source>Label text:</source>
-      <translation type="unfinished"/>
+      <translation>Texto de la etiqueta:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="109"/>
       <source>My Label</source>
-      <translation type="unfinished"/>
+      <translation>Mi Etiqueta</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="116"/>
@@ -14000,7 +14024,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="174"/>
       <source>Text outline:</source>
-      <translation type="unfinished"/>
+      <translation>Contorno del texto:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="202"/>
@@ -14015,17 +14039,17 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/map_label.ui" line="215"/>
       <source>&lt;p&gt;If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Si se deselecciona, la etiqueta mantendrá el mismo tamaño al acercar o alejar el mapa. Si se selecciona, la etiqueta cambiará de tamaño proporcionalmente al usar el zoom del mapa.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="191"/>
       <source>Position:</source>
-      <translation type="unfinished"/>
+      <translation>Posición:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="218"/>
       <source>Scale with zoom</source>
-      <translation type="unfinished"/>
+      <translation>Escala con zoom</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="266"/>
@@ -14053,102 +14077,102 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/mapper.ui" line="285"/>
       <source>Map autosave failed - click for options</source>
-      <translation type="unfinished"/>
+      <translation>Error en el guardado automático del mapa - haz clic para ver opciones</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="447"/>
       <source>top + 1</source>
-      <translation type="unfinished"/>
+      <translation>arriba + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="597"/>
       <source>Player Icon Adjustments:</source>
-      <translation type="unfinished"/>
+      <translation>Ajustes del icono del jugador:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="607"/>
       <source>Height</source>
-      <translation type="unfinished"/>
+      <translation>Altura</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="614"/>
       <source>Rot X</source>
-      <translation type="unfinished"/>
+      <translation>Rotación X</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="621"/>
       <source>Rot Y</source>
-      <translation type="unfinished"/>
+      <translation>Rotación Y</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="628"/>
       <source>Rot Z</source>
-      <translation type="unfinished"/>
+      <translation>Rotación Z</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="635"/>
       <source>Scale</source>
-      <translation type="unfinished"/>
+      <translation>Escala</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="663"/>
       <source>Adjust player icon height (-2.0 to +5.0 units)</source>
-      <translation type="unfinished"/>
+      <translation>Ajustar la altura del icono del jugador (-2.0 a +5.0 unidades)</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="691"/>
       <source>Rotate player icon around X axis (-180° to +180°)</source>
-      <translation type="unfinished"/>
+      <translation>Rotar icono del jugador alrededor del eje X (-180° a +180°)</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="719"/>
       <source>Rotate player icon around Y axis (-180° to +180°)</source>
-      <translation type="unfinished"/>
+      <translation>Rotar icono del jugador alrededor del eje Y (-180° a +180°)</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="747"/>
       <source>Rotate player icon around Z axis (-180° to +180°)</source>
-      <translation type="unfinished"/>
+      <translation>Rotar icono del jugador alrededor del eje Z (-180° a +180°)</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="775"/>
       <source>Adjust player icon scale (0.001 to 0.02)</source>
-      <translation type="unfinished"/>
+      <translation>Ajustar la escala del icono del jugador (0.001 a 0.02)</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="782"/>
       <source>Reset Player Icon</source>
-      <translation type="unfinished"/>
+      <translation>Reiniciar el icono de jugador</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="785"/>
       <source>Reset player icon adjustments to default values</source>
-      <translation type="unfinished"/>
+      <translation>Restablecer los ajustes del icono del jugador a los valores predeterminados</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="421"/>
       <source>bottom + 1</source>
-      <translation type="unfinished"/>
+      <translation>abajo + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="301"/>
       <source>≡</source>
-      <translation type="unfinished"/>
+      <translation>≡</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="304"/>
       <source>Mapper display options</source>
-      <translation type="unfinished"/>
+      <translation>Opciones de visualización del mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="434"/>
       <source>bottom -1</source>
-      <translation type="unfinished"/>
+      <translation>abajo -1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="460"/>
       <source>top - 1</source>
-      <translation type="unfinished"/>
+      <translation>arriba - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="408"/>
@@ -14158,22 +14182,22 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/mapper.ui" line="356"/>
       <source>default</source>
-      <translation>por defecto</translation>
+      <translation>defecto</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="369"/>
       <source>top view</source>
-      <translation type="unfinished"/>
+      <translation>vista superior</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="382"/>
       <source>side view</source>
-      <translation type="unfinished"/>
+      <translation>vista lateral</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="395"/>
       <source>all levels</source>
-      <translation type="unfinished"/>
+      <translation>todos los niveles</translation>
     </message>
   </context>
   <context>
