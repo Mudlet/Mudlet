@@ -1351,13 +1351,16 @@ describe("Media playback effects with a generated sound file", function()
     -- it reachable at all.
     local captionKey = "busted-caption-deferred"
     local wasCaptioned = getConfig("enableClosedCaption")
-    assert.is_true(setConfig("enableClosedCaption", true))
     onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
 
-    -- Every caption this spec's playback prints carries its key, and nothing
-    -- else in the buffer does. Counted from the buffer's last line rather than
-    -- from the one after it: that line is still open, so the first caption
-    -- completes it instead of starting a line of its own.
+    -- Counted by key, not by line delta: the window between mark and the last
+    -- line does receive captions from other specs, because a playback stopped
+    -- in an earlier one prints its own caption a turn later, by which time
+    -- captions are on. The key filter is what keeps those out, so do not
+    -- simplify this into a line count. Counted from the buffer's last line
+    -- rather than from the one after it, too: that line is still open, so the
+    -- first caption completes it instead of starting a line of its own.
     local mark = getLastLineNumber("main")
     local function captionCount()
       local last = getLastLineNumber("main")
@@ -1427,8 +1430,12 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
   end
 
+  -- Deliberately not feedGmcp(): after_each drains the cleanup list without a
+  -- pcall, so an undo that raised would skip every cleanup registered before it
+  -- and the stops that follow the drain. A refused injection is the spec body's
+  -- problem, not the undo's.
   local function stopGmcpMediaAfterwards()
-    onCleanup(function() feedGmcp("Client.Media.Stop {}") end)
+    onCleanup(function() feedTelnet("<T_IAC><T_SB><O_GMCP>Client.Media.Stop {}<T_IAC><T_SE>") end)
   end
 
   -- The profile's "accept media from the game" preference gates parseGMCP() and
@@ -1453,7 +1460,9 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("busted-gmcp-play", key)
     assert.equals("busted-gmcp-tag", tag)
 
-    -- and the API's own queries do not see the server's playback
+    -- Pinning today's behaviour, not asserting it is right: the API queries
+    -- filter on the API protocol, so a script cannot see server-driven media at
+    -- all. Unifying the lists one day would fail this deliberately.
     assert.equals(0, #getPlayingSounds())
     assert.equals(0, #getPlayingMusic())
   end)
@@ -1467,10 +1476,25 @@ describe("Media playback effects with a generated sound file", function()
 
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "music", "key": "busted-gmcp-music"}')
 
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
     local event, _, _, mediaType, key = waitForEvent("sysMediaStarted", 5000)
     assert.equals("sysMediaStarted", event, gmcpRefused)
     assert.equals("music", mediaType)
     assert.equals("busted-gmcp-music", key)
+
+    -- The event's type is stamped on the request before the list to track it in
+    -- is chosen, so it alone cannot tell a mislabelled track from a misfiled
+    -- one. A typed stop can: it only reaches the list of the type it names.
+    feedGmcp('Client.Media.Stop {"type": "sound"}')
+    pumpEvents(250)
+    assert.equals(0, #finished, "a sound-typed stop reached the music list")
+
+    feedGmcp('Client.Media.Stop {"type": "music"}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-gmcp-music", finished[1].key)
   end)
 
   it("a Client.Media.Stop message ends what a Client.Media.Play started", function()

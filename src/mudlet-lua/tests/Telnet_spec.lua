@@ -165,4 +165,12 @@ describe("Tests addSupportedTelnetOption", function()
     assert.has_error(function() addSupportedTelnetOption() end)
     assert.has_error(function() addSupportedTelnetOption("mssp") end)
   end)
+
+  it("raises a Lua error for a number too large to be an option", function()
+    -- there is no range check on the option itself, so the refusal that does
+    -- exist is getVerifiedInt's, and it is the only one worth holding
+    local ok, err = pcall(function() addSupportedTelnetOption(2 ^ 40) end)
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
+  end)
 end)

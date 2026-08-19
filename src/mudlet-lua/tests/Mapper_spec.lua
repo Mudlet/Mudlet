@@ -1815,6 +1815,12 @@ describe("Tests mapper functions against a shared fixture", function()
   end)
 
   describe("Tests setDefaultAreaVisible", function()
+    -- Opened here as well as in the outer setup: the success branch needs the
+    -- mapper widget, and busted can be asked to shuffle these blocks.
+    setup(function()
+      assert.is_true(openMapWidget())
+    end)
+
     -- The flag itself has no Lua readback: TMap::mShowDefaultArea is read by
     -- the mapper's area list, the map view's painting and the preferences
     -- checkbox, and by no Lua function other than this setter's own fixup.
