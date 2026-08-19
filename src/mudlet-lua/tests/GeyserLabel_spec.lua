@@ -1258,11 +1258,7 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       end)
     end)
 
-    -- the three wrappers call their global and return nothing, so the nil and
-    -- error message the global answers with for a label it cannot find is
-    -- dropped before the caller sees it, and there is no link style getter
-    -- either: whether the styling reached the label cannot be read from Lua
-    pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the wrapper discards the global's return value and Mudlet has no link style getter")
+    pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the three wrappers discard the nil and error message their global answers with, and Mudlet has no link style getter")
   end)
 
   describe("Geyser.Label:setToolTip/resetToolTip", function()

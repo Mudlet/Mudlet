@@ -678,9 +678,9 @@ describe("Tests functionality of Geyser.Gauge", function()
     end)
   end)
 
-  -- setColor paints the fill bar; the backdrop gets the same colour at a
-  -- fraction of the alpha, which is what makes the unfilled part read as the
-  -- same gauge rather than as a hole.
+  -- setColor paints the fill bar at full alpha and the backdrop in the same
+  -- colour at a fixed alpha of 100, which is what makes the unfilled part read
+  -- as the same gauge rather than as a hole.
   describe("Geyser.Gauge:setColor", function()
     local function backgroundColor(name)
       local red, green, blue, alpha = getBackgroundColor(name)

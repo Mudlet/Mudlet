@@ -233,9 +233,9 @@ describe("Tests functionality of Geyser.Container", function()
     -- again, so each window used to be placed once per ancestor it had. The three
     -- specs below pin the single pass and the two kinds of child that only the
     -- walk reaches, which a top-down reposition on its own would leave behind.
-    -- Geyser looks moveWindow up in the globals of the file it lives in, which are
-    -- not the globals a spec file writes to, so the counter has to go into its
-    -- environment rather than ours
+    -- the counter is installed through the function's own environment so that
+    -- it holds whether or not that environment is the globals table the spec
+    -- sees, and so that the real moveWindow can be put back exactly
     local function countPlacements(work)
       local geyser = getfenv(Geyser.Container.reposition)
       local placements = 0
@@ -878,11 +878,11 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
-  -- Geyser.display writes to the main console, and Geyser looks echo up in the
-  -- globals of the file it lives in, so the stand-in has to go into that
-  -- environment rather than into the spec's - the same trick the placement
-  -- counter above uses for moveWindow. Capturing rather than letting it through
-  -- also keeps a screenful of debug output out of the suite's own console.
+  -- Geyser.display writes to the main console, so echo is swapped for a
+  -- capture rather than spied on: spy.on calls through, and letting it through
+  -- would put a screenful of debug output into the suite's own console. The
+  -- swap goes through the function's own environment so that it holds whether
+  -- or not that environment is the globals table the spec sees.
   describe("Geyser.display", function()
     local function displayed(...)
       local environment = getfenv(Geyser.display)

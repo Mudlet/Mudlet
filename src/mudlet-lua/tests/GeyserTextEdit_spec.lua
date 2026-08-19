@@ -146,9 +146,7 @@ describe("Tests functionality of Geyser.TextEdit", function()
       editor = track(Geyser.TextEdit:new({name = "gteProps", x = 0, y = 0, width = 200, height = 100}))
     end)
 
-    -- Mudlet reports none of these back, so the observable part is that the
-    -- wrapper named its own widget and passed the value straight on; spy.on
-    -- leaves the real call in place
+    -- spy.on leaves the real call in place, so this still exercises Mudlet
     it("passes read-only, placeholder, font, font size and tab focus straight through", function()
       local calls = {
         {method = "setReadOnly", global = "setTextEditReadOnly", value = true},

@@ -780,9 +780,9 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
   end
 
   -- drives a drag through the handlers a mouse would call. The handlers ask
-  -- getMousePosition where the pointer is, and they look it up in the globals of
-  -- the file they live in, which is not the globals a spec file writes to, so the
-  -- stand-in for the mouse has to go into their own environment
+  -- getMousePosition where the pointer is, so the stand-in goes in through the
+  -- handler's own environment: that holds whether or not the environment is the
+  -- globals table the spec sees
   local function drag(container, grabX, grabY, stepX, stepY, steps)
     local geyser = getfenv(Adjustable.Container.onMove)
     local realGetMousePosition = geyser.getMousePosition
@@ -1252,7 +1252,7 @@ describe("Tests the cost of resizing an Adjustable.Container by its edge", funct
     container = nil
   end)
 
-  -- as with getMousePosition above, Geyser looks moveWindow up in its own globals
+  -- as with getMousePosition above, the counter goes in through Geyser's own environment
   local function placements(work)
     local geyser = getfenv(Geyser.Container.reposition)
     local count = 0
@@ -1314,6 +1314,7 @@ end)
 describe("Tests Adjustable.Container borders, persistence and menu items", function()
   local containers
   local topLevelBefore
+  local borderBefore
   local scratchDir = getMudletHomeDir() .. "/gapAdjustableScratch/"
 
   local function newTopLevelObjects()
@@ -1343,6 +1344,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
 
   before_each(function()
     containers = {}
+    borderBefore = getBorderLeft()
     topLevelBefore = {}
     for name in pairs(Geyser.windowList) do
       topLevelBefore[name] = true
@@ -1378,6 +1380,9 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     for _, name in ipairs(newTopLevelObjects()) do
       local object = Geyser.windowList[name]
       if object then
+        -- the scroll tables are keyed by the label object and outlive it
+        Geyser.Label.scrollV[object] = nil
+        Geyser.Label.scrollH[object] = nil
         object:delete()
       end
     end
@@ -1389,19 +1394,12 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       end
       lfs.rmdir(scratchDir)
     end
+    -- last, because detaching above is what hands the border back: a restore
+    -- from an inner after_each would run before that and net nothing
+    setBorderLeft(borderBefore)
   end)
 
   describe("Adjustable.Container:adjustBorder/setBorderMargin/resetBorder", function()
-    local borderBefore
-
-    before_each(function()
-      borderBefore = getBorderLeft()
-    end)
-
-    after_each(function()
-      setBorderLeft(borderBefore)
-    end)
-
     it("does nothing for a container that is not attached", function()
       local container = make("gapLoose")
       assert.is_false(container:adjustBorder())
@@ -1486,16 +1484,6 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   end)
 
   describe("Adjustable.Container:connectToBorder/disconnect", function()
-    local borderBefore
-
-    before_each(function()
-      borderBefore = getBorderLeft()
-    end)
-
-    after_each(function()
-      setBorderLeft(borderBefore)
-    end)
-
     it("does nothing for a container that is not attached", function()
       local container = make("gapUnattached")
       container:connectToBorder("left")
@@ -1587,7 +1575,6 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       local container = make("gapSaveDir", {x = 20, y = 30})
       assert.is_true(container:save(nil, scratchDir))
       assert.is_true(io.exists(scratchDir .. "gapSaveDir.lua"))
-      -- nothing was written to the default directory
       assert.is_false(io.exists(container.defaultDir .. "gapSaveDir.lua"))
 
       container:move(300, 400)
@@ -1870,16 +1857,6 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   end)
 
   describe("Adjustable.Container:hideObj", function()
-    local borderBefore
-
-    before_each(function()
-      borderBefore = getBorderLeft()
-    end)
-
-    after_each(function()
-      setBorderLeft(borderBefore)
-    end)
-
     it("hides the container and gives its border reservation back", function()
       local container = make("gapHideObj", {width = 150})
       container:attachToBorder("left")

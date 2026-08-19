@@ -624,7 +624,8 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("hands back a range of lines and the one under the cursor", function()
-      -- the range is half open, so the last line asked for is not included
+      -- the range is walked forwards from the first line for as many lines as
+      -- the two are apart, so the last line asked for is not included
       assert.are.same({"alpha", "beta"}, console:getLines(0, 2))
       assert.are.same({"alpha", "beta", "gamma"}, console:getLines(0, 3))
       console:moveCursor(0, 1)
@@ -669,12 +670,13 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
   end)
 
-  -- Scrolling a console back opens its split view, and the scroll is applied
-  -- through the pane that appears on the next turn of the event loop rather
-  -- than on the call, so every reading here is taken after pumping. The split
-  -- opening also shortens the upper pane, and the scroll compensates for that
-  -- by the height of the pane that appeared, so only the first scroll of a
-  -- console lands above the line it asked for - hence openSplit() below.
+  -- The first scroll of a console opens its split view, and that one is
+  -- applied on the next turn of the event loop rather than on the call, so
+  -- every reading here is taken after pumping. Opening the split also shortens
+  -- the upper pane, and that first scroll compensates for it by the height of
+  -- the pane that appeared, so only the first scroll of a console lands above
+  -- the line it asked for - hence openSplit() below. Later scrolls go through
+  -- the pane that is already there, synchronously and to the exact line.
   describe("Geyser.MiniConsole scrolling", function()
     local console
 
@@ -781,26 +783,37 @@ describe("Tests functionality of Geyser.MiniConsole", function()
   end)
 
   describe("Geyser.MiniConsole scroll bars", function()
-    -- Mudlet cannot report whether a scroll bar is on screen for a
-    -- miniconsole, but resetAutoWrap keeps 15 pixels clear for a vertical one,
-    -- so an auto wrapping console wraps that much earlier while it is on -
-    -- which is readable, and is what proves the call reached the widget.
-    it("enableScrollBar takes room off the wrap and disableScrollBar gives it back", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBar", x = 0, y = 0, width = 300, height = 100, autoWrap = true}))
-      local charWidth = calcFontSize("gmcScrollBar")
-
+    it("enableScrollBar and disableScrollBar put the bar on the widget", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBar", x = 0, y = 0, width = 300, height = 100}))
+      -- a console the constructor was given no scrollBar constraint has one
+      -- turned off, which is what makes the enable below observable
+      assert.is_false(getScrollBarVisible("gmcScrollBar"))
       console:enableScrollBar()
       assert.is_true(console.scrollBar)
-      assert.are.equal(math.floor((300 - 15) / charWidth), getWindowWrap("gmcScrollBar"))
-
+      assert.is_true(getScrollBarVisible("gmcScrollBar"))
       console:disableScrollBar()
       assert.is_false(console.scrollBar)
-      assert.are.equal(math.floor(300 / charWidth), getWindowWrap("gmcScrollBar"))
+      assert.is_false(getScrollBarVisible("gmcScrollBar"))
+    end)
+
+    -- turning the bar on also has to re-derive an auto wrap, because
+    -- resetAutoWrap keeps 15 pixels clear for it and the text would otherwise
+    -- run under it
+    it("enableScrollBar takes room off the wrap and disableScrollBar gives it back", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBarWrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true}))
+      local charWidth = calcFontSize("gmcScrollBarWrap")
+
+      console:enableScrollBar()
+      assert.are.equal(math.floor((300 - 15) / charWidth), getWindowWrap("gmcScrollBarWrap"))
+
+      console:disableScrollBar()
+      assert.are.equal(math.floor(300 / charWidth), getWindowWrap("gmcScrollBarWrap"))
     end)
 
     it("the horizontal scroll bar is remembered on the object and reaches Mudlet", function()
-      -- a horizontal bar costs no width, so unlike the vertical one it leaves
-      -- nothing readable behind: the delegation is what can be checked
+      -- getScrollBarVisible reports the vertical bar only, and a horizontal one
+      -- costs no width either, so it leaves nothing readable behind: the
+      -- delegation is what can be checked
       local enable = spy.on(_G, "enableHorizontalScrollBar")
       local disable = spy.on(_G, "disableHorizontalScrollBar")
       finally(function() enable:revert() disable:revert() end)
@@ -819,6 +832,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       local console = track(Geyser.MiniConsole:new({name = "gmcScrollBarCons", x = 0, y = 0, width = 300, height = 100, scrollBar = true, horizontalScrollBar = true}))
       assert.is_true(console.scrollBar)
       assert.is_true(console.horizontalScrollBar)
+      assert.is_true(getScrollBarVisible("gmcScrollBarCons"))
     end)
   end)
 

@@ -107,20 +107,38 @@ describe("Tests functionality of Geyser.Color", function()
     end)
   end)
 
-  -- applyColors is what every Geyser widget constructor calls to put the
-  -- fgColor/bgColor/color constraints onto the primitive it just made, so it is
-  -- specced against a real miniconsole and read back out of Mudlet.
+  -- applyColors is what the label, miniconsole, mapper and user window
+  -- constructors call to put the fgColor/bgColor/color constraints onto the
+  -- primitive they just made, so it is specced against a real miniconsole and
+  -- read back out of Mudlet.
   describe("Geyser.Color.applyColors", function()
+    local created
     local console
 
+    local function track(object)
+      created[#created + 1] = object
+      return object
+    end
+
+    local function alive(object)
+      if not object or not object.container or not object.container.windowList then
+        return false
+      end
+      return object.container.windowList[object.name] == object
+    end
+
     before_each(function()
-      console = Geyser.MiniConsole:new({name = "gcoColours", x = 0, y = 0, width = 200, height = 100})
+      created = {}
+      console = track(Geyser.MiniConsole:new({name = "gcsColours", x = 0, y = 0, width = 200, height = 100}))
     end)
 
     after_each(function()
-      if console and Geyser.windowList.gcoColours == console then
-        console:delete()
+      for _, object in ipairs(created) do
+        if alive(object) then
+          object:delete()
+        end
       end
+      created = {}
       console = nil
     end)
 
@@ -132,13 +150,13 @@ describe("Tests functionality of Geyser.Color", function()
       Geyser.Color.applyColors(console)
 
       console:echo("coloured\n")
-      moveCursor("gcoColours", 0, getLineCount("gcoColours") - 1)
-      selectCurrentLine("gcoColours")
-      local format = getTextFormat("gcoColours")
+      moveCursor("gcsColours", 0, getLineCount("gcsColours") - 1)
+      selectCurrentLine("gcsColours")
+      local format = getTextFormat("gcsColours")
       assert.are.same({255, 0, 0}, format.foreground)
       assert.are.same({0, 0, 255}, format.background)
       -- color is the window's own background rather than the text's
-      local red, green, blue = getBackgroundColor("gcoColours")
+      local red, green, blue = getBackgroundColor("gcsColours")
       assert.are.same({16, 32, 48}, {red, green, blue})
     end)
 
@@ -150,12 +168,12 @@ describe("Tests functionality of Geyser.Color", function()
       Geyser.Color.applyColors(console)
 
       console:echo("mixed\n")
-      moveCursor("gcoColours", 0, getLineCount("gcoColours") - 1)
-      selectCurrentLine("gcoColours")
-      local format = getTextFormat("gcoColours")
+      moveCursor("gcsColours", 0, getLineCount("gcsColours") - 1)
+      selectCurrentLine("gcsColours")
+      local format = getTextFormat("gcsColours")
       assert.are.same({0, 255, 0}, format.foreground)
       assert.are.same({0, 0, 128}, format.background)
-      local red, green, blue = getBackgroundColor("gcoColours")
+      local red, green, blue = getBackgroundColor("gcsColours")
       assert.are.same({32, 64, 96}, {red, green, blue})
     end)
   end)

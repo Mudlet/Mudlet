@@ -147,15 +147,16 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal(math.floor(usableWidth / charWidth), getWindowWrap("guwAutoWrap"))
     end)
 
-    -- Mudlet cannot report whether the scroll bar is on screen, but
-    -- Geyser.MiniConsole:resetAutoWrap keeps 15 pixels clear for one when it
-    -- is, so an auto wrapping console wraps that much earlier - which is
-    -- readable, and is what proves the constraint reached the widget.
+    -- Geyser.MiniConsole:resetAutoWrap keeps 15 pixels clear for a scroll bar,
+    -- so an auto wrapping console wraps that much earlier. That much is
+    -- Geyser's own arithmetic off its own flag, so the bar reaching the widget
+    -- is read back separately, from getScrollBarVisible.
     it("keeps room for the scroll bar it was asked for when wrapping", function()
       track(Geyser.UserWindow:new({name = "guwScrollBar", x = 10, y = 10, width = 300, height = 200, wrapAt = "auto", scrollBar = true}))
       local usableWidth = getUserWindowSize("guwScrollBar")
       local charWidth = calcFontSize("guwScrollBar")
       assert.are.equal(math.floor((usableWidth - 15) / charWidth), getWindowWrap("guwScrollBar"))
+      assert.is_true(getScrollBarVisible("guwScrollBar"))
     end)
 
     it("ignores the geometry it was given when it is asked to start docked", function()
