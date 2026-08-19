@@ -370,6 +370,7 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
           -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
           -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
           -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
