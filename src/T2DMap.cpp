@@ -4138,7 +4138,7 @@ void T2DMap::slot_createRoom()
         return;
     }
 
-    mpMap->setRoomArea(roomID, mAreaID, false);
+    mpMap->setRoomArea(roomID, mAreaID);
     mpMap->setRoomCoordinates(roomID, mContextMenuClickPosition.x, mContextMenuClickPosition.y, mMapCenterZ);
 
     mpMap->mMapGraphNeedsUpdate = true;
@@ -4550,8 +4550,11 @@ void T2DMap::slot_toggleMapViewOnly()
 
 void T2DMap::populateUserContextMenus(QMenu& menu)
 {
+    if (!mpMap) {
+        return;
+    }
     QMap<QString, QMenu*> userMenus;
-    QMapIterator<QString, QStringList> menuIterator(mUserMenus);
+    QMapIterator<QString, QStringList> menuIterator(mpMap->mUserMenus);
 
     while (menuIterator.hasNext()) {
         menuIterator.next();
@@ -4576,7 +4579,7 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
         }
     }
 
-    QMapIterator<QString, QStringList> actionIterator(mUserActions);
+    QMapIterator<QString, QStringList> actionIterator(mpMap->mUserActions);
     while (actionIterator.hasNext()) {
         actionIterator.next();
         const QString uniqueName = actionIterator.key();
@@ -4602,8 +4605,11 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
 
 void T2DMap::slot_userAction(QString uniqueName)
 {
+    if (!mpMap) {
+        return;
+    }
     TEvent event{};
-    QStringList userEvent = mUserActions[uniqueName];
+    const QStringList userEvent = mpMap->mUserActions.value(uniqueName);
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(uniqueName);
@@ -5144,7 +5150,7 @@ void T2DMap::slot_newMap()
         return;
     }
 
-    mpMap->setRoomArea(roomID, -1, false);
+    mpMap->setRoomArea(roomID, -1);
     mpMap->setRoomCoordinates(roomID, 0, 0, 0);
     mpMap->mMapGraphNeedsUpdate = true;
 
@@ -5228,28 +5234,12 @@ void T2DMap::slot_setArea()
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
         while (itSelectedRoom.hasNext()) {
-            const int currentRoomId = itSelectedRoom.next();
-            if (itSelectedRoom.hasNext()) { // NOT the last room in set -  so defer some area related recalculations
-                mpMap->setRoomArea(currentRoomId, newAreaId, true);
-            } else {
-                // Is the LAST room, so be careful to do all that is needed to clean
-                // up the affected areas (triggered by last "false" argument in next
-                // line)...
-                if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
-                    // Failed on the last of multiple room area move so do the missed
-                    // out recalculations for the dirtied areas
-                    auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
-                    QSet<TArea*> const areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
-                    QSetIterator<TArea*> itpArea{areaPtrsSet};
-                    while (itpArea.hasNext()) {
-                        TArea* pArea = itpArea.next();
-                        pArea->clean();
-                    }
-                }
-                const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
-                switchArea(targetAreaName);
-            }
+            mpMap->setRoomArea(itSelectedRoom.next(), newAreaId);
+        }
+        if (!mMultiSelectionSet.isEmpty()) {
+            const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
+            mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            switchArea(targetAreaName);
         }
         update();
     });

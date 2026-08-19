@@ -21,7 +21,7 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
-#include "TEncodingHelper.h"
+#include "TStringUtils.h"
 #include <QDebug>
 
 // Static sets of MXP tags from the specification
@@ -291,6 +291,10 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         return HANDLER_FALL_THROUGH;
     }
 
+    // Keep the tag builder in sync with the session encoding so attribute
+    // bytes are decoded correctly on non-UTF-8 sessions.
+    mMxpTagBuilder.setEncoding(mpMxpClient->getEncoding());
+
     // Newline while inside a tag: MXP tags cannot span lines
     // Reject the partial tag as literal text, then let the newline trigger line commit
     if ((ch == '\n' || ch == '\r') && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag() && !mMxpTagBuilder.isInsideComment()) {
@@ -386,7 +390,6 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
                 return HANDLER_INSERT_ENTITY_LIT;
             }
         }
-        // ask for the next char
         return HANDLER_NEXT_CHAR;
     }
 
@@ -397,13 +400,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
 QString TMxpProcessor::decodeRawBytes(const std::string& raw, const QByteArray& encoding) const
 {
-    if (encoding == QByteArrayLiteral("UTF-8")) {
-        return QString::fromStdString(raw);
-    } else if (encoding == QByteArrayLiteral("ISO 8859-1")) {
-        return QString::fromLatin1(raw.c_str(), static_cast<int>(raw.length()));
-    } else {
-        return TEncodingHelper::decode(QByteArray::fromRawData(raw.c_str(), raw.length()), encoding);
-    }
+    return TStringUtils::decodeBytes(raw, encoding);
 }
 
 bool TMxpProcessor::isValidTagName(const std::string& tagName) const

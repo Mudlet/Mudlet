@@ -28,6 +28,7 @@
 
 #include "ui_profile_preferences.h"
 #include <QDialog>
+#include <QList>
 #include <QMap>
 
 class Host;
@@ -36,6 +37,7 @@ class QDoubleSpinBox;
 class TAction;
 class TAlias;
 class TKey;
+class TKeySequenceEdit;
 class TScript;
 class TTimer;
 class TTrigger;
@@ -48,6 +50,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
     explicit dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
+    ~dlgProfilePreferences();
     void setTab(QString tab);
 
 public slots:
@@ -142,7 +145,6 @@ private slots:
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
     void slot_tabChanged(int tabIndex);
-    void slot_showNewFeatureCallouts();
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
@@ -170,6 +172,7 @@ private slots:
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
     void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_toggleEnableOSC8Hyperlinks(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
     void slot_deleteMap();
@@ -228,6 +231,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits);
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);

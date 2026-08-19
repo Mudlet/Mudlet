@@ -1,9 +1,22 @@
--- Test for OSC sequence buffer underflow protection
--- This test verifies the fix for a buffer underflow bug in TBuffer::translateToPlainText()
--- when processing OSC (Operating System Command) sequences at the beginning of a buffer.
+-- How TBuffer::translateToPlainText() handles the out-of-band sequences that
+-- arrive mixed into the game's text: OSC, the DCS/SOS/PM/APC string sequences
+-- and escape sequences that Mudlet does not act on.
 
 describe("Tests TBuffer OSC sequence handling", function()
-  
+
+  -- feedTriggers writes to the main console; fish the line carrying our
+  -- unique marker back out of the buffer to see what actually rendered
+  local function findRecentLine(needle)
+    local lastLine = getLastLineNumber("main")
+    local lines = getLines("main", math.max(0, lastLine - 15), lastLine + 1)
+    for i = #lines, 1, -1 do
+      if lines[i]:find(needle, 1, true) then
+        return lines[i]
+      end
+    end
+    return nil
+  end
+
   describe("Tests the protection against buffer underflow in OSC sequences", function()
     
     it("should handle OSC sequences at buffer start without crashing", function()
@@ -95,19 +108,6 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   describe("Tests ANSI string sequence handling (DCS, SOS, PM, APC)", function()
 
-    -- feedTriggers writes to the main console; fish the line carrying our
-    -- unique marker back out of the buffer to see what actually rendered
-    local function findRecentLine(needle)
-      local lastLine = getLastLineNumber("main")
-      local lines = getLines("main", math.max(0, lastLine - 15), lastLine + 1)
-      for i = #lines, 1, -1 do
-        if lines[i]:find(needle, 1, true) then
-          return lines[i]
-        end
-      end
-      return nil
-    end
-
     it("should swallow an APC sequence terminated by ST", function()
       assert.is_true(feedTriggers("APCST1(\027_secret apc payload\027\\)APCST1\n"))
       assert.equals("APCST1()APCST1", findRecentLine("APCST1"))
@@ -128,7 +128,10 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("APCBEL1()APCBEL1", findRecentLine("APCBEL1"))
     end)
 
-    it("should swallow an APC sequence split across two packets", function()
+    -- As with the private-CSI case below, two feedTriggers() calls cannot express
+    -- a packet split; what carries between local feeds is the mGotString latch,
+    -- not the pending bytes.
+    it("should swallow an APC sequence whose bytes arrive across two local feeds", function()
       assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
       assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
       assert.equals("APCSPLIT1()APCSPLIT1", findRecentLine("APCSPLIT1"))
@@ -150,5 +153,174 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
   end)
+
+  describe("Tests escape sequences that Mudlet does not handle", function()
+
+    local previousEncoding
+
+    -- these tests are not encoding agnostic: feedTriggers transcodes its UTF-8
+    -- argument into the server encoding, so under anything else the "\195\169"
+    -- pairs below reach the parser as a single byte and stop exercising the
+    -- multibyte lead byte that it must not swallow
+    setup(function()
+      previousEncoding = getServerEncoding()
+      setServerEncoding("UTF-8")
+    end)
+
+    teardown(function()
+      setServerEncoding(previousEncoding)
+    end)
+
+    it("should consume the two-byte escapes it recognises", function()
+      assert.is_true(feedTriggers("TWOBYTE1(\027" .. "7|\027" .. "8|\027c)TWOBYTE1\n"))
+      assert.equals("TWOBYTE1(||)TWOBYTE1", findRecentLine("TWOBYTE1"))
+    end)
+
+    it("should keep the byte of a two-byte escape it does not recognise", function()
+      assert.is_true(feedTriggers("UNKNOWN1(\027M\027D\027>\027=)UNKNOWN1\n"))
+      assert.equals("UNKNOWN1(MD>=)UNKNOWN1", findRecentLine("UNKNOWN1"))
+    end)
+
+    it("should consume a character set designation", function()
+      assert.is_true(feedTriggers("CHARSET1(\027(B)CHARSET1\n"))
+      assert.equals("CHARSET1()CHARSET1", findRecentLine("CHARSET1"))
+    end)
+
+    it("should not let a CSI introducer name a character set and start a CSI", function()
+      assert.is_true(feedTriggers("GUARD1(\027([31mred\027[0m)GUARD1\n"))
+      assert.equals("GUARD1(31mred)GUARD1", findRecentLine("GUARD1"))
+    end)
+
+    it("should not let an APC introducer name a character set and start a string sequence", function()
+      assert.is_true(feedTriggers("GUARD2(\027(_payload)GUARD2\n"))
+      assert.equals("GUARD2(payload)GUARD2", findRecentLine("GUARD2"))
+    end)
+
+    it("should restart the sequence when an escape follows a designation", function()
+      assert.is_true(feedTriggers("RELATCH1(\027(\027[31mred\027[0m)RELATCH1\n"))
+      assert.equals("RELATCH1(red)RELATCH1", findRecentLine("RELATCH1"))
+    end)
+
+    it("should keep the letter after a stray escape", function()
+      assert.is_true(feedTriggers("STRAY1(\027ABC)STRAY1\n"))
+      assert.equals("STRAY1(ABC)STRAY1", findRecentLine("STRAY1"))
+    end)
+
+    it("should keep the digit after a stray escape", function()
+      assert.is_true(feedTriggers("STRAY2(\027" .. "1234)STRAY2\n"))
+      assert.equals("STRAY2(1234)STRAY2", findRecentLine("STRAY2"))
+    end)
+
+    it("should keep the text after several stray escapes", function()
+      assert.is_true(feedTriggers("STRAY3(\027A\027BCD)STRAY3\n"))
+      assert.equals("STRAY3(ABCD)STRAY3", findRecentLine("STRAY3"))
+    end)
+
+    it("should keep a run of punctuation after a stray escape", function()
+      assert.is_true(feedTriggers("PUNCT1(\027--- Hello)PUNCT1\n"))
+      assert.equals("PUNCT1(--- Hello)PUNCT1", findRecentLine("PUNCT1"))
+    end)
+
+    it("should keep a space after a stray escape", function()
+      assert.is_true(feedTriggers("PUNCT2(\027 spaced)PUNCT2\n"))
+      assert.equals("PUNCT2( spaced)PUNCT2", findRecentLine("PUNCT2"))
+    end)
+
+    it("should keep a multibyte character that follows a stray escape", function()
+      assert.is_true(feedTriggers("UTF8ESC1(caf\027\195\169)UTF8ESC1\n"))
+      assert.equals("UTF8ESC1(caf\195\169)UTF8ESC1", findRecentLine("UTF8ESC1"))
+    end)
+
+    it("should keep a multibyte character that cannot name a character set", function()
+      assert.is_true(feedTriggers("UTF8ESC2(\027(\195\169)UTF8ESC2\n"))
+      assert.equals("UTF8ESC2(\195\169)UTF8ESC2", findRecentLine("UTF8ESC2"))
+    end)
+
+    it("should keep a line break that follows a stray escape", function()
+      assert.is_true(feedTriggers("NLESC1(\027\nNLESC2)\n"))
+      assert.equals("NLESC1(", findRecentLine("NLESC1"))
+      assert.equals("NLESC2)", findRecentLine("NLESC2"))
+    end)
+
+    it("should keep a line break that cannot name a character set", function()
+      assert.is_true(feedTriggers("NLESC3(\027(\nNLESC4)\n"))
+      assert.equals("NLESC3(", findRecentLine("NLESC3"))
+      assert.equals("NLESC4)", findRecentLine("NLESC4"))
+    end)
+
+    it("should apply a trailing escape to the next packet", function()
+      assert.is_true(feedTriggers("SPLITESC1(\027"))
+      assert.is_true(feedTriggers("7 then ABC)SPLITESC1\n"))
+      assert.equals("SPLITESC1( then ABC)SPLITESC1", findRecentLine("SPLITESC1"))
+    end)
+
+    it("should apply a trailing designation to the next packet", function()
+      assert.is_true(feedTriggers("SPLITINT1(\027("))
+      assert.is_true(feedTriggers("B)SPLITINT1\n"))
+      assert.equals("SPLITINT1()SPLITINT1", findRecentLine("SPLITINT1"))
+    end)
+
+    it("should not eat a multibyte character starting the next packet", function()
+      assert.is_true(feedTriggers("SPLITESC2(\027"))
+      assert.is_true(feedTriggers("\195\169)SPLITESC2\n"))
+      assert.equals("SPLITESC2(\195\169)SPLITESC2", findRecentLine("SPLITESC2"))
+    end)
+
+    it("should keep an 8-bit character that follows a stray escape", function()
+      setServerEncoding("ISO 8859-1")
+      assert.is_true(feedTriggers("LATIN1(\027\195\169)LATIN1\n"))
+      assert.equals("LATIN1(\195\169)LATIN1", findRecentLine("LATIN1"))
+      setServerEncoding("UTF-8")
+    end)
+
+  end)
+
+  -- A CSI parameter string may only carry one of '<', '=', '>' or '?' in its
+  -- FIRST byte, where it marks a private/reserved sequence that Mudlet does not
+  -- interpret; after that only "0-9:;" are allowed. Getting those two sets the
+  -- wrong way round leaves the tail of such a sequence on screen as game text.
+  describe("Tests private/reserved CSI sequences", function()
+
+    it("should consume a private DEC sequence that hides the cursor", function()
+      assert.is_true(feedTriggers("CSIPRIV1(\027[?25l)CSIPRIV1\n"))
+      assert.equals("CSIPRIV1()CSIPRIV1", findRecentLine("CSIPRIV1"))
+    end)
+
+    it("should consume a private DEC sequence with a multi-digit parameter", function()
+      assert.is_true(feedTriggers("CSIPRIV2(\027[?1049h)CSIPRIV2\n"))
+      assert.equals("CSIPRIV2()CSIPRIV2", findRecentLine("CSIPRIV2"))
+    end)
+
+    it("should consume a reserved sequence introduced by '<'", function()
+      assert.is_true(feedTriggers("CSIPRIV3(\027[<0;10;10M)CSIPRIV3\n"))
+      assert.equals("CSIPRIV3()CSIPRIV3", findRecentLine("CSIPRIV3"))
+    end)
+
+    -- Two feedTriggers() calls cannot express a packet split: a local feed keeps
+    -- its own mGotCSI latch between calls but drops the incomplete bytes, since
+    -- the carry is gated on isFromServer. So the latch swallows the "l" rather
+    -- than "?25" surviving. This still fails without the fix - the "25l" leaks -
+    -- but it does not guard the private branch's ordering against the
+    -- incomplete-packet check, which needs a real split from the socket.
+    it("should not leak a private sequence whose bytes arrive across two local feeds", function()
+      assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
+      assert.is_true(feedTriggers("l)CSISPLIT1\n"))
+      assert.equals("CSISPLIT1()CSISPLIT1", findRecentLine("CSISPLIT1"))
+    end)
+
+    -- Guards the other direction: an ordinary digit-initial parameter string and
+    -- an empty one must still reach the SGR handler and leave no text behind.
+    it("should still consume a digit-initial SGR sequence", function()
+      assert.is_true(feedTriggers("CSISGR1(\027[0;32mgreen\027[0m)CSISGR1\n"))
+      assert.equals("CSISGR1(green)CSISGR1", findRecentLine("CSISGR1"))
+    end)
+
+    it("should still consume an SGR sequence with no parameters", function()
+      assert.is_true(feedTriggers("CSISGR2(\027[mplain)CSISGR2\n"))
+      assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
+    end)
+
+  end)
+
 
 end)

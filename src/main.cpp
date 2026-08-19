@@ -63,7 +63,6 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
-#include "LsanSuppressions.h"
 #include "SentryWrapper.h"
 #include "utils.h"
 #include <QFileInfo>
@@ -77,27 +76,6 @@
 #endif
 
 using namespace std::chrono_literals;
-
-// These hooks are only consulted when the LeakSanitizer runtime is linked in
-// (USE_SANITIZER builds, i.e. PTBs and testing builds); elsewhere they are two
-// inert functions. They cannot be guarded with an "is ASAN on" macro check:
-// Mudlet only applies -fsanitize=address at link time, so no compiler macro is
-// set, and Qt's qcompilerdetection.h shims __has_feature to 0 on GCC anyway.
-
-// Embeds the suppression list into the binary so leak reports shown to users
-// by testing/PTB builds exclude third-party noise (GPU drivers, font stack)
-// with no LSAN_OPTIONS needed at runtime:
-extern "C" const char* __lsan_default_suppressions()
-{
-    return mudletLsanSuppressions;
-}
-
-// Without this, LeakSanitizer appends a "Suppressions used" summary to every
-// clean exit, which reads like an error to users:
-extern "C" const char* __lsan_default_options()
-{
-    return "print_suppressions=0";
-}
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -250,7 +228,9 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
         }
         confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
     } else {
-        confPath = confDirDefault;
+        // Mirror setupConfig()'s XDG_CONFIG_HOME resolution so this early
+        // Mudlet.ini read looks in the same config root.
+        confPath = utils::xdgConfigDir(confDirDefault).path;
     }
 
     if (confPath.isEmpty()) {
@@ -314,7 +294,7 @@ int main(int argc, char* argv[])
 #ifdef WITH_SENTRY
     initSentry();
     auto sentryClose = qScopeGuard([] {
-        closeSentry();
+        sentry_close();
     });
 #endif
 
@@ -425,6 +405,10 @@ int main(int argc, char* argv[])
             QStringList() << qsl("o") << qsl("only"), qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
+    // long-only, as -o is taken by --only just above
+    const QCommandLineOption openOffline(qsl("offline"), qsl("Open the profiles loaded at startup without connecting to their game server"));
+    parser.addOption(openOffline);
+
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
@@ -466,6 +450,10 @@ int main(int argc, char* argv[])
                                                           "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                           "                                    predefined game, may be repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --offline                    open the profiles loaded at startup\n"
+                                                          "                                    without connecting to their game\n"
+                                                          "                                    server."));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --steammode                  adjusts Mudlet settings to match\n"
                                                           "                                    Steam's requirements."));
@@ -542,7 +530,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)", "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
         texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2026  Mudlet developers"));
-        texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv3: GNU GPL version 3 - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "This is free software: you are free to change and redistribute it.\n"
                                                           "There is NO WARRANTY, to the extent permitted by law."));
@@ -643,6 +631,7 @@ int main(int argc, char* argv[])
     }
 
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
+    const bool offlineProfiles = parser.isSet(openOffline);
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
@@ -1104,7 +1093,7 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri, offlineProfiles]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
@@ -1120,7 +1109,7 @@ int main(int argc, char* argv[])
         }
 
         // Always load auto-login profiles first
-        mudlet::self()->startAutoLogin(cliProfiles);
+        mudlet::self()->startAutoLogin(cliProfiles, offlineProfiles);
 
         // Then handle telnet URI if provided
         if (!telnetUri.isEmpty()) {

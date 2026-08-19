@@ -15,7 +15,6 @@ jobs:
       matrix:
         include:
           - buildname: 'pi'
-            qt: '6.9.0'
             triplet: arm64-linux
             compiler: gcc_64
             os: [ self-hosted, pi4 ]
@@ -28,7 +27,7 @@ jobs:
         submodules: recursive
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.4.0
+      uses: lukka/get-cmake@v4.4.2
 
     - name: Install dependencies
       run: |

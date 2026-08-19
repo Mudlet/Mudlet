@@ -311,6 +311,29 @@ void UpdateDialog::showIfUpdatesAvailableOrQuit()
     }
 }
 
+/*!
+ * \brief Stops the dialog from showing itself when the last window closes.
+ *
+ * Used when the application is deliberately closing to restart into an
+ * already-installed update: offering the update again would leave this dialog
+ * as the only window of an instance the user expects to be gone, keeping it
+ * alive alongside the restarted one. As quitOnLastWindowClosed is disabled in
+ * OnLastWindowClosed mode, quit explicitly once the last window closes.
+ */
+void UpdateDialog::disableAutoShow()
+{
+    if (mType != OnLastWindowClosed) {
+        return;
+    }
+    disconnect(qApp, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
+    connect(qApp, &QGuiApplication::lastWindowClosed, qApp, &QCoreApplication::quit);
+}
+
+QString UpdateDialog::pendingDownloadPath(QSettings* settings)
+{
+    return settingsValue(qsl("updateFilePath"), QString(), settings).toString();
+}
+
 // "DBLSQD/" prefix retained for backward compatibility with user settings from the previous update system
 QVariant UpdateDialog::settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings)
 {
@@ -536,7 +559,14 @@ QString UpdateDialog::generateChangelogDocument()
     QString changelog;
     QList<Release> changelogReleases;
     if (mMinVersion.isEmpty() && mMaxVersion.isEmpty()) {
-        changelogReleases = mUpdates;
+        // Everything the offered release brings with it, off the unfiltered
+        // list: a release left out of mUpdates because it published no asset
+        // for this platform still ships its changes inside the one being
+        // offered, so the user is about to receive them either way. Bounded by
+        // the same release getUpdates() measures against, so what is listed and
+        // what is offered cannot disagree.
+        changelogReleases = Feed::selectReleasesBetween(mReleases, Release::getCurrentRelease(), mLatestRelease);
+        changelog = generateCompareLink();
     } else {
         Release minRelease(mMinVersion.isEmpty() ? QApplication::applicationVersion() : mMinVersion);
         Release maxRelease(mMaxVersion);
@@ -560,6 +590,23 @@ QString UpdateDialog::generateChangelogDocument()
         changelog.append(body + qsl("\n\n"));
     }
     return changelog;
+}
+
+QString UpdateDialog::generateCompareLink() const
+{
+    const QString installedVersion = QApplication::applicationVersion();
+    const QString updateVersion = mLatestRelease.getVersion();
+    if (installedVersion.isEmpty() || updateVersion.isEmpty()) {
+        return QString();
+    }
+    const QString base = Release::gitHubRef(installedVersion);
+    const QString head = Release::gitHubRef(updateVersion);
+    if (base == head || mFeed->getOwner().isEmpty() || mFeed->getRepo().isEmpty()) {
+        return QString();
+    }
+    const QString url = qsl("https://github.com/%1/%2/compare/%3...%4").arg(mFeed->getOwner(), mFeed->getRepo(), base, head);
+    //: Shown above the update changelog; the text in [] is a clickable link, %1 is the GitHub comparison URL
+    return tr("[See every change between your version and this update](%1) on GitHub.").arg(url) + qsl("\n\n");
 }
 
 void UpdateDialog::startDownload()

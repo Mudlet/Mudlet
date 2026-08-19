@@ -32,6 +32,8 @@
 #include <QRegularExpression>
 #include <QTemporaryFile>
 
+#include <utility>
+
 namespace dblsqd {
 
 Feed::Feed(QObject* parent)
@@ -84,6 +86,16 @@ QUrl Feed::getUrl() const
     return mUrl;
 }
 
+QString Feed::getOwner() const
+{
+    return mOwner;
+}
+
+QString Feed::getRepo() const
+{
+    return mRepo;
+}
+
 QList<Release> Feed::getReleases() const
 {
     return mReleases;
@@ -91,13 +103,55 @@ QList<Release> Feed::getReleases() const
 
 QList<Release> Feed::getUpdates(const Release& currentRelease) const
 {
+    return selectUpdates(mReleases, currentRelease);
+}
+
+QList<Release> Feed::selectUpdates(const QList<Release>& releases, const Release& currentRelease)
+{
     QList<Release> updates;
-    for (const auto& release : mReleases) {
-        if (currentRelease.getVersion().toLower() != release.getVersion().toLower() && currentRelease < release) {
-            updates << release;
+    for (const auto& release : releases) {
+        if (currentRelease.getVersion().toLower() == release.getVersion().toLower() || !(currentRelease < release)) {
+            continue;
         }
+        const QUrl downloadUrl = release.getDownloadUrl();
+        if (!downloadUrl.isValid() || downloadUrl.isEmpty()) {
+            continue;
+        }
+        // Release warns about the missing binary itself; nothing else notices a
+        // release that has one but cannot be verified, and the user is only
+        // told they are up to date
+        const QUrl checksumsUrl = release.getChecksumsUrl();
+        if (!checksumsUrl.isValid() || checksumsUrl.isEmpty()) {
+            qWarning() << "Release" << release.getVersion() << "publishes no checksums to verify its download against - passing it over";
+            continue;
+        }
+        updates << release;
     }
     return updates;
+}
+
+QList<Release> Feed::selectReleasesBetween(const QList<Release>& releases, const Release& after, const Release& upTo)
+{
+    QList<Release> selected;
+    // With nothing on offer upTo is a default-constructed Release, which no
+    // release is older than or equal to
+    if (upTo.getVersion().isEmpty()) {
+        return selected;
+    }
+    for (const auto& release : releases) {
+        // The release being run is in the feed as well, and its own notes were
+        // read when it was installed. Matched by version like selectUpdates
+        // does: a version SemVer cannot read is ordered by date instead, and
+        // the date the running release carries is when it was built rather than
+        // when it was published, so it can sort as older than itself
+        if (after.getVersion().compare(release.getVersion(), Qt::CaseInsensitive) == 0) {
+            continue;
+        }
+        if (after < release && release <= upTo) {
+            selected << release;
+        }
+    }
+    return selected;
 }
 
 QString Feed::getDownloadFilePath() const
@@ -112,7 +166,13 @@ bool Feed::isReady() const
 
 bool Feed::isDownloading() const
 {
-    return mDownloadReply != nullptr && !mDownloadReply->isFinished();
+    // The checksums are fetched before the download request is made, so a
+    // download that has only got that far has no mDownloadReply yet. Counting
+    // that window as downloading is what stops a second downloadRelease() -
+    // the update dialog's automatic download and the twice-daily check both
+    // answer the same ready() - from starting a parallel run of the same
+    // download (#9938)
+    return mChecksumsReply != nullptr || (mDownloadReply != nullptr && !mDownloadReply->isFinished());
 }
 
 void Feed::load()
@@ -159,11 +219,53 @@ void Feed::downloadRelease(const Release& release, bool requireChecksums)
     if (checksumsUrl.isValid() && !checksumsUrl.isEmpty()) {
         fetchChecksums(checksumsUrl);
     } else if (requireChecksums) {
-        //: Error shown when a manual update cannot be verified as safe to install
-        emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
+        qWarning() << "Release" << release.getVersion() << "publishes no checksums - refusing to install an unverifiable download";
+        //: Error shown when the release publishes no checksums at all, so the download cannot be verified as safe to install
+        emit downloadError(tr("This update does not publish the checksums needed to verify it. Please try again later, or download it from https://www.mudlet.org/download/"));
     } else {
+        qCritical() << "Release" << release.getVersion() << "publishes no checksums - download will proceed without integrity verification";
         makeDownloadRequest(downloadUrl);
     }
+}
+
+QString Feed::findChecksum(const QString& checksumData, const QString& downloadFilename, int* entriesParsed)
+{
+    if (entriesParsed) {
+        *entriesParsed = 0;
+    }
+    if (downloadFilename.isEmpty()) {
+        return QString();
+    }
+
+    // SHA256 hex digest is 64 characters; search for separator after that
+    static const QRegularExpression separatorRx(qsl("[\\s*]+"));
+    static const QRegularExpression hexRx(qsl("^[0-9a-fA-F]{64}$"));
+
+    QString match;
+    const QStringList lines = checksumData.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (const auto& line : lines) {
+        // Format: "hash  filename" or "hash *filename"
+        const int separatorPos = line.indexOf(separatorRx, 64);
+        if (separatorPos <= 0) {
+            continue;
+        }
+        const QString hash = line.left(separatorPos).trimmed();
+        if (!hexRx.match(hash).hasMatch()) {
+            continue;
+        }
+        if (entriesParsed) {
+            ++*entriesParsed;
+        }
+        // Compare the whole name, not a substring of it: SHA256SUMS.txt accumulates
+        // entries across builds, so a longer name that happens to contain this one
+        // would otherwise hand back the wrong hash. The generators write bare
+        // basenames, but tolerate a path in case one ever stops.
+        const QString filename = line.mid(separatorPos).trimmed().remove(QLatin1Char('*'));
+        if (match.isEmpty() && filename.section(QLatin1Char('/'), -1).compare(downloadFilename, Qt::CaseInsensitive) == 0) {
+            match = hash;
+        }
+    }
+    return match;
 }
 
 void Feed::fetchChecksums(const QUrl& checksumsUrl)
@@ -174,48 +276,41 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(30000);
     auto* reply = mNam.get(request);
+    mChecksumsReply = reply;
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        mChecksumsReply = nullptr;
         if (reply->error() != QNetworkReply::NoError) {
             if (mRequireChecksums) {
+                qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- refusing to install an unverifiable download";
                 reply->deleteLater();
-                //: Error shown when a manual update cannot be verified as safe to install
-                emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
+                //: Error shown when the checksums needed to verify the update could not be downloaded
+                emit downloadError(tr("Could not download the checksums needed to verify this update. Please try again later."));
                 return;
             }
             qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- download will proceed without integrity verification";
         } else {
-            const QString checksumData = QString::fromUtf8(reply->readAll());
-            const QStringList lines = checksumData.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
-            // SHA256 hex digest is 64 characters; search for separator after that
-            static const QRegularExpression separatorRx(qsl("[\\s*]+"));
-            static const QRegularExpression hexRx(qsl("^[0-9a-fA-F]{64}$"));
-            for (const auto& line : lines) {
-                // Format: "hash  filename" or "hash *filename"
-                const int separatorPos = line.indexOf(separatorRx, 64);
-                if (separatorPos <= 0) {
-                    continue;
-                }
-                const QString hash = line.left(separatorPos).trimmed();
-                if (!hexRx.match(hash).hasMatch()) {
-                    continue;
-                }
-                const QString filename = line.mid(separatorPos).trimmed().remove(QLatin1Char('*'));
-
-                // Match against the download URL filename
-                const QString downloadFilename = mCurrentDownload.getDownloadUrl().fileName();
-                if (!downloadFilename.isEmpty() && filename.contains(downloadFilename, Qt::CaseInsensitive)) {
-                    mCurrentDownload.setDownloadSHA256(hash);
-                    break;
-                }
-            }
+            const QString downloadFilename = mCurrentDownload.getDownloadUrl().fileName();
+            const QByteArray checksumData = reply->readAll();
+            int entriesParsed = 0;
+            mCurrentDownload.setDownloadSHA256(findChecksum(QString::fromUtf8(checksumData), downloadFilename, &entriesParsed));
             if (mCurrentDownload.getDownloadSHA256().isEmpty()) {
+                qWarning() << "Checksum file has no entry for" << downloadFilename << "- parsed" << entriesParsed << "entries from" << checksumData.size() << "bytes";
                 if (mRequireChecksums) {
                     reply->deleteLater();
-                    //: Error shown when a manual update cannot be verified as safe to install
-                    emit downloadError(tr("Could not verify the integrity of the download. Please try again later."));
+                    if (entriesParsed == 0) {
+                        // Nothing parsed means the payload was not a checksum file at
+                        // all - a truncated transfer, or an error page served as 200 -
+                        // rather than a release that forgot one platform
+                        //: Error shown when the checksum file for the update was downloaded but could not be read
+                        emit downloadError(tr("The checksums for this update could not be read, so it cannot be verified. Please try again later."));
+                    } else {
+                        //: Error shown when the release publishes checksums but none of them cover this platform's download
+                        emit downloadError(
+                                tr("This update is missing a checksum for your platform, so it cannot be verified. Please try again later, or download it from https://www.mudlet.org/download/"));
+                    }
                     return;
                 }
-                qCritical() << "Checksum file downloaded but no matching hash found for" << mCurrentDownload.getDownloadUrl().fileName() << "- download will proceed without integrity verification";
+                qCritical() << "Proceeding without integrity verification for" << downloadFilename;
             }
         }
         reply->deleteLater();
@@ -227,19 +322,23 @@ void Feed::makeDownloadRequest(const QUrl& url)
 {
     mDownloadFilePath.clear();
 
-    if (mDownloadReply != nullptr) {
-        if (!mDownloadReply->isFinished()) {
-            disconnect(mDownloadReply);
-            mDownloadReply->abort();
+    // Take the previous reply out of the member before touching it. abort()
+    // delivers finished() synchronously, so handleDownloadFinished() runs
+    // inside the call below and its cleanupDownloadReply() deletes the reply
+    // and clears the member - after which reading mDownloadReply again would
+    // call deleteLater() on a null pointer (#9938). Disconnecting the reply
+    // from this Feed first also keeps that handler, and the download error it
+    // emits, out of an abort this function asked for. The old
+    // disconnect(mDownloadReply) resolved to QObject::disconnect(receiver),
+    // which unhooks signals sent *to* the reply - of which there are none.
+    if (auto* previousReply = std::exchange(mDownloadReply, nullptr)) {
+        previousReply->disconnect(this);
+        if (!previousReply->isFinished()) {
+            previousReply->abort();
         }
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        previousReply->deleteLater();
     }
-    if (mDownloadFile != nullptr) {
-        mDownloadFile->close();
-        mDownloadFile->deleteLater();
-        mDownloadFile = nullptr;
-    }
+    cleanupDownloadFile();
 
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "Mudlet-Updater");
@@ -333,7 +432,10 @@ void Feed::handleDownloadReadyRead()
         if (extensionPos > -1) {
             fileName.insert(extensionPos, qsl("-XXXXXX"));
         }
-        mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/") + fileName);
+        // The prefix is what lets Updater::cleanupStaleUpdateFiles() recognise
+        // these later: the download outlives this object (setAutoRemove(false)
+        // below) and the name comes from the redirect, which is a bare GUID.
+        mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/mudlet-update-") + fileName);
         if (!mDownloadFile->open()) {
             qWarning() << "Failed to create temporary file for download:" << mDownloadFile->errorString();
             //: Error shown when a temporary file cannot be created for the update download. %1 is the system error message.

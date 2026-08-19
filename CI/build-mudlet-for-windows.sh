@@ -112,10 +112,9 @@ mkdir -p "build-${MSYSTEM}"
 cd "${GITHUB_WORKSPACE}"/build-"${MSYSTEM}" || exit 1
 
 #### Lua environment setup ####
-# Set up Lua 5.1 paths for translation processing and runtime
-LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
 export LUA_PATH
-LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
 export LUA_CPATH
 
 echo ""

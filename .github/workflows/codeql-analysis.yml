@@ -26,7 +26,7 @@ jobs:
         include:
           - language: cpp
             buildname: 'CodeQL'
-            qt: '6.9.0'
+            qt: '6.11.1'
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
@@ -88,7 +88,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
+      uses: github/codeql-action/init@v4.37.6
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
@@ -98,7 +98,7 @@ jobs:
         queries: security-extended, security-and-quality
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.4.0
+      uses: lukka/get-cmake@v4.4.2
 
     - name: (Linux) Install Lua via GitHub Actions
       uses: leafo/gh-actions-lua@v13
@@ -118,7 +118,11 @@ jobs:
 
         # Install all required dependencies
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
-        sudo apt-get install libsecret-1-dev ccache pkg-config pcre2-utils expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+        # No ccache here on purpose: CMake picks it up as a compiler launcher
+        # wherever it is installed, and a cache hit would hide the compilation
+        # from CodeQL's tracer. The runner images do not ship ccache, so leaving
+        # it out of this list is enough to keep it out of the build.
+        sudo apt-get install libsecret-1-dev pkg-config pcre2-utils libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libonig-dev libboost-dev qtkeychain-qt6-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
@@ -126,8 +130,6 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
-
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks install --local lua-yajl
@@ -156,7 +158,7 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      uses: github/codeql-action/analyze@v4.37.6
       with:
         category: "/language:${{ matrix.language }}"
         upload: false
@@ -171,6 +173,6 @@ jobs:
         output: sarif-results/${{ matrix.language }}.sarif
 
     - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v4.37.6
       with:
         sarif_file: sarif-results/${{ matrix.language }}.sarif

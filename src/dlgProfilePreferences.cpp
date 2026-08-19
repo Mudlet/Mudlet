@@ -31,7 +31,6 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
-#include "TFeatureCallout.h"
 #include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -47,6 +46,7 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "MMCP.h"
+#include "utils.h"
 
 #include <chrono>
 #include <QtConcurrentRun>
@@ -206,9 +206,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         clearHostDetails();
     }
 
-    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_showNewFeatureCallouts);
-    slot_showNewFeatureCallouts();
-
 #if defined(INCLUDE_UPDATER)
     if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // tick the box and make it be "un-untickable" as automatic updates are
@@ -216,6 +213,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(utils::richText(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.")));
+    } else if (!pMudlet->pUpdater->ready()) {
+        // Nothing to show a setting for until the platform updater is set up,
+        // and a checkbox that silently does nothing is worse than no checkbox
+        groupBox_updates->hide();
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->pUpdater->updateAutomatically());
         // This is the extra connect(...) relating to settings' changes saved by
@@ -377,6 +378,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(comboBox_crashReportPolicy, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_crashReportPolicyChanged);
 
     setupPasswordsMigration();
+}
+
+dlgProfilePreferences::~dlgProfilePreferences()
+{
+    // ~QDialog hides the dialog once this destructor is done, and the widget
+    // that has the keyboard focus then emits its editingFinished() - the chat
+    // name field and the shortcut editors both act on that one - when this
+    // object is no longer a valid receiver (#9574)
+    utils::disconnectChildSignals(this);
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
@@ -803,6 +813,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
+    checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
+    connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks);
 
     checkBox_enableClosedCaption->setChecked(pHost->mEnableClosedCaption);
     connect(checkBox_enableClosedCaption, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableClosedCaption);
@@ -826,6 +838,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     undo_server_wrap_width_spinBox->setValue(pHost->mUndoServerWrapWidth);
     undo_server_wrap_width_spinBox->setEnabled(pHost->mUndoServerWrap);
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, undo_server_wrap_width_spinBox, &QWidget::setEnabled);
+    // The note is only worth its space to someone actually running the option:
+    label_undo_server_wrap_experimental->setVisible(pHost->mUndoServerWrap);
+    connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
@@ -900,14 +915,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
-        lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
-        lineEdit_discordUserName->setAccessibleDescription(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server."));
+        lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). "
+                                                                "Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted "
+                                                                "lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
+        lineEdit_discordUserName->setAccessibleDescription(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). "
+                                                              "Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted lowercase "
+                                                              "ASCII character set and not any \"Nickname\" that you may have set for a particular Server."));
 
         const QString currentDiscordUser = Discord::getLoggedInUserName();
         if (!currentDiscordUser.isEmpty()) {
             //: Shows which Discord account is logged in:
             label_data_discordCurrentUser->setText(currentDiscordUser);
-            label_data_discordCurrentUser->setToolTip(utils::richText(tr("This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.")));
+            label_data_discordCurrentUser->setToolTip(utils::richText(
+                    tr("This is the unique username using a restricted character set for the Discord account, and not necessarily the nickname that you might have set for a particular Server.")));
         } else {
             label_data_discordCurrentUser->setText(tr("(Not connected)"));
             //: Tooltip shown when Discord Rich Presence cannot detect a logged-in user
@@ -983,17 +1003,17 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     protocolMenu->clear();
 
-    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), nullptr);
+    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), protocolMenu);
     mEnableCHARSET->setCheckable(true);
     mEnableCHARSET->setChecked(pHost->mEnableCHARSET);
     protocolMenu->addAction(mEnableCHARSET);
 
-    mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), nullptr);
+    mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), protocolMenu);
     mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
 
-    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
+    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), protocolMenu);
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
     //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
@@ -1001,37 +1021,37 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                                "including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
-    mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
+    mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), protocolMenu);
     mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
     protocolMenu->addAction(mEnableMSDP);
 
-    mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), nullptr);
+    mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), protocolMenu);
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
 
-    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
+    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), protocolMenu);
     mEnableMSSP->setCheckable(true);
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
     protocolMenu->addAction(mEnableMSSP);
 
-    mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
+    mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), protocolMenu);
     mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
     protocolMenu->addAction(mEnableMTTS);
 
-    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
+    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), protocolMenu);
     mEnableMXP->setCheckable(true);
     mEnableMXP->setChecked(pHost->mEnableMXP);
     protocolMenu->addAction(mEnableMXP);
 
-    mEnableNAWS = new QAction(tr("NAWS: Negotiate About Window Size"), nullptr);
+    mEnableNAWS = new QAction(tr("NAWS: Negotiate About Window Size"), protocolMenu);
     mEnableNAWS->setCheckable(true);
     mEnableNAWS->setChecked(pHost->mEnableNAWS);
     protocolMenu->addAction(mEnableNAWS);
 
-    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
+    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), protocolMenu);
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
     //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
@@ -1050,7 +1070,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
     if (!mpMenu) {
-        mpMenu = new QMenu(tr("Other profiles to Map to:"));
+        mpMenu = new QMenu(tr("Other profiles to Map to:"), this);
     }
 
     mpMenu->clear();
@@ -1063,7 +1083,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             continue;
         }
 
-        auto pItem = new QAction(s, nullptr);
+        auto pItem = new QAction(s, mpMenu);
         pItem->setCheckable(true);
         pItem->setChecked(false);
         mpMenu->addAction(pItem);
@@ -1542,6 +1562,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //Shortcuts tab
     auto shortcutKeys = mudlet::self()->mpShortcutsManager->iterator();
     int shortcutsRow = 0;
+    QList<TKeySequenceEdit*> sequenceEdits;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
         auto shortcutIt = pHost->profileShortcuts.find(key);
@@ -1561,6 +1582,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         gridLayout_groupBox_shortcuts->addWidget(label, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
+        sequenceEdits.append(sequenceEdit);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
             QKeySequence newSequence;
@@ -1577,7 +1599,44 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             currentShortcuts[key] = defaultSequence;
         });
     }
+    setShortcutsTabOrder(sequenceEdits);
     updateShortcutConflictWarning();
+}
+
+// The shortcut editors do not exist until a profile is loaded, so they cannot
+// be listed among the .ui file's tab stops; Qt appends every widget created
+// after setupUi() to the end of the dialog's focus chain instead. That left the
+// page's only static control - the 'reset to defaults' button, which the .ui
+// file chains right after the proxy fields of the security page - ahead of the
+// editors it resets, so tabbing through this page reached the button first and
+// only then jumped to the editors, in an order a screen reader dutifully
+// announced as it found it. Splice the editors into the chain so the focus
+// order follows the visible one. Only the widgets of the page on show take part
+// in the traversal, so the position this gives them among the other pages'
+// widgets is immaterial, and no layout is touched.
+void dlgProfilePreferences::setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits)
+{
+    if (sequenceEdits.isEmpty()) {
+        return;
+    }
+
+    // Anchoring to the save button rather than to the tab widget keeps this
+    // page in step with every other one (where the .ui file also puts the save
+    // button directly behind the tab bar) and keeps the result predictable:
+    // for a widget that has focusable children - which the tab widget, as the
+    // ancestor of these very editors, does - setTabOrder() inserts behind the
+    // last of those children rather than behind the widget itself.
+    //
+    // setTabOrder(first, second) moves second to directly behind first, so
+    // walking forwards over the list leaves the editors in reading order:
+    QWidget* previous = closeButton;
+    for (auto* sequenceEdit : sequenceEdits) {
+        setTabOrder(previous, sequenceEdit);
+        previous = sequenceEdit;
+    }
+    // ...and the button that acts on all of them comes last, matching its
+    // position at the bottom of the group box:
+    setTabOrder(previous, toolButton_resetMainWindowShortcuts);
 }
 
 // Recomputes the duplicate state of the whole shortcut map, not just the last
@@ -2081,7 +2140,16 @@ void dlgProfilePreferences::slot_purgeMediaCache()
         return;
     }
 
-    pHost->mpMedia->purgeMediaCache();
+    const auto [purged, message] = pHost->mpMedia->purgeMediaCache();
+
+    if (!purged) {
+        //: Shown after the "Clear stored media" button in preferences fails to empty the profile's media directory. %1 is the reason, which is not translated.
+        pHost->postMessage(tr("[ WARN ]  - Could not clear the stored media: %1.").arg(message));
+        return;
+    }
+
+    //: Shown after the "Clear stored media" button in preferences empties the profile's media directory.
+    pHost->postMessage(tr("[  OK  ]  - The stored media files for this profile have been cleared."));
 }
 
 void dlgProfilePreferences::slot_resetColors()
@@ -3484,6 +3552,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
+        pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
         pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
@@ -5012,26 +5081,25 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     }
 }
 
+void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
+{
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    if (pHost->mEnableOSC8Hyperlinks != state) {
+        pHost->mEnableOSC8Hyperlinks = state;
+        pHost->mTelnet.sendInfoNewEnvironOSCHyperlinks();
+    }
+}
+
 void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
 {
     if (mpHost && mpHost->mEnableClosedCaption != state) {
         mpHost->mEnableClosedCaption = state;
     }
-}
-
-
-void dlgProfilePreferences::slot_showNewFeatureCallouts()
-{
-    // The balloon only makes sense while its anchor can be seen:
-    if (tabWidget->currentWidget() != tab_display) {
-        return;
-    }
-    TFeatureCallout::maybeShow(qsl("undo-server-wrap"),
-                               checkBox_undoServerWrap,
-                               //: Title of a balloon pointing out a newly added feature
-                               tr("New: undo the game's own wrapping"),
-                               //: Body of the balloon, anchored to the option that rejoins lines the game server wrapped itself so that triggers match whole lines
-                               tr("Games that wrap their own lines make triggers fiddly. Mudlet can now undo that wrapping, so triggers always see whole lines."));
 }
 
 void dlgProfilePreferences::slot_changeWrapAt()

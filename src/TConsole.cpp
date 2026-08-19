@@ -60,8 +60,34 @@
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
 #include <chrono>
+#include <cmath>
 
 using namespace std::chrono_literals;
+
+namespace {
+double relativeLuminance(const QColor& color)
+{
+    const auto channel = [](const double value) {
+        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+}
+
+double contrastRatio(const QColor& first, const QColor& second)
+{
+    const double one = relativeLuminance(first);
+    const double other = relativeLuminance(second);
+    return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
+}
+
+// Plain blue is barely legible against the dark background most profiles use,
+// so whichever of the two link blues stands out more against this console wins:
+QColor readableLinkColor(const QColor& background)
+{
+    const QColor lightBlue(80, 160, 255);
+    return contrastRatio(QColor(Qt::blue), background) >= contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
+}
+} // namespace
 
 const QString TConsole::cmLuaLineVariable("line");
 
@@ -222,6 +248,19 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     mpMainDisplay->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+
+    if (mType == MainConsole) {
+        // Sits behind mpMainDisplay within mpMainFrame, which always spans the
+        // console's full pane regardless of mBorders - so this stays independent
+        // of setBorderSizes() without needing its own resize/border logic.
+        mpWindowBackground = new QWidget(mpMainFrame);
+        mpWindowBackground->setObjectName(qsl("WindowBackground"));
+        mpWindowBackground->setContentsMargins(0, 0, 0, 0);
+        mpWindowBackground->move(0, 0);
+        mpWindowBackground->resize(mpMainFrame->size());
+        mpWindowBackground->lower();
+        mpWindowBackground->show();
+    }
 
     mpBaseVFrame->setSizePolicy(sizePolicy);
     mpBaseHFrame->setSizePolicy(sizePolicy);
@@ -576,6 +615,10 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mHScrollBarEnabled = true;
     }
 
+    // a Buffer is never displayed and the three types below start with their
+    // scroll bar hidden, so only the main and debug consoles begin with one
+    mScrollBarEnabled = !(mType & (ErrorConsole | SubConsole | UserWindow | Buffer));
+
     if (mType & (ErrorConsole | SubConsole | UserWindow)) {
         mpScrollBar->hide();
         mLowerPane->hide();
@@ -716,11 +759,24 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainDisplay->resize(x, y);
     }
 
+    if (mpWindowBackground) {
+        mpWindowBackground->resize(mpMainFrame->size());
+        if (mWindowBgImageMode == 5) {
+            updateWindowBackgroundCoverPixmap();
+        }
+    }
+
     if (mType & (CentralDebugConsole | ErrorConsole)) {
         layerCommandLine->hide();
     } else if (mType & ~(SubConsole | UserWindow)) {
         // does nothing for SubConsole or UserWindows
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
+    }
+
+    // MXP frames are positioned by hand against the space the borders leave, so
+    // they have to be moved whenever the window or those borders change
+    if ((mType & MainConsole) && !mpHost.isNull()) {
+        mpHost->mMxpFrameManager.scheduleRelayout();
     }
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
@@ -850,6 +906,9 @@ void TConsole::refresh()
 void TConsole::clear()
 {
     mUpperPane->resetHScrollbar();
+    // before the buffer goes, or the selection is left pointing at lines that
+    // no longer exist and the copy actions work on out of range indices
+    clearSelection();
     buffer.clear();
     clearSplit();
     mUpperPane->update();
@@ -1008,6 +1067,24 @@ QString getColorCode(QColor color)
     return qsl("%1,%2,%3,%4").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
 }
 
+// Builds the QSS fragment shared by setConsoleBackgroundImage()/setWindowBackgroundImage()
+// for modes 1-4 ('border'/'center'/'tile'/'style'). Mode 5 ('cover') is not stylesheet-based
+// (Qt's border-image/background-image have no scale-to-fill option) and is handled separately.
+static QString buildBackgroundImageStyleSheet(const QString& objectName, const QColor& bgColor, int mode, const QString& imgPath)
+{
+    if (mode == 1) {
+        return qsl("QWidget#%1{background-color: rgba(%2); border-image: url(%3);}").arg(objectName, getColorCode(bgColor), imgPath);
+    } else if (mode == 2) {
+        return qsl("QWidget#%1{background-color: rgba(%2); background-image: url(%3); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
+                .arg(objectName, getColorCode(bgColor), imgPath);
+    } else if (mode == 3) {
+        return qsl("QWidget#%1{background-color: rgba(%2); background-image: url(%3);}").arg(objectName, getColorCode(bgColor), imgPath);
+    } else if (mode == 4) {
+        return qsl("QWidget#%1{background-color: rgba(%2); %3}").arg(objectName, getColorCode(bgColor), imgPath);
+    }
+    return QString();
+}
+
 void TConsole::changeColors()
 {
     if (mType == CentralDebugConsole) {
@@ -1056,6 +1133,7 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
+        updateMainFrameTransparency();
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
     }
@@ -1234,7 +1312,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
     QPoint P2 = P;
     P2.setX(x + text.size());
 
-    const TChar standardLinkFormat = TChar(Qt::blue, mBgColor, TChar::Underline);
+    const TChar standardLinkFormat = TChar(readableLinkColor(mBgColor), mBgColor, TChar::Underline);
     if (mTriggerEngineMode) {
         mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
 
@@ -1517,25 +1595,10 @@ void TConsole::setFontSize(int size)
 
 bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
 {
-    QColor bgColor;
-    QString styleSheet;
+    const QColor bgColor = (mType == MainConsole) ? mpHost->mBgColor : mBgColor;
 
-    if (mType == MainConsole) {
-        bgColor = mpHost->mBgColor;
-    } else {
-        bgColor = mBgColor;
-    }
-
-    if (mode == 1) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor), imgPath);
-    } else if (mode == 2) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
-                             .arg(getColorCode(bgColor), imgPath);
-    } else if (mode == 3) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor), imgPath);
-    } else if (mode == 4) {
-        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); %2}").arg(getColorCode(bgColor), imgPath);
-    } else {
+    const QString styleSheet = buildBackgroundImageStyleSheet(qsl("MainDisplay"), bgColor, mode, imgPath);
+    if (styleSheet.isEmpty()) {
         return false;
     }
     mpMainDisplay->setStyleSheet(styleSheet);
@@ -1548,6 +1611,143 @@ bool TConsole::resetConsoleBackgroundImage()
 {
     mBgImageMode = 0;
     changeColors();
+    return true;
+}
+
+bool TConsole::setWindowBackgroundImage(const QString& imgPath, int mode)
+{
+    if (!mpWindowBackground) {
+        return false;
+    }
+
+    if (mode == 5) {
+        QPixmap pixmap(imgPath);
+        if (pixmap.isNull()) {
+            qWarning().nospace().noquote() << "TConsole::setWindowBackgroundImage() ERROR - could not load \"" << imgPath << "\" as an image.";
+            return false;
+        }
+        const QPixmap previousSource = mWindowBgSourcePixmap;
+        const QString previousPath = mWindowBgImagePath;
+        const QString previousStyleSheet = mpWindowBackground->styleSheet();
+        mWindowBgSourcePixmap = pixmap;
+        mWindowBgImagePath = imgPath;
+        // clearing a stylesheet repolishes the widget and drops the palette brush,
+        // so it has to happen before the brush is installed
+        mpWindowBackground->setStyleSheet(QString());
+        if (!updateWindowBackgroundCoverPixmap()) {
+            mWindowBgSourcePixmap = previousSource;
+            mWindowBgImagePath = previousPath;
+            mpWindowBackground->setStyleSheet(previousStyleSheet);
+            // the failed attempt dropped the brush, so rebuild the one the previous
+            // source was showing rather than waiting for the next resize
+            updateWindowBackgroundCoverPixmap();
+            return false;
+        }
+    } else {
+        const QColor bgColor = mpHost ? mpHost->mBgColor : QColorConstants::Black;
+        const QString styleSheet = buildBackgroundImageStyleSheet(qsl("WindowBackground"), bgColor, mode, imgPath);
+        if (styleSheet.isEmpty()) {
+            return false;
+        }
+        mWindowBgSourcePixmap = QPixmap();
+        mpWindowBackground->setAutoFillBackground(false);
+        mpWindowBackground->setPalette(QPalette());
+        mpWindowBackground->setStyleSheet(styleSheet);
+    }
+
+    mWindowBgImageMode = mode;
+    mWindowBgImagePath = imgPath;
+    updateMainFrameTransparency();
+    return true;
+}
+
+bool TConsole::resetWindowBackgroundImage()
+{
+    if (!mpWindowBackground) {
+        return false;
+    }
+
+    mWindowBgImageMode = 0;
+    mWindowBgImagePath.clear();
+    mWindowBgSourcePixmap = QPixmap();
+    mpWindowBackground->setStyleSheet(QString());
+    mpWindowBackground->setAutoFillBackground(false);
+    mpWindowBackground->setPalette(QPalette());
+    updateMainFrameTransparency();
+    return true;
+}
+
+void TConsole::updateMainFrameTransparency()
+{
+    if (mType != MainConsole || !mpMainFrame) {
+        return;
+    }
+
+    QPalette framePalette;
+    framePalette.setColor(QPalette::Text, QColor(Qt::black));
+    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
+    framePalette.setColor(QPalette::Window, mWindowBgImageMode ? QColor(0, 0, 0, 0) : mBorderColor);
+    mpMainFrame->setPalette(framePalette);
+    mpMainFrame->setAutoFillBackground(true);
+}
+
+void TConsole::setBorderColor(const QColor& color)
+{
+    mBorderColor = color;
+    updateMainFrameTransparency();
+}
+
+void TConsole::lowerMainDisplay()
+{
+    mpMainDisplay->lower();
+    if (mpWindowBackground) {
+        mpWindowBackground->lower();
+    }
+}
+
+// The largest centred rectangle of the source that has the target's aspect ratio.
+QRect TConsole::coverSourceRect(const QSize& sourceSize, const QSize& targetSize)
+{
+    QSize cropSize = targetSize;
+    cropSize.scale(sourceSize, Qt::KeepAspectRatio);
+    cropSize = cropSize.boundedTo(sourceSize).expandedTo(QSize(1, 1));
+    return QRect(QPoint((sourceSize.width() - cropSize.width()) / 2, (sourceSize.height() - cropSize.height()) / 2), cropSize);
+}
+
+// Simulates CSS "cover" since QT stylesheets do not support it. Crop first: the
+// other order multiplies the intermediate by the aspect mismatch, so a 3000x100
+// image in a 1920x1080 window builds a 32400x1080 (~140MB) one on every resize.
+bool TConsole::updateWindowBackgroundCoverPixmap()
+{
+    if (!mpWindowBackground || mWindowBgSourcePixmap.isNull()) {
+        return true;
+    }
+
+    const QSize targetSize = mpWindowBackground->size();
+    if (targetSize.isEmpty()) {
+        return true;
+    }
+
+    const QRect sourceRect = coverSourceRect(mWindowBgSourcePixmap.size(), targetSize);
+    const QPixmap cropped = (sourceRect == mWindowBgSourcePixmap.rect()) ? mWindowBgSourcePixmap : mWindowBgSourcePixmap.copy(sourceRect);
+    const QPixmap scaled = cropped.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (scaled.isNull()) {
+        if (!mWindowBgCoverScaleFailed) {
+            mWindowBgCoverScaleFailed = true;
+            qWarning().nospace().noquote() << "TConsole::updateWindowBackgroundCoverPixmap() ERROR - could not scale \"" << mWindowBgImagePath << "\" (source area " << sourceRect << ") to "
+                                           << targetSize << '.';
+        }
+        // a brush smaller than the widget tiles, so drop the stale one
+        mpWindowBackground->setAutoFillBackground(false);
+        mpWindowBackground->setPalette(QPalette());
+        return false;
+    }
+    mWindowBgCoverScaleFailed = false;
+
+    QPalette palette;
+    palette.setBrush(QPalette::Window, QBrush(scaled));
+    mpWindowBackground->setPalette(palette);
+    mpWindowBackground->setAutoFillBackground(true);
     return true;
 }
 
@@ -1568,7 +1768,7 @@ void TConsole::setCmdVisible(bool isVisible)
         mpCommandLine->setFont(font());
         // put this CommandLine in the mainConsoles SubCommandLineMap
         // name is the console name
-        mpHost->mpConsole->mSubCommandLineMap[mConsoleName] = mpCommandLine;
+        mpHost->mpConsole->registerSubCommandLine(mConsoleName, mpCommandLine);
         layoutLayer2->addWidget(mpCommandLine);
     }
     if (mType == MainConsole) {
@@ -1841,8 +2041,18 @@ void TConsole::setCommandFgColor(const QColor& newColor)
 void TConsole::setScrollBarVisible(bool isVisible)
 {
     if (mpScrollBar) {
+        mScrollBarEnabled = isVisible;
         mpScrollBar->setVisible(isVisible);
     }
+}
+
+// Reports what enableScrollBar()/disableScrollBar() last asked for rather than
+// QWidget::isVisible(): a profile that is not the front tab has its whole
+// console hidden, which would otherwise make every background profile report
+// its scroll bar as gone.
+bool TConsole::getScrollBarVisible() const
+{
+    return mScrollBarEnabled;
 }
 
 void TConsole::setHorizontalScrollBar(bool isEnabled)
@@ -1906,7 +2116,8 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
     if (customFormat) {
         buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
     } else {
-        const TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
+        const QColor background = (mType == MainConsole ? mpHost->mBgColor : mBgColor);
+        const TChar f = TChar(readableLinkColor(background), background, TChar::Underline);
         buffer.addLink(mTriggerEngineMode, text, func, hint, f, luaReference);
     }
     mUpperPane->showNewLines();
@@ -2146,29 +2357,30 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
-    if (isHidden()) {
-        return mOldSize;
+    if (isHidden() && mLastMeasuredSize.isValid()) {
+        return mLastMeasuredSize;
     }
     const QSize consoleSize = size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
-    QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
+    const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
-    // Reject obviously invalid or suspiciously small sizes during profile switch transitions
+    // A profile being switched to gets its geometry over several events, so in
+    // between the console can be a few pixels wide, or so short that the command
+    // line and toolbars taken off it come to more than its whole height, which
+    // leaves nothing at all. Hand back the last size it really had for those, and
+    // for nothing else: refusing a size for merely having changed a lot would make
+    // the refused answer the yardstick every later size is measured against, and a
+    // window shrunk to under half its width could never be reported again. A
+    // window that is genuinely only 48 pixels tall inside is reported as that,
+    // however little use it is.
     const int minValidWidth = 50;
-    if (mainWindowSize.width() < minValidWidth && mOldSize.width() >= minValidWidth) {
-        return mOldSize;
+    if (mainWindowSize.width() < minValidWidth || mainWindowSize.height() <= 0) {
+        return mLastMeasuredSize.isValid() ? mLastMeasuredSize : mainWindowSize;
     }
 
-    // Reject suspicious shrinkage (more than 50% reduction) - geometry may not have settled yet
-    if (mOldSize.width() > 0) {
-        const double shrinkageRatio = static_cast<double>(mainWindowSize.width()) / mOldSize.width();
-        if (shrinkageRatio < 0.5) {
-            return mOldSize;
-        }
-    }
-
+    mLastMeasuredSize = mainWindowSize;
     return mainWindowSize;
 }
 

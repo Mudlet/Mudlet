@@ -28,6 +28,8 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
+#include <QScopeGuard>
+
 const char* TTimer::scmProperty_HostName = "HostName";
 const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
@@ -163,6 +165,18 @@ void TTimer::compileAll()
 
 bool TTimer::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempTimer with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Unlike triggers/aliases/keys, TTimer::execute()
+    // keys off mScript rather than the flag, so the new script does run - but without
+    // this the registry entry still leaks, as the destructor would then take its
+    // mScript-based branch and delete the compiled function instead.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     if (script == "") {
         mNeedsToBeCompiled = false;
@@ -202,6 +216,22 @@ void TTimer::execute()
         qWarning() << "TTimer::execute() called on destroyed timer - ID:" << mID << "Name:" << mName;
         return;
     }
+
+    // Whilst this frame is on the stack TimerUnit::uninstall() must defer deleting
+    // this profile's timers: the scripts run below can uninstall their own package
+    // (a common package auto-updater pattern) and freeing this timer mid-execute()
+    // is a use-after-free - see TimerUnit::mProcessingDepth:
+    TimerUnit* pUnit = mpHost->getTimerUnit();
+    pUnit->beginProcessing();
+    // NB: deliberately only decrements the depth - do NOT add a doCleanup() call
+    // here: it would delete `this` (and other deferred timers) while
+    // mudlet::slot_timerFires() still holds the pointer. Deferred deletes are
+    // flushed by slot_timerFires() itself once it is finished with the timer
+    // (and by the doCleanup() calls in Host::incomingStreamProcessor() and
+    // Host::slot_purgeTemps()):
+    const auto processingGuard = qScopeGuard([pUnit] {
+        pUnit->endProcessing();
+    });
 
     if (!isActive() || isFolder()) {
         mpQTimer->stop();

@@ -36,6 +36,7 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -51,6 +52,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <utility>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
@@ -177,23 +179,30 @@ public:
     void disconnectIt();
     void abortConnection();
     // Second argument needs to be set false when sending password to prevent
-    // it being sniffed by scripts/packages:
-    bool sendData(QString& data, bool permitDataSendRequestEvent = true);
+    // it being sniffed by scripts/packages. Third argument marks game commands
+    // (whether typed at the command line or sent by a script) as opposed to
+    // internal protocol replies that also route through here (e.g. MXP) or the
+    // auto-login credentials, so only game commands can arm character-at-a-time
+    // detection:
+    bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
+    void sendInfoNewEnvironValues(const QStringList&);
+    void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
-    bool purgeMediaCache();
+    std::pair<bool, QString> purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void checkNAWS();
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
+    void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
@@ -238,14 +247,23 @@ public:
     void loopbackTest(QByteArray& data)
     {
         ++mLoopbackProcessingDepth;
+        const auto loopbackGuard = qScopeGuard([this] {
+            --mLoopbackProcessingDepth;
+        });
         processSocketData(data.data(), data.size(), true);
-        --mLoopbackProcessingDepth;
     }
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
     // Each nested processSocketData() puts ~100KB of buffers on the stack, so a
     // self-feeding feedTelnet() loop overflows a 1MB (Windows) stack in only ~8
     // levels - hence a much lower cap than TriggerUnit::scmMaxProcessingDepth.
     inline static const int scmMaxLoopbackProcessingDepth = 5;
+    // How many times processSocketData() may re-enter itself to drain data left
+    // over after a decompression pass (compressed input that did not fit in one
+    // output buffer, or plain data following the compressed stream). Each level
+    // puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
+    // output at ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read,
+    // which bounds a decompression bomb.
+    inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     void terminateConnection();
     bool currentlySecure() const
@@ -285,7 +303,7 @@ public slots:
     void slot_socketConnected();
     void slot_socketDisconnected();
     void slot_socketReadyToBeRead();
-// Not used    void slot_socketError();
+    void slot_socketError();
 #if !defined(QT_NO_SSL)
     void slot_socketSslError(const QList<QSslError>&);
 #endif
@@ -317,11 +335,23 @@ signals:
 private:
     cTelnet() = default;
 
+    // Lets the functional test drive the real download entry point and inspect
+    // the in-flight reply, reproducing the dialog-swap cancellation cascade.
+    friend class TelnetTlsPromptTest;
+
+    // Needs to call processSocketData() with a buffer it laid out itself, which
+    // the public loopbackTest() cannot express - see issue #1065 - and to seed
+    // mDecompressionRecursionDepth so the over-limit refusal can be reached
+    // without a real decompression bomb.
+    friend class cTelnetBufferTest;
+
 #if defined(QT_NO_SSL)
     void abortLosingSocket(QTcpSocket* losingSocket);
 #else
     void abortLosingSocket(QSslSocket* losingSocket);
 #endif
+
+    void abandonHostLookup();
 
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
@@ -329,6 +359,8 @@ private:
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
+    void handleFailedConnection();
+    void forgetGameSuppliedHostState();
     void sendLoginAndPass();
 
     QByteArray prepareNewEnvironData(const QString&);
@@ -393,6 +425,7 @@ private:
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
     void autoEnableTTYPEVersion();
+    QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 
     QPointer<Host> mpHost;
     // The first one will point to one of the two instances following one of
@@ -417,6 +450,12 @@ private:
     // Stores the peer certificate from slot_socketSslError() so it can be
     // used by getPeerCertificate() when mpSocket is null:
     QSslCertificate mPeerCertificate;
+    // Latched true while a TLS-upgrade question is pending or open in the
+    // frontend. The dialog is delivered via a queued connection and so outlives
+    // the emit; this stops a hostile server stacking further prompts by
+    // re-advertising its secure MSSP port while the modal is up. Cleared when the
+    // user answers (slot_tlsUpgradeResponse()).
+    bool mTlsUpgradePromptInFlight = false;
 #endif
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
@@ -426,6 +465,16 @@ private:
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
     bool mLookingUpHost = false;
+    // How many of the connection attempts started for the current connect - one per address
+    // family the lookup turned up - have yet to succeed or fail.
+    int mPendingConnectionAttempts = 0;
+    // Connects that failed in a row, which is how long the wait before the next automatic retry
+    // is. Reset by a connection being made and by the user connecting or disconnecting.
+    int mFailedConnectionCount = 0;
+    // The lookup connectIt() is waiting on, or -1. mHostUrl and mHostPort move
+    // on with every connectIt(), so a callback from a lookup a later call
+    // superseded would pair its own host name with the newer port.
+    int mHostLookupId = -1;
     int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 
@@ -442,6 +491,10 @@ private:
     // Set once a subnegotiation passes the size cap: drop the rest of it until
     // IAC SE instead of buffering or leaking the unterminated payload.
     bool mDiscardingOversizedSubnegotiation = false;
+    // Set between the KaVir handshake pattern being spotted and the reconnect it
+    // schedules: no more data from the connection being dropped may be acted on,
+    // as it would land on the connection replacing it.
+    bool mDeferredReconnect = false;
     // Set if we have negotiated the use of the option by us:
     std::bitset<256> myOptionState;
     // Set if he has negotiated the use of the option by him:
@@ -477,6 +530,7 @@ private:
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
     QTimer* mTimerPasswordModeTimeout = nullptr;
+    QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
@@ -484,6 +538,7 @@ private:
     int mCycleCountMTTS = 0;
     QSet<QString> newEnvironVariablesSent;
     bool mReplayHasFaultyFormat = false;
+    // Negotiated afresh with each game, so anything added here also has to be cleared in reset():
     bool enableNewEnviron = false;
     bool enableCHARSET = false;
     bool enableATCP = false;
@@ -528,6 +583,15 @@ private:
     bool mEchoAnomalyDetected = false;
     static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
     static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
+
+    // Character-at-a-time (ECHO + SGA) detection. A server that only masks a
+    // password produces the exact same negotiation, so we do not conclude
+    // character-at-a-time until ECHO+SGA has outlived a submitted input line:
+    // a password mask releases ECHO (WONT ECHO) right after the masked line and
+    // stops the timer before it fires, whereas a real character-at-a-time server
+    // never releases it. See cTelnet::checkCharacterModePattern().
+    bool mCharacterModeDetected = false;
+    QTimer* mTimerCharacterModeDetect = nullptr;
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;
