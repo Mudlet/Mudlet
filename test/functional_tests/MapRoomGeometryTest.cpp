@@ -24,7 +24,9 @@
  *   - connectExitStubByDirection(), which picks the nearest room in a direction
  *     that has a stub pointing back, and is the only one of the three with a Lua
  *     route (connectExitStub() with a direction and no target room);
- *   - detectRoomCollisions(), which has no caller at all outside these tests;
+ *   - detectRoomCollisions(), which has no caller at all outside these tests -
+ *     what the mapper actually draws collision borders from is
+ *     TArea::getCollisionNodes() and the area grid index;
  *   - getColor(), which only T2DMap's painter and the room properties dialog
  *     call, so nothing reaches its environment-code arithmetic from Lua.
  *
