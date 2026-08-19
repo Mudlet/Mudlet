@@ -112,4 +112,87 @@ describe("Tests MXP handling", function()
     end)
   end)
 
+  -- <DEST> hands the game a print sink other than the main window: everything
+  -- between it and </DEST> goes into the named frame's own console, and nothing
+  -- of it may reach main. The frame's console is a miniconsole registered under
+  -- the frame's name, so Lua can read it back like any other window.
+  describe("Tests output redirected into an MXP frame", function()
+    local frame = "mxpSpecDestFrame"
+
+    local function frameLines()
+      local lineCount = getLineCount(frame)
+      if not lineCount or lineCount < 1 then
+        return {}
+      end
+      return getLines(frame, 0, lineCount + 1)
+    end
+
+    local function holds(lines, needle)
+      for _, line in ipairs(lines) do
+        if line:find(needle, 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    local function mainLinesFrom(firstLine)
+      return getLines("main", firstLine, getLastLineNumber("main") + 1)
+    end
+
+    -- the colour of the first character of the run of text holding the needle,
+    -- read off the main window
+    local function mainColourOf(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        local at = line and line:find(needle, 1, true)
+        if at then
+          moveCursor("main", 0, lineNumber)
+          selectSection("main", at - 1, 1)
+          return getTextFormat("main").foreground
+        end
+      end
+      return nil
+    end
+
+    setup(function()
+      feedTriggers(('<FRAME Name="%s" Align="right" Width="20%%" Height="30%%">'):format(frame) .. "\n")
+    end)
+
+    teardown(function()
+      -- a frame left open would sit in the main window's layout for every later
+      -- spec file, and its console would stay in the window registry
+      feedTriggers(('<FRAME %s ACTION="close">'):format(frame) .. "\n")
+    end)
+
+    it("gives the frame a console of its own", function()
+      assert.are.equal("miniconsole", windowType(frame))
+    end)
+
+    it("puts the redirected text in the frame and not in the main window", function()
+      local mark = getLineCount("main")
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST1 routed away</DEST>'):format(frame) .. "\n"))
+      assert.is_true(holds(frameLines(), "MXPDEST1 routed away"), table.concat(frameLines(), "|"))
+      assert.is_false(holds(mainLinesFrom(mark), "MXPDEST1"))
+    end)
+
+    it("keeps a line break inside the redirect in the frame too", function()
+      local mark = getLineCount("main")
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST2 first'):format(frame) .. "\nMXPDEST2 second</DEST>\n"))
+      local lines = frameLines()
+      assert.is_true(holds(lines, "MXPDEST2 first"), table.concat(lines, "|"))
+      assert.is_true(holds(lines, "MXPDEST2 second"), table.concat(lines, "|"))
+      assert.is_false(holds(mainLinesFrom(mark), "MXPDEST2"))
+    end)
+
+    it("does not let colour set inside the redirect follow the text back to main", function()
+      assert.is_true(feedTriggers("MXPDEST3 plain\n"))
+      local plainColour = mainColourOf("MXPDEST3 plain")
+      assert.is_truthy(plainColour)
+      assert.is_true(feedTriggers(('<DEST %s>'):format(frame) .. "\027[31mMXPDEST4 red in the frame</DEST>MXPDEST4 back in main\n"))
+      assert.is_true(holds(frameLines(), "MXPDEST4 red in the frame"))
+      assert.are.same(plainColour, mainColourOf("MXPDEST4 back in main"))
+    end)
+  end)
 end)

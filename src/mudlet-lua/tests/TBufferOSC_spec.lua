@@ -322,5 +322,75 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   end)
 
+  -- Text carrying "!osc8-docs" is an easter egg rather than output: the phrase
+  -- itself is swallowed and a banner of worked OSC 8 examples is written into
+  -- the MAIN console's buffer, whichever buffer the phrase arrived in. The
+  -- injection is debounced to a second so that a command echoed locally and the
+  -- game's echo of it back cannot print the banner twice, which is why the
+  -- specs below wait that window out before they start.
+  describe("Tests the !osc8-docs documentation helper", function()
+    local function mainLinesFrom(firstLine)
+      return getLines("main", firstLine, getLastLineNumber("main") + 1)
+    end
+
+    local function someLineHolds(lines, needle)
+      for _, line in ipairs(lines) do
+        if line:find(needle, 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    it("writes the worked examples into the main console", function()
+      pumpEvents(1100)
+      local firstLine = getLineCount("main")
+      echo("!osc8-docs")
+      local injected = mainLinesFrom(firstLine)
+      assert.is_true(#injected > 10, "only " .. #injected .. " lines were injected")
+      assert.is_true(someLineHolds(injected, "OSC 8 Hyperlink Examples"), table.concat(injected, "\n"))
+      assert.is_true(someLineHolds(injected, "wiki.mudlet.org"), table.concat(injected, "\n"))
+      -- the phrase is consumed, not displayed
+      assert.is_false(someLineHolds(injected, "!osc8-docs"))
+    end)
+
+    it("does not write them a second time inside the debounce window", function()
+      pumpEvents(1100)
+      local firstLine = getLineCount("main")
+      echo("!osc8-docs")
+      local afterFirst = getLineCount("main")
+      assert.is_true(afterFirst > firstLine + 10, "the first injection did not happen")
+      echo("!osc8-docs")
+      assert.are.equal(afterFirst, getLineCount("main"))
+    end)
+  end)
+
+  -- A hyperlink can carry visibility instructions, and the only one that runs
+  -- without a mouse is a delayed reveal: the link is written concealed - its
+  -- text replaced by as many spaces - and the visibility manager's timer puts
+  -- the text and the clickable indices back when the delay is up.
+  describe("Tests OSC 8 hyperlink visibility expiry", function()
+    local function lineHolding(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
+    it("reveals a link that was written concealed once its delay is up", function()
+      local link = "\027]8;;send:osc8reveal?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+      assert.is_true(feedTriggers("OSCREVEAL1(" .. link .. ")OSCREVEAL1\n"))
+      local lineNumber, concealed = lineHolding("OSCREVEAL1")
+      assert.is_truthy(lineNumber, "the line carrying the link never reached the buffer")
+      -- HIDDENWORD is ten characters, so ten spaces stand in for it
+      assert.equals("OSCREVEAL1(          )OSCREVEAL1", concealed)
+      pumpEvents(700)
+      assert.equals("OSCREVEAL1(HIDDENWORD)OSCREVEAL1", getLines("main", lineNumber, lineNumber + 1)[1])
+    end)
+  end)
 
 end)
