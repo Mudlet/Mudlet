@@ -1815,9 +1815,10 @@ describe("Tests mapper functions against a shared fixture", function()
   end)
 
   describe("Tests setDefaultAreaVisible", function()
-    -- The flag itself has no Lua readback - nothing outside the mapper's own
-    -- combo box and painting reads TMap::mShowDefaultArea - so what a spec can
-    -- hold onto is the call's own contract.
+    -- The flag itself has no Lua readback: TMap::mShowDefaultArea is read by
+    -- the mapper's area list, the map view's painting and the preferences
+    -- checkbox, and by no Lua function at all. What a spec can hold onto is
+    -- therefore the call's own contract.
     teardown(function()
       setDefaultAreaVisible(true)
     end)

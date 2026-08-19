@@ -1059,9 +1059,10 @@ describe("Trigger processing", function()
     end)
 
     -- Prompt pipeline, driven through the real telnet parser: a prompt trigger
-    -- matches on the line having been marked a prompt and on nothing else, so
-    -- feedTriggers() can never fire one and the IAC GA the feedTelnet block
-    -- above injects is the only way in.
+    -- matches on the line carrying the prompt mark and on nothing else, and
+    -- that mark is set by the line terminator the telnet parser hands the
+    -- buffer - which is why the spec below fires one with the IAC GA the
+    -- feedTelnet block above injects rather than with feedTriggers().
     describe("prompt triggers and isPrompt", function()
 
         -- Killed here rather than at the end of the spec that made it: a

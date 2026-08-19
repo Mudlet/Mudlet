@@ -1513,13 +1513,13 @@ describe("Media playback effects with a generated sound file", function()
   end)
 
   it("a Client.Media.Pause message with no fields pauses everything the server started", function()
-    -- Every field parseJSONForMediaPause() reads is optional, and a request
-    -- with none of them set pauses all of the server's media - which is what
-    -- Client.Media.Stop with no fields does for stopping. It never gets there:
-    -- parseGMCP() answers "client.media.stop" above its empty-object guard and
-    -- everything else below it, so an empty Client.Media.Pause is dropped
-    -- without being read at all.
-    pending("Client.Media.Pause {} is discarded by the empty-object guard in TMedia::parseGMCP()")
+    -- #10043. Every field parseJSONForMediaPause() reads is optional, and a
+    -- request with none of them set pauses all of the server's media - which is
+    -- what Client.Media.Stop with no fields does for stopping. It never gets
+    -- there: parseGMCP() answers "client.media.stop" above its empty-object
+    -- guard and everything else below it, so an empty Client.Media.Pause is
+    -- dropped without being read at all.
+    pending("#10043: Client.Media.Pause {} is discarded by the empty-object guard in TMedia::parseGMCP()")
   end)
 
   it("a Client.Media.Load message fetches the file without playing it", function()
