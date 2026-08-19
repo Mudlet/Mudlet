@@ -69,10 +69,17 @@ public:
     // Vosk delivers per-word confidence and timing; it has no biasing, and
     // grammar constraint (vosk_recognizer_new_grm) is not wired up yet, so
     // only word results are claimed
-    bool supportsWordResults() const override { return true; }
+    // Word detail is the one thing this engine offers beyond plain text: it
+    // cannot be biased, takes no grammar, and decodes on this machine.
+    Capabilities capabilities() const override
+    {
+        Capabilities answer;
+        answer.wordResults = true;
+        answer.onDevice = true;
+        return answer;
+    }
 
-    State state() const override { return mState; }
-    float audioLevel() const override { return mState == State::Listening ? mRecentAudioLevel : 0.0f; }
+    float audioLevel() const override { return listening() ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
     void releaseResources() override;
     QString modelPath() const override { return mModelPath; }
@@ -146,7 +153,6 @@ private:
     // Audio level for visual feedback
     float calculateAudioLevel(const QByteArray& data) const;
 
-    void setState(State newState);
 
     QString findModelPathForLanguage(const QString& languageCode) const;
 
@@ -157,7 +163,6 @@ private:
     // its already trimmed "text" field.
     void emitFinalResult(const QJsonObject& resultObject, QString text);
 
-    State mState = State::Uninitialized;
     QString mModelPath;
     QString mCurrentLanguage;
 

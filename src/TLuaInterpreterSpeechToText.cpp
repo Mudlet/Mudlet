@@ -542,7 +542,18 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
         return warnArgumentValue(L, "stt.setVocabulary", "failed to create speech recognizer");
     }
 
-    lua_pushboolean(L, pRecognizer->setVocabulary(words));
+    // The Lua answer stays a boolean, as documented: applied or not. A
+    // backend that could have applied these words and did not is a fault
+    // rather than a limitation, so it also says so where faults are reported -
+    // otherwise the caller quietly falls back to correcting results itself and
+    // never learns the engine had a problem.
+    const auto outcome = pRecognizer->setVocabulary(words);
+    if (outcome == SpeechRecognizer::VocabularyResult::Failed) {
+        //: Shown when the speech engine could have used the game's vocabulary but failed to
+        emit pRecognizer->errorOccurred(tr("Speech recognition could not apply the supplied vocabulary."));
+    }
+
+    lua_pushboolean(L, outcome == SpeechRecognizer::VocabularyResult::Applied);
     return 1;
 }
 

@@ -38,7 +38,7 @@ Design contract, before the tables:
 | `stt.isListening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
 | `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Persists across sessions. |
 | `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. |
-| `stt.setVocabulary(words)` | boolean | Supply an array of words/phrases for biasing or grammar constraint. Returns `true` **only when the engine applied it**; `false` is not an error — it means this backend cannot use vocabulary (see capabilities) and the caller should correct results client-side instead. |
+| `stt.setVocabulary(words)` | boolean \| `nil, error` | Supply an array of words/phrases for biasing or grammar constraint. Returns `true` **only when the engine applied it**. `false` is not an error — it means this backend cannot use vocabulary (see capabilities) and the caller should correct results client-side instead. A backend that *can* use vocabulary and failed this time also returns `false`, but reports the fault through `sysSTTError` — so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. Applying a vocabulary may make the engine rebuild, so send a shortlist rather than a dictionary, and expect a brief pause when a model is already loaded. |
 | `stt.getInfo()` | table \| `nil` | Introspection snapshot; see below. `nil` when speech-to-text is unavailable. |
 
 ## Functions — model and library management (platform-tier)
@@ -75,7 +75,7 @@ archives — but it is not part of the `stt` namespace.
 | `silenceTimeout` | integer | Current timeout in ms; `0` while disabled. |
 | `audioLevel` | number | Level last received from the microphone, `0.0`–`1.0`; `0` while not listening. Sampled during speech, it distinguishes a phrase the engine misheard from one it barely received — failures that look identical in the text and need opposite remedies. |
 | `sensitivity` | string | `"short"`, `"default"` or `"long"`; how quickly an utterance is judged finished. |
-| `capabilities` | table | See below. |
+| `capabilities` | table | See below. **May change when a model is loaded**, since on some backends biasing is a property of the model rather than of the engine — re-read after `stt.init()` rather than caching it at startup. |
 | `version`, `language` | string | Present once a recognizer instance exists. |
 | `searchPaths` | table | Where the engine library is looked for (platform-tier; may be empty). |
 

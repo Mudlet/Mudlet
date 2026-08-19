@@ -95,27 +95,56 @@ public:
 
     // === Capabilities ===
     // What this backend can actually do, so consumers adapt instead of
-    // guessing. Defaults describe the least capable backend; overrides only
-    // claim what the implementation genuinely delivers.
+    // guessing. Answered as a group rather than one virtual at a time because
+    // they change together and, on some backends, change at all: whether
+    // recognition can be biased is a property of the loaded model rather than
+    // of the engine, so a backend re-reads them when a model loads and says so
+    // through capabilitiesChanged().
+    struct Capabilities
+    {
+        // Recognition can be biased toward a supplied vocabulary
+        bool biasing = false;
+        // Recognition can be constrained to a supplied grammar
+        bool grammar = false;
+        // Results carry per-word confidence and timing (wordsResult signal)
+        bool wordResults = false;
+        // Audio is processed locally. False is the honest default: a backend
+        // that has not said otherwise has not promised recordings stay on this
+        // machine, and inheriting that promise by omission is the one way this
+        // particular flag must never be wrong.
+        bool onDevice = false;
 
-    // Recognition can be biased toward a supplied vocabulary
-    virtual bool supportsBiasing() const { return false; }
-    // Recognition can be constrained to a supplied grammar
-    virtual bool supportsGrammar() const { return false; }
-    // Results carry per-word confidence and timing (wordsResult signal)
-    virtual bool supportsWordResults() const { return false; }
-    // Audio is processed locally; false means an off-device service is
-    // involved and no privacy guarantee about audio leaving the machine holds
-    virtual bool onDevice() const { return true; }
+        bool operator==(const Capabilities&) const = default;
+    };
 
-    // Supply vocabulary for biasing or grammar constraint. Returns true only
-    // when the backend applied it; false means the words were ignored and a
-    // consumer should rely on client-side correction instead. The default
-    // matches the default capabilities: nothing applied.
-    virtual bool setVocabulary(const QStringList& words)
+    virtual Capabilities capabilities() const { return {}; }
+
+    // Named readers over the same answers, for a caller that wants one of
+    // them. Not virtual: a backend overrides capabilities() alone, so the
+    // group and the individual answers cannot come to disagree.
+    bool supportsBiasing() const { return capabilities().biasing; }
+    bool supportsGrammar() const { return capabilities().grammar; }
+    bool supportsWordResults() const { return capabilities().wordResults; }
+    bool onDevice() const { return capabilities().onDevice; }
+
+    // What became of a vocabulary offered to the engine. Three outcomes, not
+    // two: a backend that cannot use vocabulary at all is a different matter
+    // from one that can and failed this time, and collapsing them tells a
+    // consumer to fall back to correcting results itself when what actually
+    // happened was a fault worth reporting.
+    enum class VocabularyResult {
+        Applied,     // In effect; the engine is biasing toward these words
+        Unsupported, // This backend cannot use vocabulary - correct client-side
+        Failed       // It can, and this attempt did not work
+    };
+    Q_ENUM(VocabularyResult)
+
+    // Supply vocabulary for biasing or grammar constraint. The default
+    // matches the default capabilities: nothing applied, because nothing can be.
+    virtual VocabularyResult setVocabulary(const QStringList& words)
     {
         Q_UNUSED(words)
-        return false;
+        return VocabularyResult::Unsupported;
     }
 
     // Level of the audio last received from the microphone, 0.0 to 1.0, or 0
@@ -126,7 +155,12 @@ public:
 
     // === State Queries ===
 
-    virtual State state() const = 0;
+    // The recognizer's state, and the only truth about it: there is no
+    // parallel "active" flag anywhere. Held here rather than by each backend
+    // so the rule below - a change is announced exactly once, and only when it
+    // is a change - holds for every implementation instead of being
+    // re-established correctly by each one.
+    State state() const { return mState; }
 
     // Convenience methods
     bool listening() const { return state() == State::Listening; }
@@ -188,6 +222,20 @@ public:
     virtual void setSensitivity(Sensitivity sensitivity) = 0;
     virtual Sensitivity sensitivity() const = 0;
 
+protected:
+    // Move to a new state, announcing it only when it differs from the
+    // current one. Backends transition through this rather than assigning, so
+    // no consumer sees a stateChanged that changed nothing, or misses one
+    // that did.
+    void setState(State newState)
+    {
+        if (mState == newState) {
+            return;
+        }
+        mState = newState;
+        emit stateChanged(newState);
+    }
+
 signals:
     // Emitted during recognition with partial (non-final) text.
     // This text may change as more audio is processed.
@@ -203,11 +251,20 @@ signals:
 
     void stateChanged(SpeechRecognizer::State newState);
 
+    // Emitted when what the backend can do changes, which is when a model is
+    // loaded or replaced. Without it a consumer that read the capabilities
+    // once - the obvious thing to do - would go on believing them after they
+    // stopped being true.
+    void capabilitiesChanged(SpeechRecognizer::Capabilities newCapabilities);
+
     void errorOccurred(const QString& errorMessage);
 
     // Emitted periodically with the current audio input level (0.0 to 1.0).
     // Useful for visual feedback (e.g., microphone level indicator).
     void audioLevelChanged(float level);
+
+private:
+    State mState = State::Uninitialized;
 };
 
 #endif // MUDLET_SPEECHRECOGNIZER_H

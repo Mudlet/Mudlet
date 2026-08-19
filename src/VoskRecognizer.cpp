@@ -379,17 +379,17 @@ bool VoskRecognizer::initialize(const QString& modelPath)
 
 void VoskRecognizer::startListening()
 {
-    if (mState != State::Ready) {
+    if (state() != State::Ready) {
         // Every refusal but "already listening" reports why: startListening()
         // returns void, so silence here reads to the caller as a successful start
-        if (mState == State::Uninitialized) {
+        if (state() == State::Uninitialized) {
             //: Shown when speech recognition is asked to listen before a language model is loaded
             setState(State::Error);
             emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
-        } else if (mState == State::Error) {
+        } else if (state() == State::Error) {
             //: Shown when speech recognition is asked to listen while it is in an error state
             emit errorOccurred(tr("Speech recognition is in an error state - reload the model before listening again."));
-        } else if (mState == State::Processing) {
+        } else if (state() == State::Processing) {
             //: Shown when speech recognition is asked to listen while still transcribing the previous phrase
             emit errorOccurred(tr("Speech recognition is still processing the previous phrase."));
         }
@@ -531,7 +531,7 @@ void VoskRecognizer::emitFinalResult(const QJsonObject& resultObject, QString te
 
 void VoskRecognizer::stopListening()
 {
-    if (mState != State::Listening) {
+    if (state() != State::Listening) {
         return;
     }
 
@@ -572,7 +572,7 @@ void VoskRecognizer::stopListening()
     // reaches Lua synchronously, so a handler for that state change can have
     // closed the recognizer while this call was inside the decoder; saying
     // Ready on top of that would claim a loaded model that has been freed.
-    if (mState == State::Processing) {
+    if (state() == State::Processing) {
         setState(State::Ready);
     }
 }
@@ -583,7 +583,7 @@ void VoskRecognizer::resetUtterance()
     // taken can leave the decoder inconsistent, which is why startListeningInternal()
     // rebuilds the recognizer rather than resetting it. Mid-phrase, as here and in
     // cancel(), there is no final result outstanding and the reset is safe.
-    if (mState != State::Listening) {
+    if (state() != State::Listening) {
         return;
     }
 
@@ -599,7 +599,7 @@ void VoskRecognizer::resetUtterance()
 
 void VoskRecognizer::cancel()
 {
-    if (mState != State::Listening && mState != State::Processing) {
+    if (state() != State::Listening && state() != State::Processing) {
         return;
     }
 
@@ -748,14 +748,6 @@ void VoskRecognizer::releaseResources()
     mpCapture->stop();
     releaseVoskResources();
     setState(State::Uninitialized);
-}
-
-void VoskRecognizer::setState(State newState)
-{
-    if (mState != newState) {
-        mState = newState;
-        emit stateChanged(newState);
-    }
 }
 
 QStringList VoskRecognizer::availableLanguages() const
