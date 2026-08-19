@@ -44,9 +44,11 @@ public:
 
     void setRepo(const QString& owner, const QString& repo, bool prerelease = false, const QString& os = QString(), const QString& arch = QString());
     QUrl getUrl() const;
+    QString getOwner() const;
+    QString getRepo() const;
 
     void load();
-    void downloadRelease(const Release& release, bool requireChecksums = false);
+    void downloadRelease(const Release& release, bool requireChecksums = true);
 
     // Returns the SHA256 that sha256sum-style output lists for downloadFilename,
     // comparing the whole filename case-insensitively, or an empty string when no
@@ -63,6 +65,12 @@ public:
     // getReleases() instead, and still covers them.
     QList<Release> getUpdates(const Release& currentRelease) const;
     static QList<Release> selectUpdates(const QList<Release>& releases, const Release& currentRelease);
+
+    // The releases in (after, upTo] - everything installing upTo brings with it.
+    // Pass the unfiltered release list: a release getUpdates() passed over for
+    // want of an asset for this platform is still part of what a later release
+    // delivers, so its notes belong in the changelog for it.
+    static QList<Release> selectReleasesBetween(const QList<Release>& releases, const Release& after, const Release& upTo);
 
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;
@@ -90,6 +98,7 @@ private:
 
     QNetworkAccessManager mNam;
     QNetworkReply* mFeedReply{nullptr};
+    QNetworkReply* mChecksumsReply{nullptr};
     Release mCurrentDownload;
     QNetworkReply* mDownloadReply{nullptr};
     QTemporaryFile* mDownloadFile{nullptr};

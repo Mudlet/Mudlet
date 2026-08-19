@@ -956,7 +956,9 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
-    painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space || useQtUnderline || useQtOverline || useQtStrikeOut) {
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
     drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
@@ -965,7 +967,6 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
 {
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    QFontMetrics fm(painter.font());
 
     // Calculate decoration positions
     int underlineY = textRect.bottom() - 1;
@@ -1724,7 +1725,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             int charWidth = 0;
             // This could contain a surrogate pair (i.e. pair of QChars) and/or
             // include suffixed combining diacritical marks (additional QChars):
-            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+            const QStringView grapheme = QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar);
             const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
@@ -2285,8 +2286,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             auto nextBoundary{boundaryFinder.toNextBoundary()};
             // Width in "normal" width equivalent of this grapheme:
             int charWidth{};
-            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
-            const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+            const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {

@@ -357,12 +357,14 @@ function Adjustable.Container:onMove (label, event)
             end
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
-            self:move(tx, ty)
             local minw, minh = 0,0
             if self.container == Geyser and not self.noLimit then minw, minh = 75,25 end
             tw,th = max(minw,tw), max(minh,th)
             tw,th = make_percent(tw/winw), make_percent(th/winh)
-            self:resize(tw, th)
+            -- one pass over the subtree per drag event, where move() then resize()
+            -- took two; neither runs here, so an override of either is not invoked
+            self.x, self.y, self.width, self.height = tx, ty, tw, th
+            self:set_constraints(self)
             if self.connectedContainers then
                 self:adjustConnectedContainers()
             end
@@ -771,7 +773,12 @@ end
 local function createMenus(self, parent, name, func)
     local label = self.adjLabel
     local menuTxt = self.Locale[name] and self.Locale[name].message or name
-    label:addMenuLabel(name, parent)
+    -- addMenuLabel reports a parent it cannot use rather than raising, and the
+    -- two lines below would then index a nil menu element instead of saying why
+    local added, err = label:addMenuLabel(name, parent)
+    if not added then
+        error(err)
+    end
     label:findMenuElement(parent.."."..name):echo(menuTxt, "nocolor")
     label:setMenuAction(parent.."."..name, func, self, name)
 end
@@ -1022,8 +1029,8 @@ end
 --- Event: "AdjustableContainerReposition" passed values (name, width, height, x, y, isMouseAction)
 --- (the isMouseAction property is true if the reposition is an effect of user dragging/resizing the window,
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
-function Adjustable.Container:reposition()
-    Geyser.Container.reposition(self)
+function Adjustable.Container:reposition(skipChildren)
+    Geyser.Container.reposition(self, skipChildren)
     raiseEvent(
       "AdjustableContainerReposition",
       self.name,

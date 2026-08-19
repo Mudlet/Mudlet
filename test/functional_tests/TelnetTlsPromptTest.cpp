@@ -17,10 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -36,12 +40,7 @@
 #include <QTcpServer>
 #include <QRegularExpression>
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForTlsPrompt();
+#include "GroupedTest.h"
 
 using namespace std::chrono_literals;
 
@@ -56,13 +55,33 @@ class TelnetTlsPromptTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Telnet-Tls-Prompt";
     const QString mLocalhost = "localhost";
     QString mPort;
 
 private slots:
-    void initTestCase() { initializeQRCResourcesForTlsPrompt(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -73,6 +92,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -293,6 +313,47 @@ private slots:
 #endif
     }
 
+    // The same late answer, but with a connection back up by the time it arrives - so the "is the
+    // socket still there" check passes and the answer looks current. The advertised port belongs
+    // to the connection that has gone, and moving the profile onto it now would be moving it onto
+    // a port this game never mentioned.
+    void test_tlsUpgradeAnswerAfterReconnectingIsDiscarded()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        QByteArray advertise = msspTlsPayload("48000");
+        host->mTelnet.loopbackTest(advertise);
+        QCOMPARE(host->mMSSPTlsPort, 48000);
+
+        const int originalPort = host->getPort();
+        const bool originalSsl = host->mSslTsl;
+
+        QSignalSpy disconnectedSpy(&host->mTelnet, &cTelnet::signal_disconnected);
+        QSignalSpy connectedSpy(&host->mTelnet, &cTelnet::signal_connected);
+        host->mTelnet.disconnectIt();
+        if (disconnectedSpy.isEmpty()) {
+            QVERIFY2(disconnectedSpy.wait(5s), "The connection did not drop.");
+        }
+        host->mTelnet.reconnect();
+        if (connectedSpy.isEmpty()) {
+            QVERIFY2(connectedSpy.wait(5s), "The connection did not come back, so the answer below is not the stale-but-connected case.");
+        }
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("slot_tlsUpgradeResponse.*discarding the user's answer"));
+        host->mTelnet.slot_tlsUpgradeResponse(true);
+
+        QCOMPARE(host->getPort(), originalPort);
+        QCOMPARE(host->mSslTsl, originalSsl);
+#endif
+    }
+
     // A received telnet BELL (0x07) must emit signal_bell() exactly once per
     // bell byte so the frontend can flash/beep without re-alerting on redraws.
     void test_bellEmitsSignalPerBell()
@@ -409,29 +470,7 @@ private slots:
     // GUI
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5s)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -456,20 +495,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForTlsPrompt()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TelnetTlsPromptTest.moc"
-QTEST_MAIN(TelnetTlsPromptTest)
+MUDLET_GROUPED_TEST_MAIN(TelnetTlsPromptTest)

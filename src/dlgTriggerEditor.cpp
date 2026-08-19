@@ -5197,6 +5197,9 @@ void dlgTriggerEditor::addVar(bool isFolder)
 {
     saveVar();
     mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(0);
+    // the variable left behind may have been one whose key type is not the
+    // user's to choose, which leaves the combobox disabled
+    mpVarsMainArea->comboBox_variable_key_type->setEnabled(true);
     if (isFolder) {
         // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(false);
@@ -6866,6 +6869,16 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
     return 1;
 }
 
+// A rename the Variables view asked for and did not get: nothing else on screen
+// would show that anything was refused, and the row has meanwhile been put back
+// to the name the variable still answers to.
+void dlgTriggerEditor::showVariableRenameRefused(TVar* variable)
+{
+    //: Warning shown in the editor's Variables view when a rename could not be carried out. %1 is the name the variable keeps.
+    showWarning(tr("\"%1\" was not renamed: another member of the same table already has that name, or this variable's key is a table or a function, which has no name to change.")
+                        .arg(variable->getName().toHtmlEscaped()));
+}
+
 void dlgTriggerEditor::saveVar()
 {
     // We can enter this function if:
@@ -6900,7 +6913,18 @@ void dlgTriggerEditor::saveVar()
         slot_variableSelected(pItem);
         return;
     }
+    // Everything below reaches the variable by the name the tree gave it, and a
+    // write through a name that does not reach it lands on a key of its own,
+    // leaving a second variable beside the real one (#9903). Quietly, because
+    // selecting the variable already said so. A new variable is exempt: its name
+    // is the key about to be created, so there is nothing for it to find yet.
+    if (!newVar && !luaInterface->writableByName(variable)) {
+        return;
+    }
     mChangingVar = true;
+    // said at the very end: the tail of this function re-selects the row, which
+    // clears whatever notification is on screen
+    bool renameRefused = false;
     int uiNameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
     int uiValueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
     if ((uiNameType == LUA_TNUMBER || uiNameType == LUA_TSTRING) && newVar) {
@@ -6911,7 +6935,8 @@ void dlgTriggerEditor::saveVar()
     if ((uiNameType == -1) || (variable && uiNameType != variable->getKeyType())) {
         bool nameNumberOk = false;
         newName.toDouble(&nameNumberOk);
-        // the key type combobox cannot express a boolean key, so keep an unchanged one boolean
+        // the key type combobox shows a boolean key but does not offer it as a
+        // choice, so a name that still reads as a boolean keeps its boolean key
         if (variable->getKeyType() == LUA_TBOOLEAN && (newName.toLower() == QLatin1String("true") || newName.toLower() == QLatin1String("false"))) {
             uiNameType = LUA_TBOOLEAN;
         } else if (nameNumberOk) {
@@ -6993,16 +7018,26 @@ void dlgTriggerEditor::saveVar()
                     change = change | 0x2;
                 }
                 if (change) {
+                    bool renamed = true;
                     if (change & 0x1 || newVar) {
-                        luaInterface->renameVar(variable);
+                        renamed = luaInterface->renameVar(variable);
                     }
                     if ((variable->getValueType() != LUA_TTABLE && change & 0x2) || newVar) {
                         luaInterface->setValue(variable);
                     }
-                    pItem->setText(0, newName);
-                    mpCurrentVarItem = nullptr;
+                    if (renamed) {
+                        pItem->setText(0, newName);
+                        mpCurrentVarItem = nullptr;
+                    } else {
+                        // the variable still answers to the name it had, so
+                        // that is what the row has to go back to showing
+                        pItem->setText(0, variable->getName());
+                        renameRefused = true;
+                    }
                 } else {
-                    variable->clearNewName();
+                    // nothing was renamed, so there is a pending new name to
+                    // drop rather than to write onto the variable
+                    variable->abandonNewName();
                 }
             }
         }
@@ -7055,14 +7090,20 @@ void dlgTriggerEditor::saveVar()
                 change = change | 0x2;
             }
             if (change) {
+                bool renamed = true;
                 if (change & 0x1 || newVar) {
-                    luaInterface->renameVar(var);
+                    renamed = luaInterface->renameVar(var);
                 }
                 if (change & 0x2 || newVar) {
                     luaInterface->setValue(var);
                 }
-                pItem->setText(0, newName);
-                mpCurrentVarItem = nullptr;
+                if (renamed) {
+                    pItem->setText(0, newName);
+                    mpCurrentVarItem = nullptr;
+                } else {
+                    pItem->setText(0, var->getName());
+                    renameRefused = true;
+                }
             }
         }
     }
@@ -7094,6 +7135,9 @@ void dlgTriggerEditor::saveVar()
     pItem->setIcon(0, icon);
     mChangingVar = false;
     slot_variableSelected(pItem);
+    if (renameRefused) {
+        showVariableRenameRefused(variable);
+    }
 }
 
 void dlgTriggerEditor::saveKey()
@@ -8049,12 +8093,19 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         if (vu->isSaved(var)) {
             return;
         }
+        // A tick is not on its own a decision to save: Qt's tristate cascade
+        // ticks children the user cannot tick themselves, and marks a parent
+        // partially ticked from a tick on any child, so what may be saved is
+        // asked again here rather than read off the check state (#9957).
+        if (!vu->shouldSave(var)) {
+            return;
+        }
         vu->addSavedVar(var);
         QList<QTreeWidgetItem*> list;
         recurseVariablesUp(pItem, list);
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }
@@ -8062,7 +8113,7 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         recurseVariablesDown(pItem, list);
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }
@@ -8114,13 +8165,17 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     TVar* var = vu->getWVar(pItem); // This does NOT modify pItem or what it points at
     QList<QTreeWidgetItem*> list;
     if (state == Qt::Checked || state == Qt::PartiallyChecked) {
-        if (var) {
+        // What may be saved is asked again rather than read off the check state,
+        // for the same reason slot_variableChanged() asks: a row can be left
+        // ticked from before whatever now makes it unsaveable - a table grown
+        // past the size limit, say - and clicking it would enrol it again.
+        if (var && vu->shouldSave(var)) {
             vu->addSavedVar(var);
         }
         recurseVariablesUp(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }
@@ -8128,7 +8183,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         recurseVariablesDown(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
             TVar* v = vu->getWVar(treeWidgetItem);
-            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
+            if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
         }
@@ -8177,6 +8232,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
             mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
         }
         mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(0);
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(true);
         mChangingVar = false;
         return;
     }
@@ -8188,7 +8244,16 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     switch (keyType) {
         //    case LUA_TNONE: // -1
         //    case LUA_TNIL: // 0
-        //    case LUA_TBOOLEAN: // 1
+    case LUA_TBOOLEAN: // 1
+        // index 5 = "key (boolean)". Without this the combobox would keep
+        // whatever the previously selected variable put there and name a key
+        // type this variable does not have (#9959).
+        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(5);
+        // a boolean key can be renamed between true and false, but it cannot be
+        // recast: saveVar() puts a name that still reads as a boolean back to a
+        // boolean key whatever the combobox says
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(false);
+        break;
         //    case LUA_TLIGHTUSERDATA: // 2
     case LUA_TNUMBER: // 3
         // index 2 = "index (integer number)"
@@ -8285,6 +8350,15 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     pItem->setData(0, Qt::UserRole, var->getValueType());
     pItem->setIcon(0, icon);
     mChangingVar = false;
+    // Said on selection rather than when the user tries to save: the value box
+    // filled in above is empty for the same reason, getValue() reaching the
+    // variable by this same name, and without this it reads as a real value.
+    if (!lI->writableByName(var)) {
+        //: Warning shown in the editor's Variables view for a variable it cannot write back to Lua. %1 is the name the variable is shown under.
+        showWarning(tr("\"%1\" cannot be changed here: Mudlet has no way to reach it in Lua under the name it is shown with, so anything saved for it would go somewhere else. "
+                       "Its value may show up blank for the same reason. A script can still change it.")
+                            .arg(var->getName().toHtmlEscaped()));
+    }
 }
 
 void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)

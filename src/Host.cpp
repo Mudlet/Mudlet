@@ -34,6 +34,7 @@
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "mapInfoContributorManager.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
@@ -969,6 +970,13 @@ void Host::resetProfile_phase2()
     // freshly-issued registry indices in the new state, which surfaces as
     // "attempt to call a number value" when label callbacks fire.
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    // Lua map info contributors cannot cross that swap either: each holds a
+    // reference in the state initLuaGlobals() closes below, and a callback that
+    // captures it. Left registered, the registering script's own re-run in
+    // compileAll() further down unrefs against the closed state, and one that
+    // nothing re-registers is called on it by every later map redraw. The
+    // scripts that registered them put them back against the new state.
+    mpMap->mMapInfoContributorManager->removeLuaContributors();
     mEventHandlerMap.clear();
     mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
@@ -3925,6 +3933,14 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
         return {false, QString()};
     }
 
+    // the parent window has to be one: TMainConsole::createLabel puts a label
+    // whose parent it cannot find into the main window instead, which is not
+    // anywhere the caller asked for
+    const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
+    if (!wantsMainWindow && !mpConsole->mDockWidgetMap.contains(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
     if (!pL && !pC) {
@@ -4647,6 +4663,13 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
+    // The file is read through a throwaway QMovie: the label's own must not take
+    // the path, and the gif tracker must not be given a movie to count, before
+    // the file is known to be one
+    if (const QMovie candidate(moviePath); !candidate.isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+
     auto myMovie = pL->mpMovie;
     if (!myMovie) {
         myMovie = new QMovie();
@@ -4657,11 +4680,6 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     }
 
     myMovie->setFileName(moviePath);
-
-    if (!myMovie->isValid()) {
-        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
-    }
-
     myMovie->stop();
     pL->setMovie(myMovie);
     myMovie->start();

@@ -28,6 +28,7 @@
 
 #include "ui_profile_preferences.h"
 #include <QDialog>
+#include <QList>
 #include <QMap>
 
 class Host;
@@ -36,6 +37,7 @@ class QDoubleSpinBox;
 class TAction;
 class TAlias;
 class TKey;
+class TKeySequenceEdit;
 class TScript;
 class TTimer;
 class TTrigger;
@@ -143,7 +145,6 @@ private slots:
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
     void slot_tabChanged(int tabIndex);
-    void slot_showNewFeatureCallouts();
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
@@ -230,6 +231,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits);
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);

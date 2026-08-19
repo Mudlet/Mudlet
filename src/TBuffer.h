@@ -158,9 +158,7 @@ public:
         mFgColor = newForeGroundColor;
         mBgColor = newBackGroundColor;
     }
-    // Only considers the following flags: AltFont#, Bold, Conceal,
-    // FastBlink/Blink, Italic, Overline, Reverse, Strikeout, Underline,
-    // - does not consider Echo or Found:
+    // Only considers the flags within TestMask - so not Echo or Found:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }
@@ -420,9 +418,9 @@ private:
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
     static bool startsWithListMarker(const QString& line);
+    bool pendingLineHadRoomForNextWord() const;
     void joinPendingServerWrapOntoCurrent();
     void startServerWrapFlushTimer();
-    void recordLineLengthForWrapDetection(qsizetype length);
     void processMxpWatchdogCallback();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
@@ -529,14 +527,13 @@ private:
     // joined back on and triggers run once over the whole logical line:
     QString mServerWrapPendingLine;
     std::deque<TChar> mServerWrapPendingBuffer;
+    // Length of the last game line joined into the above. Once a paragraph
+    // has been joined even once the held text is longer than the wrap column,
+    // so the column the game actually broke at is only recoverable from this:
+    qsizetype mServerWrapPendingSegmentLength = 0;
     // Commits a held line if the game goes quiet without completing it - a
     // full-width line that really was the end of the output:
     QPointer<QTimer> mpServerWrapFlushTimer;
-    // Line length statistics used to detect that a game wraps its own output
-    // even though Host::mUndoServerWrap is off, to hint the option exists;
-    // keyed by line length, value is how often that length was seen:
-    QMap<qsizetype, int> mWrapDetectCounts;
-    int mWrapDetectSamples = 0;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
     // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
@@ -609,9 +606,20 @@ private:
     bool mSkipTriggerProcessing = false;
 
     // Server wrap undoing: a line no shorter than this many characters below
-    // the configured wrap column is considered a wrapped segment (the game
-    // breaks at the last space, so segments fall a partial word short):
+    // the configured wrap column is a candidate wrapped segment (the game
+    // breaks at the last space, so segments fall a partial word short);
+    // whether it really was one is settled once the continuation arrives,
+    // see csmServerWrapFitTolerance:
     static constexpr int csmServerWrapSlack = 15;
+    // How many columns clear of the wrap column the continuation's first word
+    // would have had to end before its fitting proves the game ended the line
+    // itself. Text laid out by hand does not sit exactly on the column, so a
+    // few columns to spare mean nothing: in captures of MorgenGrauen and
+    // Discworld no genuine wrap left more than 7 free. Held lines start no
+    // more than csmServerWrapSlack short of the column, so this can only ever
+    // reject a continuation opening with a word of csmServerWrapSlack less
+    // this many characters or fewer:
+    static constexpr int csmServerWrapFitTolerance = 8;
     // Stop joining once a logical line has grown this long - a runaway guard:
     static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
     // How long to hold a full-width line for its continuation before deciding
@@ -620,9 +628,6 @@ private:
     // A longer number opening a line is likelier a year or a price ending a
     // wrapped sentence than a list number; only "[...]" is trusted past it:
     static constexpr qsizetype csmMaxListNumberDigits = 3;
-    // Wrap detection hint: how many lines ending within 8 characters of a
-    // stable ceiling column are needed before suggesting mUndoServerWrap:
-    static constexpr int csmWrapDetectThreshold = 40;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;

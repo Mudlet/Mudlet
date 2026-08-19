@@ -96,6 +96,7 @@ class QFrame;
 class QToolButton;
 class TAction;
 class TKey;
+class TVar;
 class TConsole;
 class dlgVarsMainArea;
 class QShortcut;
@@ -109,6 +110,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorBannerViewSwitchTest;
     friend class ScriptEventHandlerLifetimeTest;
+    friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -204,6 +206,7 @@ public:
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void showVariableRenameRefused(TVar*);
     void repopulateVars();
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);

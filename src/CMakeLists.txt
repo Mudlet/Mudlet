@@ -126,6 +126,7 @@ set(mudlet_SRCS
     TAlias.cpp
     TArea.cpp
     TAreaGridIndex.cpp
+    TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
@@ -358,6 +359,7 @@ set(mudlet_HDRS
     TAlias.h
     TArea.h
     TAreaGridIndex.h
+    TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
@@ -495,28 +497,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
-# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
-macro(set_alternate_linker linker)
-  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
-  if(LINKER_EXECUTABLE)
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
-      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
-      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
-      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
-      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
-    else()
-      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
-    endif()
-  else()
-    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
-  endif()
-endmacro()
-
-set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
-if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
-  set_alternate_linker(${USE_ALTERNATE_LINKER})
-endif()
-
 if(USE_SANITIZERS)
   include(cmake/EnableSanitizers.cmake)
   # The above script sets the SANITIZERS_AS_STRING variable:
@@ -644,6 +624,11 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   the single bytes of pure ASCII text:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_EUC_KR_PROCESSING)
 #
+# * Produce qDebug() messages about private/reserved ANSI CSI sequences that
+#   Mudlet does not interpret, e.g. the `\x1b[?25l` a game may send around each
+#   prompt to hide the cursor - which is frequent enough to be noisy:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_CSI_PROCESSING)
+#
 # * Produce qDebug() messages about the decoding of ANSI SGR sequences:
 #   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #
@@ -718,6 +703,23 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
     target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
+endif()
+
+if(DEFINED ENV{QT_NO_SSL})
+  message(STATUS "Not including OpenSSL 3.x licence details as that library has been explicitly excluded from the build")
+else()
+  if (DEFINED ENV{CI} AND "$ENV{CI}" STREQUAL "true" )
+    # This is ONLY used to include the Licence details for the OpenSSL 3
+    # library - as such it only needs to/should be present for builds that
+    # "package" Mudlet i.e. installer builds (for MacOS and Windows) and
+    # AppImages (for Linux) in our CI procees all other builds will use a
+    # "system-provided" libssl.so.3 library and we do not then NEED to mention
+    # them in the "Third-party" libraries.
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OPENSSL3)
+    message(STATUS "Including OpenSSL 3.x licence details for a package build")
+  else()
+    message(STATUS "Not including OpenSSL 3.x licence details as this seem to be a local build")
+  endif()
 endif()
 
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in

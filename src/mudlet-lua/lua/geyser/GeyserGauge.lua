@@ -525,6 +525,10 @@ function Geyser.Gauge:new (cons, container)
   front.color = me.color
   front.message = nil
   front.x, front.y, front.width, front.height = 0, 0, "100%", "100%"
+  -- the gauge's own hidden constraint is not its labels': they follow the gauge
+  -- as its children, and a label hidden in its own right would refuse to come
+  -- back when the gauge is shown
+  front.hidden, front.auto_hidden = nil, nil
 
   -- Set up the constraints for the back label, which is always the size of the gauge.
   -- Message set to nil to avoid unwanted text

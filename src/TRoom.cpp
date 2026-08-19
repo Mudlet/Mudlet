@@ -336,21 +336,8 @@ void TRoom::setId(const int roomId)
     id = roomId;
 }
 
-// The second optional argument delays area related recaluclations when true
-// until called with false (the default) - it records the "dirty" areas so that
-// the affected areas can be identified.
-// The caller, should set the argument true for all but the last when working
-// through a list of rooms.
-// There IS a theoretical risk that if the last called room "doesn't exist" then
-// the area related recalculations won't get done - so had better provide an
-// alternative means to do them as a fault recovery
-bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
+bool TRoom::setArea(int areaID)
 {
-    // Track dirty areas by ID rather than TArea* across calls: a TArea* held
-    // through a deferred window can dangle if the map is cleared in between
-    // (e.g. clearMapDB(), profile close, bulk map reload). Looking up the
-    // pointer freshly at flush time safely skips areas that no longer exist.
-    static QSet<int> dirtyAreaIds;
     TArea* pA = mpRoomDB->getArea(areaID);
     if (!pA) {
         // There is no TArea instance with that _areaID
@@ -367,18 +354,7 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
     //remove from the old area
     TArea* pA2 = mpRoomDB->getArea(area);
     if (pA2) {
-        pA2->removeRoom(id, deferAreaRecalculations);
-        // Ah, all rooms in the OLD area that led to the room now become area
-        // exits for that OLD area {so must run determineAreaExits() for the
-        // old area after the room has moved to the new area see other
-        // "if( pA2 )" below} - other exits that led to the room from other
-        // areas are still "out of area exits" UNLESS the room moves to the SAME
-        // area that the other exits are in.
-        // Add to local store of dirty areas
-        dirtyAreaIds.insert(area);
-        // Flag the area itself in case something goes
-        // wrong on last room in a series
-        pA2->mIsDirty = true;
+        pA2->removeRoom(id);
     } else {
         //: Although this is reported as an error it is not a problem
         mpRoomDB->mpMap->logError(tr("When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!")
@@ -388,20 +364,14 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
     area = areaID;
     pA->addRoom(id);
 
-    dirtyAreaIds.insert(areaID);
-    pA->mIsDirty = true;
-
-    if (!deferAreaRecalculations) {
-        // Swap out the set before iterating so that reentrant calls into
-        // setArea() from within clean()/determineAreaExits() (e.g. via Lua
-        // event handlers) don't mutate the container we're walking.
-        QSet<int> toClean;
-        toClean.swap(dirtyAreaIds);
-        for (const int aid : toClean) {
-            if (TArea* pArea = mpRoomDB->getArea(aid)) {
-                pArea->clean();
-            }
-        }
+    // Both refreshes have to run once the room's own area has been updated, as
+    // that is what decides whether a special exit crosses an area boundary.
+    pA->determineAreaExitsOfRoom(id);
+    pA->refreshAreaExitsToRoom(id);
+    if (pA2 && pA2 != pA) {
+        // Exits that led to the room from the old area's rooms now leave that
+        // area; exits from any third area still do, so they are unaffected.
+        pA2->refreshAreaExitsToRoom(id);
     }
 
     mpRoomDB->mpMap->setUnsaved(__func__);
@@ -1540,6 +1510,12 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
         }
     }
+
+    // The audit rewrites exit destinations, which the entrance hash built
+    // during the load has no entry for. Removing the superseded entries as
+    // well would be a full scan of the hash per room, and the consumers all
+    // re-check the exit anyway, so the leftovers are left to them.
+    mpRoomDB->updateEntranceMap(this, true);
 }
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to
