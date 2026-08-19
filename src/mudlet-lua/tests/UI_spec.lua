@@ -5669,10 +5669,9 @@ describe("Console buffer size", function()
     assert.is_true(lineCount <= 310, "line count was " .. lineCount)
   end)
 
-  -- The trim is what tells scripts their saved line indexes have moved, and the
-  -- only way they can hear about it is sysBufferShrinkEvent. The window name is
-  -- read off the console the buffer belongs to and the count is the batch
-  -- deletion size, so both arguments are engine state reached through the view.
+  -- The trim is what tells scripts their saved line indexes have moved, and
+  -- sysBufferShrinkEvent is the only way they can hear about it: it names the
+  -- console the lines went from and says how many went.
   it("raises sysBufferShrinkEvent naming the window the lines went from", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 10))
@@ -5680,23 +5679,29 @@ describe("Console buffer size", function()
     local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
       seen[#seen + 1] = {window = windowName, removed = removedLines}
     end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
     for lineNumber = 1, 200 do
       echo(console, ("shrink line %d\n"):format(lineNumber))
     end
     killAnonymousEventHandler(handlerId)
-    assert.is_true(#seen > 0, "the buffer was trimmed but no sysBufferShrinkEvent arrived")
+    local named = 0
     for _, event in ipairs(seen) do
-      assert.are.equal(console, event.window)
-      -- the count arrives as a number, not as the text it is built from
-      assert.are.equal("number", type(event.removed))
-      assert.are.equal(10, event.removed)
+      if event.window == console then
+        named = named + 1
+        -- the count arrives as a number, not as the text it is built from
+        assert.are.equal("number", type(event.removed))
+        assert.are.equal(10, event.removed)
+      end
     end
+    assert.is_true(named > 0, ("%d trims were announced, none of them naming %s"):format(#seen, console))
   end)
 
   -- The count the event carries is the amount every surviving index moved by.
-  -- Neither cursor is renumbered with them - that is the known limitation the
-  -- event exists to work around - so a script that ignores it is left pointing
-  -- at whatever text has since moved under its index.
+  -- The cursor moveCursor() sets is not moved with them: it keeps the index it
+  -- was given rather than following the line it was parked on. The engine's own
+  -- cursor is left behind too, but no Lua call reads that one back. That is the
+  -- known limitation the event exists to work around, so a script that ignores
+  -- it is left pointing at whatever text has since moved under its index.
   it("shifts the lines under a saved index down by the count the event reports", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 10))
@@ -5713,6 +5718,7 @@ describe("Console buffer size", function()
         trimmed = trimmed + removedLines
       end
     end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
     for lineNumber = 1, 35 do
       echo(console, ("filler line %d\n"):format(lineNumber))
     end

@@ -120,9 +120,11 @@ describe("Tests MXP handling", function()
   end)
 
   -- <DEST> hands the game a print sink other than the main window: everything
-  -- between it and </DEST> goes into the named frame's own console, and nothing
-  -- of it may reach main. The frame's console is a miniconsole registered under
-  -- the frame's name, so Lua can read it back like any other window.
+  -- between it and </DEST> goes into the named frame's own console, which is a
+  -- miniconsole registered under the frame's name so Lua can read it back like
+  -- any other window. A frame name that does not resolve is not an error - the
+  -- tag still counts as handled and the text goes to main with only a qWarning
+  -- - so a red spec here is worth checking the frame name over first.
   describe("Tests output redirected into an MXP frame", function()
     local frame = "mxpSpecDestFrame"
 
@@ -134,6 +136,18 @@ describe("Tests MXP handling", function()
       return getLines(frame, 0, lineCount + 1)
     end
 
+    -- the frame line the needle is on, so a redirect that ran two segments
+    -- together on one line can be told from one that kept the break
+    local function frameLineWith(needle)
+      for lineNumber = 0, getLineCount(frame) do
+        local line = getLines(frame, lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
     local function holds(lines, needle)
       for _, line in ipairs(lines) do
         if line:find(needle, 1, true) then
@@ -143,12 +157,23 @@ describe("Tests MXP handling", function()
       return false
     end
 
-    local function mainLinesFrom(firstLine)
-      return getLines("main", firstLine, getLastLineNumber("main") + 1)
+    -- a redirect that leaked would put its text among the last few main lines,
+    -- and looking back from the end rather than from a saved index keeps that
+    -- true whether or not the main buffer trimmed in between
+    local function mainRecentlyHolds(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return true
+        end
+      end
+      return false
     end
 
     -- the colour of the first character of the run of text holding the needle,
-    -- read off the main window
+    -- read off the main window. selectSection() works on the line the cursor is
+    -- on and counts columns from zero, where string.find() counts from one
     local function mainColourOf(needle)
       local lastLine = getLastLineNumber("main")
       for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
@@ -157,7 +182,10 @@ describe("Tests MXP handling", function()
         if at then
           moveCursor("main", 0, lineNumber)
           selectSection("main", at - 1, 1)
-          return getTextFormat("main").foreground
+          local colour = getTextFormat("main").foreground
+          -- a selection left behind is what a later replace() would act on
+          deselect("main")
+          return colour
         end
       end
       return nil
@@ -171,6 +199,9 @@ describe("Tests MXP handling", function()
       -- a frame left open would sit in the main window's layout for every later
       -- spec file, and its console would stay in the window registry
       feedTriggers(('<FRAME %s ACTION="close">'):format(frame) .. "\n")
+      -- closeFrame() answers true for a name it never had, so the only proof
+      -- the main window got its width back is the console being gone
+      assert.is_nil(windowType(frame))
     end)
 
     it("gives the frame a console of its own", function()
@@ -178,22 +209,34 @@ describe("Tests MXP handling", function()
     end)
 
     it("puts the redirected text in the frame and not in the main window", function()
-      local mark = getLineCount("main")
       assert.is_true(feedTriggers(('<DEST %s>MXPDEST1 routed away</DEST>'):format(frame) .. "\n"))
-      assert.is_true(holds(frameLines(), "MXPDEST1 routed away"), table.concat(frameLines(), "|"))
-      assert.is_false(holds(mainLinesFrom(mark), "MXPDEST1"))
+      local _, routed = frameLineWith("MXPDEST1")
+      assert.are.equal("MXPDEST1 routed away", routed, table.concat(frameLines(), "|"))
+      assert.is_false(mainRecentlyHolds("MXPDEST1"))
     end)
 
     it("keeps a line break inside the redirect in the frame too", function()
-      local mark = getLineCount("main")
       assert.is_true(feedTriggers(('<DEST %s>MXPDEST2 first'):format(frame) .. "\nMXPDEST2 second</DEST>\n"))
-      local lines = frameLines()
-      assert.is_true(holds(lines, "MXPDEST2 first"), table.concat(lines, "|"))
-      assert.is_true(holds(lines, "MXPDEST2 second"), table.concat(lines, "|"))
-      assert.is_false(holds(mainLinesFrom(mark), "MXPDEST2"))
+      local shown = table.concat(frameLines(), "|")
+      local firstIndex, firstLine = frameLineWith("MXPDEST2 first")
+      local secondIndex, secondLine = frameLineWith("MXPDEST2 second")
+      assert.is_truthy(firstIndex, shown)
+      assert.is_truthy(secondIndex, shown)
+      -- whole lines and adjacent indexes: a redirect that dropped the break
+      -- would still hold both strings, just run together on one line
+      assert.are.equal("MXPDEST2 first", firstLine, shown)
+      assert.are.equal("MXPDEST2 second", secondLine, shown)
+      assert.are.equal(firstIndex + 1, secondIndex, shown)
+      assert.is_false(mainRecentlyHolds("MXPDEST2"))
     end)
 
+    -- </DEST> resets the text format to the profile's own colours rather than
+    -- restoring whatever was in force, so colour set before the redirect does
+    -- not survive it either
     it("does not let colour set inside the redirect follow the text back to main", function()
+      -- the colour below is never closed by hand, so if the reset under test is
+      -- the thing severed the main console would stay red for every later spec
+      finally(function() feedTriggers("\027[0m\n") end)
       assert.is_true(feedTriggers("MXPDEST3 plain\n"))
       local plainColour = mainColourOf("MXPDEST3 plain")
       assert.is_truthy(plainColour)
