@@ -1134,8 +1134,8 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
-  -- what a fetched Timestamp answers is covered above; the accessors themselves
-  -- are pure Lua and need no database, so they are driven directly here
+  -- the accessors are pure Lua and need no database, so they are driven
+  -- directly rather than through a fetched row
   describe("Tests the functionality of db.__Timestamp", function()
     local epoch = 1748288082 -- 2025-05-26T19:34:42+00:00
     local parts = {year = 2015, month = 6, day = 14, hour = 9, min = 30, sec = 15}
@@ -1147,6 +1147,10 @@ describe("Tests DB.lua functions", function()
 
       it("should return the epoch a table of parts was converted to", function()
         assert.are.equal(os.time(parts), db:Timestamp(parts):as_number())
+      end)
+
+      it("should return the epoch a string was parsed into", function()
+        assert.are.equal(os.time(parts), db:Timestamp("2015-06-14 09:30:15"):as_number())
       end)
 
       it("should return nil and a message for a timestamp holding no number", function()
@@ -1164,10 +1168,9 @@ describe("Tests DB.lua functions", function()
 
     describe("Tests the functionality of db.__Timestamp:as_string", function()
       it("should default to a month-first date and a 24 hour clock", function()
-        local formatted = db:Timestamp(epoch):as_string()
-        assert.are.equal(os.date("%m-%d-%Y %H:%M:%S", epoch), formatted)
-        -- os.date on its own would agree with any default format, so pin the shape too
-        assert.is_truthy(formatted:match("^%d%d%-%d%d%-%d%d%d%d %d%d:%d%d:%d%d$"))
+        -- built from parts rather than an epoch so the expected string is a
+        -- literal, not os.date restating the format the function already used
+        assert.are.equal("06-14-2015 09:30:15", db:Timestamp(parts):as_string())
       end)
 
       it("should use the format it is given", function()
@@ -1209,9 +1212,9 @@ describe("Tests DB.lua functions", function()
       it("should give a timestamp holding no number a real value", function()
         local timestamp = db:Timestamp(nil)
         assert.is_nil((timestamp:as_number()))
-        timestamp:set(epoch)
-        assert.are.equal(epoch, timestamp:as_number())
-        assert.are.equal(os.date("%m-%d-%Y %H:%M:%S", epoch), timestamp:as_string())
+        timestamp:set(os.time(parts))
+        assert.are.equal(os.time(parts), timestamp:as_number())
+        assert.are.equal("06-14-2015 09:30:15", timestamp:as_string())
       end)
 
       it("should replace a value that was already there", function()
@@ -2020,14 +2023,17 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
-  -- the rollback specs above drive these four through a whole transaction; this
-  -- covers what each one does on its own, since db:merge_unique is the only
-  -- caller in the library and a package can use them in any order it likes
+  -- the rollback specs above drive these four through one whole transaction;
+  -- this covers what each does on its own. db:merge_unique is their only
+  -- in-library caller and it never calls _rollback at all.
   describe("Tests the functionality of db.Database:_begin, db.Database:_commit, db.Database:_rollback and db.Database:_end", function()
     local dbName = "txntestingonly"
     local otherName = "txnothertestingonly"
 
     before_each(function()
+      -- a run that died mid-transaction would otherwise leave rows behind
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      os.remove(getMudletHomeDir() .. "/Database_" .. otherName .. ".db")
       mydb = db:create(dbName, {sheet = {name = ""}})
       db:add(mydb.sheet, {name = "committed"})
     end)

@@ -616,13 +616,13 @@ describe("Tests the functionality of IDMgr", function()
       it("Should reach the IDMgr methods through the metatable it sets", function()
         local fresh = newManager()
         assert.are.equal(IDMgr, getmetatable(fresh))
-        assert.are.equal(IDMgr, IDMgr.__index)
         assert.is_function(fresh.registerTimer)
         assert.is_function(fresh.emergencyStop)
       end)
 
-      it("Should be what getNewIDManager hands out", function()
+      it("Should give every manager the same metatable", function()
         assert.are.equal(IDMgr, getmetatable(getNewIDManager()))
+        assert.are.equal(IDMgr, getmetatable(newManager()))
       end)
     end)
 
@@ -728,8 +728,8 @@ describe("Tests the functionality of IDMgr", function()
     end)
 
     describe("Tests the functionality of IDMgr:registerTimer", function()
-      -- the suite itself runs inside a tempTimer, so nothing fires until the
-      -- event loop is handed back control for a moment
+      -- Mudlet is single threaded, so a spec body holds the event loop until it
+      -- returns and no timer can fire inside one: hand control back for a moment
       local function pumpEventLoop(milliseconds)
         tempTimer(milliseconds / 1000, function() raiseEvent("idManagerTimerPump") end)
         waitForEvent("idManagerTimerPump", milliseconds + 1000)
@@ -750,29 +750,42 @@ describe("Tests the functionality of IDMgr", function()
         assert.are.same({"timer"}, mgr:getTimers())
       end)
 
-      it("Should run the function it was given exactly once", function()
-        local fired = 0
-        mgr:registerTimer("timer", 0.05, function() fired = fired + 1 end)
-        local handlerID = mgr.timers["timer"].handlerID
+      -- waitForEvent is test mode only, so the two specs that wait for a timer
+      -- to fire cannot run when the suite is started by hand with runTests
+      local canPump = os.getenv("MUDLET_TEST_MODE") ~= nil
 
-        pumpUntil(function() return fired > 0 end)
-        pumpEventLoop(200)
+      if not canPump then
+        pending("Should run the function it was given exactly once - needs MUDLET_TEST_MODE for waitForEvent")
+        pending("Should hand the fourth argument to tempTimer as its repeating flag - needs MUDLET_TEST_MODE for waitForEvent")
+      else
+        it("Should run the function it was given exactly once", function()
+          local fired = 0
+          mgr:registerTimer("timer", 0.05, function() fired = fired + 1 end)
+          local handlerID = mgr.timers["timer"].handlerID
 
-        assert.are.equal(1, fired)
-        -- a timer that is not repeating is gone once it has fired
-        assert.is_nil(remainingTime(handlerID))
-      end)
+          pumpUntil(function() return fired > 0 end)
+          pumpEventLoop(200)
 
-      it("Should hand the fourth argument to tempTimer as its repeating flag", function()
-        local fired = 0
-        mgr:registerTimer("timer", 0.05, function() fired = fired + 1 end, true)
-        local handlerID = mgr.timers["timer"].handlerID
+          assert.are.equal(1, fired)
+          -- a timer that is not repeating is gone once it has fired
+          assert.is_nil(remainingTime(handlerID))
+        end)
 
-        pumpUntil(function() return fired > 1 end)
+        -- IDMgr keeps this flag in a field called oneShot for every store, but
+        -- for timers it reaches tempTimer as its repeating argument, which is
+        -- the opposite meaning to the event case below - and it matches what
+        -- registerNamedTimer(..., [repeating]) is documented to take
+        it("Should hand the fourth argument to tempTimer as its repeating flag", function()
+          local fired = 0
+          mgr:registerTimer("timer", 0.05, function() fired = fired + 1 end, true)
+          local handlerID = mgr.timers["timer"].handlerID
 
-        assert.is_true(fired > 1, "a repeating timer should fire more than once")
-        assert.is_number(remainingTime(handlerID), "a repeating timer stays alive after firing")
-      end)
+          pumpUntil(function() return fired > 1 end)
+
+          assert.is_true(fired > 1, "a repeating timer should fire more than once")
+          assert.is_number(remainingTime(handlerID), "a repeating timer stays alive after firing")
+        end)
+      end
 
       it("Should replace an earlier timer of the same name instead of adding one", function()
         mgr:registerTimer("timer", 5000, function() end)
@@ -792,6 +805,12 @@ describe("Tests the functionality of IDMgr", function()
         assert.is_nil(mgr.timers["bad"])
         assert.are.same({}, mgr:getTimers())
       end)
+
+      -- BUG: IDMgr:register stops whatever is registered under the name before
+      -- it tries the new registration, and puts nothing back when that fails,
+      -- so a re-registration with a bad argument kills a working timer while
+      -- leaving the name in getTimers() looking registered.
+      pending("Should leave the running timer alone when a re-registration fails")
     end)
 
     describe("Tests the functionality of IDMgr:stopTimer", function()
