@@ -12814,126 +12814,130 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="237"/>
       <source>Buttons react on mouse clicks.</source>
       <extracomment>Headline for the Button intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los botones reaccionan a los clics del ratón.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="239"/>
       <source>How to add a new button now</source>
       <extracomment>Name of a selectable option for the Button intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo botón ahora</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="258"/>
       <source>Keys react on keyboard presses.</source>
       <extracomment>Headline for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Las teclas reaccionan a las pulsaciones del teclado.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="260"/>
       <source>How to add a new keybinding now</source>
       <extracomment>Name of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir una nueva combinación de teclas ahora</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="262"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Haz clic en &lt;strong&gt;&apos;grabar tecla&apos;&lt;/strong&gt; (capturar tecla) y luego presiona tu combinación de teclas, por ejemplo, incluyendo teclas modificadoras como Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; en texto claro que quieras enviar al juego si se presiona la tecla, o escribe un script para necesidades más complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; la nueva combinación de teclas.&lt;/li&gt;&lt;/ol&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="269"/>
       <source>&lt;p&gt;Keys can be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Pressing F8 will make you jump.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Las teclas se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;mi tecla de salto&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;saltar&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Presionar F8 te hará saltar.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="282"/>
       <source>Variables store information.</source>
       <extracomment>Headline for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Las variables almacenan información.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="284"/>
       <source>How to add a new variable now</source>
       <extracomment>Name of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir una nueva variable ahora</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="286"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba. Para añadir una tabla en su lugar, haz clic en &apos;Añadir grupo&apos;.&lt;/li&gt;&lt;li&gt;Selecciona el tipo de valor de la variable (puede ser una cadena de texto, un número entero o un booleano)&lt;/li&gt;&lt;li&gt;Introduce el valor que quieres almacenar en esta variable.&lt;/li&gt;&lt;li&gt;Si quieres mantener la variable en tus próximas sesiones de Mudlet, marca la casilla en la lista de variables de la izquierda.&lt;/li&gt;&lt;li&gt;Para eliminar una variable manualmente, establécela en &apos;cero/nula&apos; o haz clic en el icono &apos;Borrar&apos; de arriba.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Las variables creadas aquí no se guardarán cuando Mudlet se cierre a menos que marques su casilla en la lista de variables de la izquierda. También podrías crear scripts con las variables en su lugar.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="295"/>
       <source>&lt;p&gt;Variables and tables can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Las variables y las tablas también se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Esto creará una cadena de texto llamada &apos;foo&apos; con &apos;bar&apos; como su valor.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="307"/>
       <source>activated</source>
       <extracomment>Item is currently on, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>activado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="309"/>
       <source>deactivated</source>
       <extracomment>Item is currently off, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>desactivado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="311"/>
       <source>activated folder</source>
       <extracomment>Folder is currently turned on</extracomment>
-      <translation type="unfinished"/>
+      <translation>carpeta activada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="313"/>
       <source>deactivated folder</source>
       <extracomment>Folder is currently turned off</extracomment>
-      <translation type="unfinished"/>
+      <translation>carpeta desactivada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="315"/>
       <source>deactivated due to error</source>
       <extracomment>Item is currently inactive because of errors, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>desactivado debido a un error</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="317"/>
       <source>%1 in a deactivated group</source>
       <extracomment>Item is currently turned on individually, but is member of an inactive group</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 en un grupo desactivado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="319"/>
       <source>activated filter chain</source>
       <extracomment>A trigger that unlocks other triggers is currently turned on, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>cadena de filtros activada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="321"/>
       <source>deactivated filter chain</source>
       <extracomment>A trigger that unlocks other triggers is currently turned off, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>cadena de filtros desactivada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="323"/>
       <source>activated offset timer</source>
       <extracomment>A timer that starts after another timer is currently turned on</extracomment>
-      <translation type="unfinished"/>
+      <translation>temporizador de desplazamiento (offset) activado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="325"/>
       <source>deactivated offset timer</source>
       <extracomment>A timer that starts after another timer is currently turned off</extracomment>
-      <translation type="unfinished"/>
+      <translation>temporizador de desplazamiento (offset) desactivado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="402"/>
       <source>-- add your Lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- añade tu código Lua aquí</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="839"/>
@@ -12944,48 +12948,48 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="840"/>
       <source>Show/Hide the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar/ocultar la consola de errores en la parte inferior derecha de este editor.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="841"/>
       <source>Show/Hide errors console</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar/ocultar consola de errores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="845"/>
       <source>Generate a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Generar una pantalla de resumen de estadísticas en la consola principal del perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="846"/>
       <source>Generate statistics</source>
-      <translation type="unfinished"/>
+      <translation>Generar estadísticas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="850"/>
       <source>Show/Hide the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar/ocultar la Consola Central de Depuración independiente (cuando se muestra, el sistema irá más lento).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="985"/>
       <source>Save profile (triggers, aliases, scripts, timers, buttons, keys - not the map) and synchronize modules.</source>
       <extracomment>Status tip for saving profile</extracomment>
-      <translation type="unfinished"/>
+      <translation>Guardar perfil (disparadores, alias, scripts, temporizadores, botones, teclas - no el mapa) y sincronizar módulos.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1250"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Coincidir exactamente con el asunto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1254"/>
       <source>Include variables</source>
-      <translation type="unfinished"/>
+      <translation>Incluir variables</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1256"/>
       <source>Search variables (slower)</source>
-      <translation type="unfinished"/>
+      <translation>Buscar variables (más lento)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1308"/>
@@ -12996,7 +13000,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1312"/>
       <source>Where</source>
-      <translation type="unfinished"/>
+      <translation>Dónde</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1314"/>
@@ -13006,32 +13010,32 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>perl regex</source>
-      <translation type="unfinished"/>
+      <translation>perl regex</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>exact match</source>
-      <translation type="unfinished"/>
+      <translation>coincidencia exacta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>lua function</source>
-      <translation type="unfinished"/>
+      <translation>función lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>line spacer</source>
-      <translation type="unfinished"/>
+      <translation>espaciador de línea</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>color trigger</source>
-      <translation type="unfinished"/>
+      <translation>disparador de color</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1392"/>
       <source>prompt</source>
-      <translation type="unfinished"/>
+      <translation>prompt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2812"/>
@@ -13119,13 +13123,14 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="883"/>
       <source>Add Group (%1)</source>
       <extracomment>%1 is a keyboard shortcut, e.g. &apos;Ctrl+Shift+N&apos; on Windows/Linux or &apos;⌘⇧N&apos; on macOS</extracomment>
-      <translation type="unfinished"/>
+      <translation>Añadir grupo (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="893"/>
       <source>&lt;p&gt;Saves the selected item. (%1)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
       <extracomment>%1 is a keyboard shortcut, e.g. &apos;Ctrl+S&apos; on Windows/Linux or &apos;⌘S&apos; on macOS</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Guarda el elemento seleccionado. (%1)&lt;/p&gt;&lt;p&gt;Guardar hace que los cambios en el elemento surtan efecto. No se guardará en el disco, por lo que los cambios se perderán en caso de fallo del ordenador o del programa (pero Guardar Perfil a la derecha sí será seguro).&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2620"/>
@@ -13183,7 +13188,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
       <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Escritura automática</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="55"/>
@@ -13198,7 +13203,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="57"/>
       <source>table (use &quot;Add Group&quot; to create)</source>
-      <translation>tabla (use &quot;Agregar Grupo&quot; para crear)</translation>
+      <translation>tabla (usa &quot;Añadir grupo&quot; para crear)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="58"/>
@@ -13272,7 +13277,8 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Elige un nombre bueno e idealmente único para tu tecla o grupo de teclas. Este se mostrará en el árbol de teclas.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="61"/>
@@ -13287,12 +13293,12 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="100"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Introduce uno o más comandos a utilizar si el comando introducido coincide con el patrón. (Opcional)&lt;/p&gt;&lt;p&gt;Esto puede ser otro alias o un comando para enviar directamente al juego. Para comandos complejos que requieran modificar variables dentro de este perfil, utiliza en su lugar un script de Lua en el área del editor que aparece a continuación. Es posible utilizar tanto este campo como un script de Lua; el contenido de este campo se procesará antes de ejecutar el script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="103"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Texto para enviar al juego (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="110"/>
