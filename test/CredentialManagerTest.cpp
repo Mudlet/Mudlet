@@ -224,8 +224,11 @@ void CredentialManagerTest::testInputSanitization()
     CredentialManager::removeCredential(profile, normalKey);
 }
 
-// Key names are a path component, so the length cap is what stops one long
-// enough to trip the filesystem ever reaching it
+// A key name becomes a path component, and utils::sanitizeForPath truncates one
+// to 50 characters - so any two keys sharing their first 50 resolve to the same
+// file. Storing under the accepted key first is therefore what gives the
+// rejection of the overlong one something to fail at: were the cap dropped, the
+// overlong key would read that same credential straight back rather than nothing.
 void CredentialManagerTest::testOverlongKeyNamesAreRejected()
 {
     const QString profile = "OverlongKeyProfile";
@@ -234,10 +237,14 @@ void CredentialManagerTest::testOverlongKeyNamesAreRejected()
     const QString tooLong(101, QChar('k'));
 
     QVERIFY(CredentialManager::storeCredential(profile, longestAccepted, password));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, longestAccepted), password);
 
     QVERIFY(!CredentialManager::storeCredential(profile, tooLong, password));
     QVERIFY(CredentialManager::retrieveCredential(profile, tooLong).isEmpty());
     QVERIFY(!CredentialManager::removeCredential(profile, tooLong));
+
+    // and the rejection left the accepted key's credential alone
+    QCOMPARE(CredentialManager::retrieveCredential(profile, longestAccepted), password);
 
     CredentialManager::removeCredential(profile, longestAccepted);
 }
@@ -401,35 +408,49 @@ void CredentialManagerTest::testCredentialExistsWithoutHandingOverTheSecret()
     const QString profile = "AsyncExistsProfile";
     const QString key = "password";
 
-    auto exists = [&manager, &profile, &key]() {
-        bool answered = false;
-        bool present = false;
-        manager.credentialExists(profile, key, [&](bool value) {
+    // Whether the question was answered is tracked apart from the answer, so a
+    // callback that never runs cannot read as "no credential stored" - a caller
+    // that re-enables itself from this reply would hang on exactly that
+    bool answered = false;
+    bool present = false;
+    auto lookUp = [&manager, &profile, &key, &answered, &present]() {
+        answered = false;
+        present = false;
+        manager.credentialExists(profile, key, [&answered, &present](bool value) {
             answered = true;
             present = value;
         });
-        return answered && present;
     };
 
-    QVERIFY(!exists());
+    lookUp();
+    QVERIFY(answered);
+    QVERIFY(!present);
 
     bool stored = false;
     manager.storePassword(profile, key, "existing_secret", [&](bool success, const QString&) {
         stored = success;
     });
     QVERIFY(stored);
-    QVERIFY(exists());
+    lookUp();
+    QVERIFY(answered);
+    QVERIFY(present);
 
     // An empty password is how "no password saved" is spelled, so it does not
-    // count as a stored credential
+    // count as a stored credential. It has to be an empty QString rather than a
+    // null one: storeCredentialToFile rejects a null credential as a programming
+    // error, so a null here would assert nothing about existence.
     manager.storePassword(profile, key, QString(""), [&](bool success, const QString&) {
         stored = success;
     });
     QVERIFY(stored);
-    QVERIFY(!exists());
+    lookUp();
+    QVERIFY(answered);
+    QVERIFY(!present);
 
     manager.removePassword(profile, key, [](bool, const QString&) {});
-    QVERIFY(!exists());
+    lookUp();
+    QVERIFY(answered);
+    QVERIFY(!present);
 }
 
 // Every entry point answers its caller rather than returning silently, which is
@@ -439,41 +460,52 @@ void CredentialManagerTest::testAsyncEmptyArgumentsAreReportedThroughTheCallback
     CredentialManager manager;
     const QString empty;
 
-    bool stored = true;
-    QString storeError;
-    manager.storePassword(empty, "password", "secret", [&](bool success, const QString& error) {
-        stored = success;
-        storeError = error;
-    });
-    QVERIFY(!stored);
-    QVERIFY(!storeError.isEmpty());
+    // Which complaint comes back matters as much as the failure itself. Without
+    // the guard these calls still fail - they get as far as generateFilePath,
+    // which refuses an empty component - so only the message distinguishes a
+    // rejected argument from storage that went wrong.
+    const QString rejected = "cannot be empty";
 
-    bool retrieved = true;
-    QString retrieveError;
-    manager.retrievePassword("AsyncProfile", empty, [&](bool success, QString, const QString& error) {
-        retrieved = success;
-        retrieveError = error;
-    });
-    QVERIFY(!retrieved);
-    QVERIFY(!retrieveError.isEmpty());
+    // Either half missing is enough, so a guard narrowed to one of them is caught
+    const QList<QPair<QString, QString>> incomplete = {{empty, "password"}, {"AsyncGuardProfile", empty}, {empty, empty}};
 
-    bool removed = true;
-    QString removeError;
-    manager.removePassword(empty, empty, [&](bool success, const QString& error) {
-        removed = success;
-        removeError = error;
-    });
-    QVERIFY(!removed);
-    QVERIFY(!removeError.isEmpty());
+    for (const auto& [profile, key] : incomplete) {
+        bool stored = true;
+        QString storeError;
+        manager.storePassword(profile, key, "secret", [&](bool success, const QString& error) {
+            stored = success;
+            storeError = error;
+        });
+        QVERIFY(!stored);
+        QVERIFY2(storeError.contains(rejected), qPrintable(storeError));
 
-    bool answered = false;
-    bool present = true;
-    manager.credentialExists(empty, "password", [&](bool value) {
-        answered = true;
-        present = value;
-    });
-    QVERIFY(answered);
-    QVERIFY(!present);
+        bool retrieved = true;
+        QString retrieveError;
+        manager.retrievePassword(profile, key, [&](bool success, QString, const QString& error) {
+            retrieved = success;
+            retrieveError = error;
+        });
+        QVERIFY(!retrieved);
+        QVERIFY2(retrieveError.contains(rejected), qPrintable(retrieveError));
+
+        bool removed = true;
+        QString removeError;
+        manager.removePassword(profile, key, [&](bool success, const QString& error) {
+            removed = success;
+            removeError = error;
+        });
+        QVERIFY(!removed);
+        QVERIFY2(removeError.contains(rejected), qPrintable(removeError));
+
+        bool answered = false;
+        bool present = true;
+        manager.credentialExists(profile, key, [&](bool value) {
+            answered = true;
+            present = value;
+        });
+        QVERIFY(answered);
+        QVERIFY(!present);
+    }
 }
 
 void CredentialManagerTest::cleanupTestCase()
