@@ -318,6 +318,14 @@ end
 --- any columns or indexes which didn't exist before to that database. If the database already has all the
 --- specified columns and indexes, it will do nothing. <br/><br/>
 ---
+--- Because it is meant to run unguarded, a fault in the schema is only fatal when it has to be.
+--- A schema whose shape no sheet can be built from is a hard error: a malformed _index, _unique
+--- or _violations value is refused and cancels the script. A schema that is sound but asks for
+--- something which cannot be honoured, such as an _index on a column the sheet does not declare,
+--- has that part skipped and reported through printError instead, so the sheet and the data in it
+--- stay reachable. Keep new validation on that side of the line: a database the user can no longer
+--- open costs more than the mistake being reported. <br/><br/>
+---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
 --- Mudlet configuration directory. <br/><br/>
 ---
