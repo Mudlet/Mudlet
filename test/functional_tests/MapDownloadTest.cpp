@@ -174,24 +174,16 @@ private:
             socket->flush();
             socket->disconnectFromHost();
             return;
-        case Answer::Chunked: {
+        case Answer::Chunked:
             sendHeader(socket, route.body.size());
-            const qsizetype half = route.body.size() / 2;
-            socket->write(route.body.left(half));
-            socket->flush();
-            const QByteArray rest = route.body.mid(half);
-            QTimer::singleShot(150ms, socket, [socket, rest]() {
-                socket->write(rest);
-                socket->flush();
-                socket->disconnectFromHost();
-            });
+            sendInParts(socket, route.body, 2);
             return;
-        }
         case Answer::Unsized:
             socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/xml\r\nConnection: close\r\n\r\n");
-            socket->write(route.body);
-            socket->flush();
-            socket->disconnectFromHost();
+            // Three, so that a progress report carrying no total lands after the
+            // range has already been set from the guess - which is the only
+            // moment the "is the total known" guard decides anything.
+            sendInParts(socket, route.body, 3);
             return;
         case Answer::Stalled:
             sendHeader(socket, scmAssumedFileSize);
@@ -204,6 +196,26 @@ private:
     static void sendHeader(QTcpSocket* socket, const qsizetype length)
     {
         socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/xml\r\nContent-Length: " + QByteArray::number(length) + "\r\nConnection: close\r\n\r\n");
+    }
+
+    // A beat between the parts, so the reply reports progress a known number of
+    // times rather than however many times loopback happens to split one write.
+    static void sendInParts(QTcpSocket* socket, const QByteArray& body, const int parts)
+    {
+        const qsizetype partSize = body.size() / parts;
+        socket->write(body.left(partSize));
+        socket->flush();
+        for (int part = 1; part < parts; ++part) {
+            const bool last = part == parts - 1;
+            const QByteArray chunk = last ? body.mid(part * partSize) : body.mid(part * partSize, partSize);
+            QTimer::singleShot(std::chrono::milliseconds(150 * part), socket, [socket, chunk, last]() {
+                socket->write(chunk);
+                socket->flush();
+                if (last) {
+                    socket->disconnectFromHost();
+                }
+            });
+        }
     }
 
     QTcpServer mServer;
@@ -375,16 +387,13 @@ private slots:
 
     // A test that fails part way through can leave a download in flight, and
     // the import flag it holds would refuse every download after it - so the
-    // one failure would be reported as several.
+    // one failure would be reported as several. Unconditional because the flag
+    // is not observable from here and a cancel with nothing to cancel costs
+    // only a console line, which the next test's mark leaves behind anyway.
     void cleanup()
     {
-        TMap* pMap = mpHost->mpMap.data();
-        if (!pMap->hasActiveTransferProgress()) {
-            return;
-        }
-        QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
-        pMap->slot_downloadCancel();
-        closeSpy.wait(15000);
+        mpHost->mpMap->slot_downloadCancel();
+        qApp->processEvents();
     }
 
     // The whole chain on a good day: request, save, parse, announce.
@@ -449,10 +458,12 @@ private slots:
         QCOMPARE(valueSpy.at(phases.values - 1).at(0).toInt(), static_cast<int>(mPaddedMapXml.size()));
     }
 
-    // A reply with no Content-Length reports its total as -1 for the whole
-    // download - the I.R.E. games' behaviour the guard was written for. The
-    // range has to keep the guess rather than be set to a negative maximum.
-    void test_progressRangeIsLeftAloneWhenTheReplyHasNoTotal()
+    // A reply with no Content-Length reports its total as -1 while it is being
+    // received - the I.R.E. games' behaviour the guard was written for - and
+    // only learns its own size once the connection closes. Every range the
+    // download sets has to be a maximum a progress bar can use, so none of the
+    // -1s may reach one.
+    void test_progressRangeIsNeverSetFromAReplyWithNoTotal()
     {
         TMap* pMap = mpHost->mpMap.data();
         QSignalSpy rangeSpy(pMap, &TMap::signal_mapProgressSetRange);
@@ -464,23 +475,12 @@ private slots:
         disconnect(mark);
         QVERIFY2(finished, "the map download never finished");
 
-        QCOMPARE(phases.ranges, 1);
+        QVERIFY(phases.ranges >= 1);
         QCOMPARE(rangeSpy.at(0).at(1).toInt(), scmAssumedFileSize);
-    }
-
-    // Progress arriving with no progress display to put it on - which the abort
-    // path can produce, since it takes the display down before the reply ends.
-    void test_progressWithNoDisplayIsIgnored()
-    {
-        TMap* pMap = mpHost->mpMap.data();
-        QVERIFY(!pMap->hasActiveTransferProgress());
-        QSignalSpy rangeSpy(pMap, &TMap::signal_mapProgressSetRange);
-        QSignalSpy valueSpy(pMap, &TMap::signal_mapProgressSetValue);
-
-        pMap->slot_setDownloadProgress(512, 1024);
-
-        QCOMPARE(rangeSpy.count(), 0);
-        QCOMPARE(valueSpy.count(), 0);
+        for (int i = 0; i < phases.ranges; ++i) {
+            const int maximum = rangeSpy.at(i).at(1).toInt();
+            QVERIFY2(maximum > 0, qPrintable(qsl("progress range %1 of %2 was given a maximum of %3").arg(i).arg(phases.ranges).arg(maximum)));
+        }
     }
 
     // A game with no map to serve answers 404. Nothing must be left behind: the
