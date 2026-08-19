@@ -13308,7 +13308,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="127"/>
       <source>Grab New Key</source>
-      <translation type="unfinished"/>
+      <translation>Capturar nueva tecla</translation>
     </message>
   </context>
   <context>
@@ -13316,12 +13316,12 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="23"/>
       <source>No mapping script found</source>
-      <translation type="unfinished"/>
+      <translation>No se encontró ningún script de mapeado.</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Parece que aún no tienes ningún &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;script de mapeado&lt;/a&gt; instalado. El mapeador necesita que tengas uno para tu juego, de modo que pueda rastrear dónde te encuentras y caminar de forma automática. Puedes crear uno tú mismo o importar uno existente que haya hecho otra persona.&lt;/p&gt;&lt;p&gt;¿Te gustaría comprobar si hay alguno disponible?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
@@ -13331,7 +13331,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="93"/>
       <source>Find some scripts</source>
-      <translation type="unfinished"/>
+      <translation>Buscar algunos scripts</translation>
     </message>
   </context>
   <context>
@@ -13340,46 +13340,50 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/main.cpp" line="428"/>
       <source>Warning: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Advertencia: %1
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="439"/>
       <source>       -h, --help                   displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>       -h, --help                muestra este mensaje.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="440"/>
       <source>       -v, --version                displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>       -v, --version           muestra la información de la versión.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="442"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -p, --perfil=&lt;profile&gt;      perfil adicional a abrir, se puede
+                                    repetir.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="445"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -o, --solo=&lt;predefined&gt;               hacer que Mudlet solo muestre el juego
+                                    predefinido específico, puede repetirse.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="448"/>
       <source>       -f, --fullscreen             start Mudlet in fullscreen mode.</source>
-      <translation type="unfinished"/>
+      <translation>       -f, --pantallacompleta                iniciar Mudlet en modo pantalla completa.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="449"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
-      <translation type="unfinished"/>
+      <translation>       --steammode             ajusta la configuración de Mudlet para cumplir
+                                    con los requisitos de Steam.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="452"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Existen otras opciones heredadas que surgen de las librerías Qt, las cuales es menos probable que sean útiles para el uso normal de esta aplicación:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="456"/>
@@ -13461,23 +13465,23 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="504"/>
       <source>Arguments:</source>
-      <translation type="unfinished"/>
+      <translation>Argumentos:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="505"/>
       <source>        [FILE]                       File to install as a package</source>
-      <translation type="unfinished"/>
+      <translation>        [ARCHIVO]     Archivo a instalar como paquete</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="506"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
-      <translation type="unfinished"/>
+      <translation>Reportar errores a: https://github.com/Mudlet/Mudlet/issues</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="433"/>
       <source>Usage: %1 [OPTION...] [FILE] </source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>Uso: %1 [OPCIÓN...] [ARCHIVO] </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="438"/>
@@ -13492,13 +13496,13 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="507"/>
       <source>Project home page: http://www.mudlet.org/</source>
-      <translation type="unfinished"/>
+      <translation>Página principal del proyecto: http://www.mudlet.org/</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="515"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (con símbolos de depuración, sin optimizaciones)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="522"/>
@@ -13509,12 +13513,12 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="524"/>
       <source>Copyright © 2008-2026  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>Copyright ©️ 2008-2026 Desarrolladores Mudlet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="525"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
-      <translation type="unfinished"/>
+      <translation>Licencia GPLv2+: GNU GPL versión 2 o posterior - http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="526"/>
@@ -13526,7 +13530,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/main.cpp" line="632"/>
       <source>Version: %1</source>
-      <translation type="unfinished"/>
+      <translation>Versión: %1</translation>
     </message>
   </context>
   <context>
@@ -13554,7 +13558,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="144"/>
       <source>Window</source>
-      <translation type="unfinished"/>
+      <translation>Ventana</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="155"/>
@@ -13564,32 +13568,32 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>Reattach detached windows</source>
-      <translation type="unfinished"/>
+      <translation>Volver a acoplar las ventanas desacopladas</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="177"/>
       <source>&lt;p&gt;Reattach all detached profile windows back to the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;&lt;p&gt;Volver a acoplar todas las ventanas desacopladas del perfil de nuevo en la ventana principal de Mudlet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
       <source>Always on Top</source>
-      <translation type="unfinished"/>
+      <translation>Siempre visible</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="191"/>
       <source>&lt;p&gt;Keep the main Mudlet window always on top of other windows.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mantener la ventana principal de Mudlet siempre por delante de otras ventanas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="196"/>
       <source>Minimize</source>
-      <translation type="unfinished"/>
+      <translation>Minimizar</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="199"/>
       <source>&lt;p&gt;Minimize the main Mudlet window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Minimizar la ventana principal de Mudlet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="204"/>
