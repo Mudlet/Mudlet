@@ -1134,6 +1134,107 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  -- what a fetched Timestamp answers is covered above; the accessors themselves
+  -- are pure Lua and need no database, so they are driven directly here
+  describe("Tests the functionality of db.__Timestamp", function()
+    local epoch = 1748288082 -- 2025-05-26T19:34:42+00:00
+    local parts = {year = 2015, month = 6, day = 14, hour = 9, min = 30, sec = 15}
+
+    describe("Tests the functionality of db.__Timestamp:as_number", function()
+      it("should return the epoch it was made from", function()
+        assert.are.equal(epoch, db:Timestamp(epoch):as_number())
+      end)
+
+      it("should return the epoch a table of parts was converted to", function()
+        assert.are.equal(os.time(parts), db:Timestamp(parts):as_number())
+      end)
+
+      it("should return nil and a message for a timestamp holding no number", function()
+        local value, err = db:Timestamp(nil):as_number()
+        assert.is_nil(value)
+        assert.are.equal("db.Timestamp:as_number: timestamp seems to be invalid and isn't a number", err)
+      end)
+
+      it("should return nil and a message for CURRENT_TIMESTAMP before the database fills it in", function()
+        local value, err = db:Timestamp("CURRENT_TIMESTAMP"):as_number()
+        assert.is_nil(value)
+        assert.are.equal("db.Timestamp:as_number: timestamp seems to be invalid and isn't a number", err)
+      end)
+    end)
+
+    describe("Tests the functionality of db.__Timestamp:as_string", function()
+      it("should default to a month-first date and a 24 hour clock", function()
+        local formatted = db:Timestamp(epoch):as_string()
+        assert.are.equal(os.date("%m-%d-%Y %H:%M:%S", epoch), formatted)
+        -- os.date on its own would agree with any default format, so pin the shape too
+        assert.is_truthy(formatted:match("^%d%d%-%d%d%-%d%d%d%d %d%d:%d%d:%d%d$"))
+      end)
+
+      it("should use the format it is given", function()
+        assert.are.equal("2015-06-14", db:Timestamp(parts):as_string("%Y-%m-%d"))
+      end)
+
+      it("should return the string nil and a message for a timestamp holding no number", function()
+        -- it promises a string, so an invalid timestamp is reported as one rather
+        -- than making every caller wrap the result in tostring()
+        local value, err = db:Timestamp(nil):as_string()
+        assert.are.equal("nil", value)
+        assert.are.equal("db.Timestamp:as_string: timestamp seems to be invalid and isn't a number", err)
+      end)
+    end)
+
+    describe("Tests the functionality of db.__Timestamp:as_table", function()
+      it("should return the date parts of the epoch it holds", function()
+        assert.are.same(os.date("*t", epoch), db:Timestamp(epoch):as_table())
+      end)
+
+      it("should give back the parts it was built from", function()
+        local actual = db:Timestamp(parts):as_table()
+        assert.are.equal(2015, actual.year)
+        assert.are.equal(6, actual.month)
+        assert.are.equal(14, actual.day)
+        assert.are.equal(9, actual.hour)
+        assert.are.equal(30, actual.min)
+        assert.are.equal(15, actual.sec)
+      end)
+
+      it("should return nil and a message for a timestamp holding no number", function()
+        local value, err = db:Timestamp(nil):as_table()
+        assert.is_nil(value)
+        assert.are.equal("db.Timestamp:as_table: timestamp seems to be invalid and isn't a number", err)
+      end)
+    end)
+
+    describe("Tests the functionality of db.__Timestamp:set", function()
+      it("should give a timestamp holding no number a real value", function()
+        local timestamp = db:Timestamp(nil)
+        assert.is_nil((timestamp:as_number()))
+        timestamp:set(epoch)
+        assert.are.equal(epoch, timestamp:as_number())
+        assert.are.equal(os.date("%m-%d-%Y %H:%M:%S", epoch), timestamp:as_string())
+      end)
+
+      it("should replace a value that was already there", function()
+        local timestamp = db:Timestamp(epoch)
+        timestamp:set(epoch + 86400)
+        assert.are.equal(epoch + 86400, timestamp:as_number())
+      end)
+
+      it("should turn a CURRENT_TIMESTAMP placeholder into a real time", function()
+        local timestamp = db:Timestamp("CURRENT_TIMESTAMP")
+        timestamp:set(epoch)
+        assert.are.equal(epoch, timestamp:as_number())
+      end)
+
+      it("should refuse anything that is not a number", function()
+        local timestamp = db:Timestamp(epoch)
+        assert.has_error(function() timestamp:set("nope") end, "db.Timestamp:set: timestamp needs to be a number")
+        assert.has_error(function() timestamp:set(nil) end, "db.Timestamp:set: timestamp needs to be a number")
+        assert.are.equal(epoch, timestamp:as_number(), "a refused value must not have been stored")
+      end)
+    end)
+  end)
+
   describe("Tests, if hanging indexes are removed", function()
     local test_db_name = db:safe_name("remove_indexes_test")
     local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
@@ -1916,6 +2017,76 @@ describe("Tests DB.lua functions", function()
         }
       })
       assert.are.equal(2, #db:fetch(mydb.sheet))
+    end)
+  end)
+
+  -- the rollback specs above drive these four through a whole transaction; this
+  -- covers what each one does on its own, since db:merge_unique is the only
+  -- caller in the library and a package can use them in any order it likes
+  describe("Tests the functionality of db.Database:_begin, db.Database:_commit, db.Database:_rollback and db.Database:_end", function()
+    local dbName = "txntestingonly"
+    local otherName = "txnothertestingonly"
+
+    before_each(function()
+      mydb = db:create(dbName, {sheet = {name = ""}})
+      db:add(mydb.sheet, {name = "committed"})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      os.remove(getMudletHomeDir() .. "/Database_" .. otherName .. ".db")
+      mydb = nil
+    end)
+
+    local function names()
+      local result = {}
+      for _, row in ipairs(db:fetch(mydb.sheet)) do
+        result[#result + 1] = row.name
+      end
+      table.sort(result)
+      return result
+    end
+
+    it("_begin stops every write committing on its own and _end starts it again", function()
+      assert.is_true(db.__autocommit[mydb._db_name])
+      mydb:_begin()
+      assert.is_false(db.__autocommit[mydb._db_name])
+      mydb:_end()
+      assert.is_true(db.__autocommit[mydb._db_name])
+    end)
+
+    it("_begin only reaches the database it was called on", function()
+      local other = db:create(otherName, {sheet = {name = ""}})
+      mydb:_begin()
+      assert.is_false(db.__autocommit[mydb._db_name])
+      assert.is_true(db.__autocommit[other._db_name])
+      mydb:_end()
+    end)
+
+    it("_commit keeps the work so far while leaving later work rollback-able", function()
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "kept"})
+      mydb:_commit()
+      db:add(mydb.sheet, {name = "dropped"})
+      mydb:_rollback()
+      mydb:_end()
+      assert.are.same({"committed", "kept"}, names())
+    end)
+
+    it("_end is only a flag, so it does not commit what is still pending", function()
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "pending"})
+      mydb:_end()
+      -- nothing committed the row, so a rollback afterwards still takes it away
+      mydb:_rollback()
+      assert.are.same({"committed"}, names())
+    end)
+
+    it("_rollback outside a transaction leaves the committed rows alone", function()
+      db:add(mydb.sheet, {name = "autocommitted"})
+      mydb:_rollback()
+      assert.are.same({"autocommitted", "committed"}, names())
     end)
   end)
 
