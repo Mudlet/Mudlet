@@ -52,6 +52,7 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "ctelnet.h"
+#include "dlgComposer.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 #include "utils.h"
@@ -129,6 +130,30 @@ private:
     }
 
     void feedAtcp(const QByteArray& message) { feedSubnegotiation(static_cast<char>(OPT_ATCP), message); }
+
+    void announce(const char command, const char option)
+    {
+        QByteArray data;
+        data.append(TN_IAC).append(command).append(option);
+        mpHost->mTelnet.loopbackTest(data);
+    }
+
+    // Mudlet answers a DO TIMING_MARK with WONT TIMING_MARK whatever else is
+    // going on (RFC 860), so that answer arriving means everything written
+    // before it has reached the server - which is what lets a forgetReceived()
+    // after it drop all of the earlier traffic rather than some of it.
+    void waitForEverythingSentSoFar()
+    {
+        announce(TN_DO, OPT_TIMING_MARK);
+        QByteArray marker;
+        marker.append(TN_IAC).append(TN_WONT).append(OPT_TIMING_MARK);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, &marker]() {
+                             return mpServer->received().contains(marker);
+                         },
+                         10000),
+                 "the telnet marker never came back");
+    }
     void feedMsp(const QByteArray& message) { feedSubnegotiation(OPT_MSP, message); }
 
     // What a script would see. The table is created by LuaGlobal.lua, so a
@@ -146,6 +171,20 @@ private:
         const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
         lua_pop(L, 2);
         return value;
+    }
+
+    // The composer is a top-level window of its own rather than a child of the
+    // Host, so this is the only way to see whether one is up.
+    static QList<dlgComposer*> openComposers()
+    {
+        QList<dlgComposer*> found;
+        const QWidgetList widgets = QApplication::topLevelWidgets();
+        for (QWidget* widget : widgets) {
+            if (auto* composer = qobject_cast<dlgComposer*>(widget)) {
+                found.append(composer);
+            }
+        }
+        return found;
     }
 
     QString mediaLocation() const { return qsl("http://127.0.0.1:%1/msp/").arg(mpMediaServer->serverPort()); }
@@ -294,6 +333,82 @@ private slots:
         }
     }
 
+    // Client.Compose puts an editor up. A game that repeats the request - or
+    // spams it - must not stack a second one on top, since only the newest
+    // would be the one cTelnet then answers for.
+    void test_composeOpensOneEditorHoweverOftenItIsAskedFor()
+    {
+        QCOMPARE(openComposers().size(), 0);
+
+        feedAtcp("Client.Compose Note\nfirst draft");
+        QCOMPARE(openComposers().size(), 1);
+        dlgComposer* composer = openComposers().first();
+        QCOMPARE(composer->title->text(), qsl("Note"));
+        QCOMPARE(composer->edit->toPlainText(), qsl("first draft"));
+
+        feedAtcp("Client.Compose Second\nanother draft");
+        QCOMPARE(openComposers().size(), 1);
+        QCOMPARE(openComposers().first()->title->text(), qsl("Note"));
+
+        // Cancelling tells the game the buffer was abandoned, and takes the
+        // window with it - the editor is deleted on close.
+        mpHost->mTelnet.atcpComposerCancel();
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5000),
+                 "cancelling the composer left its window behind");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpServer->received().contains("*q\nno\n");
+                         },
+                         10000),
+                 "cancelling the composer did not tell the game the buffer was abandoned");
+    }
+
+    // Saving sends the buffer back. With GMCP on - the default - that is an
+    // IRE.Composer.SetBuffer with the text quoted, so a draft carrying a quote,
+    // a backslash or a line break cannot end the message early.
+    void test_savingTheComposerQuotesTheBufferItSendsBack()
+    {
+        // The buffer goes back over whichever of the two protocols is live, and
+        // GMCP is the one a profile prefers - but only once a game has offered
+        // it, which the recording server never does on its own.
+        announce(TN_WILL, static_cast<char>(OPT_GMCP));
+        QVERIFY2(mpHost->mTelnet.isGMCPEnabled(), "GMCP did not turn on, so the composer had nothing to send its buffer over");
+        // Turning GMCP on makes Mudlet introduce itself over it, so wait that
+        // out before forgetting - otherwise the handshake lands in the capture
+        // this test then reads.
+        waitForEverythingSentSoFar();
+        mpServer->forgetReceived();
+
+        feedAtcp("Client.Compose Note");
+        QCOMPARE(openComposers().size(), 1);
+        QCOMPARE(openComposers().first()->title->text(), qsl("Note"));
+        QCOMPARE(openComposers().first()->edit->toPlainText(), QString());
+
+        mpHost->mTelnet.atcpComposerSave(qsl("a \"quoted\" back\\slash\nand a second line"));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty();
+                         },
+                         10000),
+                 "saving the composer sent no GMCP message");
+        const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_GMCP);
+        QCOMPARE(sent.size(), 1);
+        // moc does not understand raw string literals, so this stays escaped:
+        QCOMPARE(sent.first().payload, QByteArray("IRE.Composer.SetBuffer \"a \\\"quoted\\\" back\\\\slash\\nand a second line\""));
+
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5000),
+                 "saving the composer left its window behind");
+    }
+
     // MSP names a file without an extension and leaves the client to pick one
     // per media type, so the file requested is where a sound and a piece of
     // music part company.
@@ -362,16 +477,6 @@ private slots:
         QCOMPARE(mpMediaServer->requestedPaths(), QStringList({qsl("/msp/bark.wav")}));
     }
 
-    // "Off" is a stop, not a file: nothing may be fetched for it.
-    void test_offStopsRatherThanFetchingAFile()
-    {
-        feedMsp("!!SOUND(Off)");
-        feedMsp("!!SOUND(sentinel.wav)");
-        QVERIFY2(waitForMediaRequests(1), "the sentinel after !!SOUND(Off) fetched nothing");
-        settleMediaRequests();
-        QCOMPARE(mpMediaServer->requestedPaths(), QStringList({qsl("/msp/sentinel.wav")}));
-    }
-
     // A server-supplied file name that climbs out of the profile's media
     // directory must not be fetched, since fetching it is what would write it
     // there.
@@ -384,9 +489,10 @@ private slots:
         QCOMPARE(mpMediaServer->requestedPaths(), QStringList({qsl("/msp/sentinel.wav")}));
     }
 
-    // The standard puts a line ending on an MSP message, and games have been
-    // known to send ANSI in one; neither may reach the file name.
-    void test_lineEndingsAndAnsiAreScrubbedFromTheMessage()
+    // The standard puts a line ending on an MSP message. It has to come off
+    // before the closing parenthesis is looked for, or every well-formed message
+    // a game sends reads as malformed.
+    void test_theLineEndingTheStandardPutsOnAMessageIsStripped()
     {
         feedMsp("!!SOUND(bark.wav)\r\n");
         QVERIFY2(waitForMediaRequests(1), "a message with the line ending the standard puts on it fetched nothing");

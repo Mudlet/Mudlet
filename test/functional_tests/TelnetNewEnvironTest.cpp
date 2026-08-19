@@ -179,6 +179,17 @@ private:
 
     void requestSend(const QByteArray& body) { feed(subnegotiation(OPT_NEW_ENVIRON, QByteArray(1, NEW_ENVIRON_SEND) + body)); }
 
+    // A fresh connection, which is the one thing that clears the record of what
+    // this game has asked for so far - it outlives a test method otherwise.
+    void reconnect()
+    {
+        QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
+        mpHost->mTelnet.disconnectIt();
+        mpHost->mTelnet.reconnect();
+        QVERIFY2(connected.wait(15s), "the profile did not come back after a reconnect");
+        mpServer->forgetReceived();
+    }
+
     static QByteArray named(const char type, const QByteArray& name) { return QByteArray(1, type) + name; }
 
     // The variables of the one reply a test expects, or an empty list and a
@@ -457,10 +468,10 @@ private slots:
         QVERIFY2(newEnvironReplies().isEmpty(), "Mudlet kept answering NEW_ENVIRON after the game withdrew it");
     }
 
-    // An INFO update is only owed to a game that asked for the variable in the
-    // first place - sending one for a variable it never requested tells it about
-    // a name it has no idea what to do with.
-    void test_infoIsSentOnlyForVariablesTheGameAskedFor()
+    // A preference the game has already been told about is worth an INFO when it
+    // changes, carrying the new value under the same type the original answer
+    // used - anything else and the game files the update under a second name.
+    void test_infoUpdateCarriesTheNewValue()
     {
         enableNewEnviron();
         requestSend({});
@@ -478,10 +489,34 @@ private slots:
         QCOMPARE(updated.type, NEW_ENVIRON_USERVAR);
         QCOMPARE(updated.name, QByteArray("SCREEN_READER"));
         QCOMPARE(updated.value, QByteArray("1"));
+    }
 
+    // An INFO is only owed to a game that asked for the variable in the first
+    // place: one it never requested arrives as a name it has no idea what to do
+    // with. The reconnect is what makes that testable, since the record of what
+    // has been asked for is only cleared by a fresh connection.
+    void test_noInfoIsSentForAVariableTheGameNeverAskedFor()
+    {
+        reconnect();
+        enableNewEnviron();
+        requestSend(named(NEW_ENVIRON_USERVAR, "CHARSET"));
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        // In the advertised set, and its value has changed, but this game has
+        // only ever asked about CHARSET.
         mpServer->forgetReceived();
-        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("NOT_A_MUDLET_VARIABLE"));
-        QVERIFY2(newEnvironReplies().isEmpty(), "an INFO went out for a variable the game never requested");
+        mpHost->mAdvertiseScreenReader = true;
+        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+        QVERIFY2(newEnvironReplies().isEmpty(), "an INFO went out for a variable the game never asked for");
+
+        // The control: the one variable it did ask about is still updated.
+        mpServer->forgetReceived();
+        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("CHARSET"));
+        QString problem;
+        const QList<EnvironVariable> updates = soleReplyVariables(NEW_ENVIRON_INFO, problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(updates.size(), 1);
+        QCOMPARE(updates.first().name, QByteArray("CHARSET"));
     }
 
     // The hyperlink capabilities change together, so they are announced together
