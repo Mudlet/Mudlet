@@ -113,6 +113,94 @@ for f in "${FILES_TO_UPLOAD[@]}"; do
     ./sentry-cli debug-files upload "$f" --project "mudlet"
 done
 
+# Qt is bundled into the AppImage and the .app, so its frames land in crash
+# reports next to Mudlet's own. Sentry can only name them if it holds the
+# libraries: the shipped, stripped ones still carry .dynsym and unwind tables,
+# which is enough for function names. The DWARF/dSYM companions add file:line
+# on top, and are picked up here whenever Qt's debug information component
+# happens to be installed - CI does not install it, because qtbase alone is a
+# 946MB download. Windows does the equivalent further down, from its MSYS2
+# -debug packages.
+QT_FILES=()
+
+add_qt_file() {
+    if [[ -e "$1" ]]; then
+        QT_FILES+=("$1")
+    fi
+}
+
+# Qt names its Linux companion "Qt6Core.debug" beside "libQt6Core.so.6", while
+# objcopy's own convention is "<file>.debug" - accept either.
+add_qt_companions() {
+    local lib="$1" dir base stem
+    dir="$(dirname "$lib")"
+    base="$(basename "$lib")"
+    stem="${base#lib}"
+    stem="${stem%%.so*}"
+    add_qt_file "${dir}/${stem}.debug"
+    add_qt_file "${lib}.debug"
+    add_qt_file "${lib}.dSYM"
+}
+
+if [[ "$OS" == "Linux" || "$OS" == "Darwin" ]]; then
+    QT_PREFIX="${2:-}"
+
+    if [[ "$OS" == "Linux" ]]; then
+        # ldd resolves the whole transitive closure, so Qt modules pulled in by
+        # other Qt modules are covered without walking the graph by hand.
+        while read -r lib; do
+            add_qt_file "$lib"
+            add_qt_companions "$lib"
+            if [[ -z "$QT_PREFIX" ]]; then
+                QT_PREFIX="$(dirname "$(dirname "$lib")")"
+            fi
+        done < <(ldd "$MUDLET_EXEC" 2>/dev/null | awk '/libQt6/ && $3 ~ /^\// {print $3}')
+    else
+        # otool reports @rpath-relative install names, so resolve each framework
+        # against the Qt prefix and walk their dependencies breadth-first.
+        if [[ -z "$QT_PREFIX" ]] && command -v qmake >/dev/null 2>&1; then
+            QT_PREFIX="$(qmake -query QT_INSTALL_PREFIX 2>/dev/null || true)"
+        fi
+        if [[ -n "$QT_PREFIX" ]]; then
+            declare -A seen_fw=()
+            pending=("$MUDLET_EXEC")
+            while [[ ${#pending[@]} -gt 0 ]]; do
+                current="${pending[0]}"
+                pending=("${pending[@]:1}")
+                while read -r name; do
+                    [[ -z "$name" || -n "${seen_fw[$name]:-}" ]] && continue
+                    seen_fw[$name]=1
+                    fw="${QT_PREFIX}/lib/${name}.framework/Versions/A/${name}"
+                    [[ -f "$fw" ]] || continue
+                    add_qt_file "$fw"
+                    add_qt_companions "$fw"
+                    add_qt_file "${QT_PREFIX}/lib/${name}.framework.dSYM"
+                    pending+=("$fw")
+                done < <(otool -L "$current" 2>/dev/null | sed -n 's|.*/\(Qt[A-Za-z0-9]*\)\.framework/.*|\1|p')
+            done
+        fi
+    fi
+
+    # Plugins are loaded at runtime rather than linked, so the walk above never
+    # reaches them, yet platform, imageformat and TLS plugins all show up in
+    # stack traces. They are small enough to take wholesale.
+    if [[ -n "$QT_PREFIX" && -d "${QT_PREFIX}/plugins" ]]; then
+        while IFS= read -r -d '' plugin; do
+            add_qt_file "$plugin"
+            add_qt_companions "$plugin"
+        done < <(find "${QT_PREFIX}/plugins" -type f \( -name '*.so' -o -name '*.dylib' \) -print0)
+    fi
+
+    if [[ ${#QT_FILES[@]} -gt 0 ]]; then
+        echo "Uploading ${#QT_FILES[@]} Qt debug information files to Sentry..."
+        ./sentry-cli debug-files upload "${QT_FILES[@]}" --project "mudlet"
+    else
+        # Not fatal - Mudlet's own frames still symbolicate - but every Qt frame
+        # in every Linux and macOS crash report goes unnamed, so say so loudly.
+        echo "::warning::no Qt libraries found to upload (QT_PREFIX='${QT_PREFIX}') - Qt frames in crash reports will be unsymbolicated"
+    fi
+fi
+
 # Qt ships its debug info as separate DWARF ".debug" companions; sentry-cli 3.5.0+
 # parses these, so upload them too. See https://github.com/getsentry/sentry/issues/104738
 if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
