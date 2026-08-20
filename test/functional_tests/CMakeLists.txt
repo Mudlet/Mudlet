@@ -182,7 +182,7 @@ if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
     set_tests_properties(PipelineBenchmark PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;ASAN_OPTIONS=detect_leaks=0"
         LABELS "functional"
         TIMEOUT 600)
 endif()
@@ -266,8 +266,17 @@ foreach(test_name ${allFunctionalTestNames})
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
     endif()
+    # MUDLET_TEST_MODE is the variable the code already keys "don't touch the real
+    # machine" off - the keychain, the update check and the real speech engine all
+    # consult it. What it changes for a functional test specifically is smaller: mpkg
+    # stays out of the profiles they build (see setupPreInstallPackages() in
+    # src/mudlet.cpp), and waitForEvent()/pumpEvents() become callable from Lua.
+    # Set here rather than in the workflows, which only ever set it for the Lua steps,
+    # so ctest behaves the same locally and in CI. A test that needs it unset has to
+    # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
+    # asserts the variable arrives at all.
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
