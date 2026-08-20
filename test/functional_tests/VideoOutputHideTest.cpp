@@ -263,9 +263,12 @@ private slots:
         QVERIFY2(pVideoWidget, "no video widget was attached to the label, so there is nothing on it for the purge to take away");
         QVERIFY2(pLabel->isVisible(), "the label was not on screen while the video played, so this test would pass severed");
 
-        // Ends every playback outright rather than deferring, so no wait is needed - but the
-        // released source is still the witness that it happened.
-        QVERIFY(runLua(qsl("assert(purgeMediaCache())")));
+        // Not assert()ed like the other calls: what it returns is whether the media directory
+        // was emptied, and on Windows the backend can still hold the clip open at that moment,
+        // so a purge that stopped everything correctly still answers false. The stop happens
+        // first either way, and the released source is the witness that it did. It also ends
+        // every playback outright rather than deferring, so no wait is needed.
+        QVERIFY(runLua(qsl("purgeMediaCache()")));
         QCOMPARE(mpHost->mpMedia->playersHoldingSource(), 0);
 
         QVERIFY2(!pLabel->isVisible(), "a purge stopped a video that had asked to close and left its label on screen - the stopAllMediaPlayers() emit no longer reaches hideVideoOutput()");
