@@ -16663,97 +16663,97 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="541"/>
       <source>Strict UNIX line endings</source>
-      <translation type="unfinished"/>
+      <translation>Fin de línea estricto de UNIX</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="554"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation type="unfinished"/>
+      <translation>Limpiar automáticamente la línea de entrada después de enviar texto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="222"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Si estás jugando a un juego que no está en inglés y ves � en lugar de texto, o si letras especiales como &lt;span style=&quot; font-weight:600;&quot;&gt;ñ &lt;/span&gt;no se muestran correctamente, intenta cambiar la codificación a UTF-8 o a la que sugiera tu juego. &lt;/p&gt;&lt;p&gt;En el caso de algunas codificaciones en ciertos sistemas operativos, el propio Mudlet debe proporcionar el códec necesario; si ese es el caso para este Mudlet, se aplicará un prefijo &lt;tt&gt;m&lt;/tt&gt; a esos nombres de codificación (¡Así, si hay errores, se podrá culpar al responsable correcto!).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="397"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extension &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed while logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Al marcarse, hará que el archivo de registro (cuyo nombre incluye la marca de la fecha) sea un archivo HTML (extensión de archivo &apos;.html&apos;), el cual puede transmitir información de color, fuente y otros formatos, en lugar de un formato de texto sin formato (extensión de archivo &apos;.txt&apos;). Si se cambia mientras el registro ya está en progreso, es necesario detener y reiniciar el registro para que esta configuración surta efecto en un nuevo archivo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="535"/>
       <source>&lt;p&gt;Use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utiliza finales de línea estrictos de UNIX en los comandos para servidores UNIX antiguos que no pueden manejar correctamente los finales de línea de Windows.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="592"/>
       <source>React to all keybindings on the same key</source>
-      <translation type="unfinished"/>
+      <translation>Reaccionar a todas las combinaciones de teclas en la misma tecla</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="567"/>
       <source>&lt;p&gt;Highlights your input line text when scrolling through your history for easy cancellation.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Resalta el texto de la línea de entrada al desplazarte por el historial para facilitar la cancelación.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="202"/>
       <source>Can you help translate Mudlet? If so, please visit: https://www.mudlet.org/translate.</source>
-      <translation type="unfinished"/>
+      <translation>¿Puedes ayudar a traducir Mudlet? Si es así, visita: https://www.mudlet.org/translate.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="225"/>
       <source>Choose the character encoding for this game. If you see replacement characters or special letters are wrong, try UTF-8 or whichever encoding your game suggests. Encoding names prefixed with the letter m are provided by Mudlet itself rather than the operating system.</source>
-      <translation type="unfinished"/>
+      <translation>Elige la codificación de caracteres para este juego. Si ves caracteres de reemplazo o las letras especiales son incorrectas, prueba con UTF-8 o la codificación que sugiera tu juego. Los nombres de codificación que empiezan con la letra m son proporcionados por el propio Mudlet en lugar del sistema operativo.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="292"/>
       <source>Show a toolbar notification if Mudlet is minimized and new data arrives.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar una notificación en la barra de herramientas si Mudlet está minimizado y llegan nuevos datos.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="308"/>
       <source>Mudlet handles telnet:// and telnets:// links</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet maneja enlaces telnet:// y telnets://</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="302"/>
       <source>&lt;p&gt;If checked, Mudlet will be registered as the default handler for telnet:// and telnets:// (secure) links in your system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Si se marca, Mudlet se registrará como el gestor predeterminado para enlaces telnet:// y telnets:// (seguros) en tu sistema.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>If checked, Mudlet will be registered as the default handler for telnet:// and telnets:// (secure) links in your system.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca, Mudlet se registrará como el gestor predeterminado para enlaces telnet:// y telnets:// (seguros) en tu sistema.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="365"/>
       <source>This also needs GMCP to be enabled in the protocols.</source>
-      <translation type="unfinished"/>
+      <translation>Esto también requiere que GMCP esté activado en los protocolos.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="400"/>
       <source>When checked, log files are saved as HTML so colors and fonts are preserved; otherwise they are saved as plain text. If logging is already running, stop and restart it for this to take effect.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está marcado, los archivos de registro se guardan como HTML para conservar los colores y las fuentes; de lo contrario, se guardan como texto sin formato. Si el registro ya se está ejecutando, detenlo y reinícialo para que esto surta efecto.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="538"/>
       <source>Use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly.</source>
-      <translation type="unfinished"/>
+      <translation>Utiliza finales de línea estrictos de UNIX en los comandos para servidores UNIX antiguos que no puedan manejar correctamente los finales de línea de Windows.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="570"/>
       <source>Highlights your input line text when scrolling through your history for easy cancellation.</source>
-      <translation type="unfinished"/>
+      <translation>Resalta el texto de tu línea de entrada al desplazarte por el historial para poder cancelarlo fácilmente.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="678"/>
       <source>Command separator:</source>
-      <translation type="unfinished"/>
+      <translation>Separador de comandos:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="701"/>
       <source>Command line minimum height in pixels:</source>
-      <translation type="unfinished"/>
+      <translation>Altura mínima de la línea de comandos en píxeles:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="837"/>
@@ -16778,7 +16778,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="910"/>
       <source>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utilizar el suavizado de fuentes (anti-aliasing). Suaviza las fuentes si tienes una alta resolución de pantalla y puedes usar fuentes más grandes. Ten en cuenta que en resoluciones bajas y tamaños de fuente pequeños, la fuente se vuelve borrosa.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="916"/>
@@ -16788,24 +16788,24 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="957"/>
       <source>Display Border</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar borde</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="975"/>
       <location filename="../src/ui/profile_preferences.ui" line="994"/>
       <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Espacio adicional antes del texto en la parte superior; se puede establecer en negativo para mover el texto hacia arriba más allá de la pantalla.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="978"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>Altura del borde superior:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1025"/>
       <location filename="../src/ui/profile_preferences.ui" line="1044"/>
       <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Espacio adicional antes del texto a la izquierda; se puede establecer en negativo para mover el texto hacia la izquierda más allá de la pantalla.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1028"/>
@@ -16816,7 +16816,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1075"/>
       <location filename="../src/ui/profile_preferences.ui" line="1094"/>
       <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Espacio adicional antes del texto en la parte inferior; se puede establecer en negativo para permitir que el texto baje más allá de la pantalla.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1078"/>
@@ -16827,7 +16827,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1125"/>
       <location filename="../src/ui/profile_preferences.ui" line="1144"/>
       <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Espacio adicional antes del texto a la derecha; se puede establecer en negativo para mover el texto hacia la derecha más allá de la pantalla.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1128"/>
@@ -16837,12 +16837,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1175"/>
       <source>Word wrapping</source>
-      <translation>Salto automatico de linea</translation>
+      <translation>Salto automático de línea</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1201"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Ajustar líneas a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
@@ -16855,12 +16855,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1255"/>
       <source>Indent wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Identar las líneas ajustadas:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1309"/>
       <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Las líneas siguientes que se ajusten al ancho se identarán esta cantidad.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1494"/>
@@ -16870,7 +16870,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1500"/>
       <source>Stop selecting a word on these characters:</source>
-      <translation type="unfinished"/>
+      <translation>Detener la selección de una palabra al llegar a estos caracteres:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1516"/>
@@ -16891,17 +16891,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1752"/>
       <source>Show Spaces/Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Espacios/Pestañas</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1765"/>
       <source>Show Line/Paragraphs</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Línea/Párrafos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1571"/>
       <source>Echo Lua errors to the main console</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar los errores de Lua en la consola principal</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1640"/>
@@ -16911,27 +16911,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1646"/>
       <source>Theme</source>
-      <translation type="unfinished"/>
+      <translation>Tema</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1714"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Actualizando temas desde colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1772"/>
       <source>&lt;p&gt;Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Muestra caracteres Unicode bidireccionales que pueden utilizarse para cambiar el significado del código fuente mientras permanecen invisibles a la vista.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1815"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>Vista de color</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1821"/>
       <source>Select your color preferences</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar preferencias de color</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1827"/>
@@ -16946,47 +16946,47 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1882"/>
       <source>Command line foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Color del primer plano de la línea de comandos:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1905"/>
       <source>Command line background:</source>
-      <translation type="unfinished"/>
+      <translation>Color del fondo de la línea de comandos:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1928"/>
       <source>Command foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Color de primer plano del comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1954"/>
       <source>Command background:</source>
-      <translation type="unfinished"/>
+      <translation>Color de fondo del comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="183"/>
       <source>Language &amp;&amp; data encoding</source>
-      <translation type="unfinished"/>
+      <translation>Idioma y codificación de datos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="189"/>
       <source>Interface language:</source>
-      <translation type="unfinished"/>
+      <translation>Idioma de la interfaz:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="209"/>
       <source>Server data encoding:</source>
-      <translation type="unfinished"/>
+      <translation>Codificación de datos del servidor:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="237"/>
       <source>Please restart Mudlet to apply the new language</source>
-      <translation type="unfinished"/>
+      <translation>Por favor, reinicia Mudlet para aplicar el nuevo idioma</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="247"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>Miscelánea</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="586"/>
