@@ -17561,12 +17561,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="611"/>
       <source>Disable password masking</source>
-      <translation type="unfinished"/>
+      <translation>Desactivar el enmascaramiento de la contraseña</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="631"/>
       <source>Show sent commands:</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar comandos enviados:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="647"/>
@@ -17577,304 +17577,311 @@ try again when it has finished.</source>
 &lt;li&gt;&lt;b&gt;Always&lt;/b&gt;: Commands are always shown regardless of script settings&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Controla cómo se muestran en la pantalla los comandos enviados:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;b&gt;Nunca&lt;/b&gt;: Los comandos nunca se muestran, independientemente de la configuración del script&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Controlado por script&lt;/b&gt;: Los scripts pueden controlar la visibilidad mediante send(cmd, true/false)&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Siempre&lt;/b&gt;: Los comandos siempre se muestran, independientemente de la configuración del script&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;i&gt;Esta opción puede ser desactivada por el servidor del juego si negocia el uso de la opción ECHO de telnet.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="656"/>
       <source>Controls how sent commands are echoed in the display. Never means commands are never shown; Script controlled lets scripts decide via the second argument to send(); Always shows commands regardless of script settings. The game server can override this by negotiating the telnet ECHO option.</source>
-      <translation type="unfinished"/>
+      <translation>Controla cómo se muestran en pantalla los comandos enviados. Nunca, significa que los comandos nunca se muestran; Controlado por script, permite que los scripts decidan mediante el segundo argumento de send(); Siempre, muestra los comandos independientemente de la configuración del script. El servidor de juego puede anular esta configuración negociando la opción ECHO de telnet.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="665"/>
       <source>Script controlled</source>
-      <translation type="unfinished"/>
+      <translation>Controlado por script</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="742"/>
       <source>This option controls spell-checking on the command line in the main console for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Esta opción controla la corrección ortográfica en la línea de comandos de la consola principal para este perfil.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="778"/>
       <source>A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>Estará disponible un diccionario de usuario específico para este perfil. Este estará accesible desde la línea de comandos (las palabras que contenga aparecerán subrayadas con una línea discontinua de color cian) y desde el subsistema Lua.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="791"/>
       <source>A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>Estará disponible un diccionario de usuario compartido entre todos los perfiles que tengan esta opción seleccionada. Este diccionario funcionará en la línea de comandos (las palabras que contenga aparecerán subrayadas con una línea discontinua de color cian) y en el subsistema Lua.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="913"/>
       <source>Use anti aliasing on fonts. Smooths fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.</source>
-      <translation type="unfinished"/>
+      <translation>Utiliza el suavizado de fuentes (anti-aliasing). Esto suaviza las fuentes si dispones de una resolución de pantalla alta y utilizas tamaños de letra mayores. Ten en cuenta que, con resoluciones bajas y tamaños de letra pequeños, la fuente se verá borrosa.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="940"/>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
-      <translation type="unfinished"/>
+      <translation>Esta fuente no es monoespaciada, lo cual puede no ser ideal para jugar a algunos juegos de texto:
+puedes usarla, pero podría haber problemas al alinear columnas de texto.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
       <source>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>Espacio adicional antes del texto superior; se puede establecer un valor negativo para desplazar el texto hacia arriba, más allá de la pantalla.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
       <source>Extra space to have before text on the left - can be set to negative to move text left beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>Espacio adicional antes del texto a la izquierda; se puede establecer un valor negativo para desplazar el texto hacia la izquierda, más allá de los límites de la pantalla.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1097"/>
       <source>Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>Espacio adicional antes del texto en la parte inferior; se puede establecer un valor negativo para permitir que el texto baje más allá de la pantalla.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1147"/>
       <source>Extra space to have before text on the right - can be set to negative to move text right beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>Espacio adicional antes del texto a la derecha; se puede establecer un valor negativo para desplazar el texto hacia la derecha, más allá de la pantalla.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1312"/>
       <source>Subsequent wrapped lines will be indented by this amount.</source>
-      <translation type="unfinished"/>
+      <translation>Las líneas siguientes que se ajusten al ancho se indentarán en esta medida.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1315"/>
       <source>Indent hanging wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Identar las líneas ajustadas:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1406"/>
       <source>Scrollback</source>
-      <translation type="unfinished"/>
+      <translation>Desplazamiento hacia atrás</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1430"/>
       <source>&lt;p&gt;Maximum number of lines to keep in the console buffer. When exceeded, older lines are removed in batches.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Número máximo de líneas que se conservan en el búfer de la consola. Al superarse este límite, las líneas más antiguas se eliminan por lotes.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1433"/>
       <source>Maximum number of lines to keep in the console buffer. When exceeded, older lines are removed in batches.</source>
-      <translation type="unfinished"/>
+      <translation>Número máximo de líneas que se conservan en el búfer de la consola. Al superarse este límite, las líneas más antiguas se eliminan por lotes.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1436"/>
       <source>Main display size:</source>
-      <translation type="unfinished"/>
+      <translation>Tamaño de la pantalla principal:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1446"/>
       <source>&lt;p&gt;Maximum number of lines to keep in the console buffer. Minimum is 100 lines.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Número máximo de líneas que se conservarán en el búfer de la consola. El mínimo es de 100 líneas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1449"/>
       <source>Maximum number of lines to keep in the console buffer. Minimum is 100 lines.</source>
-      <translation type="unfinished"/>
+      <translation>Número máximo de líneas que se conservarán en el búfer de la consola. El mínimo es de 100 líneas.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1465"/>
       <source>lines</source>
-      <translation type="unfinished"/>
+      <translation>líneas</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1478"/>
       <source>&lt;p&gt;Use the maximum buffer size your system can handle. This will be calculated based on available memory.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utiliza el tamaño máximo de búfer que tu sistema pueda gestionar. Este se calculará en función de la memoria disponible.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1481"/>
       <source>Use the maximum buffer size your system can handle. This will be calculated based on available memory.</source>
-      <translation type="unfinished"/>
+      <translation>Utiliza el tamaño máximo de búfer que tu sistema pueda gestionar. Este se calculará en función de la memoria disponible.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1484"/>
       <source>Use maximum lines possible</source>
-      <translation type="unfinished"/>
+      <translation>Utilice el máximo número de líneas posible.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1513"/>
       <source>Characters that double-click selection should stop on. Without this, only spaces end a selection, so quotes and punctuation get included with the word. For example, entering an apostrophe, double quote and exclamation mark would make double-clicking select just the word Hello rather than &quot;Hello!&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Se deben definir los caracteres en los que debe detener la selección realizada mediante el doble clic. Sin esto, la selección solo finaliza al encontrar espacios, por lo que las comillas y los signos de puntuación se incluyen junto con la palabra. Por ejemplo, si se incluyen el apóstrofe, las comillas dobles y el signo de exclamación, al hacer doble clic se seleccionaría únicamente la palabra Hola en lugar de &quot;Hola!&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1578"/>
       <source>Display control characters as:</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar caracteres de control como:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1555"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation type="unfinished"/>
+      <translation>Hacer que los caracteres de ancho &apos;ambiguo&apos; de Asia Oriental ocupen el ancho completo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="375"/>
       <source>&lt;p&gt;OSC 8 lets a game server put clickable links in its output, which can send commands, pre-fill your input line, or open a web page. Uncheck to ignore them and to stop telling servers that Mudlet supports them.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;OSC 8 permite que un servidor de juego incluya enlaces clicables en su salida; estos pueden enviar comandos, rellenar previamente la línea de entrada o abrir una página web. Desmarca esta opción para ignorarlos y dejar de informar a los servidores de que Mudlet es compatible con ellos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="378"/>
       <source>When checked, clickable OSC 8 hyperlinks from the game server are shown and Mudlet advertises support for them. When unchecked, the sequences are ignored and the capability is not advertised.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando se marca la opción, se muestran los hipervínculos OSC 8 clicables que provienen del servidor de juego y Mudlet anuncia que los admite. Cuando se desmarca, las secuencias se ignoran y no se anuncia dicha capacidad.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="381"/>
       <source>Enable OSC 8 hyperlinks from the server</source>
-      <translation type="unfinished"/>
+      <translation>Habilitar hipervínculos OSC 8 desde el servidor</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1355"/>
       <source>&lt;p&gt;Some games wrap their own lines and offer no way to turn that off, which makes triggers awkward to write: the text a trigger sees can be split mid-sentence. This option joins those wrapped lines back together before triggers run, so triggers always see whole lines and the wrapping above applies for display instead.&lt;/p&gt;&lt;p&gt;Set the column to the width the game wraps at (very often 80). Only lines from the game are affected.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This feature is experimental: it tells wrapped prose apart from prompts, tables and ASCII art by their shape, so the occasional line may still be joined or left split when it should not be.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Algunos juegos ajustan automáticamente el texto a un ancho determinado y no ofrecen forma de desactivar esta función, lo que dificulta la creación de disparadores: el texto que percibe el disparador puede aparecer dividido a mitad de una frase. Esta opción vuelve a unir dichas líneas antes de que se ejecuten los disparadores, de modo que estos siempre procesan líneas completas, mientras que el ajuste de línea mencionado anteriormente se aplica únicamente a la visualización.&lt;/p&gt;&lt;p&gt;Establezca la columna en el ancho que utiliza el juego para el ajuste de línea (muy a menudo, 80). Esta función solo afecta a las líneas provenientes del juego.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Esta función es experimental: distingue el texto continuo ajustado de los indicadores de entrada (prompts), las tablas y el arte ASCII basándose en su forma, por lo que es posible que, ocasionalmente, alguna línea se una o permanezca dividida indebidamente.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1358"/>
       <source>Undo the game&apos;s own wrapping at:</source>
-      <translation type="unfinished"/>
+      <translation>Deshaz el propio envoltorio del juego en:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1538"/>
       <source>Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.</source>
-      <translation type="unfinished"/>
+      <translation>Algunos juegos (en particular, todos los IRE MUDs) presentan un error por el cual no comunican correctamente al cliente dónde debe ir un salto de línea. Activa esta opción para evitar que el texto se añada a la línea del prompt anterior.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1568"/>
       <source>Prints Lua errors to the main console in addition to the error tab in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Imprime los errores de Lua en la consola principal, además de en la pestaña de errores del editor.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1595"/>
       <source>nothing</source>
-      <translation type="unfinished"/>
+      <translation>nada</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1600"/>
       <source>Unicode Control Pictures</source>
-      <translation type="unfinished"/>
+      <translation>Imágenes de control Unicode</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1605"/>
       <source>CP437 (OEM Font)- like</source>
-      <translation type="unfinished"/>
+      <translation>Similar a CP437 (fuente OEM)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1613"/>
       <source>Display whenever a tab is connected or a disconnected</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar cada vez que una pestaña se conecte o se desconecte</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1616"/>
       <source>Show connection status on tabs</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar el estado de la conexión en las pestañas</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1730"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>Autocompletar las funciones de Lua en el editor de código</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1749"/>
       <source>When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.</source>
-      <translation type="unfinished"/>
+      <translation>Al mostrar el contenido Lua en el área principal del editor, se visualiza las tabulaciones y los espacios con marcas visibles en lugar de espacios en blanco.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1762"/>
       <source>When displaying Lua contents in the main text editor area of the Editor show line and paragraph ends with visible marks as well as whitespace.</source>
-      <translation type="unfinished"/>
+      <translation>Al mostrar contenido Lua en el área principal del editor, se visualiza los finales de línea y de párrafo con marcas visibles, así como los espacios en blanco.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1775"/>
       <source>Shows bidirectional Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye.</source>
-      <translation type="unfinished"/>
+      <translation>Muestra los caracteres Unicode bidireccionales que pueden utilizarse para alterar el significado del código fuente, permaneciendo invisibles a simple vista.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1778"/>
       <source>Show invisible Unicode control characters</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar los caracteres de control Unicode invisibles</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1785"/>
       <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Muestra el número de identificación &lt;b&gt;único&lt;/b&gt; que Mudlet utiliza internamente para identificar cada instancia de un elemento; este es el mismo número que devuelven las funciones de la API de Lua (para crear alias, asignaciones de teclas, etc.) cuando se ejecutan correctamente. Esta información resulta útil cuando existen varios elementos del mismo tipo y nombre, y se incorporará a los nombres de los scripts Lua de dichos elementos en la salida de la consola de depuración central.&lt;/p&gt;&lt;p&gt;Ten en cuenta que, aunque el número asignado a un elemento permanece constante durante una sesión del perfil, puede variar la próxima vez que se cargue el perfil si se añaden o eliminan otros elementos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1788"/>
       <source>Shows Mudlet&apos;s internal ID number for each item. This is the same ID returned by Lua functions that create aliases, triggers, timers and so on, and is helpful when several items share the same name. The ID is stable during a session but may change the next time the profile is loaded.</source>
-      <translation type="unfinished"/>
+      <translation>Muestra el número de identificación interno de Mudlet para cada elemento. Es el mismo identificador que devuelve las funciones de Lua que crean alias, disparadores, temporizadores, etc., y resulta útil cuando varios elementos comparten el mismo nombre. El identificador se mantiene constante durante la sesión, pero puede cambiar la próxima vez que se cargue el perfil.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1791"/>
       <source>Show Items&apos; ID number</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar el número de identificación de los elementos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1837"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El color del primer plano utilizado por defecto para la consola principal (a menos que se modifique mediante un comando Lua o del servidor del juego).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1840"/>
       <source>The foreground color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>El color del primer plano utilizado por defecto para la consola principal (a menos que se modifique mediante un comando Lua o del servidor del juego).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1866"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El color de fondo utilizado por defecto para la consola principal (a menos que se modifique mediante un comando Lua o del servidor del juego).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1869"/>
       <source>The background color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>El color de fondo utilizado por defecto para la consola principal (a menos que se modifique mediante un comando Lua o el servidor del juego).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1892"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El color del primer plano utilizado para el área de entrada principal.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1895"/>
       <source>The foreground color used for the main input area.</source>
-      <translation type="unfinished"/>
+      <translation>El color del primer plano utilizado para el área de entrada principal.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1915"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El color de fondo utilizado para el área de entrada principal.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1918"/>
       <source>The background color used for the main input area.</source>
-      <translation type="unfinished"/>
+      <translation>El color de fondo utilizado para el área de entrada principal.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1938"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El color de primer plano utilizado para el texto enviado al servidor del juego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1941"/>
       <source>The foreground color used for text sent to the game server.</source>
-      <translation type="unfinished"/>
+      <translation>El color de primer plano utilizado para el texto enviado al servidor del juego.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1964"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El color de fondo utilizado para el texto enviado al servidor del juego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1967"/>
       <source>The background color used for text sent to the game server.</source>
-      <translation type="unfinished"/>
+      <translation>El color de fondo utilizado para el texto enviado al servidor del juego.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1993"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation type="unfinished"/>
+      <translation>Estas preferencias determinan cómo quieres que se represente visualmente un color específico en la pantalla principal:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2003"/>
@@ -17885,7 +17892,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2013"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2026"/>
@@ -17896,7 +17903,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2036"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2049"/>
@@ -17907,7 +17914,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2059"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2072"/>
@@ -17918,7 +17925,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2082"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2095"/>
@@ -17929,7 +17936,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2105"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2118"/>
@@ -17940,7 +17947,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2128"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2141"/>
@@ -17951,7 +17958,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2151"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2164"/>
@@ -17962,7 +17969,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2174"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2187"/>
@@ -17973,18 +17980,18 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2197"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2210"/>
       <location filename="../src/ui/profile_preferences.ui" line="3352"/>
       <source>Light blue:</source>
-      <translation>Azul celeste:</translation>
+      <translation>Azul claro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2220"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2233"/>
@@ -17995,7 +18002,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2243"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2256"/>
@@ -18006,7 +18013,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2266"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2279"/>
@@ -18017,7 +18024,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2289"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2302"/>
@@ -18028,7 +18035,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2312"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2325"/>
@@ -18039,7 +18046,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2335"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2348"/>
@@ -18050,28 +18057,28 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2358"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>Número de color ANSI 15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2374"/>
       <source>When checked, the game server may change the 16 ANSI colors above using standard OSC P escape sequences, or reset them to their defaults using OSC R, the same as the reset button beside this option.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca esta opción, el servidor de juego puede modificar los 16 colores ANSI mencionados anteriormente mediante secuencias de escape estándar OSC P, o bien restablecerlos a sus valores predeterminados utilizando OSC R, tal como lo hace el botón de restablecer situado junto a esta opción.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2384"/>
       <location filename="../src/ui/profile_preferences.ui" line="3492"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Restablecer todos los colores a los valores predeterminados</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2371"/>
       <source>&lt;p&gt;If this option is checked the Mud Server may send codes to change the above 16 colors or to reset them to their defaults by using standard ANSI &lt;tt&gt;OSC&lt;/tt&gt; Escape codes.&lt;/p&gt;&lt;p&gt;Specifically &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; will set the color with index &lt;i&gt;i&lt;/i&gt; to have the color with the given &lt;i&gt;rr&lt;/i&gt; red, &lt;i&gt;gg&lt;/i&gt; green and &lt;i&gt;bb&lt;/i&gt;  blue components where i is a single hex-digit (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos; to give a number between 0 an d15) and rr, gg and bb are two digit hex-digits numbers (between 0 to 255); &amp;lt;OSC&amp;gt; is &lt;i&gt;Operating System Command&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;[&lt;/tt&gt; and &amp;lt;ST&amp;gt; is the &lt;i&gt;String Terminator&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Conversely &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; will reset the colors to the defaults like the button to the right does.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Si se marca esta opción, el servidor MUD puede enviar códigos para cambiar los 16 colores mencionados o para restablecerlos a sus valores predeterminados utilizando códigos de escape ANSI &lt;tt&gt;OSC&lt;/tt&gt; estándar.&lt;/p&gt;&lt;p&gt;Expresamente, &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; establecerá el color con índice &lt;i&gt;i&lt;/i&gt; para que tenga los componentes de color rojo &lt;i&gt;rr&lt;/i&gt;, verde &lt;i&gt;gg&lt;/i&gt; y azul &lt;i&gt;bb&lt;/i&gt;, donde i es un único dígito hexadecimal (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos;, para obtener un número entre 0 y 15) y rr, gg y bb son números hexadecimales de dos dígitos (entre 0 y 255); &amp;lt;OSC&amp;gt; es el &lt;i&gt;Comando de Sistemas Operativos,&lt;/i&gt; que normalmente se codifican como carácter ASCII &amp;lt;ESC&amp;gt; seguido de &lt;tt&gt;;[&lt;/tt&gt;, y &amp;lt;ST&amp;gt; es el &lt;i&gt;Terminador de Cadena&lt;/i&gt;, que normalmente se codifica como el carácter ASCII &amp;lt;ESC&amp;gt; seguido de &lt;tt&gt;\&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;Por el contrario, &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; restablecerá los colores a los valores predeterminados, tal como lo hace el botón de la derecha.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2377"/>
       <source>Server allowed to redefine these colors</source>
-      <translation type="unfinished"/>
+      <translation>El servidor tiene permiso para redefinir estos colores.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2408"/>
