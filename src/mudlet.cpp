@@ -7528,9 +7528,25 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
             // clang-format on
     };
 
+    // mpkg fetches the package listing as it loads and, when the repository carries a
+    // newer mpkg than the bundled one, uninstalls itself at once and reinstalls two
+    // seconds plus a download later. Each of those calls doCleanReset() if an editor is
+    // open, which queues a clear of its tree widgets onto the next event loop turn and
+    // frees every item a test is holding, and each announces itself in the main console.
+    // Whether it lands mid-test is down to how fast the download is.
+    //
+    // generic_mapper below can self-update the same way, but its upstream is this repo's
+    // own development branch, so bundled and remote move together; mpkg is published from
+    // a separate repository on its own schedule, which is what leaves a released Mudlet
+    // upgrading itself mid-test for days at a time.
+    const bool skipSelfUpgradingPackage = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+
     QHashIterator<QString, QStringList> i(defaultScripts);
     while (i.hasNext()) {
         i.next();
+        if (skipSelfUpgradingPackage && i.key() == qsl(":/packages/mpkg/mpkg.mpackage")) {
+            continue;
+        }
         if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
             mudlet::self()->mPackagesToInstallList.append(i.key());
         }
