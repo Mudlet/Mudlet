@@ -454,6 +454,18 @@ describe("Tests the functionality of getPackages", function()
     assert.is_true(listContains(packages, "run-tests"))
     assert.is_false(listContains(packages, "mudlet-spec-never-installed"))
   end)
+
+  -- Mudlet skips mpkg for a profile built under MUDLET_TEST_MODE, because mpkg
+  -- downloads the package listing on load and, whenever the repository is ahead of
+  -- the bundled copy, removes and reinstalls itself - which clears the editor's tree
+  -- widgets and writes to the main console partway through whatever is running. The
+  -- C++ side proves the package is left off the install list; this proves a profile
+  -- really does come up without it.
+  it("has no mpkg in a test profile, which would upgrade itself mid-run", function()
+    assert.is_false(packageInstalled("mpkg"),
+      "mpkg is installed in this profile. A profile created before this check existed keeps it - " ..
+      "remove it, or let a fresh self-test profile be made.")
+  end)
 end)
 
 describe("Tests the package info accessors", function()

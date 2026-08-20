@@ -266,11 +266,15 @@ foreach(test_name ${allFunctionalTestNames})
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
     endif()
-    # MUDLET_TEST_MODE is what the code already keys "don't touch the real machine" off:
-    # no update check against dblsqd, no keychain access, Qt's mock speech engine rather
-    # than the developer's own, and no mpkg to fetch the package listing and upgrade
-    # itself mid-test. Set here rather than in the workflows so a local ctest run behaves
-    # as CI does. The few tests that need it either way set or unset it themselves.
+    # MUDLET_TEST_MODE is the variable the code already keys "don't touch the real
+    # machine" off - the keychain, the update check and the real speech engine all
+    # consult it. What it changes for a functional test specifically is smaller: mpkg
+    # stays out of the profiles they build (see setupPreInstallPackages() in
+    # src/mudlet.cpp), and waitForEvent()/pumpEvents() become callable from Lua.
+    # Set here rather than in the workflows, which only ever set it for the Lua steps,
+    # so ctest behaves the same locally and in CI. A test that needs it unset has to
+    # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
+    # asserts the variable arrives at all.
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
