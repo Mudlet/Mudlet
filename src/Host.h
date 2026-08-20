@@ -74,6 +74,7 @@ class GMCPAuthenticator;
 class TRoom;
 class TConsole;
 class TMainConsole;
+struct TConsoleModel;
 class dlgNotepad;
 class TMap;
 class MMCPServer;
@@ -274,6 +275,12 @@ public:
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
+    // The main console's data model lives in core, co-owned by Host so the
+    // per-line trigger pipeline (runTriggers) can drive it without a view. The
+    // view reaches the same instance via TConsole::model().
+    TConsoleModel& mainConsoleModel();
+    std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    void runTriggers(int line);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
@@ -531,6 +538,11 @@ private:
     // for things looking to the main console font before it gets instantiated:
     std::optional<TFontAttributes> mTempDisplayFontAttributes;
     std::optional<QFont> mTempDisplayFont;
+    // Co-owned with the main-console view rather than owned outright: mudlet
+    // destroys the Host before the lingering console widget, so a Host-owned
+    // model would leave the view's aliasing references dangling. Reached
+    // through mainConsoleModel()/sharedMainConsoleModel().
+    std::shared_ptr<TConsoleModel> mpMainConsoleModel;
 
 public:
     // Make this the first public member instantiated so we can use ITS font
