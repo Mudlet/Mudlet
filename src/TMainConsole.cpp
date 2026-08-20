@@ -660,11 +660,13 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->setContentsMargins(0, 0, 0, 0);
         pL->move(x, y);
         pL->show();
-        if (fillBackground) {
-            mpHost->setBackgroundColor(name, 32, 32, 32, 255);
-        } else {
-            mpHost->setBackgroundColor(name, 0, 0, 0, 0);
-        }
+        // fillBackground = 0 gets this grey too, which is not what the argument reads
+        // like: honouring it would turn every such label in an installed script
+        // transparent. What the argument does decide is what survives a later
+        // stylesheet - setAutoFillBackground(false) above means the colour is dropped
+        // rather than kept. A script wanting a transparent label has to say so with
+        // setBackgroundColor(name, 0, 0, 0, 0).
+        mpHost->setBackgroundColor(name, 32, 32, 32, 255);
         return pL;
     }
 

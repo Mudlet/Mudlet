@@ -228,9 +228,25 @@ private slots:
         QCOMPARE(paintedColour(QPoint(150, 50)), QColor(0, 0, 255));
     }
 
-    void test_labelAskedNotToFillItsBackgroundStartsTransparent()
+    // fillBackground = 0 reads like "start transparent" and does not do that, because
+    // honouring it would turn every such label in an installed script transparent
+    void test_labelAskedNotToFillItsBackgroundStartsOnTheSameGrey()
     {
         createTargetCovering(0);
+
+        QCOMPARE(paintedColour(), QColor(32, 32, 32));
+    }
+
+    // what the argument does decide: the colour is painted until a stylesheet replaces
+    // it, and then it is gone rather than kept as it is for a label that fills its own
+    // background. Lua cannot see this - getBackgroundColor() reports the colour either way.
+    void test_labelAskedNotToFillItsBackgroundLosesItsColourToAStyleSheet()
+    {
+        createTargetCovering(0);
+        runLua(qsl("setBackgroundColor('lbpTarget', 255, 255, 0, 255)"));
+        QCOMPARE(paintedColour(), QColor(255, 255, 0));
+
+        runLua(qsl("setLabelStyleSheet('lbpTarget', [[qproperty-alignment: 'AlignHCenter';]])"));
 
         QCOMPARE(paintedColour(), backdropColour());
     }

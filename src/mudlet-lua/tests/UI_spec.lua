@@ -4061,9 +4061,11 @@ describe("Window and label state", function()
       assert.are.equal("selection-background-color: rgb(1, 2, 3);\nbackground-color: rgba(70, 80, 90, 255);", getLabelStyleSheet(target))
     end)
 
-    it("starts a label asked not to fill its background transparent", function()
+    -- fillBg = 0 reads like "start transparent" and does not do that: honouring it
+    -- would turn every such label in an installed script transparent
+    it("starts a label asked not to fill its background on the same grey", function()
       local target = label("wlsBgNoFill", 0)
-      assert.are.same({0, 0, 0, 0}, {getBackgroundColor(target)})
+      assert.are.same({32, 32, 32, 255}, {getBackgroundColor(target)})
     end)
 
     it("starts a label that fills its background on the default grey", function()
