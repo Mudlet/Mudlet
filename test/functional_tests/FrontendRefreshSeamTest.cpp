@@ -27,18 +27,17 @@
 //    per-tab connection indicator as the socket moves. Cut them and a dropped
 //    profile goes on showing a connected tab.
 //  - THyperlinkVisibilityManager::visibilityChanged reaches the lambda in the
-//    TConsole constructor, which calls forceUpdate() on both text panes. The
-//    manager calls plain update() on them itself, so a paint happens either
-//    way; the forced redraw is the whole of what the wire adds, and without it
-//    a hyperlink that has expired in the model can stay drawn - and clickable -
-//    out of the cached screen pixmap.
+//    TConsole constructor, which forces both text panes to redraw. Cut it and
+//    text the model has just concealed can stay on screen out of the panes'
+//    cached pixmap. Only what is drawn is at stake: hit-testing reads
+//    TChar::linkIndex() straight from the buffer, so a stale pixmap cannot
+//    leave a dead link clickable.
 //
 // Both are read through a second observer attached to the same signal after the
 // production connect. Qt delivers to receivers in connection order, so what the
 // observer sees is the state the production consumer has just left behind, with
 // no event loop in between for anything else to interfere in.
 
-#include <QFileInfo>
 #include <QPointer>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
@@ -57,7 +56,6 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "ctelnet.h"
-#include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -232,9 +230,11 @@ private slots:
         assertReading(seen, qsl("disconnected"), 2, TabConnectionIndicator::Disconnected);
     }
 
-    // G6: the repaint half of the OSC 8 visibility seam. The specs added with
-    // #10085 drive the same reveal, but stay green with the emit severed - what
-    // the wire does is not Lua-observable.
+    // G6: the repaint half of the OSC 8 visibility seam. TBufferOSC_spec.lua's
+    // "reveals a link that was written concealed once its delay is up" drives
+    // the same reveal, but reads back only the line text, which performReveal()
+    // restores before it emits - so the whole spec suite stays green with this
+    // wire cut.
     void test_aHyperlinkVisibilityChangeForcesBothPanesToRedraw()
     {
         Host* host = startProfile();
@@ -273,13 +273,11 @@ private slots:
         // valid, which is why the text is replaced space for space.
         QCOMPARE(console->buffer.lineBuffer.at(lineNumber), qsl("OSCSEAM1(          )OSCSEAM1"));
 
-        // performReveal() already calls update() on both panes, so counting
-        // paints proves nothing: with the emit severed the upper pane was still
-        // measured taking two of them, and the lower pane is not visible here so
-        // it takes none either way. forceUpdate() additionally sets
-        // mForceUpdate, which is what stops the next paint reusing the cached
-        // screen pixmap, and the lambda on visibilityChanged is the only thing
-        // that sets it on this path.
+        // performReveal() calls update() on both panes itself, so counting
+        // paints cannot tell the wire apart from its absence. forceUpdate()
+        // additionally sets mForceUpdate, which is what stops the next paint
+        // reusing the cached screen pixmap, and the visibilityChanged lambda is
+        // the only thing that sets it on this path.
         console->mUpperPane->mForceUpdate = false;
         console->mLowerPane->mForceUpdate = false;
         QTest::qWait(150ms);
