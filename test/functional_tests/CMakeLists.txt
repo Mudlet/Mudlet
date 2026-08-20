@@ -42,6 +42,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpFramePlacementTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
