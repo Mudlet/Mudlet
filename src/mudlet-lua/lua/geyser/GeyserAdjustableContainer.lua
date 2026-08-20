@@ -773,7 +773,12 @@ end
 local function createMenus(self, parent, name, func)
     local label = self.adjLabel
     local menuTxt = self.Locale[name] and self.Locale[name].message or name
-    label:addMenuLabel(name, parent)
+    -- addMenuLabel reports a parent it cannot use rather than raising, and the
+    -- two lines below would then index a nil menu element instead of saying why
+    local added, err = label:addMenuLabel(name, parent)
+    if not added then
+        error(err)
+    end
     label:findMenuElement(parent.."."..name):echo(menuTxt, "nocolor")
     label:setMenuAction(parent.."."..name, func, self, name)
 end

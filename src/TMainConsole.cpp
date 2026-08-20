@@ -1230,22 +1230,16 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
         const QSize windowSize = pW->widget()->size();
         const int minValidWidth = 50;
 
-        // Reject obviously invalid sizes
+        // Mid-switch the dock can be a few pixels wide, which nothing can be laid
+        // out in - hand back the last size it really had. Only a size this small
+        // is refused: refusing one that has merely changed a lot would leave the
+        // cache as the yardstick for every size after it, and a window shrunk to
+        // under half its width could never be reported again.
         if (windowSize.width() < minValidWidth) {
             if (mCachedWindowSizes.contains(windowname)) {
                 return mCachedWindowSizes.value(windowname);
             }
             return windowSize;
-        }
-
-        // Reject suspicious shrinkage (more than 50% reduction suggests profile
-        // is transitioning and geometry isn't settled yet)
-        if (mCachedWindowSizes.contains(windowname)) {
-            const QSize cachedSize = mCachedWindowSizes.value(windowname);
-            const double shrinkageRatio = static_cast<double>(windowSize.width()) / cachedSize.width();
-            if (shrinkageRatio < 0.5) {
-                return cachedSize;
-            }
         }
 
         // Size looks valid, cache and return it
@@ -1560,52 +1554,6 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     // on TConsole types:
 
     emit signal_newDataAlert(mProfileName);
-}
-
-void TMainConsole::runTriggers(int line)
-{
-    // A trigger script can feed text back through the pipeline, re-entering this
-    // function; the rest of this pass would otherwise inherit whatever the nested
-    // one left behind and act on the fed line instead of its own.
-    const bool nested = mpHost->getTriggerUnit()->processingDepth() > 0;
-    const QPoint previousUserCursor = mUserCursor;
-    const int previousEngineCursor = mEngineCursor;
-    const bool previousIsPromptLine = mIsPromptLine;
-    const QString previousLine = mCurrentLine;
-
-    mUserCursor.setY(line);
-    mIsPromptLine = buffer.promptBuffer.at(line);
-    mEngineCursor = line;
-    mUserCursor.setX(0);
-    mCurrentLine = buffer.line(line);
-    mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
-    // The matchers take the haystack by reference all the way down, so it must be
-    // a local: a nested pass reassigns mCurrentLine under them.
-    QString haystack = mCurrentLine;
-    haystack.append('\n');
-
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> mpHost;
-    }
-    mpHost->incomingStreamProcessor(haystack, line);
-
-    if (nested) {
-        // Only a nested pass restores: at the top level a script's moveCursor()
-        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
-        // a saved index can by now point past the end.
-        const int lastLine = buffer.getLastLineNumber();
-        mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
-        mEngineCursor = qMin(previousEngineCursor, lastLine);
-        mIsPromptLine = previousIsPromptLine;
-        mCurrentLine = previousLine;
-        mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, previousLine);
-    } else {
-        mIsPromptLine = false;
-    }
-
-    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
-    //       otherwise just delete
 }
 
 void TMainConsole::finalize()

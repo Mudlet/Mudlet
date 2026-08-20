@@ -113,6 +113,72 @@ describe("Tests insertText and creplaceLine newline regressions", function()
     end)
   end)
 
+  -- Inserting into the middle of a line goes through TBuffer::insertInLine(),
+  -- which has to apply the same per-echo character cap the echo/append path
+  -- does, or an oversized insertText() grows a line without bound.
+  describe("Tests the character cap insertText applies", function()
+    local consoleName = "insertTextCapTest"
+    -- MAX_CHARACTERS_PER_ECHO in src/TBuffer.h, which has no Lua getter: change
+    -- it there and this literal has to follow, or both tests here go red
+    local maxCharactersPerEcho = 1000000
+
+    setup(function()
+      createMiniConsole(consoleName, 0, 0, 800, 200)
+      -- wide enough that the line seeded below is not wrapped into pieces
+      setWindowWrap(consoleName, 200)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(consoleName)
+    end)
+
+    before_each(function()
+      clearWindow(consoleName)
+      echo(consoleName, "HELLO\n")
+      -- getTextFormat answers for a selection when there is one, so the cursor
+      -- only decides what it reads once nothing is selected
+      deselect(consoleName)
+      -- mid-line, so the insert goes through insertInLine() rather than the
+      -- already capped append path taken when the cursor sits at the buffer end
+      assert.is_true(moveCursor(consoleName, 2, 0))
+    end)
+
+    -- The line's text and its parallel styling container are filled by two
+    -- separate inserts and must stay the same length, or the renderer reads
+    -- past the end of one of them. getTextFormat is the only Lua readback of
+    -- that container at the cursor: a table for a column it holds, nil for one
+    -- past its end.
+    local function assertStylingLength(length)
+      moveCursor(consoleName, length - 1, 0)
+      assert.is_table(getTextFormat(consoleName), "the styling container is shorter than the line")
+      moveCursor(consoleName, length, 0)
+      assert.is_nil(getTextFormat(consoleName), "the styling container is longer than the line")
+    end
+
+    it("caps an oversized insert at the per-echo maximum", function()
+      local before = getLines(consoleName, 0, 1)[1]
+      assert.is_true(#before > 2, "the line being inserted into is too short: " .. tostring(before))
+
+      insertText(consoleName, string.rep("Z", maxCharactersPerEcho + 500))
+
+      local after = getLines(consoleName, 0, 1)[1]
+      assert.equals(maxCharactersPerEcho, #after - #before)
+      assertStylingLength(#after)
+    end)
+
+    it("leaves a normally sized insert exactly as it was given", function()
+      local before = getLines(consoleName, 0, 1)[1]
+
+      insertText(consoleName, "insertedText")
+
+      -- spliced in at the cursor without disturbing what surrounds it, so the
+      -- run has to land in the right place and not merely be the right length
+      local expected = before:sub(1, 2) .. "insertedText" .. before:sub(3)
+      assert.equals(expected, getLines(consoleName, 0, 1)[1])
+      assertStylingLength(#expected)
+    end)
+  end)
+
   -- https://github.com/Mudlet/Mudlet/pull/9022#issuecomment-4163011131
   -- Word wrapping should not accumulate line width across newline boundaries
   describe("Tests that echo newlines reset wrap width tracking", function()

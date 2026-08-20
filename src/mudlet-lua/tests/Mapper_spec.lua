@@ -946,6 +946,31 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.has_error(function() setExit(rA1, rA2, "sideways") end)
     end)
 
+    it("setExit takes the short alias of every direction, whatever its case", function()
+      -- dirToNumber() accepts a one or two letter alias as well as the full
+      -- name, and nothing reached that half of it: every spec here writes a
+      -- full name, and the lockExit/hasExitLock wrappers in Other.lua translate
+      -- their direction to a number before the C++ call ever sees it.
+      local aliases = {
+        {"n", "north"}, {"e", "east"}, {"s", "south"}, {"w", "west"},
+        {"u", "up"}, {"d", "down"}, {"ne", "northeast"}, {"nw", "northwest"},
+        {"se", "southeast"}, {"sw", "southwest"}, {"i", "in"}, {"o", "out"},
+      }
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      local b = createRoomID(); addRoom(b); setRoomArea(b, areaAlpha)
+      for _, pair in ipairs(aliases) do
+        local short, long = pair[1], pair[2]
+        assert.is_true(setExit(a, b, short), short)
+        assert.are.equal(b, getRoomExits(a)[long], short)
+      end
+      -- the direction is lowercased before it is matched, so the aliases are
+      -- as case-insensitive as the full names are
+      local c = createRoomID(); addRoom(c); setRoomArea(c, areaAlpha)
+      assert.is_true(setExit(a, c, "SW"))
+      assert.are.equal(c, getRoomExits(a)["southwest"])
+      deleteRoom(a); deleteRoom(b); deleteRoom(c)
+    end)
+
     it("getAllRoomEntrances lists the rooms that exit into a room", function()
       local entrances = getAllRoomEntrances(rA2)
       assert.is_table(entrances)
@@ -1722,6 +1747,99 @@ describe("Tests mapper functions against a shared fixture", function()
       local zoom, err = getMapZoom(missingAreaId)
       assert.is_nil(zoom)
       assert.is_string(err)
+    end)
+  end)
+
+  describe("Tests the map background and room exit colours", function()
+    local originalBackground, originalRoomExits
+
+    setup(function()
+      originalBackground = {getMapBackgroundColor()}
+      originalRoomExits = {getMapRoomExitsColor()}
+    end)
+
+    teardown(function()
+      setMapBackgroundColor(unpack(originalBackground))
+      setMapRoomExitsColor(unpack(originalRoomExits))
+    end)
+
+    it("setMapBackgroundColor is read back by getMapBackgroundColor", function()
+      assert.is_true(setMapBackgroundColor(12, 34, 56, 78))
+      assert.are.same({12, 34, 56, 78}, {getMapBackgroundColor()})
+    end)
+
+    it("a background set without an alpha is opaque", function()
+      assert.is_true(setMapBackgroundColor(12, 34, 56, 78))
+      assert.is_true(setMapBackgroundColor(9, 8, 7))
+      assert.are.same({9, 8, 7, 255}, {getMapBackgroundColor()})
+    end)
+
+    it("setMapRoomExitsColor is read back by getMapRoomExitsColor", function()
+      -- three components, not four: the exit colour carries no alpha either way
+      assert.is_true(setMapRoomExitsColor(21, 43, 65))
+      assert.are.same({21, 43, 65}, {getMapRoomExitsColor()})
+    end)
+
+    it("a component outside 0-255 is refused and changes nothing", function()
+      assert.is_true(setMapBackgroundColor(10, 20, 30, 40))
+      local rejected = {{-1, 20, 30}, {10, 256, 30}, {10, 20, -5}, {10, 20, 30, 300}}
+      for _, components in ipairs(rejected) do
+        local ok, err = setMapBackgroundColor(unpack(components))
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_truthy(err:find("needs to be between 0-255", 1, true), err)
+      end
+      assert.are.same({10, 20, 30, 40}, {getMapBackgroundColor()})
+
+      assert.is_true(setMapRoomExitsColor(11, 22, 33))
+      local exitsOk, exitsErr = setMapRoomExitsColor(11, 22, 999)
+      assert.is_nil(exitsOk)
+      assert.is_string(exitsErr)
+      assert.are.same({11, 22, 33}, {getMapRoomExitsColor()})
+    end)
+
+    it("a component that is not a number hard-errors", function()
+      assert.has_error(function() setMapBackgroundColor("red", 0, 0) end)
+      assert.has_error(function() setMapRoomExitsColor(0, "green", 0) end)
+    end)
+
+    it("a component too large for an int hard-errors rather than wrapping", function()
+      -- getVerifiedInt() reads a Lua number as a 64 bit integer and refuses one
+      -- that will not fit an int, which is a separate refusal from the type
+      -- check above and from the 0-255 range check: without it the value would
+      -- be truncated into range and silently accepted.
+      local ok, err = pcall(function() setMapBackgroundColor(2 ^ 40, 0, 0) end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
+    end)
+  end)
+
+  describe("Tests setDefaultAreaVisible", function()
+    -- Opened here as well as in the outer setup: the success branch needs the
+    -- mapper widget, and busted can be asked to shuffle these blocks.
+    setup(function()
+      assert.is_true(openMapWidget())
+    end)
+
+    -- The flag itself has no Lua readback: TMap::mShowDefaultArea is read by
+    -- the mapper's area list, the map view's painting and the preferences
+    -- checkbox, and by no Lua function other than this setter's own fixup.
+    -- What a spec can hold onto is therefore the call's own contract.
+    teardown(function()
+      setDefaultAreaVisible(true)
+    end)
+
+    it("reports success while the mapper widget is up", function()
+      assert.is_true(setDefaultAreaVisible(false))
+      -- and again the other way, which must also report success. This does not
+      -- reach the combo box fixup inside: that needs the 2D map parked on the
+      -- default area, and the fixture's rooms are all in named ones.
+      assert.is_true(setDefaultAreaVisible(true))
+    end)
+
+    it("hard-errors when its argument is not a boolean", function()
+      assert.has_error(function() setDefaultAreaVisible("yes") end)
+      assert.has_error(function() setDefaultAreaVisible() end)
     end)
   end)
 

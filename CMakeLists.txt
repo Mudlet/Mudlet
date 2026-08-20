@@ -37,7 +37,7 @@ cmake_minimum_required(VERSION 3.25.1)
 
 if(APPLE)
   # minimum supported version by Qt6
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
 endif()
 
 project(mudlet)
@@ -296,8 +296,3 @@ add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 add_subdirectory(test)
-
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)

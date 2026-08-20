@@ -17,10 +17,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
 #include <QtTest/QtTest>
 
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
@@ -37,12 +40,7 @@
 
 #include <zip.h>
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForHostWidgetDecoupling();
+#include "GroupedTest.h"
 
 using namespace std::chrono_literals;
 
@@ -57,13 +55,33 @@ class HostWidgetDecouplingTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Host-Widget-Decoupling";
     const QString mLocalhost = "localhost";
     QString mPort;
 
 private slots:
-    void initTestCase() { initializeQRCResourcesForHostWidgetDecoupling(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -74,6 +92,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -122,9 +141,8 @@ private slots:
     // The mapping-script reminder used to be a QDialog built inside Host; it is
     // now shown by the frontend in response to signal_showMapperScriptReminder().
     // Verify the frontend handler actually raises a dialog parented on the main
-    // window. (Whether Host emits the signal depends on the profile's script
-    // state, which is Host-side logic unchanged by this refactor, so we drive
-    // the handler directly here.)
+    // window. This one drives the handler directly; the emit that reaches it in
+    // production is what test_mappingScriptReminderRaisedByHost() covers.
     void test_mappingScriptReminderShownByConsole()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -136,6 +154,46 @@ private slots:
         host->mpConsole->showMapperScriptReminder();
         const int dialogsAfter = mudlet::self()->findChildren<QDialog*>().count();
         QVERIFY2(dialogsAfter > dialogsBefore, "showMapperScriptReminder must raise a reminder dialog owned by the main window.");
+    }
+
+    // ...and the wire that carries it. check_for_mappingscript() is the
+    // production emitter and a profile with no mapping script of its own is what
+    // makes it fire, so the reminder arrives here the way a user gets it: over
+    // the connect made in mudlet::addConsoleForNewHost().
+    // test_mappingScriptReminderShownByConsole() calls the console's handler by
+    // hand and would stay green without that connect.
+    void test_mappingScriptReminderRaisedByHost()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        QVERIFY2(!mudlet::self()->findChild<QDialog*>(qsl("lacking_mapper_script")), "A reminder dialog was up before the profile had been asked for one.");
+
+        // A profile made the ordinary way comes with a mapping script already
+        // installed - the generic mapper, or the one the games listed in
+        // mudlet::setupPreInstallPackages() use - so the state the reminder
+        // exists for has to be arranged. What the engine reads is a boolean flag
+        // those scripts set in the profile's own Lua state, and only a boolean
+        // counts: check_for_mappingscript() ignores any other type.
+        auto* lua = host->getLuaInterpreter();
+        QVERIFY2(lua->compileAndExecuteScript(qsl("assert(mudlet.mapper_script == true)")), "A new profile no longer comes with a mapping script, so this test is no longer taking one away.");
+        QVERIFY2(lua->compileAndExecuteScript(qsl("mudlet.mapper_script = nil")), "Could not put the profile into the no-mapping-script state.");
+
+        // tells "the engine never said it" apart from "the frontend never heard it"
+        QSignalSpy reminderSpy(host, &Host::signal_showMapperScriptReminder);
+        host->check_for_mappingscript();
+        QCOMPARE(reminderSpy.count(), 1);
+
+        auto* reminder = mudlet::self()->findChild<QDialog*>(qsl("lacking_mapper_script"));
+        QVERIFY2(reminder, "A profile with no mapping script must get the reminder dialog through signal_showMapperScriptReminder.");
+
+        // Host::mHaveMapperScript latches: the reminder is a once-per-profile thing
+        delete reminder;
+        host->check_for_mappingscript();
+        QCOMPARE(reminderSpy.count(), 1);
+        QVERIFY2(!mudlet::self()->findChild<QDialog*>(qsl("lacking_mapper_script")), "The reminder came back after the profile had already been given it.");
     }
 
     // The package-unpacking progress dialog is now owned by the console and
@@ -293,29 +351,7 @@ private slots:
     // GUI
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5s)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -368,20 +404,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForHostWidgetDecoupling()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "HostWidgetDecouplingTest.moc"
-QTEST_MAIN(HostWidgetDecouplingTest)
+MUDLET_GROUPED_TEST_MAIN(HostWidgetDecouplingTest)

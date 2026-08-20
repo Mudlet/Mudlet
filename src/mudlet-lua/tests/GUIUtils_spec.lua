@@ -1756,6 +1756,136 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  -- the c/d/h echo, insert, link and popup functions are all one-line calls
+  -- into xEcho and share its argument handling, so that is specced once here
+  -- rather than once per wrapper
+  describe("Tests the functionality of xEcho", function()
+    local windowName = "guiUtilsXEchoConsole"
+    local labelName = "guiUtilsXEchoLabel"
+
+    setup(function()
+      createMiniConsole(windowName, 0, 0, 400, 200)
+      setWindowWrap(windowName, 60)
+      createLabel(labelName, 0, 0, 100, 30, 1)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+      deleteLabel(labelName)
+    end)
+
+    before_each(function()
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+    end)
+
+    local function currentLine()
+      selectCurrentLine(windowName)
+      return getSelection(windowName)
+    end
+
+    it("Should name the wrapper that called it when the text is not a string", function()
+      -- the message is built from the style and the function name, so a caller
+      -- of cecho is told about cecho rather than about xEcho
+      local ok, err = pcall(xEcho, "Color", "echo", 5)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("cecho: bad argument #1, string expected, got number", 1, true))
+
+      local hexOk, hexErr = pcall(xEcho, "Hex", "insertText", {})
+      assert.is_false(hexOk)
+      assert.is_truthy(hexErr:find("hinsertText: bad argument #1, string expected, got table", 1, true))
+    end)
+
+    it("Should write to the window named in its first argument", function()
+      xEcho("Color", "echo", windowName, "<red>xEchoWindow")
+      assert.are.equal("xEchoWindow", currentLine())
+    end)
+
+    it("Should echo to the main console when main is the window it is given", function()
+      clearWindow()
+      moveCursor(0, 0)
+      xEcho("Color", "echo", "main", "<red>xEchoMainNamed")
+      selectCurrentLine()
+      assert.are.equal("xEchoMainNamed", getSelection())
+    end)
+
+    it("Should fall back to the main console when given only the text", function()
+      clearWindow()
+      moveCursor(0, 0)
+      xEcho("Color", "echo", "<red>xEchoMainOnly")
+      selectCurrentLine()
+      assert.are.equal("xEchoMainOnly", getSelection())
+    end)
+
+    it("Should apply every colour change in the string, not just the first", function()
+      xEcho("Decimal", "echo", windowName, "<255,0,0>AA<0,0,255>BB")
+      assert.are.equal("AABB", currentLine())
+      selectSection(windowName, 0, 2)
+      assert.are.same({255, 0, 0}, getTextFormat(windowName).foreground)
+      selectSection(windowName, 2, 2)
+      assert.are.same({0, 0, 255}, getTextFormat(windowName).foreground)
+    end)
+
+    it("Should refuse anything but a plain echo on a label", function()
+      local ok, err = xEcho("Color", "echoLink", labelName, "<red>x", "send('x')", "a hint")
+      assert.is_nil(ok)
+      assert.are.equal("you cannot use echoLink, echoPopup, or insertText with Labels", err)
+    end)
+
+    it("Should echo to a label, turning a newline into a line break", function()
+      -- a label holds HTML, so the newline must arrive as <br> or the second
+      -- line is run together with the first
+      xEcho("Color", "echo", labelName, "<red>first\nsecond")
+      local html = getLabelText(labelName)
+      assert.is_truthy(html:find("first<br>second", 1, true))
+      assert.is_nil(html:find("\n", 1, true))
+    end)
+
+    it("Should take a link or a popup with no window at all", function()
+      -- the documented cechoLink(text, command, hint) form: three arguments and
+      -- the first one is the text, not a window name
+      clearWindow()
+      moveCursor(0, 0)
+      xEcho("Color", "echoLink", "<red>xEchoBareLink", "send('x')", "a hint")
+      selectCurrentLine()
+      assert.are.equal("xEchoBareLink", getSelection())
+
+      clearWindow()
+      moveCursor(0, 0)
+      xEcho("Color", "echoPopup", "<red>xEchoBarePopup", {"send('x')"}, {"a hint"})
+      selectCurrentLine()
+      assert.are.equal("xEchoBarePopup", getSelection())
+    end)
+
+    it("Should take the fourth argument as a format flag when it is a boolean", function()
+      clearWindow()
+      moveCursor(0, 0)
+      xEcho("Color", "echoLink", "<red>xEchoFormattedLink", "send('x')", "a hint", true)
+      selectCurrentLine()
+      assert.are.equal("xEchoFormattedLink", getSelection())
+    end)
+
+    it("Should insist on a command and a hint for the link variants", function()
+      local ok, err = pcall(xEcho, "Color", "echoLink", "text", "send('x')")
+      assert.is_false(ok)
+      assert.is_truthy(err:find("Insufficient arguments, usage: ([window, ] string, command, hint)", 1, true))
+
+      local improperOk, improperErr = pcall(xEcho, "Color", "echoLink", "text", "send('x')", "a hint", 5)
+      assert.is_false(improperOk)
+      assert.is_truthy(improperErr:find("Improper arguments, usage: ([window, ] string, command, hint)", 1, true))
+    end)
+
+    it("Should insist on commands and hints for the popup variants", function()
+      local ok, err = pcall(xEcho, "Color", "echoPopup", "text", {"send('x')"})
+      assert.is_false(ok)
+      assert.is_truthy(err:find("Insufficient arguments, usage: ([window, ] string, {commands}, {hints})", 1, true))
+
+      local improperOk, improperErr = pcall(xEcho, "Color", "echoPopup", "text", {"send('x')"}, {"a hint"}, 5)
+      assert.is_false(improperOk)
+      assert.is_truthy(improperErr:find("Improper arguments, usage: ([window, ] string, {commands}, {hints})", 1, true))
+    end)
+  end)
+
   describe("Tests the functionality of hinsertText and dinsertText", function()
     local windowName = "guiUtilsInsertConsole"
 
@@ -2128,6 +2258,57 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Tests the functionality of xReplace", function()
+    local windowName = "guiUtilsXReplaceBuffer"
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      createBuffer(windowName)
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "hello world")
+      moveCursor(windowName, 0, 0)
+    end)
+
+    local function currentLine()
+      selectCurrentLine(windowName)
+      return getSelection(windowName)
+    end
+
+    it("Should insert the replacement plainly when it is given no type", function()
+      -- creplace, dreplace and hreplace always name a type, so the plain
+      -- insertText fallback is only reachable by calling xReplace itself
+      selectString(windowName, "world", 1)
+      xReplace(windowName, "<red>earth")
+      assert.are.equal("hello <red>earth", currentLine())
+    end)
+
+    it("Should insert plainly for a type it does not know either", function()
+      selectString(windowName, "world", 1)
+      xReplace(windowName, "<red>earth", "z")
+      assert.are.equal("hello <red>earth", currentLine())
+    end)
+
+    it("Should put the replacement where the selection was", function()
+      selectString(windowName, "hello", 1)
+      xReplace(windowName, "goodbye", "c")
+      assert.are.equal("goodbye world", currentLine())
+    end)
+
+    it("Should fall back to the main console when the window is left out", function()
+      clearWindow()
+      moveCursor(0, 0)
+      echo("xReplaceMain marker")
+      selectString("marker", 1)
+      xReplace("<red>replaced", nil, "c")
+      selectCurrentLine()
+      assert.are.equal("xReplaceMain replaced", getSelection())
+    end)
+  end)
+
   describe("Tests the functionality of creplace, dreplace and hreplace", function()
     local windowName = "guiUtilsColourReplaceBuffer"
 
@@ -2318,6 +2499,119 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should error when resetLabelCursor is not given a string", function()
       assert.has_error(function() resetLabelCursor(5) end)
+    end)
+  end)
+
+  -- GUIUtils.lua replaces the eight C++ callback setters with one shared Lua
+  -- wrapper, so what it does with the callback it is handed is common to all of
+  -- them. Firing a callback needs a real mouse or key event and so is out of
+  -- reach here; this is the registration half.
+  describe("Tests the functionality of the shared callback setter wrapper", function()
+    local labelName = "guiUtilsCallbackLabel"
+    local cmdLineName = "guiUtilsActionCmdLine"
+    local labelSetters = {
+      "setLabelClickCallback",
+      "setLabelDoubleClickCallback",
+      "setLabelReleaseCallback",
+      "setLabelMoveCallback",
+      "setLabelWheelCallback",
+      "setLabelOnEnter",
+      "setLabelOnLeave",
+    }
+
+    setup(function()
+      createLabel(labelName, 10, 10, 60, 30, 1)
+      createCommandLine(cmdLineName, 10, 10, 140, 30)
+    end)
+
+    teardown(function()
+      deleteLabel(labelName)
+      deleteCommandLine(cmdLineName)
+    end)
+
+    describe("Tests the functionality of setLabelClickCallback, setLabelDoubleClickCallback, setLabelReleaseCallback, setLabelMoveCallback, setLabelWheelCallback, setLabelOnEnter and setLabelOnLeave", function()
+      for _, setter in ipairs(labelSetters) do
+        it(setter .. " accepts a function, a function name and nil", function()
+          assert.is_true(_G[setter](labelName, function() end))
+          -- a string is compiled into a function calling that name, which does
+          -- not have to exist until the callback runs
+          assert.is_true(_G[setter](labelName, "guiUtilsNoSuchGlobalFunction"))
+          -- nil is accepted rather than refused, which is how these seven clear
+          -- a callback and where they part company with setCmdLineAction below
+          assert.is_true(_G[setter](labelName, nil))
+        end)
+
+        it(setter .. " refuses a value that is none of those", function()
+          local ok, err = pcall(_G[setter], labelName, 42)
+          assert.is_false(ok)
+          assert.is_truthy(err:find(setter .. ": bad argument #2 type (function expected, got number!)", 1, true))
+        end)
+
+        it(setter .. " reports a label it cannot find and rejects an empty name", function()
+          local ok, err = _G[setter]("guiUtilsNoSuchLabel", function() end)
+          assert.is_nil(ok)
+          assert.are.equal("label name 'guiUtilsNoSuchLabel' not found", err)
+
+          local emptyOk, emptyErr = _G[setter]("", function() end)
+          assert.is_nil(emptyOk)
+          assert.are.equal("label name cannot be an empty string", emptyErr)
+        end)
+      end
+    end)
+
+    describe("Tests the functionality of setCmdLineAction", function()
+      it("Should accept a function", function()
+        assert.is_true(setCmdLineAction(cmdLineName, function() end))
+      end)
+
+      it("Should accept a function name as a string", function()
+        assert.is_true(setCmdLineAction(cmdLineName, "guiUtilsNoSuchGlobalFunction"))
+      end)
+
+      it("Should accept extra arguments alongside the action", function()
+        -- what the wrapper then does with them is only observable once the
+        -- action fires, which needs a real keypress
+        assert.is_true(setCmdLineAction(cmdLineName, function() end, "one", 2))
+      end)
+
+      it("Should refuse nil where the label callbacks take it as a request to clear", function()
+        -- the one function the wrapper singles out, because resetCmdLineAction
+        -- is how a command line action is cleared. The label setter is asserted
+        -- here too: the refusal on its own does not show the wrapper made the
+        -- distinction, since the C++ setter rejects a nil action as well.
+        local ok, err = pcall(setCmdLineAction, cmdLineName, nil)
+        assert.is_false(ok)
+        assert.is_truthy(err:find("setCmdLineAction: bad argument #2 type (function expected, got nil!)", 1, true))
+        assert.is_true(setLabelClickCallback(labelName, nil))
+      end)
+
+      it("Should refuse a value that is neither function, string nor nil", function()
+        local ok, err = pcall(setCmdLineAction, cmdLineName, 42)
+        assert.is_false(ok)
+        assert.is_truthy(err:find("setCmdLineAction: bad argument #2 type (function expected, got number!)", 1, true))
+      end)
+
+      it("Should report a command line it cannot find", function()
+        local ok, err = setCmdLineAction("guiUtilsNoSuchCommandLine", function() end)
+        assert.is_nil(ok)
+        assert.are.equal("command line name 'guiUtilsNoSuchCommandLine' not found", err)
+      end)
+
+      it("Should reject an empty command line name", function()
+        local ok, err = setCmdLineAction("", function() end)
+        assert.is_nil(ok)
+        assert.are.equal("command line name cannot be an empty string", err)
+      end)
+
+      it("Should have resetCmdLineAction as the way to take the action back", function()
+        -- resetCmdLineAction is not wrapped, so it answers for the command line
+        -- rather than for whether an action was ever set on it
+        setCmdLineAction(cmdLineName, function() end)
+        assert.is_true(resetCmdLineAction(cmdLineName))
+        local ok, err = resetCmdLineAction("guiUtilsNoSuchCommandLine")
+        assert.is_nil(ok)
+        assert.are.equal("command line name 'guiUtilsNoSuchCommandLine' not found", err)
+      end)
     end)
   end)
 

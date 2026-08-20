@@ -956,7 +956,9 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
-    painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space || useQtUnderline || useQtOverline || useQtStrikeOut) {
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
     drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
@@ -965,7 +967,6 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
 {
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    QFontMetrics fm(painter.font());
 
     // Calculate decoration positions
     int underlineY = textRect.bottom() - 1;
