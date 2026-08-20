@@ -17149,372 +17149,379 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2782"/>
       <source>Room size:</source>
-      <translation type="unfinished"/>
+      <translation>Tamaño de la sala:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2826"/>
       <source>Exit size:</source>
-      <translation type="unfinished"/>
+      <translation>Tamaño de salida:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2864"/>
       <source>Border size:</source>
-      <translation type="unfinished"/>
+      <translation>Tamaño del borde:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2902"/>
       <source>Grid width:</source>
-      <translation type="unfinished"/>
+      <translation>Ancho de cuadrícula:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3145"/>
       <source>Grid color:</source>
-      <translation type="unfinished"/>
+      <translation>Color de la cuadrícula:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3841"/>
       <source>MudMaster Chat options</source>
-      <translation type="unfinished"/>
+      <translation>Opciones del Chat MudMaster</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3985"/>
       <source>&lt;p&gt;Show Snoop data in main console window.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostrar los datos de espionaje en la ventana principal de la consola.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3988"/>
       <source>Show Snoop data in main console window.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar los datos del espionaje en la ventana principal de la consola.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3991"/>
       <source>Show snoop data in main console</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar los datos del espionaje en la consola principal</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3860"/>
       <source>Chat name as seen by connected chat clients.</source>
-      <translation type="unfinished"/>
+      <translation>Nombre del chat visible para los clientes de chat conectados.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3863"/>
       <source>MMCPUser123</source>
-      <translation type="unfinished"/>
+      <translation>MMCPUsuario123</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3921"/>
       <source>Port to use when connecting to another client without specifying a port along with the IP address. This is also the default port that listened for incoming connections when running a local server.</source>
-      <translation type="unfinished"/>
+      <translation>Puerto que se utiliza al conectar con otro cliente sin especificar un puerto junto con la dirección IP. También es el puerto predeterminado que escucha las conexiones entrantes al ejecutar un servidor local.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3847"/>
       <source>Chat Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nombre del chat:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3908"/>
       <source>Default Port:</source>
-      <translation type="unfinished"/>
+      <translation>Puerto por defecto:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3953"/>
       <source>Chat Message Prefix:</source>
-      <translation type="unfinished"/>
+      <translation>Prefijo del mensaje de chat:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3882"/>
       <source>Add an extra blank line to vertically space out chat messages.</source>
-      <translation type="unfinished"/>
+      <translation>Añadir una línea en blanco adicional para separar verticalmente los mensajes de chat.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2758"/>
       <source>Feature sizes:</source>
-      <translation type="unfinished"/>
+      <translation>Tamaño de los elementos:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3696"/>
       <source>Current user name:</source>
-      <translation type="unfinished"/>
+      <translation>Nombre de usuario actual:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3830"/>
       <source>Hide server login time
 (Discord shows activity timer when hidden)</source>
-      <translation type="unfinished"/>
+      <translation>Ocultar la hora de inicio de sesión del servidor (Discord muestra el temporizador de actividad cuando está oculto)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3885"/>
       <source>Add extra line to chat messages</source>
-      <translation type="unfinished"/>
+      <translation>Añadir una línea adicional a los mensajes de chat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3943"/>
       <source>Prefix own EmoteAll messages with &apos;You emote to everybody&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Anteponer &apos;Te expresas ante todos&apos; a tus propios mensajes de EmoteAll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3946"/>
       <source>Prefix emote messages</source>
-      <translation type="unfinished"/>
+      <translation>Anteponer el prefijo a los mensajes de tipo emote
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3963"/>
       <source>Text to display in front of chat messages.</source>
-      <translation type="unfinished"/>
+      <translation>Texto a mostrar delante de los mensajes de chat.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3966"/>
       <source>&lt;CHAT&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;CHAT&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4363"/>
       <source>To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).</source>
-      <translation type="unfinished"/>
+      <translation>Para fomentar una mayor protección y privacidad en la transferencia de datos, se te preguntará si quieres cambiar a un puerto cifrado cuando se anuncie a través del Protocolo de Estado del Servidor Mud (MSSP).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4382"/>
       <source>&lt;p&gt;Forget the saved sign-in for this game, so the next connection asks you to sign in again. Use this to sign out of this device or switch accounts.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Elimina el inicio de sesión guardado para este juego, de modo que la próxima vez que te conectes se te pedirá iniciar la sesión de nuevo. Utiliza esta opción para cerrar sesión en este dispositivo o cambiar de cuenta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4385"/>
       <source>Forget the saved sign-in for this game, so the next connection asks you to sign in again. Use this to sign out of this device or switch accounts.</source>
-      <translation type="unfinished"/>
+      <translation>Elimina el inicio de sesión guardado para este juego, de modo que la próxima vez que te conectes se te pedirá iniciar sesión de nuevo. Utiliza esta opción para cerrar sesión en este dispositivo o cambiar de cuenta.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4388"/>
       <source>Forget saved sign-in</source>
-      <translation type="unfinished"/>
+      <translation>Olvidar el inicio de sesión guardado</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4440"/>
       <source>&lt;p&gt;Username for logging into the proxy if required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nombre de usuario para iniciar sesión en el proxy, si es necesario.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4443"/>
       <source>Username for logging into the proxy if required.</source>
-      <translation type="unfinished"/>
+      <translation>Nombre de usuario para iniciar sesión en el proxy si es necesario.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4459"/>
       <source>&lt;p&gt;Password for logging into the proxy if required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nombre de usuario para iniciar la sesión en el proxy si es necesario.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4462"/>
       <source>Password for logging into the proxy if required.</source>
-      <translation type="unfinished"/>
+      <translation>Contraseña para iniciar sesión en el proxy, si es necesario.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4495"/>
       <source>Shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Atajos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4510"/>
       <source>Main window shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Atajos de la ventana principal
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4522"/>
       <source>To disable shortcut input &apos;Esc&apos; key.</source>
-      <translation type="unfinished"/>
+      <translation>Para desactivar el atajo, pulse la tecla &apos;Esc&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4557"/>
       <source>Reset to defaults</source>
-      <translation type="unfinished"/>
+      <translation>Restablecer valores predeterminados
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4593"/>
       <source>&lt;p&gt;On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;En algunas plataformas, como macOS, la herramienta de lectura de pantalla presenta problemas para anunciar el texto entrante en su totalidad, omitiendo partes del mismo. Puedes optar por desactivar los anuncios de texto nuevo del juego mediante esta opción, y utilizar en su lugar un sistema de síntesis de voz (TTS) personalizado, lo que evita dichos problemas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4596"/>
       <source>When checked, Mudlet announces incoming game text through the system screen reader. On some platforms such as macOS the system screen reader may skip text; if that happens, uncheck this and use a custom TTS solution instead.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está marcado, Mudlet anuncia el texto entrante del juego a través del lector de pantalla del sistema. En algunas plataformas como macOS, el lector de pantalla del sistema puede saltarse texto; si eso sucede, desmarque esta opción y utilice en su lugar una solución de TTS personalizada.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4606"/>
       <source>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</source>
-      <translation type="unfinished"/>
+      <translation>Anunciar el uso del lector de pantalla a través de protocolos que admitan este aviso (NEW-ENVIRON, MNES, MTTS)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4613"/>
       <source>Enable closed caption for media</source>
-      <translation type="unfinished"/>
+      <translation>Activar los subtítulos para el contenido multimedia
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4659"/>
       <source>&lt;p&gt;In caret mode, hyperlinks in the main window can be navigated with &lt;b&gt;Ctrl+]&lt;/b&gt; (next link) and &lt;b&gt;Ctrl+[&lt;/b&gt; (previous link), activated with &lt;b&gt;Enter&lt;/b&gt; or &lt;b&gt;Space&lt;/b&gt;, and their context menu opened with the &lt;b&gt;Menu&lt;/b&gt; key or &lt;b&gt;Shift+F10&lt;/b&gt;. Press &lt;b&gt;Ctrl+End&lt;/b&gt; to jump to the latest content (Mac: &lt;b&gt;Ctrl+Fn+Right Arrow&lt;/b&gt;) or &lt;b&gt;Ctrl+Home&lt;/b&gt; to jump to the start (Mac: &lt;b&gt;Ctrl+Fn+Left Arrow&lt;/b&gt;). Choosing &lt;b&gt;Ctrl+Tab&lt;/b&gt; or &lt;b&gt;F6&lt;/b&gt; here keeps plain &lt;b&gt;Tab&lt;/b&gt; available for stepping through links.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;En el modo de cursor, es posible navegar por los hipervínculos de la ventana principal mediante &lt;b&gt;Ctrl+]&lt;/b&gt; (enlace siguiente) y &lt;b&gt;Ctrl+[&lt;/b&gt; (enlace anterior), activarlos con &lt;b&gt;Intro&lt;/b&gt; o &lt;b&gt;Espacio&lt;/b&gt;, y abrir su menú contextual con la tecla &lt;b&gt;Menú&lt;/b&gt; o &lt;b&gt;Mayús+F10&lt;/b&gt;. Pulse &lt;b&gt;Ctrl+Fin&lt;/b&gt; para ir al final del contenido (Mac: &lt;b&gt;Ctrl+Fn+Flecha derecha&lt;/b&gt;) o &lt;b&gt;Ctrl+Inicio&lt;/b&gt; para ir al principio (Mac: &lt;b&gt;Ctrl+Fn+Flecha izquierda&lt;/b&gt;). El uso de &lt;b&gt;Ctrl+Tab&lt;/b&gt; o &lt;b&gt;F6&lt;/b&gt; en este caso permite seguir utilizando la tecla &lt;b&gt;Tab&lt;/b&gt; para desplazarse entre los enlaces.&lt;/p&gt;
+
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4662"/>
       <source>In caret mode, navigate hyperlinks with Ctrl+] for the next link and Ctrl+[ for the previous link, activate the focused link with Enter or Space, and open its menu with the Menu key or Shift+F10. Press Ctrl+End to jump to the latest content or Ctrl+Home to jump to the start of the buffer.</source>
-      <translation type="unfinished"/>
+      <translation>En el modo de cursor, navegue por los hipervínculos usando Ctrl+] para el siguiente enlace y Ctrl+[ para el anterior; active el enlace seleccionado con Intro o Espacio, y abre el menú con la tecla Menú o Shift+F10. Presiona Ctrl+Fin para saltar al contenido más reciente o Ctrl+Inicio para saltar al comienzo del búfer.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4689"/>
       <source>&lt;p&gt;Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Habilitar los atajos F3 y Shift+F3 para buscar hacia arriba y hacia abajo en el búfer.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4692"/>
       <source>Enable F3 and Shift+F3 shortcuts for searching up and down in the buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Habilitar los atajos F3 y Shift+F3 para buscar hacia arriba y hacia abajo en el búfer.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4705"/>
       <source>When enabled, text with the blinking attribute (SGR codes 5 and 6) is displayed with a smooth pulsing effect. When disabled, blinking text is shown in italics instead.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando está habilitada, el texto con el atributo de parpadeo (códigos SGR 5 y 6) se muestra con un efecto de pulsación suave. Cuando está deshabilitada, el texto parpadeante se muestra en cursiva.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4708"/>
       <source>Enable blinking text</source>
-      <translation type="unfinished"/>
+      <translation>Habilitar texto parpadeante</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4754"/>
       <source>&lt;p&gt;This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esta opción añade un salto de línea &lt;LF&gt; o &quot;
+&quot; a la entrada de comandos cuando estos están vacíos. Rara vez será necesario utilizar esta opción.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4758"/>
       <source>This option adds a line break (LF, or new-line) to your command input on empty commands. This option will rarely be necessary.</source>
-      <translation type="unfinished"/>
+      <translation>Esta opción añade un salto de línea (LF o nueva línea) en la entrada de comandos cuando estos están vacíos. Rara vez será necesario utilizar esta opción.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4775"/>
       <source>&lt;p&gt;Some servers use KaVir’s protocol snippet, which expects the client to provide both its name and a decimal version number during Telnet TTYPE negotiation. However, including a version number is not in accordance with the relevant RFCs as the period character is not permitted therein; so since 2024 Mudlet has stopped sending it by default. As a result, servers that rely on this information may assume Mudlet is version 1.0 or earlier, and consequently restrict color support to 16 colors instead of enabling 256-color mode.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Algunos servidores utilizan el fragmento de código del protocolo de KaVir, el cual espera que el cliente proporcione tanto su nombre como un número de versión en formato decimal durante la negociación TTYPE de Telnet. Sin embargo, incluir un número de versión no se ajusta a los RFC pertinentes, ya que el carácter de punto no está permitido en ellos; por ello, desde 2024, Mudlet ha dejado de enviarlo por defecto. Como resultado, los servidores que dependen de esta información pueden asumir que Mudlet es la versión 1.0 o anterior y, en consecuencia, limitar la compatibilidad a 16 colores en lugar de habilitar el modo de 256 colores.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4778"/>
       <source>When checked, send Mudlet&apos;s version number alongside its name during Telnet TTYPE negotiation. Some servers using KaVir&apos;s protocol snippet need this to enable 256-color mode; Mudlet stopped sending it by default in 2024 because the period character it contains is not allowed by the relevant RFCs.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca esta opción, se enviará el número de versión de Mudlet junto con su nombre durante la negociación TTYPE de Telnet. Algunos servidores que utilizan el fragmento de protocolo de KaVir requieren esto para habilitar el modo de 256 colores; Mudlet dejó de enviarlo por defecto en 2024 porque el carácter de punto que contiene no está permitido por los RFC pertinentes.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4781"/>
       <source>Send Mudlet version in terminal type</source>
-      <translation type="unfinished"/>
+      <translation>Escribe la versión de Mudlet en la terminal.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4788"/>
       <source>&lt;p&gt;Some servers do not negotiate Mud eXtension Protocol (MXP). When checked, this preference forces the MXP processor to be enabled. Note: To disable MXP entirely, leave this unchecked and also uncheck MXP in Choose protocols section of the General tab in Settings.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Algunos servidores no negocian el protocolo MXP (Mud eXtension Protocol). Al marcar esta opción, se fuerza la activación del procesador MXP. Nota: Para desactivar MXP por completo, deje esta casilla sin marcar y desmarque también la opción MXP en la sección de Seleccionar protocolos de la pestaña General en la configuración.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4791"/>
       <source>When checked, force the MXP processor on for servers that do not negotiate it. To disable MXP entirely, leave this unchecked and also uncheck MXP under Choose protocols on the General tab.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca esta opción, se fuerza la activación del procesador MXP para los servidores que no lo negocian. Para deshabilitar MXP por completo, deje esta casilla sin marcar y desmarque también MXP en la sección de Elegir protocolos de la pestaña General.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4794"/>
       <source>Force MXP processing on</source>
-      <translation type="unfinished"/>
+      <translation>Forzar el procesamiento MXP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4828"/>
       <source>Clear stored media</source>
-      <translation type="unfinished"/>
+      <translation>Borrar contenido multimedia almacenado</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4834"/>
       <location filename="../src/ui/profile_preferences.ui" line="4850"/>
       <source>&lt;p&gt;Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Los archivos multimedia utilizados con la API de Lua de Mudlet, el Mud Client Media Protocol (MCMP) y el Mud Sound Protocol (MSP) se almacenan en caché junto con el perfil del juego. Puedes pulsar este botón para borrar la caché de archivos multimedia. En muchos juegos, los archivos se descargarán de nuevo cuando sea necesario.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4837"/>
       <location filename="../src/ui/profile_preferences.ui" line="4853"/>
       <source>Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.</source>
-      <translation type="unfinished"/>
+      <translation>Los archivos multimedia utilizados con la API de Lua de Mudlet, el Mud Client Media Protocol (MCMP) y el Mud Sound Protocol (MSP) se almacenan en caché junto con el perfil del juego. Puedes pulsar este botón para borrar la caché de archivos multimedia. En muchos juegos, los archivos se descargarán de nuevo cuando sea necesario.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4840"/>
       <source>Purge stored media files for the current profile:</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar los archivos multimedia almacenados para el perfil actual:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4856"/>
       <source>Clear</source>
-      <translation type="unfinished"/>
+      <translation>Limpiar</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5087"/>
       <source>Crash report sending policy:</source>
-      <translation type="unfinished"/>
+      <translation>Política de envío de informes de fallos:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5098"/>
       <source>Always send</source>
-      <translation type="unfinished"/>
+      <translation>Enviar siempre</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5103"/>
       <source>Never send</source>
-      <translation type="unfinished"/>
+      <translation>Nunca envíes</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5108"/>
       <source>Ask each time</source>
-      <translation type="unfinished"/>
+      <translation>Preguntar cada vez</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4916"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Algunos MUD utilizan una interpretación errónea de las secuencias de código ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) para el modo de 16 millones de colores, la cual emplea únicamente puntos y coma, y no dos puntos, para separar los elementos de los parámetros; es decir, en lugar de utilizar un código con el formato: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;ID del espacio de color&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Rojo&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Verde&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Azul&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;No utilizado&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerancia&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Espacio de color de tolerancia (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;donde se espera que el &lt;i&gt;ID del espacio de color&lt;/i&gt; sea una cadena vacía para especificar el caso habitual (predeterminado) y donde todos los &lt;i&gt;elementos de parámetro&lt;/i&gt; (el &quot;2&quot; y los valores en él &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;) pueden, técnicamente, omitirse; utilizan: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Rojo&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Verde&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Azul&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;o bien: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;ID del espacio de color&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Rojo&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Verde&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Azul&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;No es posible detectar de forma fiable la diferencia entre ambos; por lo tanto, al marcar esta opción, Mudlet espera el último formato, que incluye el parámetro adicional (¡Aunque vacío!).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4919"/>
       <source>When checked, interpret 16-million-color SGR sequences using the non-standard semi-colon form some MUDs send, which includes an extra empty parameter for the color space identifier. Enable this if true-color text from your game shows the wrong colors.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca esta opción, se interpretarán las secuencias SGR de 16 millones de colores utilizando el formato no estándar con punto y coma que envían algunos MUD, el cual incluye un parámetro vacío adicional para el identificador del espacio de color. Activa esta opción si el texto en color real de tu juego muestra colores incorrectos.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4989"/>
       <source>Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the Central Debug Console useless if there is a very small interval timer running.</source>
-      <translation type="unfinished"/>
+      <translation>Muestra los mensajes &apos;LUA OK&apos; de los temporizadores con el intervalo mínimo especificado (h:mm:ss.zzz), el valor mínimo (el predeterminado) muestra todos estos mensajes, pero puede inutilizar la consola de depuración central si hay en ejecución un temporizador con un intervalo muy breve.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5026"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1724"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>Autocompletado</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="295"/>
       <source>Notify on new data</source>
-      <translation type="unfinished"/>
+      <translation>Notificar sobre nuevos datos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostrar una notificación en la barra de herramientas si Mudlet está minimizado y llegan nuevos datos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Autoguardar al salir</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="368"/>
       <source>Allow server to download and play media</source>
-      <translation type="unfinished"/>
+      <translation>Permitir que el servidor descargue y reproduzca contenido multimedia</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="264"/>
       <source>System setting</source>
-      <translation type="unfinished"/>
+      <translation>Ajustes del sistema</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
@@ -17534,22 +17541,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="573"/>
       <source>Highlight history</source>
-      <translation type="unfinished"/>
+      <translation>Resaltar el historial</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="589"/>
       <source>When checked, every key-binding that matches a key-press is run, not only the first match. Off by default for compatibility with older Mudlet behaviour.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca esta opción, se ejecutan todas las asignaciones de teclas que coincidan con el pulsar una tecla, no solo la primera coincidencia. Desactivada por defecto para mantener la compatibilidad con el comportamiento anterior de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="605"/>
       <source>&lt;p&gt;Disable password masking when servers request hidden input.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Warning:&lt;/b&gt; This is not recommended for security reasons as passwords will be visible in plain text.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Desactivar el enmascaramiento de contraseñas cuando los servidores soliciten ocultarlas.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Advertencia:&lt;/b&gt; No se recomienda esta opción por motivos de seguridad, ya que las contraseñas serán visibles en texto sin formato.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="608"/>
       <source>Disable password masking when servers request hidden input. Warning: This is not recommended for security reasons as passwords will be visible in plain text.</source>
-      <translation type="unfinished"/>
+      <translation>Desactive el enmascaramiento de contraseñas cuando los servidores soliciten una entrada oculta. Advertencia: esto no se recomienda por motivos de seguridad, ya que las contraseñas serán visibles en texto sin formato.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="611"/>
