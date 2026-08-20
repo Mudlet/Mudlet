@@ -18098,37 +18098,37 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2450"/>
       <source>Load another map file in:</source>
-      <translation type="unfinished"/>
+      <translation>Cargar otro archivo de mapa en:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2437"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet ahora realiza comprobaciones de integridad y reparaciones para solucionar problemas que pudieran haber surgido en versiones anteriores debido al código defectuoso o comandos mal documentados. Sin embargo, si se detectan problemas importantes, el informe puede ser bastante extenso, especialmente en el caso de mapas grandes.&lt;/p&gt;&lt;p&gt;A menos que se active esta opción, Mudlet reducirá la cantidad de mensajes en pantalla ocultando gran parte del texto y sugiriendo, en su lugar, consultar el archivo de informe.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="324"/>
       <source>Choose protocols</source>
-      <translation type="unfinished"/>
+      <translation>Elegir protocolos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="362"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the protocols.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esto también requiere que GMCP esté habilitado en los protocolos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2443"/>
       <source>report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>informar sobre problemas del mapa en pantalla</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2460"/>
       <source>choose map...</source>
-      <translation type="unfinished"/>
+      <translation>seleccionar mapa...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2467"/>
       <source>Or load an older version:</source>
-      <translation type="unfinished"/>
+      <translation>O carga una versión anterior:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2484"/>
