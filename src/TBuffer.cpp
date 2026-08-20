@@ -5617,6 +5617,10 @@ void TBuffer::clear()
 
 void TBuffer::clearLinkState()
 {
+    if (mLinkStore.pristine()) {
+        return;
+    }
+
     Host* pH = mpHost;
     const QSet<int> activeLinkIds = collectActiveLinkIds();
 
