@@ -16991,27 +16991,28 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="586"/>
       <source>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Comprobar todas las asignaciones de teclas con las teclas pulsadas.&lt;/p&gt;&lt;p&gt;&lt;i&gt; Las versiones de Mudlet anteriores a la &lt;b&gt;3.9.0&lt;/b&gt;dejaban de buscar después de encontrar la primera combinación coincidente del&lt;/i&gt; Código de tecla&lt;i&gt; y del &lt;/i&gt;Modificador de tecla&lt;i&gt;, luego enviaban el comando y/o ejecutaban el script únicamente de esa asignación de teclas. Esta opción&lt;/i&gt; por perfil &lt;i&gt;le indica a Mudlet que compruebe y ejecute el resto de las coincidencias; pero, para mantener la compatibilidad con las versiones anteriores, por defecto está &lt;b&gt;des&lt;/b&gt;marcada.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="733"/>
       <source>Spell checking</source>
-      <translation type="unfinished"/>
+      <translation>Comprobación ortográfica</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="739"/>
       <source>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esta opción controla la comprobación ortográfica en la línea de comandos de la consola principal para este perfil.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="745"/>
       <source>System/Mudlet dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Diccionario del Sistema/Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="775"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Estará disponible un diccionario de usuario específico para este perfil. Estará activo en la línea de comandos (las palabras que estén en él aparecerán con un subrayado discontinuo de color cian) y en el subsistema Lua.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="781"/>
@@ -17021,17 +17022,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="788"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Estará disponible un diccionario de usuario compartido entre todos los perfiles (que tengan esta opción seleccionada). Estará activo en la línea de comandos (las palabras que estén en él aparecerán con un subrayado discontinuo de color cian) y en el subsistema Lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="794"/>
       <source>Shared</source>
-      <translation type="unfinished"/>
+      <translation>Compartido</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="928"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation type="unfinished"/>
+      <translation>La fuente seleccionada no funciona con Mudlet, por favor elige otra</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1510"/>
