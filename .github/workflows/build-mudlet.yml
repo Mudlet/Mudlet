@@ -513,7 +513,9 @@ jobs:
 
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
+      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
     - name: Upload release asset for GitHub Release
@@ -696,8 +698,9 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # The suite alone can run past a minute on the slower Intel runners
-      timeout-minutes: 3
+      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
+      # tighter limit fails on runner speed rather than on anything the suite did
+      timeout-minutes: 6
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'

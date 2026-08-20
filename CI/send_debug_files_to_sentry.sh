@@ -114,18 +114,19 @@ for f in "${FILES_TO_UPLOAD[@]}"; do
 done
 
 # Qt ships its debug info as separate DWARF ".debug" companions; sentry-cli 3.5.0+
-# parses these, so upload them too. See https://github.com/getsentry/sentry/issues/104738
+# parses these, so upload them alongside the DLLs they belong to.
+# See https://github.com/getsentry/sentry/issues/104738
 if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
     MINGW_BIN="${MSYSTEM_PREFIX}/bin"
     QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
 
     echo ""
-    echo "=== Collecting Qt DWARF debug companions for Sentry ==="
+    echo "=== Collecting Qt debug files for Sentry ==="
 
     DEBUG_FILES=()
 
-    # Upload .debug companions only for the Qt6 modules mudlet.exe actually depends
-    # on (walk its import table), not every Qt6 DLL in the bin.
+    # Upload files only for the Qt6 modules mudlet.exe actually depends on (walk its
+    # import table), not every Qt6 DLL in the bin.
     if command -v objdump >/dev/null 2>&1; then
         declare -A seen_dll=()
         pending=("$MUDLET_EXEC")
@@ -148,6 +149,13 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
                 [[ -f "$dll_path" ]] || continue
                 pending+=("$dll_path")
                 if [[ "$dll" == Qt6*.dll ]]; then
+                    # The DLL itself is what ties a crash back to these symbols. crashpad
+                    # throws away the CodeView record lld writes - at 25 bytes it is three
+                    # short of the struct size crashpad insists on - so minidumps carry no
+                    # debug id for any Qt module, only a code id (link timestamp plus image
+                    # size). Sentry can turn that code id into the debug id the companion
+                    # was uploaded under, but only if it also holds the shipped DLL.
+                    DEBUG_FILES+=("$dll_path")
                     # companion may be "<name>.dll.debug" or "<name>.debug"; add once
                     for debug_file in "$MINGW_BIN/${dll}.debug" "$MINGW_BIN/${dll%.dll}.debug"; do
                         [[ -f "$debug_file" && -z "${seen_dll[$debug_file]:-}" ]] && { seen_dll[$debug_file]=1; DEBUG_FILES+=("$debug_file"); }
@@ -156,26 +164,26 @@ if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
             done < <(objdump -p "$current" 2>/dev/null | sed -n 's/^[[:space:]]*DLL Name:[[:space:]]*//p')
         done
     else
-        echo "objdump not found - falling back to uploading all Qt6 debug companions"
-        for debug_file in "$MINGW_BIN"/Qt6*.debug; do
+        echo "objdump not found - falling back to uploading all Qt6 debug files"
+        for debug_file in "$MINGW_BIN"/Qt6*.debug "$MINGW_BIN"/Qt6*.dll; do
             [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
         done
     fi
 
     # Qt plugins (image formats, platforms, tls, ...) can appear in crash stack
-    # traces too, so upload every plugin companion we can find
+    # traces too, so upload every plugin and companion we can find
     if [[ -d "$QT_PLUGINS_DIR" ]]; then
         while IFS= read -r -d '' debug_file; do
             DEBUG_FILES+=("$debug_file")
-        done < <(find "$QT_PLUGINS_DIR" -type f -name '*.debug' -print0)
+        done < <(find "$QT_PLUGINS_DIR" -type f \( -name '*.debug' -o -name '*.dll' \) -print0)
     fi
 
     if [[ ${#DEBUG_FILES[@]} -gt 0 ]]; then
-        echo "Uploading ${#DEBUG_FILES[@]} Qt debug companion files to Sentry..."
+        echo "Uploading ${#DEBUG_FILES[@]} Qt debug files to Sentry..."
         ./sentry-cli debug-files upload "${DEBUG_FILES[@]}" --project "mudlet"
         echo "Qt debug symbols uploaded successfully"
     else
-        echo "No Qt .debug files found - are the qt6-*-debug packages installed?"
+        echo "No Qt debug files found - are the qt6-*-debug packages installed?"
     fi
 fi
 

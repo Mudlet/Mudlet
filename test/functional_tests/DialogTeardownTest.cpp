@@ -248,6 +248,40 @@ private slots:
         QCOMPARE(mpHost->getMMCPChatName(), chatNameBefore);
     }
 
+    // The other half of that field. The profile's chat name can change from
+    // outside the dialog - a script calling mmcp.chatName() - while the
+    // preferences are open, and the dialog only hears about it through
+    // Host::mmcpChatNameChanged. Cut that connect and the open dialog goes on
+    // showing (and, on Save, writing back) a name the profile no longer has.
+    void test_openPreferencesFollowTheProfilesChatName()
+    {
+        mudlet::self()->showOptionsDialog(qsl("tab_chat"), mpHost);
+        QTest::qWait(100ms);
+        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "Preferences dialog was not created");
+
+        // A failed assertion returns from here, and every other case in this
+        // class runs in the same process afterwards - so the dialog and the
+        // profile's name go back whichever way this ends. Leaving the dialog up
+        // makes the next showOptionsDialog() hand back this one.
+        const QString chatNameBefore = mpHost->getMMCPChatName();
+        auto restoreState = qScopeGuard([this, preferences, chatNameBefore]() {
+            delete preferences;
+            mpHost->setMMCPChatName(chatNameBefore);
+        });
+        QCOMPARE(preferences->lineEdit_mmcpChatName->text(), chatNameBefore);
+
+        const QString setElsewhere = qsl("DialogTeardownRenamedElsewhere");
+        QVERIFY2(setElsewhere != chatNameBefore, "Test needs to set a chat name that is not the current one");
+
+        // tells "the profile never said it" apart from "the dialog never heard it"
+        QSignalSpy chatNameSpy(mpHost, &Host::mmcpChatNameChanged);
+        QVERIFY2(mpHost->setMMCPChatName(setElsewhere), "The profile refused the chat name this test set");
+        QCOMPARE(chatNameSpy.count(), 1);
+
+        QCOMPARE(preferences->lineEdit_mmcpChatName->text(), setElsewhere);
+    }
+
     // Opening the preferences at all used to be enough to end the run: the
     // dialog asks the updater whether it downloads updates by itself, which on
     // macOS reaches into Sparkle - and Sparkle is only created by

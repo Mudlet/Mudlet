@@ -38,6 +38,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
+    DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
@@ -71,10 +72,14 @@ set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
+    TelnetAtcpMspTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
+    CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
+    TelnetNewEnvironTest.cpp
+    TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
@@ -106,7 +111,10 @@ set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAreaReassignmentTest.cpp
     MapCloseDuringImportTest.cpp
+    MapDownloadTest.cpp
+    MapFileStatsTest.cpp
     MapProgressDialogSeamTest.cpp
+    MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
 )
 
@@ -297,6 +305,11 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # TelnetCharsetNegotiationTest creates a fresh profile per test case, each of which
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
+
+# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
+# full profile, which is nearly all of their runtime and the part a sanitizer and
+# a loaded runner stretch, so they get the same headroom as their neighbours
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout

@@ -34,10 +34,10 @@ mix of moving and refactoring.
 
 | Metric | Count |
 | --- | ---: |
-| Source files in `mudlet_core` | 392 |
-| Files depending on Qt Widgets | 158 |
-| Clean files | 234 |
-| Committed baseline | 158 |
+| Source files in `mudlet_core` | 400 |
+| Files depending on Qt Widgets | 147 |
+| Clean files | 253 |
+| Committed baseline | 147 |
 
 ## Offending files
 
@@ -46,15 +46,15 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 
 | File | Inc | Sym | Widget references |
 | --- | ---: | ---: | --- |
-| `dlgTriggerEditor.cpp` | 15 | 593 | QCheckBox, QAbstractButton, QColorDialog, QDialogButtonBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QScrollBar, QSpinBox, QStyle, QToolButton, QToolBar, QVBoxLayout, QStatusBar, QWidget, QSizePolicy, QGroupBox, QLineEdit, QListWidget, QPushButton, QMainWindow, QSplitter, QTreeWidget, QComboBox, QTimeEdit, QPlainTextEdit, QMenu, QTreeWidgetItem, QTreeWidgetItemIterator, QListWidgetItem, QApplication |
-| `dlgProfilePreferences.cpp` | 9 | 266 | QColorDialog, QDoubleSpinBox, QFileDialog, QFontDialog, QMessageBox, QTableWidget, QToolBar, QLineEdit, QHBoxLayout, QWidget, QDialog, QRadioButton, QCheckBox, QTabWidget, QAbstractButton, QComboBox, QPushButton, QFontComboBox, QSpinBox, QMenu, QLabel, QGridLayout, QKeySequenceEdit, QApplication, QTableWidgetItem, QToolButton |
+| `dlgTriggerEditor.cpp` | 16 | 607 | QApplication, QCheckBox, QAbstractButton, QColorDialog, QDialogButtonBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QScrollBar, QSpinBox, QStyle, QToolButton, QToolBar, QVBoxLayout, QStatusBar, QWidget, QSizePolicy, QGroupBox, QLineEdit, QListWidget, QPushButton, QMainWindow, QSplitter, QTreeWidget, QComboBox, QTimeEdit, QPlainTextEdit, QMenu, QTreeWidgetItem, QTreeWidgetItemIterator, QListWidgetItem |
+| `dlgProfilePreferences.cpp` | 9 | 269 | QColorDialog, QDoubleSpinBox, QFileDialog, QFontDialog, QMessageBox, QTableWidget, QToolBar, QLineEdit, QHBoxLayout, QWidget, QDialog, QRadioButton, QCheckBox, QAbstractButton, QComboBox, QPushButton, QFontComboBox, QSpinBox, QMenu, QLabel, QGridLayout, QKeySequenceEdit, QTabWidget, QApplication, QTableWidgetItem, QToolButton |
 | `T2DMap.cpp` | 12 | 143 | QMenu, QWidget, QAbstractItemView, QDialog, QLabel, QListWidget, QVBoxLayout, QHBoxLayout, QPushButton, QInputDialog, QMessageBox, QComboBox, QSizePolicy, QAbstractScrollArea, QFrame, QHeaderView, QTreeWidget, QTreeWidgetItem, QLineEdit, QCheckBox, QAbstractButton, QGridLayout, QFileDialog, QDialogButtonBox, QListWidgetItem, QColorDialog |
 | `dlgRoomExits.cpp` | 0 | 152 | QStyledItemDelegate, QWidget, QStyleOptionViewItem, QSpinBox, QGroupBox, QLineEdit, QDialog, QTreeWidgetItem, QCheckBox, QRadioButton, QAbstractButton, QTreeWidget, QButtonGroup |
-| `dlgPackageExporter.cpp` | 3 | 138 | QFileDialog, QInputDialog, QMessageBox, QWidget, QDialog, QTreeWidgetItem, QTreeWidget, QDialogButtonBox, QAbstractButton, QPushButton, QLineEdit, QTextEdit, QComboBox, QTreeWidgetItemIterator, QApplication, QListView, QAbstractItemView, QTreeView |
+| `dlgPackageExporter.cpp` | 3 | 136 | QFileDialog, QInputDialog, QMessageBox, QWidget, QDialog, QTreeWidgetItem, QTreeWidget, QDialogButtonBox, QAbstractButton, QPushButton, QLineEdit, QTextEdit, QComboBox, QTreeWidgetItemIterator, QApplication, QListView, QAbstractItemView, QTreeView |
+| `dlgConnectionProfiles.cpp` | 3 | 102 | QApplication, QColorDialog, QTabBar, QWidget, QDialog, QAbstractItemView, QAbstractButton, QDialogButtonBox, QPushButton, QTextBrowser, QLineEdit, QCheckBox, QPlainTextEdit, QListWidget, QListView, QListWidgetItem, QGroupBox, QVBoxLayout, QLabel, QMenu, QFileDialog |
 | `mudlet.cpp` | 11 | 89 | QApplication, QFileDialog, QMessageBox, QScrollBar, QSplitter, QStyleFactory, QTableWidget, QToolBar, QToolButton, QToolTip, QStyle, QMainWindow, QSizePolicy, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QMenu, QDockWidget, QDialog, QLabel |
-| `dlgConnectionProfiles.cpp` | 1 | 98 | QColorDialog, QWidget, QDialog, QAbstractItemView, QAbstractButton, QDialogButtonBox, QPushButton, QTextBrowser, QLineEdit, QCheckBox, QPlainTextEdit, QListWidget, QListView, QListWidgetItem, QGroupBox, QVBoxLayout, QLabel, QMenu, QFileDialog, QApplication |
-| `TConsole.cpp` | 7 | 87 | QAccessibleWidget, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QScrollBar, QSplitter, QWidget, QToolButton, QSizePolicy, QVBoxLayout, QAbstractButton, QMenu, QAbstractSlider, QApplication |
-| `dlgTriggerEditor.h` | 5 | 63 | QDialog, QDockWidget, QListWidgetItem, QScrollArea, QTreeWidget, QLabel, QFrame, QToolButton, QMainWindow, QTreeWidgetItem, QWidget, QToolBar, QSplitter |
+| `TConsole.cpp` | 7 | 88 | QAccessibleWidget, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QScrollBar, QSplitter, QWidget, QToolButton, QSizePolicy, QVBoxLayout, QAbstractButton, QMenu, QAbstractSlider, QApplication |
+| `dlgTriggerEditor.h` | 5 | 67 | QDialog, QDockWidget, QListWidgetItem, QScrollArea, QTreeWidget, QLabel, QFrame, QToolButton, QMainWindow, QTreeWidgetItem, QWidget, QToolBar, QSplitter |
 | `dlgPackageExporter.h` | 2 | 59 | QDialog, QTextEdit, QGroupBox, QTreeWidget, QTreeWidgetItem, QWidget, QPushButton |
 | `TDetachedWindow.cpp` | 11 | 48 | QVBoxLayout, QMenuBar, QMenu, QApplication, QToolBar, QToolButton, QLabel, QStackedWidget, QSizePolicy, QWidget, QDockWidget, QMainWindow, QTabBar |
 | `dlgRoomProperties.cpp` | 2 | 51 | QColorDialog, QMenu, QWidget, QDialog, QLineEdit, QComboBox, QAbstractButton, QSpinBox, QListWidgetItem, QVBoxLayout, QSizePolicy, QListWidget, QListView, QHBoxLayout, QPushButton |
@@ -62,44 +62,44 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgRoomExits.h` | 2 | 49 | QDialog, QStyledItemDelegate, QCheckBox, QWidget, QStyleOptionViewItem, QLineEdit, QTreeWidgetItem, QRadioButton, QSpinBox |
 | `dlgNotepad.cpp` | 8 | 36 | QApplication, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMenu, QPlainTextEdit, QToolButton, QWidget, QTabWidget, QMainWindow, QTextEdit |
 | `dlgPackageManager.cpp` | 3 | 40 | QFileDialog, QMessageBox, QProgressDialog, QWidget, QDialog, QLineEdit, QListWidget, QAbstractButton, QListWidgetItem, QButtonGroup |
-| `TTreeWidget.cpp` | 2 | 37 | QHeaderView, QToolTip, QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem, QStyle |
+| `TMainConsole.cpp` | 8 | 33 | QDialog, QDockWidget, QLabel, QLineEdit, QMessageBox, QProgressDialog, QScrollBar, QSizePolicy, QWidget, QApplication |
+| `TTreeWidget.cpp` | 2 | 38 | QHeaderView, QToolTip, QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem, QStyle |
+| `TMxpFrameManager.cpp` | 4 | 34 | QFrame, QMainWindow, QSizePolicy, QVBoxLayout, QTabWidget, QWidget |
 | `dlgMapLabel.cpp` | 3 | 34 | QColorDialog, QFileDialog, QFontDialog, QWidget, QDialog, QComboBox, QToolButton, QCheckBox, QPlainTextEdit, QPushButton, QApplication |
-| `TMxpFrameManager.cpp` | 4 | 33 | QFrame, QMainWindow, QSizePolicy, QVBoxLayout, QTabWidget, QWidget |
-| `updater/UpdateDialog.cpp` | 5 | 31 | QAbstractButton, QApplication, QMessageBox, QTextBrowser, QToolButton, QWidget, QDialog, QPushButton, QCheckBox |
-| `TTextEdit.cpp` | 5 | 30 | QApplication, QScrollBar, QLabel, QToolTip, QWidgetAction, QWidget, QAbstractSlider, QMenu |
+| `updater/UpdateDialog.cpp` | 5 | 32 | QAbstractButton, QApplication, QMessageBox, QTextBrowser, QToolButton, QWidget, QDialog, QPushButton, QCheckBox |
+| `TTextEdit.cpp` | 5 | 29 | QApplication, QScrollBar, QLabel, QToolTip, QWidgetAction, QWidget, QAbstractSlider, QMenu |
 | `mudlet.h` | 2 | 31 | QMainWindow, QSystemTrayIcon, QMenu, QLabel, QListWidget, QPushButton, QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QToolButton, QDockWidget, QToolBar, QWidget, QHBoxLayout |
 | `dlgColorTrigger.cpp` | 0 | 31 | QWidget, QDialog, QDialogButtonBox, QAbstractButton, QAbstractSlider, QPushButton |
-| `TConsole.h` | 1 | 29 | QWidget, QHBoxLayout, QLineEdit, QScrollBar, QSplitter, QToolButton |
+| `TConsole.h` | 1 | 30 | QWidget, QHBoxLayout, QLineEdit, QScrollBar, QSplitter, QToolButton |
 | `TMapView.cpp` | 4 | 26 | QApplication, QHBoxLayout, QLabel, QVBoxLayout, QWidget, QSizePolicy, QToolButton, QComboBox, QAbstractButton |
 | `dlgModuleManager.cpp` | 2 | 27 | QFileDialog, QMessageBox, QWidget, QDialog, QAbstractButton, QTableWidget, QHeaderView, QTableWidgetItem |
 | `TUiTour.cpp` | 8 | 21 | QFrame, QHBoxLayout, QLabel, QMenu, QMenuBar, QPushButton, QToolBar, QVBoxLayout, QWidget |
 | `TCommandLine.cpp` | 2 | 22 | QScrollBar, QToolButton, QWidget, QPlainTextEdit, QFrame, QApplication, QMenu |
 | `TDetachedWindow.h` | 7 | 17 | QMainWindow, QVBoxLayout, QToolBar, QToolButton, QLabel, QStackedWidget, QDockWidget, QWidget, QMenu |
-| `TMainConsole.cpp` | 4 | 20 | QLineEdit, QMessageBox, QProgressDialog, QScrollBar, QWidget, QApplication |
 | `TTabBar.cpp` | 3 | 21 | QApplication, QStyleOption, QStyleOptionTab, QWidget, QStyle, QProxyStyle, QTabBar |
 | `T2DMap.h` | 2 | 19 | QTreeWidget, QWidget, QCheckBox, QComboBox, QListWidgetItem, QPushButton, QTreeWidgetItem, QMenu, QDialog |
-| `TEasyButtonBar.cpp` | 1 | 19 | QGridLayout, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton |
-| `TToolBar.cpp` | 0 | 20 | QWidget, QDockWidget, QGridLayout, QSizePolicy, QAbstractButton |
 | `dlgTriggerPatternEdit.cpp` | 8 | 11 | QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QPlainTextEdit, QComboBox, QLineEdit, QWidget |
+| `TEasyButtonBar.cpp` | 1 | 17 | QGridLayout, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton, QPushButton |
 | `TFlipButton.cpp` | 3 | 15 | QMenu, QStyleOptionButton, QStylePainter, QPushButton, QSizePolicy, QStyle |
+| `TToolBar.cpp` | 0 | 18 | QWidget, QDockWidget, QGridLayout, QSizePolicy, QAbstractButton, QPushButton |
+| `dlgConnectionProfiles.h` | 0 | 16 | QTabBar, QDialog, QWidget, QListWidgetItem, QListWidget, QLabel, QPushButton |
 | `TFeatureCallout.cpp` | 4 | 12 | QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget |
-| `dlgConnectionProfiles.h` | 0 | 15 | QDialog, QWidget, QListWidgetItem, QListWidget, QPushButton, QLineEdit |
 | `main.cpp` | 3 | 12 | QCheckBox, QMessageBox, QSplashScreen, QApplication |
 | `TLabel.cpp` | 0 | 15 | QWidget, QLabel |
+| `utils.h` | 2 | 13 | QApplication, QWidget |
 | `dlgNotepad.h` | 0 | 14 | QLabel, QLineEdit, QPlainTextEdit, QToolButton, QMainWindow, QWidget |
-| `utils.h` | 2 | 12 | QApplication, QWidget |
 | `dlgMapper.h` | 0 | 13 | QFrame, QLabel, QProgressBar, QPushButton, QWidget, QMenu |
 | `TTabBar.h` | 2 | 11 | QProxyStyle, QTabBar, QStyleOption, QWidget, QStyleOptionTab |
 | `dlgProfilePreferences.h` | 1 | 11 | QDialog, QDoubleSpinBox, QWidget, QPushButton, QComboBox, QMenu |
 | `TUiTour.h` | 1 | 11 | QWidget, QFrame, QLabel, QPushButton |
 | `updater.cpp` | 2 | 10 | QMessageBox, QPushButton, QApplication, QAbstractButton |
-| `Host.cpp` | 1 | 10 | QDialog, QLabel, QDockWidget, QApplication |
+| `VarUnit.cpp` | 1 | 10 | QTreeWidgetItem |
+| `VarUnit.h` | 0 | 11 | QTreeWidgetItem |
 | `TMapView.h` | 3 | 7 | QComboBox, QToolButton, QWidget |
 | `TTreeWidget.h` | 1 | 9 | QTreeWidget, QWidget, QTreeWidgetItem |
-| `VarUnit.cpp` | 1 | 9 | QTreeWidgetItem |
-| `VarUnit.h` | 0 | 10 | QTreeWidgetItem |
 | `dlgMapLabel.h` | 1 | 8 | QDialog, QColorDialog, QFontDialog, QWidget |
 | `PackageItemDelegate.cpp` | 1 | 8 | QApplication, QStyledItemDelegate, QStyleOptionViewItem, QStyle |
+| `TMainConsole.h` | 1 | 8 | QWidget, QDialog, QDockWidget, QProgressDialog |
 | `AltFocusMenuBarDisable.cpp` | 0 | 8 | QProxyStyle, QStyleFactory, QStyleOption, QWidget, QStyleHintReturn, QStyle |
 | `dlgPackageManager.h` | 4 | 4 | QButtonGroup, QDialog, QListWidget, QTextBrowser, QWidget, QListWidgetItem |
 | `TKeySequenceEdit.cpp` | 1 | 7 | QLineEdit, QWidget, QKeySequenceEdit |
@@ -107,6 +107,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `updater/UpdateDialog.h` | 1 | 7 | QDialog, QAbstractButton, QWidget |
 | `dlgComposer.cpp` | 1 | 6 | QMenu, QAbstractButton, QWidget, QMainWindow |
 | `TAction.cpp` | 0 | 7 | QMenu |
+| `TDockWidget.cpp` | 0 | 7 | QDockWidget, QWidget |
 | `AltFocusMenuBarDisable.h` | 2 | 4 | QProxyStyle, QStyleFactory, QStyleOption, QWidget, QStyleHintReturn |
 | `dlgIRC.cpp` | 1 | 5 | QScrollBar, QLineEdit, QTextBrowser, QListView |
 | `dlgVarsMainArea.cpp` | 1 | 5 | QListWidgetItem, QWidget, QListWidget |
@@ -114,19 +115,14 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TAccessibleTextEdit.h` | 1 | 5 | QAccessibleWidget, QWidget |
 | `TCommandLine.h` | 2 | 4 | QPlainTextEdit, QToolButton, QWidget, QMenu |
 | `TEasyButtonBar.h` | 1 | 5 | QWidget, QGridLayout |
-| `TMap.cpp` | 2 | 4 | QFileDialog, QProgressDialog |
 | `TToolBar.h` | 1 | 5 | QDockWidget, QGridLayout, QWidget |
-| `XMLexport.cpp` | 0 | 6 | QApplication |
+| `dlgActionMainArea.cpp` | 0 | 5 | QWidget, QLineEdit, QSpinBox, QComboBox |
 | `dlgModuleManager.h` | 1 | 4 | QDialog, QWidget, QTableWidgetItem |
-| `Host.h` | 0 | 5 | QDialog, QDockWidget, QPushButton, QListWidget |
 | `LuaInterface.h` | 0 | 5 | QTreeWidgetItem |
 | `PackageItemDelegate.h` | 2 | 3 | QStyledItemDelegate, QStyleOptionViewItem |
 | `TAccessibleConsole.h` | 1 | 4 | QAccessibleWidget, QWidget |
 | `TFeatureCallout.h` | 1 | 4 | QWidget |
 | `TKeySequenceEdit.h` | 1 | 4 | QKeySequenceEdit, QLineEdit, QWidget |
-| `TLuaInterpreter.cpp` | 3 | 2 | QFileDialog, QTableWidget, QToolTip, QApplication |
-| `TLuaInterpreterMudletObjects.cpp` | 3 | 2 | QFileDialog, QTableWidget, QToolTip |
-| `TLuaInterpreterUI.cpp` | 3 | 2 | QFileDialog, QTableWidget, QToolTip, QApplication |
 | `TrailingWhitespaceMarker.cpp` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TrailingWhitespaceMarker.h` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TScrollBox.h` | 1 | 4 | QScrollArea, QWidget |
@@ -138,17 +134,13 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `LuaInterface.cpp` | 0 | 4 | QTreeWidgetItem |
 | `RoomContextMenuHandler.cpp` | 1 | 3 | QMenu |
 | `TAction.h` | 0 | 4 | QMenu |
-| `TDockWidget.cpp` | 0 | 4 | QDockWidget, QWidget |
-| `TMainConsole.h` | 1 | 3 | QWidget, QProgressDialog |
 | `TMapViewManager.cpp` | 0 | 4 | QDockWidget |
-| `TMedia.cpp` | 0 | 4 | QWidget, QSizePolicy |
 | `TScrollBox.cpp` | 0 | 4 | QWidget, QScrollArea |
 | `TSplitter.h` | 1 | 3 | QSplitter, QWidget, QSplitterHandle |
 | `TTextEdit.h` | 1 | 3 | QWidget, QScrollBar |
 | `updater.h` | 0 | 4 | QAbstractButton, QPushButton |
 | `WideComboBox.h` | 1 | 3 | QComboBox |
 | `DarkTheme.cpp` | 0 | 3 | QStyle, QProxyStyle |
-| `dlgActionMainArea.cpp` | 0 | 3 | QWidget, QLineEdit |
 | `dlgColorTrigger.h` | 0 | 3 | QDialog, QWidget, QPushButton |
 | `dlgComposer.h` | 0 | 3 | QMenu, QMainWindow |
 | `dlgKeysMainArea.cpp` | 0 | 3 | QWidget, QLineEdit |
@@ -160,10 +152,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TAccessibleTextEdit.cpp` | 0 | 3 | QAccessibleWidget |
 | `TFlipButton.h` | 1 | 2 | QPushButton, QStyleOptionButton |
 | `TLabel.h` | 1 | 2 | QLabel, QWidget |
-| `TLuaInterpreterDiscord.cpp` | 3 | 0 | QFileDialog, QTableWidget, QToolTip |
-| `TLuaInterpreterMapper.cpp` | 3 | 0 | QFileDialog, QTableWidget, QToolTip |
-| `TLuaInterpreterNetworking.cpp` | 3 | 0 | QFileDialog, QTableWidget, QToolTip |
-| `TLuaInterpreterTextToSpeech.cpp` | 3 | 0 | QFileDialog, QTableWidget, QToolTip |
+| `TLuaInterpreterMudletObjects.cpp` | 1 | 2 | QFileDialog |
 | `TSplitter.cpp` | 0 | 3 | QWidget, QSplitter, QSplitterHandle |
 | `TTextBox.cpp` | 0 | 3 | QWidget, QPlainTextEdit, QFrame |
 | `TTextBox.h` | 1 | 2 | QPlainTextEdit, QWidget |
@@ -188,11 +177,13 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgTriggersMainArea.h` | 0 | 2 | QWidget |
 | `dlgVarsMainArea.h` | 0 | 2 | QWidget |
 | `glwidget_integration.h` | 0 | 2 | QWidget |
+| `Host.cpp` | 1 | 1 | QApplication, QDockWidget |
+| `Host.h` | 0 | 2 | QDockWidget |
 | `LabelInteractionHandler.cpp` | 1 | 1 | QMenu |
 | `modern_glwidget.cpp` | 0 | 2 | QWidget |
 | `SelectionRectangleHandler.cpp` | 1 | 1 | QTreeWidgetItem |
 | `TDockWidget.h` | 1 | 1 | QDockWidget |
-| `TMap.h` | 0 | 2 | QProgressDialog |
+| `TLuaInterpreter.cpp` | 1 | 1 | QApplication |
 | `TMapViewManager.h` | 1 | 1 | QDockWidget |
 | `TSplitterHandle.cpp` | 0 | 2 | QSplitterHandle, QSplitter |
 | `TSplitterHandle.h` | 1 | 1 | QSplitterHandle |
@@ -202,10 +193,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `glwidget_integration.cpp` | 0 | 1 | QWidget |
 | `HostManager.cpp` | 0 | 1 | QApplication |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
-| `XMLimport.cpp` | 0 | 1 | QApplication |
-| `XMLimport.h` | 1 | 0 | QApplication |
 
-## Clean files (234)
+## Clean files (253)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -250,6 +239,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `EditorUndoStack.cpp`
 - `EditorUndoStack.h`
 - `enums.h`
+- `EventLoopPump.cpp`
+- `EventLoopPump.h`
 - `FileOpenHandler.cpp`
 - `FileOpenHandler.h`
 - `FontManager.cpp`
@@ -268,6 +259,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `LabelInteractionHandler.h`
 - `LabelTextureCache.cpp`
 - `LabelTextureCache.h`
+- `LuaLiteral.cpp`
+- `LuaLiteral.h`
 - `mapInfoContributorManager.cpp`
 - `mapInfoContributorManager.h`
 - `MiddleMousePanHandler.cpp`
@@ -314,6 +307,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TArea.h`
 - `TAreaGridIndex.cpp`
 - `TAreaGridIndex.h`
+- `TAreaSpanIndex.cpp`
+- `TAreaSpanIndex.h`
 - `TAreaZLevelIndex.cpp`
 - `TAreaZLevelIndex.h`
 - `TAstar.h`
@@ -347,11 +342,19 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLinkStore.cpp`
 - `TLinkStore.h`
 - `TLuaInterpreter.h`
+- `TLuaInterpreterDiscord.cpp`
+- `TLuaInterpreterMapper.cpp`
 - `TLuaInterpreterMedia.cpp`
 - `TLuaInterpreterMMCP.cpp`
+- `TLuaInterpreterNetworking.cpp`
+- `TLuaInterpreterTextToSpeech.cpp`
+- `TLuaInterpreterUI.cpp`
+- `TMap.cpp`
+- `TMap.h`
 - `TMapLabel.cpp`
 - `TMapLabel.h`
 - `TMatchState.h`
+- `TMedia.cpp`
 - `TMedia.h`
 - `TMediaData.h`
 - `TMediaPlaylist.cpp`
@@ -436,6 +439,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TTrigger.h`
 - `TVar.cpp`
 - `TVar.h`
+- `UntrustedText.cpp`
+- `UntrustedText.h`
 - `updater/Feed.cpp`
 - `updater/Feed.h`
 - `updater/Release.cpp`
@@ -443,6 +448,9 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `updater/SemVer.cpp`
 - `updater/SemVer.h`
 - `widechar_width.h`
+- `XMLexport.cpp`
 - `XMLexport.h`
+- `XMLimport.cpp`
+- `XMLimport.h`
 
 </details>
