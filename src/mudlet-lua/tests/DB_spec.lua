@@ -1134,6 +1134,110 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  -- the accessors are pure Lua and need no database, so they are driven
+  -- directly rather than through a fetched row
+  describe("Tests the functionality of db.__Timestamp", function()
+    local epoch = 1748288082 -- 2025-05-26T19:34:42+00:00
+    local parts = {year = 2015, month = 6, day = 14, hour = 9, min = 30, sec = 15}
+
+    describe("Tests the functionality of db.__Timestamp:as_number", function()
+      it("should return the epoch it was made from", function()
+        assert.are.equal(epoch, db:Timestamp(epoch):as_number())
+      end)
+
+      it("should return the epoch a table of parts was converted to", function()
+        assert.are.equal(os.time(parts), db:Timestamp(parts):as_number())
+      end)
+
+      it("should return the epoch a string was parsed into", function()
+        assert.are.equal(os.time(parts), db:Timestamp("2015-06-14 09:30:15"):as_number())
+      end)
+
+      it("should return nil and a message for a timestamp holding no number", function()
+        local value, err = db:Timestamp(nil):as_number()
+        assert.is_nil(value)
+        assert.are.equal("db.Timestamp:as_number: timestamp seems to be invalid and isn't a number", err)
+      end)
+
+      it("should return nil and a message for CURRENT_TIMESTAMP before the database fills it in", function()
+        local value, err = db:Timestamp("CURRENT_TIMESTAMP"):as_number()
+        assert.is_nil(value)
+        assert.are.equal("db.Timestamp:as_number: timestamp seems to be invalid and isn't a number", err)
+      end)
+    end)
+
+    describe("Tests the functionality of db.__Timestamp:as_string", function()
+      it("should default to a month-first date and a 24 hour clock", function()
+        -- built from parts rather than an epoch so the expected string is a
+        -- literal, not os.date restating the format the function already used
+        assert.are.equal("06-14-2015 09:30:15", db:Timestamp(parts):as_string())
+      end)
+
+      it("should use the format it is given", function()
+        assert.are.equal("2015-06-14", db:Timestamp(parts):as_string("%Y-%m-%d"))
+      end)
+
+      it("should return the string nil and a message for a timestamp holding no number", function()
+        -- it promises a string, so an invalid timestamp is reported as one rather
+        -- than making every caller wrap the result in tostring()
+        local value, err = db:Timestamp(nil):as_string()
+        assert.are.equal("nil", value)
+        assert.are.equal("db.Timestamp:as_string: timestamp seems to be invalid and isn't a number", err)
+      end)
+    end)
+
+    describe("Tests the functionality of db.__Timestamp:as_table", function()
+      it("should return the date parts of the epoch it holds", function()
+        assert.are.same(os.date("*t", epoch), db:Timestamp(epoch):as_table())
+      end)
+
+      it("should give back the parts it was built from", function()
+        local actual = db:Timestamp(parts):as_table()
+        assert.are.equal(2015, actual.year)
+        assert.are.equal(6, actual.month)
+        assert.are.equal(14, actual.day)
+        assert.are.equal(9, actual.hour)
+        assert.are.equal(30, actual.min)
+        assert.are.equal(15, actual.sec)
+      end)
+
+      it("should return nil and a message for a timestamp holding no number", function()
+        local value, err = db:Timestamp(nil):as_table()
+        assert.is_nil(value)
+        assert.are.equal("db.Timestamp:as_table: timestamp seems to be invalid and isn't a number", err)
+      end)
+    end)
+
+    describe("Tests the functionality of db.__Timestamp:set", function()
+      it("should give a timestamp holding no number a real value", function()
+        local timestamp = db:Timestamp(nil)
+        assert.is_nil((timestamp:as_number()))
+        timestamp:set(os.time(parts))
+        assert.are.equal(os.time(parts), timestamp:as_number())
+        assert.are.equal("06-14-2015 09:30:15", timestamp:as_string())
+      end)
+
+      it("should replace a value that was already there", function()
+        local timestamp = db:Timestamp(epoch)
+        timestamp:set(epoch + 86400)
+        assert.are.equal(epoch + 86400, timestamp:as_number())
+      end)
+
+      it("should turn a CURRENT_TIMESTAMP placeholder into a real time", function()
+        local timestamp = db:Timestamp("CURRENT_TIMESTAMP")
+        timestamp:set(epoch)
+        assert.are.equal(epoch, timestamp:as_number())
+      end)
+
+      it("should refuse anything that is not a number", function()
+        local timestamp = db:Timestamp(epoch)
+        assert.has_error(function() timestamp:set("nope") end, "db.Timestamp:set: timestamp needs to be a number")
+        assert.has_error(function() timestamp:set(nil) end, "db.Timestamp:set: timestamp needs to be a number")
+        assert.are.equal(epoch, timestamp:as_number(), "a refused value must not have been stored")
+      end)
+    end)
+  end)
+
   describe("Tests, if hanging indexes are removed", function()
     local test_db_name = db:safe_name("remove_indexes_test")
     local test_db_file = getMudletHomeDir() .. "/Database_" .. test_db_name .. ".db"
@@ -1916,6 +2020,143 @@ describe("Tests DB.lua functions", function()
         }
       })
       assert.are.equal(2, #db:fetch(mydb.sheet))
+    end)
+  end)
+
+  -- the rollback specs above drive these four through one whole transaction;
+  -- this covers what each does on its own. db:merge_unique is their only
+  -- in-library caller and it never calls _rollback at all.
+  describe("Tests the functionality of db.Database:_begin, db.Database:_commit, db.Database:_rollback and db.Database:_end", function()
+    local dbName = "txntestingonly"
+    local otherName = "txnothertestingonly"
+
+    before_each(function()
+      -- a run that died mid-transaction would otherwise leave rows behind
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      os.remove(getMudletHomeDir() .. "/Database_" .. otherName .. ".db")
+      mydb = db:create(dbName, {sheet = {name = ""}})
+      db:add(mydb.sheet, {name = "committed"})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      os.remove(getMudletHomeDir() .. "/Database_" .. otherName .. ".db")
+      mydb = nil
+    end)
+
+    local function names()
+      local result = {}
+      for _, row in ipairs(db:fetch(mydb.sheet)) do
+        result[#result + 1] = row.name
+      end
+      table.sort(result)
+      return result
+    end
+
+    it("_begin stops every write committing on its own and _end starts it again", function()
+      assert.is_true(db.__autocommit[mydb._db_name])
+      mydb:_begin()
+      assert.is_false(db.__autocommit[mydb._db_name])
+      mydb:_end()
+      assert.is_true(db.__autocommit[mydb._db_name])
+    end)
+
+    it("_begin only reaches the database it was called on", function()
+      local other = db:create(otherName, {sheet = {name = ""}})
+      mydb:_begin()
+      assert.is_false(db.__autocommit[mydb._db_name])
+      assert.is_true(db.__autocommit[other._db_name])
+      mydb:_end()
+    end)
+
+    it("_commit keeps the work so far while leaving later work rollback-able", function()
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "kept"})
+      mydb:_commit()
+      db:add(mydb.sheet, {name = "dropped"})
+      mydb:_rollback()
+      mydb:_end()
+      assert.are.same({"committed", "kept"}, names())
+    end)
+
+    it("_end is only a flag, so it does not commit what is still pending", function()
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "pending"})
+      mydb:_end()
+      -- nothing committed the row, so a rollback afterwards still takes it away
+      mydb:_rollback()
+      assert.are.same({"committed"}, names())
+    end)
+
+    it("_rollback outside a transaction leaves the committed rows alone", function()
+      db:add(mydb.sheet, {name = "autocommitted"})
+      mydb:_rollback()
+      assert.are.same({"autocommitted", "committed"}, names())
+    end)
+
+    it("_commit and _rollback answer true and an empty message while the database is open", function()
+      mydb:_begin()
+      local ok, msg = mydb:_commit()
+      assert.is_true(ok)
+      assert.are.equal("", msg)
+      ok, msg = mydb:_rollback()
+      assert.is_true(ok)
+      assert.are.equal("", msg)
+      mydb:_end()
+    end)
+
+    -- db:close keeps the schema, so the handle db:create handed back stays
+    -- usable with no connection left behind it
+    it("_commit answers false and says so once the database is closed", function()
+      db:close(dbName)
+      local ok, msg = mydb:_commit()
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, "commit", 1, true) ~= nil)
+      assert.is_true(string.find(msg, "closed", 1, true) ~= nil)
+      assert.is_true(string.find(msg, dbName, 1, true) ~= nil)
+    end)
+
+    it("_rollback answers false and says so once the database is closed", function()
+      db:close(dbName)
+      local ok, msg = mydb:_rollback()
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, "roll back", 1, true) ~= nil)
+      assert.is_true(string.find(msg, "closed", 1, true) ~= nil)
+      assert.is_true(string.find(msg, dbName, 1, true) ~= nil)
+    end)
+
+    -- db:get_database keeps handing out handles for a closed database, so the
+    -- guard has to hold for one obtained after the close as well as before it
+    it("_commit answers false on a handle taken out after the close", function()
+      db:close(dbName)
+      local ok, msg = db:get_database(dbName):_commit()
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, "closed", 1, true) ~= nil)
+    end)
+
+    it("_commit answers false when the database engine refuses the commit", function()
+      -- a second connection part way through reading holds the lock the COMMIT
+      -- needs, which is how a full disk or a second Mudlet on the same profile
+      -- shows up: the connection is fine, the work just does not land
+      local reader_env = luasql.sqlite3()
+      local reader = reader_env:connect(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      local cursor = reader:execute("SELECT name FROM sheet")
+      cursor:fetch()
+
+      mydb:_begin()
+      db:add(mydb.sheet, {name = "blocked"})
+      local ok, msg = mydb:_commit()
+      mydb:_rollback()
+      mydb:_end()
+
+      cursor:close()
+      reader:close()
+      reader_env:close()
+
+      assert.is_false(ok)
+      assert.is_true(string.find(msg, dbName, 1, true) ~= nil)
+      assert.are.same({"committed"}, names())
     end)
   end)
 
@@ -3176,59 +3417,81 @@ describe("Tests db:create with a single column name as _index", function()
     assert.are.equal("Bob", rows[1].name)
   end)
 
-  it("refuses a column the sheet does not have, keeping the indexes it had", function()
-    -- an index on a column that is not there can never be created, and taking
-    -- the typo for the wanted set would drop the indexes the sheet did have
+  -- db:create reports an index it cannot make through printError and carries
+  -- on, so what it says is collected rather than caught
+  local function createCollectingWarnings(sheets)
+    local collected = {}
+    -- through _G: a spec file's globals are its own, so plain assignment would
+    -- leave db:create with the printError it already has
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = db:create(dbName, sheets)
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  it("warns about a column the sheet does not have instead of refusing the sheet", function()
+    -- an index on a column that is not there can never be created, but the rest
+    -- of the sheet is sound and its data is reachable without the index
     db:create(dbName, {people = {name = "", city = "", _index = "city"}})
     assert.are.equal(1, #indexNames("people"))
 
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = "citty"}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "citty", which is not one of the sheet\'s columns', 1, true))
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "citty"}})
+    assert.is_truthy(string.find(warnings, '_index names "citty", which is not one of the sheet\'s columns', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+    -- and the index the sheet had is still there: what is left of _index is no
+    -- longer the whole set it asked for, so nothing is pruned against it
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+
+    -- only for as long as the typo is there, though: a sheet that asks for an
+    -- index it can have prunes the ones it no longer asks for, as ever
+    db:create(dbName, {people = {name = "", city = "", _index = "name"}})
+    assert.are.same({db:_index_name("people", "name")}, indexNames("people"))
+  end)
+
+  it("warns about a typo in a list or a compound index too", function()
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {"city", "citty"}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_index names "citty"', 1, true))
+    -- only the entry that names the column which is not there is dropped
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+
+    mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {{"city", "citty"}}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_index names "citty"', 1, true))
+    -- a compound index is wanted whole: an index on the half of it that names a
+    -- real column is not the one that was asked for, and the single-column index
+    -- the sheet already had is not dropped over it either
     assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
   end)
 
-  it("refuses a typo in a list or a compound index too", function()
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = {"city", "citty"}}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "citty"', 1, true))
-
-    ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = {{"city", "citty"}}}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "citty"', 1, true))
-  end)
-
-  it("refuses a sort direction where a column name belongs", function()
+  it("warns about a sort direction where a column name belongs", function()
     -- db:_sql_columns would render "name" desc, but db:_index_valid refuses the
     -- entry, so an index with a sort direction has never been created: saying so
     -- beats leaving the sheet with no index and no complaint
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = {{"name", "desc"}}}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, "an index takes column names only, not a sort direction", 1, true))
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {{"name", "desc"}}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, "an index takes column names only, not a sort direction", 1, true))
+    assert.are.same({}, indexNames("people"))
 
-    -- a sheet that really has a column of that name is not refused; what
+    -- a sheet that really has a column of that name is not warned about; what
     -- db:_sql_columns then makes of it is that function's business
-    assert.is_table(db:create(dbName, {people = {name = "", desc = "", _index = {{"name", "desc"}}}}))
+    local other, otherWarnings = createCollectingWarnings({people = {name = "", desc = "", _index = {{"name", "desc"}}}})
+    assert.is_table(other)
+    assert.are.equal("", otherWarnings)
   end)
 
-  it("refuses the _row_id no sheet definition names either", function()
+  it("warns about the _row_id no sheet definition names either", function()
     -- the sheet is given one, but no definition declares it: it is not there to
     -- index on the db:create that makes the sheet, and db:_drop_orphaned_indexes
     -- cannot match the leading underscore, so an index on it was dropped and
     -- made again on every db:create after that
-    local ok, err = pcall(function()
-      db:create(dbName, {people = {name = "", city = "", _index = "_row_id"}})
-    end)
-    assert.is_false(ok)
-    assert.is_truthy(string.find(err, '_index names "_row_id"', 1, true))
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "_row_id"}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_index names "_row_id"', 1, true))
+    assert.are.same({}, indexNames("people"))
   end)
 end)
 

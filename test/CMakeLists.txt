@@ -116,6 +116,20 @@ set_tests_properties(CMakeListsConsistencyTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
+# The version comparison every update offer is decided by. Built from the one
+# updater source it covers rather than linked against the Mudlet library, because
+# the library only contains it when configured with USE_UPDATER - which CI's
+# -testing builds are not. utils.h reaches QApplication, hence Qt6::Widgets.
+add_executable(SemVerTest
+    SemVerTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
+)
+target_link_libraries(SemVerTest PRIVATE Qt6::Test Qt6::Widgets)
+add_test(NAME SemVerTest COMMAND $<TARGET_FILE:SemVerTest>)
+set_tests_properties(SemVerTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
 # Pairing of a release's assets with its SHA256SUMS.txt. Built from the updater
 # sources rather than linked against the Mudlet library, because the library only
 # contains them when configured with USE_UPDATER.

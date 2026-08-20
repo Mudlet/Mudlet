@@ -63,8 +63,15 @@
 
 using namespace std::chrono_literals;
 
-TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent, bool toolbarVisible)
-: QMainWindow(parent)
+// Deliberately parentless: a QWidget parent on a top-level window gives it a
+// QWindow transient parent, and Windows implements that as native window
+// ownership - an owned window is pinned above its owner forever, so clicking the
+// main window focuses it without ever bringing it to the front. Qt's xcb plugin
+// sets no WM_TRANSIENT_FOR for it, so it does not reproduce on Linux.
+// Since nothing owns the window now, mudlet::closeEvent() closing it is what
+// keeps it from outliving the application.
+TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, bool toolbarVisible)
+: QMainWindow(nullptr)
 , mCurrentProfileName(profileName)
 {
     // Add the initial profile
@@ -83,7 +90,7 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     // Set window properties
     //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
     setWindowTitle(tr("Mudlet - %1 (Detached)").arg(profileName));
-    setWindowIcon(parent ? parent->windowIcon() : QIcon());
+    setWindowIcon(mudlet::self()->windowIcon());
     setAttribute(Qt::WA_DeleteOnClose);
     setAcceptDrops(true);
 
@@ -815,13 +822,9 @@ void TDetachedWindow::restoreWindowGeometry()
         resize(800, 600);
 
         // Center on screen containing the main window
-        if (parentWidget()) {
-            const QScreen* screen = QApplication::screenAt(parentWidget()->pos());
-
-            if (screen) {
-                const QRect screenGeometry = screen->availableGeometry();
-                move(screenGeometry.center() - rect().center());
-            }
+        if (const QScreen* screen = QApplication::screenAt(mudlet::self()->pos())) {
+            const QRect screenGeometry = screen->availableGeometry();
+            move(screenGeometry.center() - rect().center());
         }
     }
 

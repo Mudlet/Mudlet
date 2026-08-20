@@ -574,6 +574,58 @@ describe("Tests the functionality of IDMgr", function()
       assert.are.same({}, other:getTimers())
     end)
 
+    -- IDMgr is a local in IDManager.lua, so the class itself is only reachable
+    -- as the metatable of an instance it has already handed out
+    describe("Tests the functionality of IDMgr:new", function()
+      local IDMgr = getmetatable(getNewIDManager())
+      local made
+
+      before_each(function()
+        made = {}
+      end)
+
+      after_each(function()
+        for _, manager in ipairs(made) do
+          manager:deleteAllTimers()
+          manager:deleteAllTriggers()
+          manager:deleteAllEvents()
+        end
+      end)
+
+      local function newManager()
+        local manager = IDMgr:new()
+        made[#made + 1] = manager
+        return manager
+      end
+
+      it("Should give a manager its own four empty stores", function()
+        local fresh = newManager()
+        assert.are.same({}, fresh.events)
+        assert.are.same({}, fresh.timers)
+        assert.are.same({}, fresh.triggers)
+        assert.are.same({}, fresh.regexTriggers)
+      end)
+
+      it("Should not let two managers share a store", function()
+        local first, second = newManager(), newManager()
+        first:registerTimer("mine", 100, function() end)
+        assert.are.same({"mine"}, first:getTimers())
+        assert.are.same({}, second:getTimers())
+      end)
+
+      it("Should reach the IDMgr methods through the metatable it sets", function()
+        local fresh = newManager()
+        assert.are.equal(IDMgr, getmetatable(fresh))
+        assert.is_function(fresh.registerTimer)
+        assert.is_function(fresh.emergencyStop)
+      end)
+
+      it("Should give every manager the same metatable", function()
+        assert.are.equal(IDMgr, getmetatable(getNewIDManager()))
+        assert.are.equal(IDMgr, getmetatable(newManager()))
+      end)
+    end)
+
     describe("Tests the functionality of IDMgr:registerTrigger and IDMgr:registerRegexTrigger", function()
       it("Should register a substring trigger that fires", function()
         _G.PrivateMgrFire = 0
@@ -675,6 +727,162 @@ describe("Tests the functionality of IDMgr", function()
       end)
     end)
 
+    describe("Tests the functionality of IDMgr:registerTimer", function()
+      -- Mudlet is single threaded, so a spec body holds the event loop until it
+      -- returns and no timer can fire inside one: hand control back for a moment
+      local function pumpEventLoop(milliseconds)
+        tempTimer(milliseconds / 1000, function() raiseEvent("idManagerTimerPump") end)
+        waitForEvent("idManagerTimerPump", milliseconds + 1000)
+      end
+
+      local function pumpUntil(condition)
+        for _ = 1, 20 do
+          if condition() then
+            return
+          end
+          pumpEventLoop(50)
+        end
+      end
+
+      it("Should give the timer a live tempTimer and list it under its name", function()
+        assert.is_true(mgr:registerTimer("timer", 100, function() end))
+        assert.is_number(remainingTime(mgr.timers["timer"].handlerID))
+        assert.are.same({"timer"}, mgr:getTimers())
+      end)
+
+      -- waitForEvent is test mode only, so the two specs that wait for a timer
+      -- to fire cannot run when the suite is started by hand with runTests
+      local canPump = os.getenv("MUDLET_TEST_MODE") ~= nil
+
+      if not canPump then
+        pending("Should run the function it was given exactly once - needs MUDLET_TEST_MODE for waitForEvent")
+        pending("Should hand the fourth argument to tempTimer as its repeating flag - needs MUDLET_TEST_MODE for waitForEvent")
+      else
+        it("Should run the function it was given exactly once", function()
+          local fired = 0
+          mgr:registerTimer("timer", 0.05, function() fired = fired + 1 end)
+          local handlerID = mgr.timers["timer"].handlerID
+
+          pumpUntil(function() return fired > 0 end)
+          pumpEventLoop(200)
+
+          assert.are.equal(1, fired)
+          -- a timer that is not repeating is gone once it has fired
+          assert.is_nil(remainingTime(handlerID))
+        end)
+
+        -- IDMgr keeps this flag in a field called oneShot for every store, but
+        -- for timers it reaches tempTimer as its repeating argument, which is
+        -- the opposite meaning to the event case below - and it matches what
+        -- registerNamedTimer(..., [repeating]) is documented to take
+        it("Should hand the fourth argument to tempTimer as its repeating flag", function()
+          local fired = 0
+          mgr:registerTimer("timer", 0.05, function() fired = fired + 1 end, true)
+          local handlerID = mgr.timers["timer"].handlerID
+
+          pumpUntil(function() return fired > 1 end)
+
+          assert.is_true(fired > 1, "a repeating timer should fire more than once")
+          assert.is_number(remainingTime(handlerID), "a repeating timer stays alive after firing")
+        end)
+      end
+
+      it("Should replace an earlier timer of the same name instead of adding one", function()
+        mgr:registerTimer("timer", 5000, function() end)
+        local firstID = mgr.timers["timer"].handlerID
+
+        assert.is_true(mgr:registerTimer("timer", 5000, function() end))
+
+        assert.are_not.equal(firstID, mgr.timers["timer"].handlerID)
+        assert.is_nil(remainingTime(firstID), "the timer it replaces has to be killed")
+        assert.are.same({"timer"}, mgr:getTimers())
+      end)
+
+      it("Should report the upstream failure instead of raising", function()
+        local ok, err = mgr:registerTimer("bad", "not a number", function() end)
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_nil(mgr.timers["bad"])
+        assert.are.same({}, mgr:getTimers())
+      end)
+
+      -- BUG: IDMgr:register stops whatever is registered under the name before
+      -- it tries the new registration, and puts nothing back when that fails,
+      -- so a re-registration with a bad argument kills a working timer while
+      -- leaving the name in getTimers() looking registered.
+      pending("Should leave the running timer alone when a re-registration fails")
+    end)
+
+    describe("Tests the functionality of IDMgr:stopTimer", function()
+      it("Should kill the tempTimer while leaving the name registered", function()
+        mgr:registerTimer("timer", 100, function() end)
+        local handlerID = mgr.timers["timer"].handlerID
+
+        assert.is_true(mgr:stopTimer("timer"))
+
+        assert.is_nil(remainingTime(handlerID), "stopping has to kill the tempTimer, not just the bookkeeping")
+        assert.are.equal(-1, mgr.timers["timer"].handlerID)
+        assert.are.same({"timer"}, mgr:getTimers())
+      end)
+
+      it("Should report the stopped timer as inactive", function()
+        mgr:registerTimer("timer", 100, function() end)
+        mgr:stopTimer("timer")
+        local remaining, err = mgr:remainingTime("timer")
+        assert.is_nil(remaining)
+        assert.are.equal("timer is inactive", err)
+      end)
+
+      it("Should leave the other timers running", function()
+        mgr:registerTimer("stopped", 100, function() end)
+        mgr:registerTimer("running", 100, function() end)
+        mgr:stopTimer("stopped")
+        assert.is_number(mgr:remainingTime("running"))
+      end)
+
+      it("Should stay stopped when asked a second time", function()
+        mgr:registerTimer("timer", 100, function() end)
+        assert.is_true(mgr:stopTimer("timer"))
+        assert.is_true(mgr:stopTimer("timer"))
+        assert.are.equal(-1, mgr.timers["timer"].handlerID)
+      end)
+
+      it("Should return false for a name it does not know", function()
+        assert.is_false(mgr:stopTimer("no such timer"))
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:getTimers", function()
+      it("Should return an empty list for a fresh manager", function()
+        assert.are.same({}, mgr:getTimers())
+      end)
+
+      it("Should list every registered timer name, sorted", function()
+        mgr:registerTimer("charlie", 100, function() end)
+        mgr:registerTimer("alpha", 100, function() end)
+        mgr:registerTimer("bravo", 100, function() end)
+        assert.are.same({"alpha", "bravo", "charlie"}, mgr:getTimers())
+      end)
+
+      it("Should keep listing a timer that was stopped but not deleted", function()
+        mgr:registerTimer("stopped", 100, function() end)
+        mgr:stopTimer("stopped")
+        assert.are.same({"stopped"}, mgr:getTimers())
+      end)
+
+      it("Should forget a deleted timer", function()
+        mgr:registerTimer("gone", 100, function() end)
+        mgr:deleteTimer("gone")
+        assert.are.same({}, mgr:getTimers())
+      end)
+
+      it("Should not report events or triggers as timers", function()
+        mgr:registerEvent("event", "privateMgrTimerListEvent", function() end)
+        mgr:registerTrigger("trigger", "private_mgr_timers_not_triggers", function() end)
+        assert.are.same({}, mgr:getTimers())
+      end)
+    end)
+
     describe("Tests the functionality of IDMgr:stopAllTimers and IDMgr:deleteAllTimers", function()
       it("Should stop every timer while leaving them registered", function()
         mgr:registerTimer("one", 100, function() end)
@@ -736,6 +944,58 @@ describe("Tests the functionality of IDMgr", function()
         assert.is_equal(-1, mgr.regexTriggers["re"].handlerID)
         -- stopped, not deleted, so it can still be resumed
         assert.are.same({"re"}, mgr:getTriggers())
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:registerEvent", function()
+      local eventName = "privateMgrRegisterEvent"
+
+      it("Should register a handler that fires on the event", function()
+        local fired = 0
+        assert.is_true(mgr:registerEvent("handler", eventName, function() fired = fired + 1 end))
+        raiseEvent(eventName)
+        assert.are.equal(1, fired)
+        assert.are.same({"handler"}, mgr:getEvents())
+      end)
+
+      it("Should pass the arguments the event was raised with", function()
+        local seen
+        mgr:registerEvent("handler", eventName, function(_, first, second) seen = {first, second} end)
+        raiseEvent(eventName, "alpha", 2)
+        assert.are.same({"alpha", 2}, seen)
+      end)
+
+      it("Should stop after one event when the fourth argument asks for a one shot", function()
+        local fired = 0
+        mgr:registerEvent("handler", eventName, function() fired = fired + 1 end, true)
+        raiseEvent(eventName)
+        raiseEvent(eventName)
+        assert.are.equal(1, fired)
+      end)
+
+      it("Should keep firing without that fourth argument", function()
+        local fired = 0
+        mgr:registerEvent("handler", eventName, function() fired = fired + 1 end)
+        raiseEvent(eventName)
+        raiseEvent(eventName)
+        assert.are.equal(2, fired)
+      end)
+
+      it("Should replace a handler registered under the same name", function()
+        local first, second = 0, 0
+        mgr:registerEvent("handler", eventName, function() first = first + 1 end)
+        mgr:registerEvent("handler", eventName, function() second = second + 1 end)
+        raiseEvent(eventName)
+        assert.are.equal(0, first, "the first registration has to be killed, not left behind")
+        assert.are.equal(1, second)
+        assert.are.same({"handler"}, mgr:getEvents())
+      end)
+
+      it("Should report the upstream failure instead of raising", function()
+        local ok, err = mgr:registerEvent("bad", eventName, 5)
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_nil(mgr.events["bad"])
       end)
     end)
 
@@ -879,6 +1139,44 @@ describe("Tests the functionality of IDMgr", function()
         mgr:registerTimer("timer", 100, function() end)
         mgr:stopAllEvents()
         assert.is_number(mgr:remainingTime("timer"))
+      end)
+    end)
+
+    describe("Tests the functionality of IDMgr:deleteAllEvents", function()
+      local eventName = "privateMgrDeleteAllEvent"
+
+      it("Should stop every handler firing and empty the store", function()
+        local fired = 0
+        mgr:registerEvent("one", eventName, function() fired = fired + 1 end)
+        mgr:registerEvent("two", eventName, function() fired = fired + 1 end)
+
+        assert.is_true(mgr:deleteAllEvents())
+
+        raiseEvent(eventName)
+        assert.are.equal(0, fired)
+        assert.are.same({}, mgr:getEvents())
+      end)
+
+      it("Should leave the deleted handlers beyond resuming", function()
+        mgr:registerEvent("one", eventName, function() end)
+        mgr:deleteAllEvents()
+        assert.is_false(mgr:resumeEvent("one"))
+      end)
+
+      it("Should leave timers and triggers alone", function()
+        mgr:registerEvent("event", eventName, function() end)
+        mgr:registerTimer("timer", 100, function() end)
+        mgr:registerTrigger("trigger", "private_mgr_delete_all_events", function() end)
+
+        mgr:deleteAllEvents()
+
+        assert.is_number(mgr:remainingTime("timer"))
+        assert.are.same({"timer"}, mgr:getTimers())
+        assert.are.same({"trigger"}, mgr:getTriggers())
+      end)
+
+      it("Should return true for a manager with no handlers", function()
+        assert.is_true(mgr:deleteAllEvents())
       end)
     end)
 

@@ -5669,6 +5669,70 @@ describe("Console buffer size", function()
     assert.is_true(lineCount <= 310, "line count was " .. lineCount)
   end)
 
+  -- The trim is what tells scripts their saved line indexes have moved, and
+  -- sysBufferShrinkEvent is the only way they can hear about it: it names the
+  -- console the lines went from and says how many went.
+  it("raises sysBufferShrinkEvent naming the window the lines went from", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 10))
+    local seen = {}
+    local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
+      seen[#seen + 1] = {window = windowName, removed = removedLines}
+    end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
+    for lineNumber = 1, 200 do
+      echo(console, ("shrink line %d\n"):format(lineNumber))
+    end
+    killAnonymousEventHandler(handlerId)
+    local named = 0
+    for _, event in ipairs(seen) do
+      if event.window == console then
+        named = named + 1
+        -- the count arrives as a number, not as the text it is built from
+        assert.are.equal("number", type(event.removed))
+        assert.are.equal(10, event.removed)
+      end
+    end
+    assert.is_true(named > 0, ("%d trims were announced, none of them naming %s"):format(#seen, console))
+  end)
+
+  -- The count the event carries is the amount every surviving index moved by.
+  -- The cursor moveCursor() sets is not moved with them: it keeps the index it
+  -- was given rather than following the line it was parked on. The engine's own
+  -- cursor is left behind too, but no Lua call reads that one back. That is the
+  -- known limitation the event exists to work around, so a script that ignores
+  -- it is left pointing at whatever text has since moved under its index.
+  it("shifts the lines under a saved index down by the count the event reports", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 10))
+    for lineNumber = 1, 90 do
+      echo(console, ("kept line %d\n"):format(lineNumber))
+    end
+    local savedIndex = getLastLineNumber(console) - 20
+    local savedText = getLines(console, savedIndex, savedIndex + 1)[1]
+    assert.is_truthy(savedText and savedText:find("kept line", 1, true), tostring(savedText))
+    moveCursor(console, 0, savedIndex)
+    local trimmed = 0
+    local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
+      if windowName == console then
+        trimmed = trimmed + removedLines
+      end
+    end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
+    for lineNumber = 1, 35 do
+      echo(console, ("filler line %d\n"):format(lineNumber))
+    end
+    killAnonymousEventHandler(handlerId)
+    assert.is_true(trimmed > 0, "the buffer never trimmed, so nothing moved")
+    assert.are_not.equal(savedText, getLines(console, savedIndex, savedIndex + 1)[1])
+    assert.are.equal(savedText, getLines(console, savedIndex - trimmed, savedIndex - trimmed + 1)[1])
+    -- the cursor stayed on the index it was given, not on the line it was on
+    assert.are.equal(savedIndex, getLineNumber(console))
+    moveCursor(console, 0, savedIndex - trimmed)
+    selectCurrentLine(console)
+    assert.are.equal(savedText, getSelection(console))
+  end)
+
   it("useMaximum raises the main console to the buffer maximum", function()
     -- the main console has to be named for this one: with three arguments the
     -- first is read as a window name, so the four argument form only lines up
