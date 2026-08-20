@@ -73,6 +73,7 @@ set(TELNET_GROUP_TEST_SOURCES
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
     TelnetAtcpMspTest.cpp
+    TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     CrashTestHookTest.cpp
@@ -289,6 +290,11 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
+
+# TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
+# real time by design - every round trip it times, and every stall it places, has
+# to be waited out - so it needs a longer timeout
+set_tests_properties(TelnetLatencyMeasurementTest PROPERTIES TIMEOUT 300)
 
 # TelnetConnectFailureTest creates a fresh profile per test method and waits out a connection
 # attempt that is refused and then retried, so it needs a longer timeout
