@@ -193,10 +193,18 @@ jobs:
     # fine - the loser's save is refused and the next push heals it - but the
     # branch has no cache at all between this step and the save, so a run
     # cancelled in between leaves the next build cold.
+
+    # A PTB is a scheduled run of this workflow on development, so its key is
+    # the development key rather than one of its own. It restores at ~98.5% and
+    # then contributes 6-9 of ~550 objects back, none of which the next PTB can
+    # reuse - the differing ones are the app-build.txt resource. Not worth
+    # reopening the delete-to-save hole above on the branch key once a night.
     # Git bash rather than the msys2 shell the build steps use: gh ships with
     # the runner image and is on the native PATH.
     - name: Delete the previous ccache entry
-      if: always() && steps.restore-ccache.outputs.cache-primary-key != ''
+      if: >-
+        always() && steps.restore-ccache.outputs.cache-primary-key != ''
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -212,7 +220,7 @@ jobs:
         fi
 
     - name: Save ccache
-      if: always()
+      if: always() && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
