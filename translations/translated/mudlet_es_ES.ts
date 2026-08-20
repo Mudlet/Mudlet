@@ -18622,17 +18622,17 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4900"/>
       <source>Show icons on menus</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar iconos en los menús</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4021"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Conexión</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4395"/>
       <source>Connect to the game via proxy</source>
-      <translation type="unfinished"/>
+      <translation>Conéctate al juego a través de un proxy.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4410"/>
@@ -18647,60 +18647,61 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4449"/>
       <source>username (optional)</source>
-      <translation type="unfinished"/>
+      <translation>nombre de usuario (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4468"/>
       <source>password (optional)</source>
-      <translation type="unfinished"/>
+      <translation>contraseña (opcional)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4992"/>
       <source>Show debug messages for timers not smaller than:</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar mensajes de depuración para temporizadores no inferiores a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4986"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostrar mensajes &apos;LUA OK&apos; para temporizadores con el intervalo mínimo especificado (h:mm:ss.zzz); el valor mínimo (el predeterminado) muestra todos estos mensajes, pero puede inutilizar la &lt;i&gt;Consola Central de Depuración&lt;/i&gt; si hay en ejecución un temporizador con un intervalo muy breve.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5042"/>
       <source>Report all Codepoint problems immediately</source>
-      <translation type="unfinished"/>
+      <translation>Reportar todos los problemas de codificación inmediatamente</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5049"/>
       <source>Additional text wait time:</source>
-      <translation type="unfinished"/>
+      <translation>Tiempo de espera para el texto adicional:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5059"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;La señalización &lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) y &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) indica a Mudlet cuándo el servidor del juego ha terminado de enviar texto. En los juegos que no proporcionan &lt;tt&gt;GA&lt;/tt&gt; ni &lt;tt&gt;EOR&lt;/tt&gt;, esta opción controla cuánto tiempo esperará Mudlet a que llegue más texto. Unos valores más altos ayudarán a reducir el riesgo de que Mudlet divida un fragmento de texto extenso (introduciendo saltos de línea no deseados en medio), lo cual puede impedir el funcionamiento de algunos disparadores. Unos valores más bajos aumentan el riesgo de que el texto se fragmente, pero pueden hacer que el juego se perciba con mayor capacidad de respuesta.&lt;/p&gt;&lt;p&gt;&lt;i&gt;El valor predeterminado, que es el que utilizaba Mudlet antes de que se añadiera este control, es de 0,300 segundos.&lt;/i&gt;&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5065"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
-      <translation type="unfinished"/>
+      <translation> segundos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4581"/>
       <location filename="../src/ui/profile_preferences.ui" line="4587"/>
       <source>Accessibility</source>
-      <translation type="unfinished"/>
+      <translation>Accesibilidad</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4599"/>
       <source>Announce incoming text in screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Anunciar el texto entrante en el lector de pantalla</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4631"/>
       <source>show them</source>
-      <translation type="unfinished"/>
+      <translation>mostrarlos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4636"/>
@@ -18745,12 +18746,13 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5039"/>
       <source>When checked, every problem Unicode codepoint is reported in the debug output as it occurs. When unchecked, each distinct codepoint is reported only once and a summary table is shown when the console closes.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca la opción, cada punto de código Unicode problemático se notifica en la salida de depuración a medida que aparece. Si no se marca, cada punto de código distinto se notifica una sola vez y se muestra una tabla resumen al cerrar la consola.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5062"/>
       <source>How long Mudlet waits for more text on games that do not send Go-Ahead or End-of-record signals. Larger values reduce the chance that long output is split mid-sentence and breaks triggers; smaller values feel more responsive. Default is 0.300 seconds.</source>
-      <translation type="unfinished"/>
+      <translation>Cuánto tiempo espera Mudlet a que llegue más texto en los juegos que no envían señales Go-Ahead o End-of-Record. Los valores más altos reducen la probabilidad de que una salida extensa se divida a mitad de una frase y rompa los disparadores; los valores más bajos se perciben con una mayor velocidad de respuesta. El valor predeterminado es 0,300 segundos.
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5164"/>
@@ -18768,7 +18770,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="91"/>
       <source>NW exit...</source>
-      <translation type="unfinished"/>
+      <translation>Salida NO...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="101"/>
@@ -18784,27 +18786,27 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1575"/>
       <location filename="../src/ui/room_exits.ui" line="1838"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Establecer en un valor positivo para anular el valor predeterminado (de la sala) al usar esta ruta de Salida; un valor de cero asigna el valor predeterminado.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="225"/>
       <source>N exit...</source>
-      <translation type="unfinished"/>
+      <translation>Salida N...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="359"/>
       <source>NE exit...</source>
-      <translation type="unfinished"/>
+      <translation>Salida NE...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="493"/>
       <source>Up exit...</source>
-      <translation type="unfinished"/>
+      <translation>Salida AR...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="630"/>
       <source>W exit...</source>
-      <translation>Salida oeste...</translation>
+      <translation>Salida O...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="735"/>
@@ -18814,7 +18816,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="769"/>
       <source>&lt;p&gt;This is the Room ID Number for this room.</source>
-      <translation>&lt;p&gt;Este es el número de identificador para esta sala.</translation>
+      <translation>&lt;p&gt;Este es el número de identificación de esta sala.</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="804"/>
@@ -18824,42 +18826,44 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="817"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Este es el valor predeterminado para esta sala; se utilizará para cualquier salida &lt;i&gt;que conduzca a &lt;u&gt;esta sala&lt;/u&gt;&lt;/i&gt; y que no tenga su propio valor definido.&lt;/p&gt;
+
+</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="880"/>
       <source>E exit...</source>
-      <translation>Salida este...</translation>
+      <translation>Salida E...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1011"/>
       <source>Down exit...</source>
-      <translation>Salida abajo...</translation>
+      <translation>Salida AB...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1157"/>
       <source>SW exit...</source>
-      <translation>Salida sudoeste...</translation>
+      <translation>Salida SO...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1297"/>
       <source>S exit...</source>
-      <translation>Salida sur...</translation>
+      <translation>Salida S...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1431"/>
       <source>SE exit...</source>
-      <translation>Salida sudeste...</translation>
+      <translation>Salida SE...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1565"/>
       <source>In exit...</source>
-      <translation>Salida dentro...</translation>
+      <translation>Salida DE...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1828"/>
       <source>Out exit...</source>
-      <translation>Salida fuera...</translation>
+      <translation>Salida FU...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1681"/>
@@ -18869,7 +18873,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="1696"/>
       <source>Stub Exit</source>
-      <translation type="unfinished"/>
+      <translation>Salida provisional</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="65"/>
@@ -19145,7 +19149,7 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1921"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Salidas especiales:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1930"/>
@@ -19156,7 +19160,8 @@ Status</source>
       <location filename="../src/ui/room_exits.ui" line="1964"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>Salir
+ID de la sala</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1982"/>
@@ -19284,7 +19289,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
       <source>Border</source>
-      <translation type="unfinished"/>
+      <translation>Borde</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
