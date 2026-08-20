@@ -909,8 +909,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
                            "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
 
-    // Not behind the updater/OpenSSL guard upstream puts it behind: the Vosk
-    // credit below uses it, and the speech backend is in every build
+#if defined(INCLUDE_UPDATER) || defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
     // This uses curly double quotes “ = &#8220; and ” = &#8221;
     QString APACHE2_Body(
             qsl("<h4>Apache Licence</h4>"
@@ -1052,6 +1051,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                 "by, or claims asserted against, such Contributor by reason of your accepting any "
                 "such warranty or additional liability.</p>"
                 "<p>END OF TERMS AND CONDITIONS</p>"));
+#endif // defined(INCLUDE_UPDATER)
 
     QString MIT_Body(
             qsl("<h4>The MIT License</h4>"
@@ -1310,9 +1310,13 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
-    QString VoskHeader(tr("<h2><u>Vosk Speech Recognition Toolkit</u></h2>"
-                          "<h3>Copyright © 2019-2024 Alpha Cephei Inc.<br>"
-                          "<a href=\"https://alphacephei.com/vosk\">https://alphacephei.com/vosk</a></h3>"));
+    //: Credits the speech recognition libraries Mudlet can load. None are bundled - the user installs them - so this names them rather than reproducing their licences
+    QString speechBackendsHeader(tr("<h2><u>Speech recognition backends</u></h2>"
+                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0), "
+                                    "<a href=\"https://github.com/k2-fsa/sherpa-onnx\">sherpa-onnx</a> (Apache 2.0) and "
+                                    "<a href=\"https://github.com/microsoft/onnxruntime\">ONNX Runtime</a> (MIT).<br>"
+                                    "None of them ship with Mudlet: you install them yourself, and their licences travel "
+                                    "with the files you download.</h3>"));
 
     QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
@@ -1427,9 +1431,8 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                        APACHE2_Body));                         // 47 - OpenSSL3 body APACHE2 - not translatable
 #endif
 
-    license_3rdParty_texts.append(qsl("<hr>%48%49")
-                                  .arg(VoskHeader,                             // 48 - Vosk header - translatable
-                                       APACHE2_Body));                         // 49 - Vosk body APACHE2 - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%48")
+                                  .arg(speechBackendsHeader));                 // 48 - speech recognition backends - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 
