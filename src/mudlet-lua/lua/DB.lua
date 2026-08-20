@@ -238,12 +238,21 @@ end
 --
 -- error() rather than assert() throughout: assert would build the message on every
 -- healthy call, and these sit on trigger-driven write paths.
-local function db_no_connection_message(action, db_name)
-  -- a table that is not a sheet or field reference carries no _db_name, so it lands
+--
+-- expected is a parameter because the sites do not agree on what they take: a sheet at
+-- most of them, a field at db:set and db:aggregate, a database name at db:_migrate, the
+-- handle itself at the db.Database methods. No one phrase is true at all of them, and a
+-- phrase that named several would have to deny a field reference is a field reference.
+local A_SHEET = "a sheet, as in mydb.sheetname"
+local A_FIELD = "a field, as in mydb.sheetname.fieldname"
+local A_DATABASE = "a database handle, as in what db:create returned"
+
+local function db_no_connection_message(action, db_name, expected)
+  -- something that is not what this site takes carries no name to look up, so it lands
   -- on the same missing connection by a different route: saying "closed" there would
   -- name a cause that is not the one the caller has to fix
   if not db_name then
-    return "can not "..action.." the database: that is not a sheet or field reference."
+    return "can not "..action.." the database: expected "..expected.."."
   end
 
   -- likewise a name that was never created at all, where hunting for a db:close call
@@ -587,7 +596,9 @@ function db:create(db_name, sheets, force)
     -- read-only profile directory or a full disk both produce: without this the
     -- setautocommit below is the nil index instead
     local conn, err = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
-    assert(conn, "db:create could not open the database file for "..db_name..": "..tostring(err))
+    if not conn then
+      error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
+    end
 
     db.__conn[db_name] = conn
     conn:setautocommit(false)
@@ -712,7 +723,7 @@ function db:_migrate(db_name, s_name, force)
   -- db:create is the only caller outside the specs and it has a live connection by
   -- the time it gets here, so this only fires for a script calling db:_migrate
   -- directly. Note the first argument is a database name, not a sheet
-  if not conn then error(db_no_connection_message("migrate", db_name), 2) end
+  if not conn then error(db_no_connection_message("migrate", db_name, "a database name"), 2) end
 
   local schema = db.__schema[db_name][s_name]
 
@@ -1295,7 +1306,7 @@ function db:add(sheet, ...)
   if not conn then
     -- printed as well as returned, the way the SQL failure below is: the callers
     -- of db:add that check the result are outnumbered by the ones that do not
-    local msg = db_no_connection_message("add to", db_name)
+    local msg = db_no_connection_message("add to", db_name, A_SHEET)
     printError(msg, true, false)
     return nil, msg
   end
@@ -1349,7 +1360,7 @@ function db:fetch_sql(sheet, sql)
   -- "local results = db:fetch(...)  if results and results[1] then update else add end"
   -- reads a nil as "not there yet" and inserts, so a closed database would silently
   -- take the insert branch every time round instead of stopping
-  if not conn then error(db_no_connection_message("fetch from", db_name), 2) end
+  if not conn then error(db_no_connection_message("fetch from", db_name, A_SHEET), 2) end
 
   db:echo_sql(sql)
   local cur = conn:execute(sql)
@@ -1412,9 +1423,13 @@ end
 --- @see db:fetch_sql
 function db:fetch(sheet, query, order_by, descending)
   local s_name = sheet._sht_name
-  -- db:fetch_sql's guard is too late for this one: the concatenation below reaches a
-  -- nil sheet name first and dies there instead of saying what was passed in
-  if not s_name then error(db_no_connection_message("fetch from", sheet._db_name), 2) end
+  -- a table with no sheet name is not a sheet whatever else it carries, so its
+  -- _db_name is no more to be trusted than the rest of it
+  local db_name = s_name and sheet._db_name or nil
+
+  -- db:fetch_sql's own argument guard is too late for this one: the concatenation
+  -- below reaches a nil sheet name first and dies there
+  if not s_name then error(db_no_connection_message("fetch from", db_name, A_SHEET), 2) end
 
   local sql = "SELECT * FROM " .. s_name
 
@@ -1439,6 +1454,11 @@ function db:fetch(sheet, query, order_by, descending)
 
     sql = sql .. " ORDER BY " .. db:_sql_columns(o)
   end
+
+  -- the closed database is checked here rather than left to db:fetch_sql, whose own
+  -- guard would raise without naming a line: the return below is a tail call, so this
+  -- frame is already gone when its error(msg, 2) goes looking for level 2
+  if not db.__conn[db_name] then error(db_no_connection_message("fetch from", db_name, A_SHEET), 2) end
 
   return db:fetch_sql(sheet, sql)
 end
@@ -1471,7 +1491,7 @@ function db:aggregate(field, fn, query, distinct)
 
   -- the connection check goes last: a bad field reference is the more useful complaint
   local conn = db.__conn[db_name]
-  if not conn then error(db_no_connection_message("aggregate over", db_name), 2) end
+  if not conn then error(db_no_connection_message("aggregate over", db_name, A_FIELD), 2) end
 
   local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", field.name, ")", "AS", fn, "FROM", s_name }
 
@@ -1548,7 +1568,7 @@ function db:delete(sheet, query)
   assert(query, "must pass a query argument to db:delete()")
 
   local conn = db.__conn[db_name]
-  if not conn then error(db_no_connection_message("delete from", db_name), 2) end
+  if not conn then error(db_no_connection_message("delete from", db_name, A_SHEET), 2) end
 
   if type(query) == "number" then
     query = "_row_id = " .. tostring(query)
@@ -1633,7 +1653,7 @@ function db:merge_unique(sheet, tables)
 
   -- ahead of the schema lookup below, which indexes db.__schema[nil] for a table that
   -- is not a sheet and dies there before this can say so
-  if not db.__conn[db_name] then error(db_no_connection_message("merge into", db_name), 2) end
+  if not db.__conn[db_name] then error(db_no_connection_message("merge into", db_name, A_SHEET), 2) end
 
   local unique_options = db.__schema[db_name][s_name].options._unique
   assert(unique_options, "db:merge_unique only works on a sheet with a unique index.")
@@ -1697,7 +1717,7 @@ function db:update(sheet, tbl)
   local s_name = sheet._sht_name
 
   local conn = db.__conn[db_name]
-  if not conn then error(db_no_connection_message("update", db_name), 2) end
+  if not conn then error(db_no_connection_message("update", db_name, A_SHEET), 2) end
 
   local sql_chunks = { "UPDATE", s_name, "SET" }
 
@@ -1771,7 +1791,7 @@ function db:set(field, value, query)
   local s_name = field.sheet
 
   local conn = db.__conn[db_name]
-  if not conn then error(db_no_connection_message("set a field in", db_name), 2) end
+  if not conn then error(db_no_connection_message("set a field in", db_name, A_FIELD), 2) end
 
   local sql_update = [[UPDATE %s SET "%s" = %s]]
   if query then
@@ -2349,7 +2369,7 @@ function db.Database:_begin()
   -- without this the flag would be set on a database with nothing behind it, and the
   -- reopen would quietly reset it, turning the caller's transaction into autocommit
   if not db.__conn[self._db_name] then
-    return false, db_no_connection_message("begin a transaction on", self._db_name)
+    return false, db_no_connection_message("begin a transaction on", self._db_name, A_DATABASE)
   end
 
   db.__autocommit[self._db_name] = false
@@ -2364,7 +2384,7 @@ end
 function db.Database:_commit()
   local conn = db.__conn[self._db_name]
   if not conn then
-    return false, db_no_connection_message("commit", self._db_name)
+    return false, db_no_connection_message("commit", self._db_name, A_DATABASE)
   end
 
   -- db:create turns the driver's own autocommit off, so nothing lands until a
@@ -2385,7 +2405,7 @@ end
 function db.Database:_rollback()
   local conn = db.__conn[self._db_name]
   if not conn then
-    return false, db_no_connection_message("roll back", self._db_name)
+    return false, db_no_connection_message("roll back", self._db_name, A_DATABASE)
   end
 
   local rolled_back, err = conn:rollback()
@@ -2403,7 +2423,7 @@ end
 --- @return string message Why the transaction was not ended, empty when it was.
 function db.Database:_end()
   if not db.__conn[self._db_name] then
-    return false, db_no_connection_message("end a transaction on", self._db_name)
+    return false, db_no_connection_message("end a transaction on", self._db_name, A_DATABASE)
   end
 
   db.__autocommit[self._db_name] = true
@@ -2414,7 +2434,7 @@ end
 
 function db.Database:_drop(s_name)
   local conn = db.__conn[self._db_name]
-  if not conn then error(db_no_connection_message("drop a sheet from", self._db_name), 2) end
+  if not conn then error(db_no_connection_message("drop a sheet from", self._db_name, A_DATABASE), 2) end
 
   local schema = db.__schema[self._db_name][s_name]
 

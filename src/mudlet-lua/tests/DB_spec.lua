@@ -2245,6 +2245,10 @@ describe("Tests DB.lua functions", function()
         assert_names_the_database(err)
         assert.is_true(string.find(err, action, 1, true) ~= nil)
         assert.is_nil(string.find(err, "attempt to index", 1, true))
+        -- the position prefix is the caller's own line, and it is not free: an
+        -- error(msg, 2) reached through a tail call has no frame left to name
+        assert.is_true(string.find(err, ":%d+: can not ") ~= nil,
+          label .. " did not name the line that called it: " .. tostring(err))
       end)
     end
 
@@ -2289,7 +2293,7 @@ describe("Tests DB.lua functions", function()
       for _, case in ipairs(notASheet) do
         local ok, err = pcall(case[2])
         assert.is_false(ok, case[1] .. " did not raise")
-        assert.is_true(string.find(err, "not a sheet or field reference", 1, true) ~= nil,
+        assert.is_true(string.find(err, "expected a sheet, as in mydb.sheetname", 1, true) ~= nil,
           case[1] .. " said: " .. tostring(err))
         assert.is_nil(string.find(err, "closed", 1, true))
       end
@@ -2333,6 +2337,104 @@ describe("Tests DB.lua functions", function()
       db:delete(reopened.sheet, db:eq(reopened.sheet.name, "Bram"))
       assert.are.equal(1, #db:fetch(reopened.sheet))
       db:close(dbName)
+    end)
+  end)
+
+  -- the connection guards double as the wrong-argument message, because something that
+  -- is not what the site takes carries no database name to look up. So what they say
+  -- has to hold on an open database too, which is where that slip is actually made
+  describe("Tests the message for an argument of the wrong kind", function()
+    local dbName = "argkindtestingonly"
+
+    before_each(function()
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      mydb = db:create(dbName, {sheet = {name = "", kills = 0}})
+      db:add(mydb.sheet, {name = "Ada", kills = 3})
+    end)
+
+    after_each(function()
+      db:close(dbName)
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      mydb = nil
+    end)
+
+    -- mydb.sheet.field where mydb.sheet belongs is the easy slip, and the answer has
+    -- to name what the site wanted rather than deny a field reference is one
+    it("asks for a sheet rather than denying a field reference is one", function()
+      local field = mydb.sheet.kills
+      assert.are.equal("kills", field.name)
+      assert.is_true(db:_isActiveDBName(dbName))
+
+      local sheetSites = {
+        {"db:fetch", function() db:fetch(field) end},
+        {"db:fetch_sql", function() db:fetch_sql(field, "SELECT * FROM sheet") end},
+        {"db:delete", function() db:delete(field, true) end},
+        {"db:update", function() db:update(field, {_row_id = 1}) end},
+        {"db:merge_unique", function() db:merge_unique(field, {}) end},
+      }
+
+      for _, case in ipairs(sheetSites) do
+        local ok, err = pcall(case[2])
+        assert.is_false(ok, case[1] .. " did not raise")
+        assert.is_true(string.find(err, "expected a sheet, as in mydb.sheetname", 1, true) ~= nil,
+          case[1] .. " said: " .. tostring(err))
+        assert.is_nil(string.find(err, "closed", 1, true))
+      end
+    end)
+
+    -- a table carrying the name of a database that is open is still not a sheet, so the
+    -- guard must not answer "closed" on the strength of a _db_name it found there
+    it("does not call an open database closed on the strength of a stray _db_name", function()
+      local ok, err = pcall(function() db:fetch({_db_name = dbName}) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "expected a sheet, as in mydb.sheetname", 1, true) ~= nil,
+        tostring(err))
+      assert.is_nil(string.find(err, "closed", 1, true))
+    end)
+
+    -- db:set and db:aggregate want a field where most sites want a sheet. db:set is the
+    -- one that reaches this branch, db:aggregate having its own field check in front
+    it("asks for a field at the sites that take one", function()
+      local ok, err = pcall(function() db:set({}, 1, true) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "expected a field, as in mydb.sheetname.fieldname", 1, true) ~= nil,
+        tostring(err))
+    end)
+
+    -- the last two kinds: db:_migrate takes a database name rather than either, and the
+    -- db.Database methods take the handle db:create handed back
+    it("asks for a database name, and for a handle, at the sites that take those", function()
+      local ok, err = pcall(function() db:_migrate(nil, "sheet", false) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "expected a database name", 1, true) ~= nil, tostring(err))
+
+      local committed, msg = db.Database._commit({})
+      assert.is_false(committed)
+      assert.is_true(string.find(msg, "expected a database handle", 1, true) ~= nil, tostring(msg))
+    end)
+  end)
+
+  -- db:create is the one site where the connection is not missing but refused, which
+  -- is why the environment has to be stubbed to reach it
+  describe("Tests db:create when the driver refuses the file", function()
+    local dbName = "refusedfiletestingonly"
+
+    it("names the database it could not open, and the line that asked for it", function()
+      local realEnv = db.__env
+      db.__env = {connect = function() return nil, "unable to open database file" end}
+      finally(function() db.__env = realEnv end)
+
+      local ok, err = pcall(function() db:create(dbName, {sheet = {name = ""}}) end)
+      assert.is_false(ok)
+      assert.is_nil(string.find(err, "attempt to index", 1, true))
+      assert.is_true(string.find(err, "could not open the database file for " .. dbName, 1, true) ~= nil,
+        tostring(err))
+      assert.is_true(string.find(err, "unable to open database file", 1, true) ~= nil, tostring(err))
+
+      -- error(msg, 2), not assert: assert would concatenate the message on every
+      -- healthy create, and would then blame DB.lua's own line instead of this one
+      assert.is_true(string.find(err, ":%d+: db:create could not open") ~= nil, tostring(err))
+      assert.is_nil(string.find(err, "DB.lua:", 1, true))
     end)
   end)
 
