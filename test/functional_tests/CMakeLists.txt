@@ -110,7 +110,10 @@ set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAreaReassignmentTest.cpp
     MapCloseDuringImportTest.cpp
+    MapDownloadTest.cpp
+    MapFileStatsTest.cpp
     MapProgressDialogSeamTest.cpp
+    MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
 )
 
