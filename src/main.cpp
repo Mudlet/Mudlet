@@ -64,6 +64,12 @@
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 #include "SentryWrapper.h"
+#ifdef WITH_SENTRY
+// sentry.h and qScopeGuard are used by the shutdown guard below; SentryWrapper.h needs neither, and
+// only this target has sentry's include path, so no other file can take them from it.
+#include <QtCore/qscopeguard.h>
+#include "sentry.h"
+#endif
 #include "utils.h"
 #include <QFileInfo>
 #include <QGuiApplication>

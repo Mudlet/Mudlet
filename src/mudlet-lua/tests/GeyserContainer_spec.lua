@@ -233,9 +233,9 @@ describe("Tests functionality of Geyser.Container", function()
     -- again, so each window used to be placed once per ancestor it had. The three
     -- specs below pin the single pass and the two kinds of child that only the
     -- walk reaches, which a top-down reposition on its own would leave behind.
-    -- Geyser looks moveWindow up in the globals of the file it lives in, which are
-    -- not the globals a spec file writes to, so the counter has to go into its
-    -- environment rather than ours
+    -- the counter is installed through the function's own environment so that
+    -- it holds whether or not that environment is the globals table the spec
+    -- sees, and so that the real moveWindow can be put back exactly
     local function countPlacements(work)
       local geyser = getfenv(Geyser.Container.reposition)
       local placements = 0
@@ -875,6 +875,50 @@ describe("Tests functionality of Geyser.Container", function()
 
     it("uses the type it is given in the name", function()
       assert.is_truthy(Geyser.nameGen("gauge"):find("^anon_gauge_%d+$"))
+    end)
+  end)
+
+  -- Geyser.display writes to the main console, so echo is swapped for a
+  -- capture rather than spied on: spy.on calls through, and letting it through
+  -- would put a screenful of debug output into the suite's own console. The
+  -- swap goes through the function's own environment so that it holds whether
+  -- or not that environment is the globals table the spec sees.
+  describe("Geyser.display", function()
+    local function displayed(...)
+      local environment = getfenv(Geyser.display)
+      local realEcho = environment.echo
+      local written = {}
+      environment.echo = function(text) written[#written + 1] = text end
+      local ok, err = pcall(Geyser.display, ...)
+      environment.echo = realEcho
+      assert.is_true(ok, tostring(err))
+      return table.concat(written)
+    end
+
+    it("heads the output with the type it was given", function()
+      assert.is_truthy(displayed({}):find("------ table ------", 1, true))
+      assert.is_truthy(displayed("text"):find("------ string ------", 1, true))
+      assert.is_truthy(displayed(42):find("------ number ------", 1, true))
+    end)
+
+    it("writes one line per entry of a table", function()
+      local text = displayed({alpha = 1, beta = "two"})
+      assert.is_truthy(text:find("'alpha' - 1\n", 1, true))
+      assert.is_truthy(text:find("'beta' - two\n", 1, true))
+    end)
+
+    it("writes anything that is not a table on a line of its own", function()
+      assert.is_truthy(displayed("hello"):find("hello\n", 1, true))
+      assert.is_truthy(displayed(nil):find("nil\n", 1, true))
+    end)
+
+    -- the whole point of it over display() is that it does not recurse, so a
+    -- table inside a table is printed as itself rather than walked into
+    it("does not walk into a nested table", function()
+      local nested = {"inner"}
+      local text = displayed({outer = nested})
+      assert.is_truthy(text:find("'outer' - " .. tostring(nested), 1, true))
+      assert.is_nil(text:find("inner", 1, true))
     end)
   end)
 

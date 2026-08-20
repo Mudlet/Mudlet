@@ -213,6 +213,58 @@ function db:_isActiveDBName(db_name)
 end
 
 
+-- NOT LUADOC
+-- db:close takes the connection away but leaves db.__schema behind, so every sheet,
+-- field and database handle a script is still holding keeps working right up to the
+-- moment it needs the connection, and then indexes a nil. Nothing routes through a
+-- single choke point, so each site that reaches into db.__conn has to notice for
+-- itself; the callers of this function are the authoritative list of them.
+--
+-- Every one of those sites raised before these guards existed, and all but one still
+-- does. THE RULE IS THAT NAMING THE CAUSE MUST NOT MAKE A LOUD FAILURE QUIET, not
+-- that every site should answer the same way:
+--
+--   * db:add is the one that returns, because it alone already answers nil plus a
+--     printed message when its INSERT fails, and packages do check that result.
+--   * db:fetch_sql looks like it should match db:add, and must not. Its SQL-failure
+--     path returns a BARE nil - no message, no print - and a query that matched
+--     nothing returns an empty table, not nil. Handing back nil for a closed
+--     database would make the fetch-then-add upsert that db:merge_unique itself
+--     writes silently take the insert branch and loop forever.
+--   * db.Database:_commit and _rollback answer false plus a message, the contract
+--     #10068 gave them to match db:close. They are not a third opinion, just an
+--     older one.
+--   * everything else raises, which is what it did before.
+--
+-- error() rather than assert() throughout: assert would build the message on every
+-- healthy call, and these sit on trigger-driven write paths.
+--
+-- expected is a parameter because the sites do not agree on what they take: a sheet at
+-- most of them, a field at db:set and db:aggregate, a database name at db:_migrate, the
+-- handle itself at the db.Database methods. No one phrase is true at all of them, and a
+-- phrase that named several would have to deny a field reference is a field reference.
+local A_SHEET = "a sheet, as in mydb.sheetname"
+local A_FIELD = "a field, as in mydb.sheetname.fieldname"
+local A_DATABASE = "a database handle, as in what db:create returned"
+
+local function db_no_connection_message(action, db_name, expected)
+  -- something that is not what this site takes carries no name to look up, so it lands
+  -- on the same missing connection by a different route: saying "closed" there would
+  -- name a cause that is not the one the caller has to fix
+  if not db_name then
+    return "can not "..action.." the database: expected "..expected.."."
+  end
+
+  -- likewise a name that was never created at all, where hunting for a db:close call
+  -- that does not exist is the wrong place to send someone
+  if not db.__schema[db_name] then
+    return "can not "..action.." "..db_name..": no database by that name has been created."
+  end
+
+  return "can not "..action.." "..db_name.." because the database is closed."
+end
+
+
 local VALIDATION_OPTIONS = {
   "ABORT",
   "FAIL",
@@ -310,6 +362,18 @@ function db:_validate_index(index)
 
   return msgs[1] == nil, table.concat(msgs, "\n")
 end
+
+
+-- NOT LUADOC
+-- Lua's reserved words, so db:create can tell a column name that may be written
+-- as a bare key in the {name = ""} sheet form from one that has to be bracketed
+local lua_reserved_words = {
+  ["and"] = true, ["break"] = true, ["do"] = true, ["else"] = true, ["elseif"] = true,
+  ["end"] = true, ["false"] = true, ["for"] = true, ["function"] = true, ["if"] = true,
+  ["in"] = true, ["local"] = true, ["nil"] = true, ["not"] = true, ["or"] = true,
+  ["repeat"] = true, ["return"] = true, ["then"] = true, ["true"] = true,
+  ["until"] = true, ["while"] = true,
+}
 
 
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
@@ -412,22 +476,71 @@ function db:create(db_name, sheets, force)
       -- otherwise: sweeping keys in with the column names would make a column
       -- out of an index definition. Numeric keys are checked against #sheet so
       -- that a stray [7] in a two-item list is not taken for a column name.
+      -- These stay hard errors rather than being skipped the way an unusable
+      -- _index entry is: a sheet built without one of its columns takes every
+      -- write to that column silently, since db:add reports the rejected INSERT
+      -- to the same place and returns nil, which callers do not check.
       local column_count = #sheet
+
+      -- both working forms, spelled with the names this sheet did give plus the
+      -- one being complained about, so the fix can be read straight off the
+      -- message. Leaving that name out would advise a sheet without the column
+      -- the user was declaring, which is the state this refusal exists to stop.
+      local function keyed_entry(name)
+        if name:match("^[%a_][%w_]*$") and not lua_reserved_words[name] then
+          return name..' = ""'
+        end
+        -- anything else is not a bare key, so the form the message tells the
+        -- user to write would not parse
+        return "["..string.format("%q", name)..'] = ""'
+      end
+
+      local function both_forms(extra_name)
+        local listed, keyed = {}, {}
+        for i = 1, column_count do
+          if type(sheet[i]) == "string" then
+            listed[#listed + 1] = string.format("%q", sheet[i])
+            keyed[#keyed + 1] = keyed_entry(sheet[i])
+          end
+        end
+        if extra_name then
+          listed[#listed + 1] = string.format("%q", extra_name)
+          keyed[#keyed + 1] = keyed_entry(extra_name)
+        end
+        if listed[1] == nil then
+          return '{"name", "city"}', '{name = "", city = ""}'
+        end
+        return "{"..table.concat(listed, ", ").."}", "{"..table.concat(keyed, ", ").."}"
+      end
+
       for key, value in pairs(sheet) do
         if type(key) == "number" and key % 1 == 0 and key >= 1 and key <= column_count then
           if type(value) == "string" then
             columns[value] = ""
           else
+            -- no example here: the two forms would have to be spelled without
+            -- the name this entry was meant to give, which reads as advice to
+            -- drop the column rather than to name it
             is_valid = false
             table.insert(msgs, "db:create - "..sheet_name.." - column name #"..key..
               " is a "..type(value)..", but a sheet's column names have to be strings.")
           end
         elseif type(key) == "string" and string.starts(key, "_") then
           options[key] = value
-        else
+        elseif type(key) == "number" then
+          -- past the end, at or below zero, or fractional: none of them is a
+          -- position in the list, so none of them names a column
           is_valid = false
-          table.insert(msgs, "db:create - "..sheet_name.." - "..tostring(key)..
-            " is neither one of the sheet's column names nor a sheet option: a sheet is either a list of column names or a table of column names and their default values.")
+          table.insert(msgs, "db:create - "..sheet_name.." - ["..tostring(key)..
+            "] is not a position in this "..column_count.." item list, so it names no column. "..
+            "A sheet given as a list runs from 1 with no gaps.")
+        else
+          -- only a string key names a column the example can offer to declare
+          local list_form, keyed_form = both_forms(type(key) == "string" and key or nil)
+          is_valid = false
+          table.insert(msgs, "db:create - "..sheet_name.." - "..string.format("%q", tostring(key))..
+            " is a key, but a sheet given as a list takes its column names as list members. Write "..
+            list_form..", or use the "..keyed_form.." form to give a column a default.")
         end
       end
 
@@ -540,8 +653,16 @@ function db:create(db_name, sheets, force)
   end
 
   if not db:_isActiveDBName(db_name) then
-    db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
-    db.__conn[db_name]:setautocommit(false)
+    -- the driver answers nil plus a reason for a file it can not open, which a
+    -- read-only profile directory or a full disk both produce: without this the
+    -- setautocommit below is the nil index instead
+    local conn, err = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+    if not conn then
+      error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
+    end
+
+    db.__conn[db_name] = conn
+    conn:setautocommit(false)
     db.__autocommit[db_name] = true
   end
 
@@ -660,6 +781,11 @@ end
 -- it is not capable of removing indexes, columns, or sheets after they have been defined.
 function db:_migrate(db_name, s_name, force)
   local conn = db.__conn[db_name]
+  -- db:create is the only caller outside the specs and it has a live connection by
+  -- the time it gets here, so this only fires for a script calling db:_migrate
+  -- directly. Note the first argument is a database name, not a sheet
+  if not conn then error(db_no_connection_message("migrate", db_name, "a database name"), 2) end
+
   local schema = db.__schema[db_name][s_name]
 
   local current_columns = {}
@@ -1228,12 +1354,24 @@ end
 ---     {name="Richard Clark"}
 ---   )
 ---   </pre>
+--- @return boolean result true when the rows went in, nil when the insert failed. A
+---   multi-row call stops at the first row the database refuses, so earlier rows of
+---   that same call are left in the transaction uncommitted rather than rolled back.
+--- @return string message Why the insert failed, absent when it did not.
 function db:add(sheet, ...)
   local db_name = sheet._db_name
   local s_name = sheet._sht_name
   assert(s_name, "First argument to db:add must be a proper Sheet object.")
 
   local conn = db.__conn[db_name]
+  if not conn then
+    -- printed as well as returned, the way the SQL failure below is: the callers
+    -- of db:add that check the result are outnumbered by the ones that do not
+    local msg = db_no_connection_message("add to", db_name, A_SHEET)
+    printError(msg, true, false)
+    return nil, msg
+  end
+
   local sql_insert = "INSERT INTO %s %s VALUES %s"
 
   for _, t in ipairs({ ... }) do
@@ -1273,10 +1411,17 @@ end
 ---   db:fetch_sql(mydb.kills, "SELECT distinct area FROM kills")
 ---   </pre>
 ---
+--- @return table results The matching rows, an empty table when the query matched nothing,
+---   or nil when the SQL could not run. Raises when the database is closed.
 --- @see db:fetch
 function db:fetch_sql(sheet, sql)
   local db_name = sheet._db_name
   local conn = db.__conn[db_name]
+  -- raises rather than answering nil, which db:merge_unique below shows the reason for:
+  -- "local results = db:fetch(...)  if results and results[1] then update else add end"
+  -- reads a nil as "not there yet" and inserts, so a closed database would silently
+  -- take the insert branch every time round instead of stopping
+  if not conn then error(db_no_connection_message("fetch from", db_name, A_SHEET), 2) end
 
   db:echo_sql(sql)
   local cur = conn:execute(sql)
@@ -1334,9 +1479,18 @@ end
 ---   )
 ---   </pre>
 ---
+--- @return table results The matching rows, an empty table when the query matched nothing,
+---   or nil when the SQL could not run. Raises when the database is closed.
 --- @see db:fetch_sql
 function db:fetch(sheet, query, order_by, descending)
   local s_name = sheet._sht_name
+  -- a table with no sheet name is not a sheet whatever else it carries, so its
+  -- _db_name is no more to be trusted than the rest of it
+  local db_name = s_name and sheet._db_name or nil
+
+  -- db:fetch_sql's own argument guard is too late for this one: the concatenation
+  -- below reaches a nil sheet name first and dies there
+  if not s_name then error(db_no_connection_message("fetch from", db_name, A_SHEET), 2) end
 
   local sql = "SELECT * FROM " .. s_name
 
@@ -1361,6 +1515,11 @@ function db:fetch(sheet, query, order_by, descending)
 
     sql = sql .. " ORDER BY " .. db:_sql_columns(o)
   end
+
+  -- the closed database is checked here rather than left to db:fetch_sql, whose own
+  -- guard would raise without naming a line: the return below is a tail call, so this
+  -- frame is already gone when its error(msg, 2) goes looking for level 2
+  if not db.__conn[db_name] then error(db_no_connection_message("fetch from", db_name, A_SHEET), 2) end
 
   return db:fetch_sql(sheet, sql)
 end
@@ -1388,10 +1547,12 @@ end
 function db:aggregate(field, fn, query, distinct)
   local db_name = field.database
   local s_name = field.sheet
-  local conn = db.__conn[db_name]
-
   assert(type(field) == "table", "Field must be a field reference.")
   assert(field.name, "Field must be a real field reference.")
+
+  -- the connection check goes last: a bad field reference is the more useful complaint
+  local conn = db.__conn[db_name]
+  if not conn then error(db_no_connection_message("aggregate over", db_name, A_FIELD), 2) end
 
   local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", field.name, ")", "AS", fn, "FROM", s_name }
 
@@ -1465,9 +1626,11 @@ function db:delete(sheet, query)
   local db_name = sheet._db_name
   local s_name = sheet._sht_name
 
-  local conn = db.__conn[db_name]
-
   assert(query, "must pass a query argument to db:delete()")
+
+  local conn = db.__conn[db_name]
+  if not conn then error(db_no_connection_message("delete from", db_name, A_SHEET), 2) end
+
   if type(query) == "number" then
     query = "_row_id = " .. tostring(query)
   elseif type(query) == "table" and not query._isExp then
@@ -1549,6 +1712,10 @@ function db:merge_unique(sheet, tables)
   local db_name = sheet._db_name
   local s_name = sheet._sht_name
 
+  -- ahead of the schema lookup below, which indexes db.__schema[nil] for a table that
+  -- is not a sheet and dies there before this can say so
+  if not db.__conn[db_name] then error(db_no_connection_message("merge into", db_name, A_SHEET), 2) end
+
   local unique_options = db.__schema[db_name][s_name].options._unique
   assert(unique_options, "db:merge_unique only works on a sheet with a unique index.")
   assert(#unique_options == 1, "db:merge_unique only works on a sheet with a single unique index.")
@@ -1611,6 +1778,7 @@ function db:update(sheet, tbl)
   local s_name = sheet._sht_name
 
   local conn = db.__conn[db_name]
+  if not conn then error(db_no_connection_message("update", db_name, A_SHEET), 2) end
 
   local sql_chunks = { "UPDATE", s_name, "SET" }
 
@@ -1684,6 +1852,7 @@ function db:set(field, value, query)
   local s_name = field.sheet
 
   local conn = db.__conn[db_name]
+  if not conn then error(db_no_connection_message("set a field in", db_name, A_FIELD), 2) end
 
   local sql_update = [[UPDATE %s SET "%s" = %s]]
   if query then
@@ -2254,34 +2423,80 @@ db.__DatabaseMT = {
 
 
 
+--- Holds back every write on this database until the next commit.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the transaction was not opened, empty when it was.
 function db.Database:_begin()
+  -- without this the flag would be set on a database with nothing behind it, and the
+  -- reopen would quietly reset it, turning the caller's transaction into autocommit
+  if not db.__conn[self._db_name] then
+    return false, db_no_connection_message("begin a transaction on", self._db_name, A_DATABASE)
+  end
+
   db.__autocommit[self._db_name] = false
+  return true, ""
 end
 
 
 
+--- Commits the work done on this database since the last commit.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the work was not committed, empty when it was.
 function db.Database:_commit()
   local conn = db.__conn[self._db_name]
-  conn:commit()
+  if not conn then
+    return false, db_no_connection_message("commit", self._db_name, A_DATABASE)
+  end
+
+  -- db:create turns the driver's own autocommit off, so nothing lands until a
+  -- commit goes through and a refused one loses the work without saying so
+  local committed, err = conn:commit()
+  if not committed then
+    return false, "can not commit "..self._db_name..": "..tostring(err)
+  end
+
+  return true, ""
 end
 
 
 
+--- Discards the work done on this database since the last commit.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the work was not rolled back, empty when it was.
 function db.Database:_rollback()
   local conn = db.__conn[self._db_name]
-  conn:rollback()
+  if not conn then
+    return false, db_no_connection_message("roll back", self._db_name, A_DATABASE)
+  end
+
+  local rolled_back, err = conn:rollback()
+  if not rolled_back then
+    return false, "can not roll back "..self._db_name..": "..tostring(err)
+  end
+
+  return true, ""
 end
 
 
 
+--- Lets writes on this database commit on their own again.
+--- @return boolean result Returns true in case of success and false otherwise.
+--- @return string message Why the transaction was not ended, empty when it was.
 function db.Database:_end()
+  if not db.__conn[self._db_name] then
+    return false, db_no_connection_message("end a transaction on", self._db_name, A_DATABASE)
+  end
+
   db.__autocommit[self._db_name] = true
+  return true, ""
 end
 
 
 
 function db.Database:_drop(s_name)
   local conn = db.__conn[self._db_name]
+  if not conn then error(db_no_connection_message("drop a sheet from", self._db_name, A_DATABASE), 2) end
+
   local schema = db.__schema[self._db_name][s_name]
 
   -- _index and _unique can each be a single column name (a string) or a list of
