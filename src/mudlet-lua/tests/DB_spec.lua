@@ -3556,13 +3556,89 @@ describe("Tests db:create with a sheet given as a list of column names", functio
     assert.are.equal(1, #db:fetch(mydb.people))
   end)
 
-  it("refuses a key that is neither a column name nor a sheet option", function()
-    -- neither form on its own: "city" is keyed, and it is not a sheet option
+  it("names the key it refuses, and both forms that would take it as a column", function()
+    -- neither form on its own: "city" is keyed, and it is not a sheet option.
+    -- Refused rather than skipped, because a sheet built without one of its
+    -- columns takes every write to that column silently
     local ok, err = pcall(function()
       db:create(dbName, {people = {"name", city = ""}})
     end)
     assert.is_false(ok)
-    assert.is_truthy(string.find(err, "city is neither one of the sheet's column names nor a sheet option", 1, true))
+    assert.is_truthy(string.find(err, '"city" is a key', 1, true))
+    -- the examples carry the refused name as well as the ones the sheet gave:
+    -- offering a sheet without it would advise the very state this refusal stops
+    assert.is_truthy(string.find(err, 'Write {"name", "city"}', 1, true))
+    assert.is_truthy(string.find(err, 'use the {name = "", city = ""} form', 1, true))
+  end)
+
+  it("brackets a column name the keyed form cannot take bare", function()
+    -- the listed form quotes every name, but the keyed form writes them as keys,
+    -- and a name that is not a bare identifier does not parse as one: the
+    -- message would be telling the user to write something Lua refuses
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {"first name", bogus = ""}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, '{"first name", "bogus"}', 1, true))
+    assert.is_truthy(string.find(err, '{["first name"] = "", bogus = ""}', 1, true))
+
+    -- a name that is one of Lua's own words is no more a bare key than that one
+    ok, err = pcall(function()
+      db:create(dbName, {people = {"end", bogus = ""}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, '{["end"] = "", bogus = ""}', 1, true))
+  end)
+
+  it("tells a numeric key that is not a position in the list from a stray one", function()
+    -- "7 is neither one of the sheet's column names nor a sheet option" was
+    -- nonsense: 7 plainly is a numeric list key, and what is wrong with it is
+    -- that the list has no seventh place
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {"name", "city", [7] = "extra"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "[7] is not a position in this 2 item list", 1, true))
+
+    -- a place at or below zero is no more a position than one past the end
+    ok, err = pcall(function()
+      db:create(dbName, {people = {"name", "city", [0] = "extra"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "[0] is not a position in this 2 item list", 1, true))
+
+    -- nor is one that is not whole. This is the guard whose loss is silent: drop
+    -- the key % 1 == 0 test and db:create quietly makes a column called extra
+    ok, err = pcall(function()
+      db:create(dbName, {people = {"name", "city", [1.5] = "extra"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "[1.5] is not a position in this 2 item list", 1, true))
+  end)
+
+  it("takes a numeric key that continues the list, and refuses the first one that skips", function()
+    -- # decides what counts as a position, so the boundary is where the list
+    -- stops being contiguous rather than anywhere the sheet was written
+    local mydb = db:create(dbName, {people = {"name", "city", [3] = "extra"}})
+    assert.are.same({city = "", extra = "", name = ""}, db.__schema[dbName].people.columns)
+    assert.is_true(db:add(mydb.people, {name = "Bob", extra = "x"}))
+
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {"name", "city", [4] = "extra"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "[4] is not a position in this 2 item list", 1, true))
+  end)
+
+  it("falls back to a made-up example when the sheet named nothing to build one from", function()
+    -- a key that is not a string names no column, so there is nothing of the
+    -- sheet's own to spell the two forms with
+    local ok, err = pcall(function()
+      db:create(dbName, {people = {[1] = 42, [true] = ""}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, 'Write {"name", "city"}', 1, true))
+    assert.is_truthy(string.find(err, 'use the {name = "", city = ""} form', 1, true))
   end)
 
   it("refuses a listed column name that is not a string", function()

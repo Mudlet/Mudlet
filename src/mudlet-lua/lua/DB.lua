@@ -312,6 +312,18 @@ function db:_validate_index(index)
 end
 
 
+-- NOT LUADOC
+-- Lua's reserved words, so db:create can tell a column name that may be written
+-- as a bare key in the {name = ""} sheet form from one that has to be bracketed
+local lua_reserved_words = {
+  ["and"] = true, ["break"] = true, ["do"] = true, ["else"] = true, ["elseif"] = true,
+  ["end"] = true, ["false"] = true, ["for"] = true, ["function"] = true, ["if"] = true,
+  ["in"] = true, ["local"] = true, ["nil"] = true, ["not"] = true, ["or"] = true,
+  ["repeat"] = true, ["return"] = true, ["then"] = true, ["true"] = true,
+  ["until"] = true, ["while"] = true,
+}
+
+
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
 --- script: in fact it is recommended you run this function at a top-level without any kind of guards.
 --- If the named database does not exist it will create it. If the database does exist then it will add
@@ -412,22 +424,71 @@ function db:create(db_name, sheets, force)
       -- otherwise: sweeping keys in with the column names would make a column
       -- out of an index definition. Numeric keys are checked against #sheet so
       -- that a stray [7] in a two-item list is not taken for a column name.
+      -- These stay hard errors rather than being skipped the way an unusable
+      -- _index entry is: a sheet built without one of its columns takes every
+      -- write to that column silently, since db:add reports the rejected INSERT
+      -- to the same place and returns nil, which callers do not check.
       local column_count = #sheet
+
+      -- both working forms, spelled with the names this sheet did give plus the
+      -- one being complained about, so the fix can be read straight off the
+      -- message. Leaving that name out would advise a sheet without the column
+      -- the user was declaring, which is the state this refusal exists to stop.
+      local function keyed_entry(name)
+        if name:match("^[%a_][%w_]*$") and not lua_reserved_words[name] then
+          return name..' = ""'
+        end
+        -- anything else is not a bare key, so the form the message tells the
+        -- user to write would not parse
+        return "["..string.format("%q", name)..'] = ""'
+      end
+
+      local function both_forms(extra_name)
+        local listed, keyed = {}, {}
+        for i = 1, column_count do
+          if type(sheet[i]) == "string" then
+            listed[#listed + 1] = string.format("%q", sheet[i])
+            keyed[#keyed + 1] = keyed_entry(sheet[i])
+          end
+        end
+        if extra_name then
+          listed[#listed + 1] = string.format("%q", extra_name)
+          keyed[#keyed + 1] = keyed_entry(extra_name)
+        end
+        if listed[1] == nil then
+          return '{"name", "city"}', '{name = "", city = ""}'
+        end
+        return "{"..table.concat(listed, ", ").."}", "{"..table.concat(keyed, ", ").."}"
+      end
+
       for key, value in pairs(sheet) do
         if type(key) == "number" and key % 1 == 0 and key >= 1 and key <= column_count then
           if type(value) == "string" then
             columns[value] = ""
           else
+            -- no example here: the two forms would have to be spelled without
+            -- the name this entry was meant to give, which reads as advice to
+            -- drop the column rather than to name it
             is_valid = false
             table.insert(msgs, "db:create - "..sheet_name.." - column name #"..key..
               " is a "..type(value)..", but a sheet's column names have to be strings.")
           end
         elseif type(key) == "string" and string.starts(key, "_") then
           options[key] = value
-        else
+        elseif type(key) == "number" then
+          -- past the end, at or below zero, or fractional: none of them is a
+          -- position in the list, so none of them names a column
           is_valid = false
-          table.insert(msgs, "db:create - "..sheet_name.." - "..tostring(key)..
-            " is neither one of the sheet's column names nor a sheet option: a sheet is either a list of column names or a table of column names and their default values.")
+          table.insert(msgs, "db:create - "..sheet_name.." - ["..tostring(key)..
+            "] is not a position in this "..column_count.." item list, so it names no column. "..
+            "A sheet given as a list runs from 1 with no gaps.")
+        else
+          -- only a string key names a column the example can offer to declare
+          local list_form, keyed_form = both_forms(type(key) == "string" and key or nil)
+          is_valid = false
+          table.insert(msgs, "db:create - "..sheet_name.." - "..string.format("%q", tostring(key))..
+            " is a key, but a sheet given as a list takes its column names as list members. Write "..
+            list_form..", or use the "..keyed_form.." form to give a column a default.")
         end
       end
 
