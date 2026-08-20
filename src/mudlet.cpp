@@ -217,7 +217,7 @@ int mudlet::addAddonToolbarButton(const QString& name, const QString& icon, cons
             event.mArgumentList.append(qsl("sysToolbarButtonClicked"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(QString::number(buttonId));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             pH->raiseEvent(event);
         }
     });
@@ -225,9 +225,11 @@ int mudlet::addAddonToolbarButton(const QString& name, const QString& icon, cons
     return buttonId;
 }
 
-bool mudlet::removeAddonToolbarButton(int buttonId)
+bool mudlet::removeAddonToolbarButton(int buttonId, Host* pHost)
 {
-    if (!mAddonButtons.contains(buttonId)) {
+    // The ids come from one application-wide sequence, so another profile can
+    // name this one's controls; only their owner may address them
+    if (!mAddonButtons.contains(buttonId) || mAddonButtons[buttonId].pHost != pHost) {
         return false;
     }
 
@@ -264,9 +266,9 @@ bool mudlet::removeAddonToolbarButton(int buttonId)
     return true;
 }
 
-bool mudlet::setAddonToolbarButtonState(int buttonId, const QString& state)
+bool mudlet::setAddonToolbarButtonState(int buttonId, const QString& state, Host* pHost)
 {
-    if (!mAddonButtons.contains(buttonId)) {
+    if (!mAddonButtons.contains(buttonId) || mAddonButtons[buttonId].pHost != pHost) {
         return false;
     }
 
@@ -281,9 +283,9 @@ bool mudlet::setAddonToolbarButtonState(int buttonId, const QString& state)
     return true;
 }
 
-bool mudlet::setAddonToolbarButtonIcon(int buttonId, const QString& icon)
+bool mudlet::setAddonToolbarButtonIcon(int buttonId, const QString& icon, Host* pHost)
 {
-    if (!mAddonButtons.contains(buttonId)) {
+    if (!mAddonButtons.contains(buttonId) || mAddonButtons[buttonId].pHost != pHost) {
         return false;
     }
 
@@ -303,9 +305,9 @@ bool mudlet::setAddonToolbarButtonIcon(int buttonId, const QString& icon)
     return true;
 }
 
-bool mudlet::setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip)
+bool mudlet::setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip, Host* pHost)
 {
-    if (!mAddonButtons.contains(buttonId)) {
+    if (!mAddonButtons.contains(buttonId) || mAddonButtons[buttonId].pHost != pHost) {
         return false;
     }
 
@@ -318,9 +320,9 @@ bool mudlet::setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip)
     return true;
 }
 
-bool mudlet::setAddonToolbarButtonEnabled(int buttonId, bool enabled)
+bool mudlet::setAddonToolbarButtonEnabled(int buttonId, bool enabled, Host* pHost)
 {
-    if (!mAddonButtons.contains(buttonId)) {
+    if (!mAddonButtons.contains(buttonId) || mAddonButtons[buttonId].pHost != pHost) {
         return false;
     }
 
@@ -333,9 +335,9 @@ bool mudlet::setAddonToolbarButtonEnabled(int buttonId, bool enabled)
     return true;
 }
 
-bool mudlet::setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval)
+bool mudlet::setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost)
 {
-    if (!mAddonButtons.contains(buttonId)) {
+    if (!mAddonButtons.contains(buttonId) || mAddonButtons[buttonId].pHost != pHost) {
         return false;
     }
 
@@ -444,7 +446,7 @@ int mudlet::addAddonMenuItem(const QString& menuPath, const QString& name, const
             event.mArgumentList.append(qsl("sysMenuItemClicked"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(QString::number(itemId));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             pH->raiseEvent(event);
         }
     });
@@ -452,9 +454,9 @@ int mudlet::addAddonMenuItem(const QString& menuPath, const QString& name, const
     return itemId;
 }
 
-bool mudlet::removeAddonMenuItem(int itemId)
+bool mudlet::removeAddonMenuItem(int itemId, Host* pHost)
 {
-    if (!mAddonMenuItems.contains(itemId)) {
+    if (!mAddonMenuItems.contains(itemId) || mAddonMenuItems[itemId].pHost != pHost) {
         return false;
     }
 
@@ -481,7 +483,16 @@ bool mudlet::removeAddonMenuItem(int itemId)
     // the menu later takes that action with it.
     while (parentMenu && parentMenu != mpAddonsMenu && parentMenu->isEmpty()) {
         QMenu* grandParentMenu = qobject_cast<QMenu*>(parentMenu->parent());
-        parentMenu->menuAction()->setVisible(false);
+        // Detached from the menu above rather than merely hidden: a handler
+        // that empties a menuPath and adds another item at that same path runs
+        // before the deleteLater() below, and addAddonMenuItem() looks its
+        // submenus up through actions(), where a hidden one is still there to
+        // be found - and reused, then destroyed, taking the new item with it.
+        if (grandParentMenu) {
+            grandParentMenu->removeAction(parentMenu->menuAction());
+        } else {
+            parentMenu->menuAction()->setVisible(false);
+        }
         parentMenu->deleteLater();
         parentMenu = grandParentMenu;
     }
@@ -496,9 +507,9 @@ bool mudlet::removeAddonMenuItem(int itemId)
     return true;
 }
 
-bool mudlet::setAddonMenuItemEnabled(int itemId, bool enabled)
+bool mudlet::setAddonMenuItemEnabled(int itemId, bool enabled, Host* pHost)
 {
-    if (!mAddonMenuItems.contains(itemId)) {
+    if (!mAddonMenuItems.contains(itemId) || mAddonMenuItems[itemId].pHost != pHost) {
         return false;
     }
 
@@ -511,9 +522,9 @@ bool mudlet::setAddonMenuItemEnabled(int itemId, bool enabled)
     return true;
 }
 
-bool mudlet::setAddonMenuItemChecked(int itemId, bool checked)
+bool mudlet::setAddonMenuItemChecked(int itemId, bool checked, Host* pHost)
 {
-    if (!mAddonMenuItems.contains(itemId)) {
+    if (!mAddonMenuItems.contains(itemId) || mAddonMenuItems[itemId].pHost != pHost) {
         return false;
     }
 
@@ -2466,7 +2477,7 @@ void mudlet::closeHost(const QString& name)
         }
     }
     for (int buttonId : buttonIdsToRemove) {
-        removeAddonToolbarButton(buttonId);
+        removeAddonToolbarButton(buttonId, pH);
     }
 
     // Clean up addon menu items belonging to this host
@@ -2477,7 +2488,7 @@ void mudlet::closeHost(const QString& name)
         }
     }
     for (int itemId : menuItemIdsToRemove) {
-        removeAddonMenuItem(itemId);
+        removeAddonMenuItem(itemId, pH);
     }
 
     mpTabBar->removeTab(name);

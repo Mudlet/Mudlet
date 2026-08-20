@@ -310,18 +310,18 @@ public:
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Addon toolbar button management
     int addAddonToolbarButton(const QString& name, const QString& icon, const QString& tooltip, Host* pHost);
-    bool removeAddonToolbarButton(int buttonId);
-    bool setAddonToolbarButtonState(int buttonId, const QString& state);
-    bool setAddonToolbarButtonIcon(int buttonId, const QString& icon);
-    bool setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip);
-    bool setAddonToolbarButtonEnabled(int buttonId, bool enabled);
-    bool setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval);
+    bool removeAddonToolbarButton(int buttonId, Host* pHost);
+    bool setAddonToolbarButtonState(int buttonId, const QString& state, Host* pHost);
+    bool setAddonToolbarButtonIcon(int buttonId, const QString& icon, Host* pHost);
+    bool setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip, Host* pHost);
+    bool setAddonToolbarButtonEnabled(int buttonId, bool enabled, Host* pHost);
+    bool setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost);
 
     // Addon menu item management
     int addAddonMenuItem(const QString& menuPath, const QString& name, const QString& shortcut, Host* pHost);
-    bool removeAddonMenuItem(int itemId);
-    bool setAddonMenuItemEnabled(int itemId, bool enabled);
-    bool setAddonMenuItemChecked(int itemId, bool checked);
+    bool removeAddonMenuItem(int itemId, Host* pHost);
+    bool setAddonMenuItemEnabled(int itemId, bool enabled, Host* pHost);
+    bool setAddonMenuItemChecked(int itemId, bool checked, Host* pHost);
 
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:

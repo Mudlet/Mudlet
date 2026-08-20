@@ -49,7 +49,9 @@ click time — a control whose profile has since closed raises nothing.
 
 1. **Ids are the only identity.** Labels, paths and names may repeat;
    operations address ids, and an unknown id returns `false` rather than
-   erroring.
+   erroring. An id belonging to another profile answers the same way: ids are
+   handed out from one sequence, but a control only takes orders from the
+   profile that created it.
 2. **Removal from a control's own handler is safe.** The usual caller of
    `removeToolbarButton`/`removeMenuItem` is a Lua handler running from that
    very control's click event; implementations must tolerate this (desktop
