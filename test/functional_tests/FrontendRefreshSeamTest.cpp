@@ -185,8 +185,13 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         if (mudlet::self()) {
-            deleteProfileDirectory();
+            // Mudlet writes the profile out as it shuts down, so removing the
+            // directory first only has it recreated. The path has to be read
+            // while the singleton is alive though - getMudletPath() reaches
+            // through self() without checking it.
+            const QString profileDir = mudlet::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
+            QDir(profileDir).removeRecursively();
         }
     }
 
@@ -212,6 +217,15 @@ private slots:
         QTest::qWait(3200ms);
         QVERIFY2(tabBar->tabConnectionIndicator(mHostname) == TabConnectionIndicator::Connected,
                  qPrintable(qsl("the connected profile's tab reads %1, so the transitions below would start from the wrong state").arg(describe(tabBar->tabConnectionIndicator(mHostname)))));
+
+        // Waiting the timer out is arithmetic; this is the proof. A refresh
+        // still in flight would repair the indicator between two of the
+        // emissions below and make a later reading coincidentally right, so a
+        // value nothing but a refresh would overwrite is planted and checked.
+        tabBar->setTabConnectionIndicator(mHostname, TabConnectionIndicator::Error);
+        QTest::qWait(500ms);
+        QVERIFY2(tabBar->tabConnectionIndicator(mHostname) == TabConnectionIndicator::Error, "an indicator refresh is still pending, so the readings below would not be this wire's doing");
+        tabBar->setTabConnectionIndicator(mHostname, TabConnectionIndicator::Connected);
 
         QList<IndicatorReading> seen;
         const auto record = [this, &seen, tabBar](const QString& name) {
@@ -297,37 +311,39 @@ private slots:
         // paints cannot tell the wire apart from its absence. forceUpdate()
         // additionally sets mForceUpdate, which is what stops the next paint
         // short-cutting to the cached screen pixmap instead of re-rendering the
-        // rows. TTextEdit::needUpdate() sets the same flag for any printed
-        // line, though, so the wait below fails the moment either flag turns
-        // true ahead of the reveal: with something else forcing the redraw
-        // these readings would hold with the wire cut.
         console->mUpperPane->mForceUpdate = false;
         console->mLowerPane->mForceUpdate = false;
 
         bool observed = false;
         bool upperForced = false;
         bool lowerForced = false;
-        const auto forcedAlready = [console]() {
-            return console->mUpperPane->mForceUpdate || console->mLowerPane->mForceUpdate;
-        };
-        bool forcedBeforeReveal = false;
         QObject observerContext;
         connect(&console->getHyperlinkVisibilityManager(), &THyperlinkVisibilityManager::visibilityChanged, &observerContext, [&]() {
+            if (observed) {
+                return;
+            }
             observed = true;
             upperForced = console->mUpperPane->mForceUpdate;
             lowerForced = console->mLowerPane->mForceUpdate;
         });
 
-        const bool settled = QTest::qWaitFor(
-                [&]() {
-                    if (!observed && forcedAlready()) {
-                        forcedBeforeReveal = true;
-                    }
-                    return observed || forcedBeforeReveal;
-                },
-                12000);
-        QVERIFY2(!forcedBeforeReveal, "a redraw was forced before the hyperlink was revealed, so the readings below would not be the wire's doing");
-        QVERIFY2(settled, "the hyperlink never changed visibility, so nothing here was exercised");
+        // Half a dozen other places force a pane to redraw - a command line
+        // taking focus, a font change, the scroll-stopped timer - and any of
+        // them landing in this window would leave the readings below holding
+        // with the wire cut. Rather than enumerate them, the flags go back to
+        // false on every turn of the loop, so what the observer reads can only
+        // have been set inside the emission it is reading.
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             if (observed) {
+                                 return true;
+                             }
+                             console->mUpperPane->mForceUpdate = false;
+                             console->mLowerPane->mForceUpdate = false;
+                             return false;
+                         },
+                         12000),
+                 "the hyperlink never changed visibility, so nothing here was exercised");
         QCOMPARE(console->buffer.lineBuffer.at(lineNumber), qsl("OSCSEAM1(HIDDENWORD)OSCSEAM1"));
         QVERIFY2(upperForced, "the upper pane was not forced to redraw for a hyperlink that had just been revealed");
         QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a hyperlink that had just been revealed");
