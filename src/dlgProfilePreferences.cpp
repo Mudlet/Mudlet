@@ -31,7 +31,6 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
-#include "TFeatureCallout.h"
 #include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -206,9 +205,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         disableHostDetails();
         clearHostDetails();
     }
-
-    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_showNewFeatureCallouts);
-    slot_showNewFeatureCallouts();
 
 #if defined(INCLUDE_UPDATER)
     if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
@@ -842,6 +838,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     undo_server_wrap_width_spinBox->setValue(pHost->mUndoServerWrapWidth);
     undo_server_wrap_width_spinBox->setEnabled(pHost->mUndoServerWrap);
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, undo_server_wrap_width_spinBox, &QWidget::setEnabled);
+    // The note is only worth its space to someone actually running the option:
+    label_undo_server_wrap_experimental->setVisible(pHost->mUndoServerWrap);
+    connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
@@ -1348,7 +1347,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -1563,6 +1562,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //Shortcuts tab
     auto shortcutKeys = mudlet::self()->mpShortcutsManager->iterator();
     int shortcutsRow = 0;
+    QList<TKeySequenceEdit*> sequenceEdits;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
         auto shortcutIt = pHost->profileShortcuts.find(key);
@@ -1582,6 +1582,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         gridLayout_groupBox_shortcuts->addWidget(label, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
+        sequenceEdits.append(sequenceEdit);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
             QKeySequence newSequence;
@@ -1598,7 +1599,44 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             currentShortcuts[key] = defaultSequence;
         });
     }
+    setShortcutsTabOrder(sequenceEdits);
     updateShortcutConflictWarning();
+}
+
+// The shortcut editors do not exist until a profile is loaded, so they cannot
+// be listed among the .ui file's tab stops; Qt appends every widget created
+// after setupUi() to the end of the dialog's focus chain instead. That left the
+// page's only static control - the 'reset to defaults' button, which the .ui
+// file chains right after the proxy fields of the security page - ahead of the
+// editors it resets, so tabbing through this page reached the button first and
+// only then jumped to the editors, in an order a screen reader dutifully
+// announced as it found it. Splice the editors into the chain so the focus
+// order follows the visible one. Only the widgets of the page on show take part
+// in the traversal, so the position this gives them among the other pages'
+// widgets is immaterial, and no layout is touched.
+void dlgProfilePreferences::setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits)
+{
+    if (sequenceEdits.isEmpty()) {
+        return;
+    }
+
+    // Anchoring to the save button rather than to the tab widget keeps this
+    // page in step with every other one (where the .ui file also puts the save
+    // button directly behind the tab bar) and keeps the result predictable:
+    // for a widget that has focusable children - which the tab widget, as the
+    // ancestor of these very editors, does - setTabOrder() inserts behind the
+    // last of those children rather than behind the widget itself.
+    //
+    // setTabOrder(first, second) moves second to directly behind first, so
+    // walking forwards over the list leaves the editors in reading order:
+    QWidget* previous = closeButton;
+    for (auto* sequenceEdit : sequenceEdits) {
+        setTabOrder(previous, sequenceEdit);
+        previous = sequenceEdit;
+    }
+    // ...and the button that acts on all of them comes last, matching its
+    // position at the bottom of the group box:
+    setTabOrder(previous, toolButton_resetMainWindowShortcuts);
 }
 
 // Recomputes the duplicate state of the whole shortcut map, not just the last
@@ -5062,21 +5100,6 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     if (mpHost && mpHost->mEnableClosedCaption != state) {
         mpHost->mEnableClosedCaption = state;
     }
-}
-
-
-void dlgProfilePreferences::slot_showNewFeatureCallouts()
-{
-    // The balloon only makes sense while its anchor can be seen:
-    if (tabWidget->currentWidget() != tab_display) {
-        return;
-    }
-    TFeatureCallout::maybeShow(qsl("undo-server-wrap"),
-                               checkBox_undoServerWrap,
-                               //: Title of a balloon pointing out a newly added feature
-                               tr("New: undo the game's own wrapping"),
-                               //: Body of the balloon, anchored to the option that rejoins lines the game server wrapped itself so that triggers match whole lines
-                               tr("Games that wrap their own lines make triggers fiddly. Mudlet can now undo that wrapping, so triggers always see whole lines."));
 }
 
 void dlgProfilePreferences::slot_changeWrapAt()

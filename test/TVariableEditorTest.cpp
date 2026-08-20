@@ -18,9 +18,13 @@
  ***************************************************************************/
 
 #include <LuaInterface.h>
+#include <TTreeWidget.h>
 #include <TVar.h>
 #include <VarUnit.h>
+#include <utils.h>
 #include <QtTest/QtTest>
+
+#include <QTreeWidgetItem>
 
 #include <memory>
 
@@ -92,6 +96,30 @@ private:
             }
         }
         return nullptr;
+    }
+
+    static QTreeWidgetItem* childItemNamed(QTreeWidgetItem* parent, const QString& name)
+    {
+        for (int i = 0; i < parent->childCount(); ++i) {
+            if (parent->child(i)->text(0) == name) {
+                return parent->child(i);
+            }
+        }
+        return nullptr;
+    }
+
+    // The Variables view as repopulateVars() builds it: a root row carrying no
+    // check state of its own, holding a table whose member is over the 10,000
+    // item limit and, beside it, a table small enough to save.
+    QTreeWidgetItem* buildFenceTree(TTreeWidget& tree)
+    {
+        execLua(QStringLiteral("fenceHolder = {big = {}} "
+                               "for i = 1, 10001 do fenceHolder.big[i] = i end "
+                               "keptTable = {member = 'kept'}"));
+        interface->getVars(false);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << QStringLiteral("Variables"));
+        interface->getVarUnit()->buildVarTree(rootItem, interface->getVarUnit()->getBase(), false);
+        return rootItem;
     }
 
     TVar* createVar(TVar* parent, const QString& name, int keyType, const QString& value, int valueType)
@@ -451,7 +479,6 @@ private slots:
 
     void testCreateVarWithNumericKeyZeroAtRoot()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("0"), LUA_TNUMBER, QStringLiteral("zeroVal"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[0]")), QStringLiteral("zeroVal"));
@@ -459,7 +486,6 @@ private slots:
 
     void testCreateVarWithNumericKeyAtRoot()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("5"), LUA_TNUMBER, QStringLiteral("fiveVal"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[5]")), QStringLiteral("fiveVal"));
@@ -467,7 +493,6 @@ private slots:
 
     void testCreateVarWithNegativeNumericKeyAtRoot()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("-1"), LUA_TNUMBER, QStringLiteral("negVal"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[-1]")), QStringLiteral("negVal"));
@@ -689,7 +714,6 @@ private slots:
 
     void testDeleteNumericKeyAtRoot()
     {
-        QSKIP("PENDING: deleteVar generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         execLua(QStringLiteral("_G[99] = 'rootNum'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("99"));
@@ -748,6 +772,231 @@ private slots:
         QVERIFY(var);
         execLua(QStringLiteral("testVar = 'after'"));
         QCOMPARE(interface->getValue(var), QStringLiteral("after"));
+    }
+
+    // ========================================================================
+    // writableByName - can a variable be written back under the name it is shown with?
+    // ========================================================================
+
+    void testWritableByNameForAGlobal()
+    {
+        execLua(qsl("testVar = 'hello'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
+        QVERIFY(var);
+        QVERIFY(interface->writableByName(var));
+    }
+
+    void testWritableByNameForANestedMember()
+    {
+        execLua(qsl("testTbl = {sub = {deep = 'value'}}"));
+        interface->getVars(false);
+        TVar* deep = findChild(findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("sub")), qsl("deep"));
+        QVERIFY(deep);
+        QVERIFY(interface->writableByName(deep));
+    }
+
+    // Lua names a number key with "%.14g", which is exact for an index
+    void testWritableByNameForAnIntegerKeyedMember()
+    {
+        execLua(qsl("testTbl = {[2] = 'value'}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("2"));
+        QVERIFY(member);
+        QVERIFY(interface->writableByName(member));
+    }
+
+    // ...but not for one that needs more digits than that: the name is a
+    // different key, and a write through it would add a member (#9903)
+    void testNotWritableByNameForAFractionKeyedMember()
+    {
+        execLua(qsl("testTbl = {[1/3] = 'value'}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("0.33333333333333"));
+        QVERIFY2(member, "the walk did not name the member the way Lua names its key");
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    // a key is named through a C string, so it ends at an embedded NUL
+    void testNotWritableByNameForAMemberWithANulInItsKey()
+    {
+        execLua(qsl("testTbl = {['before\\0after'] = 'value'}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("before"));
+        QVERIFY2(member, "the walk did not name the member the way Lua names its key");
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    // the name of a member is only as good as the names above it
+    void testNotWritableByNameUnderAFractionKeyedTable()
+    {
+        execLua(qsl("testTbl = {[1/3] = {member = 'value'}}"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("0.33333333333333")), qsl("member"));
+        QVERIFY(member);
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    void testNotWritableByNameForAGlobalAScriptRemoved()
+    {
+        execLua(qsl("testVar = 'hello'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
+        QVERIFY(var);
+        execLua(qsl("testVar = nil"));
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    // What it holds is the script's business: the tree may be showing a value
+    // that is a type out of date, and the name still reaches the variable.
+    void testWritableByNameAfterAScriptChangedTheType()
+    {
+        execLua(qsl("testVar = 'hello'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
+        QVERIFY(var);
+        execLua(qsl("testVar = 42"));
+        QVERIFY(interface->writableByName(var));
+    }
+
+    // Both are shown as "before", so neither name says which member it means -
+    // and the one a write would reach is the other one.
+    void testNotWritableByNameWhenTwoMembersAreShownUnderOneName()
+    {
+        execLua(qsl("testTbl = {} testTbl['before\\0after'] = 'first' testTbl['before'] = 'second'"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        int shownAsBefore = 0;
+        for (TVar* member : table->getChildren(false)) {
+            if (member->getName() == qsl("before")) {
+                ++shownAsBefore;
+                QVERIFY(!interface->writableByName(member));
+            }
+        }
+        QCOMPARE(shownAsBefore, 2);
+    }
+
+    // ...while a number key and a string key that read alike are different
+    // lookups, so both stay writable
+    void testWritableByNameForAStringKeyThatReadsLikeItsNumberSibling()
+    {
+        execLua(qsl("testTbl = {} testTbl[42] = 'number keyed' testTbl['42'] = 'string keyed'"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        int shownAs42 = 0;
+        for (TVar* member : table->getChildren(false)) {
+            if (member->getName() == qsl("42")) {
+                ++shownAs42;
+                QVERIFY(interface->writableByName(member));
+            }
+        }
+        QCOMPARE(shownAs42, 2);
+    }
+
+    // The write paths put a string key into a quoted Lua literal, where a
+    // backslash starts an escape and reaches a key of its own instead.
+    void testNotWritableByNameForAMemberWithABackslashInItsKey()
+    {
+        execLua(qsl("testTbl = {} testTbl['C:\\\\temp'] = 'value'"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("C:\\temp"));
+        QVERIFY2(member, "the walk did not name the member after its key");
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    // ...and a global goes into that source bare, so only an identifier gets
+    // there. One with a dot in it would parse as an index into another global.
+    void testNotWritableByNameForAGlobalWithADotInItsName()
+    {
+        execLua(qsl("_G['dotted.global'] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("dotted.global"));
+        QVERIFY(var);
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    void testNotWritableByNameForANumberKeyedGlobal()
+    {
+        execLua(qsl("_G[7] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("7"));
+        QVERIFY(var);
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    // The tables above a variable are reached by name too, so an ambiguous name
+    // anywhere along the way puts the write somewhere else just as surely.
+    void testNotWritableByNameUnderATableSharingItsNameWithASibling()
+    {
+        execLua(qsl("testTbl = {} testTbl['before\\0after'] = {member = 'first'} testTbl['before'] = {member = 'second'}"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        int checked = 0;
+        for (TVar* ambiguous : table->getChildren(false)) {
+            if (ambiguous->getName() != qsl("before")) {
+                continue;
+            }
+            TVar* member = findChild(ambiguous, qsl("member"));
+            QVERIFY(member);
+            QVERIFY(!interface->writableByName(member));
+            ++checked;
+        }
+        QCOMPARE(checked, 2);
+    }
+
+    // A keyword reads as an identifier but does not parse as one, so the source
+    // the write paths generate for it does not run.
+    void testNotWritableByNameForAGlobalNamedAfterALuaKeyword()
+    {
+        execLua(qsl("_G['end'] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("end"));
+        QVERIFY(var);
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    // The tree is built by iterating the tables, which does not consult
+    // metamethods, so neither does the lookup: what an __index stands in with
+    // once a script removes the real key is a different variable.
+    void testNotWritableByNameWhenOnlyAMetamethodSuppliesTheTable()
+    {
+        execLua(qsl("fallbackTbl = {sub = {member = 'fallback value'}} "
+                    "testTbl = {sub = {member = 'real value'}} "
+                    "setmetatable(testTbl, {__index = fallbackTbl})"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("sub")), qsl("member"));
+        QVERIFY(member);
+        QVERIFY(interface->writableByName(member));
+
+        execLua(qsl("testTbl.sub = nil"));
+        QCOMPARE(getLuaValue(qsl("testTbl.sub.member")), qsl("fallback value"));
+        QVERIFY(!interface->writableByName(member));
+    }
+
+    // it walks down to the variable a push at a time, and in the editor that is
+    // the profile's own stack, where a slot left behind stays for the session
+    void testWritableByNameLeavesTheStackAsItFoundIt()
+    {
+        execLua(qsl("testTbl = {writable = 'value', [1/3] = 'value'}"));
+        interface->getVars(false);
+        TVar* table = findChild(interface->getVarUnit()->getBase(), qsl("testTbl"));
+        QVERIFY(table);
+        TVar* writable = findChild(table, qsl("writable"));
+        TVar* unwritable = findChild(table, qsl("0.33333333333333"));
+        QVERIFY(writable);
+        QVERIFY(unwritable);
+
+        lua_pushstring(L, "sentinel");
+        const int stackBefore = lua_gettop(L);
+        QVERIFY(interface->writableByName(writable));
+        QCOMPARE(lua_gettop(L), stackBefore);
+        QVERIFY(!interface->writableByName(unwritable));
+        QCOMPARE(lua_gettop(L), stackBefore);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), qsl("sentinel"));
+        lua_pop(L, 1);
     }
 
     // ========================================================================
@@ -905,7 +1154,6 @@ private slots:
 
     void testNumericKeyZeroRoundTrip()
     {
-        QSKIP("PENDING: setValue generates invalid Lua for root numeric keys (needs _G[N] instead of bare N)");
         interface->getVars(false);
         createVar(interface->getVarUnit()->getBase(), QStringLiteral("0"), LUA_TNUMBER, QStringLiteral("zeroRT"), LUA_TSTRING);
         QCOMPARE(getLuaValue(QStringLiteral("_G[0]")), QStringLiteral("zeroRT"));
@@ -947,10 +1195,7 @@ private slots:
         var->setName(QStringLiteral("bracketVal"), LUA_TSTRING);
         var->setValue(QStringLiteral("a]]b"), LUA_TSTRING);
         interface->getVarUnit()->getBase()->addChild(var);
-        const bool result = interface->setValue(var);
-        if (!result) {
-            QSKIP("Known issue: setValue fails for strings containing ']]'");
-        }
+        QVERIFY(interface->setValue(var));
         QCOMPARE(getLuaValue(QStringLiteral("bracketVal")), QStringLiteral("a]]b"));
     }
 
@@ -1102,6 +1347,130 @@ private slots:
         QVERIFY(vu->isSaved(&var));
         vu->removeSavedVar(&var);
         QVERIFY(!vu->isSaved(&var));
+    }
+
+    // ========================================================================
+    // The 10,000 item limit and the parent checkbox (#9957)
+    // ========================================================================
+
+    // Both overloads of shouldSave() answer for the same variable, so a row of
+    // the Variables view standing for an oversized table has to be refused the
+    // same way the table itself is.
+    void testWidgetRowOfAnOversizedTableIsRefusedTheSameWayTheTableIs()
+    {
+        TTreeWidget tree(nullptr);
+        QTreeWidgetItem* rootItem = buildFenceTree(tree);
+        QVERIFY(rootItem);
+        VarUnit* vu = interface->getVarUnit();
+        QTreeWidgetItem* holderItem = childItemNamed(rootItem, qsl("fenceHolder"));
+        QVERIFY(holderItem);
+        QTreeWidgetItem* bigItem = childItemNamed(holderItem, qsl("big"));
+        QTreeWidgetItem* keptItem = childItemNamed(rootItem, qsl("keptTable"));
+        QVERIFY(bigItem);
+        QVERIFY(keptItem);
+
+        QVERIFY2(!vu->shouldSave(vu->getWVar(bigItem)), "a table of 10001 members is over the limit");
+        QVERIFY2(!vu->shouldSave(bigItem), "and so is the row standing for it");
+        QVERIFY2(vu->shouldSave(keptItem), "while the row of a small table is still saveable");
+    }
+
+    // Ticking a row hands the tick to every row beneath it, an oversized table
+    // among them: Qt's tristate cascade writes the check state whether or not
+    // the child's ItemIsUserCheckable flag was taken away, which is what
+    // buildVarTree() does to a table over the limit. The sweep that runs after
+    // the tick is what has to take it back off again, or the table goes into
+    // savedVars and from there into the profile.
+    void testOversizedTableTickedThroughItsParentEndsUntickedAndUnsaved()
+    {
+        TTreeWidget tree(nullptr);
+        QTreeWidgetItem* rootItem = buildFenceTree(tree);
+        QVERIFY(rootItem);
+        VarUnit* vu = interface->getVarUnit();
+        QTreeWidgetItem* holderItem = childItemNamed(rootItem, qsl("fenceHolder"));
+        QVERIFY(holderItem);
+        QTreeWidgetItem* bigItem = childItemNamed(holderItem, qsl("big"));
+        QTreeWidgetItem* keptItem = childItemNamed(rootItem, qsl("keptTable"));
+        QVERIFY(bigItem);
+        QVERIFY(keptItem);
+        QVERIFY2(!(bigItem->flags() & Qt::ItemIsUserCheckable), "the view marks an oversized table untickable");
+
+        holderItem->setCheckState(0, Qt::Checked);
+        keptItem->setCheckState(0, Qt::Checked);
+        QVERIFY2(bigItem->checkState(0) == Qt::Checked, "Qt hands the tick to the untickable child all the same");
+
+        // the sweep TTreeWidget::mouseReleaseEvent() runs over each ticked row
+        // and everything under it
+        QList<QTreeWidgetItem*> sweep;
+        tree.getAllChildren(holderItem, sweep);
+        tree.getAllChildren(keptItem, sweep);
+        for (QTreeWidgetItem* item : sweep) {
+            if (!vu->shouldSave(item)) {
+                item->setCheckState(0, Qt::Unchecked);
+            }
+        }
+
+        QCOMPARE(bigItem->checkState(0), Qt::Unchecked);
+        QVERIFY2(keptItem->checkState(0) == Qt::Checked, "the fence must not reach past the tables it is for");
+
+        // and what dlgTriggerEditor::slot_variableChanged() does with what is
+        // left ticked - savedVars is what a profile save reads
+        for (QTreeWidgetItem* item : sweep) {
+            TVar* var = vu->getWVar(item);
+            if (var && item->checkState(0) != Qt::Unchecked) {
+                vu->addSavedVar(var);
+            }
+        }
+
+        QVERIFY2(!vu->savedVars.contains(qsl("fenceHolder.big")), "an oversized table ticked through its parent must not be saved");
+        QVERIFY2(vu->savedVars.contains(qsl("keptTable")), "a small table the user ticked still is");
+    }
+
+    // ========================================================================
+    // A global whose own name holds a dot (#9954)
+    // ========================================================================
+
+    // The Variables view is where this is felt: the row for a global made after
+    // the hiding walk answered to the mark that walk left for a member of the
+    // same dotted path, so the row was never built and the global could not be
+    // seen, renamed or deleted.
+    void testGlobalWithADotInItsNameHasARowInTheVariablesView()
+    {
+        execLua(qsl("dotHolderTable = {member = 'the member'}"));
+        interface->getVars(true); // the hiding walk Mudlet runs at profile load
+        execLua(qsl("_G['dotHolderTable.member'] = 'the global'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        vu->buildVarTree(rootItem, vu->getBase(), false);
+
+        QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("dotHolderTable.member"));
+        QVERIFY2(dottedItem, "the global has to have a row of its own in the Variables view");
+        QVERIFY2(!childItemNamed(rootItem, qsl("dotHolderTable")), "while the table the walk hid stays hidden");
+    }
+
+    // ...and that row is greyed out and untickable, with the reason on it: the
+    // save keys variables by the dotted path, so this one cannot be saved.
+    void testTheRowOfAGlobalWithADotInItsNameIsGreyedWithAReason()
+    {
+        execLua(qsl("_G['greyed.global'] = 'value' plainSaveable = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        vu->buildVarTree(rootItem, vu->getBase(), false);
+
+        QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("greyed.global"));
+        QVERIFY(dottedItem);
+        QVERIFY2(!(dottedItem->flags() & Qt::ItemIsUserCheckable), "the row must not offer a tick that cannot be honoured");
+        QCOMPARE(dottedItem->foreground(0).color(), QColor("grey"));
+        QVERIFY2(!dottedItem->toolTip(0).isEmpty(), "the row has to say why it cannot be saved");
+
+        QTreeWidgetItem* plainItem = childItemNamed(rootItem, qsl("plainSaveable"));
+        QVERIFY(plainItem);
+        QVERIFY2(plainItem->flags() & Qt::ItemIsUserCheckable, "an ordinary global is still tickable");
     }
 
     // ========================================================================

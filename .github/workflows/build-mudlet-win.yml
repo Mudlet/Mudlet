@@ -1,5 +1,7 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win-pr.yml
-# Changes here likely need to be mirrored there as well.
+# Changes here likely need to be mirrored there as well, apart from the ccache
+# deletion below: pull request caches are scoped to their own ref and keyed per
+# commit, so nothing there ever holds a key it needs to reuse.
 name: 🔨 Build Mudlet (windows)
 on:
   push:
@@ -14,7 +16,9 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
-# Permissions required for SignPath trusted build verification
+# id-token and contents are what SignPath's trusted build verification needs;
+# actions: write is for deleting the branch's previous ccache entry before
+# saving the new one.
 permissions:
   id-token: write
   contents: read
@@ -117,7 +121,9 @@ jobs:
         ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 2
+      # ~94s measured here, and a slow runner can take half again as long - kept in
+      # step with the other platforms
+      timeout-minutes: 6
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -168,7 +174,7 @@ jobs:
         fi
         echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
 
-        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
+        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test" --offline
 
     - name: Passed Lua tests
       shell: msys2 {0}
@@ -177,6 +183,32 @@ jobs:
         then
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
+        fi
+
+    # Cache keys are immutable, so the save below is refused while the branch's
+    # previous entry still holds the key, and the branch cache only ever
+    # refreshes when GitHub's eviction happens to drop it first. Deleting by key
+    # rather than by id covers a key held by several entries at once, which is
+    # what cache version drift leaves behind. Two pushes overlapping here is
+    # fine - the loser's save is refused and the next push heals it - but the
+    # branch has no cache at all between this step and the save, so a run
+    # cancelled in between leaves the next build cold.
+    # Git bash rather than the msys2 shell the build steps use: gh ships with
+    # the runner image and is on the native PATH.
+    - name: Delete the previous ccache entry
+      if: always() && steps.restore-ccache.outputs.cache-primary-key != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CACHE_KEY: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+      run: |
+        key="$(jq -rn --arg key "${CACHE_KEY}" '$key|@uri')"
+        if response="$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${key}" 2>&1)"; then
+          echo "deleted the previous ${CACHE_KEY} entry"
+        elif [[ "${response}" == *"HTTP 404"* ]]; then
+          echo "no ${CACHE_KEY} entry to delete yet"
+        else
+          echo "::warning::could not delete ${CACHE_KEY}, so the save below will be refused and this branch's ccache will go stale: ${response}"
         fi
 
     - name: Save ccache
@@ -413,7 +445,9 @@ jobs:
     - name: Upload artifact to make.mudlet.org
       shell: msys2 {0}
       if: env.ARTIFACT_NAME != '' && !startsWith(github.ref, 'refs/tags/')
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
+      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Upload release asset for GitHub Release
       uses: actions/upload-artifact@v7

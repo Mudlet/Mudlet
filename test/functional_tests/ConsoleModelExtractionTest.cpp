@@ -32,6 +32,8 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+#include "GroupedTest.h"
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lua.h>
@@ -157,7 +159,7 @@ private slots:
         TConsoleModel& model = host->mainConsoleModel();
         const int fedLine = model.mEngineCursor;
         QVERIFY2(fedLine >= 0, "Feeding a line must have left the model's engine cursor on it.");
-        QCOMPARE(model.mCurrentLine, qsl("ModelPipeline alpha\n"));
+        QCOMPARE(model.mCurrentLine, qsl("ModelPipeline alpha"));
         QCOMPARE(model.buffer.line(fedLine), qsl("ModelPipeline alpha"));
         QVERIFY2(!model.mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
         QCOMPARE(host->mpConsole->mCurrentLine, model.mCurrentLine);
@@ -247,7 +249,7 @@ private slots:
         host->runTriggers(fedLine);
 
         QCOMPARE(luaGlobalString(host, "viewlessTriggerHit"), qsl("ViewlessPipeline gamma"));
-        QCOMPARE(model->mCurrentLine, qsl("ViewlessPipeline gamma\n"));
+        QCOMPARE(model->mCurrentLine, qsl("ViewlessPipeline gamma"));
         QCOMPARE(model->mEngineCursor, fedLine);
         QVERIFY2(!model->mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
     }
@@ -495,4 +497,4 @@ void initializeQRCResourcesForConsoleModelExtraction()
 }
 
 #include "ConsoleModelExtractionTest.moc"
-QTEST_MAIN(ConsoleModelExtractionTest)
+MUDLET_GROUPED_TEST_MAIN(ConsoleModelExtractionTest)
