@@ -33,6 +33,7 @@ endif()
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
+    DetachedWindowMenuShortcutsTest.cpp
     GlyphOverflowTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
