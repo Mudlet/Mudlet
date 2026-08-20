@@ -90,7 +90,7 @@ private:
     // A client stall: the thread is held without the event loop running, so
     // nothing is read from the socket and no timer is delivered - the same
     // shape as a script that blocks, without burning a runner's CPU to do it.
-    static void freezeMudlet(const std::chrono::milliseconds duration) { QThread::msleep(static_cast<unsigned long>(duration.count())); }
+    static void freezeMudlet(const std::chrono::milliseconds duration) { QThread::sleep(duration); }
 
     void sendCommand()
     {
