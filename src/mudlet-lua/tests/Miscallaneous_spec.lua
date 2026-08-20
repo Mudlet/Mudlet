@@ -607,6 +607,58 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals("disabled by profile global preference", setterMessage)
         end)
       end)
+
+      -- The command lines only hear that the session is ending through
+      -- Host::signal_saveCommandLinesHistory, which Host::saveProfile() emits
+      -- only when given neither a folder nor a name, and nothing else writes
+      -- these files. Taking the file away and asking for that save back is
+      -- therefore a yes/no answer on whether the signal still reaches
+      -- TCommandLine::slot_saveHistory: cut the wire and every command line's
+      -- history is silently never written again, which the user only discovers
+      -- on the next launch.
+      describe("Tests that an end of session save writes the command line histories", function()
+        it("writes the main command line's history file out again", function()
+          -- slot_saveHistory() returns without writing anything unless both of
+          -- these are on, so they are what makes a missing file mean the signal
+          -- and not the settings. Putting the per-command-line one back first:
+          -- it is refused outright while the profile-wide size is zero.
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          local savedSaving = getSaveCommandHistory("main")
+          finally(function()
+            setSaveCommandHistory("main", savedSaving)
+            setConfig("commandLineHistorySaveSize", savedLines)
+          end)
+
+          setConfig("commandLineHistorySaveSize", 10)
+          assert.is_true(setSaveCommandHistory("main", true))
+
+          local historyFile = getMudletHomeDir() .. "/command_history_main"
+          os.remove(historyFile)
+          assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
+
+          -- A save another spec started can still be running, and saveProfile()
+          -- answers nil - without emitting anything - until it finishes. Of the
+          -- refusals it can answer with that is the only one waiting clears,
+          -- and only test mode can pump the event loop to let it.
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            if saved or not testMode then
+              break
+            end
+            pumpEvents(50)
+          end
+          if not saved and not testMode then
+            pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
+            return
+          end
+          assert.is_true(saved, tostring(message))
+
+          -- slot_saveHistory() writes from inside the emit, so the file is
+          -- there by the time saveProfile() has returned
+          assert.is_true(fileExists(historyFile), "the end of session save never wrote the command line history out")
+        end)
+      end)
     end)
 
     describe("Tests the logging functions", function()

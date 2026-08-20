@@ -7,7 +7,10 @@ on:
   pull_request_target:
     types: [closed]
   schedule:
-    - cron: '0 4 * * *'
+    # Hourly, not daily: a pull request pushed twice in an afternoon holds both
+    # generations of its ccache until this runs, and a generation is well over a
+    # gigabyte across the four build jobs - a tenth of the quota per stale push.
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -51,48 +54,75 @@ jobs:
           exit 1
         fi
 
-  stale-per-commit-ccache:
-    name: Sweep stale per-commit ccache entries
+  superseded-per-commit-ccache:
+    name: Sweep superseded and idle per-commit ccache entries
     if: github.event_name != 'pull_request_target' && github.repository_owner == 'Mudlet'
     runs-on: ubuntu-latest
     steps:
-    - name: Delete per-commit ccache entries not used in 48 hours
+    - name: Delete per-commit ccache entries a newer push has replaced
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Only entries whose key ends in a 40 character commit hash qualify, so
-        # nothing keyed per branch or tag is ever touched, and neither is any
-        # cache that is not a ccache one. An open pull request left idle for two
-        # days does lose its own entry, and falls back to the branch entry its
-        # first build used.
+        # Only pull request entries whose key ends in a 40 character commit hash
+        # qualify, so nothing keyed per branch or tag is ever touched, and
+        # neither is any cache that is not a ccache one.
+        #
+        # Two reasons to delete. "superseded" is the one that matters: the pull
+        # request workflows key per commit, so every push leaves a full matrix
+        # of entries behind that no later build can ever hit, and the newest
+        # generation is the only one worth keeping. The pull request workflows
+        # cannot do this themselves - most open pull requests come from forks,
+        # where GITHUB_TOKEN is read-only whatever the permissions block asks
+        # for, so the delete has to happen here in the base repository.
+        # "idle" then retires the last generation of a pull request nobody has
+        # pushed to in two days; its next build falls back to the branch entry.
+        #
+        # Both exist because the alternative is GitHub's own eviction, which
+        # picks by least-recently-used across the whole 10GB quota and is just
+        # as likely to drop the development ccache a cold build would need.
         cutoff="$(( $(date -u +%s) - 48 * 3600 ))"
-        entries="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100" --jq '
-          .actions_caches[]
-          | select(.key | test("^ccache-.*-[0-9a-f]{40}$"))
-          | [.id, (.last_accessed_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)]
-          | @tsv')"
-        ids="$(printf '%s\n' "${entries}" | awk -v cutoff="${cutoff}" '$2 < cutoff {print $1}')"
+        caches="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100" \
+          --jq '.actions_caches[]' | jq -s '.')"
+        # jq -s above, rather than gh's own --slurp: --paginate applies --jq per
+        # page, and grouping has to see every page at once.
+        doomed="$(printf '%s' "${caches}" | jq -r --argjson cutoff "${cutoff}" '
+          def ts: sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601;
+          [ .[]
+            | select(.ref | startswith("refs/pull/"))
+            | select(.key | test("^ccache-.*-[0-9a-f]{40}$")) ]
+          | group_by([.ref, (.key | sub("-[0-9a-f]{40}$"; ""))])
+          | map(
+              sort_by(.created_at | ts) | reverse | to_entries
+              | map(.value as $entry
+                    | if .key > 0 then [$entry.id, "superseded", $entry.key]
+                      elif ($entry.last_accessed_at | ts) < $cutoff
+                      then [$entry.id, "idle", $entry.key]
+                      else empty end))
+          | flatten(1) | .[] | @tsv')"
+        total="$(printf '%s' "${caches}" | jq '[.[] | select(.key | test("^ccache-.*-[0-9a-f]{40}$"))] | length')"
         # Both counts, so that a sweep with nothing to do reads differently from
         # one whose filter has stopped matching anything at all.
-        echo "$(printf '%s' "${entries}" | grep -c '' || true) per-commit ccache entries, $(printf '%s' "${ids}" | grep -c '' || true) of them not used in 48 hours"
-        if [ -z "${ids}" ]; then
+        echo "${total} per-commit ccache entries, $(printf '%s' "${doomed}" | grep -c '' || true) of them superseded or idle"
+        if [ -z "${doomed}" ]; then
           exit 0
         fi
         gone=0
         failed=0
-        for id in ${ids}; do
+        while IFS=$'\t' read -r id why key; do
+          [ -n "${id}" ] || continue
           # A 404 means the entry went away between the listing and here, which
           # is the wanted end state: GitHub evicts constantly under this quota.
           if response="$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${id}" 2>&1)" \
             || [[ "${response}" == *"HTTP 404"* ]]; then
+            echo "${why}: ${key}"
             gone=$(( gone + 1 ))
           else
-            echo "::warning::could not delete cache ${id}: ${response}"
+            echo "::warning::could not delete cache ${id} (${key}): ${response}"
             failed=$(( failed + 1 ))
           fi
-        done
-        echo "${gone} stale cache(s) gone"
+        done <<< "${doomed}"
+        echo "${gone} cache(s) gone"
         if [ "${failed}" -gt 0 ]; then
           echo "::error::${failed} cache(s) survived deletion"
           exit 1
