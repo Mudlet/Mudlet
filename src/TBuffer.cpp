@@ -5767,6 +5767,12 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
+    // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
+    // everything else - any whose line just went away are dropped
+    if (mpConsole) {
+        mpConsole->getHyperlinkVisibilityManager().adjustLineNumbers(0, mBatchDeleteSize);
+    }
+
     // Everything below needs the Host, whether or not there is a view: on app
     // quit the profile is destroyed while its widgets are still only queued for
     // deletion, so a live view is no promise that mpHost survived with it.
