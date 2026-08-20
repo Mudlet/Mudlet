@@ -399,8 +399,8 @@ private slots:
         // translated: with nothing in this run's own config to say otherwise,
         // mudlet takes its language from the desktop's locale, so on an en_GB
         // machine this looks for "canceled" in a console that said "cancelled".
-        // Written before mudlet::start() because the constructor is what reads
-        // it, and to the settings file setupConfig() will open.
+        // Written before setupConfig() opens that same file, because the value
+        // is read out of it later by init(), via readEarlySettings().
         QSettings language(qsl("%1/mudlet/Mudlet.ini").arg(mConfigDir.path()), QSettings::IniFormat);
         language.setValue(qsl("interfaceLanguage"), qsl("en_US"));
         language.sync();
