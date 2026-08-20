@@ -499,7 +499,11 @@ endif(USE_3DMAPPER)
 
 if(USE_SANITIZERS)
   include(cmake/EnableSanitizers.cmake)
-  # The above script sets the SANITIZERS_AS_STRING variable:
+  # The above script sets the SANITIZERS_AS_STRING and UNRECOGNISED_AS_STRING variable:
+  if (SANITIZERS_REQUESTED)
+      message(WARNING "Unknown or unhandled sanitizer(s) requested: '${UNRECOGNISED_AS_STRING}' - it/they have NOT been incorporated into the build!")
+  endif()
+
   if (NOT SANITIZERS_AS_STRING)
     message(STATUS "No sanitizers selected, if required add them to the environment variable MUDLET_SANITIZERS.")
   else()
@@ -650,7 +654,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #
 # * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
-# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 #
 # * Produce qDebug() messages about undo/redo operations in the trigger editor,
 #   including command execution, stack operations, and edbee text undo integration:
@@ -659,7 +663,6 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about the GMCP Char.Login authentication flow:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
-# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

@@ -47,9 +47,12 @@ project(mudlet)
 # Gather non-compiled files for IDE visibility using glob patterns
 # Note: New files are picked up automatically on CMake reconfigure
 file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
+  .clang-format
   .clang-tidy
   .crowdin.yml
   .cursorrules
+  .git-blame-ignore-revs
+  .gitattributes
   .gitignore
   .gitmodules
   .imgbotconfig
@@ -59,8 +62,8 @@ file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
   COMPILE
   COPYING
   CPPLINT.cfg
-  dangerfile.js
   asan-suppressions.txt
+  dangerfile.js
   mudlet.desktop
   mudlet.png
   mudlet.svg
@@ -72,11 +75,12 @@ file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
   .devcontainer/**
   .vscode/**
   .claude/**
+  .agents/**
+  .signpath/**
   3rdparty/discord/rpc/lib/*
   CI/**
   docker/**
   docs/**
-  .clang-format
   src/.gitignore
   src/mudlet-lua/**
 )

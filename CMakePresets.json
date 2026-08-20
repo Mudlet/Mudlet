@@ -156,7 +156,7 @@
     },
     {
       "name": "freebsd-debug-asan",
-      "displayName": "Freebsd Debug, AddressSanitizer",
+      "displayName": "FreeBSD Debug, AddressSanitizer",
       "inherits": ["variant", "freebsd-debug"],
       "environment": {
         "USE_SANITIZERS": "YES",
@@ -165,7 +165,7 @@
     },
     {
       "name": "freebsd-debug-tsan",
-      "displayName": "Freebsd Debug, ThreadSanitizer",
+      "displayName": "FreeBSD Debug, ThreadSanitizer",
       "inherits": ["variant", "freebsd-debug"],
       "environment": {
         "USE_SANITIZERS": "YES",
@@ -174,7 +174,7 @@
     },
     {
       "name": "freebsd-debug-ubsan",
-      "displayName": "Freebsd Debug, UndefinedBehaviorSanitizer",
+      "displayName": "FreeBSD Debug, UndefinedBehaviorSanitizer",
       "inherits": ["variant", "freebsd-debug"],
       "environment": {
         "USE_SANITIZERS": "YES",
