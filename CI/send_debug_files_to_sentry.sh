@@ -162,14 +162,17 @@ if [[ "$OS" == "Linux" || "$OS" == "Darwin" ]]; then
             QT_PREFIX="$(qmake -query QT_INSTALL_PREFIX 2>/dev/null || true)"
         fi
         if [[ -n "$QT_PREFIX" ]]; then
-            declare -A seen_fw=()
+            # macOS ships bash 3.2, which has no associative arrays, so the
+            # already-walked frameworks are tracked in a delimited string. Safe
+            # because the sed below only ever yields bare "QtFoo" names.
+            seen_fw=" "
             pending=("$MUDLET_EXEC")
             while [[ ${#pending[@]} -gt 0 ]]; do
                 current="${pending[0]}"
                 pending=("${pending[@]:1}")
                 while read -r name; do
-                    [[ -z "$name" || -n "${seen_fw[$name]:-}" ]] && continue
-                    seen_fw[$name]=1
+                    [[ -z "$name" || "$seen_fw" == *" ${name} "* ]] && continue
+                    seen_fw="${seen_fw}${name} "
                     fw="${QT_PREFIX}/lib/${name}.framework/Versions/A/${name}"
                     [[ -f "$fw" ]] || continue
                     add_qt_file "$fw"
