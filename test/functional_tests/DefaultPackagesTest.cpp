@@ -32,6 +32,7 @@
 
 #include <QtTest/QtTest>
 
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QXmlStreamReader>
@@ -83,6 +84,14 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
+
+        // The half of the mpkg gate that lives outside the code under test: ctest hands
+        // this to every functional test, and test_testModeLeavesOutTheSelfUpdatingPackage
+        // below sets it by hand, so nothing else here would notice it going missing. It
+        // would go unnoticed for a long time too - the skip only changes an outcome while
+        // the repository is ahead of the bundled mpkg, so CI would stay green until the
+        // next upstream release and then break somewhere else entirely.
+        QVERIFY2(qEnvironmentVariableIsSet("MUDLET_TEST_MODE"), "MUDLET_TEST_MODE is not set - run through ctest, which sets it for every functional test (test/functional_tests/CMakeLists.txt)");
 
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
@@ -152,6 +161,36 @@ private slots:
         QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
+    }
+
+    // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in
+    // src/mudlet.cpp. Both directions are asserted, so removing the skip and leaving it
+    // permanently on both fail, and the players' half pins the resource path the skip
+    // matches on - rename it in the table alone and the first check goes red.
+    void test_testModeLeavesOutTheSelfUpdatingPackage()
+    {
+        const QString mpkg = qsl(":/packages/mpkg/mpkg.mpackage");
+        const QByteArray savedTestMode = qgetenv("MUDLET_TEST_MODE");
+        const auto restoreTestMode = qScopeGuard([&savedTestMode]() {
+            savedTestMode.isNull() ? qunsetenv("MUDLET_TEST_MODE") : qputenv("MUDLET_TEST_MODE", savedTestMode);
+        });
+
+        qunsetenv("MUDLET_TEST_MODE");
+        const QStringList forPlayers = preinstallsFor(qsl("example.com"));
+        QVERIFY2(forPlayers.contains(mpkg), "players are meant to get mpkg - only tests go without it");
+        QVERIFY2(QFile::exists(mpkg), "mpkg is queued for every profile but is not compiled in");
+
+        qputenv("MUDLET_TEST_MODE", "1");
+        const QStringList forTests = preinstallsFor(qsl("example.com"));
+
+        // The whole difference, not just mpkg's absence: a skip that caught more than it
+        // meant to would otherwise pass, and the packages it silently dropped are the
+        // ones the other tests in this file build their profiles from.
+        QStringList dropped = forPlayers;
+        for (const QString& package : forTests) {
+            dropped.removeOne(package);
+        }
+        QCOMPARE(dropped, QStringList{mpkg});
     }
 
     // The generic mapper is for games that have no mapper script of their own.

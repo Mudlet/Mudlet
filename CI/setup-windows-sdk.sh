@@ -19,7 +19,10 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
+# Version: 2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
+#                   extracted files with O_BINARY, so bsdunzip no longer
+#                   mangles line endings
+#          2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
 #                   hardlinks bsdunzip over "unzip" and it mangles line
 #                   endings when it unpacks a rock
 #          2.4.0    Add Python, needed by the fixture HTTP server the Lua
@@ -206,24 +209,6 @@ echo "- Use '--tree \"user\"' (literally) instead of '--local'"
 echo "- Adjust LUA_PATH and LUA_CPATH to find per-user modules"
 echo "- See 'luarocks path --help' for details"
 
-
-# mingw-w64-libarchive 3.8.9-2 hardlinks bsdunzip to "unzip" in ${MINGW_BASE_DIR}/bin,
-# which shadows Info-ZIP's /usr/bin/unzip on PATH. bsdunzip opens extracted files
-# without O_BINARY, so on Windows every "\n" it writes becomes "\r\n": CRLF sources
-# gain a blank line between every line (breaking "\" macro continuations) and archives
-# nested inside a .src.rock are corrupted outright. Pin luarocks to Info-ZIP instead.
-# luarocks is a native Windows binary, so it needs a Windows path here rather than
-# the MSYS one - cygpath -m keeps forward slashes so the value needs no Lua escaping.
-INFOZIP_UNZIP="$(/usr/bin/cygpath -m /usr/bin/unzip.exe 2>/dev/null)"
-if [ -x /usr/bin/unzip.exe ] && [ -n "${INFOZIP_UNZIP}" ] \
-   && [ "$(grep -c "variables.UNZIP" "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua")" -eq 0 ]; then
-  echo "  Pinning luarocks to Info-ZIP unzip (bsdunzip mangles line endings)..."
-  echo "    unzip on PATH: $(command -v unzip)"
-  echo "    pinning to:    ${INFOZIP_UNZIP}"
-  printf '\nvariables = variables or {}\nvariables.UNZIP = "%s"\n' "${INFOZIP_UNZIP}" \
-    >> "${MINGW_BASE_DIR}/etc/luarocks/config-5.1.lua"
-  echo ""
-fi
 
 ROCKCOMMAND="${MINGW_BASE_DIR}/bin/luarocks --lua-version 5.1"
 echo ""
