@@ -162,7 +162,18 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
             parameter.hasSeparator = true;
             parameter.key = query.mid(pos, eqPos - pos);
 
-            if (parameter.key == qsl("config") && valueStart < query.size() && decodedCharAt(query, valueStart).ch == '{') {
+            // JSON allows insignificant whitespace before the object, so the brace the scan
+            // needs may not be the first character of the value
+            int objectStart = valueStart;
+            while (objectStart < query.size()) {
+                const DecodedChar decoded = decodedCharAt(query, objectStart);
+                if (!decoded.ch.isSpace()) {
+                    break;
+                }
+                objectStart += decoded.width;
+            }
+
+            if (parameter.key == qsl("config") && objectStart < query.size() && decodedCharAt(query, objectStart).ch == '{') {
                 int depth = 0;
                 bool inString = false;
                 bool escaped = false;
@@ -171,7 +182,7 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
                 // next '&' rather than running to the end keeps one unterminated object from
                 // swallowing every parameter behind it and dropping them from the rebuilt URL
 
-                for (int i = valueStart; i < query.size();) {
+                for (int i = objectStart; i < query.size();) {
                     const DecodedChar decoded = decodedCharAt(query, i);
                     const QChar ch = decoded.ch;
                     i += decoded.width;
@@ -3942,7 +3953,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
             // this a second "config" carrying anything else - an empty value, or a word - would
             // overwrite a valid one earlier in the query and take its styling with it
             const QString value = QUrl::fromPercentEncoding(parameter.value.toUtf8());
-            if (value.startsWith('{')) {
+            if (value.trimmed().startsWith('{')) {
                 configJson = value;
             }
         } else if (parameter.key == qsl("preset")) {

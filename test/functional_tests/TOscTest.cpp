@@ -609,6 +609,16 @@ private slots:
     QTest::newRow("half-encoded config, no other param")
         << qsl("?config=%7B%22tooltip%22%3A%22A & B%22%7D")
         << qsl("https://example.com/") << qsl("A & B");
+    // JSON allows whitespace before the object, and the parser accepts it, so
+    // a value that opens with it is still a config - and since decodeOSC()
+    // strips a reserved parameter on its key alone, refusing it here would
+    // take the styling out of the link and the parameter off the URL both
+    QTest::newRow("config with a leading space")
+        << qsl("?config= {\"tooltip\":\"A & B\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with a percent-encoded leading space")
+        << qsl("?config=%20%7B%22tooltip%22%3A%22A & B%22%7D&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
   }
 
   void test_Osc8UnencodedAmpersandInConfigLeavesUrlIntact() {
