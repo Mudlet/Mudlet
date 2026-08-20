@@ -444,10 +444,16 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
+    # -j: every test runs in its own process and shares nothing with its neighbours -
+    # each gets its own $XDG_CONFIG_HOME (XdgRecipeConsistencyTest enforces that, after
+    # #9999 found 49 tests colliding on the developer's own profiles) and every stub
+    # server binds an ephemeral port. Measured on a 4-core tree under ASan: 603s serial
+    # against 156s at -j4, the same 124 results either way, and the test that came
+    # closest to its timeout still used under a third of it.
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(nproc)
       env:
         QT_QPA_PLATFORM: offscreen
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
@@ -459,12 +465,12 @@ jobs:
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
