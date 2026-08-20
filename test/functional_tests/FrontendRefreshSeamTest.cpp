@@ -17,21 +17,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// Two engine-to-frontend wires that the libmudlet split (#9011) can sever with
-// nothing going red today. What has to fail is the *consumer* running: a
-// QSignalSpy on the emitter still records the emission after the production
-// connect() has been deleted, so it can only catch "stopped emitting".
+// Two engine-to-frontend wires the library split can sever. What has to fail is
+// the *consumer* running: a QSignalSpy on the emitter still records the
+// emission after the production connect() has been deleted, so it can only ever
+// catch "stopped emitting".
 //
 //  - cTelnet::signal_connecting / signal_connected / signal_disconnected reach
 //    mudlet::slot_telnetConnectionStateChanged, which is what refreshes the
 //    per-tab connection indicator as the socket moves. Cut them and a dropped
-//    profile goes on showing a connected tab.
-//  - THyperlinkVisibilityManager::visibilityChanged reaches the lambda in the
-//    TConsole constructor, which forces both text panes to redraw. Cut it and
-//    text the model has just concealed can stay on screen out of the panes'
-//    cached pixmap. Only what is drawn is at stake: hit-testing reads
-//    TChar::linkIndex() straight from the buffer, so a stale pixmap cannot
-//    leave a dead link clickable.
+//    profile goes on showing a connected tab. Only the main window's tab bar is
+//    read here; the same slot's detached-window half is not gated.
+//  - THyperlinkVisibilityManager::visibilityChanged reaches the lambda the
+//    TConsole constructor wires for main consoles only, which forces both text
+//    panes to redraw. Cut it and text the model has just concealed can stay on
+//    screen out of the panes' cached pixmap. Only what is drawn is at stake:
+//    hit-testing reads TChar::linkIndex() out of the buffer, so a stale pixmap
+//    cannot leave a dead link clickable.
 //
 // Both are read through a second observer attached to the same signal after the
 // production connect. Qt delivers to receivers in connection order, so what the
@@ -80,11 +81,17 @@ public:
     quint16 serverPort() const { return mServer.serverPort(); }
 
     // The way a player really ends up disconnected: the game hangs up on them.
-    void dropClient()
+    // Answers whether there was anything to hang up on: the client's own
+    // signal_connected can beat this side's newConnection into the dispatcher,
+    // and a silent no-op here would surface as the profile "never noticing the
+    // drop" - a severed-wire message for a harness problem.
+    bool dropClient()
     {
-        if (mpClient) {
-            mpClient->disconnectFromHost();
+        if (!mpClient) {
+            return false;
         }
+        mpClient->disconnectFromHost();
+        return true;
     }
 
 private slots:
@@ -125,6 +132,10 @@ private:
 private slots:
     void initTestCase()
     {
+        // Saved before the skip below, because cleanupTestCase() still runs
+        // after a skipped initTestCase() and would otherwise clear a variable
+        // this test never set.
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -137,7 +148,6 @@ private slots:
         // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
-        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
     }
 
@@ -150,7 +160,14 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        // QtTest does not run cleanup() when init() fails, so a bare QCOMPARE
+        // here would strand the singleton - and this test is leak-checked.
+        if (mudlet::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
+            delete mudlet::self();
+            delete mpServer;
+            mpServer = nullptr;
+            QFAIL("the config root was not redirected, so this would run against the developer's own profile list");
+        }
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -173,8 +190,9 @@ private slots:
         }
     }
 
-    // G9: three crossings, one consumer. Nothing else moves the indicator while
-    // this runs, so what it reads at each emit is what the tab would show.
+    // Four transitions across the three connection signals, all reaching one
+    // consumer. Each reading is taken inside the emission that caused it, which
+    // is what keeps the eight other refresh paths from repairing it first.
     void test_theTabIndicatorFollowsEveryConnectionStateChange()
     {
         Host* host = startProfile();
@@ -186,21 +204,23 @@ private slots:
         QVERIFY2(tabBar->tabIndex(mHostname) >= 0, "the profile got no tab of its own, so there is no indicator to assert on");
 
         // addConsoleForNewHost() arms a 3s single-shot refresh of every
-        // indicator from the live socket state. Left pending it would repair
-        // the stale reading a severed wire leaves behind, so it is waited out
-        // rather than raced. Nothing re-arms it on the path below.
+        // indicator from the live socket state. Left pending it would land
+        // between two of the emissions below and make a later reading
+        // coincidentally right, so it is waited out rather than raced. Only
+        // mudlet::slot_reconnect() re-arms it, and the drive below goes through
+        // cTelnet directly.
         QTest::qWait(3200ms);
         QVERIFY2(tabBar->tabConnectionIndicator(mHostname) == TabConnectionIndicator::Connected,
                  qPrintable(qsl("the connected profile's tab reads %1, so the transitions below would start from the wrong state").arg(describe(tabBar->tabConnectionIndicator(mHostname)))));
 
         QList<IndicatorReading> seen;
-        // Destroyed at the end of this function, which drops the connections
-        // below with it - including on an early return from a failed QVERIFY,
-        // where a lambda left holding a reference to 'seen' would outlive it.
-        QObject observerContext;
         const auto record = [this, &seen, tabBar](const QString& name) {
             seen.append(IndicatorReading{name, tabBar->tabConnectionIndicator(mHostname)});
         };
+        // Declared after everything the lambdas below capture, so it is the
+        // first of them destroyed and the connections are gone before their
+        // referents are - including on an early return from a failed QVERIFY.
+        QObject observerContext;
         // Attached after the production connects made in addConsoleForNewHost(),
         // so each of these runs with slot_telnetConnectionStateChanged() having
         // already had its turn at the same emission.
@@ -221,7 +241,7 @@ private slots:
         QVERIFY2(waitForReading(seen, qsl("connecting"), 1), "the profile never started connecting again");
         QVERIFY2(waitForReading(seen, qsl("connected"), 1), "the profile never reconnected to the stub");
 
-        mpServer->dropClient();
+        QVERIFY2(mpServer->dropClient(), "the stub had no client to hang up on, so the drop below was never made");
         QVERIFY2(waitForReading(seen, qsl("disconnected"), 2), "the profile never noticed the game dropping the connection");
 
         assertReading(seen, qsl("disconnected"), 1, TabConnectionIndicator::Disconnected);
@@ -230,16 +250,14 @@ private slots:
         assertReading(seen, qsl("disconnected"), 2, TabConnectionIndicator::Disconnected);
     }
 
-    // G6: the repaint half of the OSC 8 visibility seam. TBufferOSC_spec.lua's
-    // "reveals a link that was written concealed once its delay is up" drives
-    // the same reveal, but reads back only the line text, which performReveal()
-    // restores before it emits - so the whole spec suite stays green with this
-    // wire cut.
+    // The repaint half of the OSC 8 visibility seam. TBufferOSC_spec.lua drives
+    // the same delayed reveal but reads back only the line text, which
+    // performReveal() restores before it emits, so the whole spec suite stays
+    // green with this wire cut.
     void test_aHyperlinkVisibilityChangeForcesBothPanesToRedraw()
     {
         Host* host = startProfile();
         QVERIFY(host);
-        host->mEchoLuaErrors = true;
         host->mEnableOSC8Hyperlinks = true;
 
         TMainConsole* console = host->mpConsole;
@@ -248,8 +266,10 @@ private slots:
         QVERIFY(console->mLowerPane);
 
         // Of the three visibility actions, a delayed reveal is the only one that
-        // completes without a click. The delay is long enough that the flags are
-        // cleared and checked well before the manager's 100ms poll acts on it.
+        // completes without a click. The delay runs from the moment the link is
+        // registered inside feedTriggers(), and the observer below goes on a
+        // few statements later, so three seconds is budget for a loaded
+        // sanitiser runner rather than a figure the reveal needs.
         //
         // Real escape bytes inside a Lua long-bracket string, rather than Lua's
         // own "\027" escapes inside a C++ raw string literal: moc stops parsing
@@ -257,7 +277,7 @@ private slots:
         // meta-object for whatever follows, which links as an undefined vtable.
         const QString esc = QString(QChar(0x1B));
         const QString stringTerminator = esc + QLatin1Char('\\');
-        const QString link = qsl("%1]8;;send:osc8seam?config={\"visibility\":{\"action\":\"reveal\",\"delay\":1200}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
+        const QString link = qsl("%1]8;;send:osc8seam?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
         const QString feed = qsl("feedTriggers([==[OSCSEAM1(%1)OSCSEAM1\n]==])").arg(link);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(feed), "feedTriggers() did not run, so no hyperlink was ever registered");
 
@@ -276,16 +296,21 @@ private slots:
         // performReveal() calls update() on both panes itself, so counting
         // paints cannot tell the wire apart from its absence. forceUpdate()
         // additionally sets mForceUpdate, which is what stops the next paint
-        // reusing the cached screen pixmap, and the visibilityChanged lambda is
-        // the only thing that sets it on this path.
+        // short-cutting to the cached screen pixmap instead of re-rendering the
+        // rows. TTextEdit::needUpdate() sets the same flag for any printed
+        // line, though, so the wait below fails the moment either flag turns
+        // true ahead of the reveal: with something else forcing the redraw
+        // these readings would hold with the wire cut.
         console->mUpperPane->mForceUpdate = false;
         console->mLowerPane->mForceUpdate = false;
-        QTest::qWait(150ms);
-        QVERIFY2(!console->mUpperPane->mForceUpdate && !console->mLowerPane->mForceUpdate, "something else is forcing redraws, so the readings below would hold without the wire");
 
         bool observed = false;
         bool upperForced = false;
         bool lowerForced = false;
+        const auto forcedAlready = [console]() {
+            return console->mUpperPane->mForceUpdate || console->mLowerPane->mForceUpdate;
+        };
+        bool forcedBeforeReveal = false;
         QObject observerContext;
         connect(&console->getHyperlinkVisibilityManager(), &THyperlinkVisibilityManager::visibilityChanged, &observerContext, [&]() {
             observed = true;
@@ -293,12 +318,16 @@ private slots:
             lowerForced = console->mLowerPane->mForceUpdate;
         });
 
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             return observed;
-                         },
-                         8000),
-                 "the hyperlink never changed visibility, so nothing here was exercised");
+        const bool settled = QTest::qWaitFor(
+                [&]() {
+                    if (!observed && forcedAlready()) {
+                        forcedBeforeReveal = true;
+                    }
+                    return observed || forcedBeforeReveal;
+                },
+                12000);
+        QVERIFY2(!forcedBeforeReveal, "a redraw was forced before the hyperlink was revealed, so the readings below would not be the wire's doing");
+        QVERIFY2(settled, "the hyperlink never changed visibility, so nothing here was exercised");
         QCOMPARE(console->buffer.lineBuffer.at(lineNumber), qsl("OSCSEAM1(HIDDENWORD)OSCSEAM1"));
         QVERIFY2(upperForced, "the upper pane was not forced to redraw for a hyperlink that had just been revealed");
         QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a hyperlink that had just been revealed");
@@ -366,8 +395,10 @@ private:
         return -1;
     }
 
-    // Answers rather than asserting: a QVERIFY here would only return from this
-    // helper, leaving the test slot to run on and bury the real failure.
+    // Answers rather than asserting. assertReading() above wants a QVERIFY2 that
+    // returns only from the helper, so one run reports every broken wire; here
+    // the opposite is needed, because everything after this call dereferences
+    // the host.
     Host* startProfile()
     {
         Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
