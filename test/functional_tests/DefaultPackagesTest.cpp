@@ -32,6 +32,7 @@
 
 #include <QtTest/QtTest>
 
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QXmlStreamReader>
@@ -152,6 +153,28 @@ private slots:
         QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
+    }
+
+    // mpkg downloads the package listing as it loads and, when the repository has
+    // moved ahead of the bundled copy, uninstalls and reinstalls itself seconds later.
+    // Both ends of that call doCleanReset() on the editor, so a test holding a tree
+    // item finds it freed, and both echo to the main console, so a test reading the
+    // console finds "[ MPKG ]" in it. Every test in this suite runs with
+    // MUDLET_TEST_MODE set, which is why the package has to stay out of their profiles.
+    void test_testModeLeavesOutTheSelfUpdatingPackage()
+    {
+        const QString mpkg = qsl(":/packages/mpkg/mpkg.mpackage");
+        const QByteArray savedTestMode = qgetenv("MUDLET_TEST_MODE");
+        const auto restoreTestMode = qScopeGuard([&savedTestMode]() {
+            savedTestMode.isNull() ? qunsetenv("MUDLET_TEST_MODE") : qputenv("MUDLET_TEST_MODE", savedTestMode);
+        });
+
+        qunsetenv("MUDLET_TEST_MODE");
+        QVERIFY2(preinstallsFor(qsl("example.com")).contains(mpkg), "players are meant to get mpkg - only tests go without it");
+
+        qputenv("MUDLET_TEST_MODE", "1");
+        QVERIFY2(!preinstallsFor(qsl("example.com")).contains(mpkg), "mpkg reached a test profile, where it will upgrade itself mid-run");
+        QVERIFY2(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/echo/echo.mpackage")), "test mode dropped more than just mpkg");
     }
 
     // The generic mapper is for games that have no mapper script of their own.

@@ -7526,9 +7526,21 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
             // clang-format on
     };
 
+    // mpkg fetches the package listing over the network as it loads and, whenever the
+    // repository carries a newer mpkg than the bundled one, uninstalls and reinstalls
+    // itself a couple of seconds later. Both of those run doCleanReset() on the editor,
+    // which clears the tree widgets and frees every item a test is holding, and both
+    // announce themselves in the main console. Whether that lands mid-test comes down to
+    // how fast the download is, so tests go without it rather than race an upstream
+    // release. Nothing else preinstalled here reaches out on its own.
+    const bool skipSelfUpdatingPackages = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+
     QHashIterator<QString, QStringList> i(defaultScripts);
     while (i.hasNext()) {
         i.next();
+        if (skipSelfUpdatingPackages && i.key() == qsl(":/packages/mpkg/mpkg.mpackage")) {
+            continue;
+        }
         if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
             mudlet::self()->mPackagesToInstallList.append(i.key());
         }

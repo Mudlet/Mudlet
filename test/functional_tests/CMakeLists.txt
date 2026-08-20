@@ -182,7 +182,7 @@ if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
     set_tests_properties(PipelineBenchmark PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;ASAN_OPTIONS=detect_leaks=0"
         LABELS "functional"
         TIMEOUT 600)
 endif()
@@ -266,8 +266,13 @@ foreach(test_name ${allFunctionalTestNames})
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
     endif()
+    # MUDLET_TEST_MODE is what the code already keys "don't touch the real machine" off:
+    # no update check against dblsqd, no keychain access, Qt's mock speech engine rather
+    # than the developer's own, and no mpkg to fetch the package listing and upgrade
+    # itself mid-test. Set here rather than in the workflows so a local ctest run behaves
+    # as CI does. The few tests that need it either way set or unset it themselves.
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
