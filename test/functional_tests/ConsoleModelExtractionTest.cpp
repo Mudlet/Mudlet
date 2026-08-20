@@ -17,11 +17,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <chrono>
 #include <memory>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TConsoleModel.h"
@@ -64,13 +66,35 @@ class ConsoleModelExtractionTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-ConsoleModelExtraction";
     const QString mLocalhost = "localhost";
     QString mPort;
 
 private slots:
-    void initTestCase() { initializeQRCResourcesForConsoleModelExtraction(); }
+    void initTestCase()
+    {
+        initializeQRCResourcesForConsoleModelExtraction();
+
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
