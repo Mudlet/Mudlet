@@ -1010,6 +1010,7 @@ void TDetachedWindow::createToolBar()
 
 
     mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     // Map and other tools
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);

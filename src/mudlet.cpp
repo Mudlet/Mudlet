@@ -4583,6 +4583,14 @@ void mudlet::slot_mudletDiscord()
 
 void mudlet::updateDiscordNamedIcon()
 {
+    // Each detached window owns its own copy of these actions and shows its own
+    // profile's game, so refreshing the main window's pair is not enough
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->updateDiscordNamedIcon();
+        }
+    }
+
     Host* pHost = getActiveHost();
 
     if (!pHost) {

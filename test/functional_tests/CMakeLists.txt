@@ -37,6 +37,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     GlyphOverflowTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
+    DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
