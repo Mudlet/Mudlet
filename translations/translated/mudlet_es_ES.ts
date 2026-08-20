@@ -17037,37 +17037,38 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1510"/>
       <source>&lt;p&gt;Enter the characters you&apos;d like double-clicking to stop selecting text on here. If you don&apos;t enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on &apos; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Introduce aquí los caracteres donde quieres que se detenga la selección de texto al hacer doble clic. Si no introduces ninguno, al hacer doble clic en una palabra la selección solo se detendrá ante un espacio, e incluirá caracteres como comillas dobles o simples. Por ejemplo, al hacer doble clic en la palabra &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt; en el siguiente ejemplo, se seleccionará &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;¡Hola!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Dices: &lt;span style=&quot; font-weight:600;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;¡Hola!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Si configuras los caracteres en el campo correspondiente&lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;  significará que la selección debe detenerse&apos;&lt;span style=&quot; font-style:italic;&quot;&gt;o&lt;/span&gt;&amp;quot;&lt;span style=&quot; font-style:italic;&quot;&gt;o&lt;/span&gt;!,entonces al hacer doble clic en &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt; solo se seleccionará &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Dices: &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hola&lt;/span&gt;!&amp;quot;&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1519"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation type="unfinished"/>
+      <translation>Caracteres a ignorar en la selección (por ejemplo, &apos; o &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1535"/>
       <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Algunos juegos (especialmente todos los MUDs IRE) sufren un error por el cual no comunican correctamente al cliente dónde debe ir un salto de línea. Activa esto para evitar que el texto se añada a la línea del indicador (prompt) anterior.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1746"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Al mostrar el contenido de Lua en el área principal del editor de texto, muestra las tabulaciones y los espacios con marcas visibles en lugar de espacios en blanco.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1759"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Al mostrar el contenido de Lua en el área principal del editor de texto, muestra los finales de línea y de párrafo con marcas visibles, además de los espacios en blanco.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1565"/>
       <source>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Muestra los errores de Lua en la consola principal además de en la pestaña de errores del editor.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1548"/>
       <source>Enable text analyzer</source>
-      <translation type="unfinished"/>
+      <translation>Habilitar el analizador de texto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2498"/>
@@ -17077,73 +17078,73 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2723"/>
       <source>Use large area exit arrows in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Usar las flechas de salida del área grande en la vista 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3068"/>
       <source>Map info background:</source>
-      <translation type="unfinished"/>
+      <translation>Fondo de información del mapa:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4366"/>
       <source>Allow secure connection reminder</source>
-      <translation type="unfinished"/>
+      <translation>Permitir recordatorio de conexión segura</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4360"/>
       <source>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Para fomentar una mayor protección y privacidad en la transferencia de datos, se le preguntará si quieres cambiar a un puerto cifrado cuando se anuncie a través del Protocolo de Estado del Servidor Mud (MSSP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2531"/>
       <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selecciona los perfiles a los que quieres copiar el mapa, luego presiona el botón Copiar a la derecha.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2547"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Copiar el mapa en los perfiles seleccionados a la izquierda.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2582"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Cambia esto a una versión anterior si necesita guardar su mapa en un formato que puedan leer las versiones más antiguas de Mudlet. Al hacer esto, perderá los datos adicionales disponibles en el formato de mapa actual.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2624"/>
       <location filename="../src/ui/profile_preferences.ui" line="2640"/>
       <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;En los juegos que ofrecen mapas para descargar, puede presionar este botón para obtener el mapa más reciente. Tenga en cuenta que esto &lt;span style=&quot; font-weight:600;&quot;&gt;sobrescribirá&lt;/span&gt; cualquier cambio que hayasrealizado en tu mapa y utilizará únicamente el mapa nuevo.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2733"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El área predeterminada (ID de área -1) es utilizada por algunos scripts de mapas como una &apos;zona de espera&apos;" temporal para las salas antes de colocarlas en el área correcta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2707"/>
       <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esto habilita los bordes alrededor de la sala. El color se puede configurar en la pestaña de colores del mapeador.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2691"/>
       <source>&lt;p&gt;If checked, scrolling up zooms out and scrolling down zooms in. If unchecked, scrolling up zooms in and scrolling down zooms out.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Si está marcado, desplazarse hacia arriba aleja la imagen y desplazarse hacia abajo la acerca. Si está desmarcado, desplazarse hacia arriba la acerca y desplazarse hacia abajo la aleja.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2943"/>
       <source>Symbols</source>
-      <translation type="unfinished"/>
+      <translation>Símbolos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2697"/>
       <source>Invert zoom direction</source>
-      <translation type="unfinished"/>
+      <translation>Invertir la dirección del zoom</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3502"/>
       <source>Player room marker</source>
-      <translation type="unfinished"/>
+      <translation>Marcador de sala del jugador</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2782"/>
