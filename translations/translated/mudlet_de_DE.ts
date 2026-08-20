@@ -175,7 +175,7 @@
     <message>
       <location filename="../src/Host.cpp" line="1078"/>
       <source>the profile is no longer available</source>
-      <translation type="unfinished"/>
+      <translation>Profil ist nicht mehr verfügbar</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1291"/>
@@ -192,7 +192,7 @@
     <message>
       <location filename="../src/Host.cpp" line="2125"/>
       <source>[ ERROR ] - Package install failed for &quot;%1&quot;: %2</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Paketinstallation fehlgeschlagen für &quot;%1&quot;: %2</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2194"/>
@@ -226,7 +226,7 @@ Bitte warten...</translation>
       <location filename="../src/Host.cpp" line="2309"/>
       <location filename="../src/Host.cpp" line="2361"/>
       <source>[ WARN ]  - Failed to load module &quot;%1&quot;: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Fehler beim Laden des Modus &quot;%1&quot;: %2</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3121"/>
