@@ -428,12 +428,6 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
-    # -j: every test runs in its own process and shares nothing with its neighbours -
-    # each gets its own $XDG_CONFIG_HOME (XdgRecipeConsistencyTest enforces that, after
-    # #9999 found 49 tests colliding on the developer's own profiles) and every stub
-    # server binds an ephemeral port. Measured on a 4-core tree under ASan: 603s serial
-    # against 156s at -j4, the same 124 results either way, and the test that came
-    # closest to its timeout still used under a third of it.
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
