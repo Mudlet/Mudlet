@@ -18133,7 +18133,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2484"/>
       <source>◀ load this map</source>
-      <translation type="unfinished"/>
+      <translation>◀ cargar este mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2511"/>
@@ -18145,123 +18145,123 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/profile_preferences.ui" line="2537"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>elige destinos...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2630"/>
       <source>Download latest map provided by your game:</source>
-      <translation type="unfinished"/>
+      <translation>Descarga el mapa más reciente proporcionado por tu juego:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2662"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Esto activa el suavizado de los bordes (AA) para la vista del mapa en 2D, haciendo que se vea más suave y agradable. Desactívalo si utilizas un ordenador muy lento.&lt;/p&gt;&lt;p&gt;La vista del mapa en 3D siempre tiene activado el suavizado de los bordes.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2675"/>
       <source>&lt;p&gt;When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Cuando esta opción está activada, las salas de las plantas situadas por encima y por debajo del nivel actual se dibujan con un color más claro para mostrar el contexto de la distribución del mapa.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2440"/>
       <source>When checked, show the full map sanity-check and repair report on screen. Otherwise Mudlet hides most messages and points you at the report file instead, which is helpful for large maps.</source>
-      <translation type="unfinished"/>
+      <translation>Si se marca esta opción, se mostrará en pantalla el informe completo de la verificación y reparación del mapa. De lo contrario, Mudlet ocultará la mayoría de los mensajes y te remitirá al archivo del informe, lo cual resulta útil para mapas grandes.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2534"/>
       <source>Select profiles that you want to copy map to, then press the Copy button to the right.</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona los perfiles a los que quieres copiar la asignación y, a continuación, pulse el botón Copiar situado a la derecha.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2550"/>
       <source>Copy map into the selected profiles on the left.</source>
-      <translation type="unfinished"/>
+      <translation>Copia el mapa en los perfiles seleccionados de la izquierda.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2585"/>
       <source>Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.</source>
-      <translation type="unfinished"/>
+      <translation>Cambia a una versión anterior si necesitas guardar tu mapa en un formato compatible con versiones antiguas de Mudlet. Al hacerlo, se perderán los datos adicionales disponibles en el formato de mapa actual.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2627"/>
       <location filename="../src/ui/profile_preferences.ui" line="2643"/>
       <source>On games that provide maps for download, you can press this button to get the latest map. Note that this will overwrite any changes you&apos;ve done to your map, and will use the new map only.</source>
-      <translation type="unfinished"/>
+      <translation>En los juegos que ofrecen mapas para descargar, puedes pulsar este botón para obtener la versión más reciente del mapa. Ten en cuenta que esto sobrescribirá cualquier cambio que hayas realizado en tu mapa y utilizará únicamente el nuevo mapa.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2678"/>
       <source>When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context.</source>
-      <translation type="unfinished"/>
+      <translation>Cuando esta opción está activada, las salas de las plantas situadas por encima y por debajo del nivel actual se dibujan con un color más claro para mostrar el contexto de la distribución del mapa.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2681"/>
       <source>Draw rooms on upper and lower levels</source>
-      <translation type="unfinished"/>
+      <translation>Dibuja las salas en los niveles superior e inferior.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2694"/>
       <source>If checked, scrolling up zooms out and scrolling down zooms in. If unchecked, scrolling up zooms in and scrolling down zooms out.</source>
-      <translation type="unfinished"/>
+      <translation>Si está marcado, desplazar hacia arriba aleja la imagen y desplazar hacia abajo la acerca. Si no está marcado, desplazar hacia arriba acerca la imagen y desplazar hacia abajo la aleja.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2736"/>
       <source>The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.</source>
-      <translation type="unfinished"/>
+      <translation>Algunos scripts de mapeo utilizan el área predeterminada (con ID -1) como una &apos;zona de espera&apos; temporal para las salas antes de que sean ubicadas en el área correcta.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2710"/>
       <source>This enables borders around room. Color can be set in Mapper colors tab.</source>
-      <translation type="unfinished"/>
+      <translation>Esto permite habilitar los bordes alrededor de la sala. El color se puede configurar en la pestaña de colores del Mapper.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2665"/>
       <source>This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer. 3D map view always has anti-aliasing enabled.</source>
-      <translation type="unfinished"/>
+      <translation>Esto activa el suavizado de los bordes (AA) para la vista de mapa en 2D, haciendo que se vea más suave y agradable. Desactívalo si utilizas un ordenador muy lento. La vista de mapa en 3D siempre tiene el suavizado de los bordes activado.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3508"/>
       <source>2D map player room marker style:</source>
-      <translation type="unfinished"/>
+      <translation>Estilo del marcador de la sala del jugador en mapas 2D:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3521"/>
       <source>Outer ring color</source>
-      <translation type="unfinished"/>
+      <translation>Color del anillo exterior:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3531"/>
       <source>Inner ring color</source>
-      <translation type="unfinished"/>
+      <translation>Color del anillo interior</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3545"/>
       <source>Original</source>
-      <translation type="unfinished"/>
+      <translation>Original</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3550"/>
       <source>Red ring</source>
-      <translation type="unfinished"/>
+      <translation>Anillo rojo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3555"/>
       <source>Blue/Yellow ring</source>
-      <translation type="unfinished"/>
+      <translation>Anillo azul/amarillo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3560"/>
       <source>Custom ring</source>
-      <translation type="unfinished"/>
+      <translation>Anillo personalizado</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3568"/>
       <source>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Relación porcentual (&lt;i&gt;el valor predeterminado es 120%&lt;/i&gt;) entre el símbolo del marcador y el espacio disponible para la sala.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3571"/>
       <source>Percentage ratio (the default is 120%) of the marker symbol to the space available for the room.</source>
-      <translation type="unfinished"/>
+      <translation>Relación porcentual (el valor predeterminado es 120 %) entre el símbolo del marcador y el espacio disponible para la sala.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3577"/>
@@ -18272,32 +18272,32 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3580"/>
       <source>Outer diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Diámetro exterior: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3599"/>
       <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Relación porcentual entre el diámetro interior y el diámetro exterior del símbolo del marcador (&lt;i&gt;el valor predeterminado es 70 %&lt;/i&gt;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3602"/>
       <source>Percentage ratio of the inner diameter of the marker symbol to the outer one (the default is 70%).</source>
-      <translation type="unfinished"/>
+      <translation>Relación porcentual entre el diámetro interior y el diámetro exterior del símbolo del marcador (el valor predeterminado es 70).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3611"/>
       <source>Inner diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Diámetro interior: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2713"/>
       <source>Show room borders</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar los bordes de la sala</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3048"/>
       <source>Room border color:</source>
-      <translation type="unfinished"/>
+      <translation>Color del borde de la sala:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3641"/>
@@ -18307,67 +18307,67 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4741"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>Se requieren opciones especiales para algunos controladores de juegos antiguos (es necesario reiniciar el cliente para que surtan efecto).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4940"/>
       <source>the computer&apos;s password manager (secure)</source>
-      <translation type="unfinished"/>
+      <translation>el gestor de contraseñas del ordenador (seguro)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4945"/>
       <source>plaintext with the profile (portable)</source>
-      <translation type="unfinished"/>
+      <translation>texto sin formato con el perfil (portable)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5036"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Si está marcado, todos los puntos de código Unicode problemáticos se reportarán en la salida de depuración a medida que ocurran; si está desmarcado, cada punto de código diferente se reportará solo una vez y se resumirá en una tabla cuando la consola en la que ocurrieron sea finalmente destruida (cuando se cierre el perfil).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4922"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
-      <translation type="unfinished"/>
+      <translation>Se espera un ID de espacio de color en SGR...(3|4)8;2;... códigos m</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4929"/>
       <source>Store character login passwords in:</source>
-      <translation type="unfinished"/>
+      <translation>Almacenar las contraseñas de inicio de sesión de los personajes en:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4027"/>
       <source>TLS/SSL secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Conexión segura TLS/SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4128"/>
       <source>Accept self-signed certificates</source>
-      <translation type="unfinished"/>
+      <translation>Aceptar certificados autofirmados</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4138"/>
       <source>Accept expired certificates</source>
-      <translation type="unfinished"/>
+      <translation>Aceptar certificados caducados</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4045"/>
       <source>Certificate</source>
-      <translation type="unfinished"/>
+      <translation>Certificado</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4105"/>
       <source>Serial:</source>
-      <translation type="unfinished"/>
+      <translation>Serie:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4054"/>
       <source>Issuer:</source>
-      <translation type="unfinished"/>
+      <translation>Emisor:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4071"/>
       <source>Issued to:</source>
-      <translation type="unfinished"/>
+      <translation>Emitido a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4088"/>
@@ -18377,88 +18377,88 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4148"/>
       <source>Accept all certificate errors       (unsecure)</source>
-      <translation type="unfinished"/>
+      <translation>Aceptar todos los errores de certificado       (no seguro)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2518"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>Copiar mapa a otro(s) perfil(es):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2608"/>
       <source>An action above happened</source>
-      <translation type="unfinished"/>
+      <translation>Se produjo una acción anterior</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2560"/>
       <source>Map format version:</source>
-      <translation type="unfinished"/>
+      <translation>Versión del formato del mapa:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2591"/>
       <location filename="../src/ui/profile_preferences.ui" line="2595"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {versión predeterminada}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2618"/>
       <source>Map download</source>
-      <translation>Descarga de mapa</translation>
+      <translation>Descarga del mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2646"/>
       <source>Download</source>
-      <translation type="unfinished"/>
+      <translation>Descargar</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2656"/>
       <source>Map view</source>
-      <translation type="unfinished"/>
+      <translation>Vista del mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2949"/>
       <source>2D Map Room Symbol Font</source>
-      <translation type="unfinished"/>
+      <translation>Fuente de símbolos para salas de mapas 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2668"/>
       <source>Use high quality graphics in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Utiliza gráficos de alta calidad en la vista 2D.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
       <source>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;¿Puedes ayudar a traducir Mudlet?&lt;/p&gt;&lt;p&gt;Si es así, por favor visita: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="694"/>
       <source>Text to separate commands or blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Texto para separar comandos, o vacío para desactivar.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="768"/>
       <source>User dictionary: </source>
-      <translation type="unfinished"/>
+      <translation>Diccionario de usuario:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2430"/>
       <source>choose location...</source>
-      <translation type="unfinished"/>
+      <translation>elegir ubicación...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2739"/>
       <source>Show the default area in map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar el área predeterminada en la selección del área del mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2966"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation type="unfinished"/>
+      <translation>Utilice únicamente símbolos (glifos) de la fuente seleccionada.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2959"/>
       <source>Show symbol usage...</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar el uso del símbolo...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2993"/>
@@ -18468,12 +18468,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2999"/>
       <source>Select your color preferences for the map display</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona tus preferencias de color para la visualización del mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3005"/>
       <source>Link color</source>
-      <translation type="unfinished"/>
+      <translation>Color del enlace</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3028"/>
@@ -18483,75 +18483,75 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3085"/>
       <source>Lower level color:</source>
-      <translation type="unfinished"/>
+      <translation>Color del nivel inferior:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3105"/>
       <source>Upper level color:</source>
-      <translation type="unfinished"/>
+      <translation>Color del nivel superior:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3125"/>
       <source>Overlapping rooms border:</source>
-      <translation type="unfinished"/>
+      <translation>Borde de salas superpuestas:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3647"/>
       <source>Discord Rich Presence</source>
-      <translation type="unfinished"/>
+      <translation>Discord Rich Presence</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3653"/>
       <source>Show full game details (if supported)</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar todos los detalles del juego (si es compatible)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3719"/>
       <source>Show Mudlet only</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar solo Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3778"/>
       <source>Disabled</source>
-      <translation type="unfinished"/>
+      <translation>Deshabilitado</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3686"/>
       <source>Discord username</source>
-      <translation type="unfinished"/>
+      <translation>Nombre de usuario de Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3729"/>
       <source>Large icon:</source>
-      <translation>Ícono Grande:</translation>
+      <translation>Icono grande:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3746"/>
       <location filename="../src/ui/profile_preferences.ui" line="3805"/>
       <source>Show all</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar todo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3751"/>
       <location filename="../src/ui/profile_preferences.ui" line="3810"/>
       <source>Hide tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Ocultar información emergente</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3756"/>
       <location filename="../src/ui/profile_preferences.ui" line="3815"/>
       <source>Hide tooltip and icon</source>
-      <translation type="unfinished"/>
+      <translation>Ocultar información emergente e icono</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3764"/>
       <source>Hide details text</source>
-      <translation type="unfinished"/>
+      <translation>Ocultar texto de detalles</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3771"/>
       <source>Hide state text</source>
-      <translation type="unfinished"/>
+      <translation>Ocultar texto de estado</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3788"/>
@@ -18561,17 +18561,18 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3823"/>
       <source>Hide party info</source>
-      <translation type="unfinished"/>
+      <translation>Ocultar información del grupo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4695"/>
       <source>Enable F3 search shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Habilitar los atajos de búsqueda F3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4702"/>
       <source>&lt;p&gt;When enabled, text with the blinking attribute (SGR codes 5 and 6) is displayed with a smooth pulsing effect. When disabled, blinking text is shown in italics instead.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Cuando está activado, el texto con el atributo de parpadeo (códigos SGR 5 y 6) se muestra con un efecto de pulsación suave. Cuando está desactivado, el texto parpadeante se muestra en cursiva en su lugar.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4735"/>
@@ -18581,22 +18582,22 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4747"/>
       <source>Force compression off</source>
-      <translation type="unfinished"/>
+      <translation>Forzar la desactivación de la compresión</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4768"/>
       <source>Force telnet GA signal interpretation off</source>
-      <translation type="unfinished"/>
+      <translation>Forzar la desactivación de la interpretación de señales GA de Telnet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4761"/>
       <source>Force new line on empty commands</source>
-      <translation type="unfinished"/>
+      <translation>Forzar una nueva línea en comandos vacíos</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3676"/>
       <source>Restrict to:</source>
-      <translation type="unfinished"/>
+      <translation>Restringir a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4882"/>
@@ -18767,7 +18768,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="91"/>
       <source>NW exit...</source>
-      <translation>Salida noroeste...</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="101"/>
@@ -18788,17 +18789,17 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="225"/>
       <source>N exit...</source>
-      <translation>Salida norte...</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="359"/>
       <source>NE exit...</source>
-      <translation>Salida noreste...</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="493"/>
       <source>Up exit...</source>
-      <translation>Salida arriba...</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="630"/>
