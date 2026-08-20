@@ -83,7 +83,14 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        cache: true
+        # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
+        # and a copy per runner image, module set and ref took over 40% of the
+        # repository's 10GB cache quota - more than every ccache put together.
+        # Fetching it afresh costs 25-35s a job. Leaving it cached cost far more
+        # than that, because a quota with no headroom has GitHub evicting by
+        # least-recently-used, and a dropped branch ccache is a 20 minute cold
+        # rebuild rather than a 30 second download.
+        cache: false
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Cache Lua build
@@ -383,8 +390,16 @@ jobs:
     # fine - the loser's save is refused and the next push heals it - but the
     # branch has no cache at all between this step and the save, so a run
     # cancelled in between leaves the next build cold.
+
+    # A PTB is a scheduled run of this workflow on development, so its key is
+    # the development key rather than one of its own. It restores at ~98.5% and
+    # then contributes 6-9 of ~550 objects back, none of which the next PTB can
+    # reuse - the differing ones are the app-build.txt resource. Not worth
+    # reopening the delete-to-save hole above on the branch key once a night.
     - name: Delete the previous ccache entry
-      if: always() && steps.restore-ccache.outputs.cache-primary-key != ''
+      if: >-
+        always() && steps.restore-ccache.outputs.cache-primary-key != ''
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -400,7 +415,7 @@ jobs:
         fi
 
     - name: Save ccache
-      if: always()
+      if: always() && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
@@ -447,7 +462,7 @@ jobs:
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(nproc)
       env:
         QT_QPA_PLATFORM: offscreen
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
@@ -459,12 +474,12 @@ jobs:
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')

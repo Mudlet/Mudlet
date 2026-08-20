@@ -53,7 +53,8 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw73
-        cache: true
+        # uncached for the same reason as the step below
+        cache: false
         modules: qt5compat qtmultimedia
 
     - name: (Linux/macOS) Install Qt
@@ -62,7 +63,14 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        cache: true
+        # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
+        # and a copy per runner image, module set and ref took over 40% of the
+        # repository's 10GB cache quota - more than every ccache put together.
+        # Fetching it afresh costs 25-35s a job. Leaving it cached cost far more
+        # than that, because a quota with no headroom has GitHub evicting by
+        # least-recently-used, and a dropped branch ccache is a 20 minute cold
+        # rebuild rather than a 30 second download.
+        cache: false
         modules: qt5compat qtmultimedia
 
     - name: Restore Boost cache
