@@ -118,11 +118,12 @@ jobs:
         LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
 
     - name: (Windows) Run Lua tests
-      # The suite alone can run past two minutes on a slow runner, as on the other platforms.
-      timeout-minutes: 3
+      # ~94s measured here, and a slow runner can take half again as long - kept in
+      # step with the other platforms
+      timeout-minutes: 6
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -192,10 +193,18 @@ jobs:
     # fine - the loser's save is refused and the next push heals it - but the
     # branch has no cache at all between this step and the save, so a run
     # cancelled in between leaves the next build cold.
+
+    # A PTB is a scheduled run of this workflow on development, so its key is
+    # the development key rather than one of its own. It restores at ~98.5% and
+    # then contributes 6-9 of ~550 objects back, none of which the next PTB can
+    # reuse - the differing ones are the app-build.txt resource. Not worth
+    # reopening the delete-to-save hole above on the branch key once a night.
     # Git bash rather than the msys2 shell the build steps use: gh ships with
     # the runner image and is on the native PATH.
     - name: Delete the previous ccache entry
-      if: always() && steps.restore-ccache.outputs.cache-primary-key != ''
+      if: >-
+        always() && steps.restore-ccache.outputs.cache-primary-key != ''
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -211,7 +220,7 @@ jobs:
         fi
 
     - name: Save ccache
-      if: always()
+      if: always() && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
@@ -444,7 +453,9 @@ jobs:
     - name: Upload artifact to make.mudlet.org
       shell: msys2 {0}
       if: env.ARTIFACT_NAME != '' && !startsWith(github.ref, 'refs/tags/')
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
+      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Upload release asset for GitHub Release
       uses: actions/upload-artifact@v7

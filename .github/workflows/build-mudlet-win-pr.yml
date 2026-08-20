@@ -1,7 +1,9 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
 # Changes here likely need to be mirrored there as well, apart from the ccache
 # handling: caches here are scoped to their own pull request ref and keyed per
-# commit, so there is never a key to delete before saving one.
+# commit, so there is never a key to delete before saving one. The generations
+# an earlier push left behind are retired by cleanup-caches.yml instead, which
+# runs in the base repository and so has a writable token even for a fork.
 name: 🔨 Build Mudlet - PR (windows)
 on:
   pull_request:
@@ -139,7 +141,7 @@ jobs:
         LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
       env:
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
         # demonstrate every media behaviour rather than skip any of them. Without a floor
@@ -148,8 +150,9 @@ jobs:
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (Windows) Run Lua tests
-      # The suite alone can run past two minutes on a slow runner, as on the other platforms.
-      timeout-minutes: 3
+      # ~94s measured here, and a slow runner can take half again as long - kept in
+      # step with the other platforms
+      timeout-minutes: 6
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -379,7 +382,9 @@ jobs:
     - name: Upload artifact to make.mudlet.org
       shell: msys2 {0}
       if: env.ARTIFACT_NAME
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
+      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Register PTB Release
       shell: msys2 {0}

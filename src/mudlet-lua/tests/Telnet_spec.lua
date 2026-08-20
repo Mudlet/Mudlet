@@ -144,3 +144,33 @@ describe("Tests telnet subnegotiation handling", function()
     assert.is_nil(displayed:find("SUBNEG_LEAK_MARKER", 1, true), "subnegotiation payload past the size cap leaked into the display instead of being dropped until IAC SE")
   end)
 end)
+
+describe("Tests addSupportedTelnetOption", function()
+  -- Only the argument contract is reachable. What the call changes is the
+  -- reply cTelnet writes back when the server offers that option - IAC DO
+  -- rather than IAC DONT - and the option bit that goes with it, which nothing
+  -- outside further negotiation and the editor's statistics report ever reads.
+  -- Bytes sent to the server are not observable from Lua, and the report is
+  -- reachable only from a button in the editor, so the acceptance itself
+  -- cannot be asserted here.
+
+  it("returns nothing for an option number it accepts", function()
+    -- 137 is an option Mudlet has no handler for, so registering it only adds
+    -- a map entry that no negotiation in this offline run will consult. Do not
+    -- reach for a round number here: 200 is ATCP and 201 is GMCP.
+    assert.is_nil(addSupportedTelnetOption(137))
+  end)
+
+  it("raises a Lua error when the option is missing or not a number", function()
+    assert.has_error(function() addSupportedTelnetOption() end)
+    assert.has_error(function() addSupportedTelnetOption("mssp") end)
+  end)
+
+  it("raises a Lua error for a number too large to be an option", function()
+    -- there is no range check on the option itself, so the refusal that does
+    -- exist is getVerifiedInt's, and it is the only one worth holding
+    local ok, err = pcall(function() addSupportedTelnetOption(2 ^ 40) end)
+    assert.is_false(ok)
+    assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
+  end)
+end)

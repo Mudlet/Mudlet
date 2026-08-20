@@ -1058,12 +1058,24 @@ describe("Trigger processing", function()
 
     end)
 
-    -- Prompt pipeline. Only the creation contracts are exercised here; a prompt
-    -- trigger *firing* is still untested, and the feedTelnet block above shows
-    -- how to inject the IAC GA that would need.
+    -- Prompt pipeline, driven through the real telnet parser: a prompt trigger
+    -- matches on the line carrying the prompt mark and on nothing else, and
+    -- that mark is set by the line terminator the telnet parser hands the
+    -- buffer - which is why the spec below fires one with the IAC GA the
+    -- feedTelnet block above injects rather than with feedTriggers().
     describe("prompt triggers and isPrompt", function()
 
+        -- Killed here rather than at the end of the spec that made it: a
+        -- prompt trigger has no pattern to be choosy about, so one left behind
+        -- by a failed assertion would fire on every prompt the rest of the
+        -- suite feeds.
+        local liveTriggerId
+
         after_each(function()
+            if liveTriggerId then
+                killTrigger(liveTriggerId)
+                liveTriggerId = nil
+            end
             disableTrigger("SpecPermPrompt")
             _G.TrigSpec = nil
         end)
@@ -1100,6 +1112,56 @@ describe("Trigger processing", function()
             assert.is_nil(id)
             assert.is_string(err)
             assert.is_truthy(err:find("greater than zero", 1, true), "got: " .. tostring(err))
+        end)
+
+        it("tempPromptTrigger fires on a line the server ended with IAC GA", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function()
+                _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+                -- read from inside the trigger, which is the only place the
+                -- cursor is on the line that matched
+                _G.TrigSpec.wasPrompt = isPrompt()
+            end)
+            assert.is_number(liveTriggerId)
+            assert.is_true(liveTriggerId > 0)
+
+            local ok, msg = feedTelnet("SpecPromptFires> <T_IAC><T_GA>")
+            local afterPrompt = _G.TrigSpec.fired
+            local wasPrompt = _G.TrigSpec.wasPrompt
+            -- the GA leaves the prompt line open, and the specs after this one
+            -- read the buffer
+            feedTelnet("\r\n")
+            -- an ordinary line carries no prompt mark, so it must leave the
+            -- count where the prompt put it
+            feedTelnet("SpecPromptOrdinaryLine\r\n")
+            local afterOrdinary = _G.TrigSpec.fired
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, afterPrompt, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(1, afterOrdinary, "the prompt trigger fired on a line that was not a prompt")
+            assert.is_true(wasPrompt, "isPrompt() was false on the line a prompt trigger matched")
+        end)
+
+        it("tempPromptTrigger stops firing once its expiration count is used up", function()
+            -- the second argument is the whole point of the expiring form, and
+            -- until a prompt could be fed there was no way to see it run out
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function() _G.TrigSpec.fired = _G.TrigSpec.fired + 1 end, 1)
+            assert.is_number(liveTriggerId)
+            assert.is_true(liveTriggerId > 0)
+
+            local ok, msg = feedTelnet("SpecPromptExpiresOne> <T_IAC><T_GA>")
+            local afterFirst = _G.TrigSpec.fired
+            feedTelnet("\r\n")
+            feedTelnet("SpecPromptExpiresTwo> <T_IAC><T_GA>")
+            local afterSecond = _G.TrigSpec.fired
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, afterFirst, "the expiring prompt trigger did not fire on the first prompt")
+            assert.are.equal(1, afterSecond, "the prompt trigger fired again after its one firing was used up")
         end)
 
     end)

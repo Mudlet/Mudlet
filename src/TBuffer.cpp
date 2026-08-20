@@ -27,6 +27,7 @@
 #include "LuaLiteral.h"
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
@@ -294,6 +295,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mServerWrapPendingLine(other.mServerWrapPendingLine)
 , mServerWrapPendingBuffer(other.mServerWrapPendingBuffer)
 , mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
+, mServerWrapPendingSegmentStart(other.mServerWrapPendingSegmentStart)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotEscCharset(other.mLocalGotEscCharset)
@@ -390,6 +392,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mServerWrapPendingLine = other.mServerWrapPendingLine;
         mServerWrapPendingBuffer = other.mServerWrapPendingBuffer;
         mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
+        mServerWrapPendingSegmentStart = other.mServerWrapPendingSegmentStart;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotEscCharset = other.mLocalGotEscCharset;
@@ -1611,24 +1614,29 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
             // A held segment was only wrapped if what follows continues it:
             // prose rather than art, not a list entry, indented by no more
             // than the single space some games move the break to instead of
-            // swallowing it, and opening with a word that would not have
-            // fitted on the line above. Anything else means the held line was
+            // swallowing it, not opening with the words the held segment
+            // opened with, and opening with a word that would not have fitted
+            // on the line above. Anything else means the held line was
             // complete after all:
             const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
-            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine) || pendingLineHadRoomForNextWord()) {
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine) || continuationRepeatsSegmentOpening() || pendingLineHadRoomForNextWord()) {
                 flushPendingServerWrapJoin();
             }
         }
         // Deliberately judged before the pending line is joined on: ending at
         // the game's wrap column is a property of the segment as the game
-        // sent it, not of the longer joined line.
-        const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment;
+        // sent it, not of the longer joined line. A segment that finished a
+        // sentence there is not held at all, see
+        // segmentEndsSettledSentence().
+        const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment && !segmentEndsSettledSentence(mMudLine);
         const qsizetype segmentLength = mMudLine.size();
+        const QString segmentStart = segmentLooksWrapped ? mMudLine.left(csmServerWrapSegmentStartChars) : QString();
         joinPendingServerWrapOntoCurrent();
         if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
             mServerWrapPendingLine.swap(mMudLine);
             mServerWrapPendingBuffer.swap(mMudBuffer);
             mServerWrapPendingSegmentLength = segmentLength;
+            mServerWrapPendingSegmentStart = segmentStart;
             startServerWrapFlushTimer();
             ++localBufferPosition;
             return true;
@@ -1713,7 +1721,7 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
         mPreTriggerPassLine = std::move(chars);
         mPreTriggerPassLineNumber = lineIndex;
-        mpHost->mpConsole->runTriggers(lineIndex);
+        mpHost->runTriggers(lineIndex);
         mPreTriggerPassLine = std::move(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
     }
@@ -1768,6 +1776,14 @@ bool TBuffer::endsAtServerWrapColumn() const
     return len <= width && len >= width - csmServerWrapSlack;
 }
 
+namespace {
+// What the end of a sentence looks like, closing quotes and brackets
+// included. The two checks below have to agree on it: one takes a wide
+// trailing gap after such a mark as a wrap the game kept the break space of,
+// the other refuses to hold a segment that ends on one:
+constexpr QStringView SENTENCE_FINALS = u".!?'\")";
+} // anonymous namespace
+
 // Word-wrapped prose breaks between words, so a wrapped segment ends in a
 // word (or a sentence mark that happened to fall on the wrap column) and
 // consists mostly of letters. ASCII art, dividers and table borders - which
@@ -1789,10 +1805,9 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
         return false;
     }
     static const QString allowedFinals = qsl(".,;:!?'\")");
-    static const QString sentenceFinals = qsl(".!?'\")");
     const QChar last = line.at(end - 1);
     const qsizetype trailingSpaces = line.size() - end;
-    if (trailingSpaces > 2 || (trailingSpaces == 2 && !sentenceFinals.contains(last))) {
+    if (trailingSpaces > 2 || (trailingSpaces == 2 && !SENTENCE_FINALS.contains(last))) {
         return false;
     }
     if (!last.isLetterOrNumber() && !allowedFinals.contains(last)) {
@@ -1810,6 +1825,28 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
         }
     }
     return nonSpace > 0 && letters * 10 >= nonSpace * 6;
+}
+
+// Where a game swallows the space it breaks at, a segment that finishes a
+// sentence right on the wrap column looks exactly like one the game ended
+// there itself - and games end lines on sentences all the time: a room
+// description, the exits line below it, the object line below that. Joining
+// those runs separate lines into one and breaks triggers anchored to their
+// starts. A kept break space is the one piece of evidence
+// that settles it, so only a sentence with nothing at all after it is
+// refused. What that costs is a genuine wrap landing exactly after a sentence
+// staying split, which reads as a break at a sentence boundary - far cheaper
+// than the joins it prevents; the closing quotes and brackets in the set take
+// a mid-sentence one landing on the column with them, at the same cost and in
+// the same direction. The hold decision is the only place this belongs:
+// continuations legitimately end sentences, so looksLikeWrappedProse() must
+// keep accepting them.
+bool TBuffer::segmentEndsSettledSentence(const QString& line)
+{
+    if (line.isEmpty()) {
+        return false;
+    }
+    return SENTENCE_FINALS.contains(line.back());
 }
 
 // A list entry reads exactly like wrapped prose: a sentence that can end
@@ -1879,6 +1916,36 @@ bool TBuffer::pendingLineHadRoomForNextWord() const
     // added for it when the game swallowed it:
     const qsizetype separator = std::max<qsizetype>(1, trailingSpaces + wordStart);
     return heldEnd + separator + (wordEnd - wordStart) + csmServerWrapFitTolerance <= mpHost->mUndoServerWrapWidth;
+}
+
+// Games that wrap a tell, say or channel message themselves put the whole
+// prefix back on every physical line of it ("Anne teilt Dir mit: ..."). Those
+// lines break mid-sentence at the wrap column and leave no room for the next
+// word, so every other check reads them as one wrapped paragraph and the join
+// buries the prefix in the middle of it. The repeated opening is what gives
+// them away. Two words of it, because prose starts line after line with the
+// same article or pronoun and one proves nothing.
+bool TBuffer::continuationRepeatsSegmentOpening() const
+{
+    const qsizetype comparable = std::min(mServerWrapPendingSegmentStart.size(), mMudLine.size());
+    qsizetype i = 0;
+    // A held segment can open with the space the game moved the break to
+    // rather than swallowing it, and that space begins no word:
+    while (i < comparable && mServerWrapPendingSegmentStart.at(i).isSpace()) {
+        ++i;
+    }
+    int repeatedWords = 0;
+    for (; i < comparable; ++i) {
+        if (mServerWrapPendingSegmentStart.at(i) != mMudLine.at(i)) {
+            break;
+        }
+        // A word is over at the first space after it, so a run of them counts
+        // once - two words shared, not one and a wide gap:
+        if (mServerWrapPendingSegmentStart.at(i).isSpace() && !mServerWrapPendingSegmentStart.at(i - 1).isSpace()) {
+            ++repeatedWords;
+        }
+    }
+    return repeatedWords >= csmServerWrapRepeatedWords;
 }
 
 void TBuffer::joinPendingServerWrapOntoCurrent()
@@ -4838,8 +4905,14 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
+        if (mpHost.isNull()) {
+            return; // Still don't display the trigger phrase itself
+        }
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        TBuffer& mainBuffer = mpHost->mpConsole->buffer;
+        // The examples always go to the main console. Ask the model for it
+        // rather than the view: the injection is pure buffer work, so it still
+        // works when the profile has no main console widget.
+        TBuffer& mainBuffer = mpHost->mainConsoleModel().buffer;
 
         if (now - mainBuffer.mLastOSC8DocsInjectionTime > 1000) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5150,7 +5223,13 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    if (mpHost.isNull()) {
+    // The log destination lives on the main console view, which the model this
+    // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
+    // log to once the view has gone. Test this buffer's own back-pointer:
+    // TConsole unbinds it as it starts to tear down, whereas Host::mpConsole
+    // only nulls itself in ~QObject(), i.e. once the widget it still points at
+    // is long since half-destroyed:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
         return;
     }
 
@@ -5200,19 +5279,34 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
 // logs the remaining output when logging gets stopped, without duplication checks
 void TBuffer::logRemainingOutput()
 {
-    mpHost->mpConsole->mLogStream << lastTextToLog;
-    mpHost->mpConsole->mLogStream.flush();
-
-    // Reset the deferred logging state so restarting logging cannot replay this
-    // pending line into the new session via log()'s deferred-flush path
+    // Reset the deferred logging state up front, before any bail-out: it is
+    // buffer state and needs no view, and leaving it behind would let a
+    // successor view replay this pending line and let the stale line indexes
+    // suppress a real flush in log()
+    const QString pendingText = lastTextToLog;
     lastTextToLog.clear();
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
+
+    // The log file is the view's; see TBuffer::log() on why this buffer's own
+    // back-pointer is the one to test:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
+    mpHost->mpConsole->mLogStream << pendingText;
+    mpHost->mpConsole->mLogStream.flush();
 }
 
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
+    // See TBuffer::log() on why this buffer's own back-pointer is the one to
+    // test for the view still being there:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
     TBuffer* pB = &mpHost->mpConsole->buffer;
     if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
         return;
@@ -5509,7 +5603,7 @@ void TBuffer::clear()
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
     // was still pending for logging is not lost from the log file
-    if (!mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+    if (!mpConsole.isNull() && !mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
         logRemainingOutput();
 
         // A line whose own trigger calls clearWindow() has been committed and
@@ -5649,8 +5743,10 @@ void TBuffer::shrinkBuffer()
         mCursorY--;
     }
     // We need to adjust the search result line as some lines have now gone
-    // away:
-    mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    // away - there is nothing to adjust when the model has no view attached:
+    if (mpConsole) {
+        mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    }
     mPreTriggerPassLineNumber = -1;
 
     // The removed leading lines shift every remaining index down; keep the
@@ -5671,12 +5767,26 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
-    if (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) {
+    // Everything below needs the Host, whether or not there is a view: on app
+    // quit the profile is destroyed while its widgets are still only queued for
+    // deletion, so a live view is no promise that mpHost survived with it.
+    if (mpHost.isNull()) {
+        return;
+    }
+
+    // Scripts keep their own line-index bookkeeping, so they have to be told
+    // the indexes shifted whether or not anyone is watching the text. The
+    // console's name and type still live on the view, but a buffer without one
+    // can only be the main console's model - every other model is owned by the
+    // view built on it - and that console is always named "main":
+    const bool namedConsole =
+            mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) : (this == &mpHost->mainConsoleModel().buffer);
+    if (namedConsole) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        bufferShrinkEvent.mArgumentList.append(mpConsole->mConsoleName);
+        bufferShrinkEvent.mArgumentList.append(mpConsole ? mpConsole->mConsoleName : qsl("main"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
