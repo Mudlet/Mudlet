@@ -2160,6 +2160,182 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  -- db:close leaves db.__schema in place, so every sheet, field and database
+  -- handle a script is holding outlives the connection. Each of these used to
+  -- die on "attempt to index local 'conn' (a nil value)" instead of saying what
+  -- was wrong. Which of them raises and which returns is deliberate - read the
+  -- comment on db_no_connection_message in DB.lua before making them uniform.
+  describe("Tests every call site against a closed database", function()
+    local dbName = "connguardtestingonly"
+    local sheet, field
+
+    before_each(function()
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      mydb = db:create(dbName, {
+        sheet = {name = "", city = "", kills = 0, _index = {"city"}, _unique = {"name"}}
+      })
+      db:add(mydb.sheet, {name = "Ada", city = "Boston", kills = 3})
+      sheet, field = mydb.sheet, mydb.sheet.kills
+      db:close(dbName)
+    end)
+
+    after_each(function()
+      os.remove(getMudletHomeDir() .. "/Database_" .. dbName .. ".db")
+      mydb, sheet, field = nil, nil, nil
+    end)
+
+    local function assert_names_the_database(msg)
+      assert.is_string(msg)
+      assert.is_true(string.find(msg, "closed", 1, true) ~= nil)
+      assert.is_true(string.find(msg, dbName, 1, true) ~= nil)
+    end
+
+    -- db:add is the only site that returns rather than raising, because it alone
+    -- already answers nil plus a printed message when its INSERT fails
+    it("db:add answers nil and says which database is closed", function()
+      local ok, msg = db:add(sheet, {name = "Bram"})
+      assert.is_nil(ok)
+      assert_names_the_database(msg)
+    end)
+
+    it("db:add prints the message as well as returning it", function()
+      local realPrintError, collected = printError, {}
+      _G.printError = function(msg) collected[#collected + 1] = msg end
+      finally(function() _G.printError = realPrintError end)
+
+      db:add(sheet, {name = "Bram"})
+      assert.are.equal(1, #collected)
+      assert_names_the_database(collected[1])
+    end)
+
+    -- these two return false plus a message, the contract #10068 gave _commit and
+    -- _rollback to match db:close
+    it("_begin answers false rather than silently setting the autocommit flag", function()
+      local ok, msg = mydb:_begin()
+      assert.is_false(ok)
+      assert_names_the_database(msg)
+      assert.is_true(db.__autocommit[dbName])
+    end)
+
+    it("_end answers false and says which database is closed", function()
+      local ok, msg = mydb:_end()
+      assert.is_false(ok)
+      assert_names_the_database(msg)
+    end)
+
+    -- everything else raises, which is what it did before these guards existed.
+    -- db:fetch_sql in particular must NOT answer nil - see the upsert spec below
+    local raising = {
+      {"db:fetch_sql", "fetch", function() db:fetch_sql(sheet, "SELECT * FROM sheet") end},
+      {"db:fetch", "fetch", function() db:fetch(sheet) end},
+      {"db:aggregate", "aggregate", function() db:aggregate(field, "sum") end},
+      {"db:delete", "delete", function() db:delete(sheet, db:eq(sheet.name, "Ada")) end},
+      {"db:update", "update", function() db:update(sheet, {_row_id = 1, kills = 9}) end},
+      {"db:set", "set", function() db:set(field, 5) end},
+      {"db:merge_unique", "merge", function() db:merge_unique(sheet, {{name = "Ada", kills = 1}}) end},
+      {"db:_migrate", "migrate", function() db:_migrate(dbName, "sheet", false) end},
+      {"db.Database:_drop", "drop", function() mydb:_drop("sheet") end},
+    }
+
+    for _, case in ipairs(raising) do
+      local label, action, call = case[1], case[2], case[3]
+      it(label .. " raises an error naming the closed database", function()
+        local ok, err = pcall(call)
+        assert.is_false(ok)
+        assert_names_the_database(err)
+        assert.is_true(string.find(err, action, 1, true) ~= nil)
+        assert.is_nil(string.find(err, "attempt to index", 1, true))
+      end)
+    end
+
+    -- db:get_database keeps handing out handles for a closed database, so the
+    -- guards have to hold for a sheet obtained after the close as well as before
+    it("holds for a sheet taken out after the close", function()
+      local later = db:get_database(dbName).sheet
+      local ok, msg = db:add(later, {name = "Bram"})
+      assert.is_nil(ok)
+      assert_names_the_database(msg)
+    end)
+
+    -- this is the whole reason db:fetch_sql raises instead of answering nil. It is
+    -- the shape db:merge_unique itself is written in, so it is the shape scripts
+    -- copy: a nil reads as "not there yet", and the insert branch runs forever
+    it("stops the fetch-then-add upsert instead of letting it take the insert branch", function()
+      local branch
+      local ok = pcall(function()
+        local results = db:fetch(sheet, db:eq(sheet.name, "Ada"))
+        if results and results[1] then
+          branch = "UPDATE"
+        else
+          branch = "INSERT"
+          db:add(sheet, {name = "Ada"})
+        end
+      end)
+
+      assert.is_false(ok)
+      assert.is_nil(branch)
+    end)
+
+    -- a table that is not a sheet has no _db_name, so it reaches the same missing
+    -- connection by a different route and must not be told the database is closed
+    it("blames the argument, not the database, for a table that is not a sheet", function()
+      local notASheet = {
+        {"db:fetch_sql", function() db:fetch_sql({}, "SELECT * FROM sheet") end},
+        {"db:fetch", function() db:fetch({}) end},
+        {"db:delete", function() db:delete({}, true) end},
+        {"db:merge_unique", function() db:merge_unique({}, {}) end},
+      }
+
+      for _, case in ipairs(notASheet) do
+        local ok, err = pcall(case[2])
+        assert.is_false(ok, case[1] .. " did not raise")
+        assert.is_true(string.find(err, "not a sheet or field reference", 1, true) ~= nil,
+          case[1] .. " said: " .. tostring(err))
+        assert.is_nil(string.find(err, "closed", 1, true))
+      end
+    end)
+
+    -- a name that was never created reaches the same missing connection again, and
+    -- "closed" would send someone hunting for a db:close call that does not exist
+    it("says never created rather than closed for a database that never existed", function()
+      local ok, err = pcall(function() db:_migrate("neveropenedtestingonly", "sheet", false) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "no database by that name has been created", 1, true) ~= nil)
+      assert.is_nil(string.find(err, "closed", 1, true))
+    end)
+
+    -- db:add checks its own first argument before it reaches the connection, and
+    -- that message is the more useful one, so it stays in front
+    it("db:add still blames a bad sheet argument before the connection", function()
+      local ok, err = pcall(function() db:add({}, {name = "Bram"}) end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "must be a proper Sheet object", 1, true) ~= nil)
+    end)
+
+    it("db:aggregate still blames a bad field reference before the connection", function()
+      local ok, err = pcall(function() db:aggregate({}, "sum") end)
+      assert.is_false(ok)
+      assert.is_true(string.find(err, "Field must be a real field reference.", 1, true) ~= nil)
+    end)
+
+    -- the guards must not stand in the way of the healthy path once it is back
+    it("db:create reopens the database and the guards stand aside", function()
+      local reopened = db:create(dbName, {
+        sheet = {name = "", city = "", kills = 0, _index = {"city"}, _unique = {"name"}}
+      })
+      assert.is_true(db:add(reopened.sheet, {name = "Bram", city = "Chicago", kills = 7}))
+      assert.are.equal(10, db:aggregate(reopened.sheet.kills, "sum"))
+      assert.are.equal(2, #db:fetch(reopened.sheet))
+      assert.is_true(reopened:_begin())
+      db:set(reopened.sheet.kills, 1)
+      assert.is_true(reopened:_rollback())
+      assert.is_true(reopened:_end())
+      db:delete(reopened.sheet, db:eq(reopened.sheet.name, "Bram"))
+      assert.are.equal(1, #db:fetch(reopened.sheet))
+      db:close(dbName)
+    end)
+  end)
+
   describe("Tests db:update and db:set edge cases", function()
     before_each(function()
       mydb = db:create("updatetestingonly", {
