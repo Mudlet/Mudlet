@@ -466,7 +466,11 @@ Bitte warten...</translation>
 %1
 %2==== ==================== =============== =====%3
 </source>
-      <translation type="unfinished"/>
+      <translation>ID   Name                 Adresse         Port
+==== ==================== =============== =====
+%1
+%2==== ==================== =============== =====%3
+</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="882"/>
@@ -2886,7 +2890,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDetachedWindow.cpp" line="454"/>
       <source>&amp;Reattach to Main Window</source>
       <extracomment>This is an item in the &quot;Window&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>&amp;Wieder ans Hauptfenster anhängen</translation>
+      <translation>&amp;Wieder ans Hauptfenster andocken</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="456"/>
@@ -2895,7 +2899,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <extracomment>This explains the &quot;Reattach to Main Window&quot; item in the &quot;Window&quot; menu in the menubar of a detached Mudlet window.
 ----------
 This explains the &quot;Reattach&quot; item in the toolbar of a detached Mudlet window.</extracomment>
-      <translation>Dieses Profilfenster wieder an das Hauptfenster von Mudlet anhängen</translation>
+      <translation>Dieses Profilfenster wieder an das Hauptfenster von Mudlet andocken</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="465"/>
@@ -2919,7 +2923,7 @@ This explains the &quot;Reattach&quot; item in the toolbar of a detached Mudlet 
       <location filename="../src/TDetachedWindow.cpp" line="740"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
       <extracomment>This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.</extracomment>
-      <translation>&apos;%1&apos; wieder ans Hauptfenster anhängen</translation>
+      <translation>&apos;%1&apos; wieder ans Hauptfenster andocken</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="751"/>
@@ -2983,7 +2987,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="861"/>
       <source>Reattach</source>
       <extracomment>This is an item in the toolbar of a detached Mudlet window. It will reattach the profile to the main Mudlet window.</extracomment>
-      <translation>Erneut anhängen</translation>
+      <translation>Andocken</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="898"/>
@@ -13416,12 +13420,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>Reattach detached windows</source>
-      <translation>Freistehende Fenster anhängen</translation>
+      <translation>Freistehende Fenster andocken</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="177"/>
       <source>&lt;p&gt;Reattach all detached profile windows back to the main Mudlet window.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Alle freistehenden Profil-Fenster wieder an das Mudlet-Hauptfenster anhängen.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Alle freistehenden Profil-Fenster wieder an das Mudlet-Hauptfenster andocken.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
@@ -14415,7 +14419,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="5296"/>
       <location filename="../src/mudlet.cpp" line="5299"/>
       <source>Mute all media</source>
-      <translation>Alle Töne stumm schalten</translation>
+      <translation>Alles stumm</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="390"/>
