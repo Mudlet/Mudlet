@@ -447,11 +447,9 @@ int TLuaInterpreter::mmcpStartServer(lua_State* L)
 
     int port = pHost->getMMCPPort();
     if (lua_gettop(L) > 0) {
-        // The description is built from the default port, so it cannot be a
-        // plain literal - and a QByteArray alive inside getVerifiedInt() would
-        // be stranded by its lua_error() longjmp. Check in an inner scope that
-        // ends before the raise, which is where the message has already been
-        // pushed onto the Lua stack anyway.
+        // The inner scope matters: the description cannot be a plain literal,
+        // and a QByteArray still alive at lua_error()'s longjmp would be
+        // stranded. checkIntArg() has already pushed the message by then.
         bool portIsValid = false;
         {
             const QByteArray portDescription = qsl("port number {default = %1}").arg(pHost->getMMCPPort()).toUtf8();

@@ -33,10 +33,10 @@ local RAISERS = {
   "luaL_optstring", "luaL_optlstring", "luaL_optnumber", "luaL_optinteger",
 }
 
--- A raiser paired with the non-raising checker that makes its raise dead.
--- #9605's mechanism: a caller validates with check*Arg() first and returns on
--- failure, so by the time the paired raiser runs its own check cannot fail.
--- Both calls have to name the same argument position for the pairing to hold.
+-- A raiser paired with the non-raising checker that makes its raise dead: a
+-- caller that validates with check*Arg() first and returns on failure leaves
+-- the paired raiser's own check unable to fail. Both calls have to name the
+-- same argument position for the pairing to hold.
 local PAIRED_CHECKER = {
   parseCommandOrFunction = "checkCommandOrFunctionArg",
   parseHintsTable = "checkHintsTable",
@@ -63,8 +63,9 @@ local OWNING_TEMPORARIES = {
   "%.trimmed%s*%(", "%.simplified%s*%(", "%.join%s*%(", "%.split%s*%(",
 }
 
--- An initialiser that cannot have allocated: literal storage, the shared null,
--- or Qt's shared empty buffer.
+-- Whether an initialiser can be trusted not to have allocated. QStringLiteral
+-- data is in the binary, and a default-constructed or empty Qt container is a
+-- shared singleton, so none of them own a buffer to strand.
 local function initialiserIsFree(init)
   if not init or init:match("^%s*$") then
     return true                                   -- default-constructed
@@ -152,7 +153,6 @@ local function scanFile(path)
     -- A function taking lua_State*. clang-format keeps these on one line.
     if line:match("lua_State%s*%*") and line:match("%(") and not line:match("^%s*//")
        and not line:match(";%s*$") and not line:match("^%s*%*") then
-      -- find the body's opening brace
       local depth, bodyStart = 0, nil
       for j = i, math.min(i + 4, n) do
         if lines[j]:match("{") then bodyStart = j; break end
@@ -166,9 +166,7 @@ local function scanFile(path)
           local body = lines[j]
           local code = body:gsub("//.*$", "")
 
-          -- a raise: report everything still live, plus owning temporaries
           local raiser, raiserArgs = findRaiser(code)
-          -- a raise the caller has already gated on cannot fire
           if raiser and raiserArgs and PAIRED_CHECKER[raiser] then
             local checker = PAIRED_CHECKER[raiser]
             local wanted = positionArg(raiserArgs)
@@ -187,8 +185,8 @@ local function scanFile(path)
           end
           if raiser and j > bodyStart then
             for name, info in pairs(live) do
-              -- #9605's exclusion: when the guard that reaches this raise is
-              -- <var>.isEmpty(), the variable is the shared empty buffer here
+              -- when the guard reaching this raise is <var>.isEmpty(), the
+              -- variable is the shared empty buffer and owns nothing
               local guarded = false
               for back = math.max(bodyStart, j - 6), j do
                 if lines[back]:match("%f[%w]" .. name .. "%f[%W]%s*%.%s*isEmpty%s*%(%s*%)") then
@@ -213,7 +211,6 @@ local function scanFile(path)
             end
           end
 
-          -- declarations
           for _, ty in ipairs(OWNING_TYPES) do
             local pat = "^%s*[a-zA-Z:<>,%s]-%f[%w]" .. ty:gsub("%p", "%%%0") .. "%f[%W]%s+([%w_]+)%s*(.*)$"
             local varname, rest = code:match(pat)
