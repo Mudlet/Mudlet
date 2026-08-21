@@ -393,7 +393,11 @@ private slots:
         runLua(host, qsl("openUserWindow('logSpy')\n"));
         auto* subConsole = console->mSubConsoleMap.value(qsl("logSpy"));
         QVERIFY2(subConsole, "The user window was not created.");
+        // Two lines, because log() holds each one back until the next commits:
+        // with only one the leak would still be sitting in the sub-console
+        // buffer's deferred slot when logging stopped.
         appendModelLine(subConsole->buffer, qsl("user-window-only-text"));
+        appendModelLine(subConsole->buffer, qsl("user-window-second-line"));
         appendModelLine(host->mainConsoleModel().buffer, qsl("main-console-logged-text"));
 
         console->logButton->click();
@@ -406,6 +410,7 @@ private slots:
         QVERIFY2(!contents.isEmpty(), "The log file that was closed is not readable.");
         QVERIFY2(contents.contains(qsl("main-console-logged-text")), "The main console's line never reached the log file.");
         QVERIFY2(!contents.contains(qsl("user-window-only-text")), "A user window's own text was written into the game log.");
+        QVERIFY2(!contents.contains(qsl("user-window-second-line")), "A user window's own text was written into the game log.");
         // The announcements are printed on the console on purpose either side
         // of the logging flag, so neither may end up in the file itself.
         QVERIFY2(!contents.contains(startAnnouncement.arg(logFileName)), "The start announcement was logged into the file it announced.");
