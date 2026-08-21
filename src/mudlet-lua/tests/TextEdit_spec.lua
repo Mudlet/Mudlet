@@ -99,6 +99,14 @@ describe("Tests TextEdit widget functions", function()
       assert.is_true(setTextEditFont(name, "Bitstream Vera Sans Mono"))
     end)
 
+    it("Should refuse a font that is not installed", function()
+      local ok, err = setTextEditFont(name, "No Such Font At All")
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("not available", 1, true))
+      -- Ubuntu Mono ships with Mudlet, so it is there on every platform
+      assert.is_true(setTextEditFont(name, "Ubuntu Mono"))
+    end)
+
     it("Should set font size", function()
       assert.is_true(setTextEditFontSize(name, 14))
     end)

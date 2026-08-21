@@ -1209,14 +1209,32 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.is_nil(getLabelText("glfFont"):find("<font face", 1, true))
     end)
 
+    it("reports success when the font is installed", function()
+      assert.is_true(label:setFont("Ubuntu Mono"))
+    end)
+
+    it("matches an installed family ignoring case and remembers its real name", function()
+      assert.is_true(label:setFont("ubuntu mono"))
+      assert.are.equal("Ubuntu Mono", label.font)
+      assert.is_truthy(getLabelText("glfFont"):find('<font face ="Ubuntu Mono">', 1, true))
+    end)
+
     it("says so rather than raising when the font is not installed", function()
+      label:setFont("Ubuntu Mono")
       local debugMessage = spy.on(_G, "debugc")
       finally(function() debugMessage:revert() end)
-      assert.has_no.errors(function() label:setFont("No Such Font At All") end)
+      local ok, err
+      assert.has_no.errors(function() ok, err = label:setFont("No Such Font At All") end)
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("not available", 1, true))
       assert.spy(debugMessage).was.called()
       assert.is_truthy(debugMessage.calls[#debugMessage.calls].vals[1]:find("No Such Font At All", 1, true))
-      -- it still records what it was asked for, so the markup shows the ask
-      assert.are.equal("No Such Font At All", label.font)
+      -- a family Qt can only substitute for must not be remembered: it would go
+      -- into the <font face> that every echo() wraps the text in
+      assert.are.equal("Ubuntu Mono", label.font)
+      local text = getLabelText("glfFont")
+      assert.is_nil(text:find("No Such Font At All", 1, true))
+      assert.is_truthy(text:find('<font face ="Ubuntu Mono">', 1, true))
     end)
   end)
 

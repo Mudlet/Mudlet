@@ -38,8 +38,9 @@ function Geyser.TextEdit:setStyleSheet(css)
 end
 
 --- @param font the font family name
+-- @return true if the font changed, nil+error if it is not installed
 function Geyser.TextEdit:setFont(font)
-  setTextEditFont(self.name, font)
+  return setTextEditFont(self.name, font)
 end
 
 --- @param size the font size in points

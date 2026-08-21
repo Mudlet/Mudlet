@@ -750,8 +750,14 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
+    const auto resolved = host.resolveFontFamily(fontName);
+    if (!resolved.available) {
+        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+    }
+
     QFont font = pT->font();
-    font.setFamily(fontName);
+    font.setFamily(resolved.family);
+    font.setWeight(resolved.weight);
     pT->setFont(font);
     lua_pushboolean(L, true);
     return 1;
@@ -3085,30 +3091,19 @@ int TLuaInterpreter::setFont(lua_State* L)
         return warnArgumentValue(L, __func__, "font must not be empty");
     }
 
-    QString effectiveFontName = fontName;
-    QFont::Weight fontWeight = QFont::Normal;
-
-    if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
-        // Font not found - try parsing as a static font name with style
-        auto [baseName, weight] = host.parseFontNameAndStyle(fontName);
-
-        if (mudlet::self()->getAvailableFonts().contains(baseName, Qt::CaseInsensitive)) {
-            // Found the base font family, use it with the parsed weight
-            effectiveFontName = baseName;
-            fontWeight = weight;
-            qDebug() << "setFont(): Font" << fontName << "not found, using" << baseName << "with weight" << fontWeight;
-        } else {
-            // Still not found - report error
-            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
-        }
+    const auto resolved = host.resolveFontFamily(fontName);
+    if (!resolved.available) {
+        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
     }
+
+    const QString effectiveFontName = resolved.family;
+    const QFont::Weight fontWeight = resolved.weight;
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 #if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
     QFont::insertSubstitution(effectiveFontName, qsl("Noto Color Emoji"));
-    // TODO issue #4159: a nonexisting font breaks the console
 #endif
     // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif

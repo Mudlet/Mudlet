@@ -253,22 +253,44 @@ function Geyser.Label:processFormatString(format)
   end
 end
 
+-- the installed family the name refers to, matched ignoring case as the global
+-- setFont() does, or nil when there is no such family
+local function installedFontFamily(font)
+  local available = getAvailableFonts()
+  if available[font] then
+    return font
+  end
+  local wanted = font:lower()
+  for family in pairs(available) do
+    if family:lower() == wanted then
+      return family
+    end
+  end
+end
+
 --- Sets the font face for the label, use empty string to clear the font and use css/default. Returns true if the font changed, nil+error if not.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
-  local af = getAvailableFonts()
-  if not (af[font] or font == "") then
-    local err = "Geyser.Label:setFont(): attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\n"
-    err = err .. "In the meantime, we will use a similar font which isn't the one you asked for but we hope is close enough"
-    debugc(err)
-  end
-  self.font = font
-  -- Apply the profile's antialiasing settings to the label for static font compatibility
-  -- Use existing setFont() function with label name - this handles static fonts and antialiasing
   if font ~= "" then
+    -- a family Qt does not have must not be remembered: every echo() wraps the
+    -- text in a <font face="..."> built from it, and Qt answers a face it does
+    -- not have with an arbitrary substitute rather than with an error
+    local family = installedFontFamily(font)
+    if not family then
+      local err = "font '" .. font .. "' is not available"
+      debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options; the label keeps its current font")
+      return nil, err
+    end
+    font = family
+    -- the global setFont() is what applies the profile's antialiasing settings,
+    -- but it looks its window up in the console map, which labels are not in -
+    -- so what a label shows is the <font face> above, and this is here for the
+    -- day the lookup learns about labels
     setFont(self.name, font)
   end
+  self.font = font
   self:echo()
+  return true
 end
 
 --- return the size hint (the suggested size) of the label
@@ -1003,6 +1025,14 @@ function Geyser.Label:new (cons, container)
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
+  -- the constraints table is copied wholesale, so a font entry lands in me.font
+  -- without ever reaching the label or being checked; clear it first so an
+  -- unavailable family is not left behind for echo() to emit
+  if me.font then
+    local requestedFont = me.font
+    me.font = nil
+    me:setFont(requestedFont)
+  end
   me:echo()
 
   -- Set up mouse hover as the callback if we have one

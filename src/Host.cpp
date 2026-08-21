@@ -281,7 +281,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPort(port)
 {
     TDebug::addHost(this, mHostName);
-    setDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal));
+    setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
     // The "autolog" sentinel file controls whether logging the game's text as
     // plain text or HTML is immediately resumed on profile loading. Do not
@@ -1445,6 +1445,52 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
+Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+{
+    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+    if (availableFonts.contains(requested, Qt::CaseInsensitive)) {
+        return {requested, QFont::Normal, true};
+    }
+
+    auto [baseName, weight] = parseFontNameAndStyle(requested);
+    if (baseName != requested && availableFonts.contains(baseName, Qt::CaseInsensitive)) {
+        return {baseName, weight, true};
+    }
+
+    return {requested, QFont::Normal, false};
+}
+
+bool Host::substituteMissingDisplayFont()
+{
+    const QFont current = getDisplayFont();
+    const QString requestedFamily = current.family();
+    const auto resolved = resolveFontFamily(requestedFamily);
+
+    if (resolved.available && resolved.family.compare(requestedFamily, Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+
+    QFont font = current;
+    if (resolved.available) {
+        font.setFamily(resolved.family);
+        font.setWeight(resolved.weight);
+        setDisplayFont(font);
+        return true;
+    }
+
+    font.setFamily(scmDefaultFontFamily);
+    setDisplayFont(font);
+
+    qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily
+                                   << "\" instead.";
+    //: %1 is the font family the profile asked for, %2 is the font Mudlet ships with and is using instead
+    postMessage(tr("[ WARN ]  - The font \"%1\" that this profile uses is not installed on this computer, so "
+                   "the default \"%2\" is being used instead. Install that font, or pick another one in the "
+                   "preferences, to stop this message.")
+                        .arg(requestedFamily, scmDefaultFontFamily));
+    return true;
+}
+
 // Now returns the total weight of the path
 unsigned int Host::assemblePath()
 {
@@ -2363,6 +2409,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             _dir = QDir(newpath);
         }
+        // make any fonts in the package available to Mudlet for use - before the
+        // XML below is imported, because the scripts in it run as they are read
+        // in and one of them may well want to use a font the package brought
+        if (thing != enums::PackageModuleType::ModuleSync) {
+            installPackageFonts(packageName);
+        }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
@@ -2455,11 +2507,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
-
-    // make any fonts in the package available to Mudlet for use
-    if (thing != enums::PackageModuleType::ModuleSync) {
-        installPackageFonts(packageName);
-    }
 
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
