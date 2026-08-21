@@ -572,7 +572,6 @@ private slots:
 
     void testRenameNumericKeyInTable()
     {
-        QSKIP("PENDING: renameVar missing else causes numeric keys to get both [N] and [\"N\"] appended");
         execLua(QStringLiteral("testTbl = {[1] = 'one'}"));
         interface->getVars(false);
         TVar* var = findChild(findChild(interface->getVarUnit()->getBase(), QStringLiteral("testTbl")), QStringLiteral("1"));
@@ -585,7 +584,6 @@ private slots:
 
     void testRenameNumericKeyToZeroInTable()
     {
-        QSKIP("PENDING: renameVar missing else causes numeric keys to get both [N] and [\"N\"] appended");
         execLua(QStringLiteral("testTbl = {[1] = 'one'}"));
         interface->getVars(false);
         TVar* var = findChild(findChild(interface->getVarUnit()->getBase(), QStringLiteral("testTbl")), QStringLiteral("1"));
@@ -598,7 +596,6 @@ private slots:
 
     void testRenameNumericKeyToNegativeInTable()
     {
-        QSKIP("PENDING: renameVar missing else causes numeric keys to get both [N] and [\"N\"] appended");
         execLua(QStringLiteral("testTbl = {[1] = 'one'}"));
         interface->getVars(false);
         TVar* var = findChild(findChild(interface->getVarUnit()->getBase(), QStringLiteral("testTbl")), QStringLiteral("1"));
@@ -623,7 +620,6 @@ private slots:
 
     void testRenameNumericToStringKeyInTable()
     {
-        QSKIP("PENDING: renameVar missing else causes numeric keys to get both [N] and [\"N\"] appended");
         execLua(QStringLiteral("testTbl = {[42] = 'val'}"));
         interface->getVars(false);
         TVar* var = findChild(findChild(interface->getVarUnit()->getBase(), QStringLiteral("testTbl")), QStringLiteral("42"));
@@ -636,14 +632,29 @@ private slots:
 
     void testRenameToSameName()
     {
-        QSKIP("PENDING: renameVar generates self-referencing code instead of no-op for same-name rename");
         execLua(QStringLiteral("sameName = 'val'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("sameName"));
         QVERIFY(var);
         var->setNewName(QStringLiteral("sameName"), LUA_TSTRING);
-        interface->renameVar(var);
+        QVERIFY(interface->renameVar(var));
         QCOMPARE(getLuaValue(QStringLiteral("sameName")), QStringLiteral("val"));
+    }
+
+    // The name the editor offers a string-keyed root under can read as a number,
+    // and picking the number key type for it coerces straight back to a string
+    // key - so the rename arrives with nothing to change and must not take the
+    // variable with it.
+    void testRenameOfANumericLookingGlobalToItsOwnKeyKeepsIt()
+    {
+        execLua(QStringLiteral("_G['42'] = 'val'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("42"));
+        QVERIFY(var);
+        QVERIFY(interface->writableByName(var));
+        var->setNewName(QStringLiteral("42"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(var));
+        QCOMPARE(getLuaValue(QStringLiteral("_G['42']")), QStringLiteral("val"));
     }
 
     void testRenameDeeplyNested()
@@ -717,9 +728,7 @@ private slots:
         execLua(QStringLiteral("_G[99] = 'rootNum'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("99"));
-        if (!var) {
-            QSKIP("Root numeric keys may not be iterated by getVars");
-        }
+        QVERIFY(var);
         interface->deleteVar(var);
         QCOMPARE(getLuaValue(QStringLiteral("_G[99]")), QStringLiteral("nil"));
     }
@@ -895,19 +904,82 @@ private slots:
         QCOMPARE(shownAs42, 2);
     }
 
-    // The Variables view refuses a string key holding a backslash rather than
-    // writing it, even though the write paths reach such a key (#9908).
-    void testNotWritableByNameForAMemberWithABackslashInItsKey()
+    // A key reaches Lua as bytes, so what it holds is not the gate's business
+    // (#9908).
+    void testWritableByNameForAMemberWithABackslashInItsKey()
     {
         execLua(qsl("testTbl = {} testTbl['C:\\\\temp'] = 'value'"));
         interface->getVars(false);
         TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("C:\\temp"));
         QVERIFY2(member, "the walk did not name the member after its key");
-        QVERIFY(!interface->writableByName(member));
+        QVERIFY(interface->writableByName(member));
     }
 
-    // ...and only a plain identifier is a root it writes through: a dot in the
-    // name is what the tree and the save bookkeeping key member paths by.
+    void testWritableByNameForAMemberWithAQuoteInItsKey()
+    {
+        execLua(qsl("testTbl = {} testTbl['he said \"hi\"'] = 'value'"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("he said \"hi\""));
+        QVERIFY2(member, "the walk did not name the member after its key");
+        QVERIFY(interface->writableByName(member));
+    }
+
+    void testWritableByNameForAMemberWithANewlineInItsKey()
+    {
+        execLua(qsl("testTbl = {} testTbl['two\\nlines'] = 'value'"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("two\nlines"));
+        QVERIFY2(member, "the walk did not name the member after its key");
+        QVERIFY(interface->writableByName(member));
+    }
+
+    // ...and a root is named by its key just the same, whatever that key spells
+    void testWritableByNameForAGlobalThatIsNotAnIdentifier()
+    {
+        execLua(qsl("_G['a global with spaces'] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("a global with spaces"));
+        QVERIFY(var);
+        QVERIFY(interface->writableByName(var));
+        QCOMPARE(interface->getValue(var), qsl("value"));
+    }
+
+    void testWritableByNameForAGlobalNamedAfterALuaKeyword()
+    {
+        execLua(qsl("_G['end'] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("end"));
+        QVERIFY(var);
+        QVERIFY(interface->writableByName(var));
+        QCOMPARE(interface->getValue(var), qsl("value"));
+    }
+
+    // Still refused: VarUnit names a root by its text alone, so a mark put on
+    // _G[7] is the same entry as one put on _G["7"] and a rename moves whichever
+    // of the two the bookkeeping happens to hold.
+    void testNotWritableByNameForANumberKeyedGlobal()
+    {
+        execLua(qsl("_G[7] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("7"));
+        QVERIFY(var);
+        QCOMPARE(interface->getValue(var), qsl("value"));
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    void testNotWritableByNameForABooleanKeyedGlobal()
+    {
+        execLua(qsl("_G[true] = 'value'"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("true"));
+        QVERIFY(var);
+        QCOMPARE(interface->getValue(var), qsl("value"));
+        QVERIFY(!interface->writableByName(var));
+    }
+
+    // Still refused: the saved and hidden bookkeeping keys a member path by the
+    // dots in it, so this global and a member "global" of a table "dotted" are
+    // the same entry to it.
     void testNotWritableByNameForAGlobalWithADotInItsName()
     {
         execLua(qsl("_G['dotted.global'] = 'value'"));
@@ -917,13 +989,52 @@ private slots:
         QVERIFY(!interface->writableByName(var));
     }
 
-    void testNotWritableByNameForANumberKeyedGlobal()
+    // ...and a global whose key is a table or a function, which getValue() has no
+    // way to put back on the stack at all, so the view would be writing the blank
+    // it showed over the real value
+    void testNotWritableByNameForATableOrFunctionKeyedGlobal_data()
     {
-        execLua(qsl("_G[7] = 'value'"));
+        QTest::addColumn<QString>("setup");
+        QTest::addColumn<int>("keyType");
+        QTest::newRow("table key") << qsl("_G[{}] = 'value'") << LUA_TTABLE;
+        QTest::newRow("function key") << qsl("_G[function() end] = 'value'") << LUA_TFUNCTION;
+    }
+
+    void testNotWritableByNameForATableOrFunctionKeyedGlobal()
+    {
+        QFETCH(QString, setup);
+        QFETCH(int, keyType);
+        execLua(setup);
         interface->getVars(false);
-        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("7"));
-        QVERIFY(var);
-        QVERIFY(!interface->writableByName(var));
+        QList<TVar*> matches;
+        for (TVar* root : interface->getVarUnit()->getBase()->getChildren(false)) {
+            if (root->getKeyType() == keyType) {
+                matches.append(root);
+            }
+        }
+        QCOMPARE(matches.size(), 1);
+        QVERIFY(interface->getValue(matches.constFirst()).isEmpty());
+        QVERIFY(!interface->writableByName(matches.constFirst()));
+    }
+
+    // What the gate is for: the Variables view asks it before writing, so a key
+    // it refuses is a key the user cannot edit at all, however well the write
+    // paths handle it.
+    void testAMemberWhoseKeyHoldsAQuoteCanBeEditedAndDeleted()
+    {
+        execLua(qsl("testTbl = {} testTbl['say \"hi\"'] = 'before' testTbl['neighbour'] = 'untouched'"));
+        interface->getVars(false);
+        TVar* member = findChild(findChild(interface->getVarUnit()->getBase(), qsl("testTbl")), qsl("say \"hi\""));
+        QVERIFY(member);
+
+        QVERIFY(interface->writableByName(member));
+        member->setValue(qsl("after"), LUA_TSTRING);
+        QVERIFY(interface->setValue(member));
+        QCOMPARE(getLuaValue(qsl("testTbl['say \"hi\"']")), qsl("after"));
+
+        interface->deleteVar(member);
+        QCOMPARE(getLuaValue(qsl("testTbl['say \"hi\"']")), qsl("nil"));
+        QCOMPARE(getLuaValue(qsl("testTbl.neighbour")), qsl("untouched"));
     }
 
     // The tables above a variable are reached by name too, so an ambiguous name
@@ -945,16 +1056,6 @@ private slots:
             ++checked;
         }
         QCOMPARE(checked, 2);
-    }
-
-    // ...and a keyword reads as an identifier without being one.
-    void testNotWritableByNameForAGlobalNamedAfterALuaKeyword()
-    {
-        execLua(qsl("_G['end'] = 'value'"));
-        interface->getVars(false);
-        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("end"));
-        QVERIFY(var);
-        QVERIFY(!interface->writableByName(var));
     }
 
     // The tree is built by iterating the tables, which does not consult
@@ -1552,7 +1653,6 @@ private slots:
 
     void testRenameRootStringToNumericKey()
     {
-        QSKIP("PENDING: renameVar always uses string format for root-level renames");
         execLua(QStringLiteral("myvar = 'val'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("myvar"));
@@ -1565,13 +1665,10 @@ private slots:
 
     void testRenameRootNumericToStringKey()
     {
-        QSKIP("PENDING: renameVar always uses string format for root-level renames");
         execLua(QStringLiteral("_G[42] = 'val'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("42"));
-        if (!var) {
-            QSKIP("Root numeric keys may not be iterated by getVars");
-        }
+        QVERIFY(var);
         var->setNewName(QStringLiteral("myvar"), LUA_TSTRING);
         interface->renameVar(var);
         QCOMPARE(getLuaValue(QStringLiteral("myvar")), QStringLiteral("val"));

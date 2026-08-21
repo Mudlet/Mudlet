@@ -20,7 +20,6 @@
  ***************************************************************************/
 
 #include <QDebug>
-#include <QRegularExpression>
 
 #include "LuaInterface.h"
 #include "VarUnit.h"
@@ -386,24 +385,27 @@ static bool nameSharedWithASibling(TVar* var)
     return false;
 }
 
-// Names the Variables view will write back through, which is narrower than what
-// the write paths can reach: they push keys through the C API, which carries any
-// key at all, while a string key holding a quote or a backslash and a root that
-// is not a plain identifier are refused here rather than written (#9908).
+// Names the Variables view writes through. A key reaches Lua as bytes rather than
+// as text spliced into a chunk to be compiled, so what a key holds is nothing a
+// name has to survive, and whether that name still finds the variable is settled
+// by the lookup below. What is left is two things a root's name has to be:
+//  - a string key. getValue() pushes a root's key itself rather than through
+//    loadKey() as it does every level below, so a table- or function-keyed
+//    global shows no value at all and a write back would commit that blank over
+//    the real one. A number- or a boolean-keyed one does read back, but VarUnit
+//    names a root by its text alone, so _G[7] and _G["7"] are one entry to the
+//    saved and hidden bookkeeping.
+//  - free of dots, because that same bookkeeping keys a member by its dotted
+//    path, which makes _G["dotted.global"] and the member that path names one
+//    entry too. VarUnit::shouldSave() already refuses to save such a global;
+//    renameVariableBookkeeping() would still carry the member's marks off with a
+//    rename, so the write is refused here as well.
 static bool nameTheEditorWritesThrough(TVar* var, const bool asRoot)
 {
-    const QString name = var->getName();
-    if (asRoot) {
-        static const QRegularExpression identifier(qsl("^[A-Za-z_][A-Za-z0-9_]*$"));
-        static const QSet<QString> luaKeywords{qsl("and"),   qsl("break"), qsl("do"),  qsl("else"), qsl("elseif"), qsl("end"),    qsl("false"), qsl("for"),  qsl("function"), qsl("if"),   qsl("in"),
-                                               qsl("local"), qsl("nil"),   qsl("not"), qsl("or"),   qsl("repeat"), qsl("return"), qsl("then"),  qsl("true"), qsl("until"),    qsl("while")};
-        // a keyword reads as an identifier but parses as itself
-        return var->getKeyType() == LUA_TSTRING && identifier.match(name).hasMatch() && !luaKeywords.contains(name);
-    }
-    if (var->getKeyType() != LUA_TSTRING) {
+    if (!asRoot) {
         return true;
     }
-    return !name.contains(QLatin1Char('\\')) && !name.contains(QLatin1Char('"')) && !name.contains(QLatin1Char('\n')) && !name.contains(QLatin1Char('\r'));
+    return var->getKeyType() == LUA_TSTRING && !var->getName().contains(QLatin1Char('.'));
 }
 
 // Whether a variable can be written back through the name the variable tree gave
@@ -416,7 +418,7 @@ static bool nameTheEditorWritesThrough(TVar* var, const bool asRoot)
 //    one (#9903). A variable a script has deleted since the tree was built is
 //    not found either.
 //  - no other member of the same table is shown under that name too.
-//  - the name is one the Variables view writes through, see above.
+//  - the root's name is one the Variables view writes through, see above.
 // What the variable holds is not part of the question: a script is free to have
 // changed that since the tree was built, and the name still finds it.
 bool LuaInterface::writableByName(TVar* var)
@@ -725,6 +727,16 @@ bool LuaInterface::renameVar(TVar* var)
                                        << "\": its key is a table or a function, which has no name to change.";
         var->abandonNewName();
         return false;
+    }
+
+    if (var->getNewName() == var->getName() && var->getNewKeyType() == var->getKeyType()) {
+        // The value goes onto the new key and the old key is nil'ed afterwards,
+        // so when the two are one key that pair is a delete. saveVar() arrives
+        // here whenever the user picks a key type its own coercion puts straight
+        // back - a string-keyed variable whose name reads as a number, told to
+        // take a number key.
+        var->clearNewName();
+        return true;
     }
 
     if (!newNameIsFree(var)) {
