@@ -291,6 +291,17 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     command.pHost = pHost;
 
     if (wantsMenu) {
+        // The inverse of the menuPath check: a label may not be both a command
+        // and a submenu in one menu, or a later menuPath naming it cannot say
+        // which was meant - and the player sees the label twice. Two commands
+        // sharing a label is fine, and stays fine; ids are the identity.
+        for (const QAction* existing : targetMenu->actions()) {
+            if (existing->menu() && existing->text() == request.name) {
+                error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
+                return -1;
+            }
+        }
+
         QAction* action = targetMenu->addAction(request.name);
         action->setToolTip(addonTooltip(request.tooltip));
         if (!shortcut.isEmpty()) {

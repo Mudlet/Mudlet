@@ -464,6 +464,29 @@ private slots:
         QTest::qWait(100ms);
     }
 
+    // The same clash from the other side: a submenu exists, and a command tries
+    // to take its label. The review said the duplicate happened in either
+    // order, and the first fix only closed one of them.
+    void test_aCommandCannotTakeASubmenusLabel()
+    {
+        const int nestedId = addCommand(mpFirstHost, qsl("name = 'Alice', menuPath = 'Voices'"));
+        QVERIFY2(nestedId > 0, "the nested command was not placed");
+
+        const QString why = refusalReason(mpFirstHost, qsl("name = 'Voices', menuPath = ''"));
+        QVERIFY2(!why.isEmpty(), "a command took the label of an existing submenu, which shows it twice");
+        QVERIFY2(why.contains(qsl("Voices")), qPrintable(qsl("the refusal does not name the clash: %1").arg(why)));
+
+        // two commands sharing a label stay legal - ids are the identity
+        const int firstTwin = addCommand(mpFirstHost, qsl("name = 'Twin', menuPath = 'Twins'"));
+        const int secondTwin = addCommand(mpFirstHost, qsl("name = 'Twin', menuPath = 'Twins'"));
+        QVERIFY2(firstTwin > 0 && secondTwin > 0 && firstTwin != secondTwin, "two commands with one label were refused");
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(nestedId)));
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(firstTwin)));
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(secondTwin)));
+        QTest::qWait(100ms);
+    }
+
     // A menuPath part naming an existing command would put two entries with one
     // label in the menu, one a command and one a submenu
     void test_aMenuPathThatNamesACommandIsRefused()

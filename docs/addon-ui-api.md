@@ -77,9 +77,12 @@ end)
 
 ## Semantics implementations must preserve
 
-1. **Ids are the only identity.** Labels, paths and names may repeat;
-   operations address ids, and an unknown id returns `false` rather than
-   erroring. Ids come from one sequence covering every command, so an id
+1. **Ids are the only identity.** Labels, paths and names may repeat - two
+   commands may share a label; operations address ids, and an unknown id
+   returns `false` rather than erroring. The one exception is that within a
+   single menu a label may not be both a command and a submenu, in either
+   order: a later `menuPath` naming it could not say which was meant, and the
+   player would see the label twice. Ids come from one sequence covering every command, so an id
    names one command or nothing. An id belonging to another profile answers
    as an unknown one does: a command only takes orders from the profile that
    created it.
