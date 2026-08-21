@@ -1139,6 +1139,11 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         for (const auto& xmlFilename : savedModuleXmlNames) {
             xmlSaved(xmlFilename);
         }
+        // With no module writers to retire, nothing above can have emitted it,
+        // and the profile's own writer retired while the flag above was still set
+        if (savedModuleXmlNames.isEmpty() && !currentlySavingProfile()) {
+            emit profileSaveFinished();
+        }
     });
     connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(mModuleFuture);
@@ -1168,7 +1173,12 @@ void Host::xmlSaved(const QString& xmlName)
         writers.remove(xmlName);
     }
 
-    if (writers.empty()) {
+    // An empty writers list is not the end of the save: the module write runs
+    // after the profile's own writer has retired, so announcing a finish here
+    // while mWritingHostAndModules is still set tells anything waiting on it -
+    // a deferred package install, say - that a save is still running, so it
+    // defers again onto a signal that has already gone by.
+    if (!currentlySavingProfile()) {
         emit profileSaveFinished();
     }
 }
