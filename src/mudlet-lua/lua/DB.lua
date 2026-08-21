@@ -449,6 +449,10 @@ local lua_reserved_words = {
 ---   sheet asks for is made as usual. The indexes the sheet already has are left
 ---   alone in that case, since what is left of _index is no longer the whole set
 ---   it asked for.
+---   A _unique entry naming a column the sheet does not have is skipped and warned
+---   about the same way, but that one costs more than an index would: the sheet is
+---   then built without the uniqueness it asked for, so db:add takes rows the
+---   constraint would have refused.
 function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
@@ -571,6 +575,66 @@ function db:create(db_name, sheets, force)
       if is_unique_valid == false then
         is_valid = false
         table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
+      end
+
+      -- the readers of _unique want the list: the loop below walks it with ipairs,
+      -- and db:merge_unique measures it with #, which on a string gives the length
+      -- of the column name rather than one constraint and raises. db.__schema is
+      -- only written here, so normalising once covers both
+      if type(options._unique) == "string" then
+        options._unique = { options._unique }
+      end
+
+      if type(options._unique) == "table" then
+        -- the two forms reach the database by different routes, so what counts as a
+        -- column the sheet has differs too: a compound entry is written into the
+        -- CREATE TABLE for sqlite to resolve, which matches names case-insensitively
+        -- and knows the _row_id every sheet is given, while a single column name is
+        -- attached by an exact-match lookup in db:_build_create_table_sql
+        local resolvable = { _row_id = true }
+        for column_name in pairs(columns) do
+          resolvable[column_name:lower()] = true
+        end
+
+        local wanted = {}
+
+        for _, unique_entry in ipairs(options._unique) do
+          local compound = type(unique_entry) == "table"
+          local unique_columns = compound and unique_entry or {unique_entry}
+          local unknown_column
+
+          for _, column_name in ipairs(unique_columns) do
+            if not unknown_column and type(column_name) == "string" then
+              local known = compound and resolvable[column_name:lower()] or columns[column_name] ~= nil
+              if not known then
+                unknown_column = column_name
+              end
+            end
+          end
+
+          -- a UNIQUE naming a column sqlite cannot resolve is refused, and takes the
+          -- whole CREATE TABLE with it, leaving no sheet at all. Dropping the
+          -- constraint keeps the sheet, at the price of db:add then taking the
+          -- duplicates it was meant to refuse; the single-column form was never
+          -- attached in the first place, so there it only adds the message
+          if compound and #unique_entry == 0 then
+            table.insert(warnings, "db:create - "..sheet_name.." - _unique has an entry with no "..
+              "column names in it: that constraint is skipped.")
+          elseif not unknown_column then
+            wanted[#wanted + 1] = unique_entry
+          elseif unknown_column == "_row_id" then
+            table.insert(warnings, "db:create - "..sheet_name.." - _unique names \"_row_id\" on its own, "..
+              "which is the key every sheet is given rather than one of its own columns: that "..
+              "constraint is skipped.")
+          else
+            table.insert(warnings, "db:create - "..sheet_name.." - _unique names \""..unknown_column..
+              "\", which is not one of the sheet's columns: that constraint is skipped.")
+          end
+        end
+
+        -- nil rather than an empty list, so db:merge_unique can still tell a sheet
+        -- with no unique index from one with several by which of its asserts fires
+        options._unique = #wanted > 0 and wanted or nil
       end
     end
 
@@ -2499,8 +2563,9 @@ function db.Database:_drop(s_name)
 
   local schema = db.__schema[self._db_name][s_name]
 
-  -- _index and _unique can each be a single column name (a string) or a list of
-  -- them, so normalise to a list before iterating to drop the matching indexes.
+  -- db:create normalises _index and _unique to a list before they reach
+  -- db.__schema, which is written nowhere else: the string form only arrives here
+  -- from a schema built by hand
   local index_groups = { schema.options._index, schema.options._unique }
   for _, group in pairs(index_groups) do
     if type(group) == "string" then
