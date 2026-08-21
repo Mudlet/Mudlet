@@ -27,6 +27,7 @@
 
 #include "utils.h"
 
+#include <QColor>
 #include <QLabel>
 #include <QMovie>
 #include <QPointer>
@@ -62,7 +63,9 @@ public:
     void leaveEvent(QEvent*) override;
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void setClickThrough(bool clickthrough);
+    void setBackgroundColor(const QColor& color);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
@@ -78,13 +81,16 @@ public:
     int mLeaveFunction = 0;
     QMovie* mpMovie = nullptr;
     QVideoWidget* mpVideoWidget = nullptr;
-    QString mLinkColor;        // Store link color for inline style injection
-    QString mLinkVisitedColor; // Store visited color for inline style injection
-    bool mLinkUnderline = true; // Store underline preference
+    QString mLinkColor;          // Store link color for inline style injection
+    QString mLinkVisitedColor;   // Store visited color for inline style injection
+    bool mLinkUnderline = true;  // Store underline preference
     QSet<QString> mVisitedLinks; // Track which link URLs have been clicked
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
+    void applyBackgroundColor();
+
+    QColor mBackgroundColor;
 
 private slots:
     void slot_linkActivated(const QString& link);

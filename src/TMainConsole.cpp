@@ -660,6 +660,12 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->setContentsMargins(0, 0, 0, 0);
         pL->move(x, y);
         pL->show();
+        // fillBackground = 0 gets this grey too, which is not what the argument reads
+        // like: honouring it would turn every such label in an installed script
+        // transparent. What the argument does decide is what survives a later
+        // stylesheet - setAutoFillBackground(false) above means the colour is dropped
+        // rather than kept. A script wanting a transparent label has to say so with
+        // setBackgroundColor(name, 0, 0, 0, 0).
         mpHost->setBackgroundColor(name, 32, 32, 32, 255);
         return pL;
     }
@@ -1554,52 +1560,6 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     // on TConsole types:
 
     emit signal_newDataAlert(mProfileName);
-}
-
-void TMainConsole::runTriggers(int line)
-{
-    // A trigger script can feed text back through the pipeline, re-entering this
-    // function; the rest of this pass would otherwise inherit whatever the nested
-    // one left behind and act on the fed line instead of its own.
-    const bool nested = mpHost->getTriggerUnit()->processingDepth() > 0;
-    const QPoint previousUserCursor = mUserCursor;
-    const int previousEngineCursor = mEngineCursor;
-    const bool previousIsPromptLine = mIsPromptLine;
-    const QString previousLine = mCurrentLine;
-
-    mUserCursor.setY(line);
-    mIsPromptLine = buffer.promptBuffer.at(line);
-    mEngineCursor = line;
-    mUserCursor.setX(0);
-    mCurrentLine = buffer.line(line);
-    mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
-    // The matchers take the haystack by reference all the way down, so it must be
-    // a local: a nested pass reassigns mCurrentLine under them.
-    QString haystack = mCurrentLine;
-    haystack.append('\n');
-
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> mpHost;
-    }
-    mpHost->incomingStreamProcessor(haystack, line);
-
-    if (nested) {
-        // Only a nested pass restores: at the top level a script's moveCursor()
-        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
-        // a saved index can by now point past the end.
-        const int lastLine = buffer.getLastLineNumber();
-        mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
-        mEngineCursor = qMin(previousEngineCursor, lastLine);
-        mIsPromptLine = previousIsPromptLine;
-        mCurrentLine = previousLine;
-        mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, previousLine);
-    } else {
-        mIsPromptLine = false;
-    }
-
-    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
-    //       otherwise just delete
 }
 
 void TMainConsole::finalize()

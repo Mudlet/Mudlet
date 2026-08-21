@@ -40,6 +40,7 @@
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -448,6 +449,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     startMapAutosave(interval);
 
     mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
+
+    // Built here, at the end of the constructor, rather than on first use: the
+    // model's buffer snapshots this Host's colours, so every one of them has to
+    // be initialised first. The view binds the buffer's back-pointer when it
+    // attaches (TConsole::TConsole) and unbinds it when it goes away, and
+    // TConsole::changeColors() refreshes the snapshot as it does so.
+    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
 }
 
 Host::~Host()
@@ -1918,6 +1926,74 @@ QList<int> Host::getStopWatchIds() const
         ids.append(it->first);
     }
     return ids;
+}
+
+std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
+{
+    return mpMainConsoleModel;
+}
+
+// Hot: the trigger engine reads the model for every character of a colour
+// pattern, so this hands back a reference rather than a shared_ptr copy - the
+// latter costs an atomic increment and decrement per call.
+TConsoleModel& Host::mainConsoleModel()
+{
+    return *mpMainConsoleModel;
+}
+
+// The per-line trigger orchestration used to live on the main-console widget
+// (TMainConsole::runTriggers). It drives model state only, so it runs here
+// against the core model and needs no view (#8681).
+void Host::runTriggers(int line)
+{
+    TConsoleModel& consoleModel = mainConsoleModel();
+    // Relocating this made it a public API anyone can hand any index to, and QT_NO_DEBUG is set in every build we produce, so QList::at() would read out of bounds silently:
+    if (line < 0 || line >= consoleModel.buffer.promptBuffer.size()) {
+        return;
+    }
+
+    // A trigger script can feed text back through the pipeline, re-entering this
+    // function; the rest of this pass would otherwise inherit whatever the nested
+    // one left behind and act on the fed line instead of its own.
+    const bool nested = getTriggerUnit()->processingDepth() > 0;
+    const QPoint previousUserCursor = consoleModel.mUserCursor;
+    const int previousEngineCursor = consoleModel.mEngineCursor;
+    const bool previousIsPromptLine = consoleModel.mIsPromptLine;
+    const QString previousLine = consoleModel.mCurrentLine;
+
+    consoleModel.mUserCursor.setY(line);
+    consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
+    consoleModel.mEngineCursor = line;
+    consoleModel.mUserCursor.setX(0);
+    consoleModel.mCurrentLine = consoleModel.buffer.line(line);
+    getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
+    // The matchers take the haystack by reference all the way down, so it must be
+    // a local: a nested pass reassigns mCurrentLine under them.
+    QString haystack = consoleModel.mCurrentLine;
+    haystack.append('\n');
+
+    if (mudlet::smDebugMode) {
+        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> this;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> this;
+    }
+    incomingStreamProcessor(haystack, line);
+
+    if (nested) {
+        // Only a nested pass restores: at the top level a script's moveCursor()
+        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
+        // a saved index can by now point past the end.
+        const int lastLine = consoleModel.buffer.getLastLineNumber();
+        consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
+        consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
+        consoleModel.mIsPromptLine = previousIsPromptLine;
+        consoleModel.mCurrentLine = previousLine;
+        getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, previousLine);
+    } else {
+        consoleModel.mIsPromptLine = false;
+    }
+
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)
@@ -4754,19 +4830,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     }
 
     if (pL) {
-        QString styleSheet = pL->styleSheet();
-        QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
-        if (styleSheet.contains(qsl("background-color"))) {
-            QRegularExpression re("background-color:[^;]*;");
-            styleSheet.replace(re, newColor);
-        } else {
-            if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
-                styleSheet.append('\n');
-            }
-            styleSheet.append(newColor);
-        }
-
-        pL->setStyleSheet(styleSheet);
+        pL->setBackgroundColor(QColor(r, g, b, alpha));
         return true;
     }
 

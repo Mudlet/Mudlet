@@ -33,8 +33,9 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "PortableModeTestHelper.h"
+#include "LuaLiteral.h"
 #include "MudletInstanceCoordinator.h"
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
 #include "THyperlinkStyling.h"
@@ -451,6 +452,18 @@ private slots:
         << qsl("\x1b]8;;https://example.com/"
                "?%63%6F%6E%66%69%67=value\x1b\\Link\x1b]8;;\x1b\\")
         << QStringList{"%63%6F%6E%66%69%67=value"} << QStringList{};
+    QTest::newRow("keeps a valueless config name")
+        << qsl("\x1b]8;;https://example.com/"
+               "?config&id=42\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"?config&id=42"} << QStringList{};
+    QTest::newRow("keeps a valueless preset name")
+        << qsl("\x1b]8;;https://example.com/"
+               "?preset&page=1\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"?preset&page=1"} << QStringList{};
+    QTest::newRow("unterminated config keeps later params")
+        << qsl("\x1b]8;;https://example.com/"
+               "?config={\"a\":\"x&id=42\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"id=42"} << QStringList{"config="};
     QTest::newRow("send URL strips all query params")
         << qsl("\x1b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%"
                "22red%22%7D%7D\x1b\\Attack\x1b]8;;\x1b\\")
@@ -515,11 +528,10 @@ private slots:
                             .arg(commands.first())));
   }
 
-  // The rewritten split reaches a reserved parameter through generic key
-  // matching rather than only at the head of the query, so these shapes each
-  // take a different route through it than they used to: a percent-encoded
-  // value bounded by the next '&', a reserved key that is not the first
-  // parameter, and the '%3D' separator.
+  // Each row drives the split down a different path: a percent-encoded value
+  // bounded by the next '&', a reserved key that is not the first parameter, a
+  // raw-JSON value, one carrying an unencoded '&' inside a string, and the
+  // '%3D' separator.
   void test_Osc8ReservedParamShapes_data() {
     QTest::addColumn<QString>("query");
     QTest::addColumn<QString>("expectedTooltip");
@@ -567,6 +579,105 @@ private slots:
                qPrintable(qsl("Expected '%1' to survive into the opened URL: %2")
                               .arg(mustRemainInUrl, commands.first())));
     }
+  }
+
+  // A config value sent as unencoded JSON can carry '&' inside its strings, so
+  // the whole parameter has to be stripped out of the URL Mudlet opens - not
+  // just the part before the first '&', which leaves a JSON fragment behind.
+  void test_Osc8UnencodedAmpersandInConfigLeavesUrlIntact_data() {
+    QTest::addColumn<QString>("query");
+    QTest::addColumn<QString>("expectedUrl");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("config with a raw ampersand, trailing param")
+        << qsl("?config={\"tooltip\":\"A & B\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with a raw ampersand, no other param")
+        << qsl("?config={\"tooltip\":\"A & B\"}") << qsl("https://example.com/")
+        << qsl("A & B");
+    QTest::newRow("config with a raw ampersand, preceding param")
+        << qsl("?id=42&config={\"tooltip\":\"A & B\"}")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with two raw ampersands")
+        << qsl("?config={\"tooltip\":\"A & B & C\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B & C");
+    // A server may encode part of the object and leave the rest raw, so the
+    // braces bounding it can arrive as %7B/%7D while an '&' inside stays literal
+    QTest::newRow("half-encoded config with a raw ampersand")
+        << qsl("?config=%7B%22tooltip%22%3A%22A & B%22%7D&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("half-encoded config, no other param")
+        << qsl("?config=%7B%22tooltip%22%3A%22A & B%22%7D")
+        << qsl("https://example.com/") << qsl("A & B");
+    // JSON allows whitespace before the object, and the parser accepts it, so
+    // a value that opens with it is still a config - and since decodeOSC()
+    // strips a reserved parameter on its key alone, refusing it here would
+    // take the styling out of the link and the parameter off the URL both
+    QTest::newRow("config with a leading space")
+        << qsl("?config= {\"tooltip\":\"A & B\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with a percent-encoded leading space")
+        << qsl("?config=%20%7B%22tooltip%22%3A%22A & B%22%7D&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+  }
+
+  void test_Osc8UnencodedAmpersandInConfigLeavesUrlIntact() {
+    QFETCH(QString, query);
+    QFETCH(QString, expectedUrl);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+    // Compared in full rather than with contains(): the leak this guards against
+    // appends to the URL, so for the row that expects no query at all the
+    // corrupted URL still starts with the expected one. Quoting the expectation
+    // through LuaLiteral means the assertion tracks the command's Lua wrapper
+    // instead of hard-coding it.
+    QCOMPARE(commands.first(),
+             qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl)));
+    // the config itself must still have been consumed as styling
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  // A "config" parameter carrying something that is not an object is not a
+  // config, so it must not displace a valid one earlier in the same query.
+  void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
+    QTest::addColumn<QString>("query");
+
+    QTest::newRow("second config empty")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config=");
+    QTest::newRow("second config not an object")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config=junk");
+    QTest::newRow("second config empty, encoded separator")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config%3D");
+  }
+
+  void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne() {
+    QFETCH(QString, query);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), qsl("FIRST"));
   }
 
   // preset= is matched on its raw key by the same loop as config=, so a

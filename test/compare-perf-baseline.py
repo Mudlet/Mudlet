@@ -120,6 +120,11 @@ def run_binary(path):
     env = dict(os.environ)
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
     env.setdefault("ASAN_OPTIONS", "detect_leaks=0")
+    # Same environment ctest registers the benchmark with, so a run from here
+    # measures the profile a run from there does. Without it mpkg comes back,
+    # and with it the package listing download and the self-upgrade it can
+    # trigger - which is both noise in the numbers and a different profile.
+    env.setdefault("MUDLET_TEST_MODE", "1")
     print(f"running {path} ...", file=sys.stderr)
     try:
         result = subprocess.run(
