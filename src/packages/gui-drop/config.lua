@@ -14,5 +14,5 @@ are copied to %user-profile/GUIDropImages/
 
 Just drop an image file into the main window.  It will be converted into a label inside an AdjustableContainer.
 ]]
-version = [[1.2]]
+version = [[1.3]]
 created = "2025-01-19T13:10:54+04:00"

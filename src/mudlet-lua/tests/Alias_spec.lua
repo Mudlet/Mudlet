@@ -1,5 +1,36 @@
 describe("Alias processing", function()
 
+    -- TAlias's match-all loop is unconditional, and it steps one byte after an
+    -- empty match, so on a command holding a multi-byte character it can land
+    -- mid-character. pcre2 then rejects the offset and TAlias::match() ends the
+    -- loop, dropping every capture past that character.
+    describe("captures across a multi-byte character", function()
+
+        it("keeps collecting captures past a multi-byte character", function()
+            -- expandAlias() sends the command through the same encoding path as
+            -- typing it, so a non-UTF-8 encoding would strip the character and let
+            -- this pass without testing anything
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to send a multi-byte command")
+            local seen = {}
+            local id = tempAlias([[(\d*)]], function()
+                seen = {}
+                for i = 1, #matches do
+                    seen[i] = matches[i]
+                end
+            end)
+            expandAlias("caf\195\169 9", false)
+            assert.is_true(killAlias(id), "a temporary alias should be removable by id")
+            local found = false
+            for _, capture in ipairs(seen) do
+                if capture == "9" then
+                    found = true
+                end
+            end
+            assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+    end)
+
     -- Test for nested alias processing with self-deletion (GitHub issue #8817)
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     --
