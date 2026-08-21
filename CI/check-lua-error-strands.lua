@@ -267,13 +267,13 @@ local function scanFile(path)
     end
     if signature:match("lua_State%s*%*") and signature:match("%(") and not line:match("^%s*//")
        and not signature:match("%)%s*;%s*$") and not line:match("^%s*%*") then
-      local depth, bodyStart = 0, nil
+      local bodyStart = nil
       for j = signatureEnd, math.min(signatureEnd + 4, n) do
         if lines[j]:match("{") then bodyStart = j; break end
       end
       if bodyStart then
         functionsScanned = functionsScanned + 1
-        depth = 0
+        local depth = 0
         local live = {}   -- varname -> {line=, type=}
         local free = {}   -- declared empty, so owning nothing until something fills it
         local scopes = {} -- depth -> list of varnames declared at that depth
