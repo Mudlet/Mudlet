@@ -744,7 +744,6 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNAWS"), pHost->mEnableNAWS, true);
     setBoolAttributeWithDefault(qsl("mUndoServerWrap"), pHost->mUndoServerWrap, false);
-    setBoolAttributeWithDefault(qsl("mServerWrapHintShown"), pHost->mServerWrapHintShown, false);
     setBoolAttributeWithDefault(qsl("mEnableCHARSET"), pHost->mEnableCHARSET, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 
@@ -1414,14 +1413,9 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 // commented out in the XMLexporter class.
                 readStringList(pT->mPatterns, what);
             } else if (name() == qsl("regexCodePropertyList")) {
+                // A save whose two lists disagree is reported and repaired by
+                // TTrigger::setRegexCodeList(), which every reader funnels through
                 readIntegerList(pT->mPatternKinds, pT->getName(), what);
-                if (Q_UNLIKELY(pT->mPatterns.count() != pT->mPatternKinds.count())) {
-                    qWarning().nospace() << "XMLimport::readTrigger(...) ERROR: "
-                                            "mismatch in regexCode details for Trigger: "
-                                         << pT->getName() << " there were " << pT->mPatterns.count() << " 'regexCodeList' sub-elements and " << pT->mPatternKinds.count()
-                                         << " 'regexCodePropertyList' sub-elements so "
-                                            "something is broken!";
-                }
                 // Fixup the first 16 incorrect ANSI colour numbers from old
                 // code if there are any
                 if (!pT->mPatterns.isEmpty()) {

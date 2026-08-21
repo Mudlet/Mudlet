@@ -454,6 +454,18 @@ describe("Tests the functionality of getPackages", function()
     assert.is_true(listContains(packages, "run-tests"))
     assert.is_false(listContains(packages, "mudlet-spec-never-installed"))
   end)
+
+  -- Mudlet skips mpkg for a profile built under MUDLET_TEST_MODE, because mpkg
+  -- downloads the package listing on load and, whenever the repository is ahead of
+  -- the bundled copy, removes and reinstalls itself - which clears the editor's tree
+  -- widgets and writes to the main console partway through whatever is running. The
+  -- C++ side proves the package is left off the install list; this proves a profile
+  -- really does come up without it.
+  it("has no mpkg in a test profile, which would upgrade itself mid-run", function()
+    assert.is_false(packageInstalled("mpkg"),
+      "mpkg is installed in this profile. A profile created before this check existed keeps it - " ..
+      "remove it, or let a fresh self-test profile be made.")
+  end)
 end)
 
 describe("Tests the package info accessors", function()
@@ -978,6 +990,24 @@ describe("Tests the functionality of verbosePackageInstall", function()
     assert.is_true(containsWrapped(text, "could not open file"), text)
     assert.is_false(packageInstalled("mudlet-spec-there-is-no-such-package"))
   end)
+
+  it("names the file, not the whole path, when the install fails", function()
+    -- the announcement is trimmed on both branches, and only the success one is
+    -- reached from installPackageFromUrl's spec
+    local name = "mudlet-spec-there-is-no-such-package.mpackage"
+    -- an install asked for while a save is running is postponed and answered
+    -- with a bare true, so the failure under test would be announced a success
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(getMudletHomeDir() .. "/" .. name)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Installing '" .. name .. "' failed:"), text)
+    -- the reason installPackage() gives does name the whole path, so only the
+    -- announcement's own name is checked for having been trimmed
+    assert.is_false(containsWrapped(text, "Installing '" .. getMudletHomeDir()), text)
+  end)
 end)
 
 describe("Tests the functionality of verboseModuleInstall", function()
@@ -1046,11 +1076,9 @@ describe("Tests the functionality of installPackageFromUrl", function()
   end)
 
   it("names the file, not the whole path, in the announcement", function()
-    -- BUG: verbosePackageInstall() strips the profile folder off the name it
-    -- announces, but uses that folder as a Lua pattern - a profile path holding
-    -- a "-" (a home folder with one will do it) never matches, so the whole
-    -- path is announced instead of the file.
-    pending("verbosePackageInstall() strips the profile folder with an unescaped Lua pattern")
+    -- this only bites while the profile name holds a Lua pattern magic
+    -- character ("Mudlet self-test" holds a "-"): a pattern-based strip finds
+    -- nothing to match there and announces the whole path
     defer(function()
       removeFixturePackage(minimalPackage)
       os.remove(getMudletHomeDir() .. "/" .. downloadedName)

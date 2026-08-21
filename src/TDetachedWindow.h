@@ -43,7 +43,7 @@ class TDetachedWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent = nullptr, bool toolbarVisible = true);
+    explicit TDetachedWindow(const QString& profileName, TMainConsole* console, bool toolbarVisible = true);
     ~TDetachedWindow();
 
     // Multiple profile support
@@ -114,6 +114,7 @@ private slots:
     void slot_toggleFullScreenView();
     void slot_toggleAlwaysOnTop();
     void slot_toggleToolBarVisibility();
+    void slot_setToolBarIconSize(const int size);
     void slot_saveProfile();
     void slot_exportProfile();
     void slot_closeAllProfiles(); // Close all profiles properly before closing window

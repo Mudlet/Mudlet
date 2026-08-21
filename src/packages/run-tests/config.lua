@@ -13,5 +13,5 @@ See the README in the package.
 ### See Also
 
 * [Busted homepage](https://lunarmodules.github.io/busted/)]]
-version = [[1]]
+version = [[2]]
 created = "2025-01-19T14:05:54+04:00"

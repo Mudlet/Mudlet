@@ -64,6 +64,18 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_true(gauge.useAdd2)
       assert.are.equal("gauge", gauge.type)
     end)
+
+    it("starts out hidden when the constraints ask for it, and shows again", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsHiddenNew", x = 0, y = 0, width = 100, height = 20, hidden = true}))
+      assert.is_true(gauge.hidden)
+      for _, name in ipairs({"ggsHiddenNew_back", "ggsHiddenNew_front", "ggsHiddenNew_text"}) do
+        assert.is_false(windowVisible(name))
+      end
+      gauge:show()
+      for _, name in ipairs({"ggsHiddenNew_back", "ggsHiddenNew_front", "ggsHiddenNew_text"}) do
+        assert.is_true(windowVisible(name))
+      end
+    end)
   end)
 
   describe("Geyser.Gauge:setValue", function()
@@ -144,6 +156,174 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.equal(50, geometry("ggsValue_front").width)
       -- a good reading has to be distinguishable from those refusals
       assert.is_true(gauge:setValue(50, 100))
+    end)
+
+    -- a gauge only lays its front label out again when something about the fill
+    -- moved, so that a UI repainting every gauge on every prompt costs nothing
+    -- for the ones sitting still
+    it("lays the front label out once per update and not at all for a repeat", function()
+      gauge:setValue(50)
+      local move = spy.on(_G, "moveWindow")
+      local resize = spy.on(_G, "resizeWindow")
+      finally(function() move:revert() resize:revert() end)
+      gauge:setValue(60)
+      assert.spy(move).was.called(1)
+      assert.spy(resize).was.called(1)
+      gauge:setValue(60)
+      gauge:setValue(60)
+      assert.spy(move).was.called(1)
+      assert.spy(resize).was.called(1)
+      -- and the skipped repeats left it where the update put it
+      assert.are.equal(120, geometry("ggsValue_front").width)
+    end)
+
+    -- the geometry is the gauge's answer, not something a later event-loop turn
+    -- makes true, so a script may read it straight back
+    it("has the new geometry ready by the time it returns", function()
+      for _, value in ipairs({10, 20, 30, 40}) do
+        gauge:setValue(value)
+        assert.are.equal(value * 2, geometry("ggsValue_front").width)
+      end
+    end)
+
+    -- the front label's constraints are only rebuilt when they need to be, so a
+    -- gauge whose front label was resized out from under it has to notice
+    it("takes the front label back after something else resized it", function()
+      gauge:setValue(50)
+      gauge.front:resize(30, 10)
+      assert.are.same({x = 0, y = 0, width = 30, height = 10}, geometry("ggsValue_front"))
+      gauge:setValue(50)
+      assert.are.same({x = 0, y = 0, width = 100, height = 40}, geometry("ggsValue_front"))
+      gauge.front:move(7, 9)
+      gauge:setValue(60)
+      assert.are.same({x = 0, y = 0, width = 120, height = 40}, geometry("ggsValue_front"))
+    end)
+
+    it("keeps a format change made between two identical updates", function()
+      gauge:setValue(50, 100, "HP 50")
+      gauge:setBold(true)
+      gauge:setFontSize(18)
+      gauge:setValue(50, 100, "HP 50")
+      local shown = getLabelText("ggsValue_text")
+      assert.is_truthy(shown:find("<b>HP 50</b>", 1, true))
+      assert.is_truthy(shown:find("font%-size: 18pt"))
+    end)
+
+    it("puts its own text back after something else wrote to the label", function()
+      gauge:setValue(50, 100, "HP 50")
+      gauge.text:rawEcho("something else")
+      gauge:setValue(50, 100, "HP 50")
+      assert.is_truthy(getLabelText("ggsValue_text"):find("HP 50", 1, true))
+    end)
+
+    it("stays full over repeated overflow and comes back down", function()
+      local strict = track(Geyser.Gauge:new({name = "ggsStrictRepeat", x = 0, y = 0, width = 200, height = 40, strict = true}))
+      strict:setValue(150)
+      strict:setValue(300)
+      assert.are.equal(200, geometry("ggsStrictRepeat_front").width)
+      strict:setValue(50)
+      assert.are.equal(100, geometry("ggsStrictRepeat_front").width)
+    end)
+
+    it("follows a resize that happens between two identical updates", function()
+      gauge:setValue(50)
+      assert.are.equal(100, geometry("ggsValue_front").width)
+      gauge:resize(100, 40)
+      gauge:setValue(50)
+      assert.are.equal(50, geometry("ggsValue_front").width)
+    end)
+
+    it("follows a stylesheet that changes between two identical updates", function()
+      gauge:setValue(50)
+      gauge:setStyleSheet("margin: 10px;", "margin: 10px;")
+      gauge:setValue(50)
+      assert.are.same({x = 10, y = 10, width = 90, height = 20}, geometry("ggsValue_front"))
+    end)
+
+    it("keeps one gauge's spacing out of another's", function()
+      local plain = track(Geyser.Gauge:new({name = "ggsPlain", x = 0, y = 0, width = 200, height = 40}))
+      local inset = track(Geyser.Gauge:new({name = "ggsInset", x = 0, y = 0, width = 200, height = 40}))
+      inset:setStyleSheet("padding: 5px;", "padding: 5px;")
+      for _ = 1, 3 do
+        plain:setValue(50)
+        inset:setValue(50)
+      end
+      assert.are.same({x = 0, y = 0, width = 100, height = 40}, geometry("ggsPlain_front"))
+      assert.are.same({x = 5, y = 5, width = 95, height = 30}, geometry("ggsInset_front"))
+    end)
+
+    it("updates a gauge that is hidden, so showing it again is right", function()
+      gauge:hide()
+      gauge:setValue(25)
+      gauge:show()
+      assert.are.same({x = 0, y = 0, width = 50, height = 40}, geometry("ggsValue_front"))
+      assert.is_true(windowVisible("ggsValue_front"))
+    end)
+
+    -- the front label's constraints outlive the update that installed them, so
+    -- everything that lays a gauge out without going through setValue has to
+    -- keep working: the container cascade, and the reposition every window
+    -- resize runs
+    it("follows its container being moved, resized and repositioned", function()
+      local box = track(Geyser.Container:new({name = "ggsBoxMove", x = 100, y = 100, width = 400, height = 100}))
+      local gauge = track(Geyser.Gauge:new({name = "ggsInMove", x = 0, y = 0, width = "50%", height = "100%"}, box))
+      gauge:setValue(50)
+      assert.are.same({x = 100, y = 100, width = 100, height = 100}, geometry("ggsInMove_front"))
+      box:move(300, 200)
+      box:resize(200, 50)
+      assert.are.same({x = 300, y = 200, width = 50, height = 50}, geometry("ggsInMove_front"))
+      -- the value it already sits on must not undo that
+      gauge:setValue(50)
+      assert.are.same({x = 300, y = 200, width = 50, height = 50}, geometry("ggsInMove_front"))
+      box:reposition()
+      assert.are.same({x = 300, y = 200, width = 50, height = 50}, geometry("ggsInMove_front"))
+    end)
+
+    it("lays a whole row of gauges out in one go", function()
+      local row = {}
+      for i = 1, 5 do
+        row[i] = track(Geyser.Gauge:new({name = "ggsRow" .. i, x = 0, y = 0, width = 200, height = 40}))
+      end
+      for i = 1, 5 do
+        row[i]:setValue(i * 10, 100, "row " .. i)
+      end
+      for i = 1, 5 do
+        assert.are.equal(i * 20, geometry("ggsRow" .. i .. "_front").width)
+        assert.is_truthy(getLabelText("ggsRow" .. i .. "_text"):find("row " .. i, 1, true))
+      end
+    end)
+
+    -- each orientation wires the offsets into its own branch, so a gauge with
+    -- back spacing has to come out right in every one of them and on the way back
+    it("changes orientation on the next update, spacing and all", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsTurn", x = 0, y = 0, width = 200, height = 100}))
+      gauge:setStyleSheet("margin: 5px;", "margin: 5px;")
+      gauge:setValue(25)
+      assert.are.same({x = 5, y = 5, width = 48, height = 90}, geometry("ggsTurn_front"))
+      gauge.orientation = "vertical"
+      gauge:setValue(25)
+      assert.are.same({x = 5, y = 73, width = 190, height = 23}, geometry("ggsTurn_front"))
+      gauge.orientation = "goofy"
+      gauge:setValue(25)
+      assert.are.same({x = 148, y = 5, width = 48, height = 90}, geometry("ggsTurn_front"))
+      gauge.orientation = "batty"
+      gauge:setValue(25)
+      assert.are.same({x = 5, y = 5, width = 190, height = 23}, geometry("ggsTurn_front"))
+      gauge.orientation = "horizontal"
+      gauge:setValue(25)
+      assert.are.same({x = 5, y = 5, width = 48, height = 90}, geometry("ggsTurn_front"))
+    end)
+
+    -- pixel offsets against a container-relative size are where a memoised
+    -- spacing would drift, because the size is a fraction and the offsets are not
+    it("combines a percentage size with a pixel spacing", function()
+      local box = track(Geyser.Container:new({name = "ggsPctBox", x = 0, y = 0, width = 400, height = 100}))
+      local gauge = track(Geyser.Gauge:new({name = "ggsPct", x = 0, y = 0, width = "33%", height = "100%"}, box))
+      gauge:setStyleSheet("margin: 3px;", "margin: 3px;")
+      gauge:setValue(50)
+      assert.are.same({x = 3, y = 3, width = 63, height = 94}, geometry("ggsPct_front"))
+      box:resize(800, 100)
+      assert.are.same({x = 3, y = 3, width = 129, height = 94}, geometry("ggsPct_front"))
     end)
   end)
 
@@ -481,6 +661,54 @@ describe("Tests functionality of Geyser.Gauge", function()
       gauge:setText("green")
       assert.is_truthy(getLabelText("ggsText_text"):find("color: #00ff00", 1, true))
     end)
+
+    it("setFormat replaces the whole text format at once", function()
+      gauge:setBold(true)
+      gauge:setFormat("ci18")
+      gauge:setText("reformatted")
+      local text = getLabelText("ggsText_text")
+      assert.is_truthy(text:find('align="center"', 1, true))
+      assert.is_truthy(text:find("<i>reformatted</i>", 1, true))
+      assert.is_truthy(text:find("font%-size: 18pt"))
+      assert.is_nil(text:find("<b>", 1, true))
+      -- the gauge mirrors the text label's format state, so both copies move
+      assert.are.equal("ci18", gauge.format)
+      assert.is_false(gauge.formatTable.bold)
+      assert.is_true(gauge.formatTable.italics)
+    end)
+  end)
+
+  -- setColor paints the fill bar at full alpha and the backdrop in the same
+  -- colour at a fixed alpha of 100, which is what makes the unfilled part read
+  -- as the same gauge rather than as a hole.
+  describe("Geyser.Gauge:setColor", function()
+    local function backgroundColor(name)
+      local red, green, blue, alpha = getBackgroundColor(name)
+      return {red, green, blue, alpha}
+    end
+
+    it("paints the front at full alpha and the back at a fraction of it", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsColour", x = 0, y = 0, width = 200, height = 40}))
+      gauge:setColor(10, 20, 30)
+      assert.are.same({10, 20, 30, 255}, backgroundColor("ggsColour_front"))
+      assert.are.same({10, 20, 30, 100}, backgroundColor("ggsColour_back"))
+      -- the caption label stays transparent so the fill shows through it
+      assert.are.equal(0, select(4, getBackgroundColor("ggsColour_text")))
+    end)
+
+    it("takes a colour name and a hex code", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsColourName", x = 0, y = 0, width = 200, height = 40}))
+      gauge:setColor("green")
+      assert.are.same({0, 255, 0, 255}, backgroundColor("ggsColourName_front"))
+      gauge:setColor("#0000ff")
+      assert.are.same({0, 0, 255, 255}, backgroundColor("ggsColourName_front"))
+    end)
+
+    it("writes the optional fourth argument onto the text label", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsColourText", x = 0, y = 0, width = 200, height = 40}))
+      gauge:setColor("red", nil, nil, "HP")
+      assert.is_truthy(getLabelText("ggsColourText_text"):find("HP", 1, true))
+    end)
   end)
 
   describe("Geyser.Gauge geometry and visibility", function()
@@ -532,16 +760,19 @@ describe("Tests functionality of Geyser.Gauge", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsClick", x = 0, y = 0, width = 100, height = 20}))
       -- there is no getter for the clickthrough flag, so the delegation to the
       -- three labels is what can be checked
+      -- finally() only holds one function, so both spies are reverted from the
+      -- same one: a second call would drop the first, leaving a spy on a Mudlet
+      -- global that every later spy.on picks up as the real function
       local enable = spy.on(_G, "enableClickthrough")
-      finally(function() enable:revert() end)
+      local disable = spy.on(_G, "disableClickthrough")
+      finally(function() enable:revert() disable:revert() end)
+
       gauge:enableClickthrough()
       assert.spy(enable).was.called(3)
       assert.spy(enable).was.called_with("ggsClick_front")
       assert.spy(enable).was.called_with("ggsClick_back")
       assert.spy(enable).was.called_with("ggsClick_text")
 
-      local disable = spy.on(_G, "disableClickthrough")
-      finally(function() disable:revert() end)
       gauge:disableClickthrough()
       assert.spy(disable).was.called(3)
       assert.spy(disable).was.called_with("ggsClick_text")

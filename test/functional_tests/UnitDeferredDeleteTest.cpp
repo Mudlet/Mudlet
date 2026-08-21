@@ -19,7 +19,7 @@
 
 /*
  * TriggerUnit, AliasUnit, KeyUnit and TimerUnit each defer the deletion of an
- * item until no script is on the call stack. Two properties of that machinery
+ * item until no script is on the call stack. Four properties of that machinery
  * are checked here for all four units:
  *
  * - freeing a temporary item must unlink only that item from the by-name lookup
@@ -29,6 +29,8 @@
  *   rather than report failure over the first one (#9649)
  * - the two deferred-delete containers, mCleanupSet and uninstallList, must never
  *   free the same object twice, whichever order it lands in them (#9650)
+ * - enabling by name must not reactivate an item that is only waiting to be
+ *   freed, while still reaching every live item filed under that name (#9877)
  *
  * The timer half of #9649 cannot be reached from the busted Lua suite - that runs
  * inside a tempTimer, so TimerUnit's cleanup stays deferred for the whole run -
@@ -41,16 +43,20 @@
  * functional tests always build with the address sanitizer on non-Windows
  * (test/functional_tests/CMakeLists.txt includes EnableSanitizers.cmake, whose
  * USE_SANITIZER defaults to "address"), but it does mean these four cases carry
- * no weight in a build with sanitizers switched off. The trigger and timer
- * variants are pure regression guards: those two units already had the guards on
- * development, and only AliasUnit and KeyUnit gain them here.
+ * no weight in a build with sanitizers switched off. Only AliasUnit and KeyUnit
+ * ever lacked those disjointness guards; the trigger and timer cases are there
+ * to keep the four units checked alike.
  *
  * Run with: ctest -R UnitDeferredDeleteTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "AliasUnit.h"
 #include "Host.h"
 #include "KeyUnit.h"
@@ -67,20 +73,17 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForUnitDeferredDeleteTest();
+using namespace std::chrono_literals;
 
 class UnitDeferredDeleteTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "UnitDeferredDelete-Test";
@@ -95,13 +98,27 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForUnitDeferredDeleteTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -117,8 +134,13 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // #9649: temporary items are named after their id, so a permanent item called
@@ -579,6 +601,295 @@ private slots:
         QVERIFY(!unit->getTrigger(tempId));
     }
 
+    // #9877, the alias half. doCleanup() cannot run while the script that did
+    // the killing is on the call stack, so a script at depth 0 keeps the corpse
+    // reachable by name for the rest of its own run.
+    void test_aliasEnableByNameCannotReviveKilled()
+    {
+        auto* unit = mpHost->getAliasUnit();
+        const int id = mpHost->mLuaInterpreter.startTempAlias(qsl("^resurrect_alias$"), QString());
+        QVERIFY(id > 0);
+        auto* pAlias = unit->getAlias(id);
+        QVERIFY(pAlias);
+        const QString name = QString::number(id);
+        QVERIFY(pAlias->isActive());
+
+        QVERIFY2(unit->killAlias(name), "the temporary alias should be killable by name");
+        QVERIFY2(!pAlias->isActive(), "killAlias() must deactivate as well as queue the delete");
+        QVERIFY2(unit->mCleanupSet.contains(pAlias), "the killed alias should be waiting to be freed");
+
+        QVERIFY2(!unit->enableAlias(name), "enableAlias() must not report success for an alias that is only waiting to be freed");
+        QVERIFY2(!pAlias->isActive(), "a killed alias must stay dead until it is freed");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getAlias(id), "the killed alias should still have been freed");
+    }
+
+    // As a user meets it: a script kills the alias, something else enables it by
+    // name, and the next command goes out before doCleanup() has run.
+    void test_aliasEnableByNameCannotReviveAKilledAliasOnTheNextCommand()
+    {
+        mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("aliasFires = 0\n"
+                                                            "local id = tempAlias('^RESURRECTME$', [[aliasFires = aliasFires + 1]])\n"
+                                                            "local name = tostring(id)\n"
+                                                            "expandAlias('RESURRECTME', false)\n"
+                                                            "firstFires = aliasFires\n"
+                                                            "killAlias(name)\n"
+                                                            "enableAliasReturned = enableAlias(name)\n"
+                                                            "expandAlias('RESURRECTME', false)\n"));
+
+        QCOMPARE(readGlobalInt(qsl("firstFires")), 1);
+        QCOMPARE(readGlobalInt(qsl("aliasFires")), 1);
+        QVERIFY2(!readGlobalBool(qsl("enableAliasReturned")), "enableAlias() must not report success for an alias that is only waiting to be freed");
+    }
+
+    void test_aliasEnableByNameCannotReviveAnUninstalledAlias()
+    {
+        auto* unit = mpHost->getAliasUnit();
+        const int id = mpHost->mLuaInterpreter.startTempAlias(qsl("^uninstall_revive_alias$"), QString());
+        QVERIFY(id > 0);
+        auto* pAlias = unit->getAlias(id);
+        QVERIFY(pAlias);
+        const QString name = QString::number(id);
+
+        pAlias->setIsActive(false);
+        unit->uninstallList.append(pAlias);
+        QVERIFY2(!unit->mCleanupSet.contains(pAlias), "uninstall() keeps the two deferred-delete containers disjoint");
+
+        QVERIFY2(!unit->enableAlias(name), "enableAlias() must not report success for an alias an uninstall is waiting to free");
+        QVERIFY2(!pAlias->isActive(), "an alias whose package has been uninstalled must stay inactive");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getAlias(id), "the uninstalled alias should still have been freed");
+    }
+
+    void test_aliasEnableByNameStillReachesALiveSameNamedAlias()
+    {
+        auto* unit = mpHost->getAliasUnit();
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermAlias(qsl("mixed corpse alias placeholder"), QString(), qsl("^mixed_corpse_alias_perm$"), QString());
+        QVERIFY2(permId > 0, qPrintable(message));
+        const QString sharedName = QString::number(permId + 1);
+        unit->getAlias(permId)->setName(sharedName);
+
+        const int tempId = mpHost->mLuaInterpreter.startTempAlias(qsl("^mixed_corpse_alias_temp$"), QString());
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killAlias(sharedName), "the temporary alias should be the one killed");
+        unit->getAlias(permId)->setIsActive(false);
+
+        QVERIFY2(unit->enableAlias(sharedName), "enableAlias must walk past the corpse to the live alias filed under the same name");
+        QVERIFY2(unit->getAlias(permId)->isActive(), "the live same-named alias should have been enabled");
+        QVERIFY2(!unit->getAlias(tempId)->isActive(), "the killed alias must stay dead");
+
+        unit->doCleanup();
+        QVERIFY(!unit->getAlias(tempId));
+    }
+
+    // #9877, the key half. There is no cleanup() between slots, so a permanent
+    // key one case creates stays live and bound for every later one: F6 and F7
+    // are held by the cases above and F4 by the last one here, so a case that
+    // presses a key has to pick a code none of them uses.
+    void test_keyEnableByNameCannotReviveKilled()
+    {
+        auto* unit = mpHost->getKeyUnit();
+        QString emptyScript;
+        int modifier = Qt::NoModifier;
+        int keyCode = Qt::Key_F1;
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript);
+        QVERIFY(id > 0);
+        auto* pKey = unit->getKey(id);
+        QVERIFY(pKey);
+        QString name = QString::number(id);
+        QVERIFY(pKey->isActive());
+
+        QVERIFY2(unit->killKey(name), "the temporary key should be killable by name");
+        QVERIFY2(!pKey->isActive(), "killKey() must deactivate as well as queue the delete");
+        QVERIFY2(unit->mCleanupSet.contains(pKey), "the killed key should be waiting to be freed");
+
+        QVERIFY2(!unit->enableKey(name), "enableKey() must not report success for a key that is only waiting to be freed");
+        QVERIFY2(!pKey->isActive(), "a killed key must stay dead until it is freed");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getKey(id), "the killed key should still have been freed");
+    }
+
+    // As a user meets it: a script kills the key, something else enables it by
+    // name, and the key is pressed before doCleanup() has run.
+    void test_keyEnableByNameCannotReviveAKilledKeyOnTheNextPress()
+    {
+        auto* unit = mpHost->getKeyUnit();
+        mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("keyFires = 0"));
+        QString script = qsl("keyFires = keyFires + 1");
+        int modifier = Qt::NoModifier;
+        int keyCode = Qt::Key_F2;
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, script);
+        QVERIFY(id > 0);
+        QString name = QString::number(id);
+
+        QVERIFY(unit->processDataStream(Qt::Key_F2, Qt::NoModifier));
+        QCOMPARE(readGlobalInt(qsl("keyFires")), 1);
+
+        QVERIFY2(unit->killKey(name), "the temporary key should be killable by name");
+        const bool enabled = unit->enableKey(name);
+
+        QVERIFY2(!unit->processDataStream(Qt::Key_F2, Qt::NoModifier), "a killed key must not match a later key press");
+        QCOMPARE(readGlobalInt(qsl("keyFires")), 1);
+        QVERIFY2(!enabled, "enableKey() must not report success for a key that is only waiting to be freed");
+        QVERIFY2(!unit->getKey(id), "the pass at depth 0 should have freed the killed key");
+    }
+
+    void test_keyEnableByNameCannotReviveAnUninstalledKey()
+    {
+        auto* unit = mpHost->getKeyUnit();
+        QString emptyScript;
+        int modifier = Qt::NoModifier;
+        int keyCode = Qt::Key_F3;
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript);
+        QVERIFY(id > 0);
+        auto* pKey = unit->getKey(id);
+        QVERIFY(pKey);
+        QString name = QString::number(id);
+
+        pKey->setIsActive(false);
+        unit->uninstallList.append(pKey);
+        QVERIFY2(!unit->mCleanupSet.contains(pKey), "uninstall() keeps the two deferred-delete containers disjoint");
+
+        QVERIFY2(!unit->enableKey(name), "enableKey() must not report success for a key an uninstall is waiting to free");
+        QVERIFY2(!pKey->isActive(), "a key whose package has been uninstalled must stay inactive");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getKey(id), "the uninstalled key should still have been freed");
+    }
+
+    void test_keyEnableByNameStillReachesALiveSameNamedKey()
+    {
+        auto* unit = mpHost->getKeyUnit();
+        QString emptyScript;
+        QString parent;
+        QString placeholder = qsl("mixed corpse key placeholder");
+        int permModifier = Qt::NoModifier;
+        int permKeyCode = Qt::Key_F4;
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermKey(placeholder, parent, permKeyCode, permModifier, emptyScript);
+        QVERIFY2(permId > 0, qPrintable(message));
+        QString sharedName = QString::number(permId + 1);
+        unit->getKey(permId)->setName(sharedName);
+
+        int tempModifier = Qt::NoModifier;
+        int tempKeyCode = Qt::Key_F9;
+        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript);
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killKey(sharedName), "the temporary key should be the one killed");
+        unit->getKey(permId)->setIsActive(false);
+
+        QVERIFY2(unit->enableKey(sharedName), "enableKey must walk past the corpse to the live key filed under the same name");
+        QVERIFY2(unit->getKey(permId)->isActive(), "the live same-named key should have been enabled");
+        QVERIFY2(!unit->getKey(tempId)->isActive(), "the killed key must stay dead");
+
+        unit->doCleanup();
+        QVERIFY(!unit->getKey(tempId));
+    }
+
+    // #9877, the timer half. killTimer() stops the QTimer, so reviving one arms
+    // it again - remainingTime() reads that back straight from the QTimer.
+    void test_timerEnableByNameCannotReviveKilled()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        auto [id, message] = mpHost->mLuaInterpreter.startTempTimer(60.0, QString(), false);
+        QVERIFY2(id > 0, qPrintable(message));
+        auto* pTimer = unit->getTimer(id);
+        QVERIFY(pTimer);
+        const QString name = QString::number(id);
+        QVERIFY(unit->remainingTime(id) > 0);
+
+        QVERIFY2(unit->killTimer(name), "the temporary timer should be killable by name");
+        QVERIFY2(unit->remainingTime(id) == -1, "killTimer() must stop the timer as well as queue the delete");
+        QVERIFY2(unit->mCleanupSet.contains(pTimer), "the killed timer should be waiting to be freed");
+
+        QVERIFY2(!unit->enableTimer(name), "enableTimer() must not report success for a timer that is only waiting to be freed");
+        QVERIFY2(unit->remainingTime(id) == -1, "a killed timer must stay stopped until it is freed");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getTimer(id), "the killed timer should still have been freed");
+    }
+
+    // A one-shot that has fired is the one corpse that is still isActive():
+    // TTimer::execute() queues a spent non-repeating temporary with
+    // mpQTimer->stop() + markCleanup() and no deactivate(), unlike killTimer().
+    // The guard therefore cannot be reduced to a state test - skipping merely
+    // inactive timers would let this one fire again.
+    //
+    // The two calls below are exactly what TTimer::execute() does, rather than a
+    // real wait: mudlet::slot_timerFires() runs doCleanup() as soon as execute()
+    // returns, so a fired one-shot is freed before a test could look at it.
+    void test_timerEnableByNameCannotReviveASpentOneShot()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        auto [id, message] = mpHost->mLuaInterpreter.startTempTimer(60.0, QString(), false);
+        QVERIFY2(id > 0, qPrintable(message));
+        auto* pTimer = unit->getTimer(id);
+        QVERIFY(pTimer);
+        const QString name = QString::number(id);
+
+        pTimer->stop();
+        unit->markCleanup(pTimer);
+        QVERIFY2(pTimer->isActive(), "a spent one-shot is queued for cleanup without being deactivated");
+        QCOMPARE(unit->remainingTime(id), -1);
+
+        QVERIFY2(!unit->enableTimer(name), "enableTimer() must not report success for a spent one-shot waiting to be freed");
+        QVERIFY2(unit->remainingTime(id) == -1, "a spent one-shot must not be re-armed");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getTimer(id), "the spent one-shot should still have been freed");
+    }
+
+    void test_timerEnableByNameCannotReviveAnUninstalledTimer()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        auto [id, message] = mpHost->mLuaInterpreter.startTempTimer(60.0, QString(), false);
+        QVERIFY2(id > 0, qPrintable(message));
+        auto* pTimer = unit->getTimer(id);
+        QVERIFY(pTimer);
+        const QString name = QString::number(id);
+
+        pTimer->setIsActive(false);
+        unit->uninstallList.append(pTimer);
+        QVERIFY2(!unit->mCleanupSet.contains(pTimer), "uninstall() keeps the two deferred-delete containers disjoint");
+
+        QVERIFY2(!unit->enableTimer(name), "enableTimer() must not report success for a timer an uninstall is waiting to free");
+        QVERIFY2(unit->remainingTime(id) == -1, "a timer whose package has been uninstalled must stay stopped");
+
+        unit->doCleanup();
+        QVERIFY2(!unit->getTimer(id), "the uninstalled timer should still have been freed");
+    }
+
+    void test_timerEnableByNameStillReachesALiveSameNamedTimer()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        auto [permId, message] = mpHost->mLuaInterpreter.startPermTimer(qsl("mixed corpse timer placeholder"), QString(), 60.0, QString());
+        QVERIFY2(permId > 0, qPrintable(message));
+        const QString sharedName = QString::number(permId + 1);
+        unit->getTimer(permId)->setName(sharedName);
+
+        auto [tempId, tempMessage] = mpHost->mLuaInterpreter.startTempTimer(60.0, QString(), false);
+        QVERIFY2(tempId > 0, qPrintable(tempMessage));
+        QCOMPARE(tempId, permId + 1);
+        QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
+
+        QVERIFY2(unit->killTimer(sharedName), "the temporary timer should be the one killed");
+        unit->getTimer(permId)->setIsActive(false);
+
+        QVERIFY2(unit->enableTimer(sharedName), "enableTimer must walk past the corpse to the live timer filed under the same name");
+        QVERIFY2(unit->getTimer(permId)->isActive(), "the live same-named timer should have been enabled");
+        QVERIFY2(unit->remainingTime(permId) > 0, "the live same-named timer should have been re-armed, not just flagged active");
+        QVERIFY2(!unit->getTimer(tempId)->isActive(), "the killed timer must stay dead");
+
+        unit->doCleanup();
+        QVERIFY(!unit->getTimer(tempId));
+    }
+
     // Helpers (reused from the ResetProfileTest pattern)
 
     int readGlobalInt(const QString& name)
@@ -601,29 +912,7 @@ private slots:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(1000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -646,20 +935,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForUnitDeferredDeleteTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "UnitDeferredDeleteTest.moc"
-QTEST_MAIN(UnitDeferredDeleteTest)
+MUDLET_GROUPED_TEST_MAIN(UnitDeferredDeleteTest)

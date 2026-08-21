@@ -202,6 +202,7 @@ public:
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
+    void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
@@ -302,7 +303,7 @@ public slots:
     void slot_socketConnected();
     void slot_socketDisconnected();
     void slot_socketReadyToBeRead();
-// Not used    void slot_socketError();
+    void slot_socketError();
 #if !defined(QT_NO_SSL)
     void slot_socketSslError(const QList<QSslError>&);
 #endif
@@ -350,12 +351,16 @@ private:
     void abortLosingSocket(QSslSocket* losingSocket);
 #endif
 
+    void abandonHostLookup();
+
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
+    void handleFailedConnection();
+    void forgetGameSuppliedHostState();
     void sendLoginAndPass();
 
     QByteArray prepareNewEnvironData(const QString&);
@@ -420,6 +425,7 @@ private:
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
     void autoEnableTTYPEVersion();
+    QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 
     QPointer<Host> mpHost;
     // The first one will point to one of the two instances following one of
@@ -459,6 +465,16 @@ private:
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
     bool mLookingUpHost = false;
+    // How many of the connection attempts started for the current connect - one per address
+    // family the lookup turned up - have yet to succeed or fail.
+    int mPendingConnectionAttempts = 0;
+    // Connects that failed in a row, which is how long the wait before the next automatic retry
+    // is. Reset by a connection being made and by the user connecting or disconnecting.
+    int mFailedConnectionCount = 0;
+    // The lookup connectIt() is waiting on, or -1. mHostUrl and mHostPort move
+    // on with every connectIt(), so a callback from a lookup a later call
+    // superseded would pair its own host name with the newer port.
+    int mHostLookupId = -1;
     int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 
@@ -475,6 +491,10 @@ private:
     // Set once a subnegotiation passes the size cap: drop the rest of it until
     // IAC SE instead of buffering or leaking the unterminated payload.
     bool mDiscardingOversizedSubnegotiation = false;
+    // Set between the KaVir handshake pattern being spotted and the reconnect it
+    // schedules: no more data from the connection being dropped may be acted on,
+    // as it would land on the connection replacing it.
+    bool mDeferredReconnect = false;
     // Set if we have negotiated the use of the option by us:
     std::bitset<256> myOptionState;
     // Set if he has negotiated the use of the option by him:
@@ -510,6 +530,7 @@ private:
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
     QTimer* mTimerPasswordModeTimeout = nullptr;
+    QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
@@ -517,6 +538,7 @@ private:
     int mCycleCountMTTS = 0;
     QSet<QString> newEnvironVariablesSent;
     bool mReplayHasFaultyFormat = false;
+    // Negotiated afresh with each game, so anything added here also has to be cleared in reset():
     bool enableNewEnviron = false;
     bool enableCHARSET = false;
     bool enableATCP = false;

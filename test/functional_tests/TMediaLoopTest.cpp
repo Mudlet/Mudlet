@@ -19,12 +19,15 @@
 
 #include <QAudioOutput>
 #include <QDeadlineTimer>
+#include <QFileInfo>
 #include <QMediaPlayer>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMedia.h"
@@ -34,12 +37,7 @@
 #include "mudlet.h"
 #include "utils.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForMediaLoop();
+#include "GroupedTest.h"
 
 using namespace std::chrono_literals;
 
@@ -78,7 +76,9 @@ using namespace std::chrono_literals;
  *     continue=false restart of the same one, must keep the source it was given;
  *   - each of those endings must raise sysMediaFinished exactly once, since releasing the
  *     source alone leaves a script chaining its next track off that event waiting forever,
- *     and announcing twice re-enters any handler that stops the media it was told about.
+ *     and announcing twice re-enters any handler that stops the media it was told about;
+ *   - a fade-away stop must end the track whatever state it is in, a track that is not playing
+ *     being one it cannot fade over and so has to stop outright (issue #9902).
  *
  * Which of those a backend can demonstrate varies, so probeBackend() measures one up front and
  * each test skips with what it found. CMakeLists.txt pins QT_MEDIA_BACKEND on the platforms
@@ -90,15 +90,25 @@ class TMediaLoopTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "Test-Media-Loop";
-    const QString mPort = "4012";
+    QString mPort; // assigned the stub's actual ephemeral port in init()
     const QString mLocalhost = "localhost";
 
     // Length of the generated clip. Long enough that "still playing" cannot be an
     // artefact of start-up latency, short enough to loop several times quickly.
     static constexpr int clipMs = 400;
+
+    // For the fade-away tests. A fade of fadeOutMs has to be a small fraction of the clip, or a
+    // fade that never happened cannot be told from one that ran its course; and the clip has to
+    // outlast fadeStopDeadline, which is the budget a stop that was acted on has to end the
+    // track within.
+    static constexpr int longClipMs = 8000;
+    static constexpr int fadeOutMs = 800;
+    static constexpr std::chrono::milliseconds fadeStopDeadline{longClipMs / 2};
 
     QTemporaryDir mProbeDir;
     // Set when the backend never reaches PlayingState, so nothing below can even be started.
@@ -117,16 +127,34 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForMediaLoop();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
         probeBackend();
     }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mLocalhost, mPort.toUShort());
+        mpServer->start(mLocalhost, 0);
+        mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -530,6 +558,210 @@ private slots:
         QVERIFY2(waitForPlaying(media, fileName, 2s), "A restarted track was cut off - the cleanup deferred by its own stop cleared the source it had just been given.");
     }
 
+    // A fade-away stop lands in the same window as test_stoppedTrackReleasesItsSource whenever a
+    // script plays a track and stops it from the same alias or handler, and it has nowhere to
+    // fade from: the position and duration the fade is worked out from are both still 0, which a
+    // player that has not reached PlayingState stands in for here. A fade over no time at all
+    // leaves the track running with no sysMediaFinished to chain anything off - hence a repeating
+    // track and a long clip, since one that simply ran out would release its source and announce
+    // itself, reading as a stop that worked.
+    void test_fadeAwayStopWhileStillLoadingStillStopsTheTrack()
+    {
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+        SKIP_OR_FAIL_WITHOUT(mSynchronousStartReason);
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
+        watchMediaFinished();
+
+        const QString fileName = writeClip(qsl("fadeloading.wav"), wavBytes(longClipMs));
+        QVERIFY(!fileName.isEmpty());
+
+        TMediaData data = clipData(fileName);
+        data.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        media->playMedia(data);
+
+        // A player that holds the source but has not started is what "still loading" means here.
+        // Without the first of these the stop could be landing on a track that has already
+        // started; without the second, on a play() that bailed out and left nothing to stop, and
+        // the assertions below would all be satisfied by a track that never played.
+        QCOMPARE(media->playersHoldingSource(), 1);
+        QVERIFY2(media->playersInPlayingState() == 0, "The track was already playing when the stop was issued, so the stop did not land while it was still loading.");
+
+        TMediaData stop = clipData(fileName);
+        stop.setMediaFadeAway(TMediaData::MediaFadeAwayEnabled);
+        media->stopMedia(stop);
+
+        const bool stopped = QTest::qWaitFor(
+                [&]() {
+                    return !playing(media, fileName);
+                },
+                QDeadlineTimer(fadeStopDeadline));
+
+        QVERIFY2(stopped, "A fade-away stop issued while the track was still loading was lost - the track started anyway and played on.");
+
+        const bool released = QTest::qWaitFor(
+                [&]() {
+                    return media->playersHoldingSource() == 0;
+                },
+                QDeadlineTimer(10s));
+
+        QVERIFY2(released, "A track stopped with a fade-away while it was still loading never released its media source.");
+
+        QVERIFY2(waitForMediaFinishedCount(1), "A track stopped with a fade-away while it was still loading raised no single sysMediaFinished.");
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedNames[1] == 'fadeloading.wav'")), "sysMediaFinished named the wrong file for a track stopped with a fade-away while it was loading.");
+
+        // The source outlives the event by a turn, so a backend that does report a state change
+        // for this player can still announce the same ending a second time.
+        QTest::qWait(clipMs);
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedCount == 1")), "A track stopped with a fade-away while it was still loading announced its ending more than once.");
+    }
+
+    // The same stop, on a track carrying a finish position. That position is what the fade is
+    // measured against when it is set, and it is known before the track has loaded, so this is
+    // the one mid-load stop that can work out a fade over a stretch of a track that is not
+    // playing yet.
+    void test_fadeAwayStopWhileStillLoadingStillStopsATrackWithAFinish()
+    {
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+        SKIP_OR_FAIL_WITHOUT(mSynchronousStartReason);
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
+        watchMediaFinished();
+
+        const QString fileName = writeClip(qsl("fadefinish.wav"), wavBytes(longClipMs));
+        QVERIFY(!fileName.isEmpty());
+
+        TMediaData data = clipData(fileName);
+        data.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        data.setMediaFinish(longClipMs);
+        media->playMedia(data);
+
+        QCOMPARE(media->playersHoldingSource(), 1);
+        QVERIFY2(media->playersInPlayingState() == 0, "The track was already playing when the stop was issued, so the stop did not land while it was still loading.");
+
+        TMediaData stop = clipData(fileName);
+        stop.setMediaFadeAway(TMediaData::MediaFadeAwayEnabled);
+        media->stopMedia(stop);
+
+        const bool stopped = QTest::qWaitFor(
+                [&]() {
+                    return !playing(media, fileName);
+                },
+                QDeadlineTimer(fadeStopDeadline));
+
+        QVERIFY2(stopped,
+                 "A fade-away stop issued while a track with a finish position was still loading left it playing - the finish position let a fade be worked out for a track that had not started.");
+        QVERIFY2(waitForMediaFinishedCount(1), "A track with a finish position stopped with a fade-away while it was still loading raised no single sysMediaFinished.");
+    }
+
+    // A paused track cannot be faded out either: the position changes a fade is applied from
+    // only come while a player is running, so an end scheduled for a paused one is never reached
+    // and it holds its source for good.
+    void test_fadeAwayStopOfAPausedTrackStopsIt()
+    {
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
+        watchMediaFinished();
+
+        const QString fileName = writeClip(qsl("fadepaused.wav"), wavBytes(longClipMs));
+        QVERIFY(!fileName.isEmpty());
+
+        TMediaData data = clipData(fileName);
+        data.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        media->playMedia(data);
+
+        QVERIFY2(waitForPlaybackStarted(media, fileName), "The track never started playing.");
+
+        TMediaData pause = clipData(fileName);
+        media->pauseMedia(pause);
+
+        TMediaData pausedCriteria = clipData(fileName);
+        QVERIFY2(media->pausedMedia(pausedCriteria).size() == 1, "The track was not paused, so the stop below would land on a playing one.");
+
+        TMediaData stop = clipData(fileName);
+        stop.setMediaFadeAway(TMediaData::MediaFadeAwayEnabled);
+        media->stopMedia(stop);
+
+        const bool released = QTest::qWaitFor(
+                [&]() {
+                    return media->playersHoldingSource() == 0;
+                },
+                QDeadlineTimer(fadeStopDeadline));
+
+        QVERIFY2(released, "A fade-away stop of a paused track never released its media source - the fade it scheduled waits on position changes a paused player does not make.");
+        QVERIFY2(waitForMediaFinishedCount(1), "A paused track stopped with a fade-away raised no single sysMediaFinished.");
+    }
+
+    // The other half of test_fadeAwayStopWhileStillLoadingStillStopsTheTrack: a fade-away stop of
+    // a track that is really playing must still fade it rather than cut it off, and the fade must
+    // still end it. The clip is long enough that the fade is a fraction of it, so a track that
+    // plays to its own end reads as a fade that never happened. Assumes the backend knows the
+    // duration by the time it reports PlayingState, as the ones pinned in CMakeLists.txt do -
+    // one that did not would have no stretch to fade over and would stop the track outright.
+    void test_fadeAwayStopFadesAPlayingTrackOut()
+    {
+        SKIP_OR_FAIL_WITHOUT(mCannotPlayReason);
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+
+        watchMediaFinished();
+
+        const QString fileName = writeClip(qsl("fadeplaying.wav"), wavBytes(longClipMs));
+        QVERIFY(!fileName.isEmpty());
+
+        TMediaData data = clipData(fileName);
+        media->playMedia(data);
+
+        QVERIFY2(waitForPlaybackStarted(media, fileName), "The track never started playing.");
+
+        TMediaData stop = clipData(fileName);
+        stop.setMediaFadeAway(TMediaData::MediaFadeAwayEnabled);
+        stop.setMediaFadeOut(fadeOutMs);
+        media->stopMedia(stop);
+
+        TMediaData criteria = clipData(fileName);
+        const QList<TMediaData> stillPlaying = media->playingMedia(criteria);
+        QVERIFY2(stillPlaying.size() == 1, "A fade-away stop cut the track off outright instead of fading it.");
+        QVERIFY2(stillPlaying.at(0).mediaEnd() != TMediaData::MediaEndNotSet, "A fade-away stop of a playing track scheduled no end for it, so nothing would ever end the fade.");
+
+        const bool stopped = QTest::qWaitFor(
+                [&]() {
+                    return !playing(media, fileName);
+                },
+                QDeadlineTimer(fadeStopDeadline));
+
+        QVERIFY2(stopped, "A faded-away track was still playing long after its fade should have ended it.");
+        QVERIFY2(waitForMediaFinishedCount(1), "A faded-away track raised no single sysMediaFinished.");
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedNames[1] == 'fadeplaying.wav'")), "sysMediaFinished named the wrong file for a faded-away track.");
+
+        QTest::qWait(clipMs);
+        QVERIFY2(mediaFinishedHolds(qsl("mediaFinishedCount == 1")), "A faded-away track announced its ending more than once.");
+    }
+
+    // The end a fade-away schedules is a position in the track, so an end of 0 has to stay
+    // distinguishable from no end having been scheduled at all. A sentinel taken from inside
+    // that range makes the two the same value, and a fade nothing acts on is what comes of it.
+    void test_anEndOfZeroIsNotTheSameAsNoEndAtAll()
+    {
+        TMediaData data;
+        QCOMPARE(data.mediaEnd(), TMediaData::MediaEndNotSet);
+
+        data.setMediaEnd(0);
+        QCOMPARE(data.mediaEnd(), 0);
+        QVERIFY2(data.mediaEnd() != TMediaData::MediaEndNotSet, "An end scheduled at position 0 reads back as no end having been scheduled, so nothing would ever act on it.");
+
+        data.setMediaEnd(-5);
+        QCOMPARE(data.mediaEnd(), TMediaData::MediaEndNotSet);
+    }
+
     void cleanup()
     {
         delete mpServer;
@@ -771,7 +1003,7 @@ private:
     QString writeUnplayableClip(const QString& fileName) const { return writeClip(fileName, QByteArray("not a WAV file, and not decodable as anything else")); }
 
     // Writes a clip into the profile media directory, returning {} if that fails.
-    QString writeClip(const QString& fileName, const QByteArray& contents = wavBytes()) const
+    QString writeClip(const QString& fileName, const QByteArray& contents = wavBytes(clipMs)) const
     {
         const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mHostname);
         if (!QDir().mkpath(mediaPath)) {
@@ -791,11 +1023,11 @@ private:
 
     // A silent 16-bit mono PCM WAV. Silence is fine: the tests assert on playback state
     // transitions, not on what is heard.
-    static QByteArray wavBytes()
+    static QByteArray wavBytes(int durationMs = clipMs)
     {
         constexpr int sampleRate = 8000;
         constexpr int bytesPerSample = 2;
-        const int dataBytes = sampleRate * bytesPerSample * clipMs / 1000;
+        const int dataBytes = sampleRate * bytesPerSample * durationMs / 1000;
 
         QByteArray wav;
         QDataStream out(&wav, QIODevice::WriteOnly);
@@ -823,26 +1055,7 @@ private:
     // GUI
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5s)) {
+        if (!TestProfile::create(hostname, address, port)) {
             QFAIL("Profile took too long to load.");
         }
     }
@@ -861,20 +1074,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForMediaLoop()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TMediaLoopTest.moc"
-QTEST_MAIN(TMediaLoopTest)
+MUDLET_GROUPED_TEST_MAIN(TMediaLoopTest)

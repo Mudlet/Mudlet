@@ -20,6 +20,7 @@
 #include "TKeySequenceEdit.h"
 #include "utils.h"
 
+#include <QApplication>
 #include <QLineEdit>
 #include <QSignalSpy>
 #include <QVBoxLayout>
@@ -34,10 +35,15 @@ static constexpr const char* activationUnavailableMessage = "the window never be
 // MUDLET_REQUIRE_WINDOW_ACTIVATION because every display it runs against can
 // activate a window, so a skip there would be hiding a regression rather than
 // reporting an environment - the same floor MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK
-// puts under the media tests.
+// puts under the media tests. qWaitForWindowActive() only polls, so a transient
+// denial of activation timed the wait out on the macOS CI leg (#10116) - keep
+// asking, as DetachedWindowMenuShortcutsTest already does.
 #define REQUIRE_WINDOW_ACTIVATION(window)                                                                                                                                                              \
     do {                                                                                                                                                                                               \
-        if (!QTest::qWaitForWindowActive(&(window))) {                                                                                                                                                 \
+        if (!QTest::qWaitFor([&]() {                                                                                                                                                                   \
+                (window).activateWindow();                                                                                                                                                             \
+                return QApplication::activeWindow() == &(window);                                                                                                                                      \
+            })) {                                                                                                                                                                                      \
             if (qEnvironmentVariableIsSet("MUDLET_REQUIRE_WINDOW_ACTIVATION")) {                                                                                                                       \
                 QFAIL(activationUnavailableMessage);                                                                                                                                                   \
             }                                                                                                                                                                                          \

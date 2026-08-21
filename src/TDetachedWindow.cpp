@@ -63,8 +63,15 @@
 
 using namespace std::chrono_literals;
 
-TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, QWidget* parent, bool toolbarVisible)
-: QMainWindow(parent)
+// Deliberately parentless: a QWidget parent on a top-level window gives it a
+// QWindow transient parent, and Windows implements that as native window
+// ownership - an owned window is pinned above its owner forever, so clicking the
+// main window focuses it without ever bringing it to the front. Qt's xcb plugin
+// sets no WM_TRANSIENT_FOR for it, so it does not reproduce on Linux.
+// Since nothing owns the window now, mudlet::closeEvent() closing it is what
+// keeps it from outliving the application.
+TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* console, bool toolbarVisible)
+: QMainWindow(nullptr)
 , mCurrentProfileName(profileName)
 {
     // Add the initial profile
@@ -83,7 +90,7 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     // Set window properties
     //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
     setWindowTitle(tr("Mudlet - %1 (Detached)").arg(profileName));
-    setWindowIcon(parent ? parent->windowIcon() : QIcon());
+    setWindowIcon(mudlet::self()->windowIcon());
     setAttribute(Qt::WA_DeleteOnClose);
     setAcceptDrops(true);
 
@@ -254,9 +261,18 @@ void TDetachedWindow::createMenus()
         return;
     }
 
+    // No mnemonic ("&") on any of the menu titles below: QMenuBar grabs one as a
+    // window shortcut, where it lands on the Alt+<letter> shortcut of a menu
+    // action - "&Window" on Close profile's Alt+W, say, which is its Windows and
+    // Linux binding. Qt then alternates between the two, one press only warning
+    // ("QAction::event: Ambiguous shortcut overload") while the next opens the
+    // menu, so the shortcut looks dead. Picking other letters is no defence, since
+    // the shortcuts are user-assignable. The item mnemonics below are safe: they
+    // only apply while their menu is open, so they never reach QShortcutMap.
+
     // Games menu with connection actions - matches main window order
-    //: This is the name of a menu in the menubar of a detached Mudlet window.
-    auto gamesMenu = menuBar()->addMenu(tr("&Games"));
+    //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
+    auto gamesMenu = menuBar()->addMenu(tr("Games"));
 
     //: This is an item in the "Games" menu in the menubar of a detached Mudlet window.
     mpMenuConnectAction = new QAction(tr("&Play"), this);
@@ -298,8 +314,8 @@ void TDetachedWindow::createMenus()
     gamesMenu->addAction(closeApplicationAction);
 
     // Toolbox menu with all scripting tools - matches main window order
-    //: This is the name of a menu in the menubar of a detached Mudlet window.
-    auto toolboxMenu = menuBar()->addMenu(tr("&Toolbox"));
+    //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
+    auto toolboxMenu = menuBar()->addMenu(tr("Toolbox"));
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuScriptEditorAction = new QAction(tr("&Script editor"), this);
@@ -387,8 +403,8 @@ void TDetachedWindow::createMenus()
     toolboxMenu->addAction(mpMenuToggleEmergencyStopAction);
 
     // Options menu - matches main window order
-    //: This is the name of a menu in the menubar of a detached Mudlet window.
-    auto optionsMenu = menuBar()->addMenu(tr("&Options"));
+    //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
+    auto optionsMenu = menuBar()->addMenu(tr("Options"));
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
     mpMenuPreferencesAction = new QAction(tr("&Preferences"), this);
@@ -431,8 +447,8 @@ void TDetachedWindow::createMenus()
     optionsMenu->addAction(muteGameAction);
 
     // Window menu - matches main window order (except reattach vs detach)
-    //: This is the name of a menu in the menubar of a detached Mudlet window.
-    mpWindowMenu = menuBar()->addMenu(tr("&Window"));
+    //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
+    mpWindowMenu = menuBar()->addMenu(tr("Window"));
 
     //: This is an item in the "Window" menu in the menubar of a detached Mudlet window.
     auto fullScreenAction = new QAction(tr("&Fullscreen"), this);
@@ -477,8 +493,8 @@ void TDetachedWindow::createMenus()
     mpWindowMenu->addAction(minimizeAction);
 
     // Help menu - matches main window order
-    //: This is the name of a menu in the menubar of a detached Mudlet window.
-    auto helpMenu = menuBar()->addMenu(tr("&Help"));
+    //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
+    auto helpMenu = menuBar()->addMenu(tr("Help"));
 
     //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
     auto helpAction = new QAction(tr("&API Reference"), this);
@@ -523,8 +539,8 @@ void TDetachedWindow::createMenus()
     helpMenu->addAction(forumAction);
 
     // About menu - matches main window order
-    //: This is the name of a menu in the menubar of a detached Mudlet window.
-    auto aboutMenu = menuBar()->addMenu(tr("&About"));
+    //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
+    auto aboutMenu = menuBar()->addMenu(tr("About"));
 
     //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
     auto aboutAction = new QAction(tr("About &Mudlet"), this);
@@ -815,13 +831,9 @@ void TDetachedWindow::restoreWindowGeometry()
         resize(800, 600);
 
         // Center on screen containing the main window
-        if (parentWidget()) {
-            const QScreen* screen = QApplication::screenAt(parentWidget()->pos());
-
-            if (screen) {
-                const QRect screenGeometry = screen->availableGeometry();
-                move(screenGeometry.center() - rect().center());
-            }
+        if (const QScreen* screen = QApplication::screenAt(mudlet::self()->pos())) {
+            const QRect screenGeometry = screen->availableGeometry();
+            move(screenGeometry.center() - rect().center());
         }
     }
 
@@ -838,7 +850,6 @@ void TDetachedWindow::createToolBar()
     mpToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpToolBar);
     mpToolBar->setMovable(false);
-    mpToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 
     // Intercept the toggle action that Qt's default menu bar context menu uses,
     // so we can persist visibility and prevent lockout
@@ -875,7 +886,6 @@ void TDetachedWindow::createToolBar()
     mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonConnect->setAutoRaise(true);
-    mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonConnect);
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
@@ -949,7 +959,6 @@ void TDetachedWindow::createToolBar()
     mpButtonMute->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonMute->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonMute->setAutoRaise(true);
-    mpButtonMute->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonMute);
 
     mpActionMuteMedia = new QAction(tr("Mute all media"), this);
@@ -981,7 +990,6 @@ void TDetachedWindow::createToolBar()
     mpButtonDiscord->setObjectName(qsl("discord"));
     mpButtonDiscord->setContextMenuPolicy(Qt::DefaultContextMenu);
     mpButtonDiscord->setAutoRaise(true);
-    mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonDiscord);
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
@@ -1027,7 +1035,6 @@ void TDetachedWindow::createToolBar()
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonPackageManagers->setAutoRaise(true);
-    mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonPackageManagers);
 
     mpActionPackageManager = new QAction(tr("Package Manager"), this);
@@ -1133,6 +1140,30 @@ void TDetachedWindow::connectToolBarActions()
     // Discord/IRC actions - use our custom slots to ensure correct profile context
     connect(mpActionDiscord, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
     connect(mpActionMudletDiscord, &QAction::triggered, this, &TDetachedWindow::slot_mudletDiscord);
+
+    // The signal only fires on a change, so a window detached afterwards has to
+    // read the size that is already in force for itself
+    connect(mudletInstance, &mudlet::signal_setToolBarIconSize, this, &TDetachedWindow::slot_setToolBarIconSize);
+    slot_setToolBarIconSize(mudletInstance->mToolbarIconSize);
+}
+
+void TDetachedWindow::slot_setToolBarIconSize(const int size)
+{
+    if (size <= 0 || !mpToolBar) {
+        return;
+    }
+
+    const Qt::ToolButtonStyle style = (size > 2) ? Qt::ToolButtonTextUnderIcon : Qt::ToolButtonIconOnly;
+    mpToolBar->setIconSize(QSize(size * 8, size * 8));
+    mpToolBar->setToolButtonStyle(style);
+
+    // A button put in with addWidget() does not follow the toolbar's own style
+    // the way one the toolbar built for an action does
+    for (QToolButton* pButton : {mpButtonConnect, mpButtonMute, mpButtonDiscord, mpButtonPackageManagers}) {
+        if (pButton) {
+            pButton->setToolButtonStyle(style);
+        }
+    }
 }
 
 QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequence& fallback) const

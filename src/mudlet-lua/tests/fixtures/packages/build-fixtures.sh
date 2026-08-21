@@ -20,10 +20,10 @@ timestamp=202608040000.00
 
 for source in sources/*/; do
 	name=$(basename "$source")
-	# mudlet-spec-xmlonly is installed straight from its .xml file, it has no archive
-	if [ "$name" = "mudlet-spec-xmlonly" ]; then
-		continue
-	fi
+	# these are installed straight from their .xml file, they have no archive
+	case "$name" in
+		mudlet-spec-xmlonly|mudlet-spec-colorfilter) continue ;;
+	esac
 	archive="$outputDirectory/$name.mpackage"
 	staging=$(mktemp -d)
 	cp -R "$source." "$staging"

@@ -107,7 +107,7 @@ public:
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(char*, const QString&, int line, int posOffset = 0);
+    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0);
     bool checkIfNew();
     void unmarkAsNew();
 
@@ -123,7 +123,7 @@ public:
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber);
-    bool match_perl(char*, const QString&, int, int posOffset, int lineNumber);
+    bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
@@ -210,6 +210,7 @@ private:
 
     QList<int> mPatternKinds;
     QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
+    QMap<int, QSharedPointer<pcre2_match_data>> mMatchDataMap;
 
     // Lua code as a string to run
     QString mScript;
@@ -260,7 +261,7 @@ inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
     debug.nospace() << ", isMultiline=" << trigger->isMultiline();
     debug.nospace() << ", patterns=" << trigger->getPatternsList();
     debug.nospace() << ", regexCodes=" << trigger->getRegexCodePropertyList();
-    debug.nospace() << ", script is in: " << (trigger->mRegisteredAnonymousLuaFunction ? "string": "Lua function");
+    debug.nospace() << ", script is in: " << (trigger->mRegisteredAnonymousLuaFunction ? "string" : "Lua function");
     debug.nospace() << ", script=" << trigger->getScript();
     debug.nospace() << ')';
     return debug;
