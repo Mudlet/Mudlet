@@ -30,11 +30,9 @@
 #include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
-#include "THyperlinkCompactManager.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
-#include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
@@ -139,18 +137,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     // before any widget exists), so point its buffer at this view now.
     buffer.setConsole(this);
 
-    mpHyperlinkCompactManager = std::make_unique<THyperlinkCompactManager>();
-    mpHyperlinkSelectionManager = std::make_unique<THyperlinkSelectionManager>(*this);
-    mpHyperlinkVisibilityManager = std::make_unique<THyperlinkVisibilityManager>(this);
-
-    initializeOSC8StyleFeature();
-    initializeOSC8MenuFeature();
-    initializeOSC8TooltipFeature();
-    initializeOSC8DisabledFeature();
-    initializeOSC8SpoilerFeature();
-    initializeOSC8SelectionFeature();
-    initializeOSC8VisibilityFeature();
-    initializeOSC8TitleFeature();
+    // Redraw whichever panes this console has when the model conceals or
+    // reveals a link. Only the main console's buffer is ever translated, so
+    // only it registers tracked links today, but the manager is per model and
+    // this is the view's whole half of the hyperlink split - so every console
+    // gets it rather than the main one alone.
+    connect(&model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::visibilityChanged, this, &TConsole::slot_hyperlinkVisibilityChanged);
 
     auto quitShortcut = new QShortcut(this);
     quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
@@ -302,20 +294,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // zero-timer at the end of this constructor
 
         // Connect user input trigger (command submission only, not typing)
-        connect(mpCommandLine, &TCommandLine::commandSubmitted, mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onUserInput);
+        connect(mpCommandLine, &TCommandLine::commandSubmitted, &model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
 
-        // Connect GA/EOR prompt signal from telnet
-        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived, mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::onPromptReceived);
-
-        // Refresh display when hyperlink visibility changes
-        connect(mpHyperlinkVisibilityManager.get(), &THyperlinkVisibilityManager::visibilityChanged, this, [this]() {
-            if (mUpperPane) {
-                mUpperPane->forceUpdate();
-            }
-            if (mLowerPane) {
-                mLowerPane->forceUpdate();
-            }
-        });
+        // Connect GA/EOR prompt signal from telnet. Both ends of this are core,
+        // so relocating the connect() itself out of the view belongs to a later
+        // step - what matters here is that the receiver is now the model's, so
+        // the wire outlives this widget rather than dying with it.
+        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived, &model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onPromptReceived);
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -2960,6 +2945,22 @@ void TConsole::slot_clearSearchResults()
     mLowerPane->forceUpdate();
 }
 
+// The view's half of the OSC 8 visibility split: the model has just rewritten a
+// line of the buffer, so whatever this console shows of it is stale. forceUpdate()
+// rather than update() because a plain repaint is served from the pane's cached
+// screen pixmap, which still holds the text that has just been concealed.
+// The panes are null while the constructor is still building them, and stay null
+// for a console whose model outlives it long enough for a timer to fire.
+void TConsole::slot_hyperlinkVisibilityChanged()
+{
+    if (mUpperPane) {
+        mUpperPane->forceUpdate();
+    }
+    if (mLowerPane) {
+        mLowerPane->forceUpdate();
+    }
+}
+
 void TConsole::handleLinesOverflowEvent(const int lineCount)
 {
     if (mType & ~(UserWindow | SubConsole)) {
@@ -3107,111 +3108,4 @@ void TConsole::restoreCommandSearchSettings()
     }
 
     commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
-}
-
-void TConsole::initializeOSC8StyleFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    // Register shorthands for style property names
-    mpHyperlinkCompactManager->registerShorthand(qsl("s"), qsl("style"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("c"), qsl("color"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("bg"), qsl("bg"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("b"), qsl("bold"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("i"), qsl("italic"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("u"), qsl("underline"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("o"), qsl("overline"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("st"), qsl("strikethrough"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("tdc"), qsl("text-decoration-color"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("h"), qsl("hover"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("a"), qsl("active"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("f"), qsl("focus"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("fv"), qsl("focus-visible"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("vi"), qsl("visited"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("l"), qsl("link"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("al"), qsl("any-link"));
-    mpHyperlinkCompactManager->registerShorthand(qsl("sl"), qsl("selected"));
-
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("style"));
-}
-
-void TConsole::initializeOSC8MenuFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    // Register shorthand for menu property
-    mpHyperlinkCompactManager->registerShorthand(qsl("m"), qsl("menu"));
-
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("menu"));
-}
-
-void TConsole::initializeOSC8TooltipFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    // Register shorthand for tooltip property
-    mpHyperlinkCompactManager->registerShorthand(qsl("t"), qsl("tooltip"));
-
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("tooltip"));
-}
-
-void TConsole::initializeOSC8VisibilityFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    // Register shorthand for visibility property
-    mpHyperlinkCompactManager->registerShorthand(qsl("v"), qsl("visibility"));
-
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("visibility"));
-}
-
-void TConsole::initializeOSC8SelectionFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    // Register shorthand for selection property
-    mpHyperlinkCompactManager->registerShorthand(qsl("sel"), qsl("selection"));
-
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("selection"));
-}
-
-void TConsole::initializeOSC8SpoilerFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    mpHyperlinkCompactManager->registerShorthand(qsl("sp"), qsl("spoiler"));
-
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("spoiler"));
-}
-
-void TConsole::initializeOSC8DisabledFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    mpHyperlinkCompactManager->registerShorthand(qsl("d"), qsl("disabled"));
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("disabled"));
-}
-
-void TConsole::initializeOSC8TitleFeature()
-{
-    if (!mpHyperlinkCompactManager) {
-        return;
-    }
-
-    mpHyperlinkCompactManager->registerShorthand(qsl("ti"), qsl("title"));
-    mpHyperlinkCompactManager->registerPresetProperty(qsl("title"));
 }

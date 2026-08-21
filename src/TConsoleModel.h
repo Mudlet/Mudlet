@@ -21,6 +21,9 @@
  ***************************************************************************/
 
 #include "TBuffer.h"
+#include "THyperlinkCompactManager.h"
+#include "THyperlinkSelectionManager.h"
+#include "THyperlinkVisibilityManager.h"
 
 #include <QColor>
 #include <QPoint>
@@ -31,7 +34,8 @@ class Host;
 // The per-console data model: the slice of former TConsole state that the
 // telnet -> trigger pipeline drives without needing a widget. That is the text
 // buffer, the cursor/prompt state Host::runTriggers() updates on every line,
-// and the fg/bg colours colour-triggers match against. Splitting it out of the
+// the fg/bg colours colour-triggers match against, and the OSC 8 hyperlink
+// state the buffer translation registers as it goes. Splitting it out of the
 // widget is what lets the pipeline run with no view at all, which is the point
 // of the Widgets-free core (#8681).
 //
@@ -44,6 +48,7 @@ struct TConsoleModel
 {
     explicit TConsoleModel(Host* pHost)
     : buffer(pHost)
+    , mHyperlinkVisibilityManager(*this)
     {
     }
 
@@ -62,6 +67,16 @@ struct TConsoleModel
     int mEngineCursor = -1;
     QPoint mUserCursor;
     bool mIsPromptLine = false;
+
+    // The OSC 8 hyperlink managers. Only their state is here: concealing a link
+    // rewrites this model's buffer, so it has to run with or without a view,
+    // while repainting after it is the view's job - TConsole observes
+    // THyperlinkVisibilityManager::visibilityChanged and forces both panes to
+    // redraw. mHyperlinkVisibilityManager takes this model by reference, so it
+    // must stay declared after the buffer it works on.
+    THyperlinkCompactManager mHyperlinkCompactManager;
+    THyperlinkSelectionManager mHyperlinkSelectionManager;
+    THyperlinkVisibilityManager mHyperlinkVisibilityManager;
 };
 
 #endif // MUDLET_TCONSOLEMODEL_H

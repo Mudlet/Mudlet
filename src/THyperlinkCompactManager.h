@@ -27,8 +27,6 @@
 #include <QString>
 #include <QStringList>
 
-class TConsole;
-
 // Registry entry for preset properties
 struct PresetPropertyEntry {
     PresetPropertyEntry() {}
@@ -51,7 +49,8 @@ class THyperlinkCompactManager : public QObject
     Q_DISABLE_COPY(THyperlinkCompactManager)
 
 public:
-    // Constructor: No QObject parent - ownership managed by unique_ptr in TConsole
+    // No QObject parent: this is a field of the core TConsoleModel, which is not
+    // a QObject and can outlive the console widget that used to own it.
     THyperlinkCompactManager();
     ~THyperlinkCompactManager();
 
@@ -109,6 +108,8 @@ signals:
     void presetsCleared();
 
 private:
+    void registerBuiltInFeatures();
+
     QHash<QString, ShorthandEntry> mShorthandRegistry;
 
     QHash<QString, PresetPropertyEntry> mPresetPropertyRegistry;

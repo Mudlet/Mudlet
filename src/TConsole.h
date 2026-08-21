@@ -153,9 +153,6 @@ class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
-class THyperlinkCompactManager;
-class THyperlinkSelectionManager;
-class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -260,21 +257,13 @@ public:
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
 
-    THyperlinkCompactManager& getHyperlinkCompactManager()
-    {
-        Q_ASSERT(mpHyperlinkCompactManager);
-        return *mpHyperlinkCompactManager;
-    }
-    THyperlinkSelectionManager& getHyperlinkSelectionManager()
-    {
-        Q_ASSERT(mpHyperlinkSelectionManager);
-        return *mpHyperlinkSelectionManager;
-    }
-    THyperlinkVisibilityManager& getHyperlinkVisibilityManager()
-    {
-        Q_ASSERT(mpHyperlinkVisibilityManager);
-        return *mpHyperlinkVisibilityManager;
-    }
+    // The three OSC 8 managers are model state, not view state - see
+    // TConsoleModel. The main console shares Host's, so a link concealed while
+    // the profile was open is still concealed in the model once the widget has
+    // gone.
+    THyperlinkCompactManager& getHyperlinkCompactManager() { return mpModel->mHyperlinkCompactManager; }
+    THyperlinkSelectionManager& getHyperlinkSelectionManager() { return mpModel->mHyperlinkSelectionManager; }
+    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
     void changeColors();
@@ -480,25 +469,13 @@ protected:
 private slots:
     void slot_adjustAccessibleNames();
     void slot_clearSearchResults();
+    void slot_hyperlinkVisibilityChanged();
     void focusOnSearchResultAndAnnounce(int searchX, int searchY);
 
 private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
-    void initializeOSC8StyleFeature();
-    void initializeOSC8MenuFeature();
-    void initializeOSC8TooltipFeature();
-    void initializeOSC8VisibilityFeature();
-    void initializeOSC8SelectionFeature();
-    void initializeOSC8SpoilerFeature();
-    void initializeOSC8DisabledFeature();
-    void initializeOSC8TitleFeature();
-
-    // OSC 8 hyperlink managers
-    std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;
-    std::unique_ptr<THyperlinkSelectionManager> mpHyperlinkSelectionManager;
-    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua

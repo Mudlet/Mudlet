@@ -20,14 +20,15 @@
 
 #include "THyperlinkSelectionManager.h"
 #include "LuaLiteral.h"
-#include "TConsole.h"
+#include "utils.h"
 
 #include <QUrl>
 #include <QUrlQuery>
 
-THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole& console)
-: QObject(&console)
-, mpConsole(console)
+// No QObject parent: this is a field of the core TConsoleModel, which is not a
+// QObject and can outlive the console widget that used to own it.
+THyperlinkSelectionManager::THyperlinkSelectionManager()
+: QObject(nullptr)
 {
 }
 

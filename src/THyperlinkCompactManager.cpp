@@ -19,6 +19,8 @@
 
 #include "THyperlinkCompactManager.h"
 
+#include "utils.h"
+
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -28,12 +30,65 @@
 THyperlinkCompactManager::THyperlinkCompactManager()
 : QObject(nullptr)
 {
-    // Pure framework - no feature knowledge!
-    // Features register themselves when they initialize
-    // Note: No QObject parent - ownership managed by unique_ptr in TConsole
+    registerBuiltInFeatures();
 }
 
 THyperlinkCompactManager::~THyperlinkCompactManager() = default;
+
+// The shorthand and preset-property tables the OSC 8 compact syntax is parsed
+// against. They used to be filled in by eight TConsole::initializeOSC8*Feature()
+// calls, which left a model built without a view (Host builds the main
+// console's before any widget exists) unable to expand a single shorthand.
+void THyperlinkCompactManager::registerBuiltInFeatures()
+{
+    // Style
+    registerShorthand(qsl("s"), qsl("style"));
+    registerShorthand(qsl("c"), qsl("color"));
+    registerShorthand(qsl("bg"), qsl("bg"));
+    registerShorthand(qsl("b"), qsl("bold"));
+    registerShorthand(qsl("i"), qsl("italic"));
+    registerShorthand(qsl("u"), qsl("underline"));
+    registerShorthand(qsl("o"), qsl("overline"));
+    registerShorthand(qsl("st"), qsl("strikethrough"));
+    registerShorthand(qsl("tdc"), qsl("text-decoration-color"));
+    registerShorthand(qsl("h"), qsl("hover"));
+    registerShorthand(qsl("a"), qsl("active"));
+    registerShorthand(qsl("f"), qsl("focus"));
+    registerShorthand(qsl("fv"), qsl("focus-visible"));
+    registerShorthand(qsl("vi"), qsl("visited"));
+    registerShorthand(qsl("l"), qsl("link"));
+    registerShorthand(qsl("al"), qsl("any-link"));
+    registerShorthand(qsl("sl"), qsl("selected"));
+    registerPresetProperty(qsl("style"));
+
+    // Menu
+    registerShorthand(qsl("m"), qsl("menu"));
+    registerPresetProperty(qsl("menu"));
+
+    // Tooltip
+    registerShorthand(qsl("t"), qsl("tooltip"));
+    registerPresetProperty(qsl("tooltip"));
+
+    // Visibility
+    registerShorthand(qsl("v"), qsl("visibility"));
+    registerPresetProperty(qsl("visibility"));
+
+    // Selection
+    registerShorthand(qsl("sel"), qsl("selection"));
+    registerPresetProperty(qsl("selection"));
+
+    // Spoiler
+    registerShorthand(qsl("sp"), qsl("spoiler"));
+    registerPresetProperty(qsl("spoiler"));
+
+    // Disabled
+    registerShorthand(qsl("d"), qsl("disabled"));
+    registerPresetProperty(qsl("disabled"));
+
+    // Title
+    registerShorthand(qsl("ti"), qsl("title"));
+    registerPresetProperty(qsl("title"));
+}
 
 void THyperlinkCompactManager::registerShorthand(const QString& shorthand, const QString& fullName)
 {

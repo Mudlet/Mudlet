@@ -23,12 +23,11 @@
 #include <QObject>
 #include <QMap>
 #include <QTimer>
-#include <QPointer>
 #include <QString>
 
 #include "THyperlinkStyling.h"
 
-class TConsole;
+struct TConsoleModel;
 
 struct TrackedHyperlink
 {
@@ -65,12 +64,17 @@ struct TrackedHyperlink
     bool skipFirstOutput = false; // Skip the first output gap after registration
 };
 
+// Tracks which OSC 8 hyperlinks are concealed and when each is due to change.
+// That is model state - concealing rewrites the buffer, and the buffer is the
+// model's - so this lives in the core TConsoleModel alongside it and needs no
+// view. Redrawing after a change is the view's half of the split: this emits
+// visibilityChanged() and TConsole::slot_hyperlinkVisibilityChanged() repaints.
 class THyperlinkVisibilityManager : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit THyperlinkVisibilityManager(TConsole* pConsole);
+    explicit THyperlinkVisibilityManager(TConsoleModel& model);
     ~THyperlinkVisibilityManager() override;
 
     // Returns true if link should start hidden
@@ -106,7 +110,7 @@ private:
 
     void processExpireTriggeredLinks(bool input, bool prompt, bool output);
 
-    QPointer<TConsole> mpConsole;
+    TConsoleModel& mModel;
     QMap<int, TrackedHyperlink> mTrackedLinks;
     QTimer* mpTimer = nullptr;
     QTimer* mpOutputGapTimer = nullptr;
