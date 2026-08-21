@@ -11,16 +11,26 @@ local here = arg[0]:match("^(.*)/[^/]*$") or "."
 local scanner = here .. "/check-lua-error-strands.lua"
 local fixtures = here .. "/lua-error-strand-fixtures"
 
--- arg[-1] is the interpreter the standalone lua binary was invoked as, so the
--- scanner runs under the same one whether that is "lua" (CI, via
--- gh-actions-lua) or "lua5.1" (Debian and Ubuntu packages).
-local interpreter = arg[-1] or "lua"
+-- arg[-1] is the argv entry immediately before the script, so the scanner runs
+-- under the same interpreter as this test - "lua" from gh-actions-lua, or
+-- "lua5.1" from a Debian package. A flag there (lua -W test.lua) would be
+-- picked up instead, so fall back on anything that is not a path.
+local interpreter = arg[-1]
+if not interpreter or interpreter:match("^%-") then interpreter = "lua" end
+
+-- Single quotes, not Lua's %q: %q escapes " and \ but leaves $ and backticks
+-- for the shell to expand.
+local function shellQuote(text)
+  return "'" .. text:gsub("'", "'\\''") .. "'"
+end
 
 local function run(file)
-  local pipe = io.popen(("%q %q %q 2>&1"):format(interpreter, scanner, fixtures .. "/" .. file))
+  local command = ("%s %s %s 2>&1; echo EXIT:$?"):format(
+    shellQuote(interpreter), shellQuote(scanner), shellQuote(fixtures .. "/" .. file))
+  local pipe = io.popen(command)
   local out = pipe:read("*a")
   pipe:close()
-  return out
+  return out, tonumber(out:match("EXIT:(%d+)%s*$"))
 end
 
 local failures = {}
@@ -35,15 +45,24 @@ local mustCatch = {
   {12, "a QByteArray temporary inside the raiser's own argument list"},
   {20, "a QByteArray live across a raw lua_error"},
   {29, "a local live in a function whose signature wraps onto a second line"},
+  {40, "a pre-gate on a different argument must not suppress the raise"},
 }
 
-local badOutput = run("bad.cpp")
+local badOutput, badStatus = run("bad.cpp")
+-- The property the whole workflow rests on, and the only one the text
+-- assertions below cannot see: findings have to make the scanner fail.
+check(badStatus == 1,
+      ("bad.cpp exited %s, not 1 - the scanner no longer fails CI on a finding")
+      :format(tostring(badStatus)))
 for _, want in ipairs(mustCatch) do
   check(badOutput:match("bad%.cpp:" .. want[1] .. ":"),
         ("bad.cpp:%d not reported - %s"):format(want[1], want[2]))
 end
 
-local goodOutput = run("good.cpp")
+local goodOutput, goodStatus = run("good.cpp")
+check(goodStatus == 0,
+      ("good.cpp exited %s, not 0 - a clean file is being failed")
+      :format(tostring(goodStatus)))
 check(goodOutput:match("No heap objects stranded"),
       "good.cpp reported a finding, so the scanner has false positives:\n" .. goodOutput)
 

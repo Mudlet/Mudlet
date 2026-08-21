@@ -28,3 +28,15 @@ int TLuaInterpreter::strandsUnderAWrappedSignature(
     const QString name{lua_tostring(L, 1)};
     return lua_error(L);
 }
+
+// A pre-gate on a different argument must not suppress: argument 1 is checked,
+// argument 2 is not, so getVerifiedString can still raise while key is live.
+int TLuaInterpreter::preGateOnAnotherArgument(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "key")) {
+        return lua_error(L);
+    }
+    const QString key{lua_tostring(L, 1)};
+    const QString value = getVerifiedString(L, __func__, 2, "value");
+    return 0;
+}

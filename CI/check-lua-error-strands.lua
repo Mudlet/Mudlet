@@ -81,29 +81,77 @@ local function initialiserIsFree(init)
       or false
 end
 
--- Returns the raiser's name and the span of its argument list, so a temporary
--- built from the raiser's *result* - getVerifiedString(...).trimmed() - is not
--- mistaken for one built inside its arguments.
+-- A line with its string and character literals blanked and its trailing
+-- comment cut. Brace depth is what scopes every tracked variable, so a "{" in
+-- a message or a URL inside a // comment would otherwise leak a scope and
+-- silence every later raise in the function.
+local function codeOnly(line)
+  local out, k, n = {}, 1, #line
+  while k <= n do
+    local c = line:sub(k, k)
+    if c == "/" and line:sub(k + 1, k + 1) == "/" then
+      break
+    elseif c == '"' or c == "'" then
+      -- R"(...)" raw strings end at )" rather than at the next quote
+      local raw = c == '"' and line:sub(k - 1, k - 1) == "R"
+      out[#out + 1] = c
+      k = k + 1
+      while k <= n do
+        local d = line:sub(k, k)
+        if raw then
+          if d == ")" and line:sub(k + 1, k + 1) == '"' then
+            out[#out + 1] = '")'
+            k = k + 2
+            break
+          end
+        elseif d == "\\" then
+          k = k + 1
+        elseif d == c then
+          out[#out + 1] = c
+          k = k + 1
+          break
+        end
+        out[#out + 1] = " "
+        k = k + 1
+      end
+    else
+      out[#out + 1] = c
+      k = k + 1
+    end
+  end
+  return table.concat(out)
+end
+
+-- The argument list of a call to `name`, parenthesis-balanced. Returning the
+-- span rather than the rest of the line is what stops a temporary built from a
+-- raiser's *result* - getVerifiedString(...).trimmed() - being read as one
+-- built inside its arguments.
+local function argsOfCall(line, name)
+  local s, e = line:find(name, 1, true)
+  while s do
+    local before = s > 1 and line:sub(s - 1, s - 1) or " "
+    if not before:match("[%w_]") and line:sub(e + 1, e + 1) == "(" then
+      local depth, k = 0, e + 1
+      while k <= #line do
+        local c = line:sub(k, k)
+        if c == "(" then depth = depth + 1
+        elseif c == ")" then
+          depth = depth - 1
+          if depth == 0 then return line:sub(e + 2, k - 1) end
+        end
+        k = k + 1
+      end
+      return line:sub(e + 2)   -- arguments continue on the next line
+    end
+    s, e = line:find(name, e + 1, true)
+  end
+  return nil
+end
+
 local function findRaiser(line)
   for _, name in ipairs(RAISERS) do
-    local s, e = line:find(name, 1, true)
-    while s do
-      local before = s > 1 and line:sub(s - 1, s - 1) or " "
-      if not before:match("[%w_]") and line:sub(e + 1, e + 1) == "(" then
-        local depth, k = 0, e + 1
-        while k <= #line do
-          local c = line:sub(k, k)
-          if c == "(" then depth = depth + 1
-          elseif c == ")" then
-            depth = depth - 1
-            if depth == 0 then return name, line:sub(e + 2, k - 1) end
-          end
-          k = k + 1
-        end
-        return name, line:sub(e + 2)   -- arguments continue on the next line
-      end
-      s, e = line:find(name, e + 1, true)
-    end
+    local args = argsOfCall(line, name)
+    if args then return name, args end
   end
   return nil, nil
 end
@@ -117,28 +165,30 @@ local function owningTemporaryIn(line)
   return nil
 end
 
--- The position argument shared by a checker and its raiser: the third, after
--- the lua_State and the function name.
+-- The argument position a checker or raiser is talking about: the third field,
+-- after the lua_State and the function name. Getting this wrong is not a near
+-- miss - every call in a file shares __func__ as its second field, so reading
+-- that one instead makes the pairing test below always succeed, and one
+-- unrelated check*Arg() line then silences the whole function.
 local function positionArg(args)
-  local n, seen = 0, nil
-  local depth, current = 0, {}
+  local fields, depth, current = {}, 0, {}
   for k = 1, #args do
     local c = args:sub(k, k)
     if c == "(" or c == "<" then depth = depth + 1 end
     if c == ")" or c == ">" then depth = depth - 1 end
     if c == "," and depth == 0 then
-      n = n + 1
-      if n == 2 then seen = table.concat(current) break end
+      fields[#fields + 1] = table.concat(current)
       current = {}
     else
       current[#current + 1] = c
     end
   end
-  if not seen and n < 2 then seen = table.concat(current) end
-  return (seen or ""):gsub("^%s*", ""):gsub("%s*$", "")
+  fields[#fields + 1] = table.concat(current)
+  return (fields[3] or ""):gsub("^%s*", ""):gsub("%s*$", "")
 end
 
 local findings = {}
+local functionsScanned = 0
 
 local function scanFile(path)
   local fh = io.open(path, "r")
@@ -175,28 +225,24 @@ local function scanFile(path)
         if lines[j]:match("{") then bodyStart = j; break end
       end
       if bodyStart then
+        functionsScanned = functionsScanned + 1
         depth = 0
         local live = {}   -- varname -> {line=, type=}
         local scopes = {} -- depth -> list of varnames declared at that depth
         local j = bodyStart
         repeat
           local body = lines[j]
-          local code = body:gsub("//.*$", "")
+          local code = codeOnly(body)
 
           local raiser, raiserArgs = findRaiser(code)
           if raiser and raiserArgs and PAIRED_CHECKER[raiser] then
             local checker = PAIRED_CHECKER[raiser]
             local wanted = positionArg(raiserArgs)
             for back = bodyStart, j - 1 do
-              local prior = lines[back]:gsub("//.*$", "")
-              local pname, pargs = findRaiser(prior)
-              local cs, ce = prior:find(checker, 1, true)
-              if cs and prior:sub(ce + 1, ce + 1) == "(" then
-                local inner = prior:sub(ce + 2)
-                if wanted ~= "" and positionArg(inner) == wanted then
-                  raiser = nil
-                  break
-                end
+              local checkerArgs = argsOfCall(codeOnly(lines[back]), checker)
+              if checkerArgs and wanted ~= "" and positionArg(checkerArgs) == wanted then
+                raiser = nil
+                break
               end
             end
           end
@@ -269,7 +315,11 @@ end
 
 local targets = {...}
 if #targets == 0 then
-  local pipe = io.popen("ls src/*.cpp 2>/dev/null")
+  -- find, not a glob: src/ has subdirectories (src/updater, src/crash_reporter)
+  -- and the workflow's paths filter watches src/**, so a glob would let a file
+  -- trigger the job and then never be read. Headers are scanned too, for the
+  -- same reason - they are watched, and can carry inline bodies.
+  local pipe = io.popen("find src \\( -name '*.cpp' -o -name '*.h' \\) 2>/dev/null")
   for f in pipe:lines() do targets[#targets + 1] = f end
   pipe:close()
 end
@@ -301,4 +351,5 @@ if #findings > 0 then
   print("building the object, or pass a plain literal instead of a QString temporary.")
   os.exit(1)
 end
-print("No heap objects stranded across a lua_error() raise.")
+print(("No heap objects stranded across a lua_error() raise (%d files, %d functions scanned).")
+      :format(#targets, functionsScanned))
