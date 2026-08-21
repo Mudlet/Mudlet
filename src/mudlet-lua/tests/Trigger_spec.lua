@@ -1,5 +1,14 @@
 describe("Trigger processing", function()
 
+    local function contains(list, value)
+        for _, v in ipairs(list) do
+            if v == value then
+                return true
+            end
+        end
+        return false
+    end
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
@@ -133,20 +142,10 @@ describe("Trigger processing", function()
     -- TConsole::setFgColor path as the colorizer trigger checkbox, so this
     -- covers both channels.
     --
-    -- The color trigger callbacks are string code because tempAnsiColorTrigger
-    -- does not run function callbacks when the expiry argument is omitted, and
-    -- assertions check containment because default-palette text also matches
-    -- ANSI white-on-black, so the triggers can fire on unrelated lines too.
+    -- Assertions check containment rather than a fired flag because
+    -- default-palette text also matches ANSI white-on-black, so these triggers
+    -- can fire on lines other than the one under test.
     describe("color trigger original-color matching", function()
-
-        local function contains(list, value)
-            for _, v in ipairs(list) do
-                if v == value then
-                    return true
-                end
-            end
-            return false
-        end
 
         it("should match original colors after an earlier trigger recolors the line", function()
             _G.colorSnapshotMatches = {}
@@ -410,6 +409,83 @@ describe("Trigger processing", function()
 
     end)
 
+    -- scmDefault (-2) is the only colour code re-resolved while a line is being
+    -- matched; every other code is resolved once, when the trigger is created,
+    -- and cached in the pattern. Only the last spec here tells the two apart:
+    -- for an unmoved console the cached copy equals the live one, so the first
+    -- two would still match if the live read went away.
+    describe("default-colour trigger matching", function()
+
+        local liveTriggerId, savedBg
+
+        setup(function()
+            savedBg = {getBackgroundColor()}
+        end)
+
+        -- A colour trigger with one channel ignored and the other set to the
+        -- default matches almost every line the rest of the suite feeds, and its
+        -- body indexes a global this clears, so a copy surviving a failed
+        -- assertion would error on all of them. The background is restored here
+        -- for the same reason: it is the profile's, and it is saved on exit.
+        after_each(function()
+            if liveTriggerId then
+                killTrigger(liveTriggerId)
+                liveTriggerId = nil
+            end
+            setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
+            _G.TrigSpec = nil
+        end)
+
+        -- Captures rather than a fired flag: a colour trigger fires once per
+        -- matching run, so a boolean cannot say which of the two fed lines
+        -- matched, which is the whole point of the negative assertion.
+        it("matches the console's default foreground and not an explicit one", function()
+            _G.TrigSpec = {}
+            liveTriggerId = tempAnsiColorTrigger(-2, -1, [[table.insert(_G.TrigSpec, matches[1])]])
+            assert.is_true(liveTriggerId > 0, "the colour trigger was not created")
+
+            feedTriggers("\n\27[31mSpecDefaultFgExplicit\27[0m\n")
+            feedTriggers("\n\27[39mSpecDefaultFgMatch\n")
+
+            assert.is_false(contains(_G.TrigSpec, "SpecDefaultFgExplicit"), "a default-foreground trigger must not match explicitly coloured text")
+            assert.is_true(contains(_G.TrigSpec, "SpecDefaultFgMatch"), "a default-foreground trigger should match text carrying the console's default foreground")
+        end)
+
+        it("matches the console's default background and not an explicit one", function()
+            _G.TrigSpec = {}
+            liveTriggerId = tempAnsiColorTrigger(-1, -2, [[table.insert(_G.TrigSpec, matches[1])]])
+            assert.is_true(liveTriggerId > 0, "the colour trigger was not created")
+
+            feedTriggers("\n\27[41mSpecDefaultBgExplicit\27[0m\n")
+            feedTriggers("\n\27[49mSpecDefaultBgMatch\n")
+
+            assert.is_false(contains(_G.TrigSpec, "SpecDefaultBgExplicit"), "a default-background trigger must not match explicitly coloured text")
+            assert.is_true(contains(_G.TrigSpec, "SpecDefaultBgMatch"), "a default-background trigger should match text carrying the console's default background")
+        end)
+
+        -- Moving the profile's background after the trigger was created is what
+        -- separates the live read from the cached copy: the fed text is stamped
+        -- with the new colour, which the cache no longer holds. Without the move
+        -- this spec is only a slower copy of the one above, so the move itself
+        -- is asserted.
+        it("reads the console's background live rather than the copy cached at creation", function()
+            _G.TrigSpec = {}
+            liveTriggerId = tempAnsiColorTrigger(-1, -2, [[table.insert(_G.TrigSpec, matches[1])]])
+            assert.is_true(liveTriggerId > 0, "the colour trigger was not created")
+
+            assert.is_true(setBackgroundColor(17, 34, 51), "setBackgroundColor refused, so the cached and live colours never diverged")
+            assert.are_not.same({17, 34, 51, 255}, savedBg, "the profile already uses this background, so nothing diverged")
+            assert.are.same({17, 34, 51, 255}, {getBackgroundColor()}, "the console background did not move")
+
+            feedTriggers("\n\27[41mSpecMovedBgExplicit\27[0m\n")
+            feedTriggers("\n\27[49mSpecMovedBgMatch\n")
+
+            assert.is_false(contains(_G.TrigSpec, "SpecMovedBgExplicit"), "a default-background trigger must not match explicitly coloured text after the background moved")
+            assert.is_true(contains(_G.TrigSpec, "SpecMovedBgMatch"), "the trigger did not follow the console's new background")
+        end)
+
+    end)
+
     -- feedTelnet only performs injection while the telnet socket is unconnected;
     -- otherwise it refuses with nil + a message. That is the state --offline
     -- leaves the profile in, so the injection path runs here against the real
@@ -531,6 +607,27 @@ describe("Trigger processing", function()
             local fired = _G.TrigSpec.fired
             killTrigger(id)
             assert.is_true(fired, "a regex trigger created from a string body should fire")
+        end)
+
+        -- The engine appends a newline to the line before handing it to the
+        -- matchers, and a pattern is free to anchor on it. Neither an exact
+        -- match nor a bare $ can tell when it goes missing - exact-match chops a
+        -- trailing newline itself, and $ matches with or without one - so an
+        -- explicit \n is what pins it. The newline belongs to the matchers' copy
+        -- alone, so the line variable a script reads must not carry it.
+        it("hands the matchers a line that still ends in its newline", function()
+            _G.TrigSpec = {fired = false}
+            local id = tempRegexTrigger("SpecHaystackEol\\n$", function()
+                _G.TrigSpec.fired = true
+                _G.TrigSpec.line = line
+            end)
+            assert.is_true(id > 0, "the regex trigger was not created")
+            feedTriggers("\nSpecHaystackEol\n")
+            local fired = _G.TrigSpec.fired
+            local lineVariable = _G.TrigSpec.line
+            killTrigger(id)
+            assert.is_true(fired, "the line the matchers received had lost the newline the pattern anchors on")
+            assert.are.equal("SpecHaystackEol", lineVariable, "the matchers' trailing newline leaked into the line variable")
         end)
 
         it("tempLineTrigger fires for lines inside its window", function()
@@ -1141,6 +1238,51 @@ describe("Trigger processing", function()
             assert.are.equal(1, afterPrompt, "the prompt trigger did not fire on the line ended by IAC GA")
             assert.are.equal(1, afterOrdinary, "the prompt trigger fired on a line that was not a prompt")
             assert.is_true(wasPrompt, "isPrompt() was false on the line a prompt trigger matched")
+        end)
+
+        -- isPrompt() answers from the buffer line the cursor sits on, and a
+        -- prompt is the last line in the buffer while its triggers run, so a
+        -- trigger that gags it leaves the cursor past the end and the engine's
+        -- trigger-context prompt flag as the only source of an answer.
+        -- deleteLine() reports nothing back, so the gag is confirmed through the
+        -- line count rather than assumed: without it these two specs answer from
+        -- the buffer and gate nothing.
+        local function gagAndReadIsPrompt()
+            _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+            _G.TrigSpec.linesBefore = getLineCount()
+            deleteLine()
+            _G.TrigSpec.linesAfter = getLineCount()
+            _G.TrigSpec.wasPrompt = isPrompt()
+        end
+
+        it("isPrompt stays true after a prompt trigger gags the line it matched", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(gagAndReadIsPrompt)
+            assert.is_true(liveTriggerId > 0, "the prompt trigger was not created")
+
+            local ok, msg = feedTelnet("SpecPromptGagged> <T_IAC><T_GA>")
+            local spec = _G.TrigSpec
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(spec.linesBefore - 1, spec.linesAfter, "the trigger did not gag the line it matched")
+            assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just gagged")
+        end)
+
+        it("isPrompt stays false after an ordinary trigger gags the line it matched", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempRegexTrigger("^SpecOrdinaryGagged$", gagAndReadIsPrompt)
+            assert.is_true(liveTriggerId > 0, "the regex trigger was not created")
+
+            feedTriggers("\nSpecOrdinaryGagged\n")
+            local spec = _G.TrigSpec
+            deselect()
+
+            assert.are.equal(1, spec.fired, "the trigger did not fire on the fed line")
+            assert.are.equal(spec.linesBefore - 1, spec.linesAfter, "the trigger did not gag the line it matched")
+            assert.is_false(spec.wasPrompt, "isPrompt() was true on an ordinary line the trigger had just gagged")
         end)
 
         it("tempPromptTrigger stops firing once its expiration count is used up", function()
