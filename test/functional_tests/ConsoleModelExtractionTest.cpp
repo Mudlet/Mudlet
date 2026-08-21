@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFile>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -53,9 +54,9 @@ void initializeQRCResourcesForConsoleModelExtraction();
 
 using namespace std::chrono_literals;
 
-// The main console's text buffer, cursor/prompt state and fg/bg colours were
-// lifted out of the TConsole widget into a core TConsoleModel that Host
-// co-owns, and the per-line trigger orchestration moved from
+// The main console's text buffer, cursor/prompt state, fg/bg colours and log
+// lifecycle were lifted out of the TConsole widget into a core TConsoleModel
+// that Host co-owns, and the per-line trigger orchestration moved from
 // TMainConsole::runTriggers() to Host::runTriggers() (#8681). The widget keeps
 // the former members as references aliasing the model, so these tests pin down
 // that the aliasing really is one object, that the pipeline runs off the model,
@@ -132,6 +133,10 @@ private slots:
         QCOMPARE(&console->mEngineCursor, &model.mEngineCursor);
         QCOMPARE(&console->mUserCursor, &model.mUserCursor);
         QCOMPARE(&console->mIsPromptLine, &model.mIsPromptLine);
+        QCOMPARE(&console->mLogFile, &model.mLogFile);
+        QCOMPARE(&console->mLogFileName, &model.mLogFileName);
+        QCOMPARE(&console->mLogStream, &model.mLogStream);
+        QCOMPARE(&console->mLogToLogFile, &model.mLogToLogFile);
 
         model.mFgColor = QColorConstants::Svg::orange;
         QCOMPARE(console->mFgColor, QColorConstants::Svg::orange);
@@ -140,6 +145,10 @@ private slots:
 
         model.mUserCursor = QPoint(7, 11);
         QCOMPARE(console->mUserCursor, QPoint(7, 11));
+
+        model.mLogFileName = qsl("aliased-log-name");
+        QCOMPARE(console->mLogFileName, qsl("aliased-log-name"));
+        model.mLogFileName.clear();
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("cecho('<white>AliasedBufferWrite\\n')\n"));
         QVERIFY2(joinedBuffer().contains(qsl("AliasedBufferWrite")), "Text echoed through the view must be visible in the model's buffer.");
@@ -347,12 +356,43 @@ private slots:
         QVERIFY2(bufferText.contains(qsl("OSC 8 Hyperlink Examples")), "The OSC 8 documentation examples were not injected into the view-less buffer.");
     }
 
-    // Both logging entry points write to a log file that belongs to the view,
-    // so with none attached they have to do nothing rather than reach for it.
-    // logRemainingOutput() still has to drop the deferred line it would have
-    // written: that state is the buffer's, and leaving it behind would let a
-    // later view replay a line from a finished session.
-    void test_loggingCallsWithNoView()
+    // The log file, its stream and the on/off flag are core model state, so the
+    // announcement and the log button are all a logging change still needs this
+    // view for. TConsoleModel raises both through Host and TMainConsole acts on
+    // them; the announcement has to carry the file that was actually opened.
+    void test_loggingChangeIsAnnouncedByTheView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        auto console = host->mpConsole;
+        // Through TMainConsole::tr() rather than the English literal, so the
+        // assertions hold whatever interface language the run picks up.
+        const QString offerToStart = TMainConsole::tr("Start logging game output to log file.");
+        const QString offerToStop = TMainConsole::tr("Stop logging game output to log file.");
+        QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
+
+        // true = announce the change, which is what the toolbar button asks for
+        console->toggleLogging(true);
+        QVERIFY2(host->mainConsoleModel().mLogToLogFile, "toggleLogging() did not start a log.");
+        const QString logFileName = host->mainConsoleModel().mLogFileName;
+        QVERIFY2(consoleTextContains(TMainConsole::tr("Logging has started. Log file is %1").arg(logFileName)), "Starting a log was not announced on the console.");
+        QVERIFY2(console->logButton->toolTip().contains(offerToStop), "The log button still offers to start logging while a log is running.");
+
+        console->toggleLogging(true);
+        QVERIFY2(!host->mainConsoleModel().mLogToLogFile, "toggleLogging() did not stop the log.");
+        QVERIFY2(consoleTextContains(TMainConsole::tr("Logging has been stopped. Log file is %1").arg(logFileName)), "Stopping a log was not announced on the console.");
+        QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging again once the log has stopped.");
+
+        QFile::remove(logFileName);
+    }
+
+    // The point of moving the whole lifecycle rather than the stream alone: a
+    // profile with no view has to be able to *start* a log, write to it and
+    // stop it. Every step here runs against the model with the widget gone.
+    void test_loggingRunsWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
@@ -362,16 +402,41 @@ private slots:
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
-        model->buffer.appendLog(qsl("view-less appendLog text\n"));
+        // false = no announcement, the way startLogging() calls it from Lua
+        model->toggleLogging(false);
+        QVERIFY2(model->mLogToLogFile, "A view-less profile could not start a log.");
+        const QString logFileName = model->mLogFileName;
+        QVERIFY2(!logFileName.isEmpty(), "Starting a view-less log named no file.");
+        QVERIFY2(QFile::exists(logFileName), "Starting a view-less log opened no file.");
 
-        model->buffer.lastTextToLog = qsl("still pending when the view went away\n");
+        // append() logs the line it completes, so this is the ordinary per-line
+        // path rather than a direct poke at TBuffer::log().
+        appendModelLine(model->buffer, qsl("view-less-logged-line"));
+        model->buffer.appendLog(qsl("view-less-appended-text\n"));
+
+        model->toggleLogging(false);
+        QVERIFY2(!model->mLogToLogFile, "A view-less profile could not stop its log.");
+        QVERIFY2(!model->mLogFile.isOpen(), "Stopping a view-less log left its file open.");
+
+        const QString contents = readFile(logFileName);
+        QVERIFY2(contents.contains(qsl("view-less-appended-text")), "appendLog() never reached the view-less log file.");
+        // The most recent line is held back for duplicate detection and only
+        // written out as logging stops, so finding it proves the view-less stop
+        // flushed as well as the view-less writes landing.
+        QVERIFY2(contents.contains(qsl("view-less-logged-line")), "The line the view-less buffer logged never reached the log file.");
+
+        // The deferred-logging state is the buffer's own, so it has to be
+        // cleared whatever the log did - otherwise a later session replays the
+        // last line of this one.
+        model->buffer.lastTextToLog = qsl("still pending once the session ended\n");
         model->buffer.lastLoggedFromLine = 3;
         model->buffer.lastloggedToLine = 4;
         model->buffer.logRemainingOutput();
-
-        QVERIFY2(model->buffer.lastTextToLog.isEmpty(), "logRemainingOutput() left its pending line behind for a later view to replay.");
+        QVERIFY2(model->buffer.lastTextToLog.isEmpty(), "logRemainingOutput() left its pending line behind for a later session to replay.");
         QCOMPARE(model->buffer.lastLoggedFromLine, -1);
         QCOMPARE(model->buffer.lastloggedToLine, -1);
+
+        QFile::remove(logFileName);
     }
 
     void cleanup()
@@ -473,6 +538,25 @@ private:
         const QString line = text + QChar::LineFeed;
         buffer.append(line, 0, line.size(), QColorConstants::LightGray, QColorConstants::Black, TChar::None, 0);
         return buffer.getLastLineNumber() - 1;
+    }
+
+    // Utility function: the console word-wraps, and joinedBuffer() glues the
+    // pieces back together with a space, so compare with every space removed
+    // rather than betting on where a long line was broken.
+    bool consoleTextContains(const QString& needle)
+    {
+        QString haystack = joinedBuffer();
+        QString wanted = needle;
+        return haystack.remove(QChar::Space).contains(wanted.remove(QChar::Space));
+    }
+
+    QString readFile(const QString& path)
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return QString();
+        }
+        return QString::fromUtf8(file.readAll());
     }
 
     QString luaGlobalString(Host* host, const char* name)

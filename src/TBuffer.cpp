@@ -5288,18 +5288,14 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    // The log destination lives on the main console view, which the model this
-    // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
-    // log to once the view has gone. Test this buffer's own back-pointer:
-    // TConsole unbinds it as it starts to tear down, whereas Host::mpConsole
-    // only nulls itself in ~QObject(), i.e. once the widget it still points at
-    // is long since half-destroyed:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
-        return;
-    }
-
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+    // The log file, its stream and the on/off flag are all core model state
+    // now, so logging needs a Host but no view whatsoever - which is what lets
+    // a profile with no main console widget write a log at all.
+    // mainConsoleModelOrNull() rather than mainConsoleModel(): a TBuffer clears
+    // itself while it is being constructed, and the main console's one is
+    // constructed before Host has taken hold of the model holding it.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
     }
 
@@ -5316,8 +5312,8 @@ void TBuffer::log(int fromLine, int toLine)
     // if we've been called to log the same line - which can happen when the user
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        mpHost->mpConsole->mLogStream << lastTextToLog;
-        mpHost->mpConsole->mLogStream.flush();
+        pModel->mLogStream << lastTextToLog;
+        pModel->mLogStream.flush();
     }
 
     // record the last log call into a temporary buffer - we'll actually log
@@ -5353,31 +5349,28 @@ void TBuffer::logRemainingOutput()
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
 
-    // The log file is the view's; see TBuffer::log() on why this buffer's own
-    // back-pointer is the one to test:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // No mLogToLogFile test on purpose: this is called as logging is turned
+    // off, once the flag is already down, and the pending line still has to
+    // reach the file. See TBuffer::log() on the null-model case.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel) {
         return;
     }
 
-    mpHost->mpConsole->mLogStream << pendingText;
-    mpHost->mpConsole->mLogStream.flush();
+    pModel->mLogStream << pendingText;
+    pModel->mLogStream.flush();
 }
 
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
-    // See TBuffer::log() on why this buffer's own back-pointer is the one to
-    // test for the view still being there:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // See TBuffer::log() on why the model is reached this way:
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
     }
 
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
-        return;
-    }
-
-    mpHost->mpConsole->mLogStream << text;
+    pModel->mLogStream << text;
 }
 
 // Rewraps everything from startLine to the end of the buffer, and answers where
@@ -5667,8 +5660,12 @@ void TBuffer::clear()
 {
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
-    // was still pending for logging is not lost from the log file
-    if (!mpConsole.isNull() && !mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+    // was still pending for logging is not lost from the log file. See
+    // TBuffer::log() on why the model is reached through the null-tolerant
+    // accessor - this runs from the TBuffer constructor, which the main
+    // console's model is still inside of.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (pModel && this == &pModel->buffer && pModel->mLogToLogFile) {
         logRemainingOutput();
 
         // A line whose own trigger calls clearWindow() has been committed and
@@ -5678,10 +5675,10 @@ void TBuffer::clear()
         // are not lost. mCommitLineIndices holds them in display order.
         for (const int commitLineIndex : mCommitLineIndices) {
             if (commitLineIndex >= 0 && commitLineIndex < static_cast<int>(lineBuffer.size())) {
-                mpHost->mpConsole->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
+                pModel->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
             }
         }
-        mpHost->mpConsole->mLogStream.flush();
+        pModel->mLogStream.flush();
 
         lastTextToLog.clear();
         lastLoggedFromLine = -1;
