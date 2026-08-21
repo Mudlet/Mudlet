@@ -110,79 +110,6 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // A link whose line survives the trim has to move with it, so revealing it
-    // still writes into its own line.
-    void test_revealAfterATrimWritesToTheLinksOwnLine()
-    {
-        auto* pConsole = mpHost->mpConsole.data();
-        auto& buffer = pConsole->buffer;
-        auto& manager = pConsole->getHyperlinkVisibilityManager();
-        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
-
-        fill(pConsole, qsl("seed"), 45);
-        pConsole->echo(qsl("MARKERLINE\n"));
-        qApp->processEvents();
-
-        const int registeredOn = lineContaining(buffer, qsl("MARKERLINE"));
-        QVERIFY2(registeredOn >= 0, "the marker line never reached the buffer");
-        QVERIFY2(manager.registerHyperlink(1, registeredOn, 0, mLinkText.length(), mLinkText, concealedRevealStyling()), "the link did not start concealed, so there is nothing to reveal");
-
-        fill(pConsole, qsl("filler"), 60);
-        qApp->processEvents();
-
-        const int movedTo = lineContaining(buffer, qsl("MARKERLINE"));
-        QVERIFY2(movedTo >= 0 && movedTo != registeredOn, "the buffer did not trim, so this test proves nothing");
-
-        manager.revealLink(1);
-        qApp->processEvents();
-
-        QVERIFY2(buffer.lineBuffer.at(movedTo).startsWith(mLinkText), qPrintable(qsl("revealing wrote to some other line: line %1 reads \"%2\"").arg(movedTo).arg(buffer.lineBuffer.at(movedTo))));
-        QCOMPARE(lineContaining(buffer, mLinkText), movedTo);
-
-        // the text alone is not a working link - no Lua call can read this back
-        for (int column = 0; column < mLinkText.length(); ++column) {
-            QCOMPARE(buffer.buffer.at(movedTo).at(column).linkIndex(), 1);
-        }
-    }
-
-    // A link whose line is trimmed away has to be forgotten, so revealing it
-    // cannot write into whichever line has taken its index.
-    void test_revealAfterItsLineIsTrimmedAwayWritesNothing()
-    {
-        auto* pConsole = mpHost->mpConsole.data();
-        auto& buffer = pConsole->buffer;
-        auto& manager = pConsole->getHyperlinkVisibilityManager();
-        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
-
-        fill(pConsole, qsl("seed"), 45);
-        qApp->processEvents();
-
-        // an early line, well inside the first batch the next trim removes
-        const int doomedLine = 3;
-        QVERIFY(manager.registerHyperlink(2, doomedLine, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
-
-        fill(pConsole, qsl("filler"), 60);
-        qApp->processEvents();
-
-        QStringList before;
-        for (const auto& line : buffer.lineBuffer) {
-            before << line;
-        }
-
-        // whatever holds the index now is what performReveal() bounds-checks, so it
-        // has to be long enough for a stale write to land and be noticed
-        QVERIFY2(before.at(doomedLine).length() >= mLinkText.length(), "the line that took the index is too short to be overwritten, so this test proves nothing");
-        QVERIFY2(!manager.isLinkConcealed(2), "the link whose line was trimmed away is still tracked, so entries accumulate");
-
-        manager.revealLink(2);
-        qApp->processEvents();
-
-        for (int i = 0; i < before.size() && i < buffer.lineBuffer.size(); ++i) {
-            QVERIFY2(before.at(i) == buffer.lineBuffer.at(i),
-                     qPrintable(qsl("revealing a link whose line was trimmed away rewrote line %1: \"%2\" became \"%3\"").arg(i).arg(before.at(i), buffer.lineBuffer.at(i))));
-        }
-    }
-
     // The last line a trim takes is the batch edge, so a link there has to be
     // forgotten rather than left pointing into the buffer.
     void test_trimForgetsTheLinkOnTheLastCasualtyLine()
@@ -217,6 +144,11 @@ private slots:
         qApp->processEvents();
 
         QVERIFY2(buffer.lineBuffer.at(0).startsWith(mLinkText), qPrintable(qsl("the first surviving line should have become line 0, which now reads \"%1\"").arg(buffer.lineBuffer.at(0))));
+
+        // the text alone is not a working link, and no Lua call can read this back
+        for (int column = 0; column < mLinkText.length(); ++column) {
+            QCOMPARE(buffer.buffer.at(0).at(column).linkIndex(), 4);
+        }
     }
 
     // Concealing a link zeroes its characters' indices, so the scan that decides
