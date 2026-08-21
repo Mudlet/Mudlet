@@ -1,0 +1,282 @@
+#!/usr/bin/env lua
+--[[
+Finds heap-owning C++ objects left alive across a lua_error() raise.
+
+lua_error() longjmps in Lua 5.1, so it unwinds the C stack without running a
+single C++ destructor. Any QString, QByteArray, QStringList, std::string or
+TMediaData still in scope at the raise leaks its buffer. PRs #9602 and #9605
+removed the LSan suppression hiding that class and cleared all 377 sites then
+present, but the sweep was a one-off: nothing re-runs it, so a file added
+afterwards reintroduces the bug silently. LeakSanitizer only catches it if a
+spec happens to exercise the raising path, which for a freshly added Lua
+function is usually never.
+
+Only functions taking a lua_State* are considered: those are the only frames
+a longjmp can unwind. Closing the call graph over every function name instead
+produces thousands of false hits.
+
+Usage: lua CI/check-lua-error-strands.lua [file.cpp ...]
+       (no arguments scans src/*.cpp)
+Exits 1 when anything is found.
+]]
+
+-- Helpers that raise on the caller's behalf, plus the raw raisers. The
+-- check*Arg() family is deliberately absent: those return a bool and are the
+-- non-raising counterparts callers are meant to use when they hold anything.
+local RAISERS = {
+  "getVerifiedString", "getVerifiedInt", "getVerifiedBool", "getVerifiedFloat",
+  "getVerifiedDouble", "getVerifiedStringOrInteger",
+  "parseCommandOrFunction", "parseHintsTable",
+  "lua_error", "luaL_error", "luaL_argerror", "luaL_typerror",
+  "luaL_checkstring", "luaL_checklstring", "luaL_checknumber", "luaL_checkinteger",
+  "luaL_checkstack", "luaL_checktype", "luaL_checkany", "luaL_checkudata",
+  "luaL_optstring", "luaL_optlstring", "luaL_optnumber", "luaL_optinteger",
+}
+
+-- A raiser paired with the non-raising checker that makes its raise dead.
+-- #9605's mechanism: a caller validates with check*Arg() first and returns on
+-- failure, so by the time the paired raiser runs its own check cannot fail.
+-- Both calls have to name the same argument position for the pairing to hold.
+local PAIRED_CHECKER = {
+  parseCommandOrFunction = "checkCommandOrFunctionArg",
+  parseHintsTable = "checkHintsTable",
+  getVerifiedString = "checkStringArg",
+  getVerifiedInt = "checkIntArg",
+  getVerifiedBool = "checkBoolArg",
+  getVerifiedFloat = "checkNumberArg",
+  getVerifiedDouble = "checkNumberArg",
+  getVerifiedStringOrInteger = "checkStringOrIntegerArg",
+}
+
+-- Types whose default-constructed state is free but which own heap memory as
+-- soon as they hold anything.
+local OWNING_TYPES = {
+  "QString", "QStringList", "QByteArray", "std::string", "TMediaData",
+}
+
+-- Expressions that produce an owning temporary when passed straight into a
+-- raising call - the sub-case a declaration scan cannot see, because there is
+-- no named local to find.
+local OWNING_TEMPORARIES = {
+  "%.toUtf8%s*%(", "%.toLatin1%s*%(", "%.toLocal8Bit%s*%(",
+  "%.toStdString%s*%(", "%.arg%s*%(", "%.toLower%s*%(", "%.toUpper%s*%(",
+  "%.trimmed%s*%(", "%.simplified%s*%(", "%.join%s*%(", "%.split%s*%(",
+}
+
+-- An initialiser that cannot have allocated: literal storage, the shared null,
+-- or Qt's shared empty buffer.
+local function initialiserIsFree(init)
+  if not init or init:match("^%s*$") then
+    return true                                   -- default-constructed
+  end
+  init = init:gsub("^%s*[=({]%s*", ""):gsub("%s*[;)}]%s*$", "")
+  if init:match("^%s*$") then return true end
+  return init:match('^qsl%s*%(')
+      or init:match('^QStringLiteral%s*%(')
+      or init:match('^""$')
+      or init:match('^QString%s*%(%s*%)$')
+      or init:match('^QByteArray%s*%(%s*%)$')
+      or init:match('^QStringList%s*%(%s*%)$')
+      or false
+end
+
+-- Returns the raiser's name and the span of its argument list, so a temporary
+-- built from the raiser's *result* - getVerifiedString(...).trimmed() - is not
+-- mistaken for one built inside its arguments.
+local function findRaiser(line)
+  for _, name in ipairs(RAISERS) do
+    local s, e = line:find(name, 1, true)
+    while s do
+      local before = s > 1 and line:sub(s - 1, s - 1) or " "
+      if not before:match("[%w_]") and line:sub(e + 1, e + 1) == "(" then
+        local depth, k = 0, e + 1
+        while k <= #line do
+          local c = line:sub(k, k)
+          if c == "(" then depth = depth + 1
+          elseif c == ")" then
+            depth = depth - 1
+            if depth == 0 then return name, line:sub(e + 2, k - 1) end
+          end
+          k = k + 1
+        end
+        return name, line:sub(e + 2)   -- arguments continue on the next line
+      end
+      s, e = line:find(name, e + 1, true)
+    end
+  end
+  return nil, nil
+end
+
+local function owningTemporaryIn(line)
+  for _, pat in ipairs(OWNING_TEMPORARIES) do
+    if line:match(pat) then
+      return (pat:gsub("%%%.", "."):gsub("%%s%*", ""):gsub("%%%(", "()"))
+    end
+  end
+  return nil
+end
+
+-- The position argument shared by a checker and its raiser: the third, after
+-- the lua_State and the function name.
+local function positionArg(args)
+  local n, seen = 0, nil
+  local depth, current = 0, {}
+  for k = 1, #args do
+    local c = args:sub(k, k)
+    if c == "(" or c == "<" then depth = depth + 1 end
+    if c == ")" or c == ">" then depth = depth - 1 end
+    if c == "," and depth == 0 then
+      n = n + 1
+      if n == 2 then seen = table.concat(current) break end
+      current = {}
+    else
+      current[#current + 1] = c
+    end
+  end
+  if not seen and n < 2 then seen = table.concat(current) end
+  return (seen or ""):gsub("^%s*", ""):gsub("%s*$", "")
+end
+
+local findings = {}
+
+local function scanFile(path)
+  local fh = io.open(path, "r")
+  if not fh then return end
+  local lines = {}
+  for line in fh:lines() do lines[#lines + 1] = line end
+  fh:close()
+
+  local i, n = 1, #lines
+  while i <= n do
+    local line = lines[i]
+    -- A function taking lua_State*. clang-format keeps these on one line.
+    if line:match("lua_State%s*%*") and line:match("%(") and not line:match("^%s*//")
+       and not line:match(";%s*$") and not line:match("^%s*%*") then
+      -- find the body's opening brace
+      local depth, bodyStart = 0, nil
+      for j = i, math.min(i + 4, n) do
+        if lines[j]:match("{") then bodyStart = j; break end
+      end
+      if bodyStart then
+        depth = 0
+        local live = {}   -- varname -> {line=, type=}
+        local scopes = {} -- depth -> list of varnames declared at that depth
+        local j = bodyStart
+        repeat
+          local body = lines[j]
+          local code = body:gsub("//.*$", "")
+
+          -- a raise: report everything still live, plus owning temporaries
+          local raiser, raiserArgs = findRaiser(code)
+          -- a raise the caller has already gated on cannot fire
+          if raiser and raiserArgs and PAIRED_CHECKER[raiser] then
+            local checker = PAIRED_CHECKER[raiser]
+            local wanted = positionArg(raiserArgs)
+            for back = bodyStart, j - 1 do
+              local prior = lines[back]:gsub("//.*$", "")
+              local pname, pargs = findRaiser(prior)
+              local cs, ce = prior:find(checker, 1, true)
+              if cs and prior:sub(ce + 1, ce + 1) == "(" then
+                local inner = prior:sub(ce + 2)
+                if wanted ~= "" and positionArg(inner) == wanted then
+                  raiser = nil
+                  break
+                end
+              end
+            end
+          end
+          if raiser and j > bodyStart then
+            for name, info in pairs(live) do
+              -- #9605's exclusion: when the guard that reaches this raise is
+              -- <var>.isEmpty(), the variable is the shared empty buffer here
+              local guarded = false
+              for back = math.max(bodyStart, j - 6), j do
+                if lines[back]:match("%f[%w]" .. name .. "%f[%W]%s*%.%s*isEmpty%s*%(%s*%)") then
+                  guarded = true
+                end
+              end
+              if not guarded then
+              findings[#findings + 1] = {
+                file = path, line = j, kind = "local",
+                detail = ("%s %s (declared line %d) is live across %s()")
+                         :format(info.type, name, info.line, raiser),
+              }
+              end
+            end
+            local temp = raiserArgs and owningTemporaryIn(raiserArgs)
+            if temp then
+              findings[#findings + 1] = {
+                file = path, line = j, kind = "temporary",
+                detail = ("%s builds an owning temporary inside %s()'s arguments")
+                         :format(temp, raiser),
+              }
+            end
+          end
+
+          -- declarations
+          for _, ty in ipairs(OWNING_TYPES) do
+            local pat = "^%s*[a-zA-Z:<>,%s]-%f[%w]" .. ty:gsub("%p", "%%%0") .. "%f[%W]%s+([%w_]+)%s*(.*)$"
+            local varname, rest = code:match(pat)
+            if varname and not code:match("%f[%w]static%f[%W]")
+               and not code:match("%f[%w]return%f[%W]") and varname ~= "const" then
+              if not initialiserIsFree(rest) then
+                live[varname] = {line = j, type = ty}
+                scopes[depth] = scopes[depth] or {}
+                table.insert(scopes[depth], varname)
+              end
+              break
+            end
+          end
+
+          -- Brace tracking, so a variable dies with its block. Braces are
+          -- walked in text order: "} else if (...) {" closes the previous
+          -- branch's scope before opening the next one, and counting all the
+          -- opens first would keep that branch's locals alive into it.
+          for k = 1, #code do
+            local c = code:sub(k, k)
+            if c == "{" then
+              depth = depth + 1
+            elseif c == "}" then
+              if scopes[depth] then
+                for _, v in ipairs(scopes[depth]) do live[v] = nil end
+                scopes[depth] = nil
+              end
+              depth = depth - 1
+            end
+          end
+          j = j + 1
+        until depth <= 0 or j > n
+        i = j - 1
+      end
+    end
+    i = i + 1
+  end
+end
+
+local targets = {...}
+if #targets == 0 then
+  local pipe = io.popen("ls src/*.cpp 2>/dev/null")
+  for f in pipe:lines() do targets[#targets + 1] = f end
+  pipe:close()
+end
+
+for _, f in ipairs(targets) do scanFile(f) end
+
+table.sort(findings, function(a, b)
+  if a.file ~= b.file then return a.file < b.file end
+  return a.line < b.line
+end)
+
+for _, f in ipairs(findings) do
+  print(("%s:%d: %s"):format(f.file, f.line, f.detail))
+end
+
+if #findings > 0 then
+  print("")
+  print(("%d heap object(s) stranded across a lua_error() raise."):format(#findings))
+  print("lua_error() longjmps past C++ destructors, so each one leaks.")
+  print("Validate with the non-raising checkStringArg()/checkIntArg() family before")
+  print("building the object, or pass a plain literal instead of a QString temporary.")
+  os.exit(1)
+end
+print("No heap objects stranded across a lua_error() raise.")
