@@ -27,6 +27,7 @@
 #include "LuaLiteral.h"
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
@@ -1720,7 +1721,7 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
         mPreTriggerPassLine = std::move(chars);
         mPreTriggerPassLineNumber = lineIndex;
-        mpHost->mpConsole->runTriggers(lineIndex);
+        mpHost->runTriggers(lineIndex);
         mPreTriggerPassLine = std::move(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
     }
@@ -4904,8 +4905,14 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
+        if (mpHost.isNull()) {
+            return; // Still don't display the trigger phrase itself
+        }
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        TBuffer& mainBuffer = mpHost->mpConsole->buffer;
+        // The examples always go to the main console. Ask the model for it
+        // rather than the view: the injection is pure buffer work, so it still
+        // works when the profile has no main console widget.
+        TBuffer& mainBuffer = mpHost->mainConsoleModel().buffer;
 
         if (now - mainBuffer.mLastOSC8DocsInjectionTime > 1000) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5216,7 +5223,13 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    if (mpHost.isNull()) {
+    // The log destination lives on the main console view, which the model this
+    // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
+    // log to once the view has gone. Test this buffer's own back-pointer:
+    // TConsole unbinds it as it starts to tear down, whereas Host::mpConsole
+    // only nulls itself in ~QObject(), i.e. once the widget it still points at
+    // is long since half-destroyed:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
         return;
     }
 
@@ -5266,19 +5279,34 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
 // logs the remaining output when logging gets stopped, without duplication checks
 void TBuffer::logRemainingOutput()
 {
-    mpHost->mpConsole->mLogStream << lastTextToLog;
-    mpHost->mpConsole->mLogStream.flush();
-
-    // Reset the deferred logging state so restarting logging cannot replay this
-    // pending line into the new session via log()'s deferred-flush path
+    // Reset the deferred logging state up front, before any bail-out: it is
+    // buffer state and needs no view, and leaving it behind would let a
+    // successor view replay this pending line and let the stale line indexes
+    // suppress a real flush in log()
+    const QString pendingText = lastTextToLog;
     lastTextToLog.clear();
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
+
+    // The log file is the view's; see TBuffer::log() on why this buffer's own
+    // back-pointer is the one to test:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
+    mpHost->mpConsole->mLogStream << pendingText;
+    mpHost->mpConsole->mLogStream.flush();
 }
 
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
+    // See TBuffer::log() on why this buffer's own back-pointer is the one to
+    // test for the view still being there:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
     TBuffer* pB = &mpHost->mpConsole->buffer;
     if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
         return;
@@ -5575,7 +5603,7 @@ void TBuffer::clear()
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
     // was still pending for logging is not lost from the log file
-    if (!mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+    if (!mpConsole.isNull() && !mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
         logRemainingOutput();
 
         // A line whose own trigger calls clearWindow() has been committed and
@@ -5617,6 +5645,11 @@ void TBuffer::clear()
 
 void TBuffer::clearLinkState()
 {
+    if (mLinkStore.pristine() && mLinkStates.isEmpty() && mVisitedLinks.isEmpty() && mLinkSelectionState.isEmpty() && mLinkOriginalBackgrounds.isEmpty() && mLinkOriginalCharacters.isEmpty()
+        && mLinkOriginalText.isEmpty() && mPendingSelectionStyling.isEmpty() && !mCurrentHoveredLinkIndex && !mCurrentActiveLinkIndex && !mCurrentFocusedLinkIndex && !mLastClickedLinkIndex) {
+        return;
+    }
+
     Host* pH = mpHost;
     const QSet<int> activeLinkIds = collectActiveLinkIds();
 
@@ -5715,8 +5748,10 @@ void TBuffer::shrinkBuffer()
         mCursorY--;
     }
     // We need to adjust the search result line as some lines have now gone
-    // away:
-    mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    // away - there is nothing to adjust when the model has no view attached:
+    if (mpConsole) {
+        mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    }
     mPreTriggerPassLineNumber = -1;
 
     // The removed leading lines shift every remaining index down; keep the
@@ -5737,12 +5772,26 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
-    if (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) {
+    // Everything below needs the Host, whether or not there is a view: on app
+    // quit the profile is destroyed while its widgets are still only queued for
+    // deletion, so a live view is no promise that mpHost survived with it.
+    if (mpHost.isNull()) {
+        return;
+    }
+
+    // Scripts keep their own line-index bookkeeping, so they have to be told
+    // the indexes shifted whether or not anyone is watching the text. The
+    // console's name and type still live on the view, but a buffer without one
+    // can only be the main console's model - every other model is owned by the
+    // view built on it - and that console is always named "main":
+    const bool namedConsole =
+            mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) : (this == &mpHost->mainConsoleModel().buffer);
+    if (namedConsole) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        bufferShrinkEvent.mArgumentList.append(mpConsole->mConsoleName);
+        bufferShrinkEvent.mArgumentList.append(mpConsole ? mpConsole->mConsoleName : qsl("main"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);

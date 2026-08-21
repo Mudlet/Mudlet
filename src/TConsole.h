@@ -28,6 +28,7 @@
 
 
 #include "TBuffer.h"
+#include "TConsoleModel.h"
 
 #include <QDataStream>
 #include <QElapsedTimer>
@@ -191,6 +192,8 @@ public:
     void reset();
     void resizeConsole();
     Host* getHost();
+    TConsoleModel& model() { return *mpModel; }
+    const TConsoleModel& model() const { return *mpModel; }
     void replace(const QString&);
     void insertHTML(const QString&);
     void insertText(const QString&);
@@ -354,7 +357,15 @@ public:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
 
-    TBuffer buffer;
+    // The buffer, cursor/prompt state and fg/bg colours live in a core
+    // TConsoleModel reached through model(). For the main console that model is
+    // co-owned with Host (which drives the trigger pipeline through it - see
+    // Host::runTriggers); sub-consoles own theirs. The members below are
+    // references aliasing the model, so the existing buffer/mFgColor/...
+    // accesses across the codebase are unchanged - which is why the model has
+    // to stay declared ahead of every one of them.
+    std::shared_ptr<TConsoleModel> mpModel;
+    TBuffer& buffer;
     static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;
@@ -364,8 +375,8 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-    QColor mBgColor = QColorConstants::Black;
-    QColor mFgColor = QColorConstants::LightGray;
+    QColor& mBgColor;
+    QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
     QColor mSystemMessageBgColor = mBgColor;
@@ -375,8 +386,8 @@ public:
     int mButtonState = 1;
 
     QString mConsoleName;
-    QString mCurrentLine;
-    int mEngineCursor = -1;
+    QString& mCurrentLine;
+    int& mEngineCursor;
 
     int mIndentCount = 0;
     int mHangingIndentCount = 0;
@@ -408,14 +419,14 @@ public:
 
     bool mTriggerEngineMode = false;
 
-    QPoint mUserCursor;
+    QPoint& mUserCursor;
     int mWrapAt = 100;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
     QPoint P_begin;
     QPoint P_end;
     QString mProfileName;
     TSplitter* splitter = nullptr;
-    bool mIsPromptLine = false;
+    bool& mIsPromptLine;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
     QToolButton* replayButton = nullptr;

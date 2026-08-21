@@ -27,6 +27,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TMatchState.h"
 #include "TMedia.h"
@@ -676,15 +677,16 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     bool canExecute = false;
     std::list<std::string> captureList;
     std::list<int> posList;
-    if (line >= static_cast<int>(mpHost->mpConsole->buffer.buffer.size())) {
+    TConsoleModel& consoleModel = mpHost->mainConsoleModel();
+    if (line >= static_cast<int>(consoleModel.buffer.buffer.size())) {
         return false;
     }
-    std::deque<TChar>& bufferLine = mpHost->mpConsole->buffer.buffer[line];
-    const QString& lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
+    std::deque<TChar>& bufferLine = consoleModel.buffer.buffer[line];
+    const QString& lineBuffer = consoleModel.buffer.lineBuffer[line];
     // Match against the colors as they arrived from the game, not as already
     // recolored by other triggers or scripts earlier in this trigger pass;
     // text inserted mid-pass has no game original so it is read live:
-    const std::deque<TChar>* pPassLine = mpHost->mpConsole->buffer.preTriggerPassLine(line);
+    const std::deque<TChar>* pPassLine = consoleModel.buffer.preTriggerPassLine(line);
     // Filter ("only pass matches") parents hand children just the matched
     // capture, so restrict the scan to that window; for top-level triggers
     // the window covers the whole line:
@@ -712,8 +714,8 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (((pCT->ansiFg == scmIgnored) || ((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == character.foreground()) || (pCT->mFgColor == character.foreground()))
-            && ((pCT->ansiBg == scmIgnored) || ((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == character.background()) || (pCT->mBgColor == character.background()))) {
+        if (((pCT->ansiFg == scmIgnored) || ((pCT->ansiFg == scmDefault) && consoleModel.mFgColor == character.foreground()) || (pCT->mFgColor == character.foreground()))
+            && ((pCT->ansiBg == scmIgnored) || ((pCT->ansiBg == scmDefault) && consoleModel.mBgColor == character.background()) || (pCT->mBgColor == character.background()))) {
             if (matchBegin == -1) {
                 matchBegin = pos;
             }
@@ -849,7 +851,7 @@ bool TTrigger::match_lua_code(int patternNumber)
 
 bool TTrigger::match_prompt(int patternNumber)
 {
-    if (mpHost->mpConsole->mIsPromptLine) {
+    if (mpHost->mainConsoleModel().mIsPromptLine) {
         processPromptMatch(patternNumber);
         return true;
     }
