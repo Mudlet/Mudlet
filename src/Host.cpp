@@ -2458,6 +2458,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // for a module whose name is already in mInstalledModules on the way in
         // (profile loading, and installModule() over a stale entry, both do that).
         if (!registeredFromArchive) {
+            // the fonts were registered up front for the scripts' sake, and nothing
+            // got installed that could own them - take them back out again
+            mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
             // Only ever remove the folder this install made, and only if it is
             // inside the profile: the package name can come out empty (a file
             // called ".mpackage"), name a folder of the user's ("map"), or be

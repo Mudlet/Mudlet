@@ -130,6 +130,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageFontsOnRefusedArchiveTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageSelfRemovalTest.cpp
 )
