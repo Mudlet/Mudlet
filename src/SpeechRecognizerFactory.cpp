@@ -18,6 +18,8 @@
  ***************************************************************************/
 
 #include "SpeechRecognizerFactory.h"
+
+#include "utils.h"
 #include "SpeechRecognizer.h"
 #include "VoskRecognizer.h"
 
@@ -89,49 +91,20 @@ bool SpeechRecognizerFactory::backendAvailable(Backend backend)
     return false;
 }
 
-QString SpeechRecognizerFactory::backendDisplayName(Backend backend)
-{
-    switch (backend) {
-    case Backend::Vosk:
-        //: Name of a speech recognition engine that runs on this computer, shown when choosing one
-        return tr("Vosk (Offline)");
-    case Backend::Whisper:
-        //: Name of a speech recognition engine that runs on this computer, shown when choosing one
-        return tr("Whisper (Offline)");
-    case Backend::Platform:
-#if defined(Q_OS_MACOS)
-        //: Name of the speech recognition built into macOS, shown when choosing an engine
-        return tr("macOS Speech Recognition");
-#elif defined(Q_OS_WIN)
-        //: Name of the speech recognition built into Windows, shown when choosing an engine
-        return tr("Windows Speech Recognition");
-#else
-        //: Name of the speech recognition built into this operating system, shown when choosing an engine
-        return tr("Platform Speech Recognition");
-#endif
-    case Backend::Auto:
-        //: Speech engine choice meaning Mudlet picks whichever engine is installed
-        return tr("Automatic");
-    }
-
-    //: Shown in place of a speech engine name when the engine is not one Mudlet knows
-    return tr("Unknown");
-}
-
 QString SpeechRecognizerFactory::backendIdentifier(Backend backend)
 {
     switch (backend) {
     case Backend::Vosk:
-        return QStringLiteral("vosk");
+        return qsl("vosk");
     case Backend::Whisper:
-        return QStringLiteral("whisper");
+        return qsl("whisper");
     case Backend::Platform:
-        return QStringLiteral("platform");
+        return qsl("platform");
     case Backend::Auto:
-        return QStringLiteral("auto");
+        return qsl("auto");
     }
 
-    return QStringLiteral("auto");
+    return qsl("auto");
 }
 
 SpeechRecognizerFactory::Backend SpeechRecognizerFactory::backendFromIdentifier(const QString& identifier)

@@ -21,6 +21,7 @@
 #define MUDLET_VOSKRECOGNIZER_H
 
 #include "SpeechRecognizer.h"
+#include "utils.h"
 
 #include <QLibrary>
 #include <QPointer>
@@ -63,7 +64,6 @@ public:
     void startListening() override;
     void stopListening() override;
     void cancel() override;
-    void resetUtterance() override;
     void setSilenceTimeout(int msec) override;
     int silenceTimeout() const override;
     // Vosk delivers per-word confidence and timing; it has no biasing, and
@@ -88,11 +88,10 @@ public:
     void releaseResources() override;
     QString modelPath() const override { return mModelPath; }
 
-    QStringList availableLanguages() const override;
     QString currentLanguage() const override { return mCurrentLanguage; }
     bool setLanguage(const QString& languageCode) override;
 
-    QString backendName() const override { return QStringLiteral("Vosk"); }
+    QString backendName() const override { return qsl("Vosk"); }
     QString backendVersion() const override;
     bool backendAvailable() const override;
 
@@ -123,14 +122,12 @@ public:
     static QString defaultModelPath();
 
     // Where the model for a language can be downloaded from
-    static QString modelDownloadUrl(const QString& languageCode);
 
     // Model selection and management
     // Get the path to the currently selected model (from settings, or auto-detect best available)
     static QString getSelectedModelPath();
 
     // Set the selected model path (saves to settings)
-    static void setSelectedModelPath(const QString& modelPath);
 
     // The directory models are installed into
     static QString modelsDirectoryPath();

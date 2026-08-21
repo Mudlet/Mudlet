@@ -7,7 +7,7 @@
 -- or lie, and those promises are what these specs hold it to.
 --
 -- Where behaviour legitimately differs between a machine with an engine
--- installed and one without, the spec branches on stt.isAvailable() rather
+-- installed and one without, the spec branches on stt.available() rather
 -- than assuming either, so it passes in both places.
 
 describe("stt bridge", function()
@@ -21,7 +21,7 @@ describe("stt bridge", function()
     it("provides every documented function", function()
       local documented = {
         "init", "start", "stop", "toggle", "close",
-        "isAvailable", "isInitialized", "isListening",
+        "available", "initialized", "listening",
         "getInfo", "getModelPath", "getLibraryPath", "listModels",
         "getPlatformKey", "reloadLibrary", "unloadLibrary",
         "setSilenceTimeout", "setSensitivity", "setVocabulary",
@@ -35,18 +35,18 @@ describe("stt bridge", function()
   describe("state queries", function()
 
     it("answers with booleans rather than nil", function()
-      assert.is_boolean(stt.isAvailable())
-      assert.is_boolean(stt.isInitialized())
-      assert.is_boolean(stt.isListening())
+      assert.is_boolean(stt.available())
+      assert.is_boolean(stt.initialized())
+      assert.is_boolean(stt.listening())
     end)
 
     it("is not listening or initialized before anything has been set up", function()
-      if stt.isInitialized() then
+      if stt.initialized() then
         -- A previous spec or the player left a model loaded; the claim below
         -- only means anything from a clean start
         return
       end
-      assert.is_false(stt.isListening(), "nothing should be listening before a model is loaded")
+      assert.is_false(stt.listening(), "nothing should be listening before a model is loaded")
     end)
   end)
 
@@ -96,9 +96,9 @@ describe("stt bridge", function()
 
     it("agrees with the individual queries", function()
       local info = stt.getInfo()
-      assert.are.equal(stt.isAvailable(), info.available)
-      assert.are.equal(stt.isInitialized(), info.initialized)
-      assert.are.equal(stt.isListening(), info.listening)
+      assert.are.equal(stt.available(), info.available)
+      assert.are.equal(stt.initialized(), info.initialized)
+      assert.are.equal(stt.listening(), info.listening)
     end)
 
     it("names the engine it would use", function()
@@ -111,6 +111,14 @@ describe("stt bridge", function()
 
   describe("refusals", function()
 
+    -- A raise through the binding must not strand anything it built first:
+    -- getVerifiedString ends in lua_error(), which longjmps past C++
+    -- destructors, and no spec reached that path until this one
+    it("raises on an argument of the wrong type without leaking what it built", function()
+      assert.has_error(function() stt.init({}) end)
+      assert.has_error(function() stt.init(true) end)
+    end)
+
     it("refuses a model path that does not exist, without crashing", function()
       local ok, err = stt.init("/definitely/not/a/model/path/for/testing")
       assert.is_nil(ok, "loading a missing model should fail")
@@ -122,7 +130,7 @@ describe("stt bridge", function()
     -- chosen however many are installed - and being told to install a model
     -- you already have sends you looking in the wrong place.
     it("names the missing engine library rather than blaming the models", function()
-      if stt.isAvailable() then return end
+      if stt.available() then return end
       local ok, err = stt.init()
       assert.is_nil(ok, "init with no engine library should fail")
       assert.is_string(err)
@@ -130,7 +138,7 @@ describe("stt bridge", function()
     end)
 
     it("refuses to start before a model is loaded", function()
-      if stt.isInitialized() then return end
+      if stt.initialized() then return end
       local ok, err = stt.start()
       assert.is_nil(ok, "starting without a model should fail")
       assert.is_string(err)
@@ -165,7 +173,7 @@ describe("stt bridge", function()
 
     it("accepts a zero silence timeout, which means no timeout", function()
       local ok, err = stt.setSilenceTimeout(0)
-      if stt.isAvailable() then
+      if stt.available() then
         assert.is_true(ok)
       else
         assert.is_nil(ok, "with no engine there is nothing to set the timeout on")
@@ -176,7 +184,7 @@ describe("stt bridge", function()
     it("accepts each documented sensitivity", function()
       for _, mode in ipairs({"short", "default", "long"}) do
         local ok, err = stt.setSensitivity(mode)
-        if stt.isAvailable() then
+        if stt.available() then
           assert.is_true(ok, mode .. " should be accepted")
         else
           assert.is_nil(ok, mode .. " has no engine to apply to")
@@ -187,7 +195,7 @@ describe("stt bridge", function()
 
     it("answers setVocabulary with whether the engine took the words", function()
       local ok = stt.setVocabulary({"kill", "look", "inventory"})
-      if stt.isAvailable() then
+      if stt.available() then
         -- False is not a failure: it is the documented signal that this
         -- backend cannot bias, and the caller should correct results itself
         assert.is_boolean(ok)
@@ -208,9 +216,26 @@ describe("stt bridge", function()
       assert.is_table(stt.listModels(), "listing models must work before anything is installed")
     end)
 
-    it("names this platform, or admits there is no build for it", function()
+    -- "nil or a string" is every value there is, so it could not fail. The key
+    -- is what an installer picks a download by, so a wrong one is worse than
+    -- none, and the platform running the spec is known.
+    it("names this platform with the key an installer would download by", function()
       local key = stt.getPlatformKey()
-      assert.is_true(key == nil or type(key) == "string")
+      -- The architecture is not visible from Lua, so each platform's keys are
+      -- named rather than one of them: Windows on ARM64 has no build and
+      -- correctly answers nil, which is the only nil this may be.
+      local allowed = {
+        mac = {["macos"] = true},
+        linux = {["linux-x86_64"] = true, ["linux-aarch64"] = true},
+        windows = {["windows-x64"] = true, ["windows-x86"] = true},
+      }
+      local keys = allowed[getOS()]
+      assert.is_table(keys, "this spec does not know the keys for " .. tostring(getOS()))
+      if getOS() == "windows" and key == nil then
+        return -- ARM64 Windows, which ships no engine build
+      end
+      assert.is_string(key, "a platform with a build should name its key")
+      assert.is_true(keys[key] == true, "unexpected platform key: " .. tostring(key))
     end)
   end)
 end)

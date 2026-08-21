@@ -16,7 +16,7 @@ Design contract, before the tables:
   shared across profiles. Events are raised on the **active profile**;
   routing text anywhere else is consumer policy, not bridge behaviour.
 - **The recognizer's state is the single truth.** There is no parallel
-  "active" flag; `stt.isListening()` and `stt.getInfo().state` read the
+  "active" flag; `stt.listening()` and `stt.getInfo().state` read the
   engine.
 - **Honest capabilities.** `getInfo().capabilities` reports what the loaded
   backend genuinely does. Consumers MUST adapt to the flags rather than
@@ -33,13 +33,13 @@ Design contract, before the tables:
 | `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. |
 | `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
 | `stt.close()` | `true` | Release the model and native resources; state returns to `uninitialized`. Safe when nothing is initialized. |
-| `stt.isAvailable()` | boolean | The engine is present and loadable. False is the normal state on a machine with nothing installed. |
-| `stt.isInitialized()` | boolean | A model is loaded (`state` is neither `uninitialized` nor `error`). |
-| `stt.isListening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
-| `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Persists across sessions. |
+| `stt.available()` | boolean | The engine is present and loadable. False is the normal state on a machine with nothing installed. |
+| `stt.initialized()` | boolean | A model is loaded (`state` is neither `uninitialized` nor `error`). |
+| `stt.listening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
+| `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
 | `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. |
 | `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. |
-| `stt.getInfo()` | table \| `nil` | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. `nil` when speech-to-text is unavailable. |
+| `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key is present and every capability reads `false`, so a caller can read it without guarding. |
 
 ## Functions — model and library management (platform-tier)
 
@@ -57,10 +57,6 @@ returning `false` with a message, `listModels` returning `{}`.
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
 | `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. |
 | `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. |
-
-`hashFile(path, "sha256"|"sha1"|"md5")` is registered alongside the bridge as
-a general-purpose global — packages use it to verify downloaded engine
-archives — but it is not part of the `stt` namespace.
 
 ## `stt.getInfo()`
 

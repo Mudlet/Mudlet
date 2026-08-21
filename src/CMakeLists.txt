@@ -238,11 +238,10 @@ if(APPLE)
   )
   endif()
 
-  # Native macOS microphone permission handling for speech recognition
+  # Native macOS microphone permission handling for speech recognition.
+  # Only the .mm is listed: the set(mudlet_HDRS ...) further down overwrites the
+  # variable wholesale, so appending the header here would achieve nothing.
   list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
-  list(APPEND mudlet_HDRS MacMicrophonePermission.h)
-  # Only the .mm is compiled, so only it carries the language and ARC settings -
-  # the header is listed in mudlet_HDRS above for IDE visibility
   set_source_files_properties(
     MacMicrophonePermission.mm
     PROPERTIES

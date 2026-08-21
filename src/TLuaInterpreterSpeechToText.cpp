@@ -85,10 +85,10 @@ static bool speechStartAccepted(const SpeechRecognizer* pRecognizer)
 // Returns true on success, or nil + error message on failure.
 int TLuaInterpreter::sttInit(lua_State* L)
 {
-    const QString funcName = qsl("stt.init");
+    const char* funcName = "stt.init";
     QString modelPath;
     if (lua_gettop(L) >= 1 && !lua_isnoneornil(L, 1)) {
-        modelPath = getVerifiedString(L, funcName.toUtf8().constData(), 1, "model path");
+        modelPath = getVerifiedString(L, funcName, 1, "model path");
     } else {
         modelPath = SpeechRecognizerFactory::defaultModelPath();
         if (modelPath.isEmpty()) {
@@ -100,31 +100,31 @@ int TLuaInterpreter::sttInit(lua_State* L)
             if (SpeechRecognizerFactory::availableBackends().isEmpty()) {
                 return warnArgumentValue(
                         L,
-                        funcName.toUtf8().constData(),
+                        funcName,
                         qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(VoskRecognizer::librarySearchPaths().join(qsl(", "))).toUtf8().constData());
             }
-            return warnArgumentValue(L, funcName.toUtf8().constData(), "no model path provided and no default model is installed - please install a language model via the speech-to-text setup");
+            return warnArgumentValue(L, funcName, "no model path provided and no default model is installed - please install a language model via the speech-to-text setup");
         }
     }
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "mudlet instance not available");
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
     if (!QDir(modelPath).exists()) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), qsl("model path does not exist: %1").arg(modelPath).toUtf8().constData());
+        return warnArgumentValue(L, funcName, qsl("model path does not exist: %1").arg(modelPath).toUtf8().constData());
     }
 
     pMudlet->initSpeechRecognition();
 
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "failed to create speech recognizer");
+        return warnArgumentValue(L, funcName, "failed to create speech recognizer");
     }
 
     if (!pRecognizer->initialize(modelPath)) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), qsl("failed to initialize model from: %1").arg(modelPath).toUtf8().constData());
+        return warnArgumentValue(L, funcName, qsl("failed to initialize model from: %1").arg(modelPath).toUtf8().constData());
     }
 
     lua_pushboolean(L, true);
@@ -136,20 +136,20 @@ int TLuaInterpreter::sttInit(lua_State* L)
 // Returns true on success, or nil + error message on failure.
 int TLuaInterpreter::sttStart(lua_State* L)
 {
-    const QString funcName = qsl("stt.start");
+    const char* funcName = "stt.start";
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "mudlet instance not available");
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "speech recognizer not initialized - call stt.init() first");
+        return warnArgumentValue(L, funcName, "speech recognizer not initialized - call stt.init() first");
     }
 
     if (!pRecognizer->initialized()) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "speech recognizer not initialized with a model - call stt.init() first");
+        return warnArgumentValue(L, funcName, "speech recognizer not initialized with a model - call stt.init() first");
     }
 
     if (pRecognizer->listening()) {
@@ -161,7 +161,7 @@ int TLuaInterpreter::sttStart(lua_State* L)
     if (!speechStartAccepted(pRecognizer)) {
         // The recognizer has already said why through sysSTTError; what
         // matters here is not telling the caller that recording began
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "could not start listening - the sysSTTError event carries the reason");
+        return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
     }
 
     lua_pushboolean(L, true);
@@ -173,11 +173,11 @@ int TLuaInterpreter::sttStart(lua_State* L)
 // Returns true on success, or nil + error message on failure.
 int TLuaInterpreter::sttStop(lua_State* L)
 {
-    const QString funcName = qsl("stt.stop");
+    const char* funcName = "stt.stop";
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "mudlet instance not available");
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
     auto* pRecognizer = pMudlet->speechRecognizer();
@@ -200,16 +200,16 @@ int TLuaInterpreter::sttStop(lua_State* L)
 // Returns true if now listening, false if stopped, or nil + error on failure.
 int TLuaInterpreter::sttToggle(lua_State* L)
 {
-    const QString funcName = qsl("stt.toggle");
+    const char* funcName = "stt.toggle";
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "mudlet instance not available");
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer || !pRecognizer->initialized()) {
-        return warnArgumentValue(L, funcName.toUtf8().constData(), "speech recognizer not initialized - call stt.init() first");
+        return warnArgumentValue(L, funcName, "speech recognizer not initialized - call stt.init() first");
     }
 
     if (pRecognizer->listening()) {
@@ -218,7 +218,7 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     } else {
         pRecognizer->startListening();
         if (!speechStartAccepted(pRecognizer)) {
-            return warnArgumentValue(L, funcName.toUtf8().constData(), "could not start listening - the sysSTTError event carries the reason");
+            return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
         }
         lua_pushboolean(L, true);
     }
@@ -226,7 +226,7 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     return 1;
 }
 
-// stt.isListening()
+// stt.listening()
 // Check if speech recognition is currently active.
 // Returns true if listening, false otherwise.
 // Reports the recognizer's own state rather than mudlet's active flag: that flag
@@ -246,7 +246,7 @@ int TLuaInterpreter::sttIsListening(lua_State* L)
     return 1;
 }
 
-// stt.isAvailable()
+// stt.available()
 // Check if speech recognition is available (Vosk library loaded).
 // Returns true if available, false otherwise.
 int TLuaInterpreter::sttIsAvailable(lua_State* L)
@@ -255,7 +255,7 @@ int TLuaInterpreter::sttIsAvailable(lua_State* L)
     return 1;
 }
 
-// stt.isInitialized()
+// stt.initialized()
 // Check if speech recognition has been initialized with a model.
 // Returns true if initialized, false otherwise.
 int TLuaInterpreter::sttIsInitialized(lua_State* L)
@@ -654,7 +654,7 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
     }
 
     // Stays unloaded until stt.reloadLibrary() asks for it back: without this
-    // the next read-shaped call - getInfo(), isAvailable() - maps it straight
+    // the next read-shaped call - getInfo(), available() - maps it straight
     // back in, and the file the caller meant to replace is locked again
     VoskRecognizer::unloadLibraryByRequest(true);
 

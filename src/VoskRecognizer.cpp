@@ -172,7 +172,7 @@ bool VoskRecognizer::loadVoskLibrary()
     // - On macOS: adds "lib" prefix and ".dylib" suffix -> "vosk" becomes "libvosk.dylib"
     // - On Windows: adds ".dll" suffix -> "vosk" becomes "vosk.dll"
     // - On Linux: adds "lib" prefix and ".so" suffix -> "vosk" becomes "libvosk.so"
-    const QString libName = QStringLiteral("vosk");
+    const QString libName = qsl("vosk");
 
     sVoskLibrary.setFileName(libName);
 
@@ -279,15 +279,14 @@ QStringList VoskRecognizer::librarySearchPaths()
 
 #if defined(Q_OS_MACOS)
     paths << QDir(userLibraryPath()).filePath(qsl("libvosk.dylib"));
-    paths << QStringLiteral("/usr/local/lib/libvosk.dylib") << QStringLiteral("/opt/homebrew/lib/libvosk.dylib")
-          << QCoreApplication::applicationDirPath() + QStringLiteral("/../Frameworks/libvosk.dylib");
+    paths << qsl("/usr/local/lib/libvosk.dylib") << qsl("/opt/homebrew/lib/libvosk.dylib") << QCoreApplication::applicationDirPath() + qsl("/../Frameworks/libvosk.dylib");
 #elif defined(Q_OS_WIN)
     paths << QDir(userLibraryPath()).filePath(qsl("libvosk.dll"));
     // Vosk releases include libvosk.dll (with "lib" prefix)
-    paths << QCoreApplication::applicationDirPath() + QStringLiteral("/libvosk.dll");
+    paths << QCoreApplication::applicationDirPath() + qsl("/libvosk.dll");
 #else
     paths << QDir(userLibraryPath()).filePath(qsl("libvosk.so"));
-    paths << QStringLiteral("/usr/lib/libvosk.so") << QStringLiteral("/usr/local/lib/libvosk.so") << QStringLiteral("/usr/lib/x86_64-linux-gnu/libvosk.so");
+    paths << qsl("/usr/lib/libvosk.so") << qsl("/usr/local/lib/libvosk.so") << qsl("/usr/lib/x86_64-linux-gnu/libvosk.so");
 #endif
 
     return paths;
@@ -301,7 +300,7 @@ bool VoskRecognizer::backendAvailable() const
 QString VoskRecognizer::backendVersion() const
 {
     // Vosk doesn't provide a version API, return a placeholder
-    return sLibraryLoaded ? QStringLiteral("0.3.x") : QString();
+    return sLibraryLoaded ? qsl("0.3.x") : QString();
 }
 
 bool VoskRecognizer::initialize(const QString& modelPath)
@@ -372,15 +371,15 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // Try to determine language from model path (convention: vosk-model-small-en-us-0.15)
     const QString dirName = modelDir.dirName();
     if (dirName.contains(QLatin1String("-en-"))) {
-        mCurrentLanguage = QStringLiteral("en-US");
+        mCurrentLanguage = qsl("en-US");
     } else if (dirName.contains(QLatin1String("-de-"))) {
-        mCurrentLanguage = QStringLiteral("de-DE");
+        mCurrentLanguage = qsl("de-DE");
     } else if (dirName.contains(QLatin1String("-fr-"))) {
-        mCurrentLanguage = QStringLiteral("fr-FR");
+        mCurrentLanguage = qsl("fr-FR");
     } else if (dirName.contains(QLatin1String("-es-"))) {
-        mCurrentLanguage = QStringLiteral("es-ES");
+        mCurrentLanguage = qsl("es-ES");
     } else {
-        mCurrentLanguage = QStringLiteral("unknown");
+        mCurrentLanguage = qsl("unknown");
     }
 
     setState(State::Ready);
@@ -587,26 +586,6 @@ void VoskRecognizer::stopListening()
     }
 }
 
-void VoskRecognizer::resetUtterance()
-{
-    // Only while listening: vosk_recognizer_reset() after a final result has been
-    // taken can leave the decoder inconsistent, which is why startListeningInternal()
-    // rebuilds the recognizer rather than resetting it. Mid-phrase, as here and in
-    // cancel(), there is no final result outstanding and the reset is safe.
-    if (state() != State::Listening) {
-        return;
-    }
-
-    if (s_vosk_recognizer_reset && mVoskRecognizer) {
-        s_vosk_recognizer_reset(mVoskRecognizer);
-    }
-
-    // The phrase this was tracking is gone, so nothing should be compared against
-    // it, and the next words are a fresh onset rather than a continuation
-    mLastPartialResult.clear();
-    mSpeechOnsetFrames = 0;
-}
-
 void VoskRecognizer::cancel()
 {
     if (state() != State::Listening && state() != State::Processing) {
@@ -630,7 +609,6 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
     }
 
     const float level = calculateAudioLevel(pcmData);
-    emit audioLevelChanged(level);
 
     // Track recent audio level with smoothing (for silence detection)
     mRecentAudioLevel = mRecentAudioLevel * 0.7f + level * 0.3f;
@@ -773,22 +751,6 @@ void VoskRecognizer::releaseResources()
     setState(State::Uninitialized);
 }
 
-QStringList VoskRecognizer::availableLanguages() const
-{
-    // Return list of languages with available Vosk models
-    // In a full implementation, this would scan for installed models
-    return {QStringLiteral("en-US"),
-            QStringLiteral("en-GB"),
-            QStringLiteral("de-DE"),
-            QStringLiteral("fr-FR"),
-            QStringLiteral("es-ES"),
-            QStringLiteral("it-IT"),
-            QStringLiteral("pt-PT"),
-            QStringLiteral("ru-RU"),
-            QStringLiteral("zh-CN"),
-            QStringLiteral("ja-JP")};
-}
-
 bool VoskRecognizer::setLanguage(const QString& languageCode)
 {
     if (mCurrentLanguage == languageCode) {
@@ -862,20 +824,6 @@ QString VoskRecognizer::defaultModelPath()
 
     // Fallback to hardcoded default path for backward compatibility
     return mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-models/vosk-model-small-en-us-0.15"));
-}
-
-QString VoskRecognizer::modelDownloadUrl(const QString& languageCode)
-{
-    static const QHash<QString, QString> modelUrls = {{QStringLiteral("en-US"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip")},
-                                                      {QStringLiteral("de-DE"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip")},
-                                                      {QStringLiteral("fr-FR"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip")},
-                                                      {QStringLiteral("es-ES"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip")},
-                                                      {QStringLiteral("it-IT"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip")},
-                                                      {QStringLiteral("ru-RU"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip")},
-                                                      {QStringLiteral("zh-CN"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip")},
-                                                      {QStringLiteral("ja-JP"), QStringLiteral("https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip")}};
-
-    return modelUrls.value(languageCode, modelUrls.value(QStringLiteral("en-US")));
 }
 
 QString VoskRecognizer::modelsDirectoryPath()
@@ -969,22 +917,6 @@ QString VoskRecognizer::getSelectedModelPath()
     }
 
     return QString();
-}
-
-void VoskRecognizer::setSelectedModelPath(const QString& modelPath)
-{
-    QSettings settings;
-    settings.beginGroup(qsl("SpeechRecognition"));
-
-    if (modelPath.isEmpty()) {
-        settings.remove(qsl("selectedModel"));
-    } else {
-        // Store just the model directory name, not the full path
-        QDir modelDir(modelPath);
-        settings.setValue(qsl("selectedModel"), modelDir.dirName());
-    }
-
-    settings.endGroup();
 }
 
 bool VoskRecognizer::setEndpointerMode(EndpointerMode mode)
