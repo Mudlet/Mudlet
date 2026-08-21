@@ -117,6 +117,18 @@ describe("stt bridge", function()
       assert.is_string(err, "a refusal should say why")
     end)
 
+    -- The message has to name the thing that is actually missing. When the
+    -- engine library is absent no backend is available, so no model can be
+    -- chosen however many are installed - and being told to install a model
+    -- you already have sends you looking in the wrong place.
+    it("names the missing engine library rather than blaming the models", function()
+      if stt.isAvailable() then return end
+      local ok, err = stt.init()
+      assert.is_nil(ok, "init with no engine library should fail")
+      assert.is_string(err)
+      assert.is_truthy(err:find("librar"), "the refusal should name the engine library, got: " .. tostring(err))
+    end)
+
     it("refuses to start before a model is loaded", function()
       if stt.isInitialized() then return end
       local ok, err = stt.start()

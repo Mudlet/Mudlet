@@ -219,7 +219,10 @@ public:
     Q_ENUM(Sensitivity)
 
     // Set how quickly end-of-speech is detected
-    virtual void setSensitivity(Sensitivity sensitivity) = 0;
+    // False when this engine cannot tune end-of-speech detection at all, so a
+    // caller is told rather than being handed a readback that agrees with the
+    // request and disagrees with the engine
+    virtual bool setSensitivity(Sensitivity sensitivity) = 0;
     virtual Sensitivity sensitivity() const = 0;
 
 protected:

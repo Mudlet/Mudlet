@@ -92,6 +92,17 @@ int TLuaInterpreter::sttInit(lua_State* L)
     } else {
         modelPath = SpeechRecognizerFactory::defaultModelPath();
         if (modelPath.isEmpty()) {
+            // Two different problems wore one message: defaultModelPath() is
+            // empty whenever no backend is available, which is the case when
+            // the engine *library* is missing however many models are
+            // installed. Telling someone to install what they already have
+            // sends them looking in the wrong place.
+            if (SpeechRecognizerFactory::availableBackends().isEmpty()) {
+                return warnArgumentValue(
+                        L,
+                        funcName.toUtf8().constData(),
+                        qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(VoskRecognizer::librarySearchPaths().join(qsl(", "))).toUtf8().constData());
+            }
             return warnArgumentValue(L, funcName.toUtf8().constData(), "no model path provided and no default model is installed - please install a language model via the speech-to-text setup");
         }
     }
@@ -497,7 +508,9 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         return warnArgumentValue(L, "stt.setSensitivity", "failed to create speech recognizer");
     }
 
-    pRecognizer->setSensitivity(sensitivity);
+    if (!pRecognizer->setSensitivity(sensitivity)) {
+        return warnArgumentValue(L, "stt.setSensitivity", "this build of the speech engine cannot tune end-of-speech detection");
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -611,6 +624,9 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // The unload may be refused while something still holds the module; the
     // probe below then reports what is actually loadable either way
     VoskRecognizer::resetLibraryLoadState();
+    // Lift the latch stt.unloadLibrary() set, since asking for a reload is
+    // exactly the caller saying they are done replacing the file
+    VoskRecognizer::unloadLibraryByRequest(false);
     lua_pushboolean(L, VoskRecognizer::libraryAvailable());
     return 1;
 }
@@ -636,6 +652,11 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
     if (!VoskRecognizer::resetLibraryLoadState()) {
         return warnArgumentValue(L, "stt.unloadLibrary", "the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet", true);
     }
+
+    // Stays unloaded until stt.reloadLibrary() asks for it back: without this
+    // the next read-shaped call - getInfo(), isAvailable() - maps it straight
+    // back in, and the file the caller meant to replace is locked again
+    VoskRecognizer::unloadLibraryByRequest(true);
 
     lua_pushboolean(L, true);
     return 1;

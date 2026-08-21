@@ -40,6 +40,7 @@
 QLibrary VoskRecognizer::sVoskLibrary;
 bool VoskRecognizer::sLibraryLoaded = false;
 bool VoskRecognizer::sLibraryLoadAttempted = false;
+bool VoskRecognizer::sLibraryUnloadedByRequest = false;
 
 VoskRecognizer::vosk_model_new_fn VoskRecognizer::s_vosk_model_new = nullptr;
 VoskRecognizer::vosk_model_free_fn VoskRecognizer::s_vosk_model_free = nullptr;
@@ -72,17 +73,19 @@ Q_GLOBAL_STATIC_WITH_ARGS(QRegularExpression, kLeadingHallucinationRx, (qsl("^(t
 static constexpr double MIN_PHANTOM_LEADING_WORD_SECONDS = 1.0;
 
 // Whether the leading word of a result spans enough silence to be a decoder
-// artifact rather than speech. Without word timings there is nothing to judge by,
-// and the historical behaviour - strip it - is kept.
+// artifact rather than speech. Without word timings there is nothing to judge
+// by, so the word stands: a libvosk that cannot report timings would otherwise
+// lose the first word of every utterance to a guess, silently - "the dragon
+// attacks" arriving as "dragon attacks" with nothing said about it.
 static bool leadingWordIsPhantom(const QJsonArray& words)
 {
     if (words.isEmpty()) {
-        return true;
+        return false;
     }
 
     const QJsonObject first = words.first().toObject();
     if (!first.contains(QLatin1String("start")) || !first.contains(QLatin1String("end"))) {
-        return true;
+        return false;
     }
 
     const double duration = first.value(QLatin1String("end")).toDouble() - first.value(QLatin1String("start")).toDouble();
@@ -226,7 +229,11 @@ bool VoskRecognizer::loadVoskLibrary()
 
 bool VoskRecognizer::libraryAvailable()
 {
-    if (!sLibraryLoadAttempted) {
+    // Not probed again while a caller has deliberately unloaded it. Otherwise
+    // stt.unloadLibrary() is undone by the next getInfo() - and on Windows the
+    // delete that the unload existed to permit then fails on a mapped module,
+    // with nothing to explain it. reloadLibrary() is what clears this.
+    if (!sLibraryLoadAttempted && !sLibraryUnloadedByRequest) {
         loadVoskLibrary();
     }
     return sLibraryLoaded;
@@ -323,7 +330,6 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         return false;
     }
 
-    mModelPath = modelPath;
     qInfo().noquote() << "VoskRecognizer: Loading model from:" << modelPath;
 
     mVoskModel = s_vosk_model_new(modelPath.toUtf8().constData());
@@ -343,6 +349,10 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         emit errorOccurred(tr("Failed to create Vosk recognizer"));
         return false;
     }
+
+    // Only now is there a model loaded for modelPath() to name; the failure
+    // paths above leave it empty, which is what getInfo() promises
+    mModelPath = modelPath;
 
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
@@ -635,6 +645,18 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
 
     const int result = s_vosk_recognizer_accept_waveform(mVoskRecognizer, pcmData.constData(), pcmData.size());
 
+    // -1 is the decoder reporting that it threw internally. Treating that as
+    // "not finished yet" leaves a session that looks healthy - listening, audio
+    // level moving - and never produces a result, with nothing said about why.
+    if (result < 0) {
+        qWarning() << "VoskRecognizer: the decoder faulted while accepting audio; stopping capture";
+        mpCapture->stop();
+        setState(State::Error);
+        //: Shown when the speech engine's decoder fails while audio is being fed to it
+        emit errorOccurred(tr("The speech engine stopped decoding unexpectedly. Try starting speech recognition again."));
+        return;
+    }
+
     if (result > 0) {
         // We have a complete utterance
         const char* resultJson = s_vosk_recognizer_result(mVoskRecognizer);
@@ -747,6 +769,7 @@ void VoskRecognizer::releaseResources()
     // or a caller is left with a live microphone it has no call to close
     mpCapture->stop();
     releaseVoskResources();
+    mModelPath.clear();
     setState(State::Uninitialized);
 }
 
@@ -964,34 +987,40 @@ void VoskRecognizer::setSelectedModelPath(const QString& modelPath)
     settings.endGroup();
 }
 
-void VoskRecognizer::setEndpointerMode(EndpointerMode mode)
+bool VoskRecognizer::setEndpointerMode(EndpointerMode mode)
 {
+    // A libvosk without this symbol cannot be tuned at all, so remembering the
+    // request would make sensitivity() agree with the caller and disagree with
+    // the engine - the hardest shape to debug, since every readback insists the
+    // pauses are configured while they never happen
+    if (!s_vosk_recognizer_set_endpointer_mode) {
+        return false;
+    }
+
     // Clamp to valid range: Default (0) to VeryLong (4)
     const int modeInt = qBound(0, static_cast<int>(mode), 4);
     mEndpointerMode = static_cast<EndpointerMode>(modeInt);
 
-    if (mVoskRecognizer && s_vosk_recognizer_set_endpointer_mode) {
+    if (mVoskRecognizer) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, modeInt);
 #ifdef DEBUG_STT
         qDebug() << "VoskRecognizer: Set endpointer mode to" << modeInt;
 #endif
     }
+    return true;
 }
 
-void VoskRecognizer::setSensitivity(Sensitivity sensitivity)
+bool VoskRecognizer::setSensitivity(Sensitivity sensitivity)
 {
     // Map generic Sensitivity to Vosk-specific EndpointerMode
     switch (sensitivity) {
     case Sensitivity::Short:
-        setEndpointerMode(EndpointerMode::Short);
-        break;
+        return setEndpointerMode(EndpointerMode::Short);
     case Sensitivity::Long:
-        setEndpointerMode(EndpointerMode::Long);
-        break;
+        return setEndpointerMode(EndpointerMode::Long);
     case Sensitivity::Default:
     default:
-        setEndpointerMode(EndpointerMode::Default);
-        break;
+        return setEndpointerMode(EndpointerMode::Default);
     }
 }
 
