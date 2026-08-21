@@ -2126,12 +2126,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // Auto-retry installation after save completes
         QObject* obj = new QObject(this);
         connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            // The synchronous caller has already been told {true, ""} below, so
-            // the nested call is the only thing that can report this. It tells
-            // the user itself via fail() below, leaving the log line here.
             auto [ok, msg] = installPackage(fileName, thing, quiet);
             if (!ok) {
                 qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
+                // A non-quiet install has already been reported by fail() inside the
+                // call above. A quiet one has not, and cannot be: quiet's bargain is
+                // that the caller gets the reason as a return value instead of a
+                // console line, and this caller was handed {true, ""} long before the
+                // failure happened. Nobody else can say it, so say it here.
+                if (quiet) {
+                    postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
+                }
             }
             obj->deleteLater();
         });
