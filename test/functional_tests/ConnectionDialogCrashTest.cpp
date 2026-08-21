@@ -123,6 +123,7 @@ private:
     void rightClickBelowTheLastItem(QAbstractScrollArea* view) const
     {
         auto* viewport = view->viewport();
+        QVERIFY(viewport);
         const QPoint pos(viewport->width() / 2, viewport->height() - 4);
         QContextMenuEvent event(QContextMenuEvent::Mouse, pos, viewport->mapToGlobal(pos));
         QApplication::sendEvent(viewport, &event);
