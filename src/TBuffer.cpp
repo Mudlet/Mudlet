@@ -27,6 +27,7 @@
 #include "LuaLiteral.h"
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
@@ -91,6 +92,145 @@ constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
 bool jsonBoolValue(const QJsonValue& val)
 {
     return val.toBool() || (val.isDouble() && val.toDouble() != 0);
+}
+
+// One parameter of an OSC 8 URI query, kept exactly as it arrived. The styling parser decodes
+// only the values it consumes and decodeOSC() rebuilds the URL it opens out of the rest, so
+// neither can work from a query that has already been decoded.
+struct RawQueryParameter
+{
+    QString text;  // the whole parameter as it appeared, for rebuilding the query
+    QString key;   // raw key, empty when the parameter has no separator
+    QString value; // raw value, empty when the parameter has no separator
+    bool hasSeparator = false;
+};
+
+// One character of a possibly percent-encoded value, with how much of the raw query it took up.
+// A server may encode part of a config object and leave the rest raw, so the scan below has to
+// recognise a brace whether it arrived as '{' or as %7B.
+struct DecodedChar
+{
+    QChar ch;
+    int width = 1;
+};
+
+DecodedChar decodedCharAt(const QString& text, const int index)
+{
+    if (text.at(index) == '%' && index + 2 < text.size()) {
+        bool ok = false;
+        const int code = QStringView{text}.mid(index + 1, 2).toInt(&ok, 16);
+        if (ok) {
+            return {QChar(code), 3};
+        }
+    }
+    return {text.at(index), 1};
+}
+
+// Splits a query into parameters without decoding any of it, so that an escaped parameter name
+// is not mistaken for a reserved one (RFC 3986 2.4). A config value sent as unencoded JSON can
+// carry '&' inside its strings, so the end of one is found by counting braces rather than at
+// the next '&' - both callers have to agree on that or one of them sees a parameter the other
+// does not. Mirrors QString::split('&') otherwise, empty parameters included.
+QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
+{
+    QList<RawQueryParameter> parameters;
+
+    int pos = 0;
+    while (true) {
+        const int nextAmp = query.indexOf('&', pos);
+        const int ampEnd = (nextAmp == -1) ? query.size() : nextAmp;
+
+        // Accept '%3D' as the key/value separator as well as '=', taking whichever comes first
+        const int literalEq = query.indexOf('=', pos);
+        const int encodedEq = query.indexOf(qsl("%3D"), pos, Qt::CaseInsensitive);
+        int eqPos = -1;
+        int eqLength = 0;
+        if (literalEq >= 0 && literalEq < ampEnd && (encodedEq < 0 || literalEq < encodedEq)) {
+            eqPos = literalEq;
+            eqLength = 1;
+        } else if (encodedEq >= 0 && encodedEq < ampEnd) {
+            eqPos = encodedEq;
+            eqLength = 3;
+        }
+
+        RawQueryParameter parameter;
+        int paramEnd = ampEnd;
+
+        if (eqPos >= 0) {
+            const int valueStart = eqPos + eqLength;
+            int valueEnd = ampEnd;
+            parameter.hasSeparator = true;
+            parameter.key = query.mid(pos, eqPos - pos);
+
+            // JSON allows insignificant whitespace before the object, so the brace the scan
+            // needs may not be the first character of the value
+            int objectStart = valueStart;
+            while (objectStart < query.size()) {
+                const DecodedChar decoded = decodedCharAt(query, objectStart);
+                if (!decoded.ch.isSpace()) {
+                    break;
+                }
+                objectStart += decoded.width;
+            }
+
+            if (parameter.key == qsl("config") && objectStart < query.size() && decodedCharAt(query, objectStart).ch == '{') {
+                int depth = 0;
+                bool inString = false;
+                bool escaped = false;
+                // valueEnd keeps its initial ampEnd if the scan finds no closing brace: the JSON
+                // is malformed, so the parser gets what there is and fails on it. Stopping at the
+                // next '&' rather than running to the end keeps one unterminated object from
+                // swallowing every parameter behind it and dropping them from the rebuilt URL
+
+                for (int i = objectStart; i < query.size();) {
+                    const DecodedChar decoded = decodedCharAt(query, i);
+                    const QChar ch = decoded.ch;
+                    i += decoded.width;
+
+                    if (escaped) {
+                        escaped = false;
+                        continue;
+                    }
+                    if (ch == '\\') {
+                        escaped = true;
+                        continue;
+                    }
+                    if (ch == '"') {
+                        inString = !inString;
+                        continue;
+                    }
+                    if (!inString) {
+                        if (ch == '{') {
+                            ++depth;
+                        } else if (ch == '}') {
+                            --depth;
+                            if (depth == 0) {
+                                valueEnd = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // The parameter still runs to the next '&', so that anything a server appended
+                // after the object goes with it rather than being left on the rebuilt URL
+                const int afterObject = query.indexOf('&', valueEnd);
+                paramEnd = (afterObject == -1) ? query.size() : afterObject;
+            }
+
+            parameter.value = query.mid(valueStart, valueEnd - valueStart);
+        }
+
+        parameter.text = query.mid(pos, paramEnd - pos);
+        parameters.append(parameter);
+
+        if (paramEnd >= query.size()) {
+            break;
+        }
+        pos = paramEnd + 1;
+    }
+
+    return parameters;
 }
 
 } // anonymous namespace
@@ -294,6 +434,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mServerWrapPendingLine(other.mServerWrapPendingLine)
 , mServerWrapPendingBuffer(other.mServerWrapPendingBuffer)
 , mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
+, mServerWrapPendingSegmentStart(other.mServerWrapPendingSegmentStart)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotEscCharset(other.mLocalGotEscCharset)
@@ -390,6 +531,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mServerWrapPendingLine = other.mServerWrapPendingLine;
         mServerWrapPendingBuffer = other.mServerWrapPendingBuffer;
         mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
+        mServerWrapPendingSegmentStart = other.mServerWrapPendingSegmentStart;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotEscCharset = other.mLocalGotEscCharset;
@@ -1611,24 +1753,29 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
             // A held segment was only wrapped if what follows continues it:
             // prose rather than art, not a list entry, indented by no more
             // than the single space some games move the break to instead of
-            // swallowing it, and opening with a word that would not have
-            // fitted on the line above. Anything else means the held line was
+            // swallowing it, not opening with the words the held segment
+            // opened with, and opening with a word that would not have fitted
+            // on the line above. Anything else means the held line was
             // complete after all:
             const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
-            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine) || pendingLineHadRoomForNextWord()) {
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine) || continuationRepeatsSegmentOpening() || pendingLineHadRoomForNextWord()) {
                 flushPendingServerWrapJoin();
             }
         }
         // Deliberately judged before the pending line is joined on: ending at
         // the game's wrap column is a property of the segment as the game
-        // sent it, not of the longer joined line.
-        const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment;
+        // sent it, not of the longer joined line. A segment that finished a
+        // sentence there is not held at all, see
+        // segmentEndsSettledSentence().
+        const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment && !segmentEndsSettledSentence(mMudLine);
         const qsizetype segmentLength = mMudLine.size();
+        const QString segmentStart = segmentLooksWrapped ? mMudLine.left(csmServerWrapSegmentStartChars) : QString();
         joinPendingServerWrapOntoCurrent();
         if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
             mServerWrapPendingLine.swap(mMudLine);
             mServerWrapPendingBuffer.swap(mMudBuffer);
             mServerWrapPendingSegmentLength = segmentLength;
+            mServerWrapPendingSegmentStart = segmentStart;
             startServerWrapFlushTimer();
             ++localBufferPosition;
             return true;
@@ -1713,7 +1860,7 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
         mPreTriggerPassLine = std::move(chars);
         mPreTriggerPassLineNumber = lineIndex;
-        mpHost->mpConsole->runTriggers(lineIndex);
+        mpHost->runTriggers(lineIndex);
         mPreTriggerPassLine = std::move(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
     }
@@ -1768,6 +1915,14 @@ bool TBuffer::endsAtServerWrapColumn() const
     return len <= width && len >= width - csmServerWrapSlack;
 }
 
+namespace {
+// What the end of a sentence looks like, closing quotes and brackets
+// included. The two checks below have to agree on it: one takes a wide
+// trailing gap after such a mark as a wrap the game kept the break space of,
+// the other refuses to hold a segment that ends on one:
+constexpr QStringView SENTENCE_FINALS = u".!?'\")";
+} // anonymous namespace
+
 // Word-wrapped prose breaks between words, so a wrapped segment ends in a
 // word (or a sentence mark that happened to fall on the wrap column) and
 // consists mostly of letters. ASCII art, dividers and table borders - which
@@ -1789,10 +1944,9 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
         return false;
     }
     static const QString allowedFinals = qsl(".,;:!?'\")");
-    static const QString sentenceFinals = qsl(".!?'\")");
     const QChar last = line.at(end - 1);
     const qsizetype trailingSpaces = line.size() - end;
-    if (trailingSpaces > 2 || (trailingSpaces == 2 && !sentenceFinals.contains(last))) {
+    if (trailingSpaces > 2 || (trailingSpaces == 2 && !SENTENCE_FINALS.contains(last))) {
         return false;
     }
     if (!last.isLetterOrNumber() && !allowedFinals.contains(last)) {
@@ -1810,6 +1964,28 @@ bool TBuffer::looksLikeWrappedProse(const QString& line) const
         }
     }
     return nonSpace > 0 && letters * 10 >= nonSpace * 6;
+}
+
+// Where a game swallows the space it breaks at, a segment that finishes a
+// sentence right on the wrap column looks exactly like one the game ended
+// there itself - and games end lines on sentences all the time: a room
+// description, the exits line below it, the object line below that. Joining
+// those runs separate lines into one and breaks triggers anchored to their
+// starts. A kept break space is the one piece of evidence
+// that settles it, so only a sentence with nothing at all after it is
+// refused. What that costs is a genuine wrap landing exactly after a sentence
+// staying split, which reads as a break at a sentence boundary - far cheaper
+// than the joins it prevents; the closing quotes and brackets in the set take
+// a mid-sentence one landing on the column with them, at the same cost and in
+// the same direction. The hold decision is the only place this belongs:
+// continuations legitimately end sentences, so looksLikeWrappedProse() must
+// keep accepting them.
+bool TBuffer::segmentEndsSettledSentence(const QString& line)
+{
+    if (line.isEmpty()) {
+        return false;
+    }
+    return SENTENCE_FINALS.contains(line.back());
 }
 
 // A list entry reads exactly like wrapped prose: a sentence that can end
@@ -1879,6 +2055,36 @@ bool TBuffer::pendingLineHadRoomForNextWord() const
     // added for it when the game swallowed it:
     const qsizetype separator = std::max<qsizetype>(1, trailingSpaces + wordStart);
     return heldEnd + separator + (wordEnd - wordStart) + csmServerWrapFitTolerance <= mpHost->mUndoServerWrapWidth;
+}
+
+// Games that wrap a tell, say or channel message themselves put the whole
+// prefix back on every physical line of it ("Anne teilt Dir mit: ..."). Those
+// lines break mid-sentence at the wrap column and leave no room for the next
+// word, so every other check reads them as one wrapped paragraph and the join
+// buries the prefix in the middle of it. The repeated opening is what gives
+// them away. Two words of it, because prose starts line after line with the
+// same article or pronoun and one proves nothing.
+bool TBuffer::continuationRepeatsSegmentOpening() const
+{
+    const qsizetype comparable = std::min(mServerWrapPendingSegmentStart.size(), mMudLine.size());
+    qsizetype i = 0;
+    // A held segment can open with the space the game moved the break to
+    // rather than swallowing it, and that space begins no word:
+    while (i < comparable && mServerWrapPendingSegmentStart.at(i).isSpace()) {
+        ++i;
+    }
+    int repeatedWords = 0;
+    for (; i < comparable; ++i) {
+        if (mServerWrapPendingSegmentStart.at(i) != mMudLine.at(i)) {
+            break;
+        }
+        // A word is over at the first space after it, so a run of them counts
+        // once - two words shared, not one and a wide gap:
+        if (mServerWrapPendingSegmentStart.at(i).isSpace() && !mServerWrapPendingSegmentStart.at(i - 1).isSpace()) {
+            ++repeatedWords;
+        }
+    }
+    return repeatedWords >= csmServerWrapRepeatedWords;
 }
 
 void TBuffer::joinPendingServerWrapOntoCurrent()
@@ -3499,27 +3705,17 @@ void TBuffer::decodeOSC(const QString& sequence)
                     const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
                     const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
 
-                    // Compare keys against literal strings only; percent-encoded key names
-                    // (e.g. %63%6F%6E%66%69%67 for "config") are intentionally not stripped
-                    const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
+                    // Mudlet only removes what the style parser claims, which leaves two kinds of
+                    // parameter in place: one whose name is percent-encoded (%63%6F%6E%66%69%67
+                    // for "config"), since keys are compared as literal strings, and one with no
+                    // '=' at all, since the split gives that no key and the style parser passes
+                    // over it. Both are the server's own URL data.
                     QStringList kept;
-                    for (const auto& pair : rawPairs) {
-                        // Find the separator between key and value - use earliest of '=' or '%3D' (percent-encoded =)
-                        int literalEq = pair.indexOf('=');
-                        int encodedEq = pair.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
-                        int eqPos = -1;
-                        if (literalEq >= 0 && encodedEq >= 0) {
-                            eqPos = qMin(literalEq, encodedEq);
-                        } else if (literalEq >= 0) {
-                            eqPos = literalEq;
-                        } else {
-                            eqPos = encodedEq;
-                        }
-                        const auto key = eqPos >= 0 ? pair.left(eqPos) : pair;
-                        if ((stripConfig && key == qsl("config")) || (stripPreset && key == qsl("preset"))) {
+                    for (const auto& parameter : splitOscQueryParameters(baseUrl.mid(queryStart + 1))) {
+                        if (parameter.hasSeparator && ((stripConfig && parameter.key == qsl("config")) || (stripPreset && parameter.key == qsl("preset")))) {
                             continue;
                         }
-                        kept.append(pair);
+                        kept.append(parameter.text);
                     }
 
                     baseUrl = baseUrl.left(queryStart);
@@ -3739,94 +3935,30 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     qDebug() << "[OSC] Query string:" << queryString;
 #endif
 
-    // Extract config= and preset= from the query string, splitting it into parameters first
-    // and decoding only the values (RFC 3986 2.4). Decoding the whole query first would turn
-    // an escaped name - %63%6F%6E%66%69%67, the escape servers are told to use for a literal
-    // "config" in a web URL - back into "config" and consume it as styling. So a key counts
-    // as reserved only when it is raw and literal, which is the same key decodeOSC() compares
-    // when deciding what to strip out of the URL it opens: both leave an escaped name as URL
-    // data. The two still divide the query into parameters differently, as decodeOSC() splits
-    // on '&' alone and the brace matching below does not.
+    // Extract config= and preset= from the query string. The split leaves the query undecoded
+    // and only the values taken from it are decoded (RFC 3986 2.4): decoding the whole query
+    // first would turn an escaped name - %63%6F%6E%66%69%67, the escape servers are told to use
+    // for a literal "config" in a web URL - back into "config" and consume it as styling. So a
+    // key counts as reserved only when it is raw and literal, which is the same key decodeOSC()
+    // compares when deciding what to strip out of the URL it opens.
     QString configJson;
     QString presetName;
-    QString remaining = queryString;
 
-    while (!remaining.isEmpty()) {
-        const int ampPos = remaining.indexOf('&');
-        const int paramEnd = (ampPos == -1) ? remaining.size() : ampPos;
-        const QString laterParams = (ampPos == -1) ? QString() : remaining.mid(ampPos + 1);
-
-        // Accept '%3D' as the key/value separator as well, matching decodeOSC()
-        const int literalEq = remaining.indexOf('=');
-        const int encodedEq = remaining.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
-        int eqPos = -1;
-        int eqLength = 0;
-        if (literalEq >= 0 && literalEq < paramEnd && (encodedEq < 0 || literalEq < encodedEq)) {
-            eqPos = literalEq;
-            eqLength = 1;
-        } else if (encodedEq >= 0 && encodedEq < paramEnd) {
-            eqPos = encodedEq;
-            eqLength = 3;
-        }
-
-        if (eqPos < 0) {
-            remaining = laterParams;
+    for (const auto& parameter : splitOscQueryParameters(queryString)) {
+        if (!parameter.hasSeparator) {
             continue;
         }
-
-        const QString key = remaining.left(eqPos);
-        const int valueStart = eqPos + eqLength;
-
-        if (key != qsl("config")) {
-            if (key == qsl("preset")) {
-                presetName = QUrl::fromPercentEncoding(remaining.mid(valueStart, paramEnd - valueStart).toUtf8());
+        if (parameter.key == qsl("config")) {
+            // Only an object counts, which is the same thing the split brace-scans for. Without
+            // this a second "config" carrying anything else - an empty value, or a word - would
+            // overwrite a valid one earlier in the query and take its styling with it
+            const QString value = QUrl::fromPercentEncoding(parameter.value.toUtf8());
+            if (value.trimmed().startsWith('{')) {
+                configJson = value;
             }
-            remaining = laterParams;
-            continue;
+        } else if (parameter.key == qsl("preset")) {
+            presetName = QUrl::fromPercentEncoding(parameter.value.toUtf8());
         }
-
-        // A config value sent as unencoded JSON can carry '&' inside its strings, so find
-        // where the object ends by brace depth rather than at the next '&'
-        int valueEnd = paramEnd;
-        if (valueStart < remaining.size() && remaining.at(valueStart) == '{') {
-            int depth = 0;
-            bool inString = false;
-            bool escaped = false;
-            // Stands if the scan finds no closing brace: the JSON is malformed, so take the
-            // rest as config and let the parser handle it
-            valueEnd = remaining.size();
-
-            for (int i = valueStart; i < remaining.size(); ++i) {
-                const QChar ch = remaining.at(i);
-                if (escaped) {
-                    escaped = false;
-                    continue;
-                }
-                if (ch == '\\') {
-                    escaped = true;
-                    continue;
-                }
-                if (ch == '"') {
-                    inString = !inString;
-                    continue;
-                }
-                if (!inString) {
-                    if (ch == '{') {
-                        ++depth;
-                    } else if (ch == '}') {
-                        --depth;
-                        if (depth == 0) {
-                            valueEnd = i + 1;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        configJson = QUrl::fromPercentEncoding(remaining.mid(valueStart, valueEnd - valueStart).toUtf8());
-        // Skip past the value and any trailing '&'
-        remaining = (valueEnd < remaining.size() && remaining.at(valueEnd) == '&') ? remaining.mid(valueEnd + 1) : remaining.mid(valueEnd);
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -4838,8 +4970,14 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     // Use a 1-second debounce to prevent duplicate injection from echo + server response
     if (text.contains("!osc8-docs")) {
+        if (mpHost.isNull()) {
+            return; // Still don't display the trigger phrase itself
+        }
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        TBuffer& mainBuffer = mpHost->mpConsole->buffer;
+        // The examples always go to the main console. Ask the model for it
+        // rather than the view: the injection is pure buffer work, so it still
+        // works when the profile has no main console widget.
+        TBuffer& mainBuffer = mpHost->mainConsoleModel().buffer;
 
         if (now - mainBuffer.mLastOSC8DocsInjectionTime > 1000) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5150,7 +5288,13 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    if (mpHost.isNull()) {
+    // The log destination lives on the main console view, which the model this
+    // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
+    // log to once the view has gone. Test this buffer's own back-pointer:
+    // TConsole unbinds it as it starts to tear down, whereas Host::mpConsole
+    // only nulls itself in ~QObject(), i.e. once the widget it still points at
+    // is long since half-destroyed:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
         return;
     }
 
@@ -5200,19 +5344,34 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
 // logs the remaining output when logging gets stopped, without duplication checks
 void TBuffer::logRemainingOutput()
 {
-    mpHost->mpConsole->mLogStream << lastTextToLog;
-    mpHost->mpConsole->mLogStream.flush();
-
-    // Reset the deferred logging state so restarting logging cannot replay this
-    // pending line into the new session via log()'s deferred-flush path
+    // Reset the deferred logging state up front, before any bail-out: it is
+    // buffer state and needs no view, and leaving it behind would let a
+    // successor view replay this pending line and let the stale line indexes
+    // suppress a real flush in log()
+    const QString pendingText = lastTextToLog;
     lastTextToLog.clear();
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
+
+    // The log file is the view's; see TBuffer::log() on why this buffer's own
+    // back-pointer is the one to test:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
+    mpHost->mpConsole->mLogStream << pendingText;
+    mpHost->mpConsole->mLogStream.flush();
 }
 
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
+    // See TBuffer::log() on why this buffer's own back-pointer is the one to
+    // test for the view still being there:
+    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+        return;
+    }
+
     TBuffer* pB = &mpHost->mpConsole->buffer;
     if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
         return;
@@ -5509,7 +5668,7 @@ void TBuffer::clear()
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
     // was still pending for logging is not lost from the log file
-    if (!mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+    if (!mpConsole.isNull() && !mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
         logRemainingOutput();
 
         // A line whose own trigger calls clearWindow() has been committed and
@@ -5551,6 +5710,11 @@ void TBuffer::clear()
 
 void TBuffer::clearLinkState()
 {
+    if (mLinkStore.pristine() && mLinkStates.isEmpty() && mVisitedLinks.isEmpty() && mLinkSelectionState.isEmpty() && mLinkOriginalBackgrounds.isEmpty() && mLinkOriginalCharacters.isEmpty()
+        && mLinkOriginalText.isEmpty() && mPendingSelectionStyling.isEmpty() && !mCurrentHoveredLinkIndex && !mCurrentActiveLinkIndex && !mCurrentFocusedLinkIndex && !mLastClickedLinkIndex) {
+        return;
+    }
+
     Host* pH = mpHost;
     const QSet<int> activeLinkIds = collectActiveLinkIds();
 
@@ -5649,8 +5813,10 @@ void TBuffer::shrinkBuffer()
         mCursorY--;
     }
     // We need to adjust the search result line as some lines have now gone
-    // away:
-    mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    // away - there is nothing to adjust when the model has no view attached:
+    if (mpConsole) {
+        mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    }
     mPreTriggerPassLineNumber = -1;
 
     // The removed leading lines shift every remaining index down; keep the
@@ -5671,12 +5837,26 @@ void TBuffer::shrinkBuffer()
     // Clean up unreferenced links after removing old lines
     clearLinkState();
 
-    if (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) {
+    // Everything below needs the Host, whether or not there is a view: on app
+    // quit the profile is destroyed while its widgets are still only queued for
+    // deletion, so a live view is no promise that mpHost survived with it.
+    if (mpHost.isNull()) {
+        return;
+    }
+
+    // Scripts keep their own line-index bookkeeping, so they have to be told
+    // the indexes shifted whether or not anyone is watching the text. The
+    // console's name and type still live on the view, but a buffer without one
+    // can only be the main console's model - every other model is owned by the
+    // view built on it - and that console is always named "main":
+    const bool namedConsole =
+            mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) : (this == &mpHost->mainConsoleModel().buffer);
+    if (namedConsole) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        bufferShrinkEvent.mArgumentList.append(mpConsole->mConsoleName);
+        bufferShrinkEvent.mArgumentList.append(mpConsole ? mpConsole->mConsoleName : qsl("main"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);

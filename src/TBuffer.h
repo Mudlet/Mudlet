@@ -286,6 +286,10 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
 class TBuffer
 {
+    // Reads the deferred-logging state directly, to pin that
+    // logRemainingOutput() clears it even when there is no view to log through:
+    friend class ConsoleModelExtractionTest;
+
     static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
@@ -298,6 +302,24 @@ public:
     ~TBuffer();
     TBuffer(const TBuffer& other);
     TBuffer& operator=(const TBuffer& other);
+    // The main console's model can outlive the view built on it, so this
+    // back-pointer is bound when a view attaches and unbound when it goes away.
+    // A second live view attaching to the same model would silently steal it
+    // from the first, so trip on that rather than leave detachConsole() to
+    // guess which one owns the binding:
+    void setConsole(TConsole* pConsole)
+    {
+        Q_ASSERT(mpConsole.isNull() || mpConsole.data() == pConsole);
+        mpConsole = pConsole;
+    }
+    // Ignores views other than the bound one, so a departing view cannot orphan
+    // a successor that has already attached.
+    void detachConsole(const TConsole* pConsole)
+    {
+        if (mpConsole.data() == pConsole) {
+            mpConsole = nullptr;
+        }
+    }
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -417,8 +439,10 @@ private:
     void commitLineData(QString line, std::deque<TChar> chars, char ch);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
+    static bool segmentEndsSettledSentence(const QString& line);
     static bool startsWithListMarker(const QString& line);
     bool pendingLineHadRoomForNextWord() const;
+    bool continuationRepeatsSegmentOpening() const;
     void joinPendingServerWrapOntoCurrent();
     void startServerWrapFlushTimer();
     void processMxpWatchdogCallback();
@@ -531,6 +555,9 @@ private:
     // has been joined even once the held text is longer than the wrap column,
     // so the column the game actually broke at is only recoverable from this:
     qsizetype mServerWrapPendingSegmentLength = 0;
+    // Opening of that same game line, kept so that a continuation repeating it
+    // can be told from one that carries on where it left off:
+    QString mServerWrapPendingSegmentStart;
     // Commits a held line if the game goes quiet without completing it - a
     // full-width line that really was the end of the output:
     QPointer<QTimer> mpServerWrapFlushTimer;
@@ -620,6 +647,15 @@ private:
     // reject a continuation opening with a word of csmServerWrapSlack less
     // this many characters or fewer:
     static constexpr int csmServerWrapFitTolerance = 8;
+    // How much of a held game line's opening is kept for comparing a
+    // continuation against. Only the first csmServerWrapRepeatedWords shared
+    // words and the spaces after them have to fall inside it, and this leaves
+    // room for that even where a long name is one of them:
+    static constexpr qsizetype csmServerWrapSegmentStartChars = 48;
+    // How many opening words a continuation has to share with the held segment
+    // before it is a message the game re-prefixed rather than a wrap. One is
+    // far too common in prose to mean anything:
+    static constexpr int csmServerWrapRepeatedWords = 2;
     // Stop joining once a logical line has grown this long - a runaway guard:
     static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
     // How long to hold a full-width line for its continuation before deciding

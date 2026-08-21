@@ -114,6 +114,7 @@ private slots:
     void slot_toggleFullScreenView();
     void slot_toggleAlwaysOnTop();
     void slot_toggleToolBarVisibility();
+    void slot_setToolBarIconSize(const int size);
     void slot_saveProfile();
     void slot_exportProfile();
     void slot_closeAllProfiles(); // Close all profiles properly before closing window

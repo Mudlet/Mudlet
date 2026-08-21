@@ -60,6 +60,7 @@
 #include <QHostAddress>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -122,12 +123,12 @@ public:
     enum class Answer {
         // 200 with a Content-Length, sent in one go
         Whole,
-        // 200 with a Content-Length, sent in halves a beat apart, so the reply
-        // reports progress more than once
-        Chunked,
-        // 200 with no Content-Length, so the reply reports no total until the
-        // connection closes
-        Unsized,
+        // 200 with a Content-Length, released a slice at a time until
+        // finishAnswer() ends it - see paceUntilReported()
+        Paced,
+        // 200 with no Content-Length, released the same way, so the reply
+        // reports no total until the connection closes
+        PacedUnsized,
         // 200 with a Content-Length far larger than what is ever sent, so the
         // download stays in flight until the client gives up on it
         Stalled,
@@ -137,6 +138,8 @@ public:
     : QObject(parent)
     {
         connect(&mServer, &QTcpServer::newConnection, this, &StubMapServer::acceptConnections);
+        mSliceTimer.setInterval(scmSliceInterval);
+        connect(&mSliceTimer, &QTimer::timeout, this, &StubMapServer::writeSlice);
     }
 
     // Port 0: the OS picks a free one, so concurrent runs of this test cannot
@@ -149,6 +152,21 @@ public:
 
     QStringList requestedPaths() const { return mRequestedPaths; }
     void forgetRequests() { mRequestedPaths.clear(); }
+
+    // Ends a paced answer: writes whatever body is left and closes. The test
+    // calls this once the reply has reported progress as often as it needs.
+    void finishAnswer()
+    {
+        mSliceTimer.stop();
+        if (!mpPacedSocket) {
+            return;
+        }
+        mpPacedSocket->write(mPacedRemainder);
+        mpPacedSocket->flush();
+        mpPacedSocket->disconnectFromHost();
+        mpPacedSocket = nullptr;
+        mPacedRemainder.clear();
+    }
 
 private:
     struct Route
@@ -164,6 +182,14 @@ private:
                 readRequest(socket);
             });
             connect(socket, &QTcpSocket::disconnected, this, [this, socket]() {
+                // A client that gives up mid-answer - the cancel tests, and
+                // cleanup() after any failure - takes the connection with it,
+                // so the slices still queued for it have nowhere to go.
+                if (mpPacedSocket == socket) {
+                    mSliceTimer.stop();
+                    mpPacedSocket = nullptr;
+                    mPacedRemainder.clear();
+                }
                 mBuffers.remove(socket);
                 socket->deleteLater();
             });
@@ -196,16 +222,13 @@ private:
             socket->flush();
             socket->disconnectFromHost();
             return;
-        case Answer::Chunked:
+        case Answer::Paced:
             sendHeader(socket, route.body.size());
-            sendInParts(socket, route.body, 2);
+            startPacing(socket, route.body);
             return;
-        case Answer::Unsized:
+        case Answer::PacedUnsized:
             socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/xml\r\nConnection: close\r\n\r\n");
-            // Three, so that a progress report carrying no total lands after the
-            // range has already been set from the guess - which is the only
-            // moment the "is the total known" guard decides anything.
-            sendInParts(socket, route.body, 3);
+            startPacing(socket, route.body);
             return;
         case Answer::Stalled:
             sendHeader(socket, scmAssumedFileSize);
@@ -220,31 +243,45 @@ private:
         socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/xml\r\nContent-Length: " + QByteArray::number(length) + "\r\nConnection: close\r\n\r\n");
     }
 
-    // A beat between the parts, so the reply reports progress at least once per
-    // part rather than however few times loopback happens to coalesce one write
-    // into. It is a floor, not an exact count.
-    static void sendInParts(QTcpSocket* socket, const QByteArray& body, const int parts)
+    void startPacing(QTcpSocket* socket, const QByteArray& body)
     {
-        const qsizetype partSize = body.size() / parts;
-        socket->write(body.left(partSize));
-        socket->flush();
-        for (int part = 1; part < parts; ++part) {
-            const bool last = part == parts - 1;
-            const QByteArray chunk = last ? body.mid(part * partSize) : body.mid(part * partSize, partSize);
-            QTimer::singleShot(std::chrono::milliseconds(150 * part), socket, [socket, chunk, last]() {
-                socket->write(chunk);
-                socket->flush();
-                if (last) {
-                    socket->disconnectFromHost();
-                }
-            });
-        }
+        mpPacedSocket = socket;
+        mPacedRemainder = body;
+        mSliceTimer.start();
     }
+
+    void writeSlice()
+    {
+        if (!mpPacedSocket) {
+            mSliceTimer.stop();
+            return;
+        }
+        if (mPacedRemainder.isEmpty()) {
+            // The body ran out before the test had the reports it was waiting
+            // for: end the answer anyway, so that test fails on its own count
+            // assertion rather than on a download that never finishes.
+            finishAnswer();
+            return;
+        }
+        mpPacedSocket->write(mPacedRemainder.left(scmSliceSize));
+        mpPacedSocket->flush();
+        mPacedRemainder.remove(0, scmSliceSize);
+    }
+
+    // Small enough, and often enough, that a paced body outlasts by a wide
+    // margin the handful of progress reports the tests wait for: the padded map
+    // is 64 slices, well over a second of an answer that reports several times
+    // a second.
+    static constexpr qsizetype scmSliceSize = 4096;
+    static constexpr auto scmSliceInterval = std::chrono::milliseconds(20);
 
     QTcpServer mServer;
     QHash<QTcpSocket*, QByteArray> mBuffers;
     QHash<QString, Route> mRoutes;
     QStringList mRequestedPaths;
+    QTimer mSliceTimer;
+    QTcpSocket* mpPacedSocket = nullptr;
+    QByteArray mPacedRemainder;
 };
 
 class MapDownloadTest : public QObject
@@ -484,6 +521,24 @@ private:
         return mpHost->mpMap->mpMapper;
     }
 
+    // A reply reports its progress no more often than an interval of Qt's own,
+    // merging everything that lands inside one into a single report - so what a
+    // server writes in parts can be answered in fewer reports than it had
+    // parts, and on a loaded machine regularly is. The two tests that need
+    // several reports each therefore keep the answer flowing until the reports
+    // have actually arrived rather than counting on a write to produce one: the
+    // body is released a slice at a time and only ended here, which makes the
+    // count the tests then assert on a fact rather than a hope.
+    QMetaObject::Connection paceUntilReported(const QSignalSpy& valueSpy, const int reports) const
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        return connect(pMap, &TMap::signal_mapProgressSetValue, pMap, [this, &valueSpy, reports]() {
+            if (valueSpy.count() >= reports) {
+                mpMapServer->finishAnswer();
+            }
+        });
+    }
+
 private slots:
     void initTestCase()
     {
@@ -501,6 +556,16 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        // Every assertion below reads the console, and the console is
+        // translated: with nothing in this run's own config to say otherwise,
+        // mudlet takes its language from the desktop's locale, so on an en_GB
+        // machine this looks for "canceled" in a console that said "cancelled".
+        // Written before setupConfig() opens that same file, because the value
+        // is read out of it later by init(), via readEarlySettings().
+        QSettings language(qsl("%1/mudlet/Mudlet.ini").arg(mConfigDir.path()), QSettings::IniFormat);
+        language.setValue(qsl("interfaceLanguage"), qsl("en_US"));
+        language.sync();
 
         mpTelnetServer = new TelnetServerStub(qApp);
         mpTelnetServer->start(mLocalhost, 0);
@@ -525,7 +590,8 @@ private slots:
 
         watchMapDownloadEvent();
 
-        // Big enough that the reply reports progress in more than one step:
+        // Big enough to be released in many slices, so a paced answer can keep
+        // reporting progress for as long as the tests below need it to:
         mPaddedMapXml = scmMapXml;
         mPaddedMapXml.insert(mPaddedMapXml.indexOf("</map>"), "<!-- " + QByteArray(256 * 1024, 'x') + " -->\n");
 
@@ -533,8 +599,8 @@ private slots:
         QVERIFY2(mpMapServer->listen(), "the stub map server could not listen on localhost");
         mpMapServer->serve(qsl("/map.xml"), scmMapXml);
         mpMapServer->serve(qsl("/mmp.xml"), scmMapXml);
-        mpMapServer->serve(qsl("/chunked.xml"), mPaddedMapXml, StubMapServer::Answer::Chunked);
-        mpMapServer->serve(qsl("/unsized.xml"), mPaddedMapXml, StubMapServer::Answer::Unsized);
+        mpMapServer->serve(qsl("/paced.xml"), mPaddedMapXml, StubMapServer::Answer::Paced);
+        mpMapServer->serve(qsl("/unsized.xml"), mPaddedMapXml, StubMapServer::Answer::PacedUnsized);
         mpMapServer->serve(qsl("/stalled.xml"), QByteArray(64, 'x'), StubMapServer::Answer::Stalled);
     }
 
@@ -628,9 +694,13 @@ private slots:
         QSignalSpy valueSpy(pMap, &TMap::signal_mapProgressSetValue);
         ProgressPhases phases;
         const QMetaObject::Connection mark = markParseStart(rangeSpy, valueSpy, phases);
+        // Two reports: the first seeds the range from the guess, and the second
+        // is the earliest one that can correct it from the reply's own total.
+        const QMetaObject::Connection pacer = paceUntilReported(valueSpy, 2);
 
-        const bool finished = runDownload(mpMapServer->url(qsl("/chunked.xml")));
+        const bool finished = runDownload(mpMapServer->url(qsl("/paced.xml")));
         disconnect(mark);
+        disconnect(pacer);
         QVERIFY2(finished, "the map download never finished");
 
         QCOMPARE(phases.ranges, 2);
@@ -653,9 +723,14 @@ private slots:
         QSignalSpy valueSpy(pMap, &TMap::signal_mapProgressSetValue);
         ProgressPhases phases;
         const QMetaObject::Connection mark = markParseStart(rangeSpy, valueSpy, phases);
+        // Three, so that a progress report carrying no total lands after the
+        // range has already been set from the guess - which is the only moment
+        // the "is the total known" guard decides anything.
+        const QMetaObject::Connection pacer = paceUntilReported(valueSpy, 3);
 
         const bool finished = runDownload(mpMapServer->url(qsl("/unsized.xml")));
         disconnect(mark);
+        disconnect(pacer);
         QVERIFY2(finished, "the map download never finished");
 
         // Without a report that arrives while the total is still unknown AND
