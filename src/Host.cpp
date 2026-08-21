@@ -1941,6 +1941,20 @@ TConsoleModel& Host::mainConsoleModel()
     return *mpMainConsoleModel;
 }
 
+// The profile's default colours are what a colour trigger matches "the default
+// colour" against, and the main console's model is where the trigger engine
+// reads them. They are not known when the model is built - this Host still
+// holds the built-in defaults at that point - so they have to be pushed in once
+// the profile has been read, and again whenever they change. Doing that here
+// rather than from TConsole::changeColors() is what lets a profile with no view
+// (a headless one, or one whose console has gone) still match against the
+// colours the profile actually configured.
+void Host::refreshMainConsoleColors()
+{
+    mpMainConsoleModel->mFgColor = mFgColor;
+    mpMainConsoleModel->mBgColor = mBgColor;
+}
+
 // The per-line trigger orchestration used to live on the main-console widget
 // (TMainConsole::runTriggers). It drives model state only, so it runs here
 // against the core model and needs no view (#8681).

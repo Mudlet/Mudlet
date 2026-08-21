@@ -280,6 +280,7 @@ public:
     // view reaches the same instance via TConsole::model().
     TConsoleModel& mainConsoleModel();
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    void refreshMainConsoleColors();
     void runTriggers(int line);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);

@@ -55,7 +55,12 @@ struct TConsoleModel
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
-    // Only a cache today - the view fills these in through TConsole::changeColors(); refreshing them from the Host after the profile loads moves core-side with the colour sub-PR.
+    // What a colour trigger matches "the default colour" against. The main
+    // console's pair mirrors the profile's Host::mFgColor/mBgColor, which are
+    // only known once the profile has been read - later than this model is
+    // built - so Host::refreshMainConsoleColors() pushes them in at that point
+    // and on every later change. Sub-console models own theirs outright
+    // (TConsole::setConsoleBgColor()).
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QString mCurrentLine;

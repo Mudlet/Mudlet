@@ -1213,6 +1213,10 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
+    // The profile's colours are only settled now, and a profile is loaded before
+    // it has a view - so this is the only chance the console model gets to be
+    // told what "the default colour" means for colour-trigger matching:
+    pHost->refreshMainConsoleColors();
 }
 
 bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
