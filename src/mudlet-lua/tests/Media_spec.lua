@@ -1337,6 +1337,87 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingVideos())
   end)
 
+  it("a video asked to close takes its label off screen when it ends", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- close = true asks for the label the video is drawn into to be taken back
+    -- when the track ends, and no other spec passes it - so without this one
+    -- TMedia never reaches the emit behind it. What TMainConsole does with that
+    -- is hide the label, not the video widget on it, which is why windowVisible
+    -- can see the far end of the wire at all: cut the emit or the connect and
+    -- the assertion below stays true.
+    withVideoLabel()
+    writeSoundFiles()
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel, tag = "busted-video-close", close = true}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.equals(1, #getPlayingVideos())
+    assert.is_true(windowVisible(videoLabel), "the label was off screen while the video played, so hiding it again could not be observed")
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    -- Waited on by tag, not by count: nothing says the only ending this handler
+    -- hears is this spec's, and a wait for one event would return on someone
+    -- else's and then look for a tag that has not arrived yet.
+    local ended
+    for _ = 1, 5 do
+      for _, event in ipairs(finished) do
+        if event.tag == "busted-video-close" then
+          ended = event
+        end
+      end
+      if ended then
+        break
+      end
+      waitForEvent("sysMediaFinished", 1000)
+    end
+    assert.is_not_nil(ended, "the video that asked to close raised no sysMediaFinished of its own")
+    assert.equals(longSoundFile, ended.file)
+    assert.equals("video", ended.mediaType)
+    assert.equals(videoLabel, ended.key)
+
+    -- The ending is announced from inside the stop, but the hide is not: it runs
+    -- a turn later from the deferred release, so it needs a wait of its own.
+    local hidden = false
+    for _ = 1, 10 do
+      if not windowVisible(videoLabel) then
+        hidden = true
+        break
+      end
+      pumpEvents(100)
+    end
+    assert.is_true(hidden, "a stopped video left its label on screen: TMedia::signal_hideVideoOutput no longer reaches TMainConsole::hideVideoOutput")
+  end)
+
+  it("a video that never asked to close leaves its label on screen", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- The other side of the same gate. Without it, a hide that fired for every
+    -- ending would satisfy the spec above just as well.
+    withVideoLabel()
+    writeSoundFiles()
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(windowVisible(videoLabel))
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    -- Long enough to outlast a deferred turn that ran and did nothing - it is a
+    -- singleShot(0), so a second of event loop is many turns. VideoOutputHideTest
+    -- pins the same case against the release actually having happened, which is
+    -- not observable from here.
+    pumpEvents(1000)
+    assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
+  end)
+
   it("the closing caption of a stop is printed a turn after the call, not inside it", function()
     if mediaPlaybackUnavailable() then
       return

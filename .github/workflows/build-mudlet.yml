@@ -40,7 +40,7 @@ jobs:
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 12
             qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
@@ -64,7 +64,7 @@ jobs:
             qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
-          - os: macos-14
+          - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
             qt: '6.11.1'
