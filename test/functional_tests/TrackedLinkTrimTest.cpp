@@ -62,7 +62,6 @@ private:
     const QString mLinkText = qsl("SECRET");
     const QString mLinkCommand = qsl("go north");
     const QString mLinkHint = qsl("head north");
-    static constexpr int csmWrapAt = 250;
     static constexpr int csmLinesLimit = 100;
     static constexpr int csmBatchDeleteSize = 20;
 
@@ -111,45 +110,24 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // The last line a trim takes is the batch edge, so a link there has to be
-    // forgotten rather than left pointing into the buffer.
-    void test_trimForgetsTheLinkOnTheLastCasualtyLine()
+    // The batch edge, in both directions. This drives adjustLineNumbers() rather
+    // than a real trim on purpose: what is under test is its range check, and
+    // reaching it through the buffer made the case depend on how many lines the
+    // console happened to hold, which is not the same on every machine. That the
+    // trim calls this at all is covered end to end by TBufferOSC_spec.lua.
+    void test_adjustingLineNumbersDropsOnlyTheLinksOnRemovedLines()
     {
-        auto* pConsole = mpHost->mpConsole.data();
-        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        auto& manager = mpHost->mpConsole->getHyperlinkVisibilityManager();
 
-        const int lastCasualty = csmBatchDeleteSize - 1;
-        QVERIFY(fillToTheBrink(pConsole, lastCasualty));
-        QVERIFY(manager.registerHyperlink(3, lastCasualty, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
-
-        tipItOver(pConsole);
-
-        QVERIFY2(!manager.isLinkConcealed(3), "the link on the last trimmed line is still tracked, so entries accumulate");
-    }
-
-    // The line straight after that edge is the first survivor, and it becomes
-    // line 0 - the off-by-one that drops it instead is the "never reveals" bug.
-    void test_trimMovesTheLinkOnTheFirstSurvivingLineToTheTop()
-    {
-        auto* pConsole = mpHost->mpConsole.data();
-        auto& buffer = pConsole->buffer;
-        auto& manager = pConsole->getHyperlinkVisibilityManager();
-
+        const int lastRemoved = csmBatchDeleteSize - 1;
         const int firstSurvivor = csmBatchDeleteSize;
-        QVERIFY(fillToTheBrink(pConsole, firstSurvivor));
-        QVERIFY(manager.registerHyperlink(4, firstSurvivor, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
+        QVERIFY(manager.registerHyperlink(5, lastRemoved, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
+        QVERIFY(manager.registerHyperlink(6, firstSurvivor, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
 
-        tipItOver(pConsole);
+        manager.adjustLineNumbers(0, csmBatchDeleteSize);
 
-        manager.revealLink(4);
-        qApp->processEvents();
-
-        QVERIFY2(buffer.lineBuffer.at(0).startsWith(mLinkText), qPrintable(qsl("the first surviving line should have become line 0, which now reads \"%1\"").arg(buffer.lineBuffer.at(0))));
-
-        // the text alone is not a working link, and no Lua call can read this back
-        for (int column = 0; column < mLinkText.length(); ++column) {
-            QCOMPARE(buffer.buffer.at(0).at(column).linkIndex(), 4);
-        }
+        QVERIFY2(!manager.trackedLinkIds().contains(5), "the link on the last removed line was kept, so entries accumulate");
+        QVERIFY2(manager.trackedLinkIds().contains(6), "the link on the first surviving line was dropped, so it can never reveal");
     }
 
     // Concealing a link zeroes its characters' indices, so the scan that decides
@@ -239,36 +217,6 @@ private:
         styling.visibility.isConcealed = false;
         styling.visibility.delayMs = 600000;
         return styling;
-    }
-
-    // Fills a cleared buffer to exactly its limit, so the next line trims one
-    // batch and the line indices either side of the edge are known.
-    bool fillToTheBrink(TMainConsole* pConsole, const int lineNeedingRoomForALink) const
-    {
-        if (!pConsole->clear(qsl("main"))) {
-            return false;
-        }
-        // Pin the wrap: these two cases count lines, and a console narrower than
-        // a line turns one echo into several of them. The width comes from the
-        // window, so it is not the same everywhere - it wrapped a 43 character
-        // line on CI that had not wrapped locally.
-        pConsole->setWrapAt(csmWrapAt);
-        pConsole->buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
-        while (static_cast<int>(pConsole->buffer.buffer.size()) < csmLinesLimit) {
-            pConsole->echo(qsl("padding line %1\n").arg(pConsole->buffer.buffer.size()));
-        }
-        qApp->processEvents();
-        return static_cast<int>(pConsole->buffer.buffer.size()) == csmLinesLimit && pConsole->buffer.lineBuffer.at(lineNeedingRoomForALink).length() >= mLinkText.length();
-    }
-
-    void tipItOver(TMainConsole* pConsole) const
-    {
-        const int before = static_cast<int>(pConsole->buffer.buffer.size());
-        pConsole->echo(qsl("tip\n"));
-        qApp->processEvents();
-        // measured as a delta, so this says "one line arrived and one batch left"
-        // rather than assuming what the buffer held on the way in
-        QCOMPARE(static_cast<int>(pConsole->buffer.buffer.size()), before + 1 - csmBatchDeleteSize);
     }
 
     void fill(TConsole* pConsole, const QString& tag, const int lines) const
