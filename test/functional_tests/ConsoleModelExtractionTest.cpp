@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QFile>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -413,8 +414,11 @@ private slots:
         QVERIFY2(!contents.contains(qsl("user-window-second-line")), "A user window's own text was written into the game log.");
         // The announcements are printed on the console on purpose either side
         // of the logging flag, so neither may end up in the file itself.
-        QVERIFY2(!contents.contains(startAnnouncement.arg(logFileName)), "The start announcement was logged into the file it announced.");
-        QVERIFY2(!contents.contains(stopAnnouncement.arg(logFileName)), "The stop announcement was logged into the file it closed.");
+        // Whitespace-insensitive, because the console wraps a line this long
+        // and the log records it wrapped - a plain contains() would miss it and
+        // pass for the wrong reason.
+        QVERIFY2(!logTextContains(contents, startAnnouncement.arg(logFileName)), "The start announcement was logged into the file it announced.");
+        QVERIFY2(!logTextContains(contents, stopAnnouncement.arg(logFileName)), "The stop announcement was logged into the file it closed.");
 
         QFile::remove(logFileName);
     }
@@ -585,6 +589,16 @@ private:
         QString haystack = joinedBuffer();
         QString wanted = needle;
         return haystack.remove(QChar::Space).contains(wanted.remove(QChar::Space));
+    }
+
+    // Utility function: the console wraps long lines and the log records them
+    // wrapped, so an assertion about a long message has to ignore where the
+    // break landed.
+    static bool logTextContains(const QString& contents, const QString& needle)
+    {
+        QString haystack = contents;
+        QString wanted = needle;
+        return haystack.remove(QRegularExpression(qsl("\\s"))).contains(wanted.remove(QRegularExpression(qsl("\\s"))));
     }
 
     QString readFile(const QString& path)
