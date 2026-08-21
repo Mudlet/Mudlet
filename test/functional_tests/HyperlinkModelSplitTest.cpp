@@ -30,10 +30,12 @@
 // test_aHyperlinkVisibilityChangeForcesBothPanesToRedraw, and is deliberately
 // not repeated here.
 //
-// Two of the cases run against a TConsoleModel that never had a view at all,
-// which is the state Host builds the main console's model in and the state a
-// headless profile would stay in. The third destroys a real profile's view and
-// leaves the model running, which is what a closing profile does for real.
+// test_aModelWithNoViewConcealsAndRevealsItsOwnBuffer and
+// test_aModelWithNoViewKnowsTheCompactShorthands run against a TConsoleModel
+// that never had a view at all, which is the state Host builds the main
+// console's model in and the state a headless profile would stay in.
+// test_aDelayedRevealCompletesAfterTheViewIsDestroyed destroys a real profile's
+// view and leaves the model running, which is what a closing profile does.
 
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -136,8 +138,9 @@ private slots:
     }
 
     // One set of managers per model, not one per widget. A rebase that left the
-    // widget building its own would compile and run, and every OSC 8 sequence
-    // would go on working - right up until the model was asked what it holds.
+    // widget building its own would compile, and most OSC 8 behaviour would go
+    // on working, because the translate path reaches the managers through the
+    // console either way.
     void test_theHyperlinkManagersAreTheModelsNotTheViews()
     {
         Host* host = startProfile();
@@ -196,8 +199,12 @@ private slots:
         const int startColumn = text.indexOf(qsl("HIDDENWORD"));
         const int length = QStringLiteral("HIDDENWORD").size();
         QVERIFY(startColumn > 0);
-        QVERIFY2(!model->mHyperlinkVisibilityManager.registerHyperlink(linkId, lineNumber, startColumn, length, qsl("HIDDENWORD"), styling),
-                 "a conceal link starts visible, so it must not ask for its text to be replaced");
+        // The return says whether the caller must blank the text out as it
+        // writes the line, which for a conceal-on-click link is no. Not asserted
+        // on: it is a copy of styling.visibility.isConcealed, so it would read
+        // false here whatever this test asked for. What proves the link was
+        // really tracked is the concealment below actually landing.
+        model->mHyperlinkVisibilityManager.registerHyperlink(linkId, lineNumber, startColumn, length, qsl("HIDDENWORD"), styling);
 
         model->mHyperlinkVisibilityManager.concealLink(linkId);
         QVERIFY2(model->mHyperlinkVisibilityManager.isLinkConcealed(linkId), "the view-less model did not record the link as concealed");
@@ -261,30 +268,35 @@ private slots:
         // meta-object for whatever follows, which links as an undefined vtable.
         const QString esc = QString(QChar(0x1B));
         const QString stringTerminator = esc + QLatin1Char('\\');
-        const QString link = qsl("%1]8;;send:osc8split?config={\"visibility\":{\"action\":\"reveal\",\"delay\":8000}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
+        const QString link = qsl("%1]8;;send:osc8split?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
         const QString feed = qsl("feedTriggers([==[OSCSPLIT1(%1)OSCSPLIT1\n]==])").arg(link);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(feed), "feedTriggers() did not run, so no hyperlink was ever registered");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        // feedTriggers() runs synchronously inside compileAndExecuteScript(), so
+        // the line is normally already there; this only covers a loaded runner.
         int lineNumber = -1;
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
                              lineNumber = lineHolding(model->buffer, qsl("OSCSPLIT1"));
                              return lineNumber >= 0;
                          },
-                         8000),
+                         2000),
                  "the line carrying the link never reached the buffer");
-        QCOMPARE(model->buffer.lineBuffer.at(lineNumber), qsl("OSCSPLIT1(          )OSCSPLIT1"));
+        QCOMPARE(lineTextAt(model->buffer, lineNumber), qsl("OSCSPLIT1(          )OSCSPLIT1"));
 
+        // Closing the profile writes the whole profile, its map and its
+        // preinstalled packages out, which is why the reveal delay above is set
+        // far past anything that save can cost.
         destroyTheView(host);
         QCOMPARE(&host->mainConsoleModel(), model.get());
-        QVERIFY2(model->buffer.lineBuffer.at(lineNumber) == qsl("OSCSPLIT1(          )OSCSPLIT1"), "the reveal had already run before the view was destroyed, so this case proves nothing");
+        QVERIFY2(lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(          )OSCSPLIT1"), "the reveal had already run before the view was destroyed, so this case proves nothing");
 
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
-                             return model->buffer.lineBuffer.at(lineNumber) == qsl("OSCSPLIT1(HIDDENWORD)OSCSPLIT1");
+                             return lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(HIDDENWORD)OSCSPLIT1");
                          },
-                         30000),
+                         60000),
                  "the concealed link never revealed itself once its view had gone");
     }
 
@@ -307,7 +319,7 @@ private:
     }
 
     // Destroys the main console widget while Host - and the model it co-owns -
-    // live on, which is the window every view-less assertion here needs.
+    // live on, which is the window the delayed-reveal case needs.
     void destroyTheView(Host* host)
     {
         QPointer<TMainConsole> console = host->mpConsole;
@@ -319,6 +331,16 @@ private:
 
         QVERIFY2(console.isNull(), "the main console view was not destroyed by closing the profile");
         QVERIFY2(host->mpConsole.isNull(), "the host still points at a main console");
+    }
+
+    // The buffer can be trimmed under a poll that runs for a minute, so an
+    // out-of-range index has to read as "not that text" rather than throw.
+    static QString lineTextAt(TBuffer& buffer, const int lineNumber)
+    {
+        if (lineNumber < 0 || lineNumber >= buffer.lineBuffer.size()) {
+            return QString();
+        }
+        return buffer.lineBuffer.at(lineNumber);
     }
 
     static int lineHolding(TBuffer& buffer, const QString& needle)

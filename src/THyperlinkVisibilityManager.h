@@ -22,11 +22,11 @@
 
 #include <QObject>
 #include <QMap>
-#include <QTimer>
 #include <QString>
 
 #include "THyperlinkStyling.h"
 
+class QTimer;
 struct TConsoleModel;
 
 struct TrackedHyperlink

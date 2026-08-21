@@ -296,11 +296,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // Connect user input trigger (command submission only, not typing)
         connect(mpCommandLine, &TCommandLine::commandSubmitted, &model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
 
-        // Connect GA/EOR prompt signal from telnet. Both ends of this are core,
-        // so relocating the connect() itself out of the view belongs to a later
-        // step - what matters here is that the receiver is now the model's, so
-        // the wire outlives this widget rather than dying with it.
-        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived, &model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onPromptReceived);
+        // Connect GA/EOR prompt signal from telnet. Unique because both ends of
+        // this one outlive the widget that makes it - the sender is the Host's
+        // telnet and the receiver is now the Host's model - so a second main
+        // console built against a live Host would otherwise double-deliver every
+        // prompt and expire links a prompt early. mudlet::addConsoleForNewHost()
+        // refuses to build that second console today, but nothing here says so.
+        connect(&(pH->mTelnet), &cTelnet::signal_promptReceived, &model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onPromptReceived, Qt::UniqueConnection);
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -2949,8 +2951,8 @@ void TConsole::slot_clearSearchResults()
 // line of the buffer, so whatever this console shows of it is stale. forceUpdate()
 // rather than update() because a plain repaint is served from the pane's cached
 // screen pixmap, which still holds the text that has just been concealed.
-// The panes are null while the constructor is still building them, and stay null
-// for a console whose model outlives it long enough for a timer to fire.
+// The panes are only null in the constructor window - the connection is made
+// some 190 lines before they are built.
 void TConsole::slot_hyperlinkVisibilityChanged()
 {
     if (mUpperPane) {

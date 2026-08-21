@@ -26,7 +26,7 @@
 #include <QUrlQuery>
 
 // No QObject parent: this is a field of the core TConsoleModel, which is not a
-// QObject and can outlive the console widget that used to own it.
+// QObject and outlives the console widget that reaches it.
 THyperlinkSelectionManager::THyperlinkSelectionManager()
 : QObject(nullptr)
 {

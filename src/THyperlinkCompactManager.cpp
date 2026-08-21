@@ -36,9 +36,10 @@ THyperlinkCompactManager::THyperlinkCompactManager()
 THyperlinkCompactManager::~THyperlinkCompactManager() = default;
 
 // The shorthand and preset-property tables the OSC 8 compact syntax is parsed
-// against. They used to be filled in by eight TConsole::initializeOSC8*Feature()
-// calls, which left a model built without a view (Host builds the main
-// console's before any widget exists) unable to expand a single shorthand.
+// against. Filled in here rather than by the view: Host builds the main
+// console's model before any widget exists, so anything that waited for a
+// TConsole would leave a model with empty tables and silently stop expanding
+// "s" into "style".
 void THyperlinkCompactManager::registerBuiltInFeatures()
 {
     // Style
