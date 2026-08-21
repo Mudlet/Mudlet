@@ -32,7 +32,6 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -48,8 +47,6 @@
 
 #include "GroupedTest.h"
 
-using namespace std::chrono_literals;
-
 class TrackedLinkTrimTest : public QObject
 {
     Q_OBJECT
@@ -63,8 +60,10 @@ private:
     QString mPort;
     const QString mLocalhost = qsl("localhost");
     const QString mLinkText = qsl("SECRET");
-    static constexpr int mLinesLimit = 100;
-    static constexpr int mBatchDeleteSize = 20;
+    const QString mLinkCommand = qsl("go north");
+    const QString mLinkHint = qsl("head north");
+    static constexpr int csmLinesLimit = 100;
+    static constexpr int csmBatchDeleteSize = 20;
 
 private slots:
     void initTestCase()
@@ -118,7 +117,7 @@ private slots:
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        buffer.setBufferSize(mLinesLimit, mBatchDeleteSize);
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
 
         fill(pConsole, qsl("seed"), 45);
         pConsole->echo(qsl("MARKERLINE\n"));
@@ -139,6 +138,11 @@ private slots:
 
         QVERIFY2(buffer.lineBuffer.at(movedTo).startsWith(mLinkText), qPrintable(qsl("revealing wrote to some other line: line %1 reads \"%2\"").arg(movedTo).arg(buffer.lineBuffer.at(movedTo))));
         QCOMPARE(lineContaining(buffer, mLinkText), movedTo);
+
+        // the text alone is not a working link - no Lua call can read this back
+        for (int column = 0; column < mLinkText.length(); ++column) {
+            QCOMPARE(buffer.buffer.at(movedTo).at(column).linkIndex(), 1);
+        }
     }
 
     // A link whose line is trimmed away has to be forgotten, so revealing it
@@ -148,14 +152,13 @@ private slots:
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        buffer.setBufferSize(mLinesLimit, mBatchDeleteSize);
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
 
         fill(pConsole, qsl("seed"), 45);
         qApp->processEvents();
 
         // an early line, well inside the first batch the next trim removes
         const int doomedLine = 3;
-        QVERIFY(buffer.lineBuffer.at(doomedLine).length() >= mLinkText.length());
         QVERIFY(manager.registerHyperlink(2, doomedLine, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
 
         fill(pConsole, qsl("filler"), 60);
@@ -166,6 +169,11 @@ private slots:
             before << line;
         }
 
+        // whatever holds the index now is what performReveal() bounds-checks, so it
+        // has to be long enough for a stale write to land and be noticed
+        QVERIFY2(before.at(doomedLine).length() >= mLinkText.length(), "the line that took the index is too short to be overwritten, so this test proves nothing");
+        QVERIFY2(!manager.isLinkConcealed(2), "the link whose line was trimmed away is still tracked, so entries accumulate");
+
         manager.revealLink(2);
         qApp->processEvents();
 
@@ -175,10 +183,99 @@ private slots:
         }
     }
 
+    // The last line a trim takes is the batch edge, so a link there has to be
+    // forgotten rather than left pointing into the buffer.
+    void test_trimForgetsTheLinkOnTheLastCasualtyLine()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+
+        const int lastCasualty = csmBatchDeleteSize - 1;
+        QVERIFY(fillToTheBrink(pConsole, lastCasualty));
+        QVERIFY(manager.registerHyperlink(3, lastCasualty, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
+
+        tipItOver(pConsole);
+
+        QVERIFY2(!manager.isLinkConcealed(3), "the link on the last trimmed line is still tracked, so entries accumulate");
+    }
+
+    // The line straight after that edge is the first survivor, and it becomes
+    // line 0 - the off-by-one that drops it instead is the "never reveals" bug.
+    void test_trimMovesTheLinkOnTheFirstSurvivingLineToTheTop()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+
+        const int firstSurvivor = csmBatchDeleteSize;
+        QVERIFY(fillToTheBrink(pConsole, firstSurvivor));
+        QVERIFY(manager.registerHyperlink(4, firstSurvivor, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
+
+        tipItOver(pConsole);
+
+        manager.revealLink(4);
+        qApp->processEvents();
+
+        QVERIFY2(buffer.lineBuffer.at(0).startsWith(mLinkText), qPrintable(qsl("the first surviving line should have become line 0, which now reads \"%1\"").arg(buffer.lineBuffer.at(0))));
+    }
+
+    // Concealing a link zeroes its characters' indices, so the scan that decides
+    // which links are still in use cannot see it - but it is still live.
+    void test_concealedLinkKeepsItsCommandsAcrossATrim()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        QVERIFY(pConsole->clear(qsl("main")));
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+
+        fill(pConsole, qsl("seed"), 45);
+        const int linkId = appendLink(pConsole);
+        qApp->processEvents();
+
+        const int registeredOn = lineContaining(buffer, mLinkText);
+        QVERIFY2(registeredOn >= 0, "the link text never reached the buffer");
+        manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealLaterStyling());
+        QVERIFY2(buffer.collectActiveLinkIds().contains(linkId), "the link was never visible to the scan, so concealing it proves nothing");
+
+        manager.concealLink(linkId);
+        QVERIFY2(manager.isLinkConcealed(linkId), "the link did not conceal");
+        QVERIFY2(!buffer.collectActiveLinkIds().contains(linkId), "the scan can still see the concealed link, so this test proves nothing");
+
+        fill(pConsole, qsl("filler"), 60);
+        qApp->processEvents();
+
+        QVERIFY2(lineContaining(buffer, qsl("seed line 0")) < 0, "the buffer did not trim, so this test proves nothing");
+        QCOMPARE(pConsole->getLinkStore().getLinksConst(linkId), QStringList{mLinkCommand});
+        QCOMPARE(pConsole->getLinkStore().getHintsConst(linkId), QStringList{mLinkHint});
+    }
+
+    // Clearing the window deletes every line, so nothing is referenced any more
+    // and a tracked link's command has to go with the rest.
+    void test_clearingTheWindowStillDropsATrackedLinksCommands()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+
+        fill(pConsole, qsl("seed"), 5);
+        const int linkId = appendLink(pConsole);
+        qApp->processEvents();
+
+        const int registeredOn = lineContaining(pConsole->buffer, mLinkText);
+        QVERIFY(registeredOn >= 0);
+        QVERIFY(manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
+        QCOMPARE(pConsole->getLinkStore().getLinksConst(linkId), QStringList{mLinkCommand});
+
+        QVERIFY(pConsole->clear(qsl("main")));
+        qApp->processEvents();
+
+        QVERIFY2(pConsole->getLinkStore().getLinksConst(linkId).isEmpty(), "clearing the window left the link's command behind");
+    }
+
 private:
     // A reveal needs a delay or an expire trigger, otherwise registerHyperlink()
-    // refuses to conceal it - nothing would ever reveal it again. The delay is
-    // long enough that the timer cannot fire while the test runs.
+    // refuses to conceal it - nothing would ever reveal it again. Its 100ms poll
+    // still runs; the delay is long enough that it never reaches the reveal.
     Mudlet::HyperlinkStyling concealedRevealStyling() const
     {
         Mudlet::HyperlinkStyling styling;
@@ -187,6 +284,50 @@ private:
         styling.visibility.isConcealed = true;
         styling.visibility.delayMs = 600000;
         return styling;
+    }
+
+    int appendLink(TConsole* pConsole) const
+    {
+        QStringList commands{mLinkCommand};
+        QStringList hints{mLinkHint};
+        TChar format(pConsole);
+        pConsole->buffer.addLink(false, mLinkText, commands, hints, format);
+        pConsole->echo(qsl("\n"));
+        return pConsole->getLinkStore().getCurrentLinkID();
+    }
+
+    // Registers visible, so concealLink() below does the concealing and zeroes
+    // the character indices. The long delay keeps the poll off the conceal.
+    Mudlet::HyperlinkStyling concealLaterStyling() const
+    {
+        Mudlet::HyperlinkStyling styling;
+        styling.visibility.hasVisibilitySettings = true;
+        styling.visibility.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
+        styling.visibility.isConcealed = false;
+        styling.visibility.delayMs = 600000;
+        return styling;
+    }
+
+    // Fills a cleared buffer to exactly its limit, so the next line trims one
+    // batch and the line indices either side of the edge are known.
+    bool fillToTheBrink(TMainConsole* pConsole, const int lineNeedingRoomForALink) const
+    {
+        if (!pConsole->clear(qsl("main"))) {
+            return false;
+        }
+        pConsole->buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+        while (static_cast<int>(pConsole->buffer.buffer.size()) < csmLinesLimit) {
+            pConsole->echo(qsl("padding line %1\n").arg(pConsole->buffer.buffer.size()));
+        }
+        qApp->processEvents();
+        return static_cast<int>(pConsole->buffer.buffer.size()) == csmLinesLimit && pConsole->buffer.lineBuffer.at(lineNeedingRoomForALink).length() >= mLinkText.length();
+    }
+
+    void tipItOver(TMainConsole* pConsole) const
+    {
+        pConsole->echo(qsl("the line that tips the buffer over its limit\n"));
+        qApp->processEvents();
+        QCOMPARE(static_cast<int>(pConsole->buffer.buffer.size()), csmLinesLimit + 1 - csmBatchDeleteSize);
     }
 
     void fill(TConsole* pConsole, const QString& tag, const int lines) const
