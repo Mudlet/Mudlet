@@ -31,7 +31,10 @@
  * The refusal path has to unload them itself, and that is what the first test
  * here pins. The second is the positive control: registering the fonts up front
  * still has to work for an archive that does install, and they still have to go
- * away when it is uninstalled.
+ * away when it is uninstalled. The third pins the reason the fonts go in first
+ * at all - a script inside the package, running as the XML is read, can already
+ * use the font its own archive carries. ErionMud-UI in the package repository
+ * does exactly that with the Copperplate Gothic Light it ships.
  *
  * A test binary never runs the step in main.cpp that copies the bundled fonts
  * into the config directory, so nothing has registered "Bitstream Vera Sans
@@ -51,6 +54,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TLuaInterpreter.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -97,6 +101,26 @@ private:
                    "</AliasPackage>\n"
                    "</MudletPackage>\n")
                 .arg(packageName)
+                .toUtf8();
+    }
+
+    // A package holding one script that answers, as it is read in, whether the
+    // family the archive carries is already usable.
+    static QByteArray fontProbePackageXml(const QString& packageName, const QString& fontFamily)
+    {
+        return qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                   "<!DOCTYPE MudletPackage>\n"
+                   "<MudletPackage version=\"1.001\">\n"
+                   "<ScriptPackage>\n"
+                   "<Script isActive=\"yes\" isFolder=\"no\">\n"
+                   "<name>%1 font probe</name>\n"
+                   "<packageName></packageName>\n"
+                   "<script>packageFontSeenAtInstall = (getAvailableFonts()[\"%2\"] == true)</script>\n"
+                   "<eventHandlerList />\n"
+                   "</Script>\n"
+                   "</ScriptPackage>\n"
+                   "</MudletPackage>\n")
+                .arg(packageName, fontFamily)
                 .toUtf8();
     }
 
@@ -199,6 +223,38 @@ private slots:
 
         QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package could not be uninstalled");
         QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "uninstalling the package left its font registered");
+    }
+
+    // ...and the reason they are registered before the import rather than after
+    // it: the package's own scripts run as the XML is read in, and one that asks
+    // for the font its archive carries has to find it already there.
+    void test_packageScriptsCanUseTheBundledFontWhileInstalling()
+    {
+        const QString packageName = qsl("font-probe-pkg");
+        const QString archivePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(packageName));
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("VeraMono.ttf"), bundledFontBytes()}, {qsl("%1.xml").arg(packageName), fontProbePackageXml(packageName, mFontFamily)}};
+        QVERIFY2(writeArchive(archivePath, entries), "could not write the test archive");
+
+        // A Host starts with script compilation blocked and a real profile load
+        // turns it off before anything is imported, so do the same here - without
+        // it the script would be stored but never run
+        mpHost->mBlockScriptCompile = false;
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        QVERIFY(L);
+        lua_pushnil(L);
+        lua_setglobal(L, "packageFontSeenAtInstall");
+
+        auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(ok, qPrintable(message));
+
+        lua_getglobal(L, "packageFontSeenAtInstall");
+        const bool probeRan = !lua_isnil(L, -1);
+        const bool sawTheFont = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(probeRan, "the package's script never ran, so this says nothing about what it could see");
+        QVERIFY2(sawTheFont, "a script in the package could not use the font its own archive carries while it was being installed");
+
+        QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package could not be uninstalled");
     }
 };
 

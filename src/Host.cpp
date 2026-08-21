@@ -1348,6 +1348,14 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
         return {false, qsl("specified font is invalid (its letters have 0 width)")};
     }
 
+    // A different family means a new choice of font - from the preferences, from
+    // setFont() or from setConfig() - and retires the stand-in. The same family is
+    // what the preferences dialog re-sends when only the size or the antialiasing
+    // changed, and must not quietly make the stand-in the saved choice.
+    if (!mMissingDisplayFontFamily.isEmpty() && getDisplayFont().family().compare(font.family(), Qt::CaseInsensitive) != 0) {
+        mMissingDisplayFontFamily.clear();
+    }
+
     if (mpConsole) {
         if (mpConsole->font() != font) {
             mpConsole->setFont(font);
@@ -1448,13 +1456,21 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
 Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
 {
     const QStringList availableFonts = mudlet::self()->getAvailableFonts();
-    if (availableFonts.contains(requested, Qt::CaseInsensitive)) {
-        return {requested, QFont::Normal, true};
+    // The family as the font database spells it, not as it was typed: it is what
+    // ends up reported back by getFont() and remembered by the Geyser wrappers.
+    for (const QString& family : availableFonts) {
+        if (family.compare(requested, Qt::CaseInsensitive) == 0) {
+            return {family, QFont::Normal, true};
+        }
     }
 
     auto [baseName, weight] = parseFontNameAndStyle(requested);
-    if (baseName != requested && availableFonts.contains(baseName, Qt::CaseInsensitive)) {
-        return {baseName, weight, true};
+    if (baseName != requested) {
+        for (const QString& family : availableFonts) {
+            if (family.compare(baseName, Qt::CaseInsensitive) == 0) {
+                return {family, weight, true};
+            }
+        }
     }
 
     return {requested, QFont::Normal, false};
@@ -1478,8 +1494,21 @@ bool Host::substituteMissingDisplayFont()
         return true;
     }
 
+    // Nothing stands in for the bundled default itself: on an installation where
+    // it failed to register there is no better font to move the profile to, and
+    // "missing, using itself instead" would only mislead
+    if (requestedFamily.compare(scmDefaultFontFamily, Qt::CaseInsensitive) == 0) {
+        qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the bundled default font \"" << scmDefaultFontFamily
+                                       << "\" is not registered, so nothing can stand in for it.";
+        return false;
+    }
+
     font.setFamily(scmDefaultFontFamily);
     setDisplayFont(font);
+    // Set after setDisplayFont(), which clears it for a family it considers a new
+    // choice. Only this branch remembers anything: a "Family Style" name resolves
+    // to a base family that IS installed, so saving that name is no loss.
+    mMissingDisplayFontFamily = requestedFamily;
 
     qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily
                                    << "\" instead.";
@@ -5558,6 +5587,15 @@ QFont Host::getDisplayFont()
     }
 
     return mTempDisplayFont.value();
+}
+
+QFont Host::getDisplayFontForSaving()
+{
+    QFont font = getDisplayFont();
+    if (!mMissingDisplayFontFamily.isEmpty()) {
+        font.setFamily(mMissingDisplayFontFamily);
+    }
+    return font;
 }
 
 QFont Host::getAndClearTempDisplayFont()

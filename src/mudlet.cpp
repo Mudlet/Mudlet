@@ -5129,6 +5129,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     mPackagesToInstallList.clear();
 
+    // Only now are the fonts of the modules and the default packages registered
+    // too, so a family the profile names can be told apart from one that is
+    // merely not loaded yet - and the real console exists, so the stand-in this
+    // may pick lands on it and the warning reaches the player.
+    pHost->substituteMissingDisplayFont();
+
     // Now load the default (latest stored) map file:
     pHost->loadMap();
 
@@ -6271,9 +6277,6 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         }
 
         pHost->refreshPackageFonts();
-        // only now that the package fonts are registered can a font the profile
-        // names be judged missing rather than merely not loaded yet
-        pHost->substituteMissingDisplayFont();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {

@@ -1213,6 +1213,22 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.is_true(label:setFont("Ubuntu Mono"))
     end)
 
+    it("takes a \"Family Style\" name the way every other window does", function()
+      assert.is_true(label:setFont("Ubuntu Mono Bold"))
+      -- the style is the weight the widget is given, not part of the family
+      assert.are.equal("Ubuntu Mono", label.font)
+      assert.are.equal("Ubuntu Mono", getFont("glfFont"))
+    end)
+
+    it("says so rather than raising when the font is not a string", function()
+      label:setFont("Ubuntu Mono")
+      local ok, err
+      assert.has_no.errors(function() ok, err = label:setFont(12) end)
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("font must be a string", 1, true))
+      assert.are.equal("Ubuntu Mono", label.font)
+    end)
+
     it("matches an installed family ignoring case and remembers its real name", function()
       assert.is_true(label:setFont("ubuntu mono"))
       assert.are.equal("Ubuntu Mono", label.font)
@@ -1235,6 +1251,13 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       local text = getLabelText("glfFont")
       assert.is_nil(text:find("No Such Font At All", 1, true))
       assert.is_truthy(text:find('<font face ="Ubuntu Mono">', 1, true))
+    end)
+
+    it("does not raise when the constructor is handed a font that is not a string", function()
+      local built
+      assert.has_no.errors(function() built = track(Geyser.Label:new({name = "glfFontNotAString", x = 0, y = 60, width = 200, height = 50, font = 12})) end)
+      assert.is_truthy(built)
+      assert.are.equal("", built.font)
     end)
   end)
 

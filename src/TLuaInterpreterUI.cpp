@@ -1356,14 +1356,23 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFont
 int TLuaInterpreter::getFont(lua_State* L)
 {
-    QString windowName = qsl("main");
-    windowName = WINDOW_NAME(L, 1);
-    auto console = CONSOLE(L, windowName);
+    const QString windowName{WINDOW_NAME(L, 1)};
     Host& host = getHostFromLua(L);
 
     auto actualFontFamily = [](const QFont& font) -> QString {
         return QFontInfo(font).family();
     };
+
+    // Labels are not consoles, so they are not in the map CONSOLE() searches -
+    // and that macro returns "window not found" rather than falling through:
+    if (!windowName.isEmpty() && host.mpConsole) {
+        if (TLabel* pLabel = host.mpConsole->mLabelMap.value(windowName)) {
+            lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
+            return 1;
+        }
+    }
+
+    auto console = CONSOLE(L, windowName);
 
     QString fontName;
 
@@ -3108,7 +3117,23 @@ int TLuaInterpreter::setFont(lua_State* L)
     // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
 
-    auto console = CONSOLE(L, QString{windowName});
+    // Labels live in their own map rather than in the console one CONSOLE()
+    // searches, and that macro returns "window not found" rather than falling
+    // through - so they have to be looked up before it:
+    const QString targetName{windowName};
+    if (!targetName.isEmpty() && host.mpConsole) {
+        if (TLabel* pLabel = host.mpConsole->mLabelMap.value(targetName)) {
+            QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
+            if (fontWeight != QFont::Normal) {
+                labelFont.setWeight(fontWeight);
+            }
+            pLabel->setFont(labelFont);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+    }
+
+    auto console = CONSOLE(L, targetName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
         QFont newFont = host.createFontWithSettings(effectiveFontName, host.getDisplayFont().pointSize());

@@ -253,40 +253,30 @@ function Geyser.Label:processFormatString(format)
   end
 end
 
--- the installed family the name refers to, matched ignoring case as the global
--- setFont() does, or nil when there is no such family
-local function installedFontFamily(font)
-  local available = getAvailableFonts()
-  if available[font] then
-    return font
-  end
-  local wanted = font:lower()
-  for family in pairs(available) do
-    if family:lower() == wanted then
-      return family
-    end
-  end
-end
-
---- Sets the font face for the label, use empty string to clear the font and use css/default. Returns true if the font changed, nil+error if not.
+--- Sets the font face for the label, use empty string to clear the font and use css/default.
+-- Returns true when the label took the font, nil+error when it did not - a name that
+-- is not a string, or a family that is not installed, leaves the current font alone.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
+  if type(font) ~= "string" then
+    local err = "font must be a string, got " .. type(font)
+    debugc("Geyser.Label:setFont(): " .. err .. "; the label keeps its current font")
+    return nil, err
+  end
   if font ~= "" then
-    -- a family Qt does not have must not be remembered: every echo() wraps the
-    -- text in a <font face="..."> built from it, and Qt answers a face it does
-    -- not have with an arbitrary substitute rather than with an error
-    local family = installedFontFamily(font)
-    if not family then
-      local err = "font '" .. font .. "' is not available"
+    -- setFont() resolves the name the way it does for every other window (an
+    -- installed family, or a "Family Style" name split into base family and
+    -- weight), applies it to the label's own widget font, and refuses a family
+    -- Qt would only substitute for - which must never reach the <font face>
+    -- that every echo() wraps the text in
+    local ok, err = setFont(self.name, font)
+    if not ok then
       debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options; the label keeps its current font")
       return nil, err
     end
-    font = family
-    -- the global setFont() is what applies the profile's antialiasing settings,
-    -- but it looks its window up in the console map, which labels are not in -
-    -- so what a label shows is the <font face> above, and this is here for the
-    -- day the lookup learns about labels
-    setFont(self.name, font)
+    -- the family as the font database spells it, so what is remembered here and
+    -- what the widget was given cannot drift apart
+    font = getFont(self.name)
   end
   self.font = font
   self:echo()
