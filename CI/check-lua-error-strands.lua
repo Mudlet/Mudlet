@@ -155,6 +155,16 @@ local function codeOnly(line, inBlockComment)
   return table.concat(out), inBlockComment
 end
 
+-- Lua patterns have no alternation, so the control-flow keywords a definition
+-- must not start with are tested one at a time.
+local CONTROL_KEYWORDS = {"if", "while", "for", "switch", "return", "else", "catch", "do", "case"}
+local function KEYWORD_LINE(line)
+  for _, kw in ipairs(CONTROL_KEYWORDS) do
+    if line:match("^%s*" .. kw .. "%f[%W]") then return true end
+  end
+  return false
+end
+
 -- The argument list of a call to `name`, parenthesis-balanced. Returning the
 -- span rather than the rest of the line is what stops a temporary built from a
 -- raiser's *result* - getVerifiedString(...).trimmed() - being read as one
@@ -241,7 +251,11 @@ local function scanFile(path)
     -- 200 and clang-format keeps these on one line today, but a scanner that
     -- goes quiet on a shape it cannot parse is worse than one that is noisy.
     local signature, signatureEnd = line, i
-    if line:match("^[%w_]") and line:match("%(") then
+    -- Indentation is allowed: an inline member in a header is indented, and
+    -- the scan covers headers. Control-flow keywords are excluded so an
+    -- `if (...)` spanning lines is not mistaken for a definition.
+    if line:match("^%s*[%w_]") and line:match("%(")
+       and not KEYWORD_LINE(line) then
       local open = select(2, line:gsub("%(", "")) - select(2, line:gsub("%)", ""))
       local k = i
       while open > 0 and k < n and k - i < 6 do
@@ -264,6 +278,12 @@ local function scanFile(path)
         local free = {}   -- declared empty, so owning nothing until something fills it
         local scopes = {} -- depth -> list of varnames declared at that depth
         local emptyGuards = {} -- depth -> varname the enclosing if() proved empty
+        -- check*Arg() calls currently in force, keyed "checker@position".
+        -- gatesAtDepth drops them again when their block closes: a checker
+        -- inside a branch that has since ended does not dominate the raise, so
+        -- it cannot vouch for it.
+        local gates = {}
+        local gatesAtDepth = {}
         local inBlockComment = false
         local j = bodyStart
         repeat
@@ -289,12 +309,8 @@ local function scanFile(path)
           if raiser and raiserArgs and PAIRED_CHECKER[raiser] then
             local checker = PAIRED_CHECKER[raiser]
             local wanted = positionArg(raiserArgs)
-            for back = bodyStart, j - 1 do
-              local checkerArgs = argsOfCall(codeOnly(lines[back], false), checker)
-              if checkerArgs and wanted ~= "" and positionArg(checkerArgs) == wanted then
-                raiser = nil
-                break
-              end
+            if wanted ~= "" and gates[checker .. "@" .. wanted] then
+              raiser = nil
             end
           end
           if raiser and j > bodyStart then
@@ -322,6 +338,19 @@ local function scanFile(path)
                 detail = ("%s builds an owning temporary inside %s()'s arguments")
                          :format(temp, raiser),
               }
+            end
+          end
+
+          for _, checker in pairs(PAIRED_CHECKER) do
+            local checkerArgs = argsOfCall(code, checker)
+            if checkerArgs then
+              local pos = positionArg(checkerArgs)
+              if pos ~= "" then
+                local key = checker .. "@" .. pos
+                gates[key] = true
+                gatesAtDepth[depth] = gatesAtDepth[depth] or {}
+                table.insert(gatesAtDepth[depth], key)
+              end
             end
           end
 
@@ -385,6 +414,10 @@ local function scanFile(path)
                 scopes[depth] = nil
               end
               emptyGuards[depth] = nil
+              if gatesAtDepth[depth] then
+                for _, key in ipairs(gatesAtDepth[depth]) do gates[key] = nil end
+                gatesAtDepth[depth] = nil
+              end
               depth = depth - 1
             end
           end

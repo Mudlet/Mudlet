@@ -50,6 +50,8 @@ local mustCatch = {
   {59, "an auto-typed local holding a QString"},
   {67, "a container declared empty and filled afterwards"},
   {76, "parseCommandsOrFunctionsTable raises like its two siblings"},
+  {90, "a checker inside a closed branch does not dominate the raise"},
+  {100, "a wrapped signature that is also indented, as inline members are"},
 }
 
 local badOutput, badStatus = run("bad.cpp")

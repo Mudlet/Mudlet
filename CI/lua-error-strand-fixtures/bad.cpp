@@ -76,3 +76,27 @@ int TLuaInterpreter::strandsAcrossTheThirdTableParser(lua_State* L)
     parseCommandsOrFunctionsTable(L, __func__, 2, commandList, luaReferences);
     return 0;
 }
+
+// A checker inside a branch that has closed again does not dominate the raise,
+// so it cannot vouch for it.
+int TLuaInterpreter::gateInsideABranch(lua_State* L)
+{
+    if (lua_gettop(L) > 2) {
+        if (!checkStringArg(L, __func__, 2, "value")) {
+            return lua_error(L);
+        }
+    }
+    const QString key{lua_tostring(L, 1)};
+    const QString value = getVerifiedString(L, __func__, 2, "value");
+    return 0;
+}
+
+class Indented
+{
+    static int wrappedAndIndented(
+            lua_State* L)
+    {
+        const QString name{lua_tostring(L, 1)};
+        return lua_error(L);
+    }
+};
