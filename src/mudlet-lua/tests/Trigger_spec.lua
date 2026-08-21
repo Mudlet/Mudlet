@@ -697,6 +697,36 @@ describe("Trigger processing", function()
             assert.is_true(fired, "a complex regex trigger should fire on its pattern")
         end)
 
+        -- The match-all (/g) loop steps one byte after an empty match, so on a line
+        -- holding a multi-byte character it can land mid-character. pcre2 then
+        -- rejects the offset and TTrigger::match_perl() ends the loop, dropping
+        -- every capture past that character (#10112). matchAll is argument 8.
+        it("keeps collecting captures past a multi-byte character", function()
+            -- feedTriggers() transcodes into the server encoding, so a non-UTF-8
+            -- one would strip the character and let this pass without testing it
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed a multi-byte character")
+            _G.TrigSpec = {seen = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllUtf8", [[(\d*)]],
+                function()
+                    _G.TrigSpec.seen = {}
+                    for i = 1, #matches do
+                        _G.TrigSpec.seen[i] = matches[i]
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            feedTriggers("\ncaf\195\169 9\n")
+            local seen = _G.TrigSpec.seen
+            assert.is_true(killTrigger("SpecComplexMatchAllUtf8"), "a temporary complex trigger should be removable by name")
+            local found = false
+            for _, capture in ipairs(seen) do
+                if capture == "9" then
+                    found = true
+                end
+            end
+            assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
         it("rejects a non-string, non-function body (argument 3)", function()
             -- a table is not string-coercible (a number would be accepted as code)
             assert.has_error(function()

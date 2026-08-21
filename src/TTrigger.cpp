@@ -161,7 +161,10 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
                 // PCRE2_UTF needed to run compile in UTF-8 mode
                 // PCRE2_UCP needed for \d, \w etc. to use Unicode properties
-                // PCRE2_MATCH_INVALID_UTF stops pcre2 re-validating every line once per pattern
+                // PCRE2_MATCH_INVALID_UTF stops the per-pattern re-validation, and stops
+                // pcre2 rejecting an off-boundary start offset - which the match-all loop
+                // below makes when it steps a byte after an empty match on a line with
+                // multi-byte characters
                 QSharedPointer<pcre2_code> const re(
                         pcre2_compile(reinterpret_cast<PCRE2_SPTR>(regexp.constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP | PCRE2_MATCH_INVALID_UTF, &errorcode, &erroffset, nullptr),
                         pcre2_code_deleter);
