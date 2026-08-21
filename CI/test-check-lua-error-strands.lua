@@ -38,21 +38,22 @@ local function check(condition, message)
   if not condition then failures[#failures + 1] = message end
 end
 
--- every shape the scanner must catch, keyed by the line of the raise (not of
--- the declaration, which is where it is tempting to point)
-local mustCatch = {
-  {5,  "a local QString live across the next argument's getVerifiedString"},
-  {12, "a QByteArray temporary inside the raiser's own argument list"},
-  {20, "a QByteArray live across a raw lua_error"},
-  {29, "a local live in a function whose signature wraps onto a second line"},
-  {40, "a pre-gate on a different argument must not suppress the raise"},
-  {52, "an isEmpty() early-return guard leaves the variable non-empty, not free"},
-  {59, "an auto-typed local holding a QString"},
-  {67, "a container declared empty and filled afterwards"},
-  {76, "parseCommandsOrFunctionsTable raises like its two siblings"},
-  {90, "a checker inside a closed branch does not dominate the raise"},
-  {100, "a wrapped signature that is also indented, as inline members are"},
-}
+-- Every line of bad.cpp marked "// STRAND" must be reported. Deriving the
+-- expectations from the fixture rather than listing line numbers here means an
+-- edit to the fixture cannot silently stop checking a shape - which listing
+-- them did twice while this was being written.
+local mustCatch = {}
+for line in io.lines(fixtures .. "/bad.cpp") do
+  mustCatch[#mustCatch + 1] = line
+end
+do
+  local marked = {}
+  for number, text in ipairs(mustCatch) do
+    if text:match("//%s*STRAND%s*$") then marked[#marked + 1] = number end
+  end
+  mustCatch = marked
+end
+check(#mustCatch > 0, "bad.cpp has no // STRAND markers - nothing would be checked")
 
 local badOutput, badStatus = run("bad.cpp")
 -- The property the whole workflow rests on, and the only one the text
@@ -60,9 +61,19 @@ local badOutput, badStatus = run("bad.cpp")
 check(badStatus == 1,
       ("bad.cpp exited %s, not 1 - the scanner no longer fails CI on a finding")
       :format(tostring(badStatus)))
-for _, want in ipairs(mustCatch) do
-  check(badOutput:match("bad%.cpp:" .. want[1] .. ":"),
-        ("bad.cpp:%d not reported - %s"):format(want[1], want[2]))
+for _, number in ipairs(mustCatch) do
+  check(badOutput:match("bad%.cpp:" .. number .. ":"),
+        ("bad.cpp:%d is marked // STRAND but was not reported"):format(number))
+end
+
+-- and nothing beyond them: an unmarked finding is either a new shape that wants
+-- a marker, or a false positive
+for number in badOutput:gmatch("bad%.cpp:(%d+):") do
+  local wanted = false
+  for _, marked in ipairs(mustCatch) do
+    if tonumber(number) == marked then wanted = true end
+  end
+  check(wanted, ("bad.cpp:%s was reported but carries no // STRAND marker"):format(number))
 end
 
 local goodOutput, goodStatus = run("good.cpp")
@@ -71,6 +82,14 @@ check(goodStatus == 0,
       :format(tostring(goodStatus)))
 check(goodOutput:match("No heap objects stranded"),
       "good.cpp reported a finding, so the scanner has false positives:\n" .. goodOutput)
+
+-- A file the scanner never entered is "clean" for the wrong reason, and reads
+-- exactly like a real pass. Truncating this fixture during an edit produced
+-- precisely that, so hold it to having actually scanned something.
+local goodFunctions = tonumber(goodOutput:match("(%d+) functions scanned")) or 0
+check(goodFunctions >= 6,
+      ("good.cpp scanned %d functions, expected at least 6 - it is passing because it was not read")
+      :format(goodFunctions))
 
 if #failures > 0 then
   print("Scanner self-test FAILED:")
