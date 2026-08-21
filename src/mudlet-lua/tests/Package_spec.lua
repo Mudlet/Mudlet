@@ -1093,6 +1093,30 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
   end)
 end)
 
+describe("Tests installing an archive whose package XML cannot be read", function()
+  it("says the package's contents could not be read", function()
+    local name = "mudlet-spec-badxml"
+    -- the install queues a save of its own, and uninstallPackage() is refused
+    -- while one runs, so use the helper that keeps asking
+    defer(function() removeFixturePackage(name) end)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    -- the archive unpacks cleanly and holds a config.lua, so the install gets as
+    -- far as reading the XML - which is malformed. Only modules were ever asked
+    -- whether their contents loaded, so this used to install to silence.
+    local ok = installPackage(fixtureDirectory .. "/" .. name .. ".mpackage")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'Failed to load package "' .. name .. '"'), text)
+    -- the install still answers true and leaves the package listed, the same way a
+    -- module whose XML will not load stays listed: what changes is that it is said
+    assert.is_true(ok)
+    assert.is_true(packageInstalled(name))
+  end)
+end)
+
 describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
     defer(function() removeFixturePackage(minimalPackage) end)

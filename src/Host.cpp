@@ -2335,6 +2335,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                 }
+            } else if (!success) {
+                // Only modules were ever asked whether their contents loaded, so a
+                // package whose XML is corrupt was registered, left in the profile
+                // and never mentioned - the silence this whole change is about
+                qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
+                //: %1 is the package name, %2 is the reason its contents could not be read
+                postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
             }
             file2.close();
         }
@@ -2386,6 +2393,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
             }
+        } else if (!success) {
+            qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
+            //: %1 is the package name, %2 is the reason its contents could not be read
+            postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
         }
         file2.close();
     }
