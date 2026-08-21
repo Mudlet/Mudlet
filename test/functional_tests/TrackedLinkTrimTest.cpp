@@ -62,6 +62,7 @@ private:
     const QString mLinkText = qsl("SECRET");
     const QString mLinkCommand = qsl("go north");
     const QString mLinkHint = qsl("head north");
+    static constexpr int csmWrapAt = 250;
     static constexpr int csmLinesLimit = 100;
     static constexpr int csmBatchDeleteSize = 20;
 
@@ -247,6 +248,11 @@ private:
         if (!pConsole->clear(qsl("main"))) {
             return false;
         }
+        // Pin the wrap: these two cases count lines, and a console narrower than
+        // a line turns one echo into several of them. The width comes from the
+        // window, so it is not the same everywhere - it wrapped a 43 character
+        // line on CI that had not wrapped locally.
+        pConsole->setWrapAt(csmWrapAt);
         pConsole->buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
         while (static_cast<int>(pConsole->buffer.buffer.size()) < csmLinesLimit) {
             pConsole->echo(qsl("padding line %1\n").arg(pConsole->buffer.buffer.size()));
@@ -257,9 +263,12 @@ private:
 
     void tipItOver(TMainConsole* pConsole) const
     {
-        pConsole->echo(qsl("the line that tips the buffer over its limit\n"));
+        const int before = static_cast<int>(pConsole->buffer.buffer.size());
+        pConsole->echo(qsl("tip\n"));
         qApp->processEvents();
-        QCOMPARE(static_cast<int>(pConsole->buffer.buffer.size()), csmLinesLimit + 1 - csmBatchDeleteSize);
+        // measured as a delta, so this says "one line arrived and one batch left"
+        // rather than assuming what the buffer held on the way in
+        QCOMPARE(static_cast<int>(pConsole->buffer.buffer.size()), before + 1 - csmBatchDeleteSize);
     }
 
     void fill(TConsole* pConsole, const QString& tag, const int lines) const
