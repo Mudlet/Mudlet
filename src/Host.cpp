@@ -1140,7 +1140,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
             xmlSaved(xmlFilename);
         }
         // With no module writers to retire, nothing above can have emitted it,
-        // and the profile's own writer retired while the flag above was still set
+        // and the profile's writer retired while the flag above was still set
         if (savedModuleXmlNames.isEmpty() && !currentlySavingProfile()) {
             emit profileSaveFinished();
         }
@@ -1177,7 +1177,7 @@ void Host::xmlSaved(const QString& xmlName)
     // after the profile's own writer has retired, so announcing a finish here
     // while mWritingHostAndModules is still set tells anything waiting on it -
     // a deferred package install, say - that a save is still running, so it
-    // defers again onto a signal that has already gone by.
+    // defers again and waits for a signal that has already gone by.
     if (!currentlySavingProfile()) {
         emit profileSaveFinished();
     }
@@ -2139,13 +2139,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
 
     // Every failure below returns a reason, and most callers drop it: the package
-    // manager logs it without showing it, and the repository, default-package and
-    // module-sync installs ignore it altogether. Say it once here instead. Script
+    // manager logs it without showing it, the repository install names which
+    // packages failed but not why, and the default-package and module-sync
+    // installs ignore it altogether. Say it once here instead. Script
     // installs pass quiet and get the reason back as a return value, so they are
     // left to report it themselves rather than having it appear unbidden.
     auto fail = [this, &fileName, quiet](const QString& reason) -> std::pair<bool, QString> {
         qWarning() << "Host::installPackage() failed for" << fileName << ":" << reason;
         if (!quiet) {
+            //: %1 is the package or module file the user tried to install, %2 is the reason it could not be
             postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, reason));
         }
         return {false, reason};
@@ -2210,6 +2212,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 mModulesLoadedOk.remove(packageName);
             } else {
                 // Module actually exists, show duplicate error
+                //: %1 is the name of the module that is already installed
                 return fail(tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
             }
         } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
@@ -2538,9 +2541,6 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     }
     //PackageModuleType::ModuleSync seems to be only used for reloading/syncing
     //No need to remove package info as it can cause the info to be lost
-    if (thing != enums::PackageModuleType::ModuleSync) {
-        removePackageInfo(packageName, isModule);
-    }
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
@@ -2571,6 +2571,19 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedUninstallEvent);
 
+    // The guard at the top cannot see a save that a handler of the events just
+    // raised has started, and from here the package's items are destroyed: a dual
+    // install's restore would then be deferred, report success and do nothing,
+    // leaving the surviving half listed but empty with nothing said.
+    if (currentlySavingProfile()) {
+        return false;
+    }
+
+    if (thing != enums::PackageModuleType::ModuleSync) {
+        removePackageInfo(packageName, isModule);
+    }
+
+    bool restoredInPlace = false;
     int dualInstallations = 0;
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName)) {
         dualInstallations = 1;
@@ -2604,7 +2617,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
             //report a failure as the restore not happening, not as an install the user never asked for
-            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); !restored) {
+            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); restored) {
+                restoredInPlace = true;
+            } else {
                 //: %1 is the module name, %2 is the reason the package sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed module \"%1\", but its package copy could not be restored: %2").arg(packageName, reason));
             }
@@ -2617,7 +2632,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             mInstalledModules.remove(packageName);
             mActiveModules.removeAll(packageName);
             mModulesLoadedOk.remove(packageName);
-            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true); !restored) {
+            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true); restored) {
+                restoredInPlace = true;
+            } else {
                 //: %1 is the package name, %2 is the reason the module sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed package \"%1\", but its module copy could not be restored: %2").arg(packageName, reason));
             }
@@ -2631,8 +2648,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     getActionUnit()->updateAllToolbars();
 
-    const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
-    removeDir(dest, dest);
+    // A dual install's restore unpacks the surviving half into this same folder,
+    // so taking it away now would delete what was just put back
+    if (!restoredInPlace) {
+        const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+        removeDir(dest, dest);
+    }
 
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
     // not to try to write to disk a package/module that just got uninstalled and removed from memory

@@ -925,9 +925,10 @@ describe("Tests uninstalling one half of a dual package/module install", functio
   -- halves' items, and uninstallPackage() reinstalls whichever half the user did
   -- not ask to remove.
 
-  -- The package's clean-up is registered first so that it runs last: taking the
-  -- module away while the package is still installed puts the package back, and
-  -- would strand it in the profile.
+  -- The package's clean-up is registered first so that it runs last: clean-ups
+  -- run in reverse, so the module goes first, and taking the module away puts the
+  -- package back. Removing the package has to come after that or the restored
+  -- copy is left behind.
   local function withDualInstall()
     withFixturePackage(moduleName)
     return withFixtureModule(moduleName)
@@ -991,9 +992,30 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     assert.is_true(containsWrapped(text, "could not unzip package"), text)
   end)
 
+  it("says why the package could not be put back", function()
+    -- the mirror of the spec above: uninstalling the module restores the package,
+    -- and that restore reads the module's own file too, so the same broken archive
+    -- makes this direction fail for a reason of its own
+    local modulePath = withDualInstall()
+    overwriteWithGarbage(modulePath)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(uninstallModule(moduleName))
+    pumpEvents(200)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, 'Removed module "' .. moduleName .. '", but its package copy could not be restored'), text)
+    assert.is_true(containsWrapped(text, "could not unzip package"), text)
+  end)
+
   it("does not write the emptied module back over its own file when the restore fails", function()
     local modulePath = withDualInstall()
     local moduleXml = getMudletHomeDir() .. "/" .. moduleName .. "/" .. moduleName .. ".xml"
+    -- a save only writes a module out when it is synced, so without this the
+    -- assertion below holds whether or not the module was left emptied
+    defer(function() disableModuleSync(moduleName) end)
+    assert.is_true(enableModuleSync(moduleName))
     overwriteWithGarbage(modulePath)
 
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
