@@ -4,15 +4,26 @@
 # sweep was a one-off - nothing re-runs it, so a Lua function added afterwards
 # reintroduces the bug silently. LeakSanitizer only catches it when a spec
 # happens to exercise the raising path, which for a new function is usually
-# never. This job re-runs the audit on every change instead.
-name: lua_error strands
+# never. See CI/check-lua-error-strands.lua.
+name: Check lua_error strands
 
 on:
   push:
     branches: [master, development, release-*]
     tags: [Mudlet-*]
   pull_request:
+    paths:
+      - 'src/**.cpp'
+      - 'src/**.h'
+      - 'CI/check-lua-error-strands.lua'
+      - 'CI/test-check-lua-error-strands.lua'
+      - 'CI/lua-error-strand-fixtures/**'
+      - '.github/workflows/lua-error-strands.yml'
   workflow_dispatch:
+
+concurrency:
+  group: ${{github.workflow}}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lua-error-strands:
@@ -21,14 +32,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install Lua
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y lua5.1
+      - name: Install Lua 5.1.5
+        uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: "5.1.5"
 
       - name: Self-test the scanner
-        # A scanner that has quietly stopped matching anything would pass the
-        # step below on a tree full of strands, so prove it still fails on a
-        # known-bad fixture before trusting it on the real source.
-        run: lua5.1 CI/test-check-lua-error-strands.lua
+        # A scanner that has quietly stopped matching anything reports a clean
+        # tree and looks identical to success, so prove it still fails on a
+        # known-bad fixture before trusting the scan below.
+        run: lua CI/test-check-lua-error-strands.lua
 
       - name: Scan src/
-        run: lua5.1 CI/check-lua-error-strands.lua
+        run: lua CI/check-lua-error-strands.lua

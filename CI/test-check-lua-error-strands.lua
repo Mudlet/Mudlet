@@ -11,8 +11,13 @@ local here = arg[0]:match("^(.*)/[^/]*$") or "."
 local scanner = here .. "/check-lua-error-strands.lua"
 local fixtures = here .. "/lua-error-strand-fixtures"
 
+-- arg[-1] is the interpreter the standalone lua binary was invoked as, so the
+-- scanner runs under the same one whether that is "lua" (CI, via
+-- gh-actions-lua) or "lua5.1" (Debian and Ubuntu packages).
+local interpreter = arg[-1] or "lua"
+
 local function run(file)
-  local pipe = io.popen(("lua5.1 %q %q 2>&1"):format(scanner, fixtures .. "/" .. file))
+  local pipe = io.popen(("%q %q %q 2>&1"):format(interpreter, scanner, fixtures .. "/" .. file))
   local out = pipe:read("*a")
   pipe:close()
   return out
