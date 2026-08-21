@@ -32,11 +32,14 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
+    DetachedWindowMenuShortcutsTest.cpp
     GlyphOverflowTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
     MainWindowSizeReportTest.cpp
+    DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
@@ -70,10 +73,14 @@ set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
+    TelnetAtcpMspTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
+    CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
+    TelnetNewEnvironTest.cpp
+    TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
@@ -105,7 +112,10 @@ set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAreaReassignmentTest.cpp
     MapCloseDuringImportTest.cpp
+    MapDownloadTest.cpp
+    MapFileStatsTest.cpp
     MapProgressDialogSeamTest.cpp
+    MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
 )
 
@@ -173,7 +183,7 @@ if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
     set_tests_properties(PipelineBenchmark PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;ASAN_OPTIONS=detect_leaks=0"
         LABELS "functional"
         TIMEOUT 600)
 endif()
@@ -257,8 +267,17 @@ foreach(test_name ${allFunctionalTestNames})
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
     endif()
+    # MUDLET_TEST_MODE is the variable the code already keys "don't touch the real
+    # machine" off - the keychain, the update check and the real speech engine all
+    # consult it. What it changes for a functional test specifically is smaller: mpkg
+    # stays out of the profiles they build (see setupPreInstallPackages() in
+    # src/mudlet.cpp), and waitForEvent()/pumpEvents() become callable from Lua.
+    # Set here rather than in the workflows, which only ever set it for the Lua steps,
+    # so ctest behaves the same locally and in CI. A test that needs it unset has to
+    # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
+    # asserts the variable arrives at all.
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
@@ -297,6 +316,11 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
+# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
+# full profile, which is nearly all of their runtime and the part a sanitizer and
+# a loaded runner stretch, so they get the same headroom as their neighbours
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
+
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
@@ -334,6 +358,9 @@ set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
+
+# ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 300)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for

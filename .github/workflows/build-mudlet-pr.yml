@@ -1,7 +1,9 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
 # Changes here likely need to be mirrored there as well, apart from the ccache
 # handling: caches here are scoped to their own pull request ref and keyed per
-# commit, so there is never a key to delete before saving one.
+# commit, so there is never a key to delete before saving one. The generations
+# an earlier push left behind are retired by cleanup-caches.yml instead, which
+# runs in the base repository and so has a writable token even for a fork.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
@@ -59,7 +61,7 @@ jobs:
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 12
             qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
@@ -72,7 +74,7 @@ jobs:
             qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
-          - os: macos-14
+          - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
             qt: '6.11.1'
@@ -91,7 +93,14 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        cache: true
+        # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
+        # and a copy per runner image, module set and ref took over 40% of the
+        # repository's 10GB cache quota - more than every ccache put together.
+        # Fetching it afresh costs 25-35s a job. Leaving it cached cost far more
+        # than that, because a quota with no headroom has GitHub evicting by
+        # least-recently-used, and a dropped branch ccache is a 20 minute cold
+        # rebuild rather than a 30 second download.
+        cache: false
         modules: qt5compat qtmultimedia qtspeech
 
     - name: Cache Lua build
@@ -432,7 +441,7 @@ jobs:
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(nproc)
       env:
         QT_QPA_PLATFORM: offscreen
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
@@ -444,12 +453,12 @@ jobs:
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
@@ -653,8 +662,9 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # The suite alone can run past a minute on the slower Intel runners
-      timeout-minutes: 3
+      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
+      # tighter limit fails on runner speed rather than on anything the suite did
+      timeout-minutes: 6
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
