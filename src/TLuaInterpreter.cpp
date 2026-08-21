@@ -6004,17 +6004,14 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setglobal(pGlobalLua, "mmcp");
 
     // Addon toolbar and menu functions, for packages adding their own controls
-    lua_register(pGlobalLua, "addToolbarButton", TLuaInterpreter::addToolbarButton);
-    lua_register(pGlobalLua, "removeToolbarButton", TLuaInterpreter::removeToolbarButton);
-    lua_register(pGlobalLua, "setToolbarButtonState", TLuaInterpreter::setToolbarButtonState);
-    lua_register(pGlobalLua, "setToolbarButtonIcon", TLuaInterpreter::setToolbarButtonIcon);
-    lua_register(pGlobalLua, "setToolbarButtonTooltip", TLuaInterpreter::setToolbarButtonTooltip);
-    lua_register(pGlobalLua, "setToolbarButtonEnabled", TLuaInterpreter::setToolbarButtonEnabled);
-    lua_register(pGlobalLua, "setToolbarButtonPulse", TLuaInterpreter::setToolbarButtonPulse);
-    lua_register(pGlobalLua, "addMenuItem", TLuaInterpreter::addMenuItem);
-    lua_register(pGlobalLua, "removeMenuItem", TLuaInterpreter::removeMenuItem);
-    lua_register(pGlobalLua, "setMenuItemEnabled", TLuaInterpreter::setMenuItemEnabled);
-    lua_register(pGlobalLua, "setMenuItemChecked", TLuaInterpreter::setMenuItemChecked);
+    lua_register(pGlobalLua, "addCommand", TLuaInterpreter::addCommand);
+    lua_register(pGlobalLua, "removeCommand", TLuaInterpreter::removeCommand);
+    lua_register(pGlobalLua, "enableCommand", TLuaInterpreter::enableCommand);
+    lua_register(pGlobalLua, "disableCommand", TLuaInterpreter::disableCommand);
+    lua_register(pGlobalLua, "setCommandChecked", TLuaInterpreter::setCommandChecked);
+    lua_register(pGlobalLua, "setCommandIcon", TLuaInterpreter::setCommandIcon);
+    lua_register(pGlobalLua, "setCommandTooltip", TLuaInterpreter::setCommandTooltip);
+    lua_register(pGlobalLua, "setCommandPulse", TLuaInterpreter::setCommandPulse);
 
 
     QStringList additionalLuaPaths;

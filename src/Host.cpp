@@ -959,6 +959,12 @@ bool Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    // The Lua state goes with the reset, taking every id a package was holding
+    // with it, so the commands those ids named have to go too - otherwise a
+    // package that places its command from a script adds another on every
+    // reset and can never remove the ones before.
+    mudlet::self()->removeAddonCommandsForHost(this);
+
     getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();

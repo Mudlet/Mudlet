@@ -309,19 +309,33 @@ public:
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Addon toolbar button management
-    int addAddonToolbarButton(const QString& name, const QString& icon, const QString& tooltip, Host* pHost);
-    bool removeAddonToolbarButton(int buttonId, Host* pHost);
-    bool setAddonToolbarButtonState(int buttonId, const QString& state, Host* pHost);
-    bool setAddonToolbarButtonIcon(int buttonId, const QString& icon, Host* pHost);
-    bool setAddonToolbarButtonTooltip(int buttonId, const QString& tooltip, Host* pHost);
-    bool setAddonToolbarButtonEnabled(int buttonId, bool enabled, Host* pHost);
-    bool setAddonToolbarButtonPulse(int buttonId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost);
+    // Surfaces a command can be placed on. A client with different chrome maps
+    // these onto whatever it has; one that has only a menu honours Menu alone.
+    enum class CommandSurface { Menu, Toolbar, Both };
+
+    struct CommandRequest
+    {
+        QString name;
+        QString icon;
+        QString tooltip;
+        QString menuPath;
+        QString shortcut;
+        CommandSurface surfaces = CommandSurface::Both;
+    };
+
+    // Why a command could not be placed, so the binding can say which
+    int addAddonCommand(const CommandRequest& request, Host* pHost, QString& error);
+    bool removeAddonCommand(int commandId, Host* pHost);
+    bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost);
+    bool setAddonCommandChecked(int commandId, bool checked, Host* pHost);
+    bool setAddonCommandIcon(int commandId, const QString& icon, Host* pHost);
+    bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost);
+    bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
+    // Every command a profile placed, dropped when it closes or resets
+    void removeAddonCommandsForHost(Host* pHost);
+    void applyToolBarStyleToAddonCommands();
 
     // Addon menu item management
-    int addAddonMenuItem(const QString& menuPath, const QString& name, const QString& shortcut, Host* pHost);
-    bool removeAddonMenuItem(int itemId, Host* pHost);
-    bool setAddonMenuItemEnabled(int itemId, bool enabled, Host* pHost);
-    bool setAddonMenuItemChecked(int itemId, bool checked, Host* pHost);
 
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:
@@ -771,35 +785,38 @@ private:
     QList<QAction*> mWindowListActions;
     QAction* mWindowListSeparator = nullptr;
 
-    // Addon toolbar button management. closeHost() removes every button and menu
-    // item belonging to a profile before the Host is deleted, so no entry should
-    // outlive its owner - the QPointers are what keeps a missed path from turning
-    // into a dangling read in the click handlers, which resolve pHost lazily.
-    struct AddonButton
+    // Addon command management. One command may stand on both surfaces at once -
+    // a toolbar button and a menu item that are the same thing to the package
+    // that placed it, addressed by one id and raising one event, which is how
+    // Mudlet's own commands already behave.
+    //
+    // closeHost() and a profile reset both drop every command belonging to that
+    // profile before its Host goes, so no entry should outlive its owner - the
+    // QPointers are what keeps a missed path from turning into a dangling read
+    // in the click handlers, which resolve pHost lazily.
+    struct AddonCommand
     {
         QPointer<QToolButton> button;
         QPointer<QAction> toolbarAction;
+        QPointer<QAction> menuAction;
         QPointer<QTimer> pulseTimer;
         QString name;
+        QString menuPath;
         QPointer<Host> pHost;
         bool pulseState = false;
         QString pulseColor1;
         QString pulseColor2;
     };
-    QMap<int, AddonButton> mAddonButtons;
-    int mNextAddonButtonId = 1;
-    QAction* mpAddonToolbarSeparator = nullptr;
+    // One sequence for every command, so an id names one thing or nothing
+    QMenu* addonMenuForPath(const QString& menuPath, QString& error);
+    bool addonShortcutUsable(const QKeySequence& sequence, QString& error) const;
+    static QString addonTooltip(const QString& tooltip);
+    static void applyAddonIcon(QToolButton* button, QAction* action, const QString& icon);
+    void raiseAddonCommandEvent(int commandId);
 
-    // Addon menu item management
-    struct AddonMenuItem
-    {
-        QPointer<QAction> action;
-        QString menuPath;
-        QString name;
-        QPointer<Host> pHost;
-    };
-    QMap<int, AddonMenuItem> mAddonMenuItems;
-    int mNextAddonMenuItemId = 1;
+    QMap<int, AddonCommand> mAddonCommands;
+    int mNextAddonCommandId = 1;
+    QAction* mpAddonToolbarSeparator = nullptr;
     QPointer<QMenu> mpAddonsMenu;
 
     // amount of times the shortcut has been shown help educate new users

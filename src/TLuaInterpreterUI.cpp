@@ -4213,33 +4213,161 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addToolbarButton
-int TLuaInterpreter::addToolbarButton(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommand
+int TLuaInterpreter::addCommand(lua_State* L)
 {
-    const QString name = getVerifiedString(L, __func__, 1, "name");
+    if (!lua_istable(L, 1)) {
+        return warnArgumentValue(L, __func__, "addCommand needs a table, e.g. addCommand{name = 'Speech', menuPath = 'Speech'}");
+    }
+
+    mudlet::CommandRequest request;
+    auto stringField = [L](const char* field) -> QString {
+        lua_getfield(L, 1, field);
+        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 1);
+        return value;
+    };
+
+    request.name = stringField("name");
+    if (request.name.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a command needs a name to show");
+    }
+    request.icon = stringField("icon");
+    request.tooltip = stringField("tooltip");
+    request.menuPath = stringField("menuPath");
+    request.shortcut = stringField("shortcut");
+
+    // surfaces is a list rather than a single word, so a client that grows
+    // another surface takes another entry rather than a new spelling of "both".
+    // A bare string is accepted for the one-surface case.
+    bool wantsMenu = false;
+    bool wantsToolbar = false;
+    bool named = false;
+    auto nameSurface = [&](const QString& surface) -> bool {
+        named = true;
+        if (surface == qsl("menu")) {
+            wantsMenu = true;
+        } else if (surface == qsl("toolbar")) {
+            wantsToolbar = true;
+        } else {
+            return false;
+        }
+        return true;
+    };
+
+    lua_getfield(L, 1, "surfaces");
+    if (lua_isstring(L, -1)) {
+        const QString surface = QString::fromUtf8(lua_tostring(L, -1));
+        if (!nameSurface(surface)) {
+            lua_pop(L, 1);
+            return warnArgumentValue(L, __func__, qsl("'%1' is not a surface this client has - use 'menu' or 'toolbar'").arg(surface));
+        }
+    } else if (lua_istable(L, -1)) {
+        lua_pushnil(L);
+        while (lua_next(L, -2) != 0) {
+            const QString surface = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+            if (!nameSurface(surface)) {
+                lua_pop(L, 3);
+                return warnArgumentValue(L, __func__, qsl("'%1' is not a surface this client has - use 'menu' or 'toolbar'").arg(surface));
+            }
+            lua_pop(L, 1);
+        }
+    }
+    lua_pop(L, 1);
+
+    // Naming nothing means "wherever this client puts commands", which is both
+    if (!named) {
+        request.surfaces = mudlet::CommandSurface::Both;
+    } else if (wantsMenu && wantsToolbar) {
+        request.surfaces = mudlet::CommandSurface::Both;
+    } else if (wantsToolbar) {
+        request.surfaces = mudlet::CommandSurface::Toolbar;
+    } else {
+        request.surfaces = mudlet::CommandSurface::Menu;
+    }
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    QString error;
+    const int commandId = pMudlet->addAddonCommand(request, &host, error);
+    if (commandId < 0) {
+        return warnArgumentValue(L, __func__, error.isEmpty() ? qsl("the command could not be placed") : error);
+    }
+
+    lua_pushinteger(L, commandId);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommand
+int TLuaInterpreter::removeCommand(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->removeAddonCommand(commandId, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommand
+int TLuaInterpreter::enableCommand(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, true, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableCommand
+int TLuaInterpreter::disableCommand(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, false, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandChecked
+int TLuaInterpreter::setCommandChecked(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const bool checked = getVerifiedBool(L, __func__, 2, "checked");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandChecked(commandId, checked, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandIcon
+int TLuaInterpreter::setCommandIcon(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
     const QString icon = getVerifiedString(L, __func__, 2, "icon");
-    const QString tooltip = getVerifiedString(L, __func__, 3, "tooltip");
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const int buttonId = pMudlet->addAddonToolbarButton(name, icon, tooltip, &host);
-    if (buttonId < 0) {
-        return warnArgumentValue(L, __func__, "failed to add toolbar button");
-    }
-
-    lua_pushinteger(L, buttonId);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeToolbarButton
-int TLuaInterpreter::removeToolbarButton(lua_State* L)
-{
-    const int buttonId = getVerifiedInt(L, __func__, 1, "buttonId");
 
     auto& host = getHostFromLua(L);
     mudlet* pMudlet = mudlet::self();
@@ -4247,49 +4375,14 @@ int TLuaInterpreter::removeToolbarButton(lua_State* L)
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    const bool success = pMudlet->removeAddonToolbarButton(buttonId, &host);
-    lua_pushboolean(L, success);
+    lua_pushboolean(L, pMudlet->setAddonCommandIcon(commandId, icon, &host));
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setToolbarButtonState
-int TLuaInterpreter::setToolbarButtonState(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandTooltip
+int TLuaInterpreter::setCommandTooltip(lua_State* L)
 {
-    const int buttonId = getVerifiedInt(L, __func__, 1, "buttonId");
-    const QString state = getVerifiedString(L, __func__, 2, "state");
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const bool success = pMudlet->setAddonToolbarButtonState(buttonId, state, &host);
-    lua_pushboolean(L, success);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setToolbarButtonIcon
-int TLuaInterpreter::setToolbarButtonIcon(lua_State* L)
-{
-    const int buttonId = getVerifiedInt(L, __func__, 1, "buttonId");
-    const QString icon = getVerifiedString(L, __func__, 2, "icon");
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const bool success = pMudlet->setAddonToolbarButtonIcon(buttonId, icon, &host);
-    lua_pushboolean(L, success);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setToolbarButtonTooltip
-int TLuaInterpreter::setToolbarButtonTooltip(lua_State* L)
-{
-    const int buttonId = getVerifiedInt(L, __func__, 1, "buttonId");
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
     const QString tooltip = getVerifiedString(L, __func__, 2, "tooltip");
 
     auto& host = getHostFromLua(L);
@@ -4298,32 +4391,14 @@ int TLuaInterpreter::setToolbarButtonTooltip(lua_State* L)
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    const bool success = pMudlet->setAddonToolbarButtonTooltip(buttonId, tooltip, &host);
-    lua_pushboolean(L, success);
+    lua_pushboolean(L, pMudlet->setAddonCommandTooltip(commandId, tooltip, &host));
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setToolbarButtonEnabled
-int TLuaInterpreter::setToolbarButtonEnabled(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandPulse
+int TLuaInterpreter::setCommandPulse(lua_State* L)
 {
-    const int buttonId = getVerifiedInt(L, __func__, 1, "buttonId");
-    const bool enabled = getVerifiedBool(L, __func__, 2, "enabled");
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const bool success = pMudlet->setAddonToolbarButtonEnabled(buttonId, enabled, &host);
-    lua_pushboolean(L, success);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setToolbarButtonPulse
-int TLuaInterpreter::setToolbarButtonPulse(lua_State* L)
-{
-    const int buttonId = getVerifiedInt(L, __func__, 1, "buttonId");
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
     const bool enabled = getVerifiedBool(L, __func__, 2, "enabled");
 
     QString color1 = qsl("#ff4444");
@@ -4349,84 +4424,11 @@ int TLuaInterpreter::setToolbarButtonPulse(lua_State* L)
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    const bool success = pMudlet->setAddonToolbarButtonPulse(buttonId, enabled, color1, color2, interval, &host);
-    lua_pushboolean(L, success);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addMenuItem
-int TLuaInterpreter::addMenuItem(lua_State* L)
-{
-    const QString menuPath = getVerifiedString(L, __func__, 1, "menuPath");
-    const QString name = getVerifiedString(L, __func__, 2, "name");
-
-    QString shortcut;
-    if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
-        shortcut = getVerifiedString(L, __func__, 3, "shortcut");
+    QString error;
+    const bool success = pMudlet->setAddonCommandPulse(commandId, enabled, color1, color2, interval, &host, error);
+    if (!success && !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
     }
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const int itemId = pMudlet->addAddonMenuItem(menuPath, name, shortcut, &host);
-    if (itemId < 0) {
-        return warnArgumentValue(L, __func__, "failed to add menu item");
-    }
-
-    lua_pushinteger(L, itemId);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeMenuItem
-int TLuaInterpreter::removeMenuItem(lua_State* L)
-{
-    const int itemId = getVerifiedInt(L, __func__, 1, "itemId");
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const bool success = pMudlet->removeAddonMenuItem(itemId, &host);
-    lua_pushboolean(L, success);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMenuItemEnabled
-int TLuaInterpreter::setMenuItemEnabled(lua_State* L)
-{
-    const int itemId = getVerifiedInt(L, __func__, 1, "itemId");
-    const bool enabled = getVerifiedBool(L, __func__, 2, "enabled");
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const bool success = pMudlet->setAddonMenuItemEnabled(itemId, enabled, &host);
-    lua_pushboolean(L, success);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMenuItemChecked
-int TLuaInterpreter::setMenuItemChecked(lua_State* L)
-{
-    const int itemId = getVerifiedInt(L, __func__, 1, "itemId");
-    const bool checked = getVerifiedBool(L, __func__, 2, "checked");
-
-    auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
-
-    const bool success = pMudlet->setAddonMenuItemChecked(itemId, checked, &host);
     lua_pushboolean(L, success);
     return 1;
 }
