@@ -458,7 +458,7 @@ int TLuaInterpreter::mmcpStartServer(lua_State* L)
         if (!portIsValid) {
             return lua_error(L);
         }
-        port = lua_tointeger(L, 1);
+        port = static_cast<int>(lua_tointeger(L, 1));
         if (port > 65535 || port < 1) {
             return warnArgumentValue(L, sFunc, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
