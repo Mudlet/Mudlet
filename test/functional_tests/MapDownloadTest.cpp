@@ -938,8 +938,14 @@ private slots:
         pMap->mapClear();
 
         ConsoleDialogTrace trace;
+        const QSignalSpy valueSpy(pMap, &TMap::signal_mapProgressSetValue);
         const auto observers = observeConsoleProgressDialog(trace);
-        const bool finished = runDownload(mpMapServer->url(qsl("/chunked.xml")));
+        // A paced answer ends only when the test says so, which is what makes
+        // the reply report often enough to correct the range from its own total
+        // instead of leaving the guess standing as the only range ever set.
+        const QMetaObject::Connection pacer = paceUntilReported(valueSpy, 2);
+        const bool finished = runDownload(mpMapServer->url(qsl("/paced.xml")));
+        disconnect(pacer);
         stopObserving(observers);
         QVERIFY2(finished, "the map download never finished");
 
