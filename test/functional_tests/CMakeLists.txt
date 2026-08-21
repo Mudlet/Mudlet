@@ -41,6 +41,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainWindowSizeReportTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
+    LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     PastedLinkStateTest.cpp

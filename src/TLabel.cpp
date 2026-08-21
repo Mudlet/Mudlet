@@ -322,6 +322,55 @@ void TLabel::setClickThrough(bool clickthrough)
     }
 }
 
+// the lookbehind keeps selection-background-color and friends out of it
+static const QRegularExpression& backgroundColorDeclaration()
+{
+    static const QRegularExpression declaration(qsl("(?<![-\\w])background-color\\s*:[^;]*;"));
+    return declaration;
+}
+
+void TLabel::setBackgroundColor(const QColor& color)
+{
+    mBackgroundColor = color;
+
+    const QString newColor = qsl("background-color: rgba(%1, %2, %3, %4);").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
+    QString sheet = styleSheet();
+    if (sheet.contains(backgroundColorDeclaration())) {
+        sheet.replace(backgroundColorDeclaration(), newColor);
+    } else {
+        if (!sheet.isEmpty() && !sheet.endsWith(QChar::LineFeed)) {
+            sheet.append(QChar::LineFeed);
+        }
+        sheet.append(newColor);
+    }
+    setStyleSheet(sheet);
+}
+
+// Qt hands a widget back the palette it saved when it first styled it, so every
+// restyle - this label's own, an ancestor's, or the application's - drops the colour
+// and leaves a label that fills its background on Qt's near-white default
+void TLabel::changeEvent(QEvent* event)
+{
+    QLabel::changeEvent(event);
+
+    if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) {
+        applyBackgroundColor();
+    }
+}
+
+void TLabel::applyBackgroundColor()
+{
+    // the equality test is also what stops setPalette() below recursing back in
+    // through changeEvent()
+    if (!mBackgroundColor.isValid() || palette().color(QPalette::Window) == mBackgroundColor) {
+        return;
+    }
+
+    QPalette palette = this->palette();
+    palette.setColor(QPalette::Window, mBackgroundColor);
+    setPalette(palette);
+}
+
 void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline)
 {
     mLinkColor = linkColor;
@@ -354,7 +403,12 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
 
 void TLabel::resetLinkStyle()
 {
-    setPalette(QPalette());
+    // starting from a fresh palette would take the background colour with the link colours
+    QPalette palette;
+    if (mBackgroundColor.isValid()) {
+        palette.setColor(QPalette::Window, mBackgroundColor);
+    }
+    setPalette(palette);
 
     mLinkColor.clear();
     mLinkVisitedColor.clear();
