@@ -26,7 +26,7 @@ Exits 1 when anything is found.
 local RAISERS = {
   "getVerifiedString", "getVerifiedInt", "getVerifiedBool", "getVerifiedFloat",
   "getVerifiedDouble", "getVerifiedStringOrInteger",
-  "parseCommandOrFunction", "parseHintsTable",
+  "parseCommandOrFunction", "parseHintsTable", "parseCommandsOrFunctionsTable",
   "lua_error", "luaL_error", "luaL_argerror", "luaL_typerror",
   "luaL_checkstring", "luaL_checklstring", "luaL_checknumber", "luaL_checkinteger",
   "luaL_checkstack", "luaL_checktype", "luaL_checkany", "luaL_checkudata",
@@ -40,6 +40,7 @@ local RAISERS = {
 local PAIRED_CHECKER = {
   parseCommandOrFunction = "checkCommandOrFunctionArg",
   parseHintsTable = "checkHintsTable",
+  parseCommandsOrFunctionsTable = "checkCommandsOrFunctionsTable",
   getVerifiedString = "checkStringArg",
   getVerifiedInt = "checkIntArg",
   getVerifiedBool = "checkBoolArg",
@@ -52,6 +53,24 @@ local PAIRED_CHECKER = {
 -- soon as they hold anything.
 local OWNING_TYPES = {
   "QString", "QStringList", "QByteArray", "std::string", "TMediaData",
+}
+
+-- Initialisers that hand back heap-owning data, so an `auto` local holding one
+-- is tracked even though its type is never spelled out.
+local OWNING_INITIALISERS = {
+  -- getVerifiedInt/Float/Double/Bool hand back scalars, so only the two that
+  -- return a QString belong here
+  "getVerifiedString%s*%(", "getVerifiedStringOrInteger%s*%(",
+  "lua_tostring%s*%(", "QString::fromUtf8%s*%(",
+  "QString%s*[{(]", "QStringList%s*[{(]", "QByteArray%s*[{(]",
+  "%.toUtf8%s*%(", "%.arg%s*%(", "%.split%s*%(", "%.join%s*%(",
+}
+
+-- Calls that fill a container declared empty, turning a free local into an
+-- owning one partway through the function.
+local FILLING_OPERATIONS = {
+  "%s*<<%s*", "%s*%+=%s*", "%.append%s*%(", "%.push_back%s*%(",
+  "%.insert%s*%(", "%.prepend%s*%(", "%.replace%s*%(",
 }
 
 -- Expressions that produce an owning temporary when passed straight into a
@@ -85,12 +104,26 @@ end
 -- comment cut. Brace depth is what scopes every tracked variable, so a "{" in
 -- a message or a URL inside a // comment would otherwise leak a scope and
 -- silence every later raise in the function.
-local function codeOnly(line)
+local function codeOnly(line, inBlockComment)
   local out, k, n = {}, 1, #line
   while k <= n do
     local c = line:sub(k, k)
-    if c == "/" and line:sub(k + 1, k + 1) == "/" then
+    if inBlockComment then
+      if c == "*" and line:sub(k + 1, k + 1) == "/" then
+        inBlockComment = false
+        k = k + 1
+      end
+      out[#out + 1] = " "
+      k = k + 1
+    elseif c == "/" and line:sub(k + 1, k + 1) == "/" then
       break
+    elseif c == "/" and line:sub(k + 1, k + 1) == "*" then
+      inBlockComment = true
+      k = k + 2
+    -- a digit separator (1'000) is not a character literal
+    elseif c == "'" and line:sub(k - 1, k - 1):match("[%w_]") then
+      out[#out + 1] = c
+      k = k + 1
     elseif c == '"' or c == "'" then
       -- R"(...)" raw strings end at )" rather than at the next quote
       local raw = c == '"' and line:sub(k - 1, k - 1) == "R"
@@ -119,7 +152,7 @@ local function codeOnly(line)
       k = k + 1
     end
   end
-  return table.concat(out)
+  return table.concat(out), inBlockComment
 end
 
 -- The argument list of a call to `name`, parenthesis-balanced. Returning the
@@ -228,18 +261,36 @@ local function scanFile(path)
         functionsScanned = functionsScanned + 1
         depth = 0
         local live = {}   -- varname -> {line=, type=}
+        local free = {}   -- declared empty, so owning nothing until something fills it
         local scopes = {} -- depth -> list of varnames declared at that depth
+        local emptyGuards = {} -- depth -> varname the enclosing if() proved empty
+        local inBlockComment = false
         local j = bodyStart
         repeat
           local body = lines[j]
-          local code = codeOnly(body)
+          local code
+          code, inBlockComment = codeOnly(body, inBlockComment)
 
-          local raiser, raiserArgs = findRaiser(code)
+          -- A raiser's arguments can wrap. Join forward while the parentheses
+          -- are unbalanced so a temporary on a continuation line is still seen.
+          local raiseText = code
+          if select(2, code:gsub("%(", "")) > select(2, code:gsub("%)", "")) then
+            local open = select(2, code:gsub("%(", "")) - select(2, code:gsub("%)", ""))
+            local k = j
+            while open > 0 and k < n and k - j < 4 do
+              k = k + 1
+              local more = codeOnly(lines[k], false)
+              raiseText = raiseText .. " " .. more
+              open = open + select(2, more:gsub("%(", "")) - select(2, more:gsub("%)", ""))
+            end
+          end
+
+          local raiser, raiserArgs = findRaiser(raiseText)
           if raiser and raiserArgs and PAIRED_CHECKER[raiser] then
             local checker = PAIRED_CHECKER[raiser]
             local wanted = positionArg(raiserArgs)
             for back = bodyStart, j - 1 do
-              local checkerArgs = argsOfCall(codeOnly(lines[back]), checker)
+              local checkerArgs = argsOfCall(codeOnly(lines[back], false), checker)
               if checkerArgs and wanted ~= "" and positionArg(checkerArgs) == wanted then
                 raiser = nil
                 break
@@ -248,13 +299,13 @@ local function scanFile(path)
           end
           if raiser and j > bodyStart then
             for name, info in pairs(live) do
-              -- when the guard reaching this raise is <var>.isEmpty(), the
-              -- variable is the shared empty buffer and owns nothing
+              -- Inside `if (x.isEmpty()) { ... }` the variable really is the
+              -- shared empty buffer. Outside it - and the idiom here is to
+              -- return from that block - x is proven NON-empty, so the guard
+              -- has to be scoped to the block rather than to nearby lines.
               local guarded = false
-              for back = math.max(bodyStart, j - 6), j do
-                if lines[back]:match("%f[%w]" .. name .. "%f[%W]%s*%.%s*isEmpty%s*%(%s*%)") then
-                  guarded = true
-                end
+              for _, guardedName in pairs(emptyGuards) do
+                if guardedName == name then guarded = true end
               end
               if not guarded then
               findings[#findings + 1] = {
@@ -274,12 +325,44 @@ local function scanFile(path)
             end
           end
 
+          local emptyGuarded = code:match("if%s*%(%s*([%w_]+)%s*%.%s*isEmpty%s*%(%s*%)%s*%)")
+          if emptyGuarded and code:match("{%s*$") then
+            emptyGuards[depth + 1] = emptyGuarded
+          end
+
+          -- a container declared empty starts owning as soon as something fills it
+          for name, info in pairs(free) do
+            for _, op in ipairs(FILLING_OPERATIONS) do
+              if code:match("%f[%w]" .. name .. "%f[%W]" .. op) then
+                live[name] = {line = j, type = info.type}
+                scopes[info.depth] = scopes[info.depth] or {}
+                table.insert(scopes[info.depth], name)
+                free[name] = nil
+                break
+              end
+            end
+          end
+
+          local autoName, autoInit = code:match("^%s*[a-zA-Z:%s]-%f[%w]auto%f[%W]%s*[%*&]?%s*([%w_]+)%s*=%s*(.*)$")
+          if autoName then
+            for _, pat in ipairs(OWNING_INITIALISERS) do
+              if autoInit:match(pat) then
+                live[autoName] = {line = j, type = "auto"}
+                scopes[depth] = scopes[depth] or {}
+                table.insert(scopes[depth], autoName)
+                break
+              end
+            end
+          end
+
           for _, ty in ipairs(OWNING_TYPES) do
             local pat = "^%s*[a-zA-Z:<>,%s]-%f[%w]" .. ty:gsub("%p", "%%%0") .. "%f[%W]%s+([%w_]+)%s*(.*)$"
             local varname, rest = code:match(pat)
             if varname and not code:match("%f[%w]static%f[%W]")
                and not code:match("%f[%w]return%f[%W]") and varname ~= "const" then
-              if not initialiserIsFree(rest) then
+              if initialiserIsFree(rest) then
+                free[varname] = {line = j, type = ty, depth = depth}
+              else
                 live[varname] = {line = j, type = ty}
                 scopes[depth] = scopes[depth] or {}
                 table.insert(scopes[depth], varname)
@@ -298,9 +381,10 @@ local function scanFile(path)
               depth = depth + 1
             elseif c == "}" then
               if scopes[depth] then
-                for _, v in ipairs(scopes[depth]) do live[v] = nil end
+                for _, v in ipairs(scopes[depth]) do live[v] = nil; free[v] = nil end
                 scopes[depth] = nil
               end
+              emptyGuards[depth] = nil
               depth = depth - 1
             end
           end

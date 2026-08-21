@@ -46,6 +46,10 @@ local mustCatch = {
   {20, "a QByteArray live across a raw lua_error"},
   {29, "a local live in a function whose signature wraps onto a second line"},
   {40, "a pre-gate on a different argument must not suppress the raise"},
+  {52, "an isEmpty() early-return guard leaves the variable non-empty, not free"},
+  {59, "an auto-typed local holding a QString"},
+  {67, "a container declared empty and filled afterwards"},
+  {76, "parseCommandsOrFunctionsTable raises like its two siblings"},
 }
 
 local badOutput, badStatus = run("bad.cpp")
