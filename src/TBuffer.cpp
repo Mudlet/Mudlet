@@ -5288,12 +5288,12 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    // The log file, its stream and the on/off flag are all core model state
-    // now, so logging needs a Host but no view whatsoever - which is what lets
-    // a profile with no main console widget write a log at all.
-    // mainConsoleModelOrNull() rather than mainConsoleModel(): a TBuffer clears
-    // itself while it is being constructed, and the main console's one is
-    // constructed before Host has taken hold of the model holding it.
+    // The log file, its stream and the on/off flag are core model state, so
+    // this needs a Host but no view - which is what lets a profile with no main
+    // console widget write a log at all. The one thing that still notices a
+    // missing view is the HTML timestamp background in bufferToHtml().
+    // See TBuffer::clear() on why the model is reached through the
+    // null-tolerant accessor.
     TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
     if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
@@ -5349,11 +5349,14 @@ void TBuffer::logRemainingOutput()
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
 
-    // No mLogToLogFile test on purpose: this is called as logging is turned
-    // off, once the flag is already down, and the pending line still has to
-    // reach the file. See TBuffer::log() on the null-model case.
+    // No mLogToLogFile test on purpose: both callers have already decided the
+    // pending line must be flushed - toggleLogging() once it has cleared the
+    // flag, clear() while it is still set. The file being open is tested
+    // instead, because a QTextStream written to after its device closed latches
+    // WriteFailed and then silently keeps every later write in its own buffer,
+    // to be replayed into the next log file the moment setDevice() rearms it.
     TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
-    if (!pModel) {
+    if (!pModel || this != &pModel->buffer || !pModel->mLogFile.isOpen()) {
         return;
     }
 
@@ -5660,10 +5663,10 @@ void TBuffer::clear()
 {
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
-    // was still pending for logging is not lost from the log file. See
-    // TBuffer::log() on why the model is reached through the null-tolerant
-    // accessor - this runs from the TBuffer constructor, which the main
-    // console's model is still inside of.
+    // was still pending for logging is not lost from the log file.
+    // mainConsoleModelOrNull() rather than mainConsoleModel() because this runs
+    // from the TBuffer constructor, and the main console's buffer is built
+    // inside the very model Host has not taken hold of yet.
     TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
     if (pModel && this == &pModel->buffer && pModel->mLogToLogFile) {
         logRemainingOutput();

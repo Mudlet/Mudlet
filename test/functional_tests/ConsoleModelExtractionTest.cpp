@@ -146,8 +146,8 @@ private slots:
         model.mUserCursor = QPoint(7, 11);
         QCOMPARE(console->mUserCursor, QPoint(7, 11));
 
-        model.mLogFileName = qsl("aliased-log-name");
-        QCOMPARE(console->mLogFileName, qsl("aliased-log-name"));
+        console->mLogFileName = qsl("aliased-log-name");
+        QCOMPARE(model.mLogFileName, qsl("aliased-log-name"));
         model.mLogFileName.clear();
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("cecho('<white>AliasedBufferWrite\\n')\n"));
@@ -372,19 +372,44 @@ private slots:
         // assertions hold whatever interface language the run picks up.
         const QString offerToStart = TMainConsole::tr("Start logging game output to log file.");
         const QString offerToStop = TMainConsole::tr("Stop logging game output to log file.");
+        const QString startAnnouncement = TMainConsole::tr("Logging has started. Log file is %1");
+        const QString stopAnnouncement = TMainConsole::tr("Logging has been stopped. Log file is %1");
+        // The sentinel is what makes logging resume at the next launch
+        // (Host::mLogStatus), so it has to appear and disappear with the log.
+        const QString sentinel = mudlet::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
         QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
 
-        // true = announce the change, which is what the toolbar button asks for
-        console->toggleLogging(true);
-        QVERIFY2(host->mainConsoleModel().mLogToLogFile, "toggleLogging() did not start a log.");
+        // Through the toolbar button rather than toggleLogging() directly: that
+        // is the path asking for the announcement, TConsole::slot_toggleLogging.
+        console->logButton->click();
+        QVERIFY2(host->mainConsoleModel().mLogToLogFile, "Clicking the log button did not start a log.");
         const QString logFileName = host->mainConsoleModel().mLogFileName;
-        QVERIFY2(consoleTextContains(TMainConsole::tr("Logging has started. Log file is %1").arg(logFileName)), "Starting a log was not announced on the console.");
+        QVERIFY2(QFile::exists(sentinel), "Starting a log left no autolog sentinel, so logging would not resume next launch.");
+        QVERIFY2(consoleTextContains(startAnnouncement.arg(logFileName)), "Starting a log was not announced on the console.");
         QVERIFY2(console->logButton->toolTip().contains(offerToStop), "The log button still offers to start logging while a log is running.");
 
-        console->toggleLogging(true);
-        QVERIFY2(!host->mainConsoleModel().mLogToLogFile, "toggleLogging() did not stop the log.");
-        QVERIFY2(consoleTextContains(TMainConsole::tr("Logging has been stopped. Log file is %1").arg(logFileName)), "Stopping a log was not announced on the console.");
+        // A user window's own text must not be interleaved into the game log -
+        // TBuffer::log() runs for every buffer and only the main one may write.
+        runLua(host, qsl("openUserWindow('logSpy')\n"));
+        auto* subConsole = console->mSubConsoleMap.value(qsl("logSpy"));
+        QVERIFY2(subConsole, "The user window was not created.");
+        appendModelLine(subConsole->buffer, qsl("user-window-only-text"));
+        appendModelLine(host->mainConsoleModel().buffer, qsl("main-console-logged-text"));
+
+        console->logButton->click();
+        QVERIFY2(!host->mainConsoleModel().mLogToLogFile, "Clicking the log button again did not stop the log.");
+        QVERIFY2(!QFile::exists(sentinel), "Stopping a log left the autolog sentinel behind, so logging would resume unasked.");
+        QVERIFY2(consoleTextContains(stopAnnouncement.arg(logFileName)), "Stopping a log was not announced on the console.");
         QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging again once the log has stopped.");
+
+        const QString contents = readFile(logFileName);
+        QVERIFY2(!contents.isEmpty(), "The log file that was closed is not readable.");
+        QVERIFY2(contents.contains(qsl("main-console-logged-text")), "The main console's line never reached the log file.");
+        QVERIFY2(!contents.contains(qsl("user-window-only-text")), "A user window's own text was written into the game log.");
+        // The announcements are printed on the console on purpose either side
+        // of the logging flag, so neither may end up in the file itself.
+        QVERIFY2(!contents.contains(startAnnouncement.arg(logFileName)), "The start announcement was logged into the file it announced.");
+        QVERIFY2(!contents.contains(stopAnnouncement.arg(logFileName)), "The stop announcement was logged into the file it closed.");
 
         QFile::remove(logFileName);
     }
@@ -419,6 +444,13 @@ private slots:
         QVERIFY2(!model->mLogFile.isOpen(), "Stopping a view-less log left its file open.");
 
         const QString contents = readFile(logFileName);
+        QVERIFY2(!contents.isEmpty(), "The view-less log file is not readable.");
+        // The literal half of the format string, so the assertion survives a
+        // translated run: "'Log session starting at 'hh:mm..." -> the quoted run.
+        QVERIFY2(contents.contains(QCoreApplication::translate("TMainConsole", "'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.").section(QChar('\''), 1, 1)),
+                 "The view-less log has no session-start banner.");
+        QVERIFY2(contents.contains(QCoreApplication::translate("TMainConsole", "'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.").section(QChar('\''), 1, 1)),
+                 "The view-less log has no session-end banner, so the session was never closed off.");
         QVERIFY2(contents.contains(qsl("view-less-appended-text")), "appendLog() never reached the view-less log file.");
         // The most recent line is held back for duplicate detection and only
         // written out as logging stops, so finding it proves the view-less stop

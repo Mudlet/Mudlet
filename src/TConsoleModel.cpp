@@ -35,25 +35,24 @@ TConsoleModel::TConsoleModel(Host* pHost)
 {
 }
 
-// Moved here verbatim from TMainConsole so that a profile with no main console
-// widget can start, write and stop a log: moving only the stream would have
-// left the open/rotate/close half on the widget, and nothing view-less could
-// have opened a file to stream into.
+// Two gotchas in here:
 //
-// Two gotchas carried over with it:
-//
-// - the text written *into* the log file is deliberately translated against the
-//   "TMainConsole" context it came from. The catalogue is keyed on context plus
-//   source text, so re-keying these under TConsoleModel would orphan every
-//   translation they already have. The two messages printed on *screen* stayed
-//   behind in TMainConsole with their own context intact.
-// - QFontInfo(Host::getDisplayFont()) is the same font QWidget::fontInfo() used
-//   to report here, because Host::getDisplayFont() hands back the main
-//   console's own QFont - and unlike the widget call it still answers when
-//   there is no widget.
+// - the strings destined for the log file itself are translated against the
+//   "TMainConsole" context rather than through tr(). The catalogue is keyed on
+//   context plus source text, so re-keying them under TConsoleModel would
+//   orphan every translation they already have. The messages printed on
+//   *screen* live in TMainConsole and keep their context that way.
+// - QFontInfo(Host::getDisplayFont()) is what QWidget::fontInfo() reports for
+//   the main console, because Host::getDisplayFont() hands back that widget's
+//   own QFont - and unlike the widget call it still answers with no widget.
 void TConsoleModel::toggleLogging(bool isMessageEnabled)
 {
-    if (mpHost.isNull()) {
+    // Logging is profile-wide, not per-console: the autolog sentinel, the log
+    // directory and the filename format all live on the Host, and TBuffer
+    // resolves the stream through Host's main model. Running this against any
+    // other model would open a second handle onto the same file and clobber
+    // that profile-wide state.
+    if (mpHost.isNull() || this != mpHost->mainConsoleModelOrNull()) {
         return;
     }
 
@@ -124,18 +123,19 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         mLogStream.setDevice(&mLogFile);
 
         if (isMessageEnabled) {
+            // The frontend prints this synchronously, and anything printed on
+            // the console once the flag below is up is IMMEDIATELY POSTED into
+            // the log file - so it has to be raised while logging is still off.
             mpHost->raiseLoggingAnnouncement(true, mLogFile.fileName());
-            // This puts text onto console that is IMMEDIATELY POSTED into log file so
-            // must be done BEFORE logging starts - or actually mLogToLogFile gets set!
         }
         mLogToLogFile = true;
     } else {
         QFile::remove(loggingPath);
         mLogToLogFile = false;
         if (isMessageEnabled) {
+            // Likewise raised only once the flag above is down, or the frontend's
+            // print would be posted into the log file it is announcing the end of.
             mpHost->raiseLoggingAnnouncement(false, mLogFile.fileName());
-            // This puts text onto console that is IMMEDIATELY POSTED into log file so
-            // must be done AFTER logging ends - or actually mLogToLogFile gets reset!
         }
     }
 
@@ -145,12 +145,9 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             QString log;
             QTextStream logStream(&log);
             // No setting a QTextCodec here, they don't work on QString based QTextStreams
-            QStringList fontsList;                                     // List of fonts to become the font-family entry for
-                                                                       // the master css in the header
-            fontsList << QFontInfo(mpHost->getDisplayFont()).family(); // Seems to be the best way to get the
-                                                                       // font in use, as different TConsole
-                                                                       // instances within the same profile
-                                                                       // might have different fonts
+            // The font-family entry for the master css in the header
+            QStringList fontsList;
+            fontsList << QFontInfo(mpHost->getDisplayFont()).family();
             fontsList << qsl("Courier New");
             fontsList << qsl("Monospace");
             fontsList << qsl("Courier");

@@ -146,8 +146,10 @@ public:
     TBuffer mClipboard;
     // The log lifecycle lives in the core console model so a profile with no
     // view can run one; these four are references aliasing the model's fields,
-    // the way buffer and mFgColor alias theirs, so every call site that names
-    // them is unchanged.
+    // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
+    // are what keep TLuaInterpreter::startLogging() compiling unchanged; the
+    // other two are kept so the set does not have to be reasoned about in
+    // halves.
     QFile& mLogFile;
     QString& mLogFileName;
     QTextStream& mLogStream;

@@ -56,18 +56,22 @@ struct TConsoleModel
     TConsoleModel(const TConsoleModel&) = delete;
     TConsoleModel& operator=(const TConsoleModel&) = delete;
 
-    // Turns logging on when it is off and off when it is on. Lives here rather
-    // than on the main-console widget because a profile with no view still has
-    // to be able to *start* a log, not just write into a stream something else
-    // opened. The two parts of it that genuinely need a view - announcing the
-    // change on the console and re-labelling the log button - are raised as
-    // Host signals for the frontend to act on.
+    // Lives here rather than on the main-console widget because a profile with
+    // no view still has to be able to *start* a log, not just write into a
+    // stream something else opened. The two parts of it that genuinely need a
+    // view - announcing the change on the console and re-labelling the log
+    // button - are raised as Host signals for the frontend to act on.
+    // Everything it touches (the autolog sentinel, the Host's log directory and
+    // filename format) is profile-wide, so it only acts on the Host's own main
+    // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
-    // A QPointer because the model outlives its Host in the ordinary teardown
-    // order - mudlet destroys the Host first and the view holds the model up.
+    // A QPointer because Host and view are torn down in either order: quitting
+    // destroys every Host before the consoles' deferred deletes run, while
+    // closing one profile deletes its console first. The view co-owns the
+    // model, so it can be left holding one whose Host has gone.
     QPointer<Host> mpHost;
     // Only a cache today - the view fills these in through TConsole::changeColors(); refreshing them from the Host after the profile loads moves core-side with the colour sub-PR.
     QColor mBgColor = QColorConstants::Black;
@@ -77,8 +81,10 @@ struct TConsoleModel
     QPoint mUserCursor;
     bool mIsPromptLine = false;
     // The log destination. TBuffer writes into mLogStream directly, and
-    // TMainConsole keeps references aliasing all four so the call sites that
-    // name them are untouched.
+    // TMainConsole keeps references aliasing all four.
+    // mLogStream holds a bare pointer to mLogFile, so the declaration order
+    // here is load-bearing: the stream has to be destroyed - and flush - before
+    // the file it is writing into.
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
