@@ -142,7 +142,10 @@ local findings = {}
 
 local function scanFile(path)
   local fh = io.open(path, "r")
-  if not fh then return end
+  if not fh then
+    io.stderr:write(("could not read %s\n"):format(path))
+    os.exit(2)
+  end
   local lines = {}
   for line in fh:lines() do lines[#lines + 1] = line end
   fh:close()
@@ -150,11 +153,25 @@ local function scanFile(path)
   local i, n = 1, #lines
   while i <= n do
     local line = lines[i]
-    -- A function taking lua_State*. clang-format keeps these on one line.
-    if line:match("lua_State%s*%*") and line:match("%(") and not line:match("^%s*//")
-       and not line:match(";%s*$") and not line:match("^%s*%*") then
+    -- A definition's parameter list can wrap, so gather lines until the
+    -- parentheses balance before looking for the lua_State*. ColumnLimit is
+    -- 200 and clang-format keeps these on one line today, but a scanner that
+    -- goes quiet on a shape it cannot parse is worse than one that is noisy.
+    local signature, signatureEnd = line, i
+    if line:match("^[%w_]") and line:match("%(") then
+      local open = select(2, line:gsub("%(", "")) - select(2, line:gsub("%)", ""))
+      local k = i
+      while open > 0 and k < n and k - i < 6 do
+        k = k + 1
+        signature = signature .. " " .. lines[k]
+        open = open + select(2, lines[k]:gsub("%(", "")) - select(2, lines[k]:gsub("%)", ""))
+      end
+      signatureEnd = k
+    end
+    if signature:match("lua_State%s*%*") and signature:match("%(") and not line:match("^%s*//")
+       and not signature:match("%)%s*;%s*$") and not line:match("^%s*%*") then
       local depth, bodyStart = 0, nil
-      for j = i, math.min(i + 4, n) do
+      for j = signatureEnd, math.min(signatureEnd + 4, n) do
         if lines[j]:match("{") then bodyStart = j; break end
       end
       if bodyStart then
@@ -255,6 +272,14 @@ if #targets == 0 then
   local pipe = io.popen("ls src/*.cpp 2>/dev/null")
   for f in pipe:lines() do targets[#targets + 1] = f end
   pipe:close()
+end
+
+-- Finding nothing to scan reads exactly like a clean tree, so say so instead.
+-- Run from the wrong directory, this is the whole difference between a check
+-- and a green tick that means nothing.
+if #targets == 0 then
+  io.stderr:write("no C++ sources to scan - run this from the repository root\n")
+  os.exit(2)
 end
 
 for _, f in ipairs(targets) do scanFile(f) end

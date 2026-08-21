@@ -21,3 +21,10 @@ int TLuaInterpreter::strandsAcrossARawRaise(lua_State* L)
     }
     return 0;
 }
+
+int TLuaInterpreter::strandsUnderAWrappedSignature(
+        lua_State* L)
+{
+    const QString name{lua_tostring(L, 1)};
+    return lua_error(L);
+}

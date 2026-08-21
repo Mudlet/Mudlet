@@ -28,11 +28,13 @@ local function check(condition, message)
   if not condition then failures[#failures + 1] = message end
 end
 
--- every shape the scanner must catch, and the line it sits on in bad.cpp
+-- every shape the scanner must catch, keyed by the line of the raise (not of
+-- the declaration, which is where it is tempting to point)
 local mustCatch = {
   {5,  "a local QString live across the next argument's getVerifiedString"},
   {12, "a QByteArray temporary inside the raiser's own argument list"},
   {20, "a QByteArray live across a raw lua_error"},
+  {29, "a local live in a function whose signature wraps onto a second line"},
 }
 
 local badOutput = run("bad.cpp")
