@@ -16,13 +16,9 @@ Use when the user asks to open a pull request, create a PR, or push their change
 publishes the current branch to their fork if needed, then opens a PR against upstream
 `development`.
 
-Agents opening a pull request at the end of their own task use this too. The procedure is the same
-either way; only steps 5 and 6 have a person in them, and each says what to do when there is nobody
-to ask.
-
-Either way the branch has to be finished before this starts - reviewed, formatted, fully committed.
-Opening the pull request is the last step of the work rather than a checkpoint partway through it,
-because every push afterwards re-runs the automated reviewers over the whole diff.
+Agents opening a pull request at the end of their own task use this too; steps 5 and 6 say what to
+do when there is nobody to ask. Either way the branch must be finished first - reviewed, formatted,
+committed - because every push after the PR opens re-runs the automated reviewers.
 
 ## Procedure
 
@@ -81,20 +77,13 @@ because every push afterwards re-runs the automated reviewers over the whole dif
    to verify the change — not part of the template, but reviewers expect it. No fluff; about one
    screen in total.
 
-   For AI-assisted work, close the body with the `Assisted-by: AGENT_NAME:MODEL_VERSION` trailer
-   described in `docs/CONTRIBUTING.md`, naming the model that did the work. It goes in the body as
-   well as in the commits because a squash merge drops commit trailers.
+   For AI-assisted work, end the body with the `Assisted-by: AGENT_NAME:MODEL_VERSION` trailer from
+   `docs/CONTRIBUTING.md`; a squash merge drops commit trailers, so the body is the copy that lasts.
 
-5. **Settle draft versus ready for review.**
-
-   With a person in the conversation, show them the draft title and body and ask which of the two
-   to open. Wait for both answers before anything is published — never assume either.
-
-   Running unattended, do not stall on the wording: open ready for review, which is what a finished
-   branch wants, and report the title and body along with the URL. Choose draft instead when the
-   branch is knowingly unfinished — work still moving, a question that needs answering before
-   reviewers spend their time, or an experiment put up only for CI feedback. `gh pr ready <number>`
-   promotes a draft later, so draft is the reversible choice whenever it is a close call.
+5. **Settle draft versus ready for review.** With a person in the conversation, show them the
+   draft title and body and ask which to open, and wait for both answers. Unattended, open ready
+   for review and report the title and body with the URL — draft only when the branch is knowingly
+   unfinished. `gh pr ready <number>` promotes a draft later, so draft is the reversible choice.
 
 6. **Confirm the fork before pushing anything.** `origin` is not guaranteed to be the user's fork,
    and pushing to the wrong remote is awkward to undo, so establish this before the push rather
@@ -116,11 +105,9 @@ because every push afterwards re-runs the automated reviewers over the whole dif
    `/`, `:` or `@`, the URL was not in a form this understands — stop and report it rather than
    building a malformed `--head`.
 
-   Then check the owner itself. `$FORK_OWNER` must not be `Mudlet`: that is upstream, and pushing a
-   branch straight there is the mistake this step exists to catch. Compare it against
-   `gh api user --jq .login`, the account `gh pr create` will act as — a match is confirmation
-   enough to carry on unattended. If the two differ, as they legitimately do when the fork belongs
-   to an organisation, show both values and ask before pushing.
+   `$FORK_OWNER` must not be `Mudlet` — that is upstream, the mistake this step exists to catch.
+   Matching `gh api user --jq .login`, the account `gh pr create` acts as, is confirmation enough
+   unattended; otherwise show both values and ask before pushing.
 
 7. **Publish the branch** with `git push -u origin "$BRANCH"`. Do this every time, not only when
    the branch lacks an upstream — a branch that already tracks `origin` can still hold local
@@ -144,10 +131,11 @@ because every push afterwards re-runs the automated reviewers over the whole dif
    A draft can be marked ready later with `gh pr ready <number>`, so choosing draft is the
    reversible option.
 
-9. **Report the result** — the PR URL on success, the error output on failure.
+9. **Report the result** — the PR URL on success, the error output on failure. AI-assisted work is
+   not done there: ask the human to build and manually test the branch, then to supply the name and
+   email for the `Signed-off-by` trailer that `docs/ai-instructions.md` requires. Never fabricate
+   one, and never imply the change is finished without it.
 
 ## Notes
 
-- Before a human signs off on AI-assisted work they must have built and manually tested it; see
-  the commit-trailer policy in `docs/ai-instructions.md`. Do not fabricate a `Signed-off-by`.
 - Never force-push to a remote branch.
