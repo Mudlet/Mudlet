@@ -954,27 +954,41 @@ private slots:
         QCOMPARE(interface->getValue(var), qsl("value"));
     }
 
-    // Still refused: VarUnit names a root by its text alone, so a mark put on
-    // _G[7] is the same entry as one put on _G["7"] and a rename moves whichever
-    // of the two the bookkeeping happens to hold.
-    void testNotWritableByNameForANumberKeyedGlobal()
+    void testWritableByNameForANumberKeyedGlobal()
     {
         execLua(qsl("_G[7] = 'value'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("7"));
         QVERIFY(var);
+        QVERIFY(interface->writableByName(var));
         QCOMPARE(interface->getValue(var), qsl("value"));
-        QVERIFY(!interface->writableByName(var));
     }
 
-    void testNotWritableByNameForABooleanKeyedGlobal()
+    void testWritableByNameForABooleanKeyedGlobal()
     {
         execLua(qsl("_G[true] = 'value'"));
         interface->getVars(false);
         TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("true"));
         QVERIFY(var);
+        QVERIFY(interface->writableByName(var));
         QCOMPARE(interface->getValue(var), qsl("value"));
-        QVERIFY(!interface->writableByName(var));
+    }
+
+    // ...but not once a global of another key type reads the same. Both are
+    // "7" to the saved and hidden bookkeeping, which the key type is no part
+    // of, so a rename of either takes the other one's marks with it.
+    void testNotWritableByNameWhenTwoGlobalsAreShownUnderOneName()
+    {
+        execLua(qsl("_G[7] = 'number keyed' _G['7'] = 'string keyed'"));
+        interface->getVars(false);
+        int shownAs7 = 0;
+        for (TVar* root : interface->getVarUnit()->getBase()->getChildren(false)) {
+            if (root->getName() == qsl("7")) {
+                ++shownAs7;
+                QVERIFY(!interface->writableByName(root));
+            }
+        }
+        QCOMPARE(shownAs7, 2);
     }
 
     // Still refused: the saved and hidden bookkeeping keys a member path by the

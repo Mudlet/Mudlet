@@ -385,27 +385,48 @@ static bool nameSharedWithASibling(TVar* var)
     return false;
 }
 
+// Whether what the saved and hidden bookkeeping holds under a root's name is
+// about that root alone. It keys a variable by the dotted path of names down to
+// it, so a root's own name is its whole key there - and, unlike the lookup above,
+// the key type is no part of that key. Two roots that read alike therefore share
+// one entry, and so do a root with a dot in its name and the member that path
+// names, which is why VarUnit::shouldSave() fences the latter off from the save.
+// The write has to be refused as well: renameVariableBookkeeping() moves the
+// entry, and would carry the other variable's marks off with it.
+static bool rootNameIsSharedBookkeeping(TVar* var)
+{
+    const QString name = var->getName();
+    if (name.contains(QLatin1Char('.'))) {
+        return true;
+    }
+    TVar* parent = var->getParent();
+    if (!parent) {
+        return false;
+    }
+    int matches = 0;
+    for (const TVar* sibling : parent->getChildren(false)) {
+        if (sibling->getName() == name && ++matches > 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Names the Variables view writes through. A key reaches Lua as bytes rather than
 // as text spliced into a chunk to be compiled, so what a key holds is nothing a
 // name has to survive, and whether that name still finds the variable is settled
-// by the lookup below. What is left is two things a root's name has to be:
-//  - a string key. getValue() pushes a root's key itself rather than through
-//    loadKey() as it does every level below, so a table- or function-keyed
-//    global shows no value at all and a write back would commit that blank over
-//    the real one. A number- or a boolean-keyed one does read back, but VarUnit
-//    names a root by its text alone, so _G[7] and _G["7"] are one entry to the
-//    saved and hidden bookkeeping.
-//  - free of dots, because that same bookkeeping keys a member by its dotted
-//    path, which makes _G["dotted.global"] and the member that path names one
-//    entry too. VarUnit::shouldSave() already refuses to save such a global;
-//    renameVariableBookkeeping() would still carry the member's marks off with a
-//    rename, so the write is refused here as well.
+// by the lookup below. Two things are left, and both are about roots: getValue()
+// pushes a root's key itself rather than through loadKey() as it does every level
+// below, and builds only a string, a number or a boolean key - so a table- or
+// function-keyed global shows no value at all, which a write back would commit
+// over the real one - and the bookkeeping under the name has to be the root's own.
 static bool nameTheEditorWritesThrough(TVar* var, const bool asRoot)
 {
     if (!asRoot) {
         return true;
     }
-    return var->getKeyType() == LUA_TSTRING && !var->getName().contains(QLatin1Char('.'));
+    const int keyType = var->getKeyType();
+    return (keyType == LUA_TSTRING || keyType == LUA_TNUMBER || keyType == LUA_TBOOLEAN) && !rootNameIsSharedBookkeeping(var);
 }
 
 // Whether a variable can be written back through the name the variable tree gave
