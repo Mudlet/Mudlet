@@ -53,6 +53,28 @@ bool keychainDeleteSucceeded(QKeychain::Error error)
 {
     return error == QKeychain::NoError || error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
 }
+
+// Reported when a key gets as far as the async API but could not safely become a path
+// component; the wording is what tells a caller its argument was refused rather than
+// its storage having gone wrong
+const auto scmInvalidKeyNameError = qsl("Key name is not valid for credential storage");
+
+// QStandardPaths automatically handles portable mode configuration paths
+QString credentialFilePath(const QString& profileComponent, const QString& keyComponent)
+{
+    return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profileComponent, keyComponent);
+}
+
+// How utils::sanitizeForPath() built a path component before it started keeping
+// shortened names distinct, kept so that credentials filed under the old name can
+// still be found. Same role as generateLegacyServiceName() plays for the keychain.
+QString legacyPathComponent(const QString& input)
+{
+    static const auto unsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
+    QString sanitized = input;
+    sanitized.replace(unsafeChars, qsl("_"));
+    return sanitized.left(50);
+}
 } // namespace
 
 CredentialManager::CredentialManager(QObject* parent)
@@ -238,6 +260,17 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
         return;
     }
 
+    // The static API refuses a key that cannot safely become a path component, and this
+    // one has to agree: an over-long or slash-bearing key stored here would be filed
+    // where the static API - the migration and cleanup path - could never look for it.
+    if (!isValidKeyName(key)) {
+        if (callback) {
+            callback(false, scmInvalidKeyNameError);
+        }
+
+        return;
+    }
+
     // Safety check: Don't start new operations during shutdown
     if (QCoreApplication::closingDown()) {
         qWarning() << "CredentialManager: Rejecting storePassword operation during shutdown";
@@ -268,6 +301,17 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
     if (profileName.isEmpty() || key.isEmpty()) {
         if (callback) {
             callback(false, QString(), qsl("Profile name and key cannot be empty"));
+        }
+
+        return;
+    }
+
+    // The static API refuses a key that cannot safely become a path component, and this
+    // one has to agree: an over-long or slash-bearing key stored here would be filed
+    // where the static API - the migration and cleanup path - could never look for it.
+    if (!isValidKeyName(key)) {
+        if (callback) {
+            callback(false, QString(), scmInvalidKeyNameError);
         }
 
         return;
@@ -622,6 +666,17 @@ void CredentialManager::removePassword(const QString& profileName, const QString
         if (callback) {
             callback(false, qsl("Profile name and key cannot be empty"));
         }
+        return;
+    }
+
+    // The static API refuses a key that cannot safely become a path component, and this
+    // one has to agree: an over-long or slash-bearing key stored here would be filed
+    // where the static API - the migration and cleanup path - could never look for it.
+    if (!isValidKeyName(key)) {
+        if (callback) {
+            callback(false, scmInvalidKeyNameError);
+        }
+
         return;
     }
 
@@ -1248,9 +1303,18 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         // Only log warning if file should exist (not for first-time access)
         if (file.exists()) {
             qWarning() << "CredentialManager: Failed to open existing file for reading:" << filePath << "Error:" << file.errorString();
+            return QString();
         }
 
-        return QString();
+        // Nothing under the current naming, so a credential written while long names
+        // were truncated is moved across on the first read that misses it
+        const QString migrated = readLegacyFileCredential(profileName, key);
+
+        if (!migrated.isEmpty() && storeCredentialToFile(profileName, key, migrated)) {
+            removeLegacyFileCredential(profileName, key);
+        }
+
+        return migrated;
     }
 
     QString encrypted = QString::fromUtf8(file.readAll());
@@ -1280,6 +1344,10 @@ bool CredentialManager::removeCredentialFromFile(const QString& profileName, con
         qWarning() << "CredentialManager: Failed to generate valid file path for removing encrypted credential";
         return false;
     }
+
+    // A credential still filed under the legacy truncated path has to go as well, or
+    // the next read would migrate it and resurrect the password just removed
+    removeLegacyFileCredential(profileName, key);
 
     // Check if file exists before attempting removal
     if (!QFile::exists(filePath)) {
@@ -1367,12 +1435,71 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         return QString();
     }
 
-    QString sanitizedProfile = utils::sanitizeForPath(profileName);
-    QString sanitizedKey = utils::sanitizeForPath(key);
+    return credentialFilePath(utils::sanitizeForPath(profileName), utils::sanitizeForPath(key));
+}
 
-    // QStandardPaths automatically handles portable mode configuration paths
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    return qsl("%1/profiles/%2/passwords/%3").arg(configPath, sanitizedProfile, sanitizedKey);
+// Where a credential was filed while both path components were simply truncated to 50
+// characters. Empty when that is the path in use anyway, so only a profile name or key
+// long enough to have been shortened has anything to migrate.
+QString CredentialManager::generateLegacyFilePath(const QString& profileName, const QString& key)
+{
+    const QString currentPath = generateFilePath(profileName, key);
+
+    if (currentPath.isEmpty()) {
+        return QString();
+    }
+
+    const QString legacyPath = credentialFilePath(legacyPathComponent(profileName), legacyPathComponent(key));
+    return legacyPath == currentPath ? QString() : legacyPath;
+}
+
+// Reads what the legacy truncated path holds for this profile. Anything filed there
+// that this profile's key cannot decrypt was written by a profile this one used to
+// collide with, which is why this decrypts rather than just reading the file: whose
+// credential it is is the only thing that distinguishes the two. Empty when there is
+// nothing there for this profile.
+QString CredentialManager::readLegacyFileCredential(const QString& profileName, const QString& key)
+{
+    const QString legacyPath = generateLegacyFilePath(profileName, key);
+
+    if (legacyPath.isEmpty()) {
+        return QString();
+    }
+
+    QFile file(legacyPath);
+
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (file.exists()) {
+            qWarning() << "CredentialManager: Failed to open credential file left by the earlier naming scheme:" << legacyPath << "Error:" << file.errorString();
+        }
+
+        return QString();
+    }
+
+    const QString encrypted = QString::fromUtf8(file.readAll());
+    file.close();
+
+    return SecureStringUtils::decryptStringForProfile(encrypted, profileName);
+}
+
+// Deletes the legacy file, but only once it has proved to hold this profile's own
+// credential, so a profile it used to collide with never has its password removed on
+// this one's behalf.
+void CredentialManager::removeLegacyFileCredential(const QString& profileName, const QString& key)
+{
+    QString credential = readLegacyFileCredential(profileName, key);
+    const bool ours = !credential.isEmpty();
+    SecureStringUtils::secureStringClear(credential);
+
+    if (!ours) {
+        return;
+    }
+
+    const QString legacyPath = generateLegacyFilePath(profileName, key);
+
+    if (!QFile::remove(legacyPath)) {
+        qWarning() << "CredentialManager: Failed to remove credential file left by the earlier naming scheme:" << legacyPath;
+    }
 }
 
 bool CredentialManager::isValidKeyName(const QString& key)

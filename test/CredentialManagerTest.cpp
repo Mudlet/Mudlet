@@ -18,8 +18,14 @@
  ***************************************************************************/
 
 #include <CredentialManager.h>
+#include <SecureStringUtils.h>
+#include <utils.h>
+
 #include <QtTest/QtTest>
 
+#include <QDir>
+#include <QFile>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 
 // Hermetic unit tests: MUDLET_TEST_MODE forces encrypted file storage so these run
@@ -47,6 +53,9 @@ private slots:
     void testRemovePassword();
     void testInputSanitization();
     void testOverlongKeyNamesAreRejected();
+    void testLongProfileNamesDoNotShareOneCredential();
+    void testLongKeyNamesDoNotShareOneCredential();
+    void testCredentialsFiledUnderTheTruncatedPathSurvive();
     void testPathTraversalPrevention();
     void testConcurrentAccess();
     void testAsyncStoreAndRetrieve();
@@ -54,6 +63,7 @@ private slots:
     void testAsyncRemovePassword();
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
+    void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
     void cleanupTestCase();
 
 private:
@@ -224,11 +234,10 @@ void CredentialManagerTest::testInputSanitization()
     CredentialManager::removeCredential(profile, normalKey);
 }
 
-// A key name becomes a path component, and utils::sanitizeForPath truncates one
-// to 50 characters - so any two keys sharing their first 50 resolve to the same
-// file. Storing under the accepted key first is therefore what gives the
-// rejection of the overlong one something to fail at: were the cap dropped, the
-// overlong key would read that same credential straight back rather than nothing.
+// 100 characters is the longest key name the API accepts and one more is refused
+// outright. The accepted key is stored first so that the refusal has something it
+// could damage: the two differ only in that last character, so anything that
+// shortened them to a common path component would put them on one credential.
 void CredentialManagerTest::testOverlongKeyNamesAreRejected()
 {
     const QString profile = "OverlongKeyProfile";
@@ -247,6 +256,82 @@ void CredentialManagerTest::testOverlongKeyNamesAreRejected()
     QCOMPARE(CredentialManager::retrieveCredential(profile, longestAccepted), password);
 
     CredentialManager::removeCredential(profile, longestAccepted);
+}
+
+// A profile name is a path component too, and one long enough to be shortened to fit
+// used to become the same component as any other name starting the same way. Both
+// profiles then wrote to one file, so the one that saved first read back whatever the
+// other had encrypted with its own key - nothing it could decrypt.
+void CredentialManagerTest::testLongProfileNamesDoNotShareOneCredential()
+{
+    const QString sharedPrefix(50, QChar('p'));
+    const QString first = sharedPrefix + "FirstProfile";
+    const QString second = sharedPrefix + "SecondProfile";
+    const QString key = "character";
+
+    QVERIFY(CredentialManager::storeCredential(first, key, "first_secret"));
+    QVERIFY(CredentialManager::storeCredential(second, key, "second_secret"));
+
+    QCOMPARE(CredentialManager::retrieveCredential(first, key), QString("first_secret"));
+    QCOMPARE(CredentialManager::retrieveCredential(second, key), QString("second_secret"));
+
+    CredentialManager::removeCredential(first, key);
+    CredentialManager::removeCredential(second, key);
+}
+
+// Two long keys under one profile share the profile's encryption key, so a shared path
+// component does not even fail closed the way two profiles do: whoever asks for the
+// first key is handed the second key's secret in full
+void CredentialManagerTest::testLongKeyNamesDoNotShareOneCredential()
+{
+    const QString profile = "LongKeyProfile";
+    const QString sharedPrefix(50, QChar('k'));
+    const QString first = sharedPrefix + "first";
+    const QString second = sharedPrefix + "second";
+
+    QVERIFY(CredentialManager::storeCredential(profile, first, "first_secret"));
+    QVERIFY(CredentialManager::storeCredential(profile, second, "second_secret"));
+
+    QCOMPARE(CredentialManager::retrieveCredential(profile, first), QString("first_secret"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, second), QString("second_secret"));
+
+    CredentialManager::removeCredential(profile, first);
+    CredentialManager::removeCredential(profile, second);
+}
+
+// An installed Mudlet has credentials on disk under the shortened path, so the file is
+// written here the way that Mudlet wrote it rather than through the API. It has to come
+// back, and it has to stop being reachable by the name it used to collide with - which
+// is what storing for the neighbouring profile afterwards checks.
+void CredentialManagerTest::testCredentialsFiledUnderTheTruncatedPathSurvive()
+{
+    const QString sharedPrefix(50, QChar('t'));
+    const QString profile = sharedPrefix + "FiledBeforeTheRename";
+    const QString neighbour = sharedPrefix + "StoredAfterwards";
+    const QString key = "character";
+
+    const QString legacyDir = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), sharedPrefix);
+    QVERIFY(QDir().mkpath(legacyDir));
+
+    QFile legacyFile(qsl("%1/%2").arg(legacyDir, key));
+    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    const QString encrypted = SecureStringUtils::encryptStringForProfile("saved_long_ago", profile);
+    QVERIFY(!encrypted.isEmpty());
+    QVERIFY(legacyFile.write(encrypted.toUtf8()) != -1);
+    legacyFile.close();
+
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("saved_long_ago"));
+
+    QVERIFY(CredentialManager::storeCredential(neighbour, key, "the_neighbour"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("saved_long_ago"));
+    QCOMPARE(CredentialManager::retrieveCredential(neighbour, key), QString("the_neighbour"));
+
+    // and removing it takes the shortened file with it, so the next read cannot bring
+    // the removed password back
+    QVERIFY(CredentialManager::removeCredential(profile, key));
+    QVERIFY(CredentialManager::retrieveCredential(profile, key).isEmpty());
+
+    CredentialManager::removeCredential(neighbour, key);
 }
 
 void CredentialManagerTest::testPathTraversalPrevention()
@@ -508,6 +593,75 @@ void CredentialManagerTest::testAsyncEmptyArgumentsAreReportedThroughTheCallback
     }
 }
 
+// The dialogs store through the async API while migration and cleanup read through the
+// static one, so a key only one of them accepts is a credential that can be written and
+// never reached again. Which complaint comes back matters too: without the check these
+// keys either store happily or fail somewhere further down for an unrelated reason.
+void CredentialManagerTest::testAsyncApiRefusesTheKeysTheStaticApiRefuses()
+{
+    CredentialManager manager;
+    const QString profile = "AsyncKeyValidationProfile";
+    const QString refusal = "not valid";
+
+    const QStringList refused = {QString(101, QChar('k')), "keys/with/separators", "keys\\with\\separators", "..", "key_with|a_pipe"};
+
+    for (const QString& key : refused) {
+        QVERIFY2(!CredentialManager::storeCredential(profile, key, "secret"), qPrintable(key));
+        QVERIFY2(CredentialManager::retrieveCredential(profile, key).isEmpty(), qPrintable(key));
+
+        // Each of these starts at the answer the unguarded code gives, so a callback that
+        // never runs reads as a failure rather than as agreement
+        bool stored = true;
+        QString storeError;
+        manager.storePassword(profile, key, "secret", [&](bool success, const QString& error) {
+            stored = success;
+            storeError = error;
+        });
+        QVERIFY2(!stored, qPrintable(key));
+        QVERIFY2(storeError.contains(refusal), qPrintable(storeError));
+
+        bool retrieved = true;
+        QString password = "not overwritten";
+        QString retrieveError;
+        manager.retrievePassword(profile, key, [&](bool success, QString value, const QString& error) {
+            retrieved = success;
+            password = value;
+            retrieveError = error;
+        });
+        QVERIFY2(!retrieved, qPrintable(key));
+        QVERIFY(password.isEmpty());
+        QVERIFY2(retrieveError.contains(refusal), qPrintable(retrieveError));
+
+        bool removed = true;
+        QString removeError;
+        manager.removePassword(profile, key, [&](bool success, const QString& error) {
+            removed = success;
+            removeError = error;
+        });
+        QVERIFY2(!removed, qPrintable(key));
+        QVERIFY2(removeError.contains(refusal), qPrintable(removeError));
+
+        bool answered = false;
+        bool present = true;
+        manager.credentialExists(profile, key, [&](bool value) {
+            answered = true;
+            present = value;
+        });
+        QVERIFY(answered);
+        QVERIFY2(!present, qPrintable(key));
+    }
+
+    // a key both APIs accept still works, so the check is not simply refusing everything
+    const QString accepted = "reconnect";
+    bool stored = false;
+    manager.storePassword(profile, accepted, "async_secret", [&](bool success, const QString&) {
+        stored = success;
+    });
+    QVERIFY(stored);
+    QCOMPARE(CredentialManager::retrieveCredential(profile, accepted), QString("async_secret"));
+    CredentialManager::removeCredential(profile, accepted);
+}
+
 void CredentialManagerTest::cleanupTestCase()
 {
     // Clean up test passwords
@@ -535,6 +689,19 @@ void CredentialManagerTest::cleanupTestCase()
     CredentialManager::removeCredential("AsyncRemovalProfile", "password");
     CredentialManager::removeCredential("AsyncExistsProfile", "password");
     CredentialManager::removeCredential("OverlongKeyProfile", QString(100, QChar('k')));
+    CredentialManager::removeCredential("AsyncKeyValidationProfile", "reconnect");
+
+    const QString longProfilePrefix(50, QChar('p'));
+    CredentialManager::removeCredential(longProfilePrefix + "FirstProfile", "character");
+    CredentialManager::removeCredential(longProfilePrefix + "SecondProfile", "character");
+
+    const QString longKeyPrefix(50, QChar('k'));
+    CredentialManager::removeCredential("LongKeyProfile", longKeyPrefix + "first");
+    CredentialManager::removeCredential("LongKeyProfile", longKeyPrefix + "second");
+
+    const QString truncatedPrefix(50, QChar('t'));
+    CredentialManager::removeCredential(truncatedPrefix + "FiledBeforeTheRename", "character");
+    CredentialManager::removeCredential(truncatedPrefix + "StoredAfterwards", "character");
 }
 
 #include "CredentialManagerTest.moc"
