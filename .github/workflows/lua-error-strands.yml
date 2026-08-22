@@ -21,10 +21,6 @@ on:
       - '.github/workflows/lua-error-strands.yml'
   workflow_dispatch:
 
-concurrency:
-  group: ${{github.workflow}}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   lua-error-strands:
     name: Check for heap objects stranded across lua_error()
