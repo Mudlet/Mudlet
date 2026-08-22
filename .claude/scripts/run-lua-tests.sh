@@ -6,8 +6,10 @@
 # socket in the state feedTelnet() needs.
 #
 # Usage: .claude/scripts/run-lua-tests.sh [path-to-mudlet-binary]
-# Defaults to the linux-debug-nosan build. Needs the rocks and apt packages
-# that .claude/hooks/session-start.sh installs.
+# Defaults to the linux-debug-nosan build. Any Mudlet binary will do, including
+# one built in another worktree - a Lua-only change needs no build of its own,
+# because mudlet-lua is read from disk at startup. Needs the rocks and apt
+# packages that .claude/hooks/session-start.sh installs.
 #
 # Safe to run concurrently (e.g. one run per worktree): every fixture binds an
 # ephemeral port handed over through this run's private temp directory, only
@@ -21,12 +23,40 @@ TMP="$(mktemp -d /tmp/mudlet-luatests-XXXX)"
 
 [ -x "$BINARY" ] || { echo "no mudlet binary at $BINARY - build first"; exit 1; }
 
-# The binary is run in place; it locates mudlet-lua relative to itself, which
-# works for any build tree inside the repository (build*/src/mudlet).
+WS_GLOBAL="$WS/src/mudlet-lua/lua/LuaGlobal.lua"
+[ -f "$WS_GLOBAL" ] || { echo "no mudlet-lua under $WS - is this a Mudlet checkout?"; exit 1; }
+
+# Mudlet locates mudlet-lua relative to its own executable and takes the first
+# candidate that exists, so a binary borrowed from another build tree would
+# quietly run that tree's Lua library against this worktree's specs - green
+# whatever the change under test did. Detect that and shim around it, rather
+# than making the caller build here.
 BINDIR="$(cd "$(dirname "$BINARY")" && pwd)"
-if [ ! -f "$BINDIR/../../src/mudlet-lua/lua/LuaGlobal.lua" ] && [ ! -f "$BINDIR/mudlet-lua/lua/LuaGlobal.lua" ]; then
-  echo "LuaGlobal.lua is not reachable relative to $BINARY - run a build tree that sits inside the repository"
-  exit 1
+loads_this_worktree() {
+  local candidate
+  # same list, in the same order, as TLuaInterpreter::loadGlobal()
+  for candidate in "$BINDIR/mudlet-lua/lua/LuaGlobal.lua" \
+                   "$BINDIR/../src/mudlet-lua/lua/LuaGlobal.lua" \
+                   "$BINDIR/../../src/mudlet-lua/lua/LuaGlobal.lua" \
+                   "$BINDIR/../../../src/mudlet-lua/lua/LuaGlobal.lua" \
+                   "$BINDIR/../../../mudlet-lua/lua/LuaGlobal.lua"; do
+    [ -f "$candidate" ] || continue
+    # only the first existing candidate is ever loaded, so this one decides it
+    [ "$(readlink -f "$candidate")" = "$(readlink -f "$WS_GLOBAL")" ]
+    return
+  done
+  return 1
+}
+
+if ! loads_this_worktree; then
+  echo "note: $BINARY is not a build of this worktree - running it against $WS/src"
+  mkdir -p "$TMP/shim/build/src"
+  # A hardlink, not a symlink: applicationDirPath() goes through /proc/self/exe,
+  # which would resolve a symlink straight back to the donor build tree. Fall
+  # back to a copy when the donor lives on another filesystem.
+  ln "$BINARY" "$TMP/shim/build/src/mudlet" 2>/dev/null || cp "$BINARY" "$TMP/shim/build/src/mudlet"
+  ln -s "$WS/src" "$TMP/shim/src"
+  BINARY="$TMP/shim/build/src/mudlet"
 fi
 
 FIXTURE_PIDS=()

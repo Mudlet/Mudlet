@@ -12,6 +12,24 @@ license: GPL-2.0-or-later
 Read this **before** typing a build command, not after one fails. The correct invocation differs
 per platform, and the wrong one is not merely slower — see Pitfalls.
 
+## First: does this need a build at all?
+
+A change confined to `src/mudlet-lua/` needs none. Mudlet reads mudlet-lua from disk at startup,
+so any Mudlet binary already on this machine runs *this* worktree's Lua and specs:
+
+```bash
+.claude/scripts/run-lua-tests.sh /path/to/any/recent/build/src/mudlet
+```
+
+Any `build*/src/mudlet` under this checkout or a sibling worktree will do - `ls -lt` over them
+finds the newest. The script notices a binary from a foreign build tree and shims around it, so
+the Lua under test is always the local one; it prints a `note:` line when it does.
+
+Prefer a binary built within a day or two. An older one fails specs that depend on C++ landed
+since, which reads exactly like a regression in the change under test.
+
+A change touching `src/*.cpp` or `src/*.h` does need a build - carry on below.
+
 ## Use a preset — every platform, one command
 
 `CMakePresets.json` in the repository root encodes the generator, build type and sanitizer
