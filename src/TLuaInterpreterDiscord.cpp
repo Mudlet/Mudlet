@@ -362,15 +362,12 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     // in order to respect privacy.
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
-    const bool isActiveHost = (pMudlet->mpCurrentActiveHost == &host);
     const int args = lua_gettop(L);
 
     if (!args) { // no args, blank the invite URL and game name
         host.setDiscordInviteURL(QString());
         host.setDiscordGameName(QString());
-        if (isActiveHost) {
-            pMudlet->updateDiscordNamedIcon();
-        }
+        pMudlet->updateDiscordNamedIcon();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -392,9 +389,7 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     } else {
         host.setDiscordGameName(QString());
     }
-    if (isActiveHost) {
-        pMudlet->updateDiscordNamedIcon();
-    }
+    pMudlet->updateDiscordNamedIcon();
     lua_pushboolean(L, true);
     return 1;
 }

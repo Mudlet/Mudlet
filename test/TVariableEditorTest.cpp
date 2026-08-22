@@ -895,8 +895,8 @@ private slots:
         QCOMPARE(shownAs42, 2);
     }
 
-    // The write paths put a string key into a quoted Lua literal, where a
-    // backslash starts an escape and reaches a key of its own instead.
+    // The Variables view refuses a string key holding a backslash rather than
+    // writing it, even though the write paths reach such a key (#9908).
     void testNotWritableByNameForAMemberWithABackslashInItsKey()
     {
         execLua(qsl("testTbl = {} testTbl['C:\\\\temp'] = 'value'"));
@@ -906,8 +906,8 @@ private slots:
         QVERIFY(!interface->writableByName(member));
     }
 
-    // ...and a global goes into that source bare, so only an identifier gets
-    // there. One with a dot in it would parse as an index into another global.
+    // ...and only a plain identifier is a root it writes through: a dot in the
+    // name is what the tree and the save bookkeeping key member paths by.
     void testNotWritableByNameForAGlobalWithADotInItsName()
     {
         execLua(qsl("_G['dotted.global'] = 'value'"));
@@ -947,8 +947,7 @@ private slots:
         QCOMPARE(checked, 2);
     }
 
-    // A keyword reads as an identifier but does not parse as one, so the source
-    // the write paths generate for it does not run.
+    // ...and a keyword reads as an identifier without being one.
     void testNotWritableByNameForAGlobalNamedAfterALuaKeyword()
     {
         execLua(qsl("_G['end'] = 'value'"));

@@ -417,6 +417,7 @@ private:
     void runLua(const QString& script)
     {
         auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->getLuaInterpreter()->compileAndExecuteScript(script);
     }
 

@@ -198,6 +198,7 @@ private slots:
         mpServer->setWelcomeMessage(qsl("HELLO\r\n"));
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         QVERIFY2(waitForMainConsoleText(qsl("HELLO")), "Welcome text never reached the buffer");
 
         // leave a single column free of the screen width the insert wraps at -
@@ -265,6 +266,7 @@ private slots:
     {
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         runLua(qsl("setWindowWrap(80)"));
         QCOMPARE(host->mWrapAt, 80);
 
@@ -312,6 +314,7 @@ private:
     void runLua(const QString& script)
     {
         auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->getLuaInterpreter()->compileAndExecuteScript(script);
     }
 
