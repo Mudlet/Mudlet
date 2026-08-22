@@ -955,6 +955,70 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of phpTable", function()
+    -- specs that assert iteration order seed one key at a time: the constructor
+    -- walks its arguments with pairs(), whose order is unspecified and is not
+    -- insertion order
+    it("should return a table which contains the keys and values of the tables passed in", function()
+      local t = phpTable({ one = "1", two = "2" })
+      assert.equals("1", t.one)
+      assert.equals("2", t.two)
+    end)
+
+    it("should merge multiple tables given as arguments, with later tables winning", function()
+      local t = phpTable({ a = 1, b = 1 }, { b = 2 })
+      assert.equals(1, t.a)
+      assert.equals(2, t.b)
+    end)
+
+    it("should iterate over its elements in insertion order using its pairs method", function()
+      local t = phpTable({ first = 1 })
+      t.second = 2
+      local collected = {}
+      for key, value in t:pairs() do
+        collected[#collected + 1] = tostring(key) .. "=" .. tostring(value)
+      end
+      assert.same({ "first=1", "second=2" }, collected)
+    end)
+
+    it("should keep the original position of a key when its value is overwritten", function()
+      local t = phpTable({ a = 1 })
+      t.b = 2
+      t.a = 3
+      local collected = {}
+      for key, value in t:pairs() do
+        collected[#collected + 1] = tostring(key) .. "=" .. tostring(value)
+      end
+      assert.same({ "a=3", "b=2" }, collected)
+    end)
+
+    it("should remove a key from iteration when its value is set to nil", function()
+      local t = phpTable({ a = 1 })
+      t.b = 2
+      t.b = nil
+      assert.is_nil(t.b)
+      local keys = {}
+      for key in t:pairs() do
+        keys[#keys + 1] = key
+      end
+      assert.same({ "a" }, keys)
+    end)
+
+    it("should iterate over no elements when called with no arguments", function()
+      local t = phpTable()
+      local count = 0
+      for _ in t:pairs() do
+        count = count + 1
+      end
+      assert.equals(0, count)
+    end)
+
+    it("should error if given a non-nil argument that is not a table", function()
+      local errfn = function() phpTable("not a table") end
+      assert.error_matches(errfn, "table expected")
+    end)
+  end)
+
     --[[
     TODO:
       remember()
@@ -964,7 +1028,6 @@ describe("Tests Other.lua functions", function()
       table.pickle()
       tacle.load()
       table.unpickle()
-      phpTable()
       getColorWildcard()
       lockExit()
       hasExitLock()
