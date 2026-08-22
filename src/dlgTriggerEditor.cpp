@@ -8596,9 +8596,9 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         const QString name = pT->getName();
         QStringList eventHandlerList = pT->getEventHandlerList();
         for (const QString& handler : std::as_const(eventHandlerList)) {
-            auto pItem = new QListWidgetItem(mpScriptsMainArea->listWidget_script_registered_event_handlers);
-            pItem->setText(handler);
-            mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
+            auto pHandlerItem = new QListWidgetItem(mpScriptsMainArea->listWidget_script_registered_event_handlers);
+            pHandlerItem->setText(handler);
+            mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pHandlerItem);
         }
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
