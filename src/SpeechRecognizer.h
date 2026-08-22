@@ -79,12 +79,6 @@ public:
     // No finalResult() will be emitted.
     virtual void cancel() = 0;
 
-    // Abandon the phrase currently being decoded and begin a new one, while
-    // staying in Listening. Used when the text recognised so far has been
-    // committed elsewhere - without it the backend keeps reporting that phrase,
-    // and those results arrive as if they were newly spoken.
-    // No finalResult() is emitted for the abandoned phrase.
-
     // Stop listening automatically after this many milliseconds of continuous
     // silence, finalising the utterance as stopListening() would. 0 (the
     // default) keeps listening open-ended. Backends without the capability
@@ -185,8 +179,6 @@ public:
 
     // === Language/Model Support ===
 
-    // Get list of available language codes (e.g., "en-US", "de-DE")
-
     virtual QString currentLanguage() const = 0;
 
     // Set the recognition language. Returns true on success.
@@ -259,9 +251,6 @@ signals:
     void capabilitiesChanged(SpeechRecognizer::Capabilities newCapabilities);
 
     void errorOccurred(const QString& errorMessage);
-
-    // Emitted periodically with the current audio input level (0.0 to 1.0).
-    // Useful for visual feedback (e.g., microphone level indicator).
 
 private:
     State mState = State::Uninitialized;

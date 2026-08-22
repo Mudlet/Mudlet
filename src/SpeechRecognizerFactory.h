@@ -58,7 +58,6 @@ public:
     // Check if a specific backend is available.
     static bool backendAvailable(Backend backend);
 
-    // Get human-readable display name for a backend.
 
     // Get short identifier for a backend (for settings storage).
     static QString backendIdentifier(Backend backend);

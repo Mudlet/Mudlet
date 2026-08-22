@@ -62,7 +62,6 @@
 #include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
-#include <QCryptographicHash>
 #include <QDesktopServices>
 #include <QSettings>
 #if defined(Q_OS_MACOS)

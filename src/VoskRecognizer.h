@@ -121,13 +121,11 @@ public:
 
     static QString defaultModelPath();
 
-    // Where the model for a language can be downloaded from
 
     // Model selection and management
     // Get the path to the currently selected model (from settings, or auto-detect best available)
     static QString getSelectedModelPath();
 
-    // Set the selected model path (saves to settings)
 
     // The directory models are installed into
     static QString modelsDirectoryPath();

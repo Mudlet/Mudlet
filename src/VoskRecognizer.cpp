@@ -455,6 +455,10 @@ void VoskRecognizer::startListening()
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
         //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
         emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
+        // The same state a denial reaches when the dialog is answered now, as
+        // docs/stt-api.md requires: a package driving its controls from state
+        // would otherwise keep offering to listen on a machine that cannot
+        setState(State::Error);
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;
@@ -597,6 +601,15 @@ void VoskRecognizer::stopListening()
 
 void VoskRecognizer::cancel()
 {
+    // Starting counts: a request waiting on the macOS permission dialog has no
+    // audio to abandon, but leaving it there means the callback still finds
+    // Starting when the player finally answers and opens the microphone after
+    // they asked to stop. Dropping to Ready is what makes that guard refuse.
+    if (state() == State::Starting) {
+        setState(State::Ready);
+        return;
+    }
+
     if (state() != State::Listening && state() != State::Processing) {
         return;
     }
