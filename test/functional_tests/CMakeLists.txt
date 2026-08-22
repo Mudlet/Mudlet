@@ -40,6 +40,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
+    DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
