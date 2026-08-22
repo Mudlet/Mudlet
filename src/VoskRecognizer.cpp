@@ -353,6 +353,14 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // paths above leave it empty, which is what getInfo() promises
     mModelPath = modelPath;
 
+    // wordResults is derived from a symbol that resolves when the library
+    // loads, so what this backend can do has just changed. The header promises
+    // consumers hear about that rather than having to re-read on spec.
+    if (const Capabilities current = capabilities(); !(current == mAnnouncedCapabilities)) {
+        mAnnouncedCapabilities = current;
+        emit capabilitiesChanged(current);
+    }
+
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
 #ifdef DEBUG_STT
@@ -699,10 +707,14 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
                     qDebug() << "VoskRecognizer: Filtered hallucination:" << text << "(level:" << mRecentAudioLevel << ", onset:" << mSpeechOnsetFrames << ")";
 #endif
                 } else {
-                    // Strip leading hallucination words from multi-word results
-                    QString cleanText = text;
-                    cleanText.replace(*kLeadingHallucinationRx, QString());
-                    cleanText = cleanText.trimmed();
+                    // No stripping here, unlike the final result: that strips
+                    // only when word timings prove the leading word spanned
+                    // silence, and a partial carries no timings to prove it
+                    // with. Stripping anyway made live preview text mutate on
+                    // commit - "dragon attacks" while speaking, "the dragon
+                    // attacks" once decided - and a package acting on the last
+                    // partial when a final was slow sent the wrong command.
+                    const QString cleanText = text.trimmed();
 
                     if (!cleanText.isEmpty()) {
 #ifdef DEBUG_STT

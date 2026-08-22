@@ -39,7 +39,7 @@ Design contract, before the tables:
 | `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
 | `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. |
 | `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. |
-| `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key is present and every capability reads `false`, so a caller can read it without guarding. |
+| `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key below is present except `version` and `language`, which need a recognizer to exist, and every capability reads `false` - so a caller can read it without guarding. |
 
 ## Functions — model and library management (platform-tier)
 
@@ -54,7 +54,7 @@ returning `false` with a message, `listModels` returning `{}`.
 | `stt.getModelPath()` | string | Directory models are installed into. |
 | `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into. |
 | `stt.listModels()` | table | Array of `{name, path}` for installed models. Deliberately works without the engine library, so downloaded models stay visible. |
-| `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
+| `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
 | `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. |
 | `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. |
 
@@ -116,10 +116,14 @@ capability.
 
 ## Semantics implementations must preserve
 
-1. **Stop finalises; only errors discard.** `stt.stop()` and the silence
-   timeout both deliver the pending utterance via `sysSTTResult`. No path
-   silently drops recognised speech except a fault, which reports via
-   `sysSTTError`.
+1. **Stop finalises; only errors and engine artifacts discard.** `stt.stop()`
+   and the silence timeout both deliver the pending utterance via
+   `sysSTTResult`. No path silently drops recognised speech except a fault,
+   which reports via `sysSTTError` — and except what the engine produced from
+   silence rather than from a person. Desktop Mudlet's Vosk backend discards a
+   lone filler word arriving at near-silence or below 0.8 confidence, and a
+   leading word whose timings show it spanned a pause rather than being
+   spoken. Neither reports, because neither was said.
 2. **Refusals speak.** A `start()` that cannot start says why through
    `sysSTTError`; silence after a call means it worked.
 3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
