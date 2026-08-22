@@ -65,6 +65,11 @@ QString credentialFilePath(const QString& profileComponent, const QString& keyCo
     return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profileComponent, keyComponent);
 }
 
+// The length the old scheme cut a path component to. Its own constant rather than
+// utils::scmMaxPathComponentLength: that one is free to change, while this records what
+// is already written on disk and so can never change.
+constexpr int scmLegacyMaxPathComponentLength = 50;
+
 // How utils::sanitizeForPath() built a path component before it started keeping
 // shortened names distinct, kept so that credentials filed under the old name can
 // still be found. Same role as generateLegacyServiceName() plays for the keychain.
@@ -73,7 +78,7 @@ QString legacyPathComponent(const QString& input)
     static const auto unsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
     QString sanitized = input;
     sanitized.replace(unsafeChars, qsl("_"));
-    return sanitized.left(50);
+    return sanitized.left(scmLegacyMaxPathComponentLength);
 }
 } // namespace
 
@@ -1446,6 +1451,15 @@ QString CredentialManager::generateLegacyFilePath(const QString& profileName, co
     const QString currentPath = generateFilePath(profileName, key);
 
     if (currentPath.isEmpty()) {
+        return QString();
+    }
+
+    // Two keys this long collide on one legacy file, and they share the profile's
+    // encryption key - so decrypting it proves only that some key in this profile wrote
+    // it, never which. Migrating would hand one key the other's secret and removing would
+    // delete it, so an undecidable file is left alone: the password for a key this long is
+    // re-entered rather than guessed at.
+    if (key.length() > scmLegacyMaxPathComponentLength) {
         return QString();
     }
 

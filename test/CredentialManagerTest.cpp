@@ -56,6 +56,7 @@ private slots:
     void testLongProfileNamesDoNotShareOneCredential();
     void testLongKeyNamesDoNotShareOneCredential();
     void testCredentialsFiledUnderTheTruncatedPathSurvive();
+    void testLegacySharedKeyPathOwnershipIsUndecidable();
     void testPathTraversalPrevention();
     void testConcurrentAccess();
     void testAsyncStoreAndRetrieve();
@@ -332,6 +333,42 @@ void CredentialManagerTest::testCredentialsFiledUnderTheTruncatedPathSurvive()
     QVERIFY(CredentialManager::retrieveCredential(profile, key).isEmpty());
 
     CredentialManager::removeCredential(neighbour, key);
+}
+
+// Migration decides whose a legacy credential is by decrypting it, which separates two
+// profiles but cannot separate two keys inside one - they share that profile's encryption
+// key, so the file reads back cleanly whichever key asked. Two keys long enough to have
+// been cut to the same path are therefore undecidable, and the file has to be left where
+// it is: migrating it hands the second key the first one's secret, and removing it deletes
+// a credential that was never this key's to delete.
+void CredentialManagerTest::testLegacySharedKeyPathOwnershipIsUndecidable()
+{
+    const QString profile = "SharedLegacyKeyProfile";
+    const QString sharedPrefix(50, QChar('L'));
+    const QString firstKey = sharedPrefix + "first";
+    const QString secondKey = sharedPrefix + "second";
+
+    const QString legacyDir = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile);
+    QVERIFY(QDir().mkpath(legacyDir));
+
+    // planted the way the old scheme wrote it: both keys cut to their shared first 50
+    const QString legacyPath = qsl("%1/%2").arg(legacyDir, sharedPrefix);
+    QFile legacyFile(legacyPath);
+    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    const QString encrypted = SecureStringUtils::encryptStringForProfile("first_secret", profile);
+    QVERIFY(!encrypted.isEmpty());
+    QVERIFY(legacyFile.write(encrypted.toUtf8()) != -1);
+    legacyFile.close();
+
+    QVERIFY2(CredentialManager::retrieveCredential(profile, secondKey).isEmpty(), "a second key was handed the first key's legacy secret");
+
+    // and the removal half: the file is still there afterwards, rather than having been
+    // deleted on behalf of a key that never wrote it
+    QVERIFY(CredentialManager::removeCredential(profile, secondKey));
+    QVERIFY2(QFile::exists(legacyPath), "removing a second key deleted the first key's legacy credential");
+
+    QVERIFY(QFile::remove(legacyPath));
+    CredentialManager::removeCredential(profile, firstKey);
 }
 
 void CredentialManagerTest::testPathTraversalPrevention()
