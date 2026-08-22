@@ -205,8 +205,13 @@ private:
         }
         const QList<QByteArray> requestLine = buffer.left(buffer.indexOf("\r\n")).split(' ');
         mBuffers.remove(socket);
-        const QString path = requestLine.size() > 1 ? QString::fromUtf8(requestLine.at(1)) : QString();
-        mRequestedPaths << path;
+        const QString target = requestLine.size() > 1 ? QString::fromUtf8(requestLine.at(1)) : QString();
+        mRequestedPaths << target;
+
+        // Routes are keyed by path, the way a real server matches: a request carrying a
+        // query string is the same resource, and a test that asserts the query was sent
+        // reads it back out of requestedPaths() instead.
+        const QString path = target.left(target.indexOf(QLatin1Char('?')) < 0 ? target.size() : target.indexOf(QLatin1Char('?')));
 
         if (!mRoutes.contains(path)) {
             socket->write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
@@ -665,6 +670,45 @@ private slots:
 
         // A download with no local name of its own and an URL ending in "xml"
         // lands on the profile's map.xml, inside this test's own config root:
+        const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        QFile file(stored);
+        QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
+        QCOMPARE(file.readAll(), scmMapXml);
+
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QCOMPARE(pMap->mpRoomDB->getAreaNamesMap().value(1), qsl("Downloaded Area"));
+        TRoom* pRoom = pMap->mpRoomDB->getRoom(1);
+        QVERIFY(pRoom);
+        QCOMPARE(pRoom->name, qsl("Entrance"));
+        QCOMPARE(pRoom->getEast(), 2);
+
+        QVERIFY2(consoleShows(qsl("Map download initiated")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(mapDownloadEventCountIs(1), "sysMapDownloadEvent was not raised exactly once for a successful download");
+        QVERIFY(!pMap->hasActiveTransferProgress());
+    }
+
+    // The suffix decides which reader the download goes to, so it has to be read off the
+    // path: the whole URL string ends in the query, not in ".xml", and an MMP location
+    // carrying one was stored as map.dat and handed to the binary loader - which clears
+    // the map before it fails. Pre-dates the case-insensitivity fix above; same line.
+    void test_downloadedXmlMapWithQueryIsSavedAndParsed()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        pMap->mapClear();
+        QVERIFY(pMap->mpRoomDB->isEmpty());
+
+        QSignalSpy startSpy(pMap, &TMap::signal_mapTransferProgressStart);
+        QSignalSpy disableCancelSpy(pMap, &TMap::signal_mapProgressDisableCancel);
+
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml?foo=bar"))), "the map download never finished");
+
+        QCOMPARE(mpMapServer->requestedPaths(), QStringList{qsl("/map.xml?foo=bar")});
+        QCOMPARE(startSpy.count(), 1);
+        QCOMPARE(startSpy.at(0).at(0).toString(), qsl("Map download"));
+        QVERIFY2(startSpy.at(0).at(1).toString().contains(mProfileName), "the progress label does not name the profile the map is for");
+        QCOMPARE(disableCancelSpy.count(), 1);
+
         const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile file(stored);
         QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));

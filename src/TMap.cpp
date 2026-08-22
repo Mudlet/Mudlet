@@ -2591,7 +2591,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (localFileName.isEmpty()) {
-        if (url.toString().endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
+        if (url.path().endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
             mLocalMapFileName = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         } else {
             mLocalMapFileName = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
