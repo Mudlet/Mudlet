@@ -170,7 +170,7 @@ private:
     QPoint mDragStartPos;
     int mDragIndex = -1;
     bool mDetachEnabled = true;
-    static const int DETACH_DISTANCE_THRESHOLD = 50;
+    static const int DETACH_DISTANCE_THRESHOLD = 80;
     qint64 mDragStartTime = 0;
     bool mPendingDetach = false;
 
