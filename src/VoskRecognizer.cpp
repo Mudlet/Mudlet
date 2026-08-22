@@ -427,6 +427,15 @@ void VoskRecognizer::startListening()
             if (!weakThis) {
                 return; // VoskRecognizer was destroyed
             }
+            // The player may be looking at the permission dialog for a long
+            // time, and a script can close or re-initialise the recognizer
+            // while they are. Either leaves this request answering for a
+            // session nobody is waiting on any more, so granting it would open
+            // the microphone with no start behind it. Only a recognizer still
+            // waiting on this very request is still Starting.
+            if (weakThis->state() != State::Starting) {
+                return;
+            }
             if (granted) {
                 weakThis->startListeningInternal();
             } else {
