@@ -14,21 +14,30 @@ per platform, and the wrong one is not merely slower — see Pitfalls.
 
 ## First: does this need a build at all?
 
-A change confined to `src/mudlet-lua/` needs none. Mudlet reads mudlet-lua from disk at startup,
-so any Mudlet binary already on this machine runs *this* worktree's Lua and specs:
+On Linux, a change confined to `src/mudlet-lua/lua/` or `src/mudlet-lua/tests/` needs none. Those
+are read from disk at startup, so a Mudlet binary built anywhere on the machine can run *this*
+worktree's Lua and specs:
 
 ```bash
-.claude/scripts/run-lua-tests.sh /path/to/any/recent/build/src/mudlet
+.claude/scripts/run-lua-tests.sh ../otherworktree/build-linux-debug-nosan/src/mudlet
 ```
 
-Any `build*/src/mudlet` under this checkout or a sibling worktree will do - `ls -lt` over them
-finds the newest. The script notices a binary from a foreign build tree and shims around it, so
-the Lua under test is always the local one; it prints a `note:` line when it does.
+The script detects a binary from another build tree, shims around it with a `note:` line, and
+fails loudly if this worktree's Lua is not what ended up loading.
 
-Prefer a binary built within a day or two. An older one fails specs that depend on C++ landed
-since, which reads exactly like a regression in the change under test.
+These look Lua-only but still need a build:
 
-A change touching `src/*.cpp` or `src/*.h` does need a build - carry on below.
+- `src/packages/` and `src/mudlet-lua/lua/utf8_filenames.lua` are compiled into the binary as Qt
+  resources (`src/mudlet.qrc`), so editing them cannot affect a borrowed binary.
+- On macOS the build copies mudlet-lua into the `.app` bundle and that copy is preferred over
+  `src/`, so a Lua change does need a rebuild there. The script is Linux-only regardless - it
+  drives Mudlet under `xvfb-run`.
+- Anything under `src/*.cpp` or `src/*.h`.
+
+Choose a donor whose branch already contains the C++ the specs rely on - one missing it fails
+specs in a way that reads exactly like a regression in the change under test. Prefer a `-nosan`
+tree: the plain `build/` preset is an AddressSanitizer build, and this script does not pass it
+the `ASAN_OPTIONS` CI uses, so a leak surfaces as a bare non-zero exit with every spec green.
 
 ## Use a preset — every platform, one command
 

@@ -6,10 +6,12 @@
 # socket in the state feedTelnet() needs.
 #
 # Usage: .claude/scripts/run-lua-tests.sh [path-to-mudlet-binary]
-# Defaults to the linux-debug-nosan build. Any Mudlet binary will do, including
-# one built in another worktree - a Lua-only change needs no build of its own,
-# because mudlet-lua is read from disk at startup. Needs the rocks and apt
-# packages that .claude/hooks/session-start.sh installs.
+# Defaults to the linux-debug-nosan build. A binary built in another worktree
+# works too: src/mudlet-lua is read from disk at startup, so a change confined
+# to it needs no build of its own. Only the Lua is this worktree's - the C++,
+# and everything compiled into the binary's Qt resources (src/packages/*, and
+# mudlet-lua/lua/utf8_filenames.lua), still comes from whoever built it. Needs
+# the rocks and apt packages that .claude/hooks/session-start.sh installs.
 #
 # Safe to run concurrently (e.g. one run per worktree): every fixture binds an
 # ephemeral port handed over through this run's private temp directory, only
@@ -22,6 +24,7 @@ BINARY="${1:-$WS/build-linux-debug-nosan/src/mudlet}"
 TMP="$(mktemp -d /tmp/mudlet-luatests-XXXX)"
 
 [ -x "$BINARY" ] || { echo "no mudlet binary at $BINARY - build first"; exit 1; }
+BINARY="$(cd "$(dirname "$BINARY")" && pwd)/$(basename "$BINARY")"
 
 WS_GLOBAL="$WS/src/mudlet-lua/lua/LuaGlobal.lua"
 [ -f "$WS_GLOBAL" ] || { echo "no mudlet-lua under $WS - is this a Mudlet checkout?"; exit 1; }
@@ -34,7 +37,12 @@ WS_GLOBAL="$WS/src/mudlet-lua/lua/LuaGlobal.lua"
 BINDIR="$(cd "$(dirname "$BINARY")" && pwd)"
 loads_this_worktree() {
   local candidate
-  # same list, in the same order, as TLuaInterpreter::loadGlobal()
+  # The Linux subset of loadGlobal()'s candidates, in its order. Omitted: the
+  # macOS-only ../Resources entry, which would come first there, and the two
+  # absolute tail entries LUA_DEFAULT_PATH and LUA_SOURCE_PATH. They sort after
+  # these, so they cannot make this misjudge a Linux binary - but LUA_SOURCE_PATH
+  # is the donor's own source tree, baked in at compile time, so it stays a live
+  # fallback for the whole run. Hence the post-run check at the bottom.
   for candidate in "$BINDIR/mudlet-lua/lua/LuaGlobal.lua" \
                    "$BINDIR/../src/mudlet-lua/lua/LuaGlobal.lua" \
                    "$BINDIR/../../src/mudlet-lua/lua/LuaGlobal.lua" \
@@ -49,14 +57,22 @@ loads_this_worktree() {
 }
 
 if ! loads_this_worktree; then
-  echo "note: $BINARY is not a build of this worktree - running it against $WS/src"
+  echo "note: $BINARY was built elsewhere - running its C++ against this worktree's"
+  echo "      Lua. A C++ change in this worktree is NOT under test."
   mkdir -p "$TMP/shim/build/src"
-  # A hardlink, not a symlink: applicationDirPath() goes through /proc/self/exe,
-  # which would resolve a symlink straight back to the donor build tree. Fall
-  # back to a copy when the donor lives on another filesystem.
-  ln "$BINARY" "$TMP/shim/build/src/mudlet" 2>/dev/null || cp "$BINARY" "$TMP/shim/build/src/mudlet"
-  ln -s "$WS/src" "$TMP/shim/src"
+  # A hardlink rather than a symlink: Qt 6.12 derives applicationDirPath() from
+  # argv[0], under which either would work, but a hardlink is also correct if it
+  # ever goes back to resolving /proc/self/exe. -p because a bare cp applies the
+  # umask and can drop the execute bit. Copy only when the donor is on another
+  # filesystem, where a hardlink is impossible.
+  ln "$BINARY" "$TMP/shim/build/src/mudlet" 2>/dev/null \
+    || cp -p "$BINARY" "$TMP/shim/build/src/mudlet" \
+    || { echo "could not stage $BINARY into $TMP - out of space, or /tmp not writable"; exit 2; }
+  ln -s "$WS/src" "$TMP/shim/src" || { echo "could not link $WS/src into $TMP"; exit 2; }
   BINARY="$TMP/shim/build/src/mudlet"
+  BINDIR="$(cd "$(dirname "$BINARY")" && pwd)"
+  loads_this_worktree || { echo "shim did not take: $BINARY still would not load $WS/src/mudlet-lua"; exit 2; }
+  [ -x "$BINARY" ] || { echo "staged $BINARY is not executable"; exit 2; }
 fi
 
 FIXTURE_PIDS=()
@@ -64,6 +80,11 @@ cleanup() {
   for pid in "${FIXTURE_PIDS[@]:-}"; do
     kill "$pid" 2>/dev/null || true
   done
+  # Nothing here is worth keeping: the fixture logs are cat'd before any early
+  # exit and the run itself is tee'd to stdout. Leaving it behind costs real
+  # disk - a shimmed run parks a ~250MB hardlink that also pins the donor's
+  # inode, so a deleted worktree would stop reclaiming its build.
+  rm -rf "$TMP" "${runtime_dir:-}"
 }
 trap cleanup EXIT
 
@@ -131,7 +152,20 @@ export MUDLET_TEST_FAILURE_MARKER="$TMP/busted-tests-failed"
 
 cd "$WS"
 rc=0
-timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline || rc=$?
+timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline 2>&1 \
+  | tee "$TMP/run.log" || rc=$?
+
+# loadGlobal() walks on to its next candidate when one fails to run, so a syntax
+# error anywhere in this worktree's mudlet-lua silently hands the whole library
+# over to the donor's LUA_SOURCE_PATH and the suite passes against that instead.
+# The warning it emits on the way past is the only evidence, so treat it as fatal.
+if grep -q "loadGlobal() loading" "$TMP/run.log"; then
+  echo "This worktree's mudlet-lua failed to load, so the specs ran against the"
+  echo "binary's own copy - the result above is meaningless. The failure was:"
+  grep "loadGlobal() loading" "$TMP/run.log"
+  rc=1
+fi
+
 if [ -e "$MUDLET_TEST_FAILURE_MARKER" ]; then
   echo "Lua tests failed - see the busted output above."
   rc=1
