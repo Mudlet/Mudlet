@@ -2064,6 +2064,7 @@ describe("Tests saveMap and loadMap", function()
   local backupPath = mapDirectory .. "/mapper_spec_backup.dat"
   local savePath = mapDirectory .. "/mapper_spec_roundtrip.dat"
   local brokenXmlPath = getMudletHomeDir() .. "/mapper_spec_broken.xml"
+  local notAMapXmlPath = getMudletHomeDir() .. "/mapper_spec_notamap.xml"
 
   -- saveMap() with no arguments writes a timestamped file of its own choosing,
   -- so the only way to clear up after it is to spot what appeared
@@ -2141,6 +2142,7 @@ describe("Tests saveMap and loadMap", function()
     os.remove(backupPath)
     os.remove(savePath)
     os.remove(brokenXmlPath)
+    os.remove(notAMapXmlPath)
     -- snapshot whatever map the rest of the suite left behind, so that the
     -- teardown can hand it back untouched
     assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
@@ -2155,6 +2157,7 @@ describe("Tests saveMap and loadMap", function()
     os.remove(backupPath)
     os.remove(savePath)
     os.remove(brokenXmlPath)
+    os.remove(notAMapXmlPath)
   end)
 
   describe("Tests the saveMap argument contract", function()
@@ -2229,10 +2232,12 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
-  -- Careful with the order of anything added here: a load that fails still
-  -- empties the map first, both for a missing binary file (TMainConsole::loadMap
-  -- clears before it restores) and for an XML one (TMap::readXmlMapFile clears
-  -- before it parses), so none of these leave a map behind for the next spec.
+  -- Careful with the order of anything added here: a load that fails can still
+  -- have emptied the map first, both for a missing binary file
+  -- (TMainConsole::loadMap clears before it restores) and for a map document
+  -- that will not parse (TMap::readXmlMapFile clears before it parses), so most
+  -- of these leave no map behind for the next spec. A file that is not a map
+  -- document at all is the exception: it is refused before the clear.
   describe("Tests the loadMap argument contract", function()
     it("hard-errors on a path that is not a string", function()
       assert.has_error(function() loadMap({}) end)
@@ -2259,6 +2264,27 @@ describe("Tests saveMap and loadMap", function()
       assert.is_nil(ok)
       assert.is_string(message)
       assert.is_truthy(message:find("failure to import XML map file", 1, true))
+    end)
+
+    it("refuses an XML file that holds no map, keeping the one that is loaded", function()
+      -- what a game with no map to offer answers a map download with: a page
+      -- saying so, which is well-formed XML full of elements the map reader
+      -- does not know. Every one of them parses, so the reader used to count
+      -- that as a successful import - of nothing, over the loaded map.
+      local file = assert(io.open(notAMapXmlPath, "w"))
+      file:write("<html><body>Not found</body></html>")
+      file:close()
+
+      deleteMap()
+      local keeper = createRoomID()
+      addRoom(keeper)
+      assert.is_true(roomExists(keeper))
+
+      local ok, message = loadMap(notAMapXmlPath)
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find("does not contain a map", 1, true))
+      assert.is_true(roomExists(keeper), "the loaded map was thrown away for a file that holds no map")
     end)
   end)
 

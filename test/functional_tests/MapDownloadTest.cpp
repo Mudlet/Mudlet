@@ -850,13 +850,9 @@ private slots:
     //
     // QNetworkReply::abort() delivers finished() synchronously, so the whole
     // chain has unwound by the time slot_downloadCancel() returns - no waiting
-    // needed. It unwinds through the save-and-parse path rather than the error
-    // one, since slot_replyFinished() deliberately excludes a cancel from its
-    // error exit: what reaches the destination file is whatever the aborted
-    // reply still has to give, which is nothing, and the empty result is then
-    // handed to the map reader. So a second, different error line - about the
-    // parse - does follow, which is why the assertion below names the download
-    // error rather than looking for the absence of errors.
+    // needed. It unwinds through slot_replyFinished()'s error exit, which a
+    // cancel takes like any other error: nothing is written, nothing is parsed,
+    // and no further line reaches the console.
     void test_cancelStopsTheDownloadWithoutReportingAnError()
     {
         TMap* pMap = mpHost->mpMap.data();
@@ -877,6 +873,37 @@ private slots:
         QVERIFY2(mapDownloadEventCountIs(0), "a canceled download raised sysMapDownloadEvent");
 
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a canceled one was refused, so the import flag was left set");
+    }
+
+    // Taking that exit is what leaves the profile's map where it was - in
+    // memory and on disk. Writing the aborted reply's nothing over the
+    // destination file and handing that to the reader, which clears the map
+    // before it parses, cost the map every time a download was called off.
+    void test_cancelLeavesTheLoadedMapAndItsFileAlone()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download that gives this test a map to keep never finished");
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+
+        // The stalled route promises far more than it sends, so the download is
+        // still in flight when it is called off - as a user's Abort finds it:
+        pMap->downloadMap(mpMapServer->url(qsl("/stalled.xml")));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpMapServer->requestedPaths().contains(qsl("/stalled.xml"));
+                         },
+                         10000),
+                 "the download to be canceled never reached the server");
+
+        pMap->slot_downloadCancel();
+
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QVERIFY2(pMap->mpRoomDB->getRoom(1), "the canceled download took the loaded map with it");
+        QFile file(stored);
+        QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the canceled download removed %1").arg(stored)));
+        QCOMPARE(file.readAll(), scmMapXml);
+        QVERIFY2(mapDownloadEventCountIs(1), "the canceled download raised a download event of its own");
     }
 
     void test_undownloadableDestinationIsReported()
@@ -922,6 +949,31 @@ private slots:
         QVERIFY2(mapDownloadEventCountIs(0), "a map that failed to parse still raised sysMapDownloadEvent");
         QVERIFY(!pMap->hasActiveTransferProgress());
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after an unparseable one was refused, so the import flag was left set");
+    }
+
+    // A game with no map to offer can answer with a page saying so rather than
+    // with a status a download counts as a failure, and an HTML page is
+    // well-formed XML: every element in it parses, none of them means anything
+    // to the map reader, and the reader used to clear the map, find nothing to
+    // put back, and report a successful download of no rooms at all.
+    void test_aDownloadThatIsNotAMapLeavesTheMapAloneAndIsReported()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        mpMapServer->serve(qsl("/notamap.xml"), QByteArrayLiteral("<html><body>Not found</body></html>"));
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download that gives this test a map to keep never finished");
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        forgetMapDownloadEvents();
+
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/notamap.xml"))), "the map download never finished");
+
+        // The answer still lands on the destination file, which is a scratch
+        // copy of the download; the map itself is what has to survive it:
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QVERIFY2(pMap->mpRoomDB->getRoom(1), "a download that was not a map at all emptied the map");
+        QVERIFY2(consoleShows(qsl("does not contain a map")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(mapDownloadEventCountIs(0), "a download that was not a map at all raised sysMapDownloadEvent");
+        QVERIFY(!pMap->hasActiveTransferProgress());
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after one that was not a map was refused, so the import flag was left set");
     }
 
     // Everything above watches TMap's progress signals, which keep firing with
@@ -1167,6 +1219,47 @@ private slots:
         QCOMPARE(pRoom->z(), 5);
         QVERIFY2(consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
         QVERIFY2(mapDownloadEventCountIs(1), "the binary path did not raise sysMapDownloadEvent");
+    }
+
+    // The name a download is saved under is what decides which reader parses
+    // it, so the suffix has to be read the same way in both places. An MMP map
+    // location ending in an uppercase .XML used to be stored as map.dat and
+    // handed to the binary loader, which reads the XML header as a format
+    // version.
+    //
+    // Down here with the binary case rather than up with the XML ones because
+    // of what it pins: the loader this download must not reach is the one that
+    // creates the mapper widget, so a regression would take every
+    // standalone-progress test above with it.
+    void test_anUppercaseXmlUrlIsSavedAndParsedAsXml()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        pMap->mapClear();
+        mpMapServer->serve(qsl("/MAP.XML"), scmMapXml);
+        const QString xmlDestination = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString binaryDestination = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+        QFile::remove(xmlDestination);
+        QFile::remove(binaryDestination);
+
+        // Not runDownload(): the mapper the case above created owns the
+        // progress display from here on, and that one ends without the close
+        // signal runDownload() waits for - only the standalone display emits it.
+        pMap->downloadMap(mpMapServer->url(qsl("/MAP.XML")));
+        const bool finished = QTest::qWaitFor(
+                [pMap]() {
+                    return !pMap->hasActiveTransferProgress();
+                },
+                15000);
+
+        // Which file it landed on first: naming the destination the download
+        // was given says what went wrong, where a download that did not finish
+        // only says that something did.
+        QVERIFY2(QFileInfo::exists(xmlDestination), "a map from an uppercase .XML URL was not stored as the profile's XML map");
+        QVERIFY2(!QFileInfo::exists(binaryDestination), "a map from an uppercase .XML URL was stored as a binary map file");
+        QVERIFY2(finished, "the map download never finished");
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QCOMPARE(pMap->mpRoomDB->getAreaNamesMap().value(1), qsl("Downloaded Area"));
+        QVERIFY2(mapDownloadEventCountIs(1), "a map from an uppercase .XML URL was not parsed as one");
     }
 
     // The mapper's map-save-failed indicator, which nothing but
