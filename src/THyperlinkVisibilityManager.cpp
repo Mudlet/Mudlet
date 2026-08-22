@@ -419,6 +419,11 @@ bool THyperlinkVisibilityManager::isLinkConcealed(int linkId) const
     return mTrackedLinks.value(linkId).isConcealed;
 }
 
+QSet<int> THyperlinkVisibilityManager::trackedLinkIds() const
+{
+    return QSet<int>(mTrackedLinks.keyBegin(), mTrackedLinks.keyEnd());
+}
+
 void THyperlinkVisibilityManager::removeLinksOnLine(int lineNumber)
 {
     QList<int> toRemove;

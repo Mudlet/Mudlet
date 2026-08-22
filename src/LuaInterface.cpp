@@ -386,12 +386,11 @@ static bool nameSharedWithASibling(TVar* var)
     return false;
 }
 
-// The write paths build Lua source out of these names - see setValue() - where a
-// string key goes inside a quoted literal and a root goes in bare. So a key
-// holding a backslash comes back out as an escape sequence, and a root that is
-// not an identifier either fails to parse or, with a dot in it, parses as an
-// index into some other global.
-static bool nameSurvivesGeneratedCode(TVar* var, const bool asRoot)
+// Names the Variables view will write back through, which is narrower than what
+// the write paths can reach: they push keys through the C API, which carries any
+// key at all, while a string key holding a quote or a backslash and a root that
+// is not a plain identifier are refused here rather than written (#9908).
+static bool nameTheEditorWritesThrough(TVar* var, const bool asRoot)
 {
     const QString name = var->getName();
     if (asRoot) {
@@ -417,8 +416,7 @@ static bool nameSurvivesGeneratedCode(TVar* var, const bool asRoot)
 //    one (#9903). A variable a script has deleted since the tree was built is
 //    not found either.
 //  - no other member of the same table is shown under that name too.
-//  - the name is one the generated Lua source can carry back, which is a
-//    narrower thing than the C API can look up.
+//  - the name is one the Variables view writes through, see above.
 // What the variable holds is not part of the question: a script is free to have
 // changed that since the tree was built, and the name still finds it.
 bool LuaInterface::writableByName(TVar* var)
@@ -429,7 +427,7 @@ bool LuaInterface::writableByName(TVar* var)
         return false;
     }
     for (int i = 0; i < vars.size(); ++i) {
-        if (nameSharedWithASibling(vars.at(i)) || !nameSurvivesGeneratedCode(vars.at(i), i == 0)) {
+        if (nameSharedWithASibling(vars.at(i)) || !nameTheEditorWritesThrough(vars.at(i), i == 0)) {
             return false;
         }
     }
@@ -626,141 +624,6 @@ void LuaInterface::deleteVar(TVar* var)
     qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Lua panicked while deleting \"" << var->getName() << "\"; it has not been deleted.";
 }
 
-bool LuaInterface::renameCVar(QList<TVar*> vars)
-{
-    //uses C Api to rename a variable.
-    //dangerous function since you can get an api panic
-    //and trash the stack
-
-    TVar* var = vars.back();
-    // this walks down to the variable a push at a time, so every way out - the
-    // successful one included - owes the caller's Lua stack back. Left as it
-    // was, the leftovers stayed on the profile's live interpreter for good.
-    const int stackTop = lua_gettop(mL);
-    //make the new stack
-    lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
-    if (setjmp(buf) == 0) {
-        int i = 1;
-        int pushCount = 0;
-        int kType;
-        for (; i < vars.size() - 1; i++) {
-            kType = vars[i]->getKeyType();
-            if (kType == LUA_TNUMBER) {
-                lua_pushnumber(mL, QString(vars[i]->getName()).toDouble());
-            } else if (kType == LUA_TTABLE) {
-                // registry references are integer refs so must stay toInt()
-                lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-            } else {
-                lua_pushstring(mL, QString(vars[i]->getName()).toUtf8().constData());
-            }
-            lua_gettable(mL, -2);
-            if (lua_isnil(mL, -1)) {
-                //value didn't exist, make it
-                // that one nil, and not lua_pop(mL, -1) - which is
-                // lua_settop(mL, 0) and threw the whole stack away
-                lua_pop(mL, 1);
-                if (kType == LUA_TNUMBER) {
-                    lua_pushnumber(mL, QString(vars[i]->getName()).toDouble());
-                } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-                    lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-                } else {
-                    lua_pushstring(mL, QString(vars[i]->getName()).toUtf8().constData());
-                }
-                lua_newtable(mL);
-                lua_settable(mL, -3);
-                i--; //decrement since we want to reput this table on the stack on next iteration
-            }
-        }
-
-        kType = var->getKeyType();
-        if (kType == LUA_TSTRING) {
-            lua_pushstring(mL, QString(var->getNewName()).toUtf8().constData());
-        } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getNewName().toDouble());
-        } else if (kType == LUA_TTABLE) {
-            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
-        } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
-                                           << "\". Expected string, number, or table.";
-            lua_settop(mL, stackTop);
-            return false;
-        }
-
-        //put the old value on the stack
-        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
-        i = 1;
-        for (; i < vars.size() - 1; i++) {
-            kType = vars[i]->getKeyType();
-            if (kType == LUA_TNUMBER) {
-                lua_pushnumber(mL, QString(vars[i]->getName()).toDouble());
-            } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-                lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-            } else {
-                lua_pushstring(mL, QString(vars[i]->getName()).toUtf8().constData());
-            }
-            lua_gettable(mL, -2);
-            pushCount++;
-        }
-
-        kType = var->getKeyType();
-        if (kType == LUA_TSTRING) {
-            lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
-        } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getName().toDouble());
-        } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
-        } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when retrieving old value: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
-                                           << "\". Expected string, number, table, or function.";
-            lua_settop(mL, stackTop);
-            return false;
-        }
-        lua_gettable(mL, -2);
-        pushCount++;
-        //old value is @ -1 now
-        //we want to put our new named key @ -2
-        kType = var->getKeyType();
-        if (kType == LUA_TSTRING) {
-            lua_pushstring(mL, QString(var->getNewName()).toUtf8().constData());
-        } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getNewName().toDouble());
-        } else if (kType == LUA_TTABLE) {
-            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
-        } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when setting new key: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
-                                           << "\". Expected string, number, or table.";
-            lua_settop(mL, stackTop);
-            return false;
-        }
-        pushCount++;
-        lua_insert(mL, -2);
-        lua_settable(mL, -3 - pushCount);
-        //key & value popped
-        //delete it, so we put the old key back on the stack and set to nil
-        kType = var->getKeyType();
-        if (kType == LUA_TSTRING) {
-            lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
-        } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(mL, var->getName().toDouble());
-        } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
-        } else {
-            qWarning().noquote().nospace() << "LuaInterface::renameCVar() - Unsupported key type when deleting old key: " << lua_typename(mL, kType) << " for variable \"" << var->getName()
-                                           << "\". Expected string, number, table, or function.";
-            lua_settop(mL, stackTop);
-            return false;
-        }
-        lua_pushnil(mL);
-        lua_settable(mL, -3);
-        var->clearNewName();
-        lua_settop(mL, stackTop);
-        return true;
-    }
-    lua_settop(mL, stackTop);
-    qWarning().noquote().nospace() << "LuaInterface::renameCVar() WARNING - Lua panicked while renaming \"" << var->getName() << "\"; it may be left under either name.";
-    return false;
-}
-
 bool LuaInterface::loadVar(TVar* var)
 {
     //puts the value of a variable on the -1 position of the stack
@@ -836,11 +699,16 @@ bool LuaInterface::newNameIsFree(TVar* var)
     return false;
 }
 
+// Moves a variable onto its new key. Through the C API for the same reason
+// setValue() writes through it: a rename was generated Lua source - "new = old"
+// and "old = nil" - with every key along the path spliced into it as text, so a
+// key holding a quote or a backslash renamed some other member or nothing at
+// all, and a key that closed the subscript ran the rest of itself as Lua.
 bool LuaInterface::renameVar(TVar* var)
 {
     //this assumes anything like reparenting has been done
 
-    QList<TVar*> vars = varOrder(var);
+    const QList<TVar*> vars = varOrder(var);
     if (vars.isEmpty()) {
         // a variable named _G - varOrder() gives it no path
         var->abandonNewName();
@@ -850,9 +718,9 @@ bool LuaInterface::renameVar(TVar* var)
     if (var->isReference()) {
         // A key that is a table or a function of its own is not a name, and the
         // tree names such a member by the number of the registry reference
-        // holding the key. Renaming it to a string is not an operation that
-        // exists: what it did instead was write to a member named by that
-        // number - or, through renameCVar(), delete the member outright.
+        // holding the key, and renaming it to a string is not an operation that
+        // exists - what it did instead was write to a member named by that
+        // number, or delete the member outright.
         qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - not renaming \"" << var->getName() << "\" to \"" << var->getNewName()
                                        << "\": its key is a table or a function, which has no name to change.";
         var->abandonNewName();
@@ -874,89 +742,37 @@ bool LuaInterface::renameVar(TVar* var)
     newNameParts.append(var->getNewName());
     const QString newFullName = newNameParts.join(qsl("."));
 
-    QString oldVariable = vars.at(0)->getName();
-    QString newName;
-    if (vars.size() > 1) {
-        newName = vars[0]->getName();
-    }
-
-    for (int i = 1; i < vars.size(); i++) {
-        const int kType = vars[i]->getKeyType();
-        // numbers and booleans use unquoted subscripts: t[3.14], t[true]
-        if (kType == LUA_TNUMBER || kType == LUA_TBOOLEAN) {
-            oldVariable.append(qsl("[%1]").arg(vars.at(i)->getName()));
-            if (i < vars.size() - 1) {
-                newName.append(qsl("[%1]").arg(vars[i]->getName()));
-            }
-        } else if (kType == LUA_TTABLE) {
-            // a table used as a key part way along the path - the leaf's own key
-            // cannot be one, that is refused above. Only the C API can put such
-            // a key back on the stack, so the whole rename goes through it.
-            if (renameCVar(vars)) {
-                // where it goes, and why the bookkeeping moves here rather than
-                // once the rename is over: see the copying stage below
-                varUnit->renameVariableBookkeeping(var, oldFullName, newFullName);
-                return true;
-            }
+    const int stackTop = lua_gettop(mL);
+    if (setjmp(buf) == 0) {
+        if (!pushOwningTable(vars) || !pushKey(var, var->getName(), var->getKeyType())) {
+            qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - could not reach \"" << var->getName() << "\" to rename it.";
+            lua_settop(mL, stackTop);
             var->abandonNewName();
             return false;
-        } else {
-            // that leaves LUA_TSTRING
-            oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
-            if (i < vars.size() - 1) {
-                newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
-            }
         }
-    }
-
-    if (vars.size() <= 1) {
-        // this variable is at root level on _G
-        newName.append(qsl("_G[\"%1\"]").arg(vars.last()->getNewName()));
-    } else {
-        // this variable is nested in a table
-        if (var->getNewKeyType() == LUA_TNUMBER || var->getNewKeyType() == LUA_TBOOLEAN) {
-            newName.append(qsl("[%1]").arg(vars.last()->getNewName()));
-        } else {
-            newName.append(qsl(R"(["%1"])").arg(vars.last()->getNewName()));
+        // the old key stays on the stack: nil'ing the variable out from under
+        // it is what is left to do once the new key holds the value
+        lua_pushvalue(mL, -1);
+        lua_gettable(mL, -3);
+        if (!pushKey(var, var->getNewName(), var->getNewKeyType())) {
+            qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - could not build the name \"" << var->getNewName() << "\" to rename \"" << var->getName() << "\" to.";
+            lua_settop(mL, stackTop);
+            var->abandonNewName();
+            return false;
         }
-    }
-
-    auto renameCode = qsl("%1 = %2").arg(newName, oldVariable);
-    int error = luaL_loadstring(mL, renameCode.toUtf8().constData());
-    if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (parsing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\"" << renameCode
-                                       << "\".";
-        var->abandonNewName();
-        return false;
-    }
-    error = lua_pcall(mL, 0, LUA_MULTRET, 0);
-    if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (executing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\""
-                                       << renameCode << "\".";
-        var->abandonNewName();
-        return false;
-    }
-    // here rather than at the end: the variable is under its new name from this
-    // point on, whatever the deleting stage below goes on to do
-    varUnit->renameVariableBookkeeping(var, oldFullName, newFullName);
-
-    //delete it
-    error = luaL_loadstring(mL, oldVariable.append(QLatin1String(" = nil")).toUtf8().constData());
-    if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (parsing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\""
-                                       << renameCode << "\".";
-        // the copy landed, so the variable really is under its new name - only
-        // the old one is still there beside it, which this node does not name
+        lua_insert(mL, -2);
+        lua_settable(mL, -4);
+        lua_pushnil(mL);
+        lua_settable(mL, -3);
+        lua_settop(mL, stackTop);
+        varUnit->renameVariableBookkeeping(var, oldFullName, newFullName);
         var->clearNewName();
         return true;
     }
-    error = lua_pcall(mL, 0, LUA_MULTRET, 0);
-    if (error) {
-        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (executing) error: \"" << lua_tostring(mL, -1) << "\" in code:\n\""
-                                       << renameCode << "\".";
-    }
-    var->clearNewName();
-    return true;
+    lua_settop(mL, stackTop);
+    qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - Lua panicked while renaming \"" << var->getName() << "\"; it may be left under either name.";
+    var->abandonNewName();
+    return false;
 }
 
 // Returns the value for a string/number/boolean datatype, and an empty string for

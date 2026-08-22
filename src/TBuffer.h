@@ -350,7 +350,7 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
-    void clearLinkState();
+    void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
     QSet<int> collectActiveLinkIds() const;
     void clearLastLine();
     QPoint getEndPos();

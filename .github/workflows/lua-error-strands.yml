@@ -1,0 +1,47 @@
+# lua_error() longjmps in Lua 5.1, so it unwinds the C stack without running a
+# single C++ destructor. PRs #9602 and #9605 removed the LeakSanitizer
+# suppression hiding that class and cleared every site then present, but that
+# sweep was a one-off - nothing re-runs it, so a Lua function added afterwards
+# reintroduces the bug silently. LeakSanitizer only catches it when a spec
+# happens to exercise the raising path, which for a new function is usually
+# never. See CI/check-lua-error-strands.lua.
+name: Check lua_error strands
+
+on:
+  push:
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
+  pull_request:
+    paths:
+      - 'src/**.cpp'
+      - 'src/**.h'
+      - 'CI/check-lua-error-strands.lua'
+      - 'CI/test-check-lua-error-strands.lua'
+      - 'CI/lua-error-strand-fixtures/**'
+      - '.github/workflows/lua-error-strands.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{github.workflow}}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lua-error-strands:
+    name: Check for heap objects stranded across lua_error()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Lua 5.1.5
+        uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: "5.1.5"
+
+      - name: Self-test the scanner
+        # A scanner that has quietly stopped matching anything reports a clean
+        # tree and looks identical to success, so prove it still fails on a
+        # known-bad fixture before trusting the scan below.
+        run: lua CI/test-check-lua-error-strands.lua
+
+      - name: Scan src/
+        run: lua CI/check-lua-error-strands.lua

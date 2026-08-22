@@ -435,6 +435,27 @@ describe("Tests TBuffer OSC sequence handling", function()
       return nil
     end
 
+    -- scans the whole buffer, unlike lineHolding()'s 20-line tail
+    local function findLine(needle)
+      for lineNumber = 0, getLastLineNumber("main") do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
+    -- the buffer size is global state, so restore it even when the body throws or
+    -- a failure here fails an unrelated spec later in the run
+    local function withSmallBuffer(body)
+      local wasLines, wasBatch = getConsoleBufferSize("main")
+      setConsoleBufferSize("main", 100, 20)
+      local ok, err = pcall(body)
+      setConsoleBufferSize("main", wasLines, wasBatch)
+      if not ok then error(err, 0) end
+    end
+
     it("reveals a link that was written concealed once its delay is up", function()
       if not os.getenv("MUDLET_TEST_MODE") then
         -- pumpEvents() is inert outside test mode, so the reveal never fires
@@ -450,6 +471,62 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("OSCREVEAL1(          )OSCREVEAL1", concealed)
       pumpEvents(700)
       assert.equals("OSCREVEAL1(HIDDENWORD)OSCREVEAL1", getLines("main", lineNumber, lineNumber + 1)[1])
+    end)
+
+    it("reveals a link on its own line after the buffer has trimmed", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        local link = "\027]8;;send:osc8trim?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCTRIM1(" .. link .. ")OSCTRIM1\n"))
+        local before = findLine("OSCTRIM1")
+        assert.is_truthy(before, "the line carrying the link never reached the buffer")
+
+        for i = 1, 70 do echo("osctrimfiller " .. i .. "\n") end
+        local moved = findLine("OSCTRIM1")
+        assert.is_truthy(moved, "the link's line scrolled out entirely, so this test proves nothing")
+        assert.is_not.equal(before, moved, "the buffer never trimmed, so this test proves nothing")
+
+        pumpEvents(700)
+        assert.equals("OSCTRIM1(HIDDENWORD)OSCTRIM1", getLines("main", moved, moved + 1)[1])
+      end)
+    end)
+
+    it("does not rewrite an unrelated line when the link's own line was trimmed away", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        -- the link has to sit at a LOW buffer index: its stale index is what a
+        -- broken reveal writes to, and a high one falls outside the trimmed buffer
+        -- where performReveal() no-ops instead of corrupting
+        clearWindow()
+        for i = 1, 3 do echo("oscgoneseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCGONE1(" .. link .. ")OSCGONE1\n"))
+        local registeredAt = findLine("OSCGONE1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes without the fix
+        for i = 1, 260 do echo("oscgonefiller padded out well past the link column " .. i .. "\n") end
+        assert.is_nil(findLine("OSCGONE1"), "the link's line survived, so this test proves nothing")
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        for lineNumber = 0, lastLine do
+          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+            "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
+        end
+      end)
     end)
   end)
 
