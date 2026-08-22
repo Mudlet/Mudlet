@@ -1941,6 +1941,16 @@ TConsoleModel& Host::mainConsoleModel()
     return *mpMainConsoleModel;
 }
 
+void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
+{
+    emit signal_loggingAnnouncement(isLogging, logFileName);
+}
+
+void Host::raiseLoggingStateChanged(const bool isLogging)
+{
+    emit signal_loggingStateChanged(isLogging);
+}
+
 // The per-line trigger orchestration used to live on the main-console widget
 // (TMainConsole::runTriggers). It drives model state only, so it runs here
 // against the core model and needs no view (#8681).

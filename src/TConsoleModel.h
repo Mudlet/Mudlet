@@ -23,17 +23,21 @@
 #include "TBuffer.h"
 
 #include <QColor>
+#include <QFile>
 #include <QPoint>
+#include <QPointer>
 #include <QString>
+#include <QTextStream>
 
 class Host;
 
 // The per-console data model: the slice of former TConsole state that the
 // telnet -> trigger pipeline drives without needing a widget. That is the text
 // buffer, the cursor/prompt state Host::runTriggers() updates on every line,
-// and the fg/bg colours colour-triggers match against. Splitting it out of the
-// widget is what lets the pipeline run with no view at all, which is the point
-// of the Widgets-free core (#8681).
+// the fg/bg colours colour-triggers match against, and the log lifecycle the
+// buffer writes through. Splitting it out of the widget is what lets the
+// pipeline run with no view at all, which is the point of the Widgets-free
+// core (#8681).
 //
 // The main console's model is co-owned by Host (see Host::sharedMainConsoleModel)
 // so the pipeline outlives the view; sub-consoles own their own model. Every
@@ -42,10 +46,9 @@ class Host;
 // the existing accesses across the codebase are preserved unchanged.
 struct TConsoleModel
 {
-    explicit TConsoleModel(Host* pHost)
-    : buffer(pHost)
-    {
-    }
+    // Defined out of line: mpHost is a QPointer, which needs Host complete, and
+    // this header is included far too widely to drag Host.h along with it.
+    explicit TConsoleModel(Host* pHost);
 
     // A copy would duplicate the whole scrollback and leave a second model
     // claiming the view the original is bound to. Deleting the copy operations
@@ -53,8 +56,23 @@ struct TConsoleModel
     TConsoleModel(const TConsoleModel&) = delete;
     TConsoleModel& operator=(const TConsoleModel&) = delete;
 
+    // Lives here rather than on the main-console widget because a profile with
+    // no view still has to be able to *start* a log, not just write into a
+    // stream something else opened. The two parts of it that genuinely need a
+    // view - announcing the change on the console and re-labelling the log
+    // button - are raised as Host signals for the frontend to act on.
+    // Everything it touches (the autolog sentinel, the Host's log directory and
+    // filename format) is profile-wide, so it only acts on the Host's own main
+    // model and returns for any other.
+    void toggleLogging(bool isMessageEnabled);
+
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
+    // A QPointer because Host and view are torn down in either order: quitting
+    // destroys every Host before the consoles' deferred deletes run, while
+    // closing one profile deletes its console first. The view co-owns the
+    // model, so it can be left holding one whose Host has gone.
+    QPointer<Host> mpHost;
     // Only a cache today - the view fills these in through TConsole::changeColors(); refreshing them from the Host after the profile loads moves core-side with the colour sub-PR.
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
@@ -62,6 +80,15 @@ struct TConsoleModel
     int mEngineCursor = -1;
     QPoint mUserCursor;
     bool mIsPromptLine = false;
+    // The log destination. TBuffer writes into mLogStream directly, and
+    // TMainConsole keeps references aliasing all four.
+    // mLogStream holds a bare pointer to mLogFile, so the declaration order
+    // here is load-bearing: the stream has to be destroyed - and flush - before
+    // the file it is writing into.
+    QFile mLogFile;
+    QString mLogFileName;
+    QTextStream mLogStream;
+    bool mLogToLogFile = false;
 };
 
 #endif // MUDLET_TCONSOLEMODEL_H
