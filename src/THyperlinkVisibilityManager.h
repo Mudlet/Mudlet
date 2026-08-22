@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QMap>
+#include <QSet>
 #include <QTimer>
 #include <QPointer>
 #include <QString>
@@ -85,6 +86,7 @@ public:
     void concealLink(int linkId);
     void revealLink(int linkId);
     bool isLinkConcealed(int linkId) const;
+    QSet<int> trackedLinkIds() const;
     void removeLinksOnLine(int lineNumber);
     void adjustLineNumbers(int deletedLineStart, int deletedLineCount);
     void clear();
