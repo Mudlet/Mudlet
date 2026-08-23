@@ -1761,6 +1761,86 @@ void T2DMap::drawRoom(QPainter& painter,
     }
 }
 
+// The colour a room of this environment is filled with, as the batch and
+// LOD paths need it without building the rest of a room's appearance. The
+// argument is taken by value because an environment can be remapped onto
+// another one before it is resolved to a colour.
+QColor T2DMap::environmentColor(int env) const
+{
+    if (mpMap->mEnvColors.contains(env)) {
+        env = mpMap->mEnvColors[env];
+    } else if (!mpMap->mCustomEnvColors.contains(env)) {
+        env = 1;
+    }
+    switch (env) {
+    case 1:
+        return mpHost->mRed_2;
+    case 2:
+        return mpHost->mGreen_2;
+    case 3:
+        return mpHost->mYellow_2;
+    case 4:
+        return mpHost->mBlue_2;
+    case 5:
+        return mpHost->mMagenta_2;
+    case 6:
+        return mpHost->mCyan_2;
+    case 7:
+        return mpHost->mWhite_2;
+    case 8:
+        return mpHost->mBlack_2;
+    case 9:
+        return mpHost->mLightRed_2;
+    case 10:
+        return mpHost->mLightGreen_2;
+    case 11:
+        return mpHost->mLightYellow_2;
+    case 12:
+        return mpHost->mLightBlue_2;
+    case 13:
+        return mpHost->mLightMagenta_2;
+    case 14:
+        return mpHost->mLightCyan_2;
+    case 15:
+        return mpHost->mLightWhite_2;
+    case 16:
+        return mpHost->mLightBlack_2;
+    default:
+        if (mpMap->mCustomEnvColors.contains(env)) {
+            return mpMap->mCustomEnvColors[env];
+        }
+        if (env > 16 && env < 232) {
+            quint8 const base = env - 16;
+            quint8 r = base / 36;
+            quint8 g = (base - (r * 36)) / 6;
+            quint8 b = (base - (r * 36)) - (g * 6);
+            r = r == 0 ? 0 : (r - 1) * 40 + 95;
+            g = g == 0 ? 0 : (g - 1) * 40 + 95;
+            b = b == 0 ? 0 : (b - 1) * 40 + 95;
+            return QColor(r, g, b, 255);
+        }
+        if (env > 231 && env < 256) {
+            quint8 const k = ((env - 232) * 10) + 8;
+            return QColor(k, k, k, 255);
+        }
+        return mpHost->mBgColor_2;
+    }
+}
+
+// Below this many pixels per room the things that tell one room apart from the
+// next - its border, symbol, name, vertical-exit markers - are smaller than the
+// pixel they would be drawn into, so both room loops switch to filling in the
+// environment colour and nothing else.
+static constexpr float cLodPixelThreshold = 4.0f;
+
+// The drawn length, in pixels, below which an exit line is left out in that
+// same tier. The test is on the length of the line itself and not on the zoom,
+// which matters: an exit to the room next door is this short and says nothing
+// the two rooms drawn on top of it do not already say, while an exit to a
+// distant room stays long however far the map is zoomed out and is the only
+// thing on the map that shows it exists.
+static constexpr float cLodExitPixelThreshold = 2.0f;
+
 // The inclusive range of room coordinates that can put a room on screen, given
 // where the map is panned and how big a room is drawn. The forward transform is
 //     rx = room->x() * roomWidth + rx0
@@ -1808,68 +1888,6 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     const qreal timeIndex = timer.nsecsElapsed() / 1000000.0;
     timer.start();
 
-    // Helper: convert environment ID to QColor (mirrors drawRoom logic).
-    auto envToColor = [this](int env) -> QColor {
-        if (mpMap->mEnvColors.contains(env)) {
-            env = mpMap->mEnvColors[env];
-        } else if (!mpMap->mCustomEnvColors.contains(env)) {
-            env = 1;
-        }
-        switch (env) {
-        case 1:
-            return mpHost->mRed_2;
-        case 2:
-            return mpHost->mGreen_2;
-        case 3:
-            return mpHost->mYellow_2;
-        case 4:
-            return mpHost->mBlue_2;
-        case 5:
-            return mpHost->mMagenta_2;
-        case 6:
-            return mpHost->mCyan_2;
-        case 7:
-            return mpHost->mWhite_2;
-        case 8:
-            return mpHost->mBlack_2;
-        case 9:
-            return mpHost->mLightRed_2;
-        case 10:
-            return mpHost->mLightGreen_2;
-        case 11:
-            return mpHost->mLightYellow_2;
-        case 12:
-            return mpHost->mLightBlue_2;
-        case 13:
-            return mpHost->mLightMagenta_2;
-        case 14:
-            return mpHost->mLightCyan_2;
-        case 15:
-            return mpHost->mLightWhite_2;
-        case 16:
-            return mpHost->mLightBlack_2;
-        default:
-            if (mpMap->mCustomEnvColors.contains(env)) {
-                return mpMap->mCustomEnvColors[env];
-            }
-            if (env > 16 && env < 232) {
-                quint8 const base = env - 16;
-                quint8 r = base / 36;
-                quint8 g = (base - (r * 36)) / 6;
-                quint8 b = (base - (r * 36)) - (g * 6);
-                r = r == 0 ? 0 : (r - 1) * 40 + 95;
-                g = g == 0 ? 0 : (g - 1) * 40 + 95;
-                b = b == 0 ? 0 : (b - 1) * 40 + 95;
-                return QColor(r, g, b, 255);
-            }
-            if (env > 231 && env < 256) {
-                quint8 const k = ((env - 232) * 10) + 8;
-                return QColor(k, k, k, 255);
-            }
-            return mpHost->mBgColor_2;
-        }
-    };
-
     const TAreaGridIndex& gridIndex = pDrawnArea->getGridIndex();
     int roomCount = 0;
 
@@ -1878,14 +1896,13 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     // QPainterPath::addRect() costs ~3.6 us per room regardless of room size,
     // making the normal path unusable at high zoom-out with thousands of rooms.
     // Writing directly to a QImage scanline is ~10x faster overall.
-    constexpr float cLodPixelThreshold = 4.0f;
     if (mRoomWidth < cLodPixelThreshold) {
         const int imgW = static_cast<int>(std::ceil(static_cast<double>(widgetWidth)));
         const int imgH = static_cast<int>(std::ceil(static_cast<double>(widgetHeight)));
         QImage lodImage(imgW, imgH, QImage::Format_ARGB32_Premultiplied);
         lodImage.fill(0); // transparent: background was already rendered beneath us
 
-        // Cache env -> QRgb so envToColor() is called at most once per env ID.
+        // Cache env -> QRgb so environmentColor() is called at most once per env ID.
         QHash<int, QRgb> envColorCache;
 
         if (mRoomWidth < 1.0f) {
@@ -1939,7 +1956,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                                 if (colorIt != envColorCache.constEnd()) {
                                     currentColor = *colorIt;
                                 } else {
-                                    currentColor = envToColor(room->environment).rgba();
+                                    currentColor = environmentColor(room->environment).rgba();
                                     envColorCache.insert(room->environment, currentColor);
                                 }
                             }
@@ -1988,7 +2005,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                 if (colorIt != envColorCache.constEnd()) {
                     colorRgb = *colorIt;
                 } else {
-                    colorRgb = envToColor(room->environment).rgba();
+                    colorRgb = environmentColor(room->environment).rgba();
                     envColorCache.insert(room->environment, colorRgb);
                 }
 
@@ -2144,7 +2161,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                 path.addRect(rect);
             }
         }
-        painter.fillPath(path, envToColor(it.key()));
+        painter.fillPath(path, environmentColor(it.key()));
     }
 
     const qreal timeBatchDraw = timer.nsecsElapsed() / 1000000.0;
@@ -2153,7 +2170,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     // Batch draw collision rooms with a colored border.
     const int collisionBorderWidth = qMax(1, static_cast<int>(mRoomWidth / 50.0));
     for (auto it = collisionRoomsByEnvironment.constBegin(); it != collisionRoomsByEnvironment.constEnd(); ++it) {
-        const QColor color = envToColor(it.key());
+        const QColor color = environmentColor(it.key());
         QPainterPath fillPath;
         for (const auto& rect : it.value()) {
             if (mBubbleMode) {
@@ -2180,7 +2197,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     // grid mode rooms.
     painter.setPen(Qt::NoPen);
     for (const auto& [room, roomRect] : selectedRooms) {
-        const QColor roomColor = envToColor(room->environment);
+        const QColor roomColor = environmentColor(room->environment);
         QLinearGradient selectionBg(roomRect.topLeft(), roomRect.bottomRight());
         selectionBg.setColorAt(0.2, roomColor);
         selectionBg.setColorAt(1, Qt::blue);
@@ -2220,7 +2237,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         for (const auto& [room, center] : verticalExitRooms) {
             const float rx = center.x();
             const float ry = center.y();
-            const QColor roomColor = envToColor(room->environment);
+            const QColor roomColor = environmentColor(room->environment);
             const QColor lc = (roomColor.lightness() > 127) ? QColorConstants::Black : QColorConstants::White;
             QPen exitPen;
             exitPen.setColor(lc);
@@ -2317,7 +2334,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         const QRectF& roomRect = entry.second;
 
         if (!showVnums && !room->mSymbol.isEmpty()) {
-            const QColor roomColor = envToColor(room->environment);
+            const QColor roomColor = environmentColor(room->environment);
             QColor symbolColor;
             if (room->mSymbolColor.isValid()) {
                 symbolColor = room->mSymbolColor;
@@ -2337,7 +2354,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         }
 
         if (showVnums) {
-            const QColor roomColor = envToColor(room->environment);
+            const QColor roomColor = environmentColor(room->environment);
             const QColor textColor = (roomColor.lightness() > 127) ? QColor(Qt::black) : QColor(Qt::white);
             painter.save();
             painter.setPen(QPen(textColor));
@@ -2373,11 +2390,177 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         // be printed AFTER phase6Time is captured.  Calling qDebug() here
         // would inflate phase6 time by 100-200 ms on Windows debug builds.
         QDebug dbg(profileOutput);
-        dbg.noquote().nospace() << "drawGridModeRooms timing (ms):"
-                                << " total:" << (timeIndex + timeCollect + timeBatchDraw + timeCollision + timeDecor) << " indexSetup:" << timeIndex << " collect(gridIndex):" << timeCollect
-                                << " batchDraw:" << timeBatchDraw << " collision:" << timeCollision << " decor:" << timeDecor << " visibleRooms:" << roomCount
+        dbg.noquote().nospace() << "drawGridModeRooms timing (ms):" << " total:" << (timeIndex + timeCollect + timeBatchDraw + timeCollision + timeDecor) << " indexSetup:" << timeIndex
+                                << " collect(gridIndex):" << timeCollect << " batchDraw:" << timeBatchDraw << " collision:" << timeCollision << " decor:" << timeDecor << " visibleRooms:" << roomCount
                                 << " viewportCells:" << static_cast<qint64>(maxX - minX + 1) * (maxY - minY + 1) << " viewportBounds: x[" << minX << "," << maxX << "] y[" << minY << "," << maxY << "]"
                                 << " gridIndexRooms:" << gridIndex.size() << " gridIndexBytes:" << gridIndex.memoryEstimateBytes();
+    }
+}
+
+// The room loop for a non-grid area drawn at fewer than cLodPixelThreshold
+// pixels per room. Everything that tells one room apart from the next is
+// smaller than a pixel at that size, so each room becomes its environment
+// colour written straight into a scanline and the lot is blitted once, in
+// place of a QPainter shape, a border, a symbol and four exit markers each.
+//
+// What survives the simplification is what a pixel cannot hide: the selection
+// tint, because selecting a large region and zooming out to look at it is the
+// reason to be at this zoom at all, and per-room highlights, whose radius is
+// set in room units by the script that asked for them and so can be far bigger
+// than the room.
+void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
+                                     const TArea* pDrawnArea,
+                                     const int zLevel,
+                                     const int playerRoomId,
+                                     const QRect& roomBounds,
+                                     const float widgetWidth,
+                                     const float widgetHeight,
+                                     bool& isPlayerRoomVisible,
+                                     QPointF& playerRoomOnWidgetCoordinates,
+                                     QString* profileOutput)
+{
+    QElapsedTimer timer;
+    timer.start();
+
+    const int imgW = static_cast<int>(std::ceil(static_cast<double>(widgetWidth)));
+    const int imgH = static_cast<int>(std::ceil(static_cast<double>(widgetHeight)));
+    QImage lodImage(imgW, imgH, QImage::Format_ARGB32_Premultiplied);
+    lodImage.fill(0); // transparent: the background and the exit lines are already under us
+
+    // Non-grid rooms are drawn at a fraction of their cell, so the blob is
+    // sized from that fraction and not from the cell, but it never shrinks
+    // below the one pixel it has to occupy to be seen at all.
+    const float blobWidth = mRoomWidth * static_cast<float>(rSize);
+    const float blobHeight = mRoomHeight * static_cast<float>(rSize);
+    const int blobPixelWidth = qMax(1, qRound(static_cast<double>(blobWidth)));
+    const int blobPixelHeight = qMax(1, qRound(static_cast<double>(blobHeight)));
+
+    QHash<int, QRgb> envColorCache;
+    QList<QPair<TRoom*, QPointF>> highlightedRooms;
+    QList<QRect> selectedRoomRects;
+
+    const QList<int> candidateRooms = pDrawnArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+    const qreal timeIndex = timer.nsecsElapsed() / 1000000.0;
+    timer.start();
+    int roomCount = 0;
+
+    for (const int roomId : candidateRooms) {
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+
+        const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
+        const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
+        if (rx < 0 || ry < 0 || rx > widgetWidth || ry > widgetHeight) {
+            continue;
+        }
+
+        if (playerRoomId == roomId) {
+            // Drawn in full at the end of the phase, as it is at any zoom.
+            isPlayerRoomVisible = true;
+            playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
+            continue;
+        }
+
+        if (room->isHidden()) {
+            continue;
+        }
+
+        ++roomCount;
+        const int px = qRound(static_cast<double>(rx - blobWidth * 0.5f));
+        const int py = qRound(static_cast<double>(ry - blobHeight * 0.5f));
+        const int xStart = qBound(0, px, imgW);
+        const int xEnd = qBound(0, px + blobPixelWidth, imgW);
+        const int yStart = qBound(0, py, imgH);
+        const int yEnd = qBound(0, py + blobPixelHeight, imgH);
+        if (xStart >= xEnd || yStart >= yEnd) {
+            continue;
+        }
+
+        QRgb colorRgb;
+        const auto colorIt = envColorCache.constFind(room->environment);
+        if (colorIt != envColorCache.constEnd()) {
+            colorRgb = *colorIt;
+        } else {
+            colorRgb = environmentColor(room->environment).rgba();
+            envColorCache.insert(room->environment, colorRgb);
+        }
+
+        for (int dy = yStart; dy < yEnd; ++dy) {
+            QRgb* scanLine = reinterpret_cast<QRgb*>(lodImage.scanLine(dy));
+            for (int dx = xStart; dx < xEnd; ++dx) {
+                scanLine[dx] = colorRgb;
+            }
+        }
+
+        if (!mMultiSelectionSet.isEmpty() && mMultiSelectionSet.contains(roomId)) {
+            selectedRoomRects.append(QRect(xStart, yStart, xEnd - xStart, yEnd - yStart));
+        }
+        if (room->highlight) {
+            highlightedRooms.append({room, QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry))});
+        }
+    }
+
+    const qreal timeCollect = timer.nsecsElapsed() / 1000000.0;
+    timer.start();
+
+    painter.drawImage(0, 0, lodImage);
+
+    // A semi-transparent blue over the environment colour, standing in for the
+    // gradient the full-detail path fills a selected room with: at this size
+    // the two ends of that gradient are the same pixel.
+    if (!selectedRoomRects.isEmpty()) {
+        painter.save();
+        painter.setPen(Qt::NoPen);
+        const QColor selectionTint(0, 0, 255, 180);
+        for (const QRect& selectedRect : std::as_const(selectedRoomRects)) {
+            painter.fillRect(selectedRect, selectionTint);
+        }
+        painter.restore();
+    }
+
+    for (const auto& [room, roomCenter] : std::as_const(highlightedRooms)) {
+        const float roomRadius = (room->highlightRadius * mRoomWidth) / 2.0f;
+        QRadialGradient gradient(roomCenter, roomRadius);
+        gradient.setColorAt(0.85f, room->highlightColor);
+        gradient.setColorAt(0, room->highlightColor2);
+        painter.save();
+        painter.setBrush(gradient);
+        painter.setPen(QPen(Qt::transparent));
+        QPainterPath highlightPath;
+        highlightPath.addEllipse(roomCenter, roomRadius, roomRadius);
+        painter.drawPath(highlightPath);
+        painter.restore();
+    }
+
+    const qreal timeBlit = timer.nsecsElapsed() / 1000000.0;
+
+    if (qEnvironmentVariableIsSet("MUDLET_PROFILE_MAP") && profileOutput) {
+        // Handed back to paintEvent to print rather than printed here, so that
+        // the qDebug() call does not land inside the phase this is timing.
+        QDebug dbg(profileOutput);
+        dbg.noquote().nospace() << "drawNonGridModeRoomsLod timing (ms):" << " total:" << (timeIndex + timeCollect + timeBlit) << " index:" << timeIndex << " collect+pixelWrite:" << timeCollect
+                                << " imageBlit:" << timeBlit << " candidates:" << candidateRooms.size() << " drawnRooms:" << roomCount << " roomSizePx:" << mRoomWidth << " blobPx:" << blobPixelWidth
+                                << "x" << blobPixelHeight;
+    }
+
+    // drawRoom() resolves a double-click into a speed-walk and is not called
+    // from here, so the click has to be resolved against the grid instead.
+    // mPick is only cleared when a room was actually under the pointer: the
+    // player room is still drawn in full afterwards, and that is what offers
+    // the click to the area exit markers.
+    if (mPick) {
+        const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
+        const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
+        const QSet<int>& clickedRooms = pDrawnArea->getGridIndex().roomsAt(zLevel, clickWorldX, clickWorldY);
+        if (!clickedRooms.isEmpty()) {
+            mPick = false;
+            if (mStartSpeedWalk) {
+                mStartSpeedWalk = false;
+                initiateSpeedWalk(playerRoomId, *clickedRooms.constBegin());
+            }
+        }
     }
 }
 
@@ -2808,7 +2991,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     // rather than here, to avoid inflating phase6Time with qDebug() overhead on
     // Windows.
     qreal timeGetRoomsForZ = 0.0;
-    QString gridModeProfileOutput;
+    QString roomLoopProfileOutput;
     QElapsedTimer phase6Sub;
     phase6Sub.start();
     painter.save(); // prevent room-drawing state from leaking into labels/info box
@@ -2828,7 +3011,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
                           isPlayerRoomVisible,
                           playerRoomOnWidgetCoordinates,
                           isFontBigEnoughToShowRoomVnum,
-                          &gridModeProfileOutput);
+                          &roomLoopProfileOutput);
+    } else if (mRoomWidth < cLodPixelThreshold) {
+        // Non-grid mode, drawn too small for a room to have any detail worth
+        // building a QPainter shape for.
+        drawNonGridModeRoomsLod(painter, pDrawnArea, zLevel, playerRoomId, roomBounds, widgetWidth, widgetHeight, isPlayerRoomVisible, playerRoomOnWidgetCoordinates, &roomLoopProfileOutput);
     } else {
         // Non-grid mode: use full-featured per-room rendering
         QElapsedTimer getRoomsTimer;
@@ -2872,10 +3059,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     qreal timePhase6Gradient = 0.0;
     painter.save(); // prevent player-room drawing state from leaking into labels/info box
     if (isPlayerRoomVisible) {
-        // In grid mode use the spatial index (detects collisions even with off-screen rooms).
-        // In non-grid mode the usedRoomPositions set was populated during the room loop above.
-        const bool roomCollision =
-                pDrawnArea->gridMode ? pDrawnArea->getGridIndex().roomsAt(zLevel, pPlayerRoom->x(), pPlayerRoom->y()).size() > 1 : usedRoomPositions.contains({pPlayerRoom->x(), pPlayerRoom->y()});
+        // Only the full-detail non-grid loop fills usedRoomPositions; the grid
+        // and LOD loops ask the spatial index instead, which also finds a
+        // collision with a room that is off screen or hidden.
+        const bool roomCollision = (pDrawnArea->gridMode || mRoomWidth < cLodPixelThreshold) ? pDrawnArea->getGridIndex().roomsAt(zLevel, pPlayerRoom->x(), pPlayerRoom->y()).size() > 1
+                                                                                             : usedRoomPositions.contains({pPlayerRoom->x(), pPlayerRoom->y()});
         drawRoom(painter,
                  roomVNumFont,
                  mapNameFont,
@@ -3038,8 +3226,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QString profileOut;
         QDebug pdbg(&profileOut);
         pdbg.nospace().noquote() << "getRoomsForZ: " << timeGetRoomsForZ << "ms\n";
-        if (!gridModeProfileOutput.isEmpty()) {
-            pdbg << gridModeProfileOutput << "\n";
+        if (!roomLoopProfileOutput.isEmpty()) {
+            pdbg << roomLoopProfileOutput << "\n";
         }
         pdbg << "phase6 subs: roomsDraw=" << timePhase6RoomsDraw << " playerRoom=" << timePhase6DrawRoom << " gradient=" << timePhase6Gradient << " playerVisible=" << isPlayerRoomVisible << "\n";
         // Comprehensive infoBox diagnostic: shows every condition paintMapInfo
@@ -3184,6 +3372,11 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
     const float widgetHeight = height();
+    // At this zoom the rooms are drawn as single blobs on top of these lines,
+    // so a line that does not reach past the blobs at its two ends is worth
+    // nothing to look at. Which lines those are is decided one line at a time,
+    // further down, from the length that line is actually drawn at.
+    const bool lodTier = mRoomWidth < cLodPixelThreshold;
 
     int customLineDestinationTarget = 0;
     if (mCustomLinesRoomTo > 0) {
@@ -3582,6 +3775,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 // do not support special exit stubs (yet?)
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
                 const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
+                if (lodTier && stubLine.length() < cLodExitPixelThreshold) {
+                    continue;
+                }
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 // Draw the door lines before we draw the stub or the filled
                 // circle on the end - so that the latter overlays the doors
@@ -3622,6 +3818,21 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             const float ex = pE->x() * mRoomWidth + mRX;
             const float ey = pE->y() * mRoomHeight * -1 + mRY;
             const int ez = pE->z();
+
+            // Level of detail. Only this one line is judged, and only on how
+            // long it is drawn: an exit to the room next door is shorter than
+            // the two blobs it joins and they are painted over the top of it,
+            // while an exit to a distant room stays long however far the map
+            // is zoomed out and is the only thing that shows it exists. Area
+            // exits are never dropped either - their marker is a fixed size
+            // and it is the click target for a speed walk into that area.
+            if (lodTier && !areaExit) {
+                const float exitPixelDx = ex - rx;
+                const float exitPixelDy = ey - ry;
+                if ((exitPixelDx * exitPixelDx) + (exitPixelDy * exitPixelDy) < (cLodExitPixelThreshold * cLodExitPixelThreshold)) {
+                    continue;
+                }
+            }
 
             const QVector3D p1(ex, ey, ez);
             const int rz = mMapCenterZ;
