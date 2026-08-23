@@ -113,7 +113,12 @@ QString TMCPServer::getEndpoint() const
     if (!running()) {
         return QString();
     }
-    return qsl("http://127.0.0.1:%1/mcp").arg(mPort);
+    return endpointFor(mPort);
+}
+
+QString TMCPServer::endpointFor(quint16 port)
+{
+    return qsl("http://127.0.0.1:%1/mcp").arg(port);
 }
 
 QHttpServerResponse TMCPServer::respondToPost(const QHttpServerRequest& request)

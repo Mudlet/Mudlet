@@ -77,6 +77,7 @@ private:
     static Host* targetHost(const QString& profileName, QString& failure);
     static QJsonValue luaToJson(lua_State* L, int index, int depth);
     static QJsonValue luaTableToJson(lua_State* L, int index, int depth);
+    static QString readString(lua_State* L, int index);
     static QString numberKey(double value);
     static QString jsonToText(const QJsonValue& value);
 };

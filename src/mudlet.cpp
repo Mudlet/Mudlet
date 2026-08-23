@@ -3435,8 +3435,8 @@ bool mudlet::setMCPEnabled(const bool enabled, const quint16 port, QString& erro
 
     if (!mpMCPServer) {
         // Created on first use rather than in the constructor: most people never turn this
-        // on, and until they do there is no reason to carry a HTTP server around.
-        mpMCPServer.reset(new TMCPServer(this));
+        // on, and until they do there is no reason to carry the MCP machinery around.
+        mpMCPServer.reset(new TMCPServer());
     }
 
     if (mpMCPServer->running() && mpMCPServer->getPort() == port) {
@@ -5461,8 +5461,8 @@ void mudlet::slot_compactInputLine(const bool state)
 mudlet::~mudlet()
 {
 #ifdef INCLUDE_MCPSERVER
-    // Before the profiles go: a request arriving mid-teardown would otherwise reach for a
-    // Lua interpreter that is being pulled out from under it.
+    // Stop taking requests before the rest of the teardown runs. ~TMCPServer does this too,
+    // but only once this destructor body has finished.
     if (mpMCPServer) {
         mpMCPServer->stopServer();
     }

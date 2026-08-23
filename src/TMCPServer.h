@@ -72,6 +72,9 @@ public:
     bool running() const { return mpHttpServer != nullptr; }
     quint16 getPort() const { return mPort; }
     QString getEndpoint() const;
+    // The address to paste into an MCP client for a given port. Shared with the preferences
+    // dialog, which compares the address it would offer against the one that is live.
+    static QString endpointFor(quint16 port);
 
     // Answers one JSON-RPC message. Public because it is the protocol seam - see MCPReply.
     MCPReply handleMessage(const QByteArray& requestBody, const QHttpHeaders& headers);

@@ -119,13 +119,26 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
         return {false, tr("Unknown tool: %1").arg(toolName)};
     }
 
-    const QString luaCode = arguments.value(qsl("code")).toString();
+    // QJsonValue::toString() answers an empty string for a number, an object or a boolean,
+    // so an argument of the wrong type would otherwise read as one that was never sent: a
+    // numeric "profile" would quietly run the code in whichever profile is in the
+    // foreground rather than the one that was asked for.
+    const QJsonValue codeArgument = arguments.value(qsl("code"));
+    if (!codeArgument.isUndefined() && !codeArgument.isString()) {
+        return {false, tr("The 'code' argument must be a string.")};
+    }
+    const QString luaCode = codeArgument.toString();
     if (luaCode.isEmpty()) {
         return {false, tr("The 'code' argument is required and cannot be empty.")};
     }
 
+    const QJsonValue profileArgument = arguments.value(qsl("profile"));
+    if (!profileArgument.isUndefined() && !profileArgument.isNull() && !profileArgument.isString()) {
+        return {false, tr("The 'profile' argument must be a string.")};
+    }
+
     QString failure;
-    Host* pTarget = targetHost(arguments.value(qsl("profile")).toString(), failure);
+    Host* pTarget = targetHost(profileArgument.toString(), failure);
     if (!pTarget) {
         return {false, failure};
     }
@@ -184,7 +197,7 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
     }
 
     const bool ok = lua_toboolean(L, stackBefore + 1) != 0;
-    const QString printed = QString::fromUtf8(lua_tostring(L, stackBefore + 2));
+    const QString printed = readString(L, stackBefore + 2);
     const int firstValue = stackBefore + 3;
     const int lastValue = lua_gettop(L);
 
@@ -233,13 +246,8 @@ QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth)
         return QJsonValue(lua_toboolean(L, index) != 0);
     case LUA_TNUMBER:
         return QJsonValue(lua_tonumber(L, index));
-    case LUA_TSTRING: {
-        // Read the length rather than treating it as a C string: Lua strings may hold
-        // NULs, and stopping at the first one would truncate the value.
-        size_t length = 0;
-        const char* text = lua_tolstring(L, index, &length);
-        return QJsonValue(QString::fromUtf8(text, static_cast<int>(length)));
-    }
+    case LUA_TSTRING:
+        return QJsonValue(readString(L, index));
     case LUA_TTABLE:
         return luaTableToJson(L, index, depth);
     default:
@@ -263,6 +271,7 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
     // array so that a model reading the result sees a list, not {"1":..., "2":...}.
     const int length = static_cast<int>(lua_objlen(L, index));
     int keyCount = 0;
+    int sequenceKeyCount = 0;
     QSet<QString> stringKeys;
     QSet<QString> numberKeys;
     lua_pushnil(L);
@@ -271,14 +280,21 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
         // lua_tostring() on a number key would rewrite the key in place, and lua_next()
         // then loses its place in the table - so read numbers without converting them.
         if (lua_type(L, -2) == LUA_TSTRING) {
-            stringKeys.insert(QString::fromUtf8(lua_tostring(L, -2)));
+            stringKeys.insert(readString(L, -2));
         } else if (lua_type(L, -2) == LUA_TNUMBER) {
-            numberKeys.insert(numberKey(lua_tonumber(L, -2)));
+            const double number = lua_tonumber(L, -2);
+            numberKeys.insert(numberKey(number));
+            if (number >= 1 && number <= length && static_cast<int>(number) == number) {
+                ++sequenceKeyCount;
+            }
         }
         lua_pop(L, 1);
     }
 
-    if (length > 0 && keyCount == length) {
+    // Counting keys is not enough on its own: lua_objlen() may answer any border of a table
+    // that has a hole, so { "a", nil, "c", x = "d" } has three keys and a border of three,
+    // and the array branch would render ["a",null,"c"] and drop x without a trace.
+    if (length > 0 && keyCount == length && sequenceKeyCount == length) {
         QJsonArray array;
         for (int i = 1; i <= length; ++i) {
             lua_rawgeti(L, index, i);
@@ -299,7 +315,7 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
     while (lua_next(L, index) != 0) {
         QString key;
         if (lua_type(L, -2) == LUA_TSTRING) {
-            key = QString::fromUtf8(lua_tostring(L, -2));
+            key = readString(L, -2);
         } else if (lua_type(L, -2) == LUA_TNUMBER) {
             key = numberKey(lua_tonumber(L, -2));
             if (bracketNumbers) {
@@ -312,6 +328,18 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
         lua_pop(L, 1);
     }
     return object;
+}
+
+QString TMCPLuaBridge::readString(lua_State* L, int index)
+{
+    // Read the length rather than treating it as a C string: Lua strings may hold NULs, and
+    // stopping at the first one truncates a value - or, for a table key, collides two
+    // distinct keys into one and drops whichever the walk reaches first. Callers must have
+    // established that the slot really holds a string, because lua_tolstring() rewrites a
+    // number in place and lua_next() then loses its place in the table.
+    size_t length = 0;
+    const char* text = lua_tolstring(L, index, &length);
+    return QString::fromUtf8(text, static_cast<int>(length));
 }
 
 QString TMCPLuaBridge::numberKey(double value)

@@ -49,6 +49,10 @@
 #include "MMCP.h"
 #include "utils.h"
 
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPServer.h"
+#endif
+
 #include <chrono>
 #include <QtConcurrentRun>
 #include <QAccessible>
@@ -1358,7 +1362,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -3594,10 +3598,10 @@ void dlgProfilePreferences::slot_saveAndClose()
 #ifdef INCLUDE_MCPSERVER
     QString mcpError;
     if (!pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), static_cast<quint16>(spinBox_mcpServerPort->value()), mcpError)) {
-        //: %1 is a TCP port number, %2 the reason the socket could not be opened.
         QMessageBox::warning(this,
                              //: Title of a warning shown when the AI assistant (MCP) server could not be started.
                              tr("Could not start the MCP server"),
+                             //: %1 is a TCP port number, %2 the reason the socket could not be opened.
                              tr("Mudlet could not listen on port %1: %2\n\n"
                                 "Another program may already be using that port. The setting has been kept, so you can pick a different port and try again.")
                                      .arg(QString::number(spinBox_mcpServerPort->value()), mcpError));
@@ -4695,10 +4699,18 @@ void dlgProfilePreferences::slot_updateMCPServerEndpoint()
         return;
     }
 
-    const QString endpoint = qsl("http://127.0.0.1:%1/mcp").arg(spinBox_mcpServerPort->value());
+    const QString endpoint = TMCPServer::endpointFor(static_cast<quint16>(spinBox_mcpServerPort->value()));
     if (mudlet::self()->mcpEndpoint() == endpoint) {
         //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp
         label_mcpServerEndpoint->setText(tr("Listening. Give your AI assistant this address: %1").arg(endpoint));
+        return;
+    }
+
+    // Starting at launch has no console to report a failure on, so this label is the only
+    // place it can surface - and "press Save" on its own reads as "you have not saved yet".
+    if (mudlet::self()->mcpEnabled() && mudlet::self()->mcpEndpoint().isEmpty() && static_cast<quint16>(spinBox_mcpServerPort->value()) == mudlet::self()->mcpServerPort()) {
+        //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp
+        label_mcpServerEndpoint->setText(tr("The server could not start on %1 - another program may be using that port. Press Save to try again.").arg(endpoint));
         return;
     }
 

@@ -57,6 +57,15 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+#ifdef INCLUDE_MCPSERVER
+#include "TLuaInterpreter.h"
+#include "TMCPLuaBridge.h"
+#include "TMCPServer.h"
+
+#include <QHttpHeaders>
+#include <QJsonArray>
+#endif
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -662,6 +671,50 @@ private slots:
 
         QVERIFY2(!mudlet::self()->mcpEnabled(), "an installed package switched the MCP server on");
         QVERIFY2(mudlet::self()->mcpEndpoint().isEmpty(), "an installed package started the MCP server");
+    }
+
+    void test_aToolCallRunsInTheProfileItNames()
+    {
+        // The unit tests reach handleMessage() without a profile, so this is the only place
+        // a tools/call can be taken all the way through to an interpreter and back.
+        TMCPServer mcpServer;
+
+        QJsonObject meta;
+        meta[QString::fromLatin1(TMCPServer::META_PROTOCOL_VERSION)] = QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION);
+        meta[QString::fromLatin1(TMCPServer::META_CLIENT_CAPABILITIES)] = QJsonObject();
+
+        QJsonObject arguments;
+        arguments[qsl("code")] = qsl("mcpProbe = 'ran here' return 6 * 7");
+        arguments[qsl("profile")] = mTargetName;
+
+        QJsonObject params;
+        params[qsl("name")] = QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL);
+        params[qsl("arguments")] = arguments;
+        params[qsl("_meta")] = meta;
+
+        QJsonObject message;
+        message[qsl("jsonrpc")] = qsl("2.0");
+        message[qsl("id")] = 1;
+        message[qsl("method")] = qsl("tools/call");
+        message[qsl("params")] = params;
+
+        QHttpHeaders headers;
+        headers.append("MCP-Protocol-Version", QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION));
+        headers.append("Mcp-Method", qsl("tools/call"));
+        headers.append("Mcp-Name", QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL));
+
+        const MCPReply reply = mcpServer.handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headers);
+        const QJsonObject result = reply.body.value(qsl("result")).toObject();
+        const QString text = result.value(qsl("content")).toArray().first().toObject().value(qsl("text")).toString();
+
+        QVERIFY2(result.value(qsl("isError")).toBool() == false, qPrintable(text));
+        QCOMPARE(text, qsl("42"));
+
+        // ...and it ran in the profile the call named, not in the foreground one.
+        const MCPToolResult onTarget = TMCPLuaBridge::runLua(mpTarget->getLuaInterpreter()->getLuaGlobalState(), qsl("return mcpProbe"));
+        QCOMPARE(onTarget.text, qsl("ran here"));
+        const MCPToolResult onSource = TMCPLuaBridge::runLua(mpSource->getLuaInterpreter()->getLuaGlobalState(), qsl("return mcpProbe"));
+        QVERIFY2(onSource.text != qsl("ran here"), qPrintable(onSource.text));
     }
 #endif
 };

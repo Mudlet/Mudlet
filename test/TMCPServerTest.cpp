@@ -202,7 +202,48 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         const QJsonObject result = resultOf(reply);
         QCOMPARE(result.value(qsl("isError")).toBool(), true);
         QCOMPARE(result.value(qsl("resultType")).toString(), qsl("complete"));
-        QCOMPARE(result.value(qsl("content")).toArray().first().toObject().value(qsl("type")).toString(), qsl("text"));
+        const QJsonObject content = result.value(qsl("content")).toArray().first().toObject();
+        QCOMPARE(content.value(qsl("type")).toString(), qsl("text"));
+        // The reason has to survive into the content block, otherwise the model is told
+        // something went wrong and given nothing to correct.
+        QVERIFY2(content.value(qsl("text")).toString().contains(qsl("code")), qPrintable(content.value(qsl("text")).toString()));
+    }
+
+    void testAnArgumentOfTheWrongTypeIsNamedAsSuch()
+    {
+        // QJsonValue::toString() answers "" for a number, so without a type check a numeric
+        // profile reads as one that was never sent and the code runs in the wrong profile.
+        QJsonObject arguments;
+        arguments[qsl("code")] = qsl("return 1");
+        arguments[qsl("profile")] = 3;
+        QJsonObject params;
+        params[qsl("name")] = QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL);
+        params[qsl("arguments")] = arguments;
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/call"), params), headersFor(qsl("tools/call"), QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL)));
+
+        const QJsonObject result = resultOf(reply);
+        QCOMPARE(result.value(qsl("isError")).toBool(), true);
+        // Not just "mentions the profile": without the type check this call still fails,
+        // but with "no profile is open" - the same answer an honest empty argument gets.
+        const QString text = result.value(qsl("content")).toArray().first().toObject().value(qsl("text")).toString();
+        QVERIFY2(text.contains(qsl("'profile' argument must be a string")), qPrintable(text));
+    }
+
+    void testACodeArgumentOfTheWrongTypeIsNotReportedAsMissing()
+    {
+        QJsonObject arguments;
+        arguments[qsl("code")] = 42;
+        QJsonObject params;
+        params[qsl("name")] = QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL);
+        params[qsl("arguments")] = arguments;
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/call"), params), headersFor(qsl("tools/call"), QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL)));
+
+        const QJsonObject result = resultOf(reply);
+        QCOMPARE(result.value(qsl("isError")).toBool(), true);
+        const QString text = result.value(qsl("content")).toArray().first().toObject().value(qsl("text")).toString();
+        QVERIFY2(text.contains(qsl("must be a string")), qPrintable(text));
     }
 
     // ---------- transport-level validation ----------
@@ -515,6 +556,39 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QVERIFY(result.success);
         QVERIFY2(result.text.contains(qsl("no such room")), qPrintable(result.text));
+    }
+
+    void testPrintedOutputIsNotTruncatedAtAnEmbeddedNul()
+    {
+        // The runner joins every print() into one Lua string, so reading it as a C string
+        // does not just clip one line - it discards every line after the NUL.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("print('a' .. string.char(0) .. 'b') print('after')"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(qsl("after")), qPrintable(result.text));
+    }
+
+    void testATableWithAHoleKeepsItsNamedKeys()
+    {
+        // #t is any border of a table with a hole, so this table has three keys and a
+        // length of three - the array shortcut fires and the named key is lost.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("return {'a', nil, 'c', x = 'd'}"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(qsl("\"x\":\"d\"")), qPrintable(result.text));
+        QVERIFY2(result.text.contains(qsl("\"a\"")), qPrintable(result.text));
+        QVERIFY2(result.text.contains(qsl("\"c\"")), qPrintable(result.text));
+    }
+
+    void testATableKeyIsNotTruncatedAtAnEmbeddedNul()
+    {
+        // Reading a key as a C string stops at the NUL, so both keys become "a" and one of
+        // the two values is silently dropped.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("return {[string.char(97,0,120)] = 1, [string.char(97,0,121)] = 2}"));
+
+        QVERIFY(result.success);
+        const QJsonObject table = QJsonDocument::fromJson(result.text.toUtf8()).object();
+        QCOMPARE(table.size(), 2);
     }
 
     void testValuesAfterANilStillArrive()
