@@ -772,6 +772,20 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mFORCE_NO_COMPRESSION"), pHost->mFORCE_NO_COMPRESSION);
     setBoolAttribute(qsl("mFORCE_GA_OFF"), pHost->mFORCE_GA_OFF);
     setBoolAttribute(qsl("mEnableGMCP"), pHost->mEnableGMCP);
+#ifdef INCLUDE_MCPSERVER
+    if (attributes().hasAttribute(qsl("mMCPServerPort"))) {
+        const int port = attributes().value(qsl("mMCPServerPort")).toString().toInt();
+        if (port > 0 && port <= 65535) {
+            pHost->mMCPServerPort = port;
+        }
+    }
+    // Read the port first, because the setter binds to whatever mMCPServerPort holds by
+    // then. Going through the setter rather than assigning the field is what actually
+    // starts the server, so a profile saved with it switched on comes back listening.
+    bool enableMCP = false;
+    setBoolAttribute(qsl("mEnableMCP"), enableMCP);
+    pHost->setMCPEnabled(enableMCP);
+#endif
     setBoolAttribute(qsl("mEnableMSSP"), pHost->mEnableMSSP);
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);

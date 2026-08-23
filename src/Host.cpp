@@ -495,9 +495,7 @@ Host::~Host()
     mpLastCommandLineUsed.clear();
 
 #ifdef INCLUDE_MCPSERVER
-    if (mpMCPServer && mpMCPServer->isRunning()) {
-        mpMCPServer->stopServer();
-    }
+    mpMCPServer->stopServer();
 #endif
 
     mStopWatchMap.clear();
@@ -5522,25 +5520,20 @@ void Host::setMCPEnabled(const bool enabled)
 
     mEnableMCP = enabled;
 
-    if (enabled && !mpMCPServer->isRunning()) {
-        if (mpMCPServer->startServer(mMCPServerPort)) {
-            mMCPServerPort = mpMCPServer->getPort();
-            qDebug() << "MCP Server started for profile" << mHostName << "on port" << mMCPServerPort;
-        } else {
-            qWarning() << "Failed to start MCP Server for profile" << mHostName;
-            mEnableMCP = false;
-        }
-    } else if (!enabled && mpMCPServer->isRunning()) {
+    if (!enabled) {
         mpMCPServer->stopServer();
-        qDebug() << "MCP Server stopped for profile" << mHostName;
+        qDebug() << "MCP server stopped for profile" << mHostName;
+        return;
     }
-}
 
-QString Host::getMCPServerInfo() const
-{
-    if (!mpMCPServer) {
-        return tr("MCP Server: Not available");
+    if (!mpMCPServer->startServer(mMCPServerPort)) {
+        qWarning() << "MCP server could not start for profile" << mHostName;
+        mEnableMCP = false;
+        return;
     }
-    return mpMCPServer->getServerInfo();
+
+    // Port 0 asks the OS to pick one, so read back what it actually bound to.
+    mMCPServerPort = mpMCPServer->getPort();
+    qDebug() << "MCP server for profile" << mHostName << "is listening on" << mpMCPServer->getEndpoint();
 }
 #endif

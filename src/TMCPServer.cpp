@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,442 +19,336 @@
 
 #include "TMCPServer.h"
 #include "TMCPLuaBridge.h"
-#include "Host.h"
+#include "utils.h"
 
 #include <QDebug>
+#include <QHostAddress>
+#include <QHttpHeaders>
+#include <QHttpServer>
+#include <QHttpServerRequest>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonParseError>
-#include <QHttpServerResponse>
-#include <QNetworkInterface>
-#include <QUuid>
+#include <QTcpServer>
+#include <QUrl>
+
+// Neither the tool list nor the server's identity changes while Mudlet runs, so clients
+// are told they may cache both for an hour rather than re-ask on every turn.
+static constexpr int csmCacheTtlMs = 3600000;
 
 TMCPServer::TMCPServer(Host* pHost, QObject* parent)
 : QObject(parent)
 , mpHost(pHost)
-, mpLuaBridge(nullptr)
-, mpHttpServer(nullptr)
-, mpTcpServer(nullptr)
-, mPort(0)
-, mServerRunning(false)
+, mpLuaBridge(new TMCPLuaBridge(pHost, this))
 {
-    mpLuaBridge = new TMCPLuaBridge(mpHost, this);
-    mpHttpServer = new QHttpServer(this);
-    mpTcpServer = new QTcpServer(this);
-
-    // Connect Lua bridge signals to notification slots
-    connect(mpLuaBridge, &TMCPLuaBridge::toolsChanged, this, &TMCPServer::notifyToolsChanged);
 }
 
 TMCPServer::~TMCPServer()
 {
     stopServer();
-    qDeleteAll(mSessions);
 }
 
 bool TMCPServer::startServer(int port)
 {
-    if (mServerRunning) {
+    if (running()) {
         return false;
     }
 
-    if (!mpLuaBridge->loadLuaFunctions()) {
-        qWarning() << "TMCPServer: Failed to load Lua functions";
+    auto* httpServer = new QHttpServer(this);
+
+    // Everything rides one POST endpoint in this revision. /mcp is the conventional
+    // path, and / is accepted as well so a bare host:port still reaches the server.
+    const auto onPost = [this](const QHttpServerRequest& request) { return respondToPost(request); };
+    httpServer->route(qsl("/"), QHttpServerRequest::Method::Post, onPost);
+    httpServer->route(qsl("/mcp"), QHttpServerRequest::Method::Post, onPost);
+
+    // GET opened the standalone SSE stream and DELETE ended a session in revisions up to
+    // 2025-11-25. Neither exists now, and the spec asks a modern-only server to say so
+    // with a 405 rather than let an old client hang waiting for a stream.
+    const auto onRetiredMethod = [](const QHttpServerRequest&) {
+        return QHttpServerResponse(QHttpServerResponse::StatusCode::MethodNotAllowed);
+    };
+    const QHttpServerRequest::Methods retiredMethods = QHttpServerRequest::Method::Get | QHttpServerRequest::Method::Delete;
+    httpServer->route(qsl("/"), retiredMethods, onRetiredMethod);
+    httpServer->route(qsl("/mcp"), retiredMethods, onRetiredMethod);
+
+    auto* tcpServer = new QTcpServer(httpServer);
+    if (!tcpServer->listen(QHostAddress::LocalHost, port)) {
+        qWarning() << "TMCPServer: could not listen on port" << port << "-" << tcpServer->errorString();
+        delete httpServer;
         return false;
     }
 
-    // Set up HTTP routes for MCP
-    mpHttpServer->route("/", QHttpServerRequest::Method::Post,
-        [this](const QHttpServerRequest& request) {
-            return handleMcpPost(request);
-        });
-
-    mpHttpServer->route("/", QHttpServerRequest::Method::Get,
-        [this](const QHttpServerRequest& request) {
-            return handleMcpGet(request);
-        });
-
-    mpHttpServer->route("/", QHttpServerRequest::Method::Options,
-        [this](const QHttpServerRequest& request) {
-            Q_UNUSED(request)
-            return QHttpServerResponse(QHttpServerResponse::StatusCode::Ok);
-        });
-
-    // Bind to localhost
-    QHostAddress address = QHostAddress::LocalHost;
-    if (!mpTcpServer->listen(address, port)) {
-        qWarning() << "TMCPServer: Failed to start server on port" << port << ":" << mpTcpServer->errorString();
+    if (!httpServer->bind(tcpServer)) {
+        qWarning() << "TMCPServer: could not bind the HTTP server to port" << tcpServer->serverPort();
+        delete httpServer;
         return false;
     }
 
-    if (!mpHttpServer->bind(mpTcpServer)) {
-        qWarning() << "TMCPServer: Failed to bind HTTP server to TCP server";
-        mpTcpServer->close();
-        return false;
-    }
-
-    mPort = mpTcpServer->serverPort();
-    mServerRunning = true;
-
-    qDebug() << "TMCPServer: Started HTTP server on" << address.toString() << ":" << mPort;
+    mPort = tcpServer->serverPort();
+    mpHttpServer = httpServer;
     return true;
 }
 
 void TMCPServer::stopServer()
 {
-    if (!mServerRunning) {
+    if (!running()) {
         return;
     }
 
-    mpHttpServer->disconnect();
-    mpTcpServer->close();
-
-    qDeleteAll(mSessions);
-    mSessions.clear();
-
-    mServerRunning = false;
+    // This takes the QTcpServer with it - bind() reparented the socket to the HTTP server.
+    delete mpHttpServer;
+    mpHttpServer = nullptr;
     mPort = 0;
-
-    qDebug() << "TMCPServer: Stopped";
 }
 
-bool TMCPServer::isRunning() const
+QString TMCPServer::getEndpoint() const
 {
-    return mServerRunning;
-}
-
-int TMCPServer::getPort() const
-{
-    return mPort;
-}
-
-QString TMCPServer::getServerInfo() const
-{
-    if (!mServerRunning) {
-        return tr("MCP Server: Not running");
+    if (!running()) {
+        return QString();
     }
-    return tr("MCP Server: Running on localhost:%1 (%2 sessions)").arg(mPort).arg(mSessions.size());
+    return qsl("http://127.0.0.1:%1/mcp").arg(mPort);
 }
 
-QHttpServerResponse TMCPServer::handleMcpPost(const QHttpServerRequest& request)
+QHttpServerResponse TMCPServer::respondToPost(const QHttpServerRequest& request)
 {
-    // Validate Origin header for security
-    if (request.headers().contains("Origin")) {
-        QString origin = QString::fromUtf8(request.headers().value("Origin"));
-        if (!origin.isEmpty() && !origin.startsWith("http://localhost") && !origin.startsWith("http://127.0.0.1")) {
-            qWarning() << "TMCPServer: Rejecting request from origin:" << origin;
-            return QHttpServerResponse(QHttpServerResponse::StatusCode::Forbidden);
-        }
+    const MCPReply reply = handleMessage(request.body(), request.headers());
+    if (reply.body.isEmpty()) {
+        return QHttpServerResponse(reply.status);
+    }
+    return QHttpServerResponse(reply.body, reply.status);
+}
+
+MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHeaders& headers)
+{
+    // Guards against DNS rebinding. A browser always attaches Origin, a genuine MCP
+    // client never does, so anything with a non-local Origin is a page in a tab.
+    const QByteArrayView origin = headers.value("Origin");
+    if (!origin.isEmpty() && !originAllowed(QString::fromUtf8(origin))) {
+        qWarning() << "TMCPServer: refused a request from origin" << origin;
+        return {QJsonObject(), QHttpServerResponse::StatusCode::Forbidden};
     }
 
-    // Get or create session
-    QString sessionId = QString::fromUtf8(request.headers().value("Mcp-Session-Id"));
-
-    // Parse the method early to determine if this is initialization
-    QByteArray requestBody = request.body();
     QJsonParseError parseError;
-    QJsonDocument doc = QJsonDocument::fromJson(requestBody, &parseError);
-    if (parseError.error != QJsonParseError::NoError) {
-        QJsonObject error = createJsonRpcError(-1, ParseError, tr("JSON parse error: %1").arg(parseError.errorString()));
-        return QHttpServerResponse(error, QHttpServerResponse::StatusCode::BadRequest);
+    const QJsonDocument document = QJsonDocument::fromJson(requestBody, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return error(QJsonValue(), ParseError, tr("JSON parse error: %1").arg(parseError.errorString()), QJsonValue(),
+                     QHttpServerResponse::StatusCode::BadRequest);
     }
-    QJsonObject jsonRequest = doc.object();
-    QString method = jsonRequest[qsl("method")].toString();
 
-    MCPSession* session = nullptr;
+    const QJsonObject message = document.object();
+    const QJsonValue id = message.value(qsl("id"));
 
+    if (message.value(qsl("jsonrpc")).toString() != qsl("2.0")) {
+        return error(id, InvalidRequest, tr("Not a JSON-RPC 2.0 message"), QJsonValue(),
+                     QHttpServerResponse::StatusCode::BadRequest);
+    }
+
+    // A message without an id is a notification and is never answered. The core protocol
+    // defines no client-to-server notification over HTTP, so there is nothing to act on.
+    if (id.isUndefined() || id.isNull()) {
+        return {QJsonObject(), QHttpServerResponse::StatusCode::Accepted};
+    }
+
+    const QString method = message.value(qsl("method")).toString();
+    const QJsonObject params = message.value(qsl("params")).toObject();
+    const QJsonObject meta = params.value(qsl("_meta")).toObject();
+
+    // A pre-2026-07-28 client opens with initialize and has no way to fall forward, so
+    // this error is the only diagnostic it can put in front of a user - name the version.
     if (method == qsl("initialize")) {
-        // For initialization, create a new session if no session ID provided
-        if (sessionId.isEmpty()) {
-            sessionId = generateSessionId();
-        }
-        session = getOrCreateSession(sessionId);
-    } else {
-        // For other requests, require session ID (except ping)
-        if (method != qsl("ping") && sessionId.isEmpty()) {
-            QJsonObject error = createJsonRpcError(jsonRequest[qsl("id")].toInt(-1), ServerError, tr("Session ID required. Must initialize first."));
-            return QHttpServerResponse(error, QHttpServerResponse::StatusCode::BadRequest);
-        }
-        session = getOrCreateSession(sessionId);
-
-        // Verify session is initialized for non-ping requests
-        if (method != qsl("ping") && !session->initialized) {
-            QJsonObject error = createJsonRpcError(jsonRequest[qsl("id")].toInt(-1), ServerError, tr("Client not initialized"));
-            return QHttpServerResponse(error, QHttpServerResponse::StatusCode::BadRequest);
-        }
+        QJsonObject data;
+        data[qsl("supported")] = QJsonArray{QString::fromLatin1(MCP_PROTOCOL_VERSION)};
+        data[qsl("requested")] = params.value(qsl("protocolVersion"));
+        return error(id, UnsupportedProtocolVersion,
+                     tr("This server speaks MCP %1 only, which has no initialize handshake.").arg(QString::fromLatin1(MCP_PROTOCOL_VERSION)),
+                     data, QHttpServerResponse::StatusCode::BadRequest);
     }
 
-
-    QJsonObject jsonResponse;
-
-    // Handle the request
-    if (method == qsl("initialize")) {
-        // Validate JSON-RPC format for initialization
-        if (!jsonRequest.contains(qsl("jsonrpc")) || jsonRequest[qsl("jsonrpc")].toString() != qsl("2.0")) {
-            jsonResponse = createJsonRpcError(-1, InvalidRequest, tr("Invalid JSON-RPC 2.0 request: missing or invalid 'jsonrpc' field"));
-        } else if (!jsonRequest.contains(qsl("id"))) {
-            jsonResponse = createJsonRpcError(-1, InvalidRequest, tr("Invalid JSON-RPC 2.0 request: missing 'id' field"));
-        } else if (!jsonRequest.contains(qsl("params"))) {
-            jsonResponse = createJsonRpcError(jsonRequest[qsl("id")].toInt(), InvalidParams, tr("Initialize request missing 'params'"));
-        } else {
-            handleInitializeRequest(jsonRequest, jsonResponse, session);
-        }
-    } else if (method == qsl("tools/list")) {
-        qDebug() << "TMCPServer: tools/list request for sessionId:" << sessionId << "initialized:" << session->initialized;
-        handleListToolsRequest(jsonRequest, jsonResponse);
-    } else if (method == qsl("tools/call")) {
-        handleCallToolRequest(jsonRequest, jsonResponse);
-    } else if (method == qsl("ping")) {
-        handlePingRequest(jsonRequest, jsonResponse);
-    } else if (method.startsWith(qsl("notifications/"))) {
-        handleNotificationRequest(jsonRequest);
-        // Notifications don't require a response, return empty response
-        return QHttpServerResponse(QHttpServerResponse::StatusCode::Ok);
-    } else {
-        int id = jsonRequest[qsl("id")].toInt(-1);
-        jsonResponse = createJsonRpcError(id, MethodNotFound, tr("Method not found: %1").arg(method));
+    if (!meta.contains(QString::fromLatin1(META_CLIENT_CAPABILITIES))) {
+        return error(id, InvalidParams, tr("Missing required _meta field: %1").arg(QString::fromLatin1(META_CLIENT_CAPABILITIES)),
+                     QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
     }
 
-    // Send response
-    QHttpServerResponse response(jsonResponse, QHttpServerResponse::StatusCode::Ok);
-
-    // Add session ID header for initialization requests
-    if (method == qsl("initialize")) {
-        QHttpHeaders headers = response.headers();
-        headers.append("Mcp-Session-Id", session->sessionId.toUtf8());
-        response.setHeaders(headers);
+    const QString mismatch = headerMismatch(headers, method, params, meta);
+    if (!mismatch.isEmpty()) {
+        return error(id, HeaderMismatch, mismatch, QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
     }
 
-    return response;
+    const QString requestedVersion = meta.value(QString::fromLatin1(META_PROTOCOL_VERSION)).toString();
+    if (requestedVersion != QLatin1String(MCP_PROTOCOL_VERSION)) {
+        QJsonObject data;
+        data[qsl("supported")] = QJsonArray{QString::fromLatin1(MCP_PROTOCOL_VERSION)};
+        data[qsl("requested")] = requestedVersion;
+        return error(id, UnsupportedProtocolVersion, tr("Unsupported protocol version"), data,
+                     QHttpServerResponse::StatusCode::BadRequest);
+    }
+
+    return dispatch(method, id, params);
 }
 
-QHttpServerResponse TMCPServer::handleMcpGet(const QHttpServerRequest& request)
+MCPReply TMCPServer::dispatch(const QString& method, const QJsonValue& id, const QJsonObject& params)
 {
-    // For GET requests, we could implement SSE streaming here if needed
-    // For now, return HTTP 405 Method Not Allowed as we don't support SSE yet
-    Q_UNUSED(request)
+    if (method == qsl("server/discover")) {
+        return discover(id);
+    }
+    if (method == qsl("tools/list")) {
+        return listTools(id);
+    }
+    if (method == qsl("tools/call")) {
+        return callTool(id, params);
+    }
 
-    return QHttpServerResponse(QHttpServerResponse::StatusCode::MethodNotAllowed);
+    // The JSON-RPC body on this 404 is what tells a client it has reached a modern MCP
+    // endpoint that lacks the method, rather than a server hosting no endpoint at all.
+    return error(id, MethodNotFound, tr("Method not found: %1").arg(method), QJsonValue(),
+                 QHttpServerResponse::StatusCode::NotFound);
 }
 
-void TMCPServer::handleInitializeRequest(const QJsonObject& request, QJsonObject& response, MCPSession* session)
+MCPReply TMCPServer::discover(const QJsonValue& id) const
 {
-    QJsonObject params = request[qsl("params")].toObject();
-
-    // Validate required parameters
-    if (!params.contains(qsl("protocolVersion"))) {
-        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams, tr("Missing required parameter: protocolVersion"));
-        return;
-    }
-
-    if (!params.contains(qsl("clientInfo"))) {
-        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams, tr("Missing required parameter: clientInfo"));
-        return;
-    }
-
-    QJsonObject clientInfo = params[qsl("clientInfo")].toObject();
-    if (!clientInfo.contains(qsl("name"))) {
-        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams, tr("Missing required clientInfo.name"));
-        return;
-    }
-
-    // Protocol version negotiation
-    QString clientVersion = params[qsl("protocolVersion")].toString();
-    QString serverVersion = QString::fromLatin1(MCP_PROTOCOL_VERSION);
-    QString negotiatedVersion;
-
-    if (clientVersion == serverVersion) {
-        // Perfect match
-        negotiatedVersion = serverVersion;
-    } else {
-        // For now, we only support our current version
-        // In a full implementation, you'd check for compatible versions
-        QJsonObject errorData;
-        errorData[qsl("supported")] = QJsonArray{serverVersion};
-        errorData[qsl("requested")] = clientVersion;
-        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams,
-                                    tr("Unsupported protocol version"), QJsonValue(errorData));
-        return;
-    }
-
-    session->clientName = clientInfo[qsl("name")].toString();
-    session->clientVersion = clientInfo[qsl("version")].toString();
-    session->initialized = true;
-
-    QJsonObject initializeResult = createInitializeResult(negotiatedVersion);
-    response[qsl("jsonrpc")] = qsl("2.0");
-    response[qsl("id")] = request[qsl("id")];
-    response[qsl("result")] = initializeResult;
-
-    qDebug() << "TMCPServer: Initialized client:" << session->clientName << session->clientVersion
-             << "sessionId:" << session->sessionId << "protocol:" << negotiatedVersion;
-}
-
-void TMCPServer::handleListToolsRequest(const QJsonObject& request, QJsonObject& response)
-{
-    QJsonObject result;
-    result[qsl("tools")] = getAvailableTools();
-
-    response[qsl("jsonrpc")] = qsl("2.0");
-    response[qsl("id")] = request[qsl("id")];
-    response[qsl("result")] = result;
-}
-
-void TMCPServer::handleCallToolRequest(const QJsonObject& request, QJsonObject& response)
-{
-    QJsonObject params = request[qsl("params")].toObject();
-
-    // Validate required parameters according to MCP spec
-    if (!params.contains(qsl("name"))) {
-        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams, tr("Missing required parameter: name"));
-        return;
-    }
-
-    QString toolName = params[qsl("name")].toString();
-    if (toolName.isEmpty()) {
-        response = createJsonRpcError(request[qsl("id")].toInt(), InvalidParams, tr("Tool name cannot be empty"));
-        return;
-    }
-
-    // arguments parameter is optional - default to empty object if not provided
-    QJsonObject arguments = params[qsl("arguments")].toObject();
-
-    qDebug() << "TMCPServer: Calling tool:" << toolName << "with arguments:" << arguments;
-    MCPToolResult result = mpLuaBridge->callTool(toolName, arguments);
-
-    response[qsl("jsonrpc")] = qsl("2.0");
-    response[qsl("id")] = request[qsl("id")];
-
-    // Handle protocol errors (unknown tools, server errors) vs tool execution errors
-    if (!result.success && result.errorCode == -32601) {
-        // Unknown tool - this is a protocol error, not a tool execution error
-        response = createJsonRpcError(request[qsl("id")].toInt(), MethodNotFound, tr("Unknown tool: %1").arg(toolName));
-        return;
-    }
-
-    QJsonObject resultObj;
-    resultObj[qsl("isError")] = false;
-
-    if (result.success) {
-        // Only include content if there's actually something to show
-        if (!result.result.isNull() && !result.result.toString().isEmpty()) {
-            QJsonObject content;
-            content[qsl("type")] = qsl("text");
-            content[qsl("text")] = result.result.toString();
-            resultObj[qsl("content")] = QJsonArray{content};
-        }
-    } else {
-        // For tool execution errors, return error content with isError: true
-        // This follows MCP spec for tool execution errors vs protocol errors
-        QJsonObject content;
-        content[qsl("type")] = qsl("text");
-        content[qsl("text")] = result.errorMessage;
-        resultObj[qsl("content")] = QJsonArray{content};
-        resultObj[qsl("isError")] = true;
-    }
-
-    response[qsl("result")] = resultObj;
-}
-
-void TMCPServer::handlePingRequest(const QJsonObject& request, QJsonObject& response)
-{
-    response[qsl("jsonrpc")] = qsl("2.0");
-    response[qsl("id")] = request[qsl("id")];
-    response[qsl("result")] = QJsonObject();
-}
-
-QJsonObject TMCPServer::createJsonRpcError(int id, int code, const QString& message, const QJsonValue& data)
-{
-    QJsonObject error;
-    error[qsl("code")] = code;
-    error[qsl("message")] = message;
-    if (!data.isNull()) {
-        error[qsl("data")] = data;
-    }
-
-    QJsonObject response;
-    response[qsl("jsonrpc")] = qsl("2.0");
-    response[qsl("id")] = id;
-    response[qsl("error")] = error;
-
-    return response;
-}
-
-QString TMCPServer::generateSessionId()
-{
-    return QUuid::createUuid().toString(QUuid::WithoutBraces);
-}
-
-TMCPServer::MCPSession* TMCPServer::getOrCreateSession(const QString& sessionId)
-{
-    if (!mSessions.contains(sessionId)) {
-        MCPSession* session = new MCPSession();
-        session->sessionId = sessionId;
-        session->initialized = false;
-        session->requestId = 1;
-        mSessions[sessionId] = session;
-    }
-    return mSessions[sessionId];
-}
-
-QJsonObject TMCPServer::createInitializeResult(const QString& negotiatedVersion) const
-{
-    QJsonObject serverInfo;
-    serverInfo[qsl("name")] = QString::fromLatin1(MCP_SERVER_NAME);
-    serverInfo[qsl("version")] = QString::fromLatin1(MCP_SERVER_VERSION);
-
     QJsonObject capabilities;
+    // Deliberately no listChanged: the tool list is fixed, and announcing a change would
+    // need a subscriptions/listen stream that there is nothing to send down.
+    capabilities[qsl("tools")] = QJsonObject();
 
-    // Tools capability
-    QJsonObject tools;
-    tools[qsl("listChanged")] = true;
-    capabilities[qsl("tools")] = tools;
-
-    QJsonObject result;
-    result[qsl("protocolVersion")] = negotiatedVersion;
-    result[qsl("serverInfo")] = serverInfo;
-    result[qsl("capabilities")] = capabilities;
-
-    return result;
+    QJsonObject payload;
+    payload[qsl("supportedVersions")] = QJsonArray{QString::fromLatin1(MCP_PROTOCOL_VERSION)};
+    payload[qsl("capabilities")] = capabilities;
+    //: Shown to an AI model to explain what this MCP server is for. "Lua" and "MUD" are proper nouns.
+    payload[qsl("instructions")] = tr("Runs Lua inside Mudlet, a MUD client. Use it to inspect and drive a player's "
+                                      "session: read the map, windows, triggers, aliases and variables, and send "
+                                      "commands to the game.");
+    payload[qsl("ttlMs")] = csmCacheTtlMs;
+    payload[qsl("cacheScope")] = qsl("private");
+    return result(id, payload);
 }
 
-QJsonArray TMCPServer::getAvailableTools() const
+MCPReply TMCPServer::listTools(const QJsonValue& id) const
 {
-    return mpLuaBridge->getAvailableTools();
+    QJsonObject payload;
+    payload[qsl("tools")] = mpLuaBridge->getAvailableTools();
+    payload[qsl("ttlMs")] = csmCacheTtlMs;
+    payload[qsl("cacheScope")] = qsl("private");
+    return result(id, payload);
 }
 
-void TMCPServer::handleNotificationRequest(const QJsonObject& request)
+MCPReply TMCPServer::callTool(const QJsonValue& id, const QJsonObject& params)
 {
-    QString method = request[qsl("method")].toString();
-
-    if (method == qsl("notifications/initialized")) {
-        qDebug() << "TMCPServer: Client sent initialized notification";
-        // Client is confirming it's ready - no action needed
-    } else {
-        qDebug() << "TMCPServer: Received unknown notification:" << method;
-    }
-}
-
-void TMCPServer::sendNotificationToAllSessions(const QString& method, const QJsonObject& params)
-{
-    if (!mServerRunning || mSessions.isEmpty()) {
-        return;
+    const QString toolName = params.value(qsl("name")).toString();
+    if (!mpLuaBridge->hasTool(toolName)) {
+        return error(id, InvalidParams, tr("Unknown tool: %1").arg(toolName));
     }
 
-    QJsonObject notification;
-    notification[qsl("jsonrpc")] = qsl("2.0");
-    notification[qsl("method")] = method;
-    if (!params.isEmpty()) {
-        notification[qsl("params")] = params;
-    }
+    const MCPToolResult toolResult = mpLuaBridge->callTool(toolName, params.value(qsl("arguments")).toObject());
 
-    qDebug() << "TMCPServer: Sending notification" << method << "to" << mSessions.size() << "sessions";
+    QJsonObject textContent;
+    textContent[qsl("type")] = qsl("text");
+    textContent[qsl("text")] = toolResult.text;
 
-    // Note: For HTTP transport, we would need to implement Server-Sent Events (SSE)
-    // to push notifications to clients. For now, we'll store pending notifications
-    // and send them when clients poll or make requests.
-    // This is a limitation of HTTP transport vs WebSocket or stdio transport.
+    QJsonObject payload;
+    payload[qsl("content")] = QJsonArray{textContent};
+    // A failure here is the tool's, not the protocol's, so the model sees it and can retry.
+    payload[qsl("isError")] = !toolResult.success;
+    return result(id, payload);
 }
 
-void TMCPServer::notifyToolsChanged()
+QString TMCPServer::headerMismatch(const QHttpHeaders& headers, const QString& method, const QJsonObject& params, const QJsonObject& meta) const
 {
-    sendNotificationToAllSessions(qsl("notifications/tools/list_changed"));
+    // These headers mirror body fields so that proxies can route without parsing the
+    // body. If the two disagree, the two halves of the network are looking at different
+    // requests, which the spec treats as a security problem rather than a mistake.
+    const QByteArrayView versionHeader = headers.value("MCP-Protocol-Version");
+    if (versionHeader.isEmpty()) {
+        return tr("Missing required header: MCP-Protocol-Version");
+    }
+    const QString metaVersion = meta.value(QString::fromLatin1(META_PROTOCOL_VERSION)).toString();
+    if (QString::fromUtf8(versionHeader) != metaVersion) {
+        return tr("Header mismatch: MCP-Protocol-Version header value '%1' does not match body value '%2'")
+                .arg(QString::fromUtf8(versionHeader), metaVersion);
+    }
+
+    const QByteArrayView methodHeader = headers.value("Mcp-Method");
+    if (methodHeader.isEmpty()) {
+        return tr("Missing required header: Mcp-Method");
+    }
+    if (QString::fromUtf8(methodHeader) != method) {
+        return tr("Header mismatch: Mcp-Method header value '%1' does not match body value '%2'")
+                .arg(QString::fromUtf8(methodHeader), method);
+    }
+
+    if (method == qsl("tools/call")) {
+        const QByteArrayView nameHeader = headers.value("Mcp-Name");
+        if (nameHeader.isEmpty()) {
+            return tr("Missing required header: Mcp-Name");
+        }
+        const QString name = decodeHeaderValue(nameHeader);
+        if (name != params.value(qsl("name")).toString()) {
+            return tr("Header mismatch: Mcp-Name header value '%1' does not match body value '%2'")
+                    .arg(name, params.value(qsl("name")).toString());
+        }
+    }
+
+    return QString();
+}
+
+MCPReply TMCPServer::result(const QJsonValue& id, QJsonObject payload, QHttpServerResponse::StatusCode status) const
+{
+    payload[qsl("resultType")] = qsl("complete");
+
+    QJsonObject meta = payload.value(qsl("_meta")).toObject();
+    meta[QString::fromLatin1(META_SERVER_INFO)] = serverImplementation();
+    payload[qsl("_meta")] = meta;
+
+    QJsonObject body;
+    body[qsl("jsonrpc")] = qsl("2.0");
+    body[qsl("id")] = id;
+    body[qsl("result")] = payload;
+    return {body, status};
+}
+
+MCPReply TMCPServer::error(const QJsonValue& id, JsonRpcErrorCode code, const QString& message, const QJsonValue& data, QHttpServerResponse::StatusCode status) const
+{
+    QJsonObject errorObject;
+    errorObject[qsl("code")] = code;
+    errorObject[qsl("message")] = message;
+    if (!data.isNull() && !data.isUndefined()) {
+        errorObject[qsl("data")] = data;
+    }
+
+    QJsonObject body;
+    body[qsl("jsonrpc")] = qsl("2.0");
+    // A message too malformed to read an id from still gets a reply, with a null id.
+    body[qsl("id")] = id.isUndefined() ? QJsonValue() : id;
+    body[qsl("error")] = errorObject;
+    return {body, status};
+}
+
+QJsonObject TMCPServer::serverImplementation() const
+{
+    QJsonObject implementation;
+    implementation[qsl("name")] = QString::fromLatin1(MCP_SERVER_NAME);
+    implementation[qsl("version")] = QString::fromLatin1(APP_VERSION);
+    return implementation;
+}
+
+QString TMCPServer::decodeHeaderValue(QByteArrayView raw)
+{
+    // A value that would not survive an HTTP header - non-ASCII, control characters,
+    // padding whitespace - arrives base64-wrapped in this sentinel instead.
+    constexpr QByteArrayView prefix = "=?base64?";
+    constexpr QByteArrayView suffix = "?=";
+    if (raw.size() >= prefix.size() + suffix.size() && raw.startsWith(prefix) && raw.endsWith(suffix)) {
+        const QByteArray payload = raw.sliced(prefix.size(), raw.size() - prefix.size() - suffix.size()).toByteArray();
+        return QString::fromUtf8(QByteArray::fromBase64(payload));
+    }
+    return QString::fromUtf8(raw);
+}
+
+bool TMCPServer::originAllowed(const QString& origin)
+{
+    // Compare the parsed host, not the prefix: "http://localhost.example.com" starts with
+    // "http://localhost" but is somebody else's domain.
+    const QString host = QUrl(origin).host();
+    return host == qsl("localhost") || host == qsl("127.0.0.1") || host == qsl("::1");
 }

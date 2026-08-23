@@ -2,7 +2,7 @@
 #define MUDLET_TMCPSERVER_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,30 +20,35 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QString>
-#include <QTimer>
-#include <QVariantMap>
-#include <QUrl>
-#include <QUrlQuery>
-#include <QHttpServer>
-#include <QHttpServerRequest>
 #include <QHttpServerResponse>
-#include <QHttpHeaders>
-#include <QTcpServer>
+#include <QJsonObject>
+#include <QObject>
+#include <QString>
 
 class Host;
 class TMCPLuaBridge;
+class QHttpHeaders;
+class QHttpServer;
+class QHttpServerRequest;
+class QTcpServer;
 
+// The answer to one MCP message, before it becomes a QHttpServerResponse. Split out
+// because QHttpServerRequest cannot be constructed outside QtHttpServer, so this is the
+// only seam at which the protocol can be driven without opening a real socket.
+struct MCPReply
+{
+    QJsonObject body;
+    QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok;
+};
+
+// A Model Context Protocol server speaking revision 2026-07-28 over Streamable HTTP.
+//
+// That revision is stateless: there is no initialize handshake, no Mcp-Session-Id and no
+// ping, and every request repeats its protocol version, client identity and capabilities
+// in _meta. Nothing here may therefore carry state between requests.
 class TMCPServer : public QObject
 {
     Q_OBJECT
-
-#ifdef TMCPServer_Test
-    friend class TMCPServerTest;
-#endif
 
 public:
     explicit TMCPServer(Host* pHost, QObject* parent = nullptr);
@@ -51,51 +56,21 @@ public:
 
     bool startServer(int port = 0);
     void stopServer();
-    bool isRunning() const;
-    int getPort() const;
-    QString getServerInfo() const;
+    bool running() const { return mpHttpServer != nullptr; }
+    int getPort() const { return mPort; }
+    QString getEndpoint() const;
 
-    static constexpr const char* MCP_PROTOCOL_VERSION = "2025-06-18";
+    // Answers one JSON-RPC message. Public because it is the protocol seam - see MCPReply.
+    MCPReply handleMessage(const QByteArray& requestBody, const QHttpHeaders& headers);
+
+    static constexpr const char* MCP_PROTOCOL_VERSION = "2026-07-28";
     static constexpr const char* MCP_SERVER_NAME = "mudlet";
-    static constexpr const char* MCP_SERVER_VERSION = "1.0.0";
 
-private slots:
-    void notifyToolsChanged();
-
-private:
-    struct MCPSession {
-        QString sessionId;
-        QString clientName;
-        QString clientVersion;
-        bool initialized;
-        int requestId;
-    };
-
-    QHttpServerResponse handleHttpRequest(const QHttpServerRequest& request);
-    QHttpServerResponse handleMcpPost(const QHttpServerRequest& request);
-    QHttpServerResponse handleMcpGet(const QHttpServerRequest& request);
-
-    void handleInitializeRequest(const QJsonObject& request, QJsonObject& response, MCPSession* session);
-    void handleListToolsRequest(const QJsonObject& request, QJsonObject& response);
-    void handleCallToolRequest(const QJsonObject& request, QJsonObject& response);
-    void handlePingRequest(const QJsonObject& request, QJsonObject& response);
-    void handleNotificationRequest(const QJsonObject& request);
-
-    QJsonObject createJsonRpcError(int id, int code, const QString& message, const QJsonValue& data = QJsonValue());
-    QString generateSessionId();
-    MCPSession* getOrCreateSession(const QString& sessionId);
-
-    QJsonObject createInitializeResult(const QString& negotiatedVersion) const;
-    QJsonArray getAvailableTools() const;
-    void sendNotificationToAllSessions(const QString& method, const QJsonObject& params = QJsonObject());
-
-    Host* mpHost;
-    TMCPLuaBridge* mpLuaBridge;
-    QHttpServer* mpHttpServer;
-    QTcpServer* mpTcpServer;
-    QMap<QString, MCPSession*> mSessions;
-    int mPort;
-    bool mServerRunning;
+    // _meta keys the specification reserves for per-request protocol metadata
+    static constexpr const char* META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
+    static constexpr const char* META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
+    static constexpr const char* META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo";
+    static constexpr const char* META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
     enum JsonRpcErrorCode {
         ParseError = -32700,
@@ -103,8 +78,36 @@ private:
         MethodNotFound = -32601,
         InvalidParams = -32602,
         InternalError = -32603,
-        ServerError = -32000
+        // -32020 to -32099 is the range the specification reserves for itself; the older
+        // -32000 to -32019 range must not be used by new implementations.
+        HeaderMismatch = -32020,
+        UnsupportedProtocolVersion = -32022
     };
+
+private:
+    MCPReply dispatch(const QString& method, const QJsonValue& id, const QJsonObject& params);
+    MCPReply discover(const QJsonValue& id) const;
+    MCPReply listTools(const QJsonValue& id) const;
+    MCPReply callTool(const QJsonValue& id, const QJsonObject& params);
+
+    // Returns an empty string when the mirrored headers agree with the body.
+    QString headerMismatch(const QHttpHeaders& headers, const QString& method, const QJsonObject& params, const QJsonObject& meta) const;
+
+    MCPReply result(const QJsonValue& id, QJsonObject payload, QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok) const;
+    MCPReply error(const QJsonValue& id, JsonRpcErrorCode code, const QString& message, const QJsonValue& data = QJsonValue(), QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok) const;
+
+    QJsonObject serverImplementation() const;
+    static QString decodeHeaderValue(QByteArrayView raw);
+    static bool originAllowed(const QString& origin);
+
+    QHttpServerResponse respondToPost(const QHttpServerRequest& request);
+
+    Host* mpHost;
+    TMCPLuaBridge* mpLuaBridge;
+    // Recreated on every start: QHttpServer has no way to drop a route or unbind a
+    // socket, so a restart would otherwise stack a second copy of each route.
+    QHttpServer* mpHttpServer = nullptr;
+    int mPort = 0;
 };
 
 #endif // MUDLET_TMCPSERVER_H

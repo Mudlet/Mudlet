@@ -2,7 +2,7 @@
 #define MUDLET_TMCPLUABRIDGE_H
 
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,12 +21,10 @@
  ***************************************************************************/
 
 #include <QJsonArray>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QObject>
 #include <QString>
-#include <QStringList>
-#include <QVariant>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -42,59 +40,38 @@ extern "C" {
 
 class Host;
 
-struct LuaFunctionInfo {
-    QString name;
-    QString signature;
-    QString description;
-    QStringList parameters;
-    QString returnType;
+// What one tool call produced. success == false is a tool execution error, which the
+// model is shown so it can correct itself - it is not a protocol error.
+struct MCPToolResult
+{
+    bool success = false;
+    QString text;
 };
 
-struct MCPToolResult {
-    bool success;
-    QJsonValue result;
-    QString errorMessage;
-    int errorCode;
-};
-
+// Exposes Mudlet's Lua interpreter to the MCP server as a single "lua" tool.
+//
+// One tool rather than one per Lua API function: the API runs to hundreds of functions,
+// which would swamp a model's context, and any of them can be reached from a snippet.
 class TMCPLuaBridge : public QObject
 {
     Q_OBJECT
 
-#ifdef TMCPLuaBridge_Test
-    friend class TMCPLuaBridgeTest;
-#endif
-
 public:
     explicit TMCPLuaBridge(Host* pHost, QObject* parent = nullptr);
-    ~TMCPLuaBridge() = default;
 
-    bool loadLuaFunctions();
     QJsonArray getAvailableTools() const;
+    bool hasTool(const QString& toolName) const;
     MCPToolResult callTool(const QString& toolName, const QJsonObject& arguments);
 
-signals:
-    void toolsChanged();
+    static constexpr const char* MCP_LUA_TOOL = "lua";
 
 private:
-    struct MCPTool {
-        QString name;
-        QString description;
-        QJsonObject inputSchema;
-        LuaFunctionInfo luaFunction;
-    };
-
-    void createLuaExecutionTool();
-    QJsonValue executeLuaCode(const QString& luaCode, const QString& profileName = QString());
-    QJsonValue executeLuaFunction(const LuaFunctionInfo& luaFunc, const QJsonObject& arguments);
-    QJsonValue luaStackToJson(lua_State* L, int index);
-    void jsonToLuaStack(lua_State* L, const QJsonValue& value);
-    QString extractParameterType(const QString& signature, const QString& paramName);
+    MCPToolResult runLua(const QString& luaCode, const QString& profileName);
+    static QJsonValue luaToJson(lua_State* L, int index, int depth);
+    static QJsonValue luaTableToJson(lua_State* L, int index, int depth);
+    static QString jsonToText(const QJsonValue& value);
 
     Host* mpHost;
-    QMap<QString, MCPTool> mTools;
-    QMap<QString, LuaFunctionInfo> mLuaFunctions;
-    bool mFunctionsLoaded;
 };
 
 #endif // MUDLET_TMCPLUABRIDGE_H

@@ -432,6 +432,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mFORCE_GA_OFF") = pHost->mFORCE_GA_OFF ? "yes" : "no";
     host.append_attribute("mFORCE_SAVE_ON_EXIT") = pHost->mFORCE_SAVE_ON_EXIT ? "yes" : "no";
     host.append_attribute("mEnableGMCP") = pHost->mEnableGMCP ? "yes" : "no";
+#ifdef INCLUDE_MCPSERVER
+    host.append_attribute("mEnableMCP") = pHost->mEnableMCP ? "yes" : "no";
+    host.append_attribute("mMCPServerPort") = QString::number(pHost->mMCPServerPort).toUtf8().constData();
+#endif
     host.append_attribute("mEnableMSSP") = pHost->mEnableMSSP ? "yes" : "no";
     host.append_attribute("mEnableMSDP") = pHost->mEnableMSDP ? "yes" : "no";
     host.append_attribute("mEnableMSP") = pHost->mEnableMSP ? "yes" : "no";

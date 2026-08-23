@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,392 +18,262 @@
  ***************************************************************************/
 
 #include "TMCPLuaBridge.h"
+
 #include "Host.h"
+#include "HostManager.h"
 #include "TLuaInterpreter.h"
 #include "mudlet.h"
+#include "utils.h"
 
-#include <QDebug>
-#include <QFile>
-#include <QJsonParseError>
-#include <QRegularExpression>
-#include <QStandardPaths>
+#include <QJsonDocument>
+#include <QStringList>
+
+// Runs the caller's code with print() diverted into a table, then puts print back.
+// Keeping the whole dance inside one chunk keeps the saved print and the collected lines
+// as locals; an earlier version parked them in _G, where they outlived the call and
+// collided with any script that happened to use those names.
+static const char* csmLuaRunner = R"LUA(
+local code = ...
+local lines = {}
+local realPrint = print
+print = function(...)
+    local parts = {}
+    for i = 1, select('#', ...) do
+        parts[i] = tostring((select(i, ...)))
+    end
+    lines[#lines + 1] = table.concat(parts, '\t')
+end
+
+local chunk, syntaxError = loadstring(code, 'mcp')
+if not chunk then
+    print = realPrint
+    return false, table.concat(lines, '\n'), syntaxError
+end
+
+local returned = { pcall(chunk) }
+print = realPrint
+local ok = table.remove(returned, 1)
+return ok, table.concat(lines, '\n'), unpack(returned)
+)LUA";
+
+// A table that refers to itself would otherwise recurse until the C stack gives out, and
+// the code being rendered here is written by a model, so _G is a plausible return value.
+static constexpr int csmMaxTableDepth = 12;
 
 TMCPLuaBridge::TMCPLuaBridge(Host* pHost, QObject* parent)
 : QObject(parent)
 , mpHost(pHost)
-, mFunctionsLoaded(false)
 {
 }
 
-bool TMCPLuaBridge::loadLuaFunctions()
+bool TMCPLuaBridge::hasTool(const QString& toolName) const
 {
-    if (mFunctionsLoaded) {
-        return true;
-    }
-
-    // Create a single Lua execution tool instead of exposing all individual functions
-    createLuaExecutionTool();
-
-    mFunctionsLoaded = true;
-    qDebug() << "TMCPLuaBridge: Loaded" << mTools.size() << "MCP tools";
-
-    emit toolsChanged();
-    return true;
-}
-
-
-void TMCPLuaBridge::createLuaExecutionTool()
-{
-    MCPTool tool;
-    tool.name = qsl("lua");
-    tool.description = tr("Run Lua code in the Mudlet client");
-
-    // Create input schema for the Lua execution tool
-    QJsonObject schema;
-    schema[qsl("type")] = qsl("object");
-
-    QJsonObject properties;
-    QJsonArray required;
-
-    // Required 'code' parameter
-    QJsonObject codeParam;
-    codeParam[qsl("type")] = qsl("string");
-    codeParam[qsl("description")] = tr("Lua code to run");
-    properties[qsl("code")] = codeParam;
-    required.append(qsl("code"));
-
-    // Optional 'profile' parameter
-    QJsonObject profileParam;
-    profileParam[qsl("type")] = qsl("string");
-    profileParam[qsl("description")] = tr("Profile name to run the code in. If not specified, uses the currently active profile");
-    properties[qsl("profile")] = profileParam;
-
-    schema[qsl("properties")] = properties;
-    schema[qsl("required")] = required;
-
-    tool.inputSchema = schema;
-
-    // Store a placeholder lua function info (not used for execution)
-    tool.luaFunction.name = qsl("lua");
-    tool.luaFunction.description = tool.description;
-
-    mTools[tool.name] = tool;
-    qDebug() << "TMCPLuaBridge: Created Lua tool";
-}
-
-QJsonValue TMCPLuaBridge::executeLuaCode(const QString& luaCode, const QString& profileName)
-{
-    Host* targetHost = mpHost;
-
-    // If a profile name is specified, try to get that profile's host
-    if (!profileName.isEmpty()) {
-        targetHost = mudlet::self()->getHostManager().getHost(profileName);
-        if (!targetHost) {
-            return QJsonValue(tr("Profile '%1' not found").arg(profileName));
-        }
-    } else if (!targetHost) {
-        // If no profile specified and mpHost is null, try to get the active host
-        targetHost = mudlet::self()->getActiveHost();
-        if (!targetHost) {
-            return QJsonValue(tr("No active profile available for Lua execution"));
-        }
-    }
-
-    lua_State* L = targetHost->getLuaInterpreter()->pGlobalLua;
-    if (!L) {
-        return QJsonValue(tr("Lua interpreter not available"));
-    }
-
-    // Capture output by redirecting print function temporarily
-    QString output;
-    QString originalPrintCode = qsl(R"(
-        local original_print = print
-        local captured_output = {}
-        print = function(...)
-            local args = {...}
-            local str_args = {}
-            for i, v in ipairs(args) do
-                str_args[i] = tostring(v)
-            end
-            table.insert(captured_output, table.concat(str_args, '\t'))
-        end
-    )");
-
-    // Execute setup code
-    int setupResult = luaL_dostring(L, originalPrintCode.toUtf8().constData());
-    if (setupResult) {
-        return QJsonValue(tr("Failed to setup Lua output capture"));
-    }
-
-    // Execute the user's code using luaL_loadstring + lua_pcall to capture return values
-    // (luaL_dostring uses lua_pcall with 0 return values, so we can't capture them)
-    int stackBefore = lua_gettop(L);
-    int loadResult = luaL_loadstring(L, luaCode.toUtf8().constData());
-
-    QString resultStr;
-    if (loadResult != 0) {
-        // Syntax error in Lua code
-        if (lua_gettop(L) > 0) {
-            resultStr = tr("Lua Syntax Error: %1").arg(QString::fromUtf8(lua_tostring(L, -1)));
-            lua_pop(L, 1);
-        } else {
-            resultStr = tr("Unknown Lua syntax error occurred");
-        }
-    } else {
-        // Execute the compiled chunk, requesting all return values
-        int execResult = lua_pcall(L, 0, LUA_MULTRET, 0);
-
-        if (execResult != 0) {
-            // Runtime error
-            if (lua_gettop(L) > 0) {
-                resultStr = tr("Lua Error: %1").arg(QString::fromUtf8(lua_tostring(L, -1)));
-                lua_pop(L, 1);
-            } else {
-                resultStr = tr("Unknown Lua error occurred");
-            }
-        } else {
-            // Get all return values
-            int returnCount = lua_gettop(L) - stackBefore;
-            if (returnCount > 0) {
-                if (returnCount == 1) {
-                    QJsonValue returnValue = luaStackToJson(L, -1);
-                    if (!returnValue.isNull()) {
-                        if (returnValue.isString()) {
-                            resultStr = returnValue.toString();
-                        } else {
-                            resultStr = QJsonDocument(QJsonArray{returnValue}).toJson(QJsonDocument::Compact);
-                        }
-                    }
-                } else {
-                    // Multiple return values - return as array
-                    QJsonArray returnArray;
-                    for (int i = -returnCount; i <= -1; ++i) {
-                        returnArray.append(luaStackToJson(L, i));
-                    }
-                    resultStr = QJsonDocument(returnArray).toJson(QJsonDocument::Compact);
-                }
-                lua_pop(L, returnCount);
-            }
-        }
-    }
-
-    // Get captured output
-    QString getCapturedCode = qsl(R"(
-        local result = ""
-        if captured_output and type(captured_output) == "table" then
-            result = table.concat(captured_output, '\n')
-        end
-        print = original_print
-        return result
-    )");
-
-    if (luaL_dostring(L, getCapturedCode.toUtf8().constData()) == 0) {
-        if (lua_gettop(L) > 0) {
-            QString capturedOutput = QString::fromUtf8(lua_tostring(L, -1));
-            if (!capturedOutput.isEmpty()) {
-                resultStr = capturedOutput + (resultStr.isEmpty() ? "" : "\n" + resultStr);
-            }
-            lua_pop(L, 1);
-        }
-    }
-
-    // Return null if no output or return value
-    if (resultStr.isEmpty()) {
-        return QJsonValue();
-    }
-
-    return QJsonValue(resultStr);
+    return toolName == QLatin1String(MCP_LUA_TOOL);
 }
 
 QJsonArray TMCPLuaBridge::getAvailableTools() const
 {
-    QJsonArray tools;
+    QJsonObject codeArgument;
+    codeArgument[qsl("type")] = qsl("string");
+    //: Describes an argument of the MCP "lua" tool to an AI model. Keep print() as-is, it is Lua code.
+    codeArgument[qsl("description")] = tr("Lua code to run. Report values back with print(), or return them.");
 
-    qDebug() << "TMCPLuaBridge: Returning" << mTools.size() << "tools";
+    QJsonObject profileArgument;
+    profileArgument[qsl("type")] = qsl("string");
+    //: Describes an argument of the MCP "lua" tool to an AI model.
+    profileArgument[qsl("description")] = tr("Name of the profile to run the code in. Defaults to the active profile.");
 
-    for (const auto& tool : mTools) {
-        QJsonObject toolDef;
-        toolDef[qsl("name")] = tool.name;
-        toolDef[qsl("title")] = tool.name; // Add optional title field
-        toolDef[qsl("description")] = tool.description;
-        toolDef[qsl("inputSchema")] = tool.inputSchema;
+    QJsonObject properties;
+    properties[qsl("code")] = codeArgument;
+    properties[qsl("profile")] = profileArgument;
 
-        qDebug() << "TMCPLuaBridge: Tool:" << tool.name << "schema:" << tool.inputSchema;
-        tools.append(toolDef);
-    }
+    QJsonObject inputSchema;
+    inputSchema[qsl("type")] = qsl("object");
+    inputSchema[qsl("properties")] = properties;
+    inputSchema[qsl("required")] = QJsonArray{qsl("code")};
 
-    return tools;
+    QJsonObject tool;
+    tool[qsl("name")] = QString::fromLatin1(MCP_LUA_TOOL);
+    //: Human-readable name of the MCP "lua" tool.
+    tool[qsl("title")] = tr("Run Lua in Mudlet");
+    //: Describes the MCP "lua" tool to an AI model. "Lua" and "MUD" are proper nouns.
+    tool[qsl("description")] = tr("Runs Lua code inside the Mudlet MUD client and returns whatever it printed or returned.");
+    tool[qsl("inputSchema")] = inputSchema;
+
+    return QJsonArray{tool};
 }
 
 MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject& arguments)
 {
-    MCPToolResult result;
-    result.success = false;
-    result.errorCode = -32603;
-
-    if (!mTools.contains(toolName)) {
-        result.errorMessage = tr("Tool not found: %1").arg(toolName);
-        result.errorCode = -32601;
-        return result;
+    if (!hasTool(toolName)) {
+        return {false, tr("Unknown tool: %1").arg(toolName)};
     }
 
-    const MCPTool& tool = mTools[toolName];
+    const QString luaCode = arguments.value(qsl("code")).toString();
+    if (luaCode.isEmpty()) {
+        return {false, tr("The 'code' argument is required and cannot be empty.")};
+    }
 
-    try {
-        if (toolName == qsl("lua")) {
-            // Special handling for the Lua tool
-            QString luaCode = arguments[qsl("code")].toString();
-            if (luaCode.isEmpty()) {
-                result.errorMessage = tr("Missing required parameter: code");
-                result.errorCode = -32602;
-                return result;
-            }
-            QString profileName = arguments[qsl("profile")].toString();
-            result.result = executeLuaCode(luaCode, profileName);
+    return runLua(luaCode, arguments.value(qsl("profile")).toString());
+}
+
+MCPToolResult TMCPLuaBridge::runLua(const QString& luaCode, const QString& profileName)
+{
+    Host* pTarget = mpHost;
+    if (!profileName.isEmpty()) {
+        pTarget = mudlet::self() ? mudlet::self()->getHostManager().getHost(profileName) : nullptr;
+        if (!pTarget) {
+            return {false, tr("No profile named '%1' is open.").arg(profileName)};
+        }
+    } else if (!pTarget) {
+        pTarget = mudlet::self() ? mudlet::self()->getActiveHost() : nullptr;
+        if (!pTarget) {
+            return {false, tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.")};
+        }
+    }
+
+    lua_State* L = pTarget->getLuaInterpreter()->pGlobalLua;
+    if (!L) {
+        return {false, tr("That profile has no Lua interpreter running.")};
+    }
+
+    const int stackBefore = lua_gettop(L);
+
+    if (luaL_loadstring(L, csmLuaRunner) != 0) {
+        const QString message = QString::fromUtf8(lua_tostring(L, -1));
+        lua_settop(L, stackBefore);
+        return {false, tr("Could not compile Mudlet's Lua runner: %1").arg(message)};
+    }
+
+    lua_pushstring(L, luaCode.toUtf8().constData());
+    if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
+        const QString message = QString::fromUtf8(lua_tostring(L, -1));
+        lua_settop(L, stackBefore);
+        return {false, tr("Lua error: %1").arg(message)};
+    }
+
+    // The runner always answers with ok, printed output, then whatever the code returned.
+    if (lua_gettop(L) - stackBefore < 2) {
+        lua_settop(L, stackBefore);
+        return {false, tr("Mudlet's Lua runner returned nothing.")};
+    }
+
+    const bool ok = lua_toboolean(L, stackBefore + 1) != 0;
+    const QString printed = QString::fromUtf8(lua_tostring(L, stackBefore + 2));
+    const int firstValue = stackBefore + 3;
+    const int lastValue = lua_gettop(L);
+
+    QStringList pieces;
+    if (!printed.isEmpty()) {
+        pieces << printed;
+    }
+
+    if (!ok) {
+        const QString message = firstValue <= lastValue ? QString::fromUtf8(lua_tostring(L, firstValue)) : tr("unknown error");
+        pieces << tr("Lua error: %1").arg(message);
+        lua_settop(L, stackBefore);
+        return {false, pieces.join(QChar::LineFeed)};
+    }
+
+    QStringList values;
+    for (int i = firstValue; i <= lastValue; ++i) {
+        values << jsonToText(luaToJson(L, i, 0));
+    }
+    lua_settop(L, stackBefore);
+
+    if (!values.isEmpty()) {
+        pieces << values.join(QChar::Tabulation);
+    }
+
+    if (pieces.isEmpty()) {
+        return {true, tr("The code ran and produced no output.")};
+    }
+    return {true, pieces.join(QChar::LineFeed)};
+}
+
+QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth)
+{
+    // Work in absolute indices so that pushing onto the stack while walking a table does
+    // not shift the slot being read out from under us.
+    if (index < 0) {
+        index = lua_gettop(L) + 1 + index;
+    }
+
+    switch (lua_type(L, index)) {
+    case LUA_TNIL:
+        return QJsonValue();
+    case LUA_TBOOLEAN:
+        return QJsonValue(lua_toboolean(L, index) != 0);
+    case LUA_TNUMBER:
+        return QJsonValue(lua_tonumber(L, index));
+    case LUA_TSTRING:
+        return QJsonValue(QString::fromUtf8(lua_tostring(L, index)));
+    case LUA_TTABLE:
+        return luaTableToJson(L, index, depth);
+    default:
+        return QJsonValue(qsl("<%1>").arg(QString::fromUtf8(lua_typename(L, lua_type(L, index)))));
+    }
+}
+
+QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
+{
+    if (depth >= csmMaxTableDepth) {
+        return QJsonValue(qsl("<table nested too deeply>"));
+    }
+
+    // A Lua table is a list and a map at once. Render a plain 1..n sequence as a JSON
+    // array so that a model reading the result sees a list, not {"1":..., "2":...}.
+    const int length = static_cast<int>(lua_objlen(L, index));
+    int keyCount = 0;
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0) {
+        ++keyCount;
+        lua_pop(L, 1);
+    }
+
+    if (length > 0 && keyCount == length) {
+        QJsonArray array;
+        for (int i = 1; i <= length; ++i) {
+            lua_rawgeti(L, index, i);
+            array.append(luaToJson(L, lua_gettop(L), depth + 1));
+            lua_pop(L, 1);
+        }
+        return array;
+    }
+
+    QJsonObject object;
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0) {
+        // lua_tostring() on a number key would rewrite the key in place, and lua_next()
+        // then loses its place in the table - so read numbers without converting them.
+        QString key;
+        if (lua_type(L, -2) == LUA_TSTRING) {
+            key = QString::fromUtf8(lua_tostring(L, -2));
+        } else if (lua_type(L, -2) == LUA_TNUMBER) {
+            key = QString::number(lua_tonumber(L, -2));
         } else {
-            // Handle regular Lua function tools (if any remain)
-            result.result = executeLuaFunction(tool.luaFunction, arguments);
+            key = qsl("<%1>").arg(QString::fromUtf8(lua_typename(L, lua_type(L, -2))));
         }
-        result.success = true;
-        result.errorMessage.clear();
-        result.errorCode = 0;
-    } catch (const std::exception& e) {
-        result.errorMessage = tr("Error executing tool %1: %2").arg(toolName, QString::fromStdString(e.what()));
-    } catch (...) {
-        result.errorMessage = tr("Unknown error executing tool %1").arg(toolName);
-    }
-
-    return result;
-}
-
-QJsonValue TMCPLuaBridge::executeLuaFunction(const LuaFunctionInfo& luaFunc, const QJsonObject& arguments)
-{
-    if (!mpHost || !mpHost->mpConsole || !mpHost->mLuaInterpreter.pGlobalLua) {
-        throw std::runtime_error("Lua interpreter not available");
-    }
-
-    lua_State* L = mpHost->mLuaInterpreter.pGlobalLua;
-
-    lua_getglobal(L, luaFunc.name.toUtf8().constData());
-    if (!lua_isfunction(L, -1)) {
+        object[key] = luaToJson(L, lua_gettop(L), depth + 1);
         lua_pop(L, 1);
-        throw std::runtime_error(tr("Function %1 not found in Lua global scope").arg(luaFunc.name).toStdString());
     }
-
-    int argCount = 0;
-    for (const QString& param : luaFunc.parameters) {
-        QString cleanParam = param;
-        if (cleanParam.startsWith(qsl("[")) && cleanParam.endsWith(qsl("]"))) {
-            cleanParam = cleanParam.mid(1, cleanParam.length() - 2);
-        }
-
-        if (arguments.contains(cleanParam)) {
-            jsonToLuaStack(L, arguments[cleanParam]);
-            argCount++;
-        } else if (!param.startsWith(qsl("["))) {
-            lua_pushnil(L);
-            argCount++;
-        }
-    }
-
-    int result = lua_pcall(L, argCount, LUA_MULTRET, 0);
-    if (result != 0) {
-        QString errorMsg = QString::fromUtf8(lua_tostring(L, -1));
-        lua_pop(L, 1);
-        throw std::runtime_error(errorMsg.toStdString());
-    }
-
-    int returnCount = lua_gettop(L);
-    QJsonValue returnValue;
-
-    if (returnCount == 0) {
-        returnValue = QJsonValue();
-    } else if (returnCount == 1) {
-        returnValue = luaStackToJson(L, -1);
-    } else {
-        QJsonArray returnArray;
-        for (int i = -returnCount; i <= -1; ++i) {
-            returnArray.append(luaStackToJson(L, i));
-        }
-        returnValue = returnArray;
-    }
-
-    lua_pop(L, returnCount);
-    return returnValue;
+    return object;
 }
 
-QJsonValue TMCPLuaBridge::luaStackToJson(lua_State* L, int index)
-{
-    int type = lua_type(L, index);
-
-    switch (type) {
-        case LUA_TNIL:
-            return QJsonValue();
-        case LUA_TBOOLEAN:
-            return QJsonValue(lua_toboolean(L, index) != 0);
-        case LUA_TNUMBER:
-            return QJsonValue(lua_tonumber(L, index));
-        case LUA_TSTRING:
-            return QJsonValue(QString::fromUtf8(lua_tostring(L, index)));
-        case LUA_TTABLE: {
-            QJsonObject obj;
-            lua_pushnil(L);
-            while (lua_next(L, index < 0 ? index - 1 : index) != 0) {
-                QString key;
-                if (lua_type(L, -2) == LUA_TSTRING) {
-                    key = QString::fromUtf8(lua_tostring(L, -2));
-                } else if (lua_type(L, -2) == LUA_TNUMBER) {
-                    key = QString::number(lua_tonumber(L, -2));
-                } else {
-                    key = qsl("unknown_key");
-                }
-                obj[key] = luaStackToJson(L, -1);
-                lua_pop(L, 1);
-            }
-            return QJsonValue(obj);
-        }
-        default:
-            return QJsonValue(tr("Unsupported Lua type: %1").arg(lua_typename(L, type)));
-    }
-}
-
-void TMCPLuaBridge::jsonToLuaStack(lua_State* L, const QJsonValue& value)
+QString TMCPLuaBridge::jsonToText(const QJsonValue& value)
 {
     switch (value.type()) {
-        case QJsonValue::Null:
-            lua_pushnil(L);
-            break;
-        case QJsonValue::Bool:
-            lua_pushboolean(L, value.toBool() ? 1 : 0);
-            break;
-        case QJsonValue::Double:
-            lua_pushnumber(L, value.toDouble());
-            break;
-        case QJsonValue::String:
-            lua_pushstring(L, value.toString().toUtf8().constData());
-            break;
-        case QJsonValue::Array: {
-            QJsonArray arr = value.toArray();
-            lua_createtable(L, arr.size(), 0);
-            for (int i = 0; i < arr.size(); ++i) {
-                lua_pushinteger(L, i + 1);
-                jsonToLuaStack(L, arr[i]);
-                lua_settable(L, -3);
-            }
-            break;
-        }
-        case QJsonValue::Object: {
-            QJsonObject obj = value.toObject();
-            lua_createtable(L, 0, obj.size());
-            for (auto it = obj.begin(); it != obj.end(); ++it) {
-                lua_pushstring(L, it.key().toUtf8().constData());
-                jsonToLuaStack(L, it.value());
-                lua_settable(L, -3);
-            }
-            break;
-        }
-        default:
-            lua_pushnil(L);
-            break;
+    case QJsonValue::String:
+        return value.toString();
+    case QJsonValue::Bool:
+        return value.toBool() ? qsl("true") : qsl("false");
+    case QJsonValue::Double:
+        return QString::number(value.toDouble());
+    case QJsonValue::Array:
+        return QString::fromUtf8(QJsonDocument(value.toArray()).toJson(QJsonDocument::Compact));
+    case QJsonValue::Object:
+        return QString::fromUtf8(QJsonDocument(value.toObject()).toJson(QJsonDocument::Compact));
+    default:
+        return qsl("nil");
     }
 }

@@ -1492,14 +1492,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor);
 
     connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-#ifdef INCLUDE_MCPSERVER
-    connect(mEnableMCP, &QAction::toggled, this, [this, pHost]() {
-        // MCP server doesn't require reconnection, handle immediately
-        if (pHost) {
-            pHost->setMCPEnabled(mEnableMCP->isChecked());
-        }
-    });
-#endif
     // The GMCP Char.Login "forget saved sign-in" control is only meaningful when GMCP is on.
     connect(mEnableGMCP, &QAction::toggled, pushButton_forgetSavedSignIn, &QWidget::setEnabled);
     connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn);
@@ -1754,9 +1746,6 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAction::toggled, nullptr, nullptr);
-#ifdef INCLUDE_MCPSERVER
-    disconnect(mEnableMCP, &QAction::toggled, nullptr, nullptr);
-#endif
     disconnect(mEnableMSSP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAction::toggled, nullptr, nullptr);
     disconnect(mEnableMSP, &QAction::toggled, nullptr, nullptr);
@@ -3348,7 +3337,9 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
 #ifdef INCLUDE_MCPSERVER
-        pHost->mEnableMCP = mEnableMCP->isChecked();
+        // Through the setter, not the field: this is what starts and stops the server,
+        // and it clears the flag again if the port turns out to be taken.
+        pHost->setMCPEnabled(mEnableMCP->isChecked());
 #endif
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
