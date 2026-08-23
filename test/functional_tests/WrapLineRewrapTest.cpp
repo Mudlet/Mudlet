@@ -236,6 +236,51 @@ private slots:
         QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
     }
 
+    // The spaces the wrapping pads a line out with take the colour of the
+    // character they precede. That is only distinguishable from any other
+    // character of the line being rewrapped when the line changes colour part
+    // way through, so this one does.
+    void test_indentationTakesTheColourOfTheCharacterItPrecedes()
+    {
+        auto* console = consoleWithWrapWidth(12);
+        QVERIFY(console);
+        runLua(qsl("setWindowWrapIndent('%1', 2)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapHangingIndent('%1', 4)").arg(mMiniConsole));
+        const QColor firstHalf(170, 0, 0);
+        const QColor secondHalf(0, 0, 170);
+        runLua(qsl("decho('%1', '<255,255,255:170,0,0>abcdefghij<255,255,255:0,0,170>klmnopqrstuvwxyz\\n')").arg(mMiniConsole));
+
+        QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
+
+        bool sawFirstHalf = false;
+        bool sawSecondHalf = false;
+        for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
+            const QString line = console->buffer.line(i);
+            int firstTextChar = 0;
+            while (firstTextChar < line.size() && line.at(firstTextChar) == QChar::Space) {
+                ++firstTextChar;
+            }
+            if (!firstTextChar || firstTextChar >= line.size()) {
+                continue;
+            }
+
+            const std::vector<TChar>& chars = console->buffer.buffer.at(i);
+            QCOMPARE(static_cast<int>(chars.size()), line.size());
+            const QColor& textColour = chars.at(firstTextChar).background();
+            sawFirstHalf = sawFirstHalf || textColour == firstHalf;
+            sawSecondHalf = sawSecondHalf || textColour == secondHalf;
+            for (int j = 0; j < firstTextChar; ++j) {
+                QVERIFY2(chars.at(j).background() == textColour,
+                         qPrintable(qsl("space %1 of line %2's indentation is %3, but the character it precedes is %4")
+                                            .arg(QString::number(j), QString::number(i), chars.at(j).background().name(), textColour.name())));
+            }
+        }
+
+        // without indentation on both sides of the colour change a wrong colour
+        // would still be the right one somewhere
+        QVERIFY2(sawFirstHalf && sawSecondHalf, "the indented lines did not span the colour change, so a mismatched indent could not have been told from a matching one");
+    }
+
     // Narrowing the width rewraps a scrollback that is already wrapped, so no
     // line in the range is skipped by the shortcut.
     void test_narrowingTheWidthRewrapsTheWholeScrollback()

@@ -1787,15 +1787,19 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     }
 
     QString line;
-    std::deque<TChar> chars;
     line.swap(mMudLine);
-    chars.swap(mMudBuffer);
+    // Copy out and clear rather than swap, so that mMudBuffer keeps its
+    // allocation for the next line. Swapping leaves it empty, and a vector
+    // grown back from empty reallocates several times per line - which costs
+    // more than the single copy this makes.
+    std::vector<TChar> chars(mMudBuffer);
+    mMudBuffer.clear();
     commitLineData(std::move(line), std::move(chars), ch);
     ++localBufferPosition;
     return true;
 }
 
-void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char ch)
+void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char ch)
 {
     // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
     // https://bugreports.qt.io/browse/QTBUG-105035
@@ -1856,7 +1860,7 @@ void TBuffer::commitLineData(QString line, std::deque<TChar> chars, const char c
         // after earlier triggers in this pass have recolored the line;
         // save/restore gives nested feedTriggers() passes (which re-enter
         // this function) their own snapshot:
-        std::deque<TChar> savedPassLine = std::move(mPreTriggerPassLine);
+        std::vector<TChar> savedPassLine = std::move(mPreTriggerPassLine);
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
         mPreTriggerPassLine = std::move(chars);
         mPreTriggerPassLineNumber = lineIndex;
@@ -2109,7 +2113,7 @@ void TBuffer::flushPendingServerWrapJoin()
         return;
     }
     QString line;
-    std::deque<TChar> chars;
+    std::vector<TChar> chars;
     line.swap(mServerWrapPendingLine);
     chars.swap(mServerWrapPendingBuffer);
     commitLineData(std::move(line), std::move(chars), '\n');
@@ -2144,7 +2148,7 @@ void TBuffer::startServerWrapFlushTimer()
     mpServerWrapFlushTimer->start();
 }
 
-const std::deque<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
+const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
 {
     if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber) {
         return &mPreTriggerPassLine;
@@ -4575,7 +4579,7 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
         return;
     }
 
-    std::deque<TChar>& line = buffer[lineNumber];
+    std::vector<TChar>& line = buffer[lineNumber];
 
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
@@ -4621,7 +4625,7 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
         return;
     }
 
-    std::deque<TChar>& line = buffer[lineNumber];
+    std::vector<TChar>& line = buffer[lineNumber];
 
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
@@ -4853,7 +4857,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const TCha
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
 }
 
-void TBuffer::appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore)
+void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
 {
     if (text.isEmpty()) {
         return;
@@ -5066,7 +5070,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             expandLine(y, x - buffer.at(y).size(), c);
         }
         // Insert the whole run in one operation. Inserting one character at a
-        // time into the middle of the QString/std::deque is O(n) per character,
+        // time into the middle of the QString/std::vector is O(n) per character,
         // which is quadratic for large inserts.
         lineBuffer[y].insert(x, insertedText);
         buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
@@ -5097,7 +5101,7 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size())); // Correct P2.x() to prevent out-of-bounds
 
     if (x < P2x_corrected) {
-        const std::deque<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
+        const std::vector<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
         slice.appendFormatted(lineBuffer.at(y).mid(x, P2x_corrected - x), formatting, mLinkStore);
     }
     return slice;
@@ -5396,11 +5400,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
     // moving it out of the buffer into a queue and back again and standing up
-    // four temporary containers to do it - and in libstdc++ even an empty
-    // std::deque costs an allocation for its map and another for its first
-    // node. A line with no TChars or no text is not left alone: the loop turns
-    // that one into appendEmptyLine(), which drops its TChars, restamps it and
-    // clears its prompt flag.
+    // four temporary containers to do it. A line with no TChars or no text is
+    // not left alone: the loop turns that one into appendEmptyLine(), which
+    // drops its TChars, restamps it and clears its prompt flag.
     int firstRewrappedLine = startLine;
     QList<WrapInfo> lineBreaks;
     while (firstRewrappedLine < total) {
@@ -5425,14 +5427,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         return 0;
     }
 
-    std::queue<std::deque<TChar>> queue;
+    std::queue<std::vector<TChar>> queue;
     QStringList tempList;
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
-        std::deque<TChar> newBufferLine;
+        std::vector<TChar> newBufferLine;
         QString newLineText;
         const QString time = timeBuffer[i];
         // trivial case
@@ -5467,33 +5469,33 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
         const QString qIndent(indent, QChar::Space);
         const QString qHangingIndent(hangingIndent, QChar::Space);
+        // newBufferCharPosition walks the source line instead of the source
+        // line being consumed from its front, which a vector cannot do without
+        // shuffling every remaining TChar down one place per character.
+        const std::vector<TChar>& sourceChars = buffer[i];
+        const int sourceSize = static_cast<int>(sourceChars.size());
         for (const WrapInfo w : std::as_const(lineBreaks)) {
             // skip TChars as needed
-            while (newBufferCharPosition < w.firstChar && !buffer[i].empty()) {
-                buffer[i].pop_front();
-                newBufferCharPosition++;
+            if (newBufferCharPosition < w.firstChar) {
+                newBufferCharPosition = std::min(w.firstChar, sourceSize);
             }
-            if (w.needsIndent && !buffer[i].empty()) {
+            if (w.needsIndent && newBufferCharPosition < sourceSize) {
                 // background color of indentation spaces should match first char in the line
-                const TChar indentSpace = buffer[i].front();
+                const TChar& indentSpace = sourceChars[newBufferCharPosition];
                 // add indentation to TChar buffer and newLineText
                 if (w.isNewline) {
-                    for (int i = 0; i < indent; ++i) {
-                        newBufferLine.push_front(indentSpace);
-                    }
+                    newBufferLine.insert(newBufferLine.end(), indent, indentSpace);
                     newLineText.append(qIndent);
                 } else {
-                    for (int i = 0; i < hangingIndent; ++i) {
-                        newBufferLine.push_front(indentSpace);
-                    }
+                    newBufferLine.insert(newBufferLine.end(), hangingIndent, indentSpace);
                     newLineText.append(qHangingIndent);
                 }
             }
             // append TChars of the wrapped lineText to TChar buffer
-            while (newBufferCharPosition < w.lastChar && !buffer[i].empty()) {
-                newBufferLine.push_back(buffer[i].front());
-                buffer[i].pop_front();
-                newBufferCharPosition++;
+            const int copyEnd = std::min(w.lastChar, sourceSize);
+            if (newBufferCharPosition < copyEnd) {
+                newBufferLine.insert(newBufferLine.end(), sourceChars.cbegin() + newBufferCharPosition, sourceChars.cbegin() + copyEnd);
+                newBufferCharPosition = copyEnd;
             }
             // everything else
             newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
