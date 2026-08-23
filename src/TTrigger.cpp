@@ -712,8 +712,8 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
 
     for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
         const TChar& character = (pPassLine && pos < static_cast<int>(pPassLine->size())) ? (*pPassLine)[pos] : *it;
-        // This now allows matching against the current default colours (-1) and
-        // allows ONE of the foreground or background to NOT be considered (-2)
+        // This now allows matching against the current default colours (-2) and
+        // allows ONE of the foreground or background to NOT be considered (-1)
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:

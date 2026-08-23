@@ -55,12 +55,13 @@ struct TConsoleModel
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
-    // What a colour trigger matches "the default colour" against. The main
-    // console's pair mirrors the profile's Host::mFgColor/mBgColor, which are
-    // only known once the profile has been read - later than this model is
-    // built - so Host::refreshMainConsoleColors() pushes them in at that point
-    // and on every later change. Sub-console models own theirs outright
-    // (TConsole::setConsoleBgColor()).
+    // The MAIN console model's pair is what a colour trigger matches "the
+    // default colour" against; it mirrors the profile's Host::mFgColor/mBgColor,
+    // which are only known once the profile has been read - later than this
+    // model is built - so Host::refreshMainConsoleColors() lands them here. A
+    // sub-console model's pair is view-local (background through
+    // TConsole::setConsoleBgColor(), the foreground is never written) and no
+    // trigger consults it.
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QString mCurrentLine;

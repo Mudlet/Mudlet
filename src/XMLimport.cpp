@@ -1213,9 +1213,11 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
-    // The profile's colours are only settled now, and a profile is loaded before
-    // it has a view - so this is the only chance the console model gets to be
-    // told what "the default colour" means for colour-trigger matching:
+    // The profile's colours are only settled now, and the console that would
+    // otherwise hand them to the model (TConsole::changeColors()) is not built
+    // until after the load - so without this a colour trigger matching "the
+    // default colour" uses the built-in default for the whole of that window,
+    // and forever on a profile that never gets a view:
     pHost->refreshMainConsoleColors();
 }
 

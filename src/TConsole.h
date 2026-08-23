@@ -379,7 +379,11 @@ public:
     QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    QColor mSystemMessageBgColor = mBgColor;
+    // Black rather than mBgColor: this is captured once and never updated, so it
+    // never really tracked the console background - and now that the model is
+    // handed the profile's colours before a console is built, taking mBgColor
+    // would quietly change what system messages are drawn on.
+    QColor mSystemMessageBgColor = QColorConstants::Black;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
