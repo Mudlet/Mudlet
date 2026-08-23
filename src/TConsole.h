@@ -379,10 +379,9 @@ public:
     QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    // Black rather than mBgColor: captured once and never updated, so it never
-    // tracked the background anyway, and the model now carries the profile's
-    // colours before a console exists - copying would change what system
-    // messages are drawn on.
+    // Not mBgColor: captured once and never updated, so it only ever held the
+    // built-in default - which the model can now have replaced with the
+    // profile's before the console is built.
     QColor mSystemMessageBgColor = QColorConstants::Black;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
