@@ -45,9 +45,15 @@ private:
     const QString mpPort = "4001";
     const QString mpLocalhost = "localhost";
 
-    // 70 characters, inside the join band for a wrap column of 80:
+    // 70 characters, inside the join band for a wrap column of 80. That
+    // leaves 10 columns free, so any continuation paired with it opening with
+    // more than one character still reads as a wrap - unlike the lines built
+    // by heldLine(), which have to survive a one character continuation:
     const QString mSegment1 = QString(64, QChar('x')) + qsl(" alpha");
     const QString mSegment2 = qsl("beta tail.");
+    // Short, and not ending at the wrap column, so draining it cannot itself be
+    // held back as a wrapped segment:
+    const QString mWelcome = qsl("Welcome to the test game.");
 
 private slots:
     void initTestCase() { initializeQRCResources(); }
@@ -55,6 +61,7 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
+        mpServer->setWelcomeMessage(mWelcome);
         mpServer->start(mpLocalhost, mpPort.toUShort());
         mudlet::start();
         mudlet::self()->setupConfig();
@@ -67,11 +74,7 @@ private slots:
     void test_wrappedLinesStaySplitByDefault()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n" + mSegment2.toUtf8() + "\r\n");
 
@@ -84,11 +87,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n" + mSegment2.toUtf8() + "\r\n");
 
@@ -99,11 +98,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // The prompt is terminated by IAC GA rather than a newline; the
         // full-width line before it must not swallow it:
@@ -115,11 +110,19 @@ private slots:
 
     void test_loneFullWidthLineIsFlushed()
     {
+        const QString welcome = qsl("Welcome to the test game.");
+        mpServer->setWelcomeMessage(welcome);
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
+        connectAndDrainWelcome();
+
+        // The stub sends its welcome message 100ms after connecting. Letting it
+        // land first is what makes this test exercise the flush timer at all:
+        // otherwise it arrives as a following line and commits the held segment
+        // through the ordinary painted path before the timer ever fires.
         QVERIFY(QTest::qWaitFor(
                 [&]() {
-                    return mpServer->clientConnected();
+                    return bufferHasLine(welcome);
                 },
                 2000));
 
@@ -127,18 +130,40 @@ private slots:
         // flush timer once the game goes quiet:
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n");
 
+        // The timer is created when the line is first held back:
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QTimer* flushTimer = nullptr;
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
+                             return flushTimer && flushTimer->isActive();
+                         },
+                         2000),
+                 "the full-width line was not held back for a continuation");
+
+        // Only showNewLines() advances buffer.mCursorY, so it having caught up
+        // with the buffer is what distinguishes a painted line from an appended
+        // one. It has to be read the moment the flush returns rather than
+        // polled for: cTelnet's posting timer calls finalize() as well and
+        // repaints within a tick, so any wait long enough to see the line
+        // appear is also long enough to lose the evidence.
+        int sizeAtFlush = -1;
+        int cursorAtFlush = -1;
+        connect(flushTimer, &QTimer::timeout, this, [&]() {
+            sizeAtFlush = console->buffer.size();
+            cursorAtFlush = console->buffer.mCursorY;
+        });
+
         QVERIFY2(waitForLineInBuffer(mSegment1), "held full-width line was not flushed after the game went quiet");
+        QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
+        QCOMPARE(cursorAtFlush, sizeAtFlush);
     }
 
     void test_blankLineEndsParagraph()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         mpServer->sendRaw(mSegment1.toUtf8() + "\r\n\r\n" + mSegment2.toUtf8() + "\r\n");
 
@@ -151,11 +176,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // A full-width divider, a full-width prose line followed by an
         // indented line (menu/centered art), and only then real wrapped
@@ -174,11 +195,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // Some games keep the space they broke the line at - either at the
         // end of the wrapped line or at the start of the continuation.
@@ -194,11 +211,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // A line space-padded out to the wrap column is a table row or a
         // colour fill, not a wrapped segment - word wrap never produces a
@@ -214,11 +227,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         enableUndoServerWrap();
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // Games that put two spaces after a full stop keep both when the
         // wrap point lands right after a sentence - neither a held line
@@ -236,17 +245,222 @@ private slots:
         QVERIFY2(waitForLineInBuffer(sentencePadded), "sentence-final line padded with several spaces was not committed on its own");
     }
 
+    void test_listEntriesAreNotJoined()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // Only the marker tells these entries from a wrapped paragraph; the
+        // last carries the single leading space a game may indent an index by:
+        const QString entry1 = heldLine(qsl("[581] Stat Fury - a viking only stat that grants bonuses"));
+        const QString entry2 = heldLine(qsl("(3) Viking Default: what you get if you do not customise"));
+        const QString entry3 = heldLine(qsl("1. Viking Specializations lists the class specialisations"));
+        const QString entry4 = qsl(" [1366] Vikings: a barbaric fighter class.");
+        verifyHeldLines({entry1, entry2, entry3});
+        mpServer->sendRaw(entry1.toUtf8() + "\r\n" + entry2.toUtf8() + "\r\n" + entry3.toUtf8() + "\r\n" + entry4.toUtf8() + "\r\n");
+
+        QVERIFY2(waitForLineInBuffer(entry1), "bracketed list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry2), "parenthesised list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry3), "numbered list entry was joined onto the entry below it");
+        QVERIFY2(waitForLineInBuffer(entry4), "indented list entry was joined onto the entry above it");
+    }
+
+    void test_wrappedListEntryStillJoins()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // The marker is looked for on the continuation only, so an entry too
+        // long for one line still wraps like any other prose:
+        const QString entry = heldLine(qsl("[1364] Viking Default: if you chose not to customise your"));
+        verifyHeldLines({entry});
+        mpServer->sendRaw(entry.toUtf8() + "\r\nviking this is what is included.\r\n");
+
+        QVERIFY2(waitForLineInBuffer(entry + qsl(" viking this is what is included.")), "a wrapped list entry was no longer joined back together");
+    }
+
+    void test_proseIsNotMistakenForAList()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // Every one of these continuations opens with something a list
+        // marker could be mistaken for:
+        const QString dash = heldLine(qsl("The Grand Bazaar sells everything you could want in this"));
+        const QString aside = heldLine(qsl("You gain a large amount of experience for your daring"));
+        const QString price = heldLine(qsl("The merchant paid for the whole shipment in advance, all"));
+        const QString reference = heldLine(qsl("More detail about the viking class can be found over"));
+        verifyHeldLines({dash, aside, price, reference});
+
+        mpServer->sendRaw(dash.toUtf8() + "\r\n- weapons, armour and rope - at a very fair price.\r\n");
+        QVERIFY2(waitForLineInBuffer(dash + qsl(" - weapons, armour and rope - at a very fair price.")), "a spaced dash opening a continuation was mistaken for a bullet");
+
+        mpServer->sendRaw(aside.toUtf8() + "\r\n(2500) and the whole town cheers for you.\r\n");
+        QVERIFY2(waitForLineInBuffer(aside + qsl(" (2500) and the whole town cheers for you.")), "a parenthesised number too long to be a label was mistaken for one");
+
+        mpServer->sendRaw(price.toUtf8() + "\r\n1364. gold was a fair price for it.\r\n");
+        QVERIFY2(waitForLineInBuffer(price + qsl(" 1364. gold was a fair price for it.")), "a number too long to be a list label was mistaken for one");
+
+        mpServer->sendRaw(reference.toUtf8() + "\r\n(see help vikings) for the full list.\r\n");
+        QVERIFY2(waitForLineInBuffer(reference + qsl(" (see help vikings) for the full list.")), "a parenthesised phrase carrying no number was mistaken for a list marker");
+    }
+
+    void test_completeSentencesAreNotJoined()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap(78);
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // Two lines of MorgenGrauen's appraisal, each a whole sentence. The
+        // width is that game's, so that the first line lands inside the join
+        // band and is held; it stops 13 columns short, and "Die" would have
+        // fitted after it, so the game broke the line rather than its wrap:
+        const QString verdict = qsl("Der Logiker haelt mindestens fuenf Mal so viel aus, wie ein Hund!");
+        const QString armour = qsl("Die Ruestung des Logikers ist besser als Deine.");
+        verifyInJoinBand({verdict}, 78);
+        mpServer->sendRaw(verdict.toUtf8() + "\r\n" + armour.toUtf8() + "\r\n");
+
+        QVERIFY2(waitForLineInBuffer(verdict), "sentence with room to spare left on it was not committed on its own");
+        QVERIFY2(waitForLineInBuffer(armour), "sentence following one that had room for its first word was not committed on its own");
+        QVERIFY2(!bufferHasLine(verdict + QChar::Space + armour), "two whole sentences the game sent separately were joined into one line");
+    }
+
+    void test_handWrappedProseStillJoins()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap(78);
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // Two room descriptions as MorgenGrauen sends them. Lines laid out by
+        // hand stop several columns short of the wrap column, so a
+        // continuation's first word can look like one that would have fitted:
+        // "sich" would have ended 5 columns clear of the column, and only
+        // csmServerWrapFitTolerance keeps that paragraph joined. It is the
+        // tightest wrap in a capture of the game:
+        const QStringList hall = {qsl("Der grosse Raum mit seiner niedrigen Decke und den grob geschnittenen"),
+                                  qsl("Querbalken hat Platz fuer sehr viele Personen. Knarrende Dielen erzaehlen"),
+                                  qsl("ueber Heldentaten laengst vergessener Abenteurer, beruehmter als mancher"),
+                                  qsl("Weise unserer Zeit.")};
+        const QStringList visitors = {qsl("Abenteurer, aber auch andere Bewohner dieser Welt kommen hierher, um"),
+                                      qsl("sich zu informieren, ihre Erfahrungen auszutauschen oder sich in den"),
+                                      qsl("verschiedensten Wissenschaften zu verbessern.")};
+        verifyInJoinBand({hall.at(0), hall.at(1), hall.at(2), visitors.at(0), visitors.at(1)}, 78);
+
+        mpServer->sendRaw((hall.join(qsl("\r\n")) + qsl("\r\n")).toUtf8());
+        QVERIFY2(waitForLineInBuffer(hall.join(QChar::Space)), "a hand-wrapped paragraph was no longer joined back into one line");
+
+        mpServer->sendRaw((visitors.join(qsl("\r\n")) + qsl("\r\n")).toUtf8());
+        QVERIFY2(waitForLineInBuffer(visitors.join(QChar::Space)), "a paragraph broken well short of the wrap column was no longer joined");
+    }
+
+    void test_joinTurnsOnWhereTheFirstWordWouldHaveEnded()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap(78);
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // One character of held line either side of the decision: with 66 the
+        // continuation's "one" would have ended on column 70, a full
+        // csmServerWrapFitTolerance clear of the column, and with 67 it would
+        // have ended one column later than the tolerance allows:
+        const QString roomToSpare = QString(60, QChar('x')) + qsl(" alpha");
+        const QString noRoom = QString(61, QChar('x')) + qsl(" alpha");
+        const QString continuation = qsl("one more word.");
+        verifyInJoinBand({roomToSpare, noRoom}, 78);
+
+        mpServer->sendRaw(roomToSpare.toUtf8() + "\r\n" + continuation.toUtf8() + "\r\n");
+        QVERIFY2(waitForLineInBuffer(roomToSpare), "a line the continuation's first word would have fitted on was not committed on its own");
+        QVERIFY2(!bufferHasLine(roomToSpare + QChar::Space + continuation), "a line with room to spare for the continuation's first word was joined anyway");
+
+        mpServer->sendRaw(noRoom.toUtf8() + "\r\n" + continuation.toUtf8() + "\r\n");
+        QVERIFY2(waitForLineInBuffer(noRoom + QChar::Space + continuation), "a line one character too long for the continuation's first word was not joined");
+    }
+
+    void test_keptBreakSpacesCountTowardsTheFit()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap(78);
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // The word would have gone where the join puts it, so the spaces the
+        // game left at the break count towards it. Both of these hold 66
+        // characters of text - one short of joining on their own - and only
+        // join because a second space sits between them and the continuation:
+        const QString sentenceGap = QString(59, QChar('x')) + qsl(" alpha.  ");
+        const QString spacedBothSides = QString(60, QChar('x')) + qsl(" alpha ");
+        const QString continuation = qsl("one more word.");
+        verifyInJoinBand({sentenceGap, spacedBothSides}, 78);
+
+        mpServer->sendRaw(sentenceGap.toUtf8() + "\r\n" + continuation.toUtf8() + "\r\n");
+        QVERIFY2(waitForLineInBuffer(sentenceGap + continuation), "the two spaces a game leaves after a sentence were not counted towards where the next word would have gone");
+
+        mpServer->sendRaw(spacedBothSides.toUtf8() + "\r\n " + continuation.toUtf8() + "\r\n");
+        QVERIFY2(waitForLineInBuffer(spacedBothSides + QChar::Space + continuation), "a break space kept on both lines was not counted towards where the next word would have gone");
+    }
+
+    void test_paragraphIsMeasuredByItsLastLine()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        enableUndoServerWrap(78);
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+
+        // Once a paragraph has been joined the held text is longer than the
+        // wrap column, so the game line it ends on is what the next word has
+        // to be measured against - "Die" would have fitted on the appraisal
+        // but not on the whole two lines held by then:
+        const QString opening = qsl("Der Logiker mustert Dich abschaetzend und schnaubt dann veraechtlich");
+        const QString verdict = qsl("Der Logiker haelt mindestens fuenf Mal so viel aus, wie ein Hund!");
+        const QString armour = qsl("Die Ruestung des Logikers ist besser als Deine.");
+        verifyInJoinBand({opening, verdict}, 78);
+        mpServer->sendRaw(opening.toUtf8() + "\r\n" + verdict.toUtf8() + "\r\n" + armour.toUtf8() + "\r\n");
+
+        QVERIFY2(waitForLineInBuffer(opening + QChar::Space + verdict), "the wrapped opening was not joined onto the line that continues it");
+        QVERIFY2(waitForLineInBuffer(armour), "a whole sentence after a joined paragraph was not committed on its own");
+        QVERIFY2(!bufferHasLine(opening + QChar::Space + verdict + QChar::Space + armour), "a whole sentence was glued onto a paragraph its first word would have fitted the last line of");
+    }
+
     void test_wrapDetectionRaisesHint()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY(host);
         QVERIFY(!host->mServerWrapHintShown);
-        QVERIFY(QTest::qWaitFor(
-                [&]() {
-                    return mpServer->clientConnected();
-                },
-                2000));
+        connectAndDrainWelcome();
 
         // 100 lines all ending hard against a 78 column ceiling:
         QByteArray data;
@@ -273,15 +487,66 @@ private slots:
     }
 
 private:
-    void enableUndoServerWrap()
+    // The stub sends its welcome message 100ms after the client connects. Every
+    // test here asserts how one line relates to its neighbours, so a line
+    // arriving at an uncontrolled moment can commit a held segment through a
+    // path the test did not intend - which is how test_loneFullWidthLineIsFlushed
+    // came to pass without ever reaching the flush timer it is named after.
+    // Draining it leaves every test starting from a known buffer.
+    void connectAndDrainWelcome()
+    {
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->clientConnected();
+                },
+                2000));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return bufferHasLine(mWelcome);
+                         },
+                         3000),
+                 "the stub's welcome message never arrived, so no later line can be attributed to the test's own input");
+    }
+
+    void enableUndoServerWrap(int width = 80)
     {
         auto host = mudlet::self()->getActiveHost();
         QVERIFY(host);
         host->mUndoServerWrap = true;
-        host->mUndoServerWrapWidth = 80;
+        host->mUndoServerWrapWidth = width;
         // Keep Mudlet's own display wrap out of the way so that logical
         // lines can be compared with buffer lines verbatim:
         host->mpConsole->buffer.mWrapAt = 500;
+    }
+
+    // Only a line inside the join band - the default wrap column of 80 less
+    // csmServerWrapSlack - is ever held back for a continuation. Lines that
+    // have to be held are padded to a fixed width inside it and checked,
+    // because one that drifted out would never be held, leaving every
+    // assertion after it passing without the code under test having run. It
+    // also has to leave too little room for the continuation to have opened
+    // on it, even where that continuation opens with a single character,
+    // or the pair reads as two separate lines rather than as a wrap:
+    static constexpr qsizetype smHeldLineLength = 76;
+
+    static QString heldLine(const QString& text) { return text + QChar::Space + QString(smHeldLineLength - text.size() - 1, QChar('x')); }
+
+    void verifyHeldLines(const QList<QString>& lines)
+    {
+        for (const QString& line : lines) {
+            QVERIFY2(line.size() == smHeldLineLength, qPrintable(qsl("test line is %1 characters, not the %2 that put it inside the join band").arg(line.size()).arg(smHeldLineLength)));
+        }
+    }
+
+    // Same guard for the tests that use text from a real game verbatim at
+    // that game's own wrap column instead of padding to a fixed length. The
+    // band floor repeats csmServerWrapSlack, which is private to TBuffer:
+    void verifyInJoinBand(const QList<QString>& lines, qsizetype width)
+    {
+        const qsizetype floor = width - 15;
+        for (const QString& line : lines) {
+            QVERIFY2(line.size() >= floor && line.size() <= width, qPrintable(qsl("test line is %1 characters, outside the join band of %2 to %3").arg(line.size()).arg(floor).arg(width)));
+        }
     }
 
     // Utility function to manually start a profile like a user would do via the

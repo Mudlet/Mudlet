@@ -1996,6 +1996,7 @@ describe("Tests UI functions", function()
         "You tell the group 'incoming'",
         "Bob whispers to you, 'psst'",
         "Bob tells the group 'incoming'",
+        "You gossip, 'test!'",
         "Bob says, 'hello'",
         "Bob asks, 'where is the bank?'",
         "Bob exclaims, 'at last!'",
@@ -2425,6 +2426,84 @@ describe("Tests UI functions", function()
       assert.is_nil(result:find("aaa", 1, true))
     end)
 
+    -- Echo a marked line, park the cursor on it, run replaceAll and hand back what
+    -- the line reads afterwards. A budget runs the call under an instruction-count
+    -- hook, so a replaceAll that fails to terminate fails the spec instead of
+    -- hanging the whole suite.
+    local function replaceOnMarkedLine(text, word, what, budget)
+      echo("main", "\n" .. text .. "\n")
+      local lineCount = getLineCount()
+      local target
+      for i = lineCount - 1, math.max(0, lineCount - 8), -1 do
+        moveCursor(0, i)
+        selectCurrentLine()
+        if getCurrentLine():find(text, 1, true) then
+          target = i
+          break
+        end
+      end
+      deselect()
+      assert.is_not_nil(target, "marked line not found in the main console")
+
+      moveCursor(0, target)
+      local terminated, err
+      if budget then
+        local runner = coroutine.create(function() replaceAll(word, what) end)
+        debug.sethook(runner, function() error("replaceAll did not terminate", 0) end, "", budget)
+        terminated, err = coroutine.resume(runner)
+      else
+        terminated, err = pcall(replaceAll, word, what)
+      end
+
+      -- replace() edits the line in place, so its index is still good
+      moveCursor(0, target)
+      selectCurrentLine()
+      local result = getCurrentLine()
+      deselect()
+      moveCursorEnd()
+      return result, terminated, err
+    end
+
+    -- string.find() reported byte offsets while selectSection() indexes characters,
+    -- so any non-ASCII earlier in the line slid the selection to the right
+    it("replaces the right characters when the line contains non-ASCII", function()
+      local result = replaceOnMarkedLine("uiReplaceAllAccent Der H\195\164ndler sagt: John kommt", "John", "Doe")
+      assert.is_truthy(result:find("uiReplaceAllAccent Der H\195\164ndler sagt: Doe kommt", 1, true), "got: " .. result)
+    end)
+
+    -- a three-byte character shifts it by two, and needs no non-English game
+    it("replaces the right characters after a three-byte character", function()
+      local result = replaceOnMarkedLine("uiReplaceAllQuote It\226\128\153s John here", "John", "Doe")
+      assert.is_truthy(result:find("uiReplaceAllQuote It\226\128\153s Doe here", 1, true), "got: " .. result)
+    end)
+
+    -- %a matches an accented letter for utf8.find but not for string.find, whose
+    -- classes are byte-wise and locale-bound
+    it("matches a pattern class against characters, not bytes", function()
+      local result = replaceOnMarkedLine("uiReplaceAllClass caf\195\169 done", "caf%a", "TEA")
+      assert.is_truthy(result:find("uiReplaceAllClass TEA done", 1, true), "got: " .. result)
+    end)
+
+    -- the search used to resume by the PATTERN's length rather than the match's,
+    -- so masking a digit landed back on the digit it had just written
+    it("terminates when the replacement still matches the pattern", function()
+      local result, terminated, err = replaceOnMarkedLine("uiReplaceAllDigits you have 42 gold", "%d", "0", 50000)
+      assert.is_true(terminated, tostring(err))
+      assert.is_truthy(result:find("uiReplaceAllDigits you have 00 gold", 1, true), "got: " .. result)
+    end)
+
+    -- a pattern that can match nothing never advances on its own
+    it("terminates on a pattern that can match the empty string", function()
+      local _, terminated, err = replaceOnMarkedLine("uiReplaceAllEmpty abc", "x*", "-", 50000)
+      assert.is_true(terminated, tostring(err))
+    end)
+
+    -- the shape a script hits when the needle it computed came back empty
+    it("terminates when the search string is empty", function()
+      local _, terminated, err = replaceOnMarkedLine("uiReplaceAllNoNeedle abc", "", "Z", 50000)
+      assert.is_true(terminated, tostring(err))
+    end)
+
     it("hard-errors on non-string arguments", function()
       assert.is_false(pcall(replaceAll, 5, "x"))
       assert.is_false(pcall(replaceAll, "x", 5))
@@ -2673,14 +2752,24 @@ describe("Tests UI functions", function()
     local src = "uiReadbackClipSrc"
     local dst = "uiReadbackClipDst"
 
+    local srcWrap, dstWrap
+
     setup(function()
       createMiniConsole(src, 0, 0, 400, 100)
       createMiniConsole(dst, 0, 110, 400, 100)
+      srcWrap, dstWrap = getWindowWrap(src), getWindowWrap(dst)
     end)
 
     before_each(function()
       clearWindow(src)
       clearWindow(dst)
+    end)
+
+    -- the wrapping tests below narrow these, and a failing assert must not carry
+    -- that into the next test
+    after_each(function()
+      setWindowWrap(src, srcWrap)
+      setWindowWrap(dst, dstWrap)
     end)
 
     teardown(function()
@@ -2704,7 +2793,115 @@ describe("Tests UI functions", function()
       assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
     end)
 
-    it("paste places the copied selection at the target cursor", function()
+    -- copy() and appendBuffer() carry the line's per-character formatting
+    -- through appendFormatted(), where a character can be given its
+    -- neighbour's colour
+    it("appendBuffer keeps every colour run of a multi-coloured line", function()
+      decho(src, "<255,0,0:0,0,0>red<0,255,0:0,0,0>green<0,0,255:0,0,0>blue\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("redgreenblue", lines[1])
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 0, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 3, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 8, 1)
+      assert.are.same({0, 0, 255}, getTextFormat(dst).foreground)
+      -- the last character before each colour change, where an off-by-one in
+      -- the carried formatting shows
+      selectSection(dst, 2, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 7, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- "!osc8-docs" in text being echoed or received is an easter egg: it prints
+    -- a documentation banner instead of the line. A line already in a buffer is
+    -- being moved, not written, so copying it must not re-read it - the text
+    -- would be lost and the banner would land in the main console. The
+    -- injection is debounced to once a second, so nothing else may use the
+    -- phrase near this spec or the assertion below holds for that reason.
+    it("copies a line holding the documentation trigger phrase verbatim", function()
+      -- in two pieces, so putting the line into the source does not trip it
+      echo(src, "chat: !osc8-")
+      echo(src, "docs\n")
+      local mainLinesBefore = getLineCount()
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("chat: !osc8-docs", lines[1])
+      assert.are.equal(mainLinesBefore, getLineCount())
+    end)
+
+    -- copy() slices the line's text and its per-character formatting at the same
+    -- offset from the line's start, so the two can only be seen to disagree when
+    -- the selection does not begin at column 0
+    it("copies a partial selection that spans a colour change", function()
+      decho(src, "<255,0,0:0,0,0>redpart<0,255,0:0,0,0>greenpart\n")
+      moveCursor(src, 0, 0)
+      selectSection(src, 4, 6)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("artgre", lines[1])
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 2, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      selectSection(dst, 3, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+    end)
+
+    -- appendFormatted() finishes with the same wrapLine() call the echo path
+    -- makes, so an appended line has to lay out exactly as an echoed one
+    it("appendBuffer wraps a long line the same way echoing it does", function()
+      local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
+      -- wide source so copy() takes the line whole, narrow destination so the
+      -- appended line has to wrap
+      setWindowWrap(src, 500)
+      setWindowWrap(dst, 40)
+      echo(src, long .. "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local appended = getLines(dst, 0, getLineCount(dst))
+      clearWindow(dst)
+      echo(dst, long .. "\n")
+      local echoed = getLines(dst, 0, getLineCount(dst))
+      assert.is_true(#appended > 1, "the destination did not wrap, so this proves nothing")
+      assert.are.same(echoed, appended)
+    end)
+
+    -- the carried formatting must not be able to move a wrap point
+    it("wraps a multi-coloured line where the same text uncoloured wraps", function()
+      local long = ("the quick brown fox jumps over the lazy dog "):rep(6)
+      setWindowWrap(src, 500)
+      setWindowWrap(dst, 40)
+      -- the colour changes mid-word, so the boundary between the colours is
+      -- nowhere a wrap point could legitimately be
+      local split = math.floor(#long / 2) + 2
+      decho(src, "<255,0,0:0,0,0>" .. long:sub(1, split) .. "<0,255,0:0,0,0>" .. long:sub(split + 1) .. "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      appendBuffer(dst)
+      local coloured = getLines(dst, 0, getLineCount(dst))
+      clearWindow(dst)
+      echo(dst, long .. "\n")
+      local plain = getLines(dst, 0, getLineCount(dst))
+      assert.is_true(#coloured > 1, "the destination did not wrap, so this proves nothing")
+      assert.are.same(plain, coloured)
+    end)
+
+    -- An empty target has no line after the cursor's, so TConsole::paste()
+    -- appends here instead of reaching TBuffer::paste()
+    it("paste into an empty window appends the copied selection", function()
       echo(src, "pastetext\n")
       moveCursor(src, 0, 0)
       selectCurrentLine(src)
@@ -2713,6 +2910,144 @@ describe("Tests UI functions", function()
       moveCursor(dst, 0, 0)
       selectCurrentLine(dst)
       assert.are.equal("pastetext", getCurrentLine(dst))
+    end)
+
+    -- selectCurrentLine is the one case where an inclusive and an exclusive end
+    -- column agree, so these use selectString to pin a mid-line selection.
+    it("appendBuffer copies exactly the selection, not one character more", function()
+      echo(src, "one two.three\n")
+      moveCursor(src, 0, 0)
+      assert.is_true(selectString(src, "two", 1) > -1)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("two", lines[1])
+    end)
+
+    -- TConsole::paste() only reaches TBuffer::paste() when the target holds a
+    -- line after the cursor's; against a freshly cleared window it falls through
+    -- to appendBuffer(), so the target is pre-filled to pin the insert path.
+    it("paste places exactly the selection, not one character more", function()
+      echo(src, "alpha beta.gamma\n")
+      moveCursor(src, 0, 0)
+      assert.is_true(selectString(src, "beta", 1) > -1)
+      copy(src)
+      echo(dst, "xxx\nyyy\n")
+      moveCursor(dst, 0, 0)
+      paste(dst)
+      moveCursor(dst, 0, 0)
+      selectCurrentLine(dst)
+      assert.are.equal("betaxxx", getCurrentLine(dst))
+      moveCursor(dst, 0, 1)
+      selectCurrentLine(dst)
+      assert.are.equal("yyy", getCurrentLine(dst))
+    end)
+
+    -- Guards against over-correcting the end-column clamp: a selection reaching
+    -- the last character of the line must still include it.
+    it("a selection reaching the end of the line keeps its last character", function()
+      echo(src, "alpha omega\n")
+      moveCursor(src, 0, 0)
+      assert.is_true(selectString(src, "omega", 1) > -1)
+      copy(src)
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("omega", lines[1])
+    end)
+
+    -- cut() is copy() and replaceInLine() composed, and only ever acts on the
+    -- main console. The deletion was always exclusive, so while the copy was
+    -- inclusive the clipboard held one character more than the line lost.
+    it("cut copies exactly the text it removes", function()
+      clearWindow("main")
+      echo("main", "one two.three\n")
+      moveCursor("main", 0, 0)
+      assert.is_true(selectString("two", 1) > -1)
+      cut()
+      appendBuffer(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("two", lines[1])
+      moveCursor("main", 0, 0)
+      selectCurrentLine("main")
+      assert.are.equal("one .three", getCurrentLine("main"))
+    end)
+
+    -- A chunk holding one empty line still has to terminate the destination's
+    -- current line, so mirroring a blank spacer line reproduces it.
+    it("appendBuffer reproduces a copied blank line", function()
+      echo(src, "\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      local before = getLineCount(dst)
+      appendBuffer(dst)
+      assert.are.equal(before + 1, getLineCount(dst))
+    end)
+
+    -- These pin TBuffer::paste(), so the target is pre-filled with two lines to
+    -- get past the gate above.
+    local function copyBetaInto(target)
+      echo(src, "beta\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      echo(target, "xxxxx\nyyy\n")
+    end
+
+    it("paste inserts at the cursor's column, not at the start of the line", function()
+      copyBetaInto(dst)
+      moveCursor(dst, 2, 0)
+      paste(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("xxbetaxxx", lines[1])
+      assert.are.equal("yyy", lines[2])
+    end)
+
+    it("paste at the end of a line appends to it rather than doing nothing", function()
+      copyBetaInto(dst)
+      moveCursor(dst, 5, 0)
+      paste(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("xxxxxbeta", lines[1])
+      assert.are.equal("yyy", lines[2])
+    end)
+
+    -- Matches insertText(), which pads through the same insertInLine() path
+    it("paste past the end of a line pads out to the cursor", function()
+      copyBetaInto(dst)
+      moveCursor(dst, 9, 0)
+      paste(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("xxxxx    beta", lines[1])
+      assert.are.equal("yyy", lines[2])
+    end)
+
+    it("paste with a negative cursor column leaves the line alone", function()
+      copyBetaInto(dst)
+      moveCursor(dst, -1, 0)
+      paste(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("xxxxx", lines[1])
+    end)
+
+    -- The insert runs a character at a time to keep per-character formatting,
+    -- so a paste of two differently coloured runs has to arrive as two runs
+    it("paste keeps each character's own formatting", function()
+      decho(src, "<255,0,0:0,0,0>red<0,255,0:0,0,0>grn\n")
+      moveCursor(src, 0, 0)
+      selectCurrentLine(src)
+      copy(src)
+      echo(dst, "xxxxx\nyyy\n")
+      moveCursor(dst, 2, 0)
+      paste(dst)
+      local lines = getLines(dst, 0, getLineCount(dst))
+      assert.are.equal("xxredgrnxxx", lines[1])
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 2, 1)
+      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      moveCursor(dst, 0, 0)
+      selectSection(dst, 5, 1)
+      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
     end)
   end)
 end)

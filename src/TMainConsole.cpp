@@ -1516,11 +1516,15 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
         getHyperlinkVisibilityManager().onDataReceived();
     }
 
+    // feedTriggers() lands here, so this runs nested inside an outer pass that
+    // is itself mid-translate; clearing the flag outright would take trigger
+    // context away from the rest of that pass.
+    const bool wasInTriggerEngineMode = mTriggerEngineMode;
     mTriggerEngineMode = true;
     const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
     const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
     buffer.translateToPlainText(incomingSocketData, isFromServer);
-    mTriggerEngineMode = false;
+    mTriggerEngineMode = wasInTriggerEngineMode;
 
     const int lastLineNumber = buffer.getLastLineNumber();
     const bool bufferChanged = lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine;
@@ -1560,20 +1564,45 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
 
 void TMainConsole::runTriggers(int line)
 {
+    // A trigger script can feed text back through the pipeline, re-entering this
+    // function; the rest of this pass would otherwise inherit whatever the nested
+    // one left behind and act on the fed line instead of its own.
+    const bool nested = mpHost->getTriggerUnit()->processingDepth() > 0;
+    const QPoint previousUserCursor = mUserCursor;
+    const int previousEngineCursor = mEngineCursor;
+    const bool previousIsPromptLine = mIsPromptLine;
+    const QString previousLine = mCurrentLine;
+
     mUserCursor.setY(line);
     mIsPromptLine = buffer.promptBuffer.at(line);
     mEngineCursor = line;
     mUserCursor.setX(0);
     mCurrentLine = buffer.line(line);
     mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
-    mCurrentLine.append('\n');
+    // The matchers take the haystack by reference all the way down, so it must be
+    // a local: a nested pass reassigns mCurrentLine under them.
+    QString haystack = mCurrentLine;
+    haystack.append('\n');
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> mpHost;
     }
-    mpHost->incomingStreamProcessor(mCurrentLine, line);
-    mIsPromptLine = false;
+    mpHost->incomingStreamProcessor(haystack, line);
+
+    if (nested) {
+        // Only a nested pass restores: at the top level a script's moveCursor()
+        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
+        // a saved index can by now point past the end.
+        const int lastLine = buffer.getLastLineNumber();
+        mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
+        mEngineCursor = qMin(previousEngineCursor, lastLine);
+        mIsPromptLine = previousIsPromptLine;
+        mCurrentLine = previousLine;
+        mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, previousLine);
+    } else {
+        mIsPromptLine = false;
+    }
 
     //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
     //       otherwise just delete
@@ -1593,16 +1622,27 @@ void TMainConsole::finalize()
 // to the TMap class...?
 bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
-    const QString filename_map =
-            location.isEmpty() ? mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))) : location;
+    QString filename_map = location;
+    if (filename_map.isEmpty()) {
+        filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
+        // Resolve the name relative to the profile home directory the way
+        // TMainConsole::importMap does, rather than against whatever directory
+        // Mudlet happens to have been started in:
+        filename_map = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+    }
 
     const QDir dir_map(mudlet::getMudletPath(enums::profileMapsPath, mProfileName));
     if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
         return false;
     }
 
     QSaveFile file_map(filename_map);
     if (!file_map.open(QIODevice::WriteOnly)) {
+        // Naming the file matters more than usual: a relative location is not
+        // the path the caller typed
+        qDebug().noquote() << "Error saving map to" << filename_map << ":" << file_map.errorString();
         return false;
     }
 
@@ -1651,12 +1691,19 @@ bool TMainConsole::loadMap(const QString& location)
 
     pHost->mpMap->mapClear();
 
+    // The same resolution saveMap and importMap use, so that a map written
+    // under a bare name is looked for where it was written:
+    QString filePathName = location;
+    if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
+        filePathName = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+    }
+
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
     pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
     const QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
-    if (pHost->mpMap->restore(location)) {
+    if (pHost->mpMap->restore(filePathName)) {
         pHost->mpMap->audit();
         pHost->mpMap->mpMapper->mp2dMap->init();
         pHost->mpMap->mpMapper->updateAreaComboBox();
@@ -1669,10 +1716,10 @@ bool TMainConsole::loadMap(const QString& location)
         pHost->mpMap->mpMapper->show();
     }
 
-    if (location.isEmpty()) {
+    if (filePathName.isEmpty()) {
         pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
     } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
+        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(filePathName, now.toString(Qt::ISODate)), true);
     }
 
     pHost->mpMap->updateArea(-1);

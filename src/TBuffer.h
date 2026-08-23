@@ -340,6 +340,12 @@ public:
     void flushPendingServerWrapJoin();
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
+    // Drops any half-received ANSI sequence or multi-byte character, on both
+    // the Game Server and the local channel. Only a connection boundary (or a
+    // test fixture) should use this: a sequence split across Game Server
+    // packets relies on that state surviving between calls to
+    // translateToPlainText():
+    void resetSequenceParserState();
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar& format, const int linkID = 0);
@@ -399,6 +405,7 @@ private:
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
     void swapParserSequenceState();
+    void warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd);
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -412,6 +419,8 @@ private:
     void commitLineData(QString line, std::deque<TChar> chars, char ch);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
+    static bool startsWithListMarker(const QString& line);
+    bool pendingLineHadRoomForNextWord() const;
     void joinPendingServerWrapOntoCurrent();
     void startServerWrapFlushTimer();
     void recordLineLengthForWrapDetection(qsizetype length);
@@ -457,10 +466,14 @@ private:
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
     bool mGotOSC = false;
-    // Set alongside mGotOSC for the other ANSI string sequences (DCS, SOS, PM
-    // and APC, i.e. ESC followed by 'P', 'X', '^' or '_' respectively) whose
-    // payload must be consumed up to the terminator but not decoded:
+    // Set alongside mGotOSC when the payload must be consumed up to the
+    // terminator but not decoded: the other ANSI string sequences (DCS, SOS,
+    // PM and APC, i.e. ESC followed by 'P', 'X', '^' or '_' respectively), and
+    // an OSC that grew past MAX_OSC_SEQUENCE_LENGTH so that only part of its
+    // payload is still to hand:
     bool mGotString = false;
+    // Keeps warnAboutDiscardedStringSequence() to one report per connection:
+    bool mWarnedAboutStringSequence = false;
     bool mIsDefaultColor = true;
 
 
@@ -517,6 +530,10 @@ private:
     // joined back on and triggers run once over the whole logical line:
     QString mServerWrapPendingLine;
     std::deque<TChar> mServerWrapPendingBuffer;
+    // Length of the last game line joined into the above. Once a paragraph
+    // has been joined even once the held text is longer than the wrap column,
+    // so the column the game actually broke at is only recoverable from this:
+    qsizetype mServerWrapPendingSegmentLength = 0;
     // Commits a held line if the game goes quiet without completing it - a
     // full-width line that really was the end of the output:
     QPointer<QTimer> mpServerWrapFlushTimer;
@@ -597,14 +614,28 @@ private:
     bool mSkipTriggerProcessing = false;
 
     // Server wrap undoing: a line no shorter than this many characters below
-    // the configured wrap column is considered a wrapped segment (the game
-    // breaks at the last space, so segments fall a partial word short):
+    // the configured wrap column is a candidate wrapped segment (the game
+    // breaks at the last space, so segments fall a partial word short);
+    // whether it really was one is settled once the continuation arrives,
+    // see csmServerWrapFitTolerance:
     static constexpr int csmServerWrapSlack = 15;
+    // How many columns clear of the wrap column the continuation's first word
+    // would have had to end before its fitting proves the game ended the line
+    // itself. Text laid out by hand does not sit exactly on the column, so a
+    // few columns to spare mean nothing: in captures of MorgenGrauen and
+    // Discworld no genuine wrap left more than 7 free. Held lines start no
+    // more than csmServerWrapSlack short of the column, so this can only ever
+    // reject a continuation opening with a word of csmServerWrapSlack less
+    // this many characters or fewer:
+    static constexpr int csmServerWrapFitTolerance = 8;
     // Stop joining once a logical line has grown this long - a runaway guard:
     static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
     static constexpr int csmServerWrapFlushDelayMs = 300;
+    // A longer number opening a line is likelier a year or a price ending a
+    // wrapped sentence than a list number; only "[...]" is trusted past it:
+    static constexpr qsizetype csmMaxListNumberDigits = 3;
     // Wrap detection hint: how many lines ending within 8 characters of a
     // stable ceiling column are needed before suggesting mUndoServerWrap:
     static constexpr int csmWrapDetectThreshold = 40;

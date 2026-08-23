@@ -199,7 +199,7 @@ private:
         return out;
     }
 
-    // A realistic ~three-dozen always-active trigger mix. Some patterns never
+    // A realistic ~four-dozen always-active trigger mix. Some patterns never
     // match, so the miss path is costed too. Lua-code matchers are excluded and
     // every trigger carries an empty script, so a match runs the full regex +
     // capture path (the cost we want) but TTrigger::execute() returns before any
@@ -261,6 +261,23 @@ private:
 
         for (const QString& s : {qsl("You are"), qsl("The"), qsl("HP:"), qsl("You gain")}) {
             addKind({s}, REGEX_BEGIN_OF_LINE_SUBSTRING, false);
+        }
+
+        // Exact-match patterns cost the whole line on every call, so they are
+        // costed at the same count as the substring group.
+        for (const QString& s : {qsl("You are hungry."),
+                                 qsl("You are thirsty."),
+                                 qsl("It is pitch black."),
+                                 qsl("The door is closed."),
+                                 qsl("You have no keys."),
+                                 qsl("Nothing happens."),
+                                 qsl("You feel better."),
+                                 qsl("Your wounds close."),
+                                 qsl("The orc dies."),
+                                 qsl("You are hidden."),
+                                 qsl("A cool breeze blows."),
+                                 qsl("You cannot go that way.")}) {
+            addKind({s}, REGEX_EXACT_MATCH, false);
         }
 
         addColor(1, TTrigger::scmIgnored);
@@ -381,6 +398,27 @@ private slots:
         emitMetric("text_lines_per_sec", mCorpusLines / seconds);
         emitMetric("text_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
         emitMetric("text_best_pass_ms", seconds * 1000.0);
+    }
+
+    // ISO 8859-1 has no lookup table, so every received byte takes the single-byte
+    // branch of the decoder - unlike the default encoding, which never enters it.
+    // Decoding the UTF-8 corpus as Latin-1 yields mojibake, which is irrelevant:
+    // the byte count through that branch is what is being timed.
+    void benchLatin1Decode()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+
+        const auto result = host->mTelnet.setEncoding("ISO 8859-1", false);
+        QVERIFY2(result.first, qPrintable(result.second));
+
+        const double seconds = feedCorpusBestPass(host, kFeedPasses);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        emitMetric("latin1_lines_per_sec", mCorpusLines / seconds);
+        emitMetric("latin1_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
+        emitMetric("latin1_best_pass_ms", seconds * 1000.0);
     }
 
     void benchTriggerEngine()

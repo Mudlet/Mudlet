@@ -243,6 +243,107 @@ describe("Trigger processing", function()
             assert.is_true(outerMatched, "Outer pass should still match its original colors after the nested pass")
         end)
 
+        -- A trigger script that calls feedTriggers() re-enters trigger processing.
+        -- The outer and inner lines are deliberately different lengths: an equal
+        -- length lets the colour scan window line up by luck, which is why the
+        -- spec above passes even without the fix.
+        local outerLine = "OuterMarkerLineIsLonger"
+        local innerLine = "InnerShort"
+
+        it("should still match later triggers against the outer line after a nested feedTriggers", function()
+            _G.reentrancySubstring = false
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- a substring trigger reads the haystack string itself, so it is the
+            -- kind the aliasing silenced; "Marker" is only in the outer line
+            local watcher = tempTrigger("Marker", function()
+                _G.reentrancySubstring = true
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local fired = _G.reentrancySubstring
+            killTrigger(feeder)
+            killTrigger(watcher)
+            _G.reentrancySubstring = nil
+
+            assert.is_true(fired, "A substring trigger should still see the outer line after an earlier trigger fed text")
+        end)
+
+        it("should leave the outer line selectable after a nested feedTriggers", function()
+            _G.reentrancySelect = -1
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- a regex trigger matches whatever the haystack is, so what this pins
+            -- is which line the cursor is left pointing at
+            local selector = tempRegexTrigger("Marker", function()
+                _G.reentrancySelect = selectString("Marker", 1)
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local selected = _G.reentrancySelect
+            killTrigger(feeder)
+            killTrigger(selector)
+            _G.reentrancySelect = nil
+
+            assert.is_true(selected > -1, "selectString should still find the outer line, not the line that was fed")
+        end)
+
+        it("should restore the line variable after a nested feedTriggers", function()
+            _G.reentrancyLine = nil
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            local reader = tempRegexTrigger("Marker", function()
+                _G.reentrancyLine = line
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local seen = _G.reentrancyLine
+            killTrigger(feeder)
+            killTrigger(reader)
+            _G.reentrancyLine = nil
+
+            assert.are.equal(outerLine, seen)
+        end)
+
+        -- printOnDisplay() is where a nested feed lands, so clearing its trigger
+        -- flag outright leaves the rest of the outer pass outside trigger context.
+        -- What that flag gates is not whether inserted text lands inline - the
+        -- ordinary path inserts inline too whenever the cursor is not at the end
+        -- of the buffer - but whether the capture positions are shifted to follow
+        -- it. Without that, a capture selected after an insert is off by the
+        -- length inserted.
+        it("should keep captures selectable after an insert across a nested feedTriggers", function()
+            _G.reentrancyCapture = nil
+            -- unanchored: this line carries the marker text after the outer line
+            local feeder = tempRegexTrigger("^" .. outerLine, function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- selectCaptureGroup(1) selects the whole match, so that is what the
+            -- insert has to leave correctly positioned
+            local inserter = tempRegexTrigger("Marker (\\w+)$", function()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+                selectCaptureGroup(1)
+                _G.reentrancyCapture = getSelection()
+            end)
+
+            feedTriggers("\n" .. outerLine .. " Marker payload\n")
+
+            local selected = _G.reentrancyCapture
+            killTrigger(feeder)
+            killTrigger(inserter)
+            _G.reentrancyCapture = nil
+
+            assert.are.equal("Marker payload", selected,
+                "the match should still be selectable after text was inserted before it")
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()
@@ -596,6 +697,8 @@ describe("Trigger processing", function()
             disableTrigger("SpecPermSubstring")
             disableTrigger("SpecPermBeginOfLine")
             disableTrigger("SpecPermExact")
+            disableTrigger("SpecPermBlankPattern")
+            disableTrigger("SpecPermTwoBlankPatterns")
             _G.TrigSpec = nil
         end)
 
@@ -657,6 +760,39 @@ describe("Trigger processing", function()
             assert.is_false(ok, "a non-table pattern argument should error")
             assert.is_truthy(tostring(err):find("permBeginOfLineStringTrigger", 1, true),
                 "the error should name permBeginOfLineStringTrigger, got: " .. tostring(err))
+        end)
+
+        -- Blank patterns are skipped when the pattern list is stored, so the stored
+        -- list is compacted while the list passed in is not, and a pattern following
+        -- a blank one must still be matched with its own regex. A pattern table with
+        -- more than one entry makes the trigger multiline, so its captures arrive in
+        -- multimatches rather than matches even though only one pattern survives.
+        -- A permanent trigger saved by an earlier run reloads with its blank pattern
+        -- already stripped, i.e. healed, so it has to be cleared out first or it
+        -- fires and masks the result.
+        it("a blank pattern before a real one does not stop the real one matching", function()
+            _G.TrigSpec = {capture = nil}
+            killTrigger("SpecPermBlankPattern")
+            disableTrigger("SpecPermBlankPattern")
+            local id = permRegexTrigger("SpecPermBlankPattern", "", {"", "^You see (\\w+)$"},
+                                        [==[_G.TrigSpec.capture = multimatches[1][2]]==])
+            assert.is_number(id)
+            assert.is_true(id > 0)
+            feedTriggers("\nYou see sword\n")
+            assert.is_equal("sword", _G.TrigSpec.capture,
+                "a pattern after a blank one should match and report its own capture")
+        end)
+
+        it("two blank patterns before a real one do not shift its regex", function()
+            _G.TrigSpec = {capture = nil}
+            killTrigger("SpecPermTwoBlankPatterns")
+            disableTrigger("SpecPermTwoBlankPatterns")
+            local id = permRegexTrigger("SpecPermTwoBlankPatterns", "", {"", "", "^probe (\\w+)$"},
+                                        [==[_G.TrigSpec.capture = multimatches[1][2]]==])
+            assert.is_number(id)
+            feedTriggers("\nprobe alpha\n")
+            assert.is_equal("alpha", _G.TrigSpec.capture,
+                "the shift should be corrected for any number of leading blank patterns")
         end)
 
         it("killTrigger returns false for a permanent trigger (they cannot be killed)", function()
@@ -1032,6 +1168,125 @@ describe("Trigger processing", function()
             assert.are.equal(permanents, exists(name, "trigger"), "only the temporary trigger should leave the lookup table")
             assert.is_true(_G.NameEvictionSpec >= 1, "the permanent trigger should still fire")
             assert.is_true(disableTrigger(name), "the permanent trigger must still be reachable by name")
+        end)
+
+    end)
+
+    -- Multiline triggers: a state completes only once every pattern has matched
+    -- within the condition line delta. tempComplexRegexTrigger() is the only Lua
+    -- function that can set that delta, and calling it twice under one name
+    -- accumulates the patterns into a single trigger - so each spec below uses a
+    -- name of its own, because a second call against a surviving trigger would
+    -- add a third condition rather than start afresh.
+    describe("multiline trigger state", function()
+
+        it("fires once with the captures from both of its lines", function()
+            _G.MLCaps = {fires = 0, caps = ""}
+            local code = [==[
+                _G.MLCaps.fires = _G.MLCaps.fires + 1
+                _G.MLCaps.caps = multimatches[1][2] .. "," .. multimatches[2][2]
+            ]==]
+            tempComplexRegexTrigger("SpecMLCaps", [[^one (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLCaps", [[^two (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+
+            feedTriggers("one aaa\n")
+            feedTriggers("two bbb\n")
+
+            local fires, caps = _G.MLCaps.fires, _G.MLCaps.caps
+            killTrigger("SpecMLCaps")
+            _G.MLCaps = nil
+            assert.are.equal(1, fires)
+            assert.are.equal("aaa,bbb", caps, "both lines' captures should reach the script through multimatches")
+        end)
+
+        -- Both sides are asserted: a count of zero on its own is also what a
+        -- silently broken setup produces.
+        it("drops a state whose line delta has run out", function()
+            _G.MLExpiry = 0
+            local code = [==[_G.MLExpiry = _G.MLExpiry + 1]==]
+            tempComplexRegexTrigger("SpecMLExpiry", [[^first$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+            tempComplexRegexTrigger("SpecMLExpiry", [[^second$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+
+            feedTriggers("first\n")
+            feedTriggers("second\n")
+            local consecutive = _G.MLExpiry
+            feedTriggers("first\n")
+            feedTriggers("padding\n")
+            feedTriggers("second\n")
+            local padded = _G.MLExpiry
+
+            killTrigger("SpecMLExpiry")
+            _G.MLExpiry = nil
+            assert.are.equal(1, consecutive, "a state within its line delta should complete")
+            assert.are.equal(1, padded, "a state whose delta has run out should not be completed by a later line")
+        end)
+
+        it("passes a filtering trigger's captures to its children", function()
+            _G.MLFilter = {}
+            tempComplexRegexTrigger("SpecMLFilterParent", [[^hit (\w+) for (\d+)$]], [==[ ]==], 0, 0, 0, 1, 0, 0, 0, 0, 0, 0)
+            permRegexTrigger("SpecMLFilterChild", "SpecMLFilterParent", {[[(\w+)]]},
+                             [==[table.insert(_G.MLFilter, matches[2])]==])
+
+            feedTriggers("hit orc for 12\n")
+
+            local seen = table.concat(_G.MLFilter, ",")
+            killTrigger("SpecMLFilterChild")
+            killTrigger("SpecMLFilterParent")
+            _G.MLFilter = nil
+            assert.are.equal("orc,12", seen, "a filter trigger should offer each of its captures to its children")
+        end)
+
+        it("fires a state created and completed inside a nested feed exactly once", function()
+            _G.MLNested = 0
+            tempComplexRegexTrigger("SpecMLNestedOuter", [[^outer$]], [===[
+                tempComplexRegexTrigger("SpecMLNestedInner", [[^alpha$]], [==[_G.MLNested = _G.MLNested + 1]==], 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                tempComplexRegexTrigger("SpecMLNestedInner", [[^beta$]], [==[_G.MLNested = _G.MLNested + 1]==], 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                feedTriggers("alpha\n")
+                feedTriggers("beta\n")
+            ]===], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+            feedTriggers("outer\n")
+
+            local fires = _G.MLNested
+            killTrigger("SpecMLNestedInner")
+            killTrigger("SpecMLNestedOuter")
+            _G.MLNested = nil
+            assert.are.equal(1, fires, "a state created and completed within a nested pass should fire once, in that pass")
+        end)
+
+        it("fires both states that complete on the same line", function()
+            _G.MLDrain = 0
+            local code = [==[_G.MLDrain = _G.MLDrain + 1]==]
+            tempComplexRegexTrigger("SpecMLDrain", [[^ss$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5)
+            tempComplexRegexTrigger("SpecMLDrain", [[^tt$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5)
+
+            -- two "ss" lines leave two states each waiting for "tt", so the "tt"
+            -- line completes both of them at once
+            feedTriggers("ss\n")
+            feedTriggers("ss\n")
+            feedTriggers("tt\n")
+
+            local fires = _G.MLDrain
+            killTrigger("SpecMLDrain")
+            _G.MLDrain = nil
+            assert.are.equal(2, fires, "every state completing on one line should fire, not just the first")
+        end)
+
+        it("keeps firing for the length set by fireLength", function()
+            _G.MLKeep = 0
+            local code = [==[_G.MLKeep = _G.MLKeep + 1]==]
+            tempComplexRegexTrigger("SpecMLKeep", [[^go$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3)
+            tempComplexRegexTrigger("SpecMLKeep", [[^now$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3)
+
+            feedTriggers("go\n")
+            feedTriggers("now\n")
+            feedTriggers("filler\n")
+            feedTriggers("filler\n")
+
+            local fires = _G.MLKeep
+            killTrigger("SpecMLKeep")
+            _G.MLKeep = nil
+            assert.are.equal(3, fires, "fireLength should keep the trigger firing on the lines after it completed")
         end)
 
     end)

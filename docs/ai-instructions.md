@@ -4,6 +4,13 @@
 
 Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
 
+## Skills
+
+Task-specific instructions live in `.agents/skills/<name>/SKILL.md`, in the [Agent Skills](https://agentskills.io) format. Claude Code, GitHub Copilot and Cursor all read this directory (Claude Code via the `.claude/skills` symlink). Read the relevant one before starting that kind of task rather than working from memory:
+
+- `build-mudlet` - building, rebuilding or running Mudlet on any platform
+- `open-pr` - publishing a branch and opening a pull request upstream
+
 ## Coding standards
 All files should end with a newline character at the end of the file.
 
@@ -125,16 +132,25 @@ Don't add comments for obvious code as that increases cognitive load on the read
 - Follow Qt's Model-View pattern
 - Use Qt's signal/slot mechanism for communication
 
+## Tests
+
+Two harnesses: Lua specs in `src/mudlet-lua/tests/*_spec.lua` (busted, run in the self-test profile), and C++ functional tests in `test/functional_tests/` (ctest).
+
+Prefer a spec. Each functional test is its own executable statically linking `mudlet_core`, so it adds ~290MB to every build tree plus a link step, while a spec is ~30KB and needs no rebuild at all because `mudlet-lua` loads from disk. Write a functional test when a spec genuinely cannot reach the behaviour: private C++ state, a path with no Lua entry point, or something that happens before Lua exists. Sanitiser coverage is not one of those reasons, as the spec run exercises the same instrumented binary.
+
+Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it.
+
 ## Demo videos
 
 To demonstrate a bug fix or UI change with a screen recording, follow the before & after video workflow in `docs/demo-videos.md` (Linux/Xvfb; records headlessly, then trims and labels the result for attaching to a PR).
 
 ## Build system notes
 
+- **Before running any `cmake`, `ninja` or `make` command, read the `build-mudlet` skill in `.agents/skills/build-mudlet/SKILL.md`.** It carries the per-platform invocation and the parallelism pitfalls; an unbounded build command can saturate the machine's memory.
 - **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
-- Building on macOS or Windows, and compile-time debugging defines: see `docs/platform-builds.md`
+- Platform specifics and compile-time debugging defines: see `docs/platform-builds.md`
 
 ### Code formatting
 
@@ -170,21 +186,22 @@ Before the human signs off, they must have built and manually tested the change 
 
 Both trailers go at the end of the commit message. Apply this to every AI-assisted commit, not just the first. See the "AI Coding Assistants" section in `docs/CONTRIBUTING.md` for the full policy.
 
-### Building on Linux
+### Building
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet
 
+Build through a preset from `CMakePresets.json`. Run `cmake --list-presets` to see the ones offered
+on the current machine — the listing is filtered by host system, so only that platform's presets
+appear. Read the `build-mudlet` skill for the per-platform detail:
+
 ```bash
-# cd to the right build directory
-cd /path/to/Mudlet/build
-
-# configure (only needed the first time)
-cmake ../ -G Ninja
-
-# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default, no need to specify number of jobs:
-cmake --build .
+# from the repository root; wait up to 10mins for a full build
+cmake --preset linux-debug
+cmake --build --preset linux-debug
 
 # Run Mudlet - it's a visual, desktop application
-cd /path/to/Mudlet/build
-./src/mudlet
+./build/src/mudlet          # macOS: ./build/src/mudlet.app/Contents/MacOS/mudlet
 ```
+
+Variant presets such as `linux-debug-nosan` build into `build-<preset-name>/`, so the binary is
+under that directory rather than `build/`.

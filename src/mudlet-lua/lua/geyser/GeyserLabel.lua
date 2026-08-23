@@ -514,8 +514,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setDoubleClickCallback (func, ...)
   setLabelDoubleClickCallback(self.name, func, ...)
-  self.doubleclickCallback = func
-  self.doubleclickArgs = { ... }
+  self.doubleClickCallback = func
+  self.doubleClickArgs = { ... }
 end
 
 --- Sets a callback to be used when a mouse click is released over this label. When this
@@ -994,7 +994,7 @@ function Geyser.Label:new (cons, container)
     createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
--- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+-- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end
