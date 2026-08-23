@@ -8074,8 +8074,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
         if (key == qsl("mapSymbolFontScaling")) {
             const double scaling = getVerifiedDouble(L, __func__, 2, "value");
-            // Matches the range of the preferences dialog spin-box:
-            if (scaling < 0.50 || scaling > 2.00) {
+            // Matches the range of the preferences dialog spin-box. The finite
+            // check is not redundant: NaN compares false against both bounds, so
+            // without it a NaN would be stored and every symbol's geometry would
+            // then be NaN, making room symbols vanish:
+            if (!qIsFinite(scaling) || scaling < 0.50 || scaling > 2.00) {
                 return warnArgumentValue(L, __func__, qsl("mapSymbolFontScaling %1 is out of range, it must be between 0.50 and 2.00").arg(scaling));
             }
             host.mpMap->setSymbolFontFudgeFactor(scaling);

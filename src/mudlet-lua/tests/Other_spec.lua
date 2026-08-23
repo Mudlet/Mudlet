@@ -910,9 +910,12 @@ describe("Tests Other.lua functions", function()
       assert.equals(2.00, getConfig("mapSymbolFontScaling"))
 
       assert.is_true(setConfig("mapSymbolFontScaling", 1.10))
-      for _, value in ipairs({0.49, 2.01, -1, 0}) do
+      -- NaN and the infinities belong here: NaN compares false against both
+      -- bounds, so a plain range check lets it through and every room symbol's
+      -- geometry then becomes NaN, making the symbols vanish.
+      for _, value in ipairs({0.49, 2.01, -1, 0, 0/0, 1/0, -1/0}) do
         local ok, err = setConfig("mapSymbolFontScaling", value)
-        assert.is_nil(ok)
+        assert.is_nil(ok, "setConfig accepted out-of-range value: " .. tostring(value))
         assert.is_string(err)
         assert.is_truthy(err:find("out of range", 1, true), err)
       end
