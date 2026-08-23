@@ -2100,15 +2100,15 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
     <message>
       <location filename="../src/T2DMap.cpp" line="4743"/>
       <source>Click to finish moving the selected room(s).</source>
-      <translation type="unfinished"/>
+      <translation>Haga clic para terminar de mover el/los cuarto(s) seleccionado(s).</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5222"/>
       <source>[ ERROR ] - Unable to add &quot;%1&quot; as an area to the map.
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text here should be the same as that used for the translation of &quot;[MAP ERROR:] %1&quot; in the &apos;TMap::logError(...)&apos; function.</comment>
-      <translation>[ ERROR ] - No se puede agregar &quot;%1&quot; como un área del mapa.
-Vea el &quot;[ERROR DEL MAPA:]&quot; la razón del mensaje.</translation>
+      <translation>[ ERROR ] - No se puede añadir &quot;%1&quot; como área al mapa.
+Consulte el mensaje &quot;[MAPA ERROR:]&quot; para conocer el motivo.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5262"/>
@@ -2207,7 +2207,7 @@ Warning message shown when trying to delete an area fails.</extracomment>
       <location filename="../src/T2DMap.cpp" line="6106"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation type="unfinished"/>
+      <translation>Haga clic izquierdo y arrastra un cuadrado para definir el tamaño y la posición de la etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6979"/>
@@ -2232,7 +2232,7 @@ Warning message shown when trying to delete an area fails.</extracomment>
     <message>
       <location filename="../src/T2DMap.cpp" line="7039"/>
       <source>[MAP]: Export failed - %1</source>
-      <translation type="unfinished"/>
+      <translation>[MAPA]: Error al exportar - %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1170"/>
@@ -2254,14 +2254,14 @@ Warning message shown when trying to delete an area fails.</extracomment>
       <location filename="../src/T2DMap.cpp" line="2459"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
       <translation>
-        <numerusform>Tienes un mapa cargado (%n room(s)), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
-        <numerusform>Tienes un mapa cargado (%n room(s)), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
+        <numerusform>Tienes un mapa cargado (%n sala), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
+        <numerusform>Tienes un mapa cargado (%n salas), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
       </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="495"/>
       <source>ID</source>
-      <translation>Numero de identificación</translation>
+      <translation>Número de identificación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="497"/>
@@ -2271,12 +2271,12 @@ Warning message shown when trying to delete an area fails.</extracomment>
     <message>
       <location filename="../src/T2DMap.cpp" line="2457"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation>No hay habitaciones en el mapa: carga otro, o comience a mapear desde cero para empezar.</translation>
+      <translation>No hay salas en el mapa: carga otro, o comience a mapear desde cero para empezar.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4970"/>
       <source>Spread out rooms</source>
-      <translation>Separar habitaciones</translation>
+      <translation>Espaciar salas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4971"/>
@@ -2286,15 +2286,15 @@ centered on the
 highlighted room by a
 factor of:</source>
       <translation>Aumentar el espaciado de
-las habitaciones seleccionadas,
-centradas en la habitación
-resaltada por un factor
-de:</translation>
+las salas seleccionadas,
+centradas en la
+sala resaltada, en un
+factor de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5040"/>
       <source>Shrink in rooms</source>
-      <translation>Reducir en las habitaciones</translation>
+      <translation>Reducir en las salas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5041"/>
@@ -2303,10 +2303,10 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation>Disminuya el espaciado de
+      <translation>Reduzca el espaciado de
 las salas seleccionadas,
-centradas en la
-sala resaltada por el
+centrado en la
+sala resaltada, en un
 factor de:</translation>
     </message>
     <message>
@@ -2336,7 +2336,7 @@ factor de:</translation>
     <message>
       <location filename="../src/TAlias.cpp" line="288"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation>Error: en &quot;Patrón:&quot;, expresión regular defectuosa, razón: &quot;%1&quot;.</translation>
+      <translation>Error en &quot;Patrón:&quot;: expresión regular incorrecta; motivo: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -2417,7 +2417,7 @@ factor de:</translation>
 Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</extracomment>
-      <translation>Escriba el texto para enviar al servidor del juego para el perfil &quot;%1&quot; o introduce un alias para ejecutar los comandos localmente.</translation>
+      <translation>Escribe el texto que quieras enviar al servidor de juego para el perfil &quot;%1&quot;, o introduce un alias para ejecutar comandos localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1502"/>
@@ -2435,31 +2435,31 @@ Accessibility-friendly description for the built-in command line of a console/wi
 Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</extracomment>
-      <translation>Escriba el texto para enviar al servidor del juego, o introduzca un alias para ejecutar los comandos localmente.</translation>
+      <translation>Escribe el texto para enviarlo al servidor del juego o introduce un alias para ejecutar comandos localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1520"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</extracomment>
-      <translation>Línea de entrada adicional &quot;%1&quot; en &quot;%2&quot; ventana del perfil &quot;%3&quot;.</translation>
+      <translation>Línea de entrada adicional &quot;%1&quot; en la ventana &quot;%2&quot; del perfil &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1536"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</extracomment>
-      <translation>Línea adicional de entrada &quot;%1&quot; en &quot;%2&quot; ventana.</translation>
+      <translation>Línea de entrada adicional &quot;%1&quot; en la ventana &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1554"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
-      <translation>Línea de entrada de la ventana &quot;%1&quot; del perfil &quot;%2&quot;.</translation>
+      <translation>Línea de entrada de la ventana &quot;%1&quot; del perfil &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1569"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</extracomment>
-      <translation>Línea de entrada de &quot;%1&quot; ventana.</translation>
+      <translation>Línea de entrada de la ventana &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1868"/>
@@ -2472,7 +2472,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="162"/>
       <source>Debug Console</source>
-      <translation>Consola de depuración</translation>
+      <translation>Consola de Depuración</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="491"/>
@@ -2510,13 +2510,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2634"/>
       <source>Central debug console past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</extracomment>
-      <translation>Consola central de depuración de contenido pasado.</translation>
+      <translation>Contenido anterior de la consola de depuración central.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2636"/>
       <source>Central debug console live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</extracomment>
-      <translation>Contenido de la consola central de depuración.</translation>
+      <translation>Contenido en tiempo real de la consola de depuración central.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2639"/>
@@ -2528,42 +2528,42 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2648"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>Ventana de errores del editor para el perfil &quot;%1&quot;, contenido anterior.</translation>
+      <translation>Ventana de error del editor para el perfil &quot;%1&quot;, contenido anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2650"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>Ventana de errores del editor para el perfil &quot;%1&quot;, contenido en tiempo real.</translation>
+      <translation>Ventana de error del editor para el perfil &quot;%1&quot;, contenido en tiempo real.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2653"/>
       <source>Editor&apos;s error window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation>Editor&apos; de ventana de error de contenido pasado.</translation>
+      <translation>Ventana de error del editor: contenido anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2655"/>
       <source>Editor&apos;s error window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation>Editor&apos; de ventana de contenido en vivo.</translation>
+      <translation>Contenido en vivo de la ventana de error del editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2661"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>Editor&apos;s de contenido para perfil&quot;%1&quot;.</translation>
+      <translation>Ventana de errores del editor para el perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2664"/>
       <source>Editor&apos;s error window</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</extracomment>
-      <translation>Editor&apos;de ventana de error.</translation>
+      <translation>Ventana de error del editor</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2671"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation>El contenido del juego se muestra aquí. Puede contener subconsolas y la ventana de mapeo.</translation>
+      <translation>Aquí se muestra el contenido del juego. Puede incluir subconsolas y una ventana de mapeador.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="351"/>
@@ -2575,7 +2575,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="1090"/>
       <source>Start recording of replay</source>
       <extracomment>Button tooltip for the replay recording toggle button</extracomment>
-      <translation>Iniciar la grabación de repetición</translation>
+      <translation>Iniciar la grabación de reproducción</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="462"/>
@@ -2614,7 +2614,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="556"/>
       <source>Match case precisely</source>
-      <translation>Coincidir exactamente con el asunto</translation>
+      <translation>Coincide exactamente con el asunto</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="569"/>
@@ -2630,7 +2630,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="1069"/>
       <source>Failed to open replay recording file for writing.</source>
       <extracomment>Informational message displayed when replay recording file could not be opened</extracomment>
-      <translation>Error al abrir el archivo de grabación de repetición para escritura.</translation>
+      <translation>Error al abrir el archivo de grabación de reproducción para escritura.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1077"/>
@@ -2670,13 +2670,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2680"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>Contenido anterior de la ventana principal del perfil  &quot;%1&quot;</translation>
+      <translation>Contenido anterior de la ventana principal del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2682"/>
       <source>Profile &quot;%1&quot; main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation>Perfil &quot;%1&quot; de contenido en vivo de la ventana principal.</translation>
+      <translation>Contenido en tiempo real de la ventana principal del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2685"/>
@@ -2706,73 +2706,73 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2710"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation>Perfil &quot;%1&quot; ventana incrustada &quot;%2&quot; contenido pasado.</translation>
+      <translation>Contenido anterior de la ventana integrada &quot;%2&quot; del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2712"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation>Perfil &quot;%1&quot; ventana incrustada &quot;%2&quot; contenido activo.</translation>
+      <translation>Contenido en tiempo real de la ventana incrustada &quot;%2&quot; del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2715"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation>Ventana de perfil incrustada &quot;%1&quot; contenido pasado.</translation>
+      <translation>Ventana integrada del perfil &quot;%1&quot;: contenido anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2717"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation>Ventana incrustada del perfil &quot;%1&quot; contenido en vivo.</translation>
+      <translation>Ventana integrada del perfil &quot;%1&quot; contenido en vivo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2722"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation>Perfil &quot;%1&quot; ventana incrustada &quot;%2&quot;.</translation>
+      <translation>Perfil &quot;%1&quot; ventana integrada &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2725"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation>Ventana incrustada del perfil &quot;%1&quot;.</translation>
+      <translation>Ventana integrada del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2741"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation>Perfil &quot;%1&quot; ventana del usuario &quot;%2&quot; contenido pasado.</translation>
+      <translation>Contenido anterior de la ventana de usuario &quot;%2&quot; del perfil &quot;%1&quot;».</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2743"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation>Perfil &quot;%1&quot; ventana de usuario &quot;%2&quot; contenido en vivo.</translation>
+      <translation>Contenido en tiempo real de la ventana de usuario &quot;%2&quot; del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2746"/>
       <source>Profile user window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation>Ventana de usuario del perfil &quot;%1&quot; contenido pasado.</translation>
+      <translation>Ventana de perfil de usuario &quot;%1&quot;: contenido anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2748"/>
       <source>Profile user window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation>Ventana de usuario del perfil &quot;%1&quot; contenido en vivo.</translation>
+      <translation>Ventana de perfil de usuario &quot;%1&quot;: contenido en tiempo real.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2753"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation>Perfil &quot;%1&quot; ventana del usuario &quot;%2&quot;.</translation>
+      <translation>Ventana de usuario &quot;%2&quot; del perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2756"/>
       <source>Profile user window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation>Ventana de usuario del perfil &quot;%1&quot;.</translation>
+      <translation>Ventana de perfil de usuario &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2644"/>
@@ -2802,7 +2802,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2673"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation>Ventana principal para el perfil &quot;%1&quot;.</translation>
+      <translation>Ventana Principal para el perfil &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2675"/>
@@ -2812,17 +2812,17 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2702"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation>Incorporar la ventana &quot;%1&quot; para el perfil &quot;%2&quot;.</translation>
+      <translation>Ventana integrada &quot;%1&quot; para el perfil &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2704"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation>Incorporar la ventana &quot;%1&quot;.</translation>
+      <translation>Integrar la ventana &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2706"/>
       <source>Game content or locally generated text may be sent here.</source>
-      <translation>El contenido del juego o del texto generado localmente pueden ser enviados aquí.</translation>
+      <translation>El contenido del juego o el texto generado localmente se pueden enviar aquí.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2732"/>
@@ -2837,7 +2837,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2737"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation>El contenido del juego o el texto generado localmente se puede enviar a esta ventana que se puede separar de la aplicación Mudlet o acoplar dentro de la ventana principal de la aplicación.</translation>
+      <translation>A esta ventana se puede enviar contenido del juego o texto generado localmente. Dicha ventana puede separarse de la aplicación Mudlet o acoplarse dentro de la ventana principal de la aplicación.</translation>
     </message>
   </context>
   <context>
@@ -2874,7 +2874,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <extracomment>This explains the &quot;Reattach to Main Window&quot; item in the &quot;Window&quot; menu in the menubar of a detached Mudlet window.
 ----------
 This explains the &quot;Reattach&quot; item in the toolbar of a detached Mudlet window.</extracomment>
-      <translation>Volver a conectar esta ventana de perfil a la ventana principal de Mudlet</translation>
+      <translation>Volver a acoplar esta ventana de perfil a la ventana principal de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="481"/>
@@ -2898,7 +2898,7 @@ This explains the &quot;Reattach&quot; item in the toolbar of a detached Mudlet 
       <location filename="../src/TDetachedWindow.cpp" line="756"/>
       <source>Reattach &apos;%1&apos; to Main Window</source>
       <extracomment>This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.</extracomment>
-      <translation>Volver a conectar &apos;%1&apos; a la ventana principal</translation>
+      <translation>Volver a acoplar &apos;%1&apos; a la Ventana Principal</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="767"/>
@@ -2910,7 +2910,7 @@ This explains the &quot;Reattach&quot; item in the toolbar of a detached Mudlet 
       <location filename="../src/TDetachedWindow.cpp" line="777"/>
       <source>Close Window (All Profiles)</source>
       <extracomment>This is an item in the context menu when clicked on a detached tab.</extracomment>
-      <translation>Cerrar ventana (todos los perfiles)</translation>
+      <translation>Cerrar ventana (Todos los perfiles)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="885"/>
@@ -3094,7 +3094,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="280"/>
       <source>Configure connection details of, and make a connection to, game servers.</source>
       <extracomment>This explains the &quot;Play&quot; item in the &quot;Games&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Configure los detalles de conexión de los servidores de juegos y establezca una conexión con ellos.</translation>
+      <translation>Configura los detalles de conexión de los servidores de juego y establezca una conexión con ellos.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="287"/>
@@ -3118,7 +3118,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="296"/>
       <source>Disconnect and then reconnect to the current game server.</source>
       <extracomment>This explains the &quot;Reconnect&quot; item in the &quot;Games&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Desconéctate y vuélvete a conectarte al servidor de juegos actual.</translation>
+      <translation>Desconéctate y vuelve a conectarte al servidor de juegos actual.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="310"/>
@@ -3202,19 +3202,19 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="359"/>
       <source>Install and remove collections of Mudlet lua items (packages).</source>
       <extracomment>This explains the &quot;Package manager&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Instala y remueve colecciones de elementos lua de Mudlet (paquetes).</translation>
+      <translation>Instala y elimina colecciones de elementos Lua de Mudlet (paquetes).</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="364"/>
       <source>Load &amp;replay</source>
       <extracomment>This is an item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Cargar y reproducir</translation>
+      <translation>Cargar y &amp;reproducir</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="366"/>
       <source>Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).</source>
       <extracomment>This explains the &quot;Load replay&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Carga una sesión del juego guardada previamente que sirva para probar los sistemas de Lua y Mudlet (¡sin conexión!).</translation>
+      <translation>Carga una sesión de juego guardada anteriormente que se pueda usar para probar los sistemas Lua de Mudlet (¡sin conexión!).</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="371"/>
@@ -3238,19 +3238,19 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="380"/>
       <source>Gather and bundle up collections of Mudlet Lua items and other reasources into a module.</source>
       <extracomment>This explains the &quot;Package exporter&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Reúna y agrupe colecciones de elementos Lua de Mudlet y otros recursos en un módulo.</translation>
+      <translation>Recopila y agrupa colecciones de elementos Lua de Mudlet y otros recursos en un módulo.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="385"/>
       <source>Record replay</source>
       <extracomment>This is an item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Grabar repetición</translation>
+      <translation>Grabar reproducción</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="387"/>
       <source>Toggle recording of replays.</source>
       <extracomment>This explains the &quot;Record replay&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Cambiar la grabación de repeticiones.</translation>
+      <translation>Activar/desactivar la grabación de reproducciones.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="392"/>
@@ -3274,7 +3274,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="401"/>
       <source>Toggle all triggers, aliases, timers, etc. on or off</source>
       <extracomment>This explains the &quot;Emergency stop&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Activa o desactiva todos los disparadores, alias, temporizadores, etc.</translation>
+      <translation>Activar/desactivar todos los disparadores, alias, temporizadores, etc.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="410"/>
@@ -3286,7 +3286,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="412"/>
       <source>Configure setting for the Mudlet application globally and for the current profile.</source>
       <extracomment>This explains the &quot;Preferences&quot; item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Configure los ajustes de la aplicación Mudlet de forma global y para el perfil actual.</translation>
+      <translation>Configura los ajustes de la aplicación Mudlet de forma global y para el perfil actual.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="417"/>
@@ -3298,7 +3298,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="419"/>
       <source>Toggle time stamps on the main console.</source>
       <extracomment>This explains the &quot;Timestamps&quot; item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Cambia los sellos de tiempo en la consola principal.</translation>
+      <translation>Activa/desactiva las marcas de tiempo en la consola principal.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="428"/>
@@ -3312,7 +3312,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="975"/>
       <source>Mute sounds from Mudlet (triggers, scripts, etc.)</source>
       <extracomment>This is an item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Silenciar sonidos de Mudlet (disparadores, scripts, etc.)</translation>
+      <translation>Silencia los sonidos de Mudlet (disparadores, scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="436"/>
@@ -3326,7 +3326,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="981"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
       <extracomment>This is an item in the &quot;Options&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Silenciar sonidos del juego (MCMP, MSP)</translation>
+      <translation>Silencia los sonidos del juego (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="444"/>
@@ -3380,7 +3380,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="509"/>
       <source>Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.</source>
       <extracomment>This explains the &quot;Video tutorials&quot; item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>Abre una colección (en línea) de &quot;videotutoriales educativos de Mudlet&quot; en el navegador web de su sistema.</translation>
+      <translation>Abre una colección (en línea) de&quot; Videotutoriales Educativos de Mudlet&quot; en el navegador web de su sistema.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="514"/>
@@ -3479,7 +3479,7 @@ Tooltip for About Mudlet toolbar button (Used in multiple places - please ensure
       <location filename="../src/TDetachedWindow.cpp" line="571"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
       <extracomment>This explains the &quot;Report an issue&quot; item in the &quot;About&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation>La versión de prueba pública te ofrece las nuevas funciones más recientes antes, así tú nos ayudas a detectar problemas con mayor rapidez. ¿Has visto algo raro? ¡Avísanos cuanto antes!</translation>
+      <translation>La versión de prueba pública te ofrece las nuevas funciones más rápido, y tú nos ayudas a detectar problemas con mayor rapidez. ¿Has visto algo raro? ¡Avísanos cuanto antes!</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="784"/>
@@ -3526,7 +3526,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1021"/>
       <source>Browse reference material and documentation</source>
-      <translation>Examinar el material de referencia y documentación</translation>
+      <translation>Consulta el material de referencia y la documentación.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1025"/>
@@ -3650,7 +3650,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/TDetachedWindow.cpp" line="1380"/>
       <source>Mudlet (%1 profiles) - %2 (Detached)</source>
       <extracomment>This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %1 is the number of profiles, %2 is the name of the profile currently shown.</extracomment>
-      <translation>Mudlet (Perfiles%1) - %2 (Separado)</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -5889,7 +5889,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTrigger.cpp" line="126"/>
       <source>The trigger &quot;%1&quot; was saved with a list of patterns and a list of pattern types of different lengths. Any pattern left without a type has been set to substring and any type left without a pattern dropped, so the trigger can be seen and repaired - until then it will probably not work as expected.</source>
       <extracomment>%1 is the name of the trigger. Shown when a saved profile holds a trigger whose list of patterns and list of pattern types are of different lengths.</extracomment>
-      <translation type="unfinished"/>
+      <translation>El disparador &quot;%1&quot; se guardó con una lista de patrones y una lista de tipos de patrones de longitudes diferentes. Cualquier patrón dejado sin un tipo se ha asignado a subcadena y cualquier tipo dejado sin patrón se ha eliminado, para que el disparador pueda ser visto y reparado - hasta entonces es probable que no funcione como se esperaba.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="138"/>
