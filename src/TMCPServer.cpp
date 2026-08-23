@@ -18,6 +18,9 @@
  ***************************************************************************/
 
 #include "TMCPServer.h"
+
+#include <QRandomGenerator>
+
 #include "TMCPLuaBridge.h"
 #include "utils.h"
 
@@ -37,9 +40,19 @@
 // underneath that is the interface language, since the tool descriptions are translated.
 static constexpr int csmCacheTtlMs = 60 * 60 * 1000;
 
+// QRandomGenerator::system() rather than ::global(): the global one is seeded for speed
+// rather than to be unguessable, and this value is what keeps other local processes out.
+static QString generateAuthToken()
+{
+    quint32 words[4] = {};
+    QRandomGenerator::system()->fillRange(words);
+    return QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(words), static_cast<qsizetype>(sizeof(words))).toHex());
+}
+
 TMCPServer::TMCPServer(QObject* parent)
 : QObject(parent)
 , mpLuaBridge(new TMCPLuaBridge(this))
+, mAuthToken(generateAuthToken())
 {
 }
 
@@ -62,8 +75,22 @@ MCPStartResult TMCPServer::startServer(quint16 port)
     const auto onPost = [this](const QHttpServerRequest& request) {
         return respondToPost(request);
     };
-    httpServer->route(qsl("/"), QHttpServerRequest::Method::Post, onPost);
-    httpServer->route(qsl("/mcp"), QHttpServerRequest::Method::Post, onPost);
+    // Qt answers a Rule* here from 6.9 and a bool before that; both test the same way, and
+    // an unregistered route would otherwise turn every POST into a silent 404.
+    const auto rootRoute = httpServer->route(qsl("/"), QHttpServerRequest::Method::Post, onPost);
+    const auto mcpRoute = httpServer->route(qsl("/mcp"), QHttpServerRequest::Method::Post, onPost);
+    // The token is accepted as a trailing path segment as well as in an Authorization
+    // header, because a good many MCP clients take only a URL and offer nowhere to put a
+    // header - and the preferences dialog hands out one string to paste.
+    const auto tokenRoute = httpServer->route(qsl("/mcp/<arg>"), QHttpServerRequest::Method::Post, [this](const QString& pathToken, const QHttpServerRequest& request) {
+        return respondToPost(request, pathToken);
+    });
+    if (!rootRoute || !mcpRoute || !tokenRoute) {
+        qWarning() << "TMCPServer: could not register the POST routes";
+        delete httpServer;
+        //: Reported when the MCP server could not set up the addresses it answers on.
+        return {false, tr("The server could not register the addresses it answers on.")};
+    }
 
     // GET opened the standalone SSE stream and DELETE ended a session in revisions up to
     // 2025-11-25. Neither exists now, and the spec asks a modern-only server to say so
@@ -74,6 +101,11 @@ MCPStartResult TMCPServer::startServer(quint16 port)
     const QHttpServerRequest::Methods retiredMethods = QHttpServerRequest::Method::Get | QHttpServerRequest::Method::Delete;
     httpServer->route(qsl("/"), retiredMethods, onRetiredMethod);
     httpServer->route(qsl("/mcp"), retiredMethods, onRetiredMethod);
+    // The endpoint Mudlet hands out carries the token in the path, so that is the address
+    // an old client would try these on; without this it gets a bare 404 instead.
+    httpServer->route(qsl("/mcp/<arg>"), retiredMethods, [onRetiredMethod](const QString&, const QHttpServerRequest& request) {
+        return onRetiredMethod(request);
+    });
 
     auto* tcpServer = new QTcpServer(httpServer);
     if (!tcpServer->listen(QHostAddress::LocalHost, port)) {
@@ -113,24 +145,27 @@ QString TMCPServer::getEndpoint() const
     if (!running()) {
         return QString();
     }
-    return endpointFor(mPort);
+    return endpointFor(mPort, mAuthToken);
 }
 
-QString TMCPServer::endpointFor(quint16 port)
+QString TMCPServer::endpointFor(quint16 port, const QString& token)
 {
-    return qsl("http://127.0.0.1:%1/mcp").arg(port);
+    if (token.isEmpty()) {
+        return qsl("http://127.0.0.1:%1/mcp").arg(port);
+    }
+    return qsl("http://127.0.0.1:%1/mcp/%2").arg(QString::number(port), token);
 }
 
-QHttpServerResponse TMCPServer::respondToPost(const QHttpServerRequest& request)
+QHttpServerResponse TMCPServer::respondToPost(const QHttpServerRequest& request, const QString& pathToken)
 {
-    const MCPReply reply = handleMessage(request.body(), request.headers());
+    const MCPReply reply = handleMessage(request.body(), request.headers(), pathToken);
     if (reply.body.isEmpty()) {
         return QHttpServerResponse(reply.status);
     }
     return QHttpServerResponse(reply.body, reply.status);
 }
 
-MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHeaders& headers)
+MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHeaders& headers, const QString& pathToken)
 {
     // Guards against DNS rebinding: a page in a browser tab always attaches Origin, so a
     // non-local one means somebody else's site is driving the request rather than a local
@@ -140,6 +175,16 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
         qWarning() << "TMCPServer: refused a request from origin" << origin;
         //: Sent back to a rejected MCP client. %1 is the web origin the request carried.
         return error(QJsonValue(), InvalidRequest, tr("Refused: origin '%1' is not local.").arg(QString::fromUtf8(origin)), QJsonValue(), QHttpServerResponse::StatusCode::Forbidden);
+    }
+
+    if (!authorised(headers, pathToken)) {
+        qWarning() << "TMCPServer: refused an unauthenticated request";
+        //: Sent back to an MCP client that did not present the server's access token.
+        return error(QJsonValue(),
+                     Unauthorized,
+                     tr("Refused: this request did not carry Mudlet's MCP access token. Copy the address from Mudlet's preferences, which has the token in it."),
+                     QJsonValue(),
+                     QHttpServerResponse::StatusCode::Unauthorized);
     }
 
     QJsonParseError parseError;
@@ -199,7 +244,10 @@ MCPReply TMCPServer::unsupportedVersion(const QJsonValue& id, const QJsonValue& 
 {
     QJsonObject data;
     data[qsl("supported")] = QJsonArray{QString::fromLatin1(MCP_PROTOCOL_VERSION)};
-    data[qsl("requested")] = requested;
+    // Assigning an Undefined removes the key rather than writing null, so a client that
+    // asked for no version at all would see "requested" missing and could not tell that
+    // apart from a server that never reports it. Spell the absence out.
+    data[qsl("requested")] = requested.isUndefined() ? QJsonValue(QJsonValue::Null) : requested;
     return error(id, UnsupportedProtocolVersion, message, data, QHttpServerResponse::StatusCode::BadRequest);
 }
 
@@ -257,7 +305,16 @@ MCPReply TMCPServer::callTool(const QJsonValue& id, const QJsonObject& params)
         return error(id, InvalidParams, tr("Unknown tool: %1").arg(toolName));
     }
 
-    const MCPToolResult toolResult = mpLuaBridge->callTool(toolName, params.value(qsl("arguments")).toObject());
+    // toObject() answers an empty object for a string, a number or an array, so arguments
+    // sent in the wrong shape would reach the bridge as none at all and come back as
+    // "the 'code' argument is required" - which sends the model off fixing the wrong thing.
+    const QJsonValue argumentsValue = params.value(qsl("arguments"));
+    if (!argumentsValue.isUndefined() && !argumentsValue.isNull() && !argumentsValue.isObject()) {
+        //: Sent to an MCP client that put something other than an object in a tool call's "arguments". Keep 'arguments' as-is, it names a protocol field.
+        return error(id, InvalidParams, tr("The 'arguments' field must be an object."));
+    }
+
+    const MCPToolResult toolResult = mpLuaBridge->callTool(toolName, argumentsValue.toObject());
 
     QJsonObject textContent;
     textContent[qsl("type")] = qsl("text");
@@ -358,9 +415,38 @@ QString TMCPServer::decodeHeaderValue(QByteArrayView raw)
     constexpr QByteArrayView suffix = "?=";
     if (raw.size() >= prefix.size() + suffix.size() && raw.startsWith(prefix) && raw.endsWith(suffix)) {
         const QByteArray payload = raw.sliced(prefix.size(), raw.size() - prefix.size() - suffix.size()).toByteArray();
-        return QString::fromUtf8(QByteArray::fromBase64(payload));
+        // Strictly, so that a malformed wrapper is reported as bad encoding rather than
+        // decoding to garbage and surfacing as a header mismatch against random bytes.
+        const QByteArray::FromBase64Result decoded = QByteArray::fromBase64Encoding(payload, QByteArray::Base64Encoding | QByteArray::AbortOnBase64DecodingErrors);
+        if (!decoded) {
+            return QString();
+        }
+        return QString::fromUtf8(*decoded);
     }
     return QString::fromUtf8(raw);
+}
+
+bool TMCPServer::authorised(const QHttpHeaders& headers, const QString& pathToken) const
+{
+    QString presented = pathToken;
+    if (presented.isEmpty()) {
+        const QString authorization = QString::fromUtf8(headers.value(QHttpHeaders::WellKnownHeader::Authorization));
+        constexpr QLatin1StringView bearer("Bearer ");
+        if (authorization.startsWith(bearer, Qt::CaseInsensitive)) {
+            presented = authorization.sliced(bearer.size()).trimmed();
+        }
+    }
+
+    // Compare every character rather than stopping at the first difference, so that how
+    // long the answer takes does not report how much of the token was guessed correctly.
+    if (presented.size() != mAuthToken.size()) {
+        return false;
+    }
+    int difference = 0;
+    for (int i = 0; i < mAuthToken.size(); ++i) {
+        difference |= presented.at(i).unicode() ^ mAuthToken.at(i).unicode();
+    }
+    return difference == 0;
 }
 
 bool TMCPServer::originAllowed(const QString& origin)

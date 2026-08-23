@@ -74,10 +74,18 @@ public:
     QString getEndpoint() const;
     // The address to paste into an MCP client for a given port. Shared with the preferences
     // dialog, which compares the address it would offer against the one that is live.
-    static QString endpointFor(quint16 port);
+    static QString endpointFor(quint16 port, const QString& token = QString());
+
+    // The shared secret a client must present. Binding to loopback is not an access
+    // control: every other process on the machine can reach loopback too, and this tool
+    // runs arbitrary Lua, which reaches os.execute() - so any local process, or any other
+    // user with a session on a shared machine, would otherwise have code execution. Fresh
+    // on every launch, so a token that leaks into a log or a screenshot stops working.
+    QString authToken() const { return mAuthToken; }
 
     // Answers one JSON-RPC message. Public because it is the protocol seam - see MCPReply.
-    MCPReply handleMessage(const QByteArray& requestBody, const QHttpHeaders& headers);
+    // pathToken carries the secret when it arrived in the URL rather than in a header.
+    MCPReply handleMessage(const QByteArray& requestBody, const QHttpHeaders& headers, const QString& pathToken = QString());
 
     static constexpr const char* MCP_PROTOCOL_VERSION = "2026-07-28";
     static constexpr const char* MCP_SERVER_NAME = "mudlet";
@@ -97,7 +105,8 @@ public:
         // -32020 to -32099 is the range the specification reserves for itself; the older
         // -32000 to -32019 range must not be used by new implementations.
         HeaderMismatch = -32020,
-        UnsupportedProtocolVersion = -32022
+        UnsupportedProtocolVersion = -32022,
+        Unauthorized = -32024
     };
 
 private:
@@ -122,10 +131,12 @@ private:
     QJsonObject serverImplementation() const;
     static QString decodeHeaderValue(QByteArrayView raw);
     static bool originAllowed(const QString& origin);
+    bool authorised(const QHttpHeaders& headers, const QString& pathToken) const;
 
-    QHttpServerResponse respondToPost(const QHttpServerRequest& request);
+    QHttpServerResponse respondToPost(const QHttpServerRequest& request, const QString& pathToken = QString());
 
     TMCPLuaBridge* mpLuaBridge;
+    QString mAuthToken;
     // Recreated on every start: QHttpServer has no way to drop a route or unbind a
     // socket, so a restart would otherwise stack a second copy of each route.
     QHttpServer* mpHttpServer = nullptr;

@@ -1362,7 +1362,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -3603,7 +3603,7 @@ void dlgProfilePreferences::slot_saveAndClose()
                              tr("Could not start the MCP server"),
                              //: %1 is a TCP port number, %2 the reason the socket could not be opened.
                              tr("Mudlet could not listen on port %1: %2\n\n"
-                                "Another program may already be using that port. The setting has been kept, so you can pick a different port and try again.")
+                                "Another program may already be using that port. The setting has been kept, so open Preferences again to pick a different port.")
                                      .arg(QString::number(spinBox_mcpServerPort->value()), mcpError));
     }
 #endif
@@ -4693,22 +4693,36 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
 #ifdef INCLUDE_MCPSERVER
 void dlgProfilePreferences::slot_updateMCPServerEndpoint()
 {
+    mudlet* pMudlet = mudlet::self();
+    const quint16 port = static_cast<quint16>(spinBox_mcpServerPort->value());
+    const QString liveEndpoint = pMudlet->mcpEndpoint();
+
     if (!checkBox_enableMCPServer->isChecked()) {
+        // Unticking the box changes nothing until Save, so check whether anything is still
+        // listening before saying nothing can reach Mudlet - the port is open until then.
+        if (!liveEndpoint.isEmpty()) {
+            //: Shown beneath the AI assistant settings when the MCP server has been switched off but is still listening until the user saves.
+            label_mcpServerEndpoint->setText(tr("Still listening - press Save to stop the server."));
+            return;
+        }
         //: Shown beneath the AI assistant settings while the MCP server is switched off.
         label_mcpServerEndpoint->setText(tr("The server is off, so nothing can reach Mudlet."));
         return;
     }
 
-    const QString endpoint = TMCPServer::endpointFor(static_cast<quint16>(spinBox_mcpServerPort->value()));
-    if (mudlet::self()->mcpEndpoint() == endpoint) {
-        //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp
-        label_mcpServerEndpoint->setText(tr("Listening. Give your AI assistant this address: %1").arg(endpoint));
+    // The address carries the access token, which only exists once the server is up, so a
+    // live endpoint is shown verbatim rather than rebuilt from the port.
+    if (!liveEndpoint.isEmpty() && pMudlet->mcpServerPort() == port) {
+        //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp/a1b2c3
+        label_mcpServerEndpoint->setText(tr("Listening. Give your AI assistant this address, and keep it private - it is what stops other programs using Mudlet: %1").arg(liveEndpoint));
         return;
     }
 
+    const QString endpoint = TMCPServer::endpointFor(port);
+
     // Starting at launch has no console to report a failure on, so this label is the only
     // place it can surface - and "press Save" on its own reads as "you have not saved yet".
-    if (mudlet::self()->mcpEnabled() && mudlet::self()->mcpEndpoint().isEmpty() && static_cast<quint16>(spinBox_mcpServerPort->value()) == mudlet::self()->mcpServerPort()) {
+    if (pMudlet->mcpEnabled() && liveEndpoint.isEmpty() && port == pMudlet->mcpServerPort()) {
         //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp
         label_mcpServerEndpoint->setText(tr("The server could not start on %1 - another program may be using that port. Press Save to try again.").arg(endpoint));
         return;

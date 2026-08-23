@@ -66,17 +66,22 @@ public:
     bool hasTool(const QString& toolName) const;
     MCPToolResult callTool(const QString& toolName, const QJsonObject& arguments);
 
+    // A snippet is written by a model and runs on Mudlet's only thread, so "while true do
+    // end" freezes the whole application with no way out but killing it. Snippets are stopped
+    // once they have run this long; the parameter exists so tests need not wait it out.
+    static constexpr int csmDefaultDeadlineMs = 10000;
+
     // Runs one snippet on an already-chosen interpreter. Separate from callTool() so that
     // deciding which profile to run in stays apart from running, and so the runner can be
     // exercised against a bare lua_State.
-    static MCPToolResult runLua(lua_State* L, const QString& luaCode);
+    static MCPToolResult runLua(lua_State* L, const QString& luaCode, int deadlineMs = csmDefaultDeadlineMs);
 
     static constexpr const char* MCP_LUA_TOOL = "lua";
 
 private:
     static Host* targetHost(const QString& profileName, QString& failure);
-    static QJsonValue luaToJson(lua_State* L, int index, int depth);
-    static QJsonValue luaTableToJson(lua_State* L, int index, int depth);
+    static QJsonValue luaToJson(lua_State* L, int index, int depth, int& nodeBudget);
+    static QJsonValue luaTableToJson(lua_State* L, int index, int depth, int& nodeBudget);
     static QString readString(lua_State* L, int index);
     static QString numberKey(double value);
     static QString jsonToText(const QJsonValue& value);

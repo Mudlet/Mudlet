@@ -24,6 +24,7 @@
 #include <QtTest/QtTest>
 
 #include <QHostAddress>
+#include <QElapsedTimer>
 #include <QHttpHeaders>
 #include <QJsonArray>
 #include <QNetworkAccessManager>
@@ -38,6 +39,10 @@ using StatusCode = QHttpServerResponse::StatusCode;
 namespace {
 const QString currentVersion = QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION);
 
+// Set from the server under test in init(): every request has to carry its token, so the
+// helper below adds it rather than each case remembering to.
+QString authToken;
+
 QHttpHeaders headersFor(const QString& method, const QString& name = QString(), const QString& version = currentVersion)
 {
     QHttpHeaders headers;
@@ -49,6 +54,9 @@ QHttpHeaders headersFor(const QString& method, const QString& name = QString(), 
     }
     if (!name.isNull()) {
         headers.append("Mcp-Name", name);
+    }
+    if (!authToken.isEmpty()) {
+        headers.append("Authorization", qsl("Bearer %1").arg(authToken).toUtf8());
     }
     return headers;
 }
@@ -121,6 +129,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         // Every case here is either protocol handling or a Lua snippet run against the
         // bare interpreter below, neither of which needs a profile.
         server = new TMCPServer(nullptr);
+        authToken = server->authToken();
         L = luaL_newstate();
         luaL_openlibs(L);
     }
@@ -129,6 +138,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     {
         delete server;
         server = nullptr;
+        authToken.clear();
         lua_close(L);
         L = nullptr;
     }
@@ -274,6 +284,60 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QCOMPARE(reply.status, StatusCode::BadRequest);
         QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::HeaderMismatch));
+    }
+
+    void testAMalformedEncodedHeaderIsRejectedRatherThanDecodedToMojibake()
+    {
+        // "bHVh!" is "lua" with one character a base64 alphabet does not contain. A lenient
+        // decode skips it, so a header that is not valid base64 at all is accepted as if the
+        // client had spelled the tool name correctly.
+        QJsonObject params;
+        params[qsl("name")] = QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL);
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/call"), params), headersFor(qsl("tools/call"), qsl("=?base64?bHVh!?=")));
+
+        QCOMPARE(reply.status, StatusCode::BadRequest);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::HeaderMismatch));
+    }
+
+    void testAnUnsupportedVersionSaysWhichOneWasAskedFor()
+    {
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list"), QJsonObject(), QJsonValue(1), qsl("2025-06-18")), headersFor(qsl("tools/list"), QString(), qsl("2025-06-18")));
+
+        const QJsonObject data = errorOf(reply).value(qsl("data")).toObject();
+        QCOMPARE(data.value(qsl("requested")).toString(), qsl("2025-06-18"));
+        QCOMPARE(data.value(qsl("supported")).toArray(), QJsonArray{currentVersion});
+    }
+
+    void testAnUnsupportedVersionReportsNullWhenNoneWasNamed()
+    {
+        // An old client that opened with initialize and named no version must not read
+        // alike to one that named "", or the error cannot tell it which mistake it made.
+        QJsonObject message;
+        message[qsl("jsonrpc")] = qsl("2.0");
+        message[qsl("id")] = 1;
+        message[qsl("method")] = qsl("initialize");
+        message[qsl("params")] = QJsonObject();
+
+        const MCPReply reply = server->handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headersFor(qsl("initialize")));
+
+        const QJsonObject data = errorOf(reply).value(qsl("data")).toObject();
+        QVERIFY2(data.contains(qsl("requested")), "the absence was left out rather than spelled out");
+        QVERIFY(data.value(qsl("requested")).isNull());
+    }
+
+    void testToolCallArgumentsThatAreNotAnObjectAreAProtocolError()
+    {
+        // A string here reached the tool and came back as "the code argument is required",
+        // which sends the model off correcting code it did supply.
+        QJsonObject params;
+        params[qsl("name")] = QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL);
+        params[qsl("arguments")] = qsl("print('hello')");
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/call"), params), headersFor(qsl("tools/call"), QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL)));
+
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidParams));
+        QVERIFY(reply.body.value(qsl("result")).isUndefined());
     }
 
     void testBase64WrappedNameHeaderIsDecodedBeforeComparing()
@@ -432,6 +496,75 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY(!resultOf(reply).value(qsl("tools")).toArray().isEmpty());
     }
 
+    // ---------- the access token ----------
+
+    void testARequestWithoutTheTokenIsRefused()
+    {
+        // Loopback is not access control: anything already running on this computer can
+        // reach the port, and the tool runs arbitrary Lua - os.execute() included.
+        QHttpHeaders headers = headersFor(qsl("tools/list"));
+        headers.removeAll("Authorization");
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list")), headers);
+
+        QCOMPARE(reply.status, StatusCode::Unauthorized);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::Unauthorized));
+        QVERIFY(reply.body.value(qsl("result")).isUndefined());
+    }
+
+    void testARequestWithTheWrongTokenIsRefused()
+    {
+        QHttpHeaders headers = headersFor(qsl("tools/list"));
+        headers.removeAll("Authorization");
+        headers.append("Authorization", "Bearer not-the-token");
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list")), headers);
+
+        QCOMPARE(reply.status, StatusCode::Unauthorized);
+    }
+
+    void testTheTokenIsCheckedBeforeTheBodyIsParsed()
+    {
+        // An unauthorised caller must not be able to tell malformed JSON from valid JSON,
+        // nor reach the parser at all.
+        QHttpHeaders headers = headersFor(qsl("tools/list"));
+        headers.removeAll("Authorization");
+
+        const MCPReply reply = server->handleMessage(QByteArrayLiteral("{ not json"), headers);
+
+        QCOMPARE(reply.status, StatusCode::Unauthorized);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::Unauthorized));
+    }
+
+    void testTheTokenIsAlsoAcceptedFromTheUrlPath()
+    {
+        // The endpoint Mudlet shows carries the token in the path, because that is the one
+        // place every MCP client can be pointed at without configuring a header.
+        QHttpHeaders headers = headersFor(qsl("tools/list"));
+        headers.removeAll("Authorization");
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list")), headers, server->authToken());
+
+        QCOMPARE(reply.status, StatusCode::Ok);
+    }
+
+    void testTheShownEndpointCarriesTheToken()
+    {
+        QVERIFY(server->startServer(0).started);
+
+        QVERIFY(server->getEndpoint().contains(server->authToken()));
+        QVERIFY(!server->authToken().isEmpty());
+
+        server->stopServer();
+    }
+
+    void testEachServerGetsItsOwnToken()
+    {
+        const QScopedPointer<TMCPServer> other(new TMCPServer(nullptr));
+
+        QVERIFY(other->authToken() != server->authToken());
+    }
+
     // ---------- listening ----------
 
     void testStartingAndStoppingCanBeRepeated()
@@ -476,8 +609,8 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
     void testATakenPortIsReportedWithAReason()
     {
-        // Every profile defaults to the same port, so a second profile enabling MCP takes
-        // this path as a matter of course. The reason has to survive back to the caller,
+        // There is one server for the whole application, so the port is only ever taken by
+        // something else on this computer - a second Mudlet, or an unrelated program. The reason has to survive back to the caller,
         // because it is the only thing that can be put in front of the user.
         QTcpServer squatter;
         QVERIFY(squatter.listen(QHostAddress::LocalHost, 0));
@@ -729,6 +862,74 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QVERIFY(result.success);
         QVERIFY(!result.text.isEmpty());
+    }
+
+    void testASnippetThatNeverReturnsIsStopped()
+    {
+        // Mudlet is single threaded, so without a deadline this wedges the whole
+        // application - every profile - with no way out but killing it.
+        QElapsedTimer elapsed;
+        elapsed.start();
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("while true do end"), 200);
+
+        QVERIFY(!result.success);
+        QVERIFY2(result.text.contains(qsl("stopped after running")), qPrintable(result.text));
+        QVERIFY2(elapsed.elapsed() < 5000, "the deadline did not stop the snippet");
+    }
+
+    void testAnExplodingTableIsCutShortRatherThanExhaustingMemory()
+    {
+        // Four self-references are only one level deep per step, so the depth cap never
+        // trips; unbounded this took 15 seconds, and five references reached 20GB
+        // resident and had to be killed.
+        QElapsedTimer elapsed;
+        elapsed.start();
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 4 do t[i] = t end return t"));
+
+        QVERIFY(result.success);
+        QVERIFY2(elapsed.elapsed() < 5000, "the node budget did not cut the walk short");
+    }
+
+    void testTheHookIsPutBackAfterTheCall()
+    {
+        // A count hook left armed would charge this deadline to whatever the interpreter
+        // runs next - every trigger and timer in the profile.
+        TMCPLuaBridge::runLua(L, qsl("while true do end"), 200);
+
+        QVERIFY(lua_gethook(L) == nullptr);
+        QCOMPARE(lua_gethookmask(L), 0);
+    }
+
+    void testNonScalarKeysDoNotOverwriteEachOther()
+    {
+        // Naming every key after its type alone collapsed {[true] = 1, [false] = 2} into
+        // a single entry, silently losing half the table.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("return {[true] = 'yes', [false] = 'no'}"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(qsl("yes")), qPrintable(result.text));
+        QVERIFY2(result.text.contains(qsl("no")), qPrintable(result.text));
+    }
+
+    void testANonFiniteNumberInsideATableIsNotLost()
+    {
+        // JSON has no nan or inf, so QJsonValue(double) turns both into null and the
+        // model is told the value was nil.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("return {ratio = 0/0, limit = 1/0}"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(qsl("nan")), qPrintable(result.text));
+        QVERIFY2(result.text.contains(qsl("inf")), qPrintable(result.text));
+    }
+
+    void testTheNoOutputMessageSaysWhereEchoedTextWent()
+    {
+        // echo() and cecho() write to the profile window, not to the tool result, so a
+        // model that used them is otherwise told its code did nothing at all.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local x = 1"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(qsl("echo")), qPrintable(result.text));
     }
 
     void testTheLuaStackIsLeftAsItWasFound()

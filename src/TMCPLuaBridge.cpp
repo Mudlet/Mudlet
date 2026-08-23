@@ -22,35 +22,55 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "TLuaInterpreter.h"
+#include "TMap.h"
 #include "mudlet.h"
 #include "utils.h"
 
+#include <QElapsedTimer>
 #include <QJsonDocument>
 #include <QLocale>
+#include <QScopeGuard>
 #include <QSet>
 #include <QStringList>
 
-// Runs the caller's code with print() diverted into a table, then puts print back.
-// The whole dance stays inside one chunk so that the saved print and the collected lines
-// are locals: anything kept in _G would outlive the call and collide with a script that
-// happened to use the same name.
+#include <cmath>
+
+// Runs the caller's code with print() diverted into a table.
+//
+// The capture is installed in the chunk's own environment rather than over _G.print,
+// because Mudlet dispatches from nested event loops - installPackage()'s unpacking
+// progress, a profile save, a modal dialog - and any trigger, timer or second MCP
+// request that runs in that window would otherwise have its output captured into this
+// call's result and never reach the user's console. Only the snippet, and functions it
+// defines, see the capture. The flag turns it off once the call is over, so a timer the
+// snippet created prints to the console when it fires later rather than into a table
+// nobody will read.
+//
+// print is seeded in the table constructor, not assigned afterwards: assigning would go
+// through __newindex and land in _G, which is the very thing being avoided.
 static const char* csmLuaRunner = R"LUA(
 local code = ...
 local lines = {}
-local realPrint = print
-print = function(...)
-    local parts = {}
-    for i = 1, select('#', ...) do
-        parts[i] = tostring((select(i, ...)))
-    end
-    lines[#lines + 1] = table.concat(parts, '\t')
-end
+local capturing = true
 
 local chunk, syntaxError = loadstring(code, 'mcp')
 if not chunk then
-    print = realPrint
-    return false, table.concat(lines, '\n'), syntaxError
+    return false, '', syntaxError
 end
+
+local env = setmetatable({
+    print = function(...)
+        if not capturing then
+            return _G.print(...)
+        end
+        local parts = {}
+        for i = 1, select('#', ...) do
+            parts[i] = tostring((select(i, ...)))
+        end
+        lines[#lines + 1] = table.concat(parts, '\t')
+    end
+}, {__index = _G, __newindex = _G})
+setfenv(chunk, env)
 
 -- Count the results rather than measuring them afterwards. A nil anywhere in the list
 -- leaves a hole, and both # and unpack() stop at the first one, so the Lua idiom
@@ -63,13 +83,39 @@ local function collect(...)
     end
 end
 collect(pcall(chunk))
-print = realPrint
+capturing = false
 return returned[1], table.concat(lines, '\n'), unpack(returned, 2, count)
 )LUA";
 
 // A table that refers to itself would otherwise recurse until the C stack gives out, and
 // the code being rendered here is written by a model, so _G is a plausible return value.
 static constexpr int csmMaxTableDepth = 12;
+
+// Depth alone does not bound the walk. A table holding twenty references to itself is
+// only one level deeper each step but has 20^12 nodes to render, so the depth cap never
+// trips: measured, five self-references reached 20GB resident and had to be killed.
+// Cap how many values may be converted in total as well.
+static constexpr int csmMaxNodes = 200000;
+
+// A count hook gives the VM the wall-clock deadline declared in the header. A snippet that
+// swallows the error inside its own loop can still spin - no cooperative limit can prevent
+// that - but it can no longer do so by accident.
+static constexpr int csmHookInstructionCount = 20000;
+
+// Shared rather than per-call because a nested MCP request may start while an outer one is
+// still running; the inner call takes the earlier of the two deadlines and puts the outer
+// one back on the way out, so nesting cannot extend a deadline that has already been set.
+static QElapsedTimer smExecutionTimer;
+static qint64 smExecutionDeadline = 0;
+static int smDeadlineMs = TMCPLuaBridge::csmDefaultDeadlineMs;
+
+static void executionDeadlineHook(lua_State* L, lua_Debug*)
+{
+    if (smExecutionTimer.isValid() && smExecutionTimer.elapsed() >= smExecutionDeadline) {
+        //: Error shown to an AI model when the Lua code it sent ran for too long and was stopped. %1 is a whole number of seconds.
+        luaL_error(L, "%s", TMCPLuaBridge::tr("stopped after running for more than %1 seconds").arg((smDeadlineMs + 999) / 1000).toUtf8().constData());
+    }
+}
 
 TMCPLuaBridge::TMCPLuaBridge(QObject* parent)
 : QObject(parent)
@@ -116,6 +162,7 @@ QJsonArray TMCPLuaBridge::getAvailableTools() const
 MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject& arguments)
 {
     if (!hasTool(toolName)) {
+        //: Error shown to an AI model that asked for a tool this server does not have. %1 is the name it asked for.
         return {false, tr("Unknown tool: %1").arg(toolName)};
     }
 
@@ -125,15 +172,18 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
     // foreground rather than the one that was asked for.
     const QJsonValue codeArgument = arguments.value(qsl("code"));
     if (!codeArgument.isUndefined() && !codeArgument.isString()) {
+        //: Error shown to an AI model that sent the wrong kind of value for the "code" argument. Keep 'code' as-is, it names the argument.
         return {false, tr("The 'code' argument must be a string.")};
     }
     const QString luaCode = codeArgument.toString();
     if (luaCode.isEmpty()) {
+        //: Error shown to an AI model that left out the Lua code to run. Keep 'code' as-is, it names the argument.
         return {false, tr("The 'code' argument is required and cannot be empty.")};
     }
 
     const QJsonValue profileArgument = arguments.value(qsl("profile"));
     if (!profileArgument.isUndefined() && !profileArgument.isNull() && !profileArgument.isString()) {
+        //: Error shown to an AI model that sent the wrong kind of value for the "profile" argument. Keep 'profile' as-is, it names the argument.
         return {false, tr("The 'profile' argument must be a string.")};
     }
 
@@ -145,6 +195,7 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
 
     lua_State* L = pTarget->getLuaInterpreter()->getLuaGlobalState();
     if (!L) {
+        //: Error shown to an AI model when the profile it named cannot run Lua.
         return {false, tr("That profile has no Lua interpreter running.")};
     }
 
@@ -153,32 +204,89 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
 
 Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure)
 {
-    if (!profileName.isEmpty()) {
-        Host* pNamed = mudlet::self() ? mudlet::self()->getHostManager().getHost(profileName) : nullptr;
-        if (!pNamed) {
-            failure = tr("No profile named '%1' is open.").arg(profileName);
-        }
-        return pNamed;
+    if (!mudlet::self()) {
+        //: Error shown to an AI model when the application is not available to run Lua in.
+        failure = tr("Mudlet is not running.");
+        return nullptr;
     }
 
-    // The foreground profile, which is the one the user would mean by "here". A model that
-    // needs to be sure of which profile it is in should name it instead.
-    Host* pActive = mudlet::self() ? mudlet::self()->getActiveHost() : nullptr;
-    if (!pActive) {
-        failure = tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.");
+    Host* pTarget = nullptr;
+    if (!profileName.isEmpty()) {
+        // Match the profile name the way the rest of Mudlet does. getHost() is an exact
+        // lookup, so "achaea" would not find the profile the user knows as "Achaea".
+        const QString canonical = mudlet::self()->getCanonicalProfileName(profileName);
+        pTarget = mudlet::self()->getHostManager().getHost(canonical.isEmpty() ? profileName : canonical);
+        if (!pTarget) {
+            //: Error shown to an AI model that named a profile which is not open. %1 is the name it gave.
+            failure = tr("No profile named '%1' is open.").arg(profileName);
+            return nullptr;
+        }
+    } else {
+        // The foreground profile, which is the one the user would mean by "here". A model
+        // that needs to be sure of which profile it is in should name it instead.
+        pTarget = mudlet::self()->getActiveHost();
+        if (!pTarget) {
+            //: Error shown to an AI model when no game profile is open. Keep 'profile' as-is, it names an argument.
+            failure = tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.");
+            return nullptr;
+        }
     }
-    return pActive;
+
+    // A profile stays in the host pool until the very end of its teardown, and an MCP
+    // request is delivered from whatever nested event loop happens to be pumping - a
+    // profile save, an unpacking package, a modal dialog - so without this the snippet
+    // can run on a profile whose triggers are already stopped, or on a lua_State that a
+    // queued phase-2 reset is about to close underneath it. waitForEvent() and
+    // pumpEvents() refuse for the same reason; see TLuaInterpreterMudletObjects.cpp.
+    if (pTarget->isClosingDown() || pTarget->profileResetInProgress()) {
+        //: Error shown to an AI model when the profile it named is shutting down. %1 is the profile name.
+        failure = tr("The profile '%1' is closing or being reset, so Lua cannot run in it right now.").arg(pTarget->getName());
+        return nullptr;
+    }
+    if (pTarget->mpMap && pTarget->mpMap->mapOperationInProgress()) {
+        //: Error shown to an AI model when the profile it named is redrawing its map. %1 is the profile name.
+        failure = tr("The profile '%1' is busy with a map operation, so Lua cannot run in it right now.").arg(pTarget->getName());
+        return nullptr;
+    }
+
+    return pTarget;
 }
 
-MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
+MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode, int deadlineMs)
 {
     const int stackBefore = lua_gettop(L);
 
     if (luaL_loadstring(L, csmLuaRunner) != 0) {
         const QString message = QString::fromUtf8(lua_tostring(L, -1));
         lua_settop(L, stackBefore);
+        //: Error shown to an AI model when Mudlet's own wrapper code failed to compile, which means a bug in Mudlet. %1 is the compiler message.
         return {false, tr("Could not compile Mudlet's Lua runner: %1").arg(message)};
     }
+
+    // Put back whatever was hooked before, and on every exit: leaving a count hook armed
+    // would charge the deadline to the next thing this interpreter runs.
+    const lua_Hook previousHook = lua_gethook(L);
+    const int previousMask = lua_gethookmask(L);
+    const int previousCount = lua_gethookcount(L);
+    const bool timerWasRunning = smExecutionTimer.isValid();
+    const qint64 previousDeadline = smExecutionDeadline;
+    const int previousDeadlineMs = smDeadlineMs;
+    if (!timerWasRunning) {
+        smExecutionTimer.start();
+    }
+    const qint64 ownDeadline = smExecutionTimer.elapsed() + deadlineMs;
+    const bool ownDeadlineIsSooner = !timerWasRunning || ownDeadline < previousDeadline;
+    smExecutionDeadline = ownDeadlineIsSooner ? ownDeadline : previousDeadline;
+    smDeadlineMs = ownDeadlineIsSooner ? deadlineMs : previousDeadlineMs;
+    lua_sethook(L, executionDeadlineHook, LUA_MASKCOUNT, csmHookInstructionCount);
+    const auto deadlineGuard = qScopeGuard([=]() {
+        lua_sethook(L, previousHook, previousMask, previousCount);
+        smExecutionDeadline = previousDeadline;
+        smDeadlineMs = previousDeadlineMs;
+        if (!timerWasRunning) {
+            smExecutionTimer.invalidate();
+        }
+    });
 
     // Push the length too: lua_pushstring() would stop at the first embedded NUL and
     // silently run only the leading fragment of the snippet.
@@ -187,12 +295,14 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
     if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
         const QString message = QString::fromUtf8(lua_tostring(L, -1));
         lua_settop(L, stackBefore);
+        //: Error shown to an AI model when the Lua code it sent failed. %1 is the message from Lua.
         return {false, tr("Lua error: %1").arg(message)};
     }
 
     // The runner always answers with ok, printed output, then whatever the code returned.
     if (lua_gettop(L) - stackBefore < 2) {
         lua_settop(L, stackBefore);
+        //: Error shown to an AI model when Mudlet's own wrapper code misbehaved, which means a bug in Mudlet.
         return {false, tr("Mudlet's Lua runner returned nothing.")};
     }
 
@@ -200,6 +310,9 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
     const QString printed = readString(L, stackBefore + 2);
     const int firstValue = stackBefore + 3;
     const int lastValue = lua_gettop(L);
+    // One budget for the whole reply rather than one per returned value, so that
+    // "return _G, _G, _G" cannot multiply the ceiling by the number of values.
+    int nodeBudget = csmMaxNodes;
 
     QStringList pieces;
     if (!printed.isEmpty()) {
@@ -209,7 +322,9 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
     if (!ok) {
         // error() can be handed a table rather than a string, and lua_tostring() answers
         // null for one of those, which would drop the message entirely.
-        const QString message = firstValue <= lastValue ? jsonToText(luaToJson(L, firstValue, 0)) : tr("unknown error");
+        //: Stands in for a Lua error message that could not be read.
+        const QString message = firstValue <= lastValue ? jsonToText(luaToJson(L, firstValue, 0, nodeBudget)) : tr("unknown error");
+        //: Error shown to an AI model when the Lua code it sent failed. %1 is the message from Lua.
         pieces << tr("Lua error: %1").arg(message);
         lua_settop(L, stackBefore);
         return {false, pieces.join(QChar::LineFeed)};
@@ -217,7 +332,7 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
 
     QStringList values;
     for (int i = firstValue; i <= lastValue; ++i) {
-        values << jsonToText(luaToJson(L, i, 0));
+        values << jsonToText(luaToJson(L, i, 0, nodeBudget));
     }
     lua_settop(L, stackBefore);
 
@@ -226,12 +341,15 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
     }
 
     if (pieces.isEmpty()) {
-        return {true, tr("The code ran and produced no output.")};
+        //: Shown to an AI model when its Lua code succeeded but reported nothing back. Keep print(), echo(), cecho() and display() as-is, they are Lua function names.
+        return {true,
+                tr("The code ran. It returned nothing and printed nothing - note that only print() and returned values are reported back, not echo(), cecho() or display(), which write to the "
+                   "profile's window.")};
     }
     return {true, pieces.join(QChar::LineFeed)};
 }
 
-QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth)
+QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth, int& nodeBudget)
 {
     // Work in absolute indices so that pushing onto the stack while walking a table does
     // not shift the slot being read out from under us.
@@ -239,23 +357,36 @@ QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth)
         index = lua_gettop(L) + 1 + index;
     }
 
+    if (--nodeBudget < 0) {
+        //: Stands in for the rest of a Lua value that was too big to send to an AI model.
+        return QJsonValue(tr("<too much data, the rest was left out>"));
+    }
+
     switch (lua_type(L, index)) {
     case LUA_TNIL:
         return QJsonValue();
     case LUA_TBOOLEAN:
         return QJsonValue(lua_toboolean(L, index) != 0);
-    case LUA_TNUMBER:
-        return QJsonValue(lua_tonumber(L, index));
+    case LUA_TNUMBER: {
+        // QJsonValue turns a non-finite double into null, so 0/0 and math.huge would reach
+        // the model as "no value" from inside a table while reading as nan/inf at the top
+        // level. Spell them out instead, so the two positions agree.
+        const double number = lua_tonumber(L, index);
+        if (!std::isfinite(number)) {
+            return QJsonValue(numberKey(number));
+        }
+        return QJsonValue(number);
+    }
     case LUA_TSTRING:
         return QJsonValue(readString(L, index));
     case LUA_TTABLE:
-        return luaTableToJson(L, index, depth);
+        return luaTableToJson(L, index, depth, nodeBudget);
     default:
         return QJsonValue(qsl("<%1>").arg(QString::fromUtf8(lua_typename(L, lua_type(L, index)))));
     }
 }
 
-QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
+QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int& nodeBudget)
 {
     if (depth >= csmMaxTableDepth) {
         return QJsonValue(qsl("<table nested too deeply>"));
@@ -298,7 +429,7 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
         QJsonArray array;
         for (int i = 1; i <= length; ++i) {
             lua_rawgeti(L, index, i);
-            array.append(luaToJson(L, lua_gettop(L), depth + 1));
+            array.append(luaToJson(L, lua_gettop(L), depth + 1, nodeBudget));
             lua_pop(L, 1);
         }
         return array;
@@ -322,9 +453,22 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
                 key = qsl("[%1]").arg(key);
             }
         } else {
-            key = qsl("<%1>").arg(QString::fromUtf8(lua_typename(L, lua_type(L, -2))));
+            // A key that is neither a string nor a number has no JSON spelling, so it is
+            // named after its type - but two of them would then be the same name and one
+            // entry would overwrite the other, which is the loss the numeric bracketing
+            // above exists to prevent. The identity makes each one distinct.
+            key = qsl("<%1: %2>").arg(QString::fromUtf8(lua_typename(L, lua_type(L, -2))), QString::number(reinterpret_cast<quintptr>(lua_topointer(L, -2)), 16));
         }
-        object[key] = luaToJson(L, lua_gettop(L), depth + 1);
+
+        // Backstop for the cases the rules above cannot separate, such as a string key
+        // spelled exactly like the rendering of some other key. Suffixing keeps both
+        // entries; lua_next's order is unspecified, so which one is suffixed may vary
+        // between calls, but no value is dropped.
+        QString uniqueKey = key;
+        for (int collision = 2; object.contains(uniqueKey); ++collision) {
+            uniqueKey = qsl("%1#%2").arg(key).arg(collision);
+        }
+        object[uniqueKey] = luaToJson(L, lua_gettop(L), depth + 1, nodeBudget);
         lua_pop(L, 1);
     }
     return object;

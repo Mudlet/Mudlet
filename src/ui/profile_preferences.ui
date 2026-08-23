@@ -4879,26 +4879,26 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <widget class="QGroupBox" name="groupBox_mcpServer">
          <property name="title">
-          <string>AI assistant access (MCP)</string>
+          <string extracomment="Title of the Preferences group of settings for letting an AI assistant control Mudlet. MCP is the name of the Model Context Protocol standard, leave it as-is.">AI assistant access (MCP)</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_mcpServer">
           <item row="0" column="0" colspan="3">
            <widget class="QCheckBox" name="checkBox_enableMCPServer">
             <property name="toolTip">
-             <string>&lt;p&gt;Runs a Model Context Protocol (MCP) server so an AI assistant can run Lua inside Mudlet on your behalf. The server listens on this computer only, and there is one for the whole application rather than one per profile.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Anything that can reach the port can run any Lua code in your profiles.&lt;/b&gt; Leave this off unless you are using it.&lt;/p&gt;</string>
+             <string extracomment="Tooltip on the checkbox that starts the MCP server.">&lt;p&gt;Runs a Model Context Protocol (MCP) server so an AI assistant can run Lua inside Mudlet on your behalf. One server covers the whole application, so an assistant can reach every open profile.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Lua can run programs and change files on this computer, not just script your game.&lt;/b&gt; The address Mudlet shows once the server starts contains an access token - give it only to the assistant you mean to hand control to, and leave this off when you are not using it.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>When checked, Mudlet runs a Model Context Protocol server so an AI assistant can run Lua inside Mudlet. The server listens on this computer only and covers every open profile. Anything that can reach the port can run any Lua code in your profiles, so leave this off unless you are using it.</string>
+             <string extracomment="Screen reader description of the checkbox that starts the MCP server.">When checked, Mudlet runs a Model Context Protocol server so an AI assistant can run Lua inside Mudlet on your behalf. One server covers the whole application, so an assistant can reach every open profile. Lua can run programs and change files on this computer, not just script your game, so give the address Mudlet shows - it contains an access token - only to the assistant you mean to hand control to, and leave this off when you are not using it.</string>
             </property>
             <property name="text">
-             <string>Let an AI assistant run Lua in Mudlet</string>
+             <string extracomment="Label of the checkbox that starts the MCP server.">Let an AI assistant run Lua in Mudlet</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_mcpServerPort">
             <property name="text">
-             <string>Port:</string>
+             <string extracomment="Label in front of the number entry for the network port the MCP server listens on.">Port:</string>
             </property>
             <property name="buddy">
              <cstring>spinBox_mcpServerPort</cstring>
@@ -4908,10 +4908,10 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="1" column="1">
            <widget class="QSpinBox" name="spinBox_mcpServerPort">
             <property name="toolTip">
-             <string>&lt;p&gt;The port the MCP server listens on. Change this if another program on this computer is already using it.&lt;/p&gt;</string>
+             <string extracomment="Tooltip on the number entry for the network port the MCP server listens on.">&lt;p&gt;The port the MCP server listens on. Change this if another program on this computer is already using it.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>The port the MCP server listens on. Change this if another program on this computer is already using it.</string>
+             <string extracomment="Screen reader description of the number entry for the network port the MCP server listens on.">The port the MCP server listens on. Change this if another program on this computer is already using it.</string>
             </property>
             <property name="minimum">
              <number>1</number>

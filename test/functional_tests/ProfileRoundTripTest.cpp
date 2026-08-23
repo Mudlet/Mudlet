@@ -702,6 +702,7 @@ private slots:
         headers.append("MCP-Protocol-Version", QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION));
         headers.append("Mcp-Method", qsl("tools/call"));
         headers.append("Mcp-Name", QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL));
+        headers.append("Authorization", qsl("Bearer %1").arg(mcpServer.authToken()).toUtf8());
 
         const MCPReply reply = mcpServer.handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headers);
         const QJsonObject result = reply.body.value(qsl("result")).toObject();

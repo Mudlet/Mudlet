@@ -3444,6 +3444,8 @@ bool mudlet::setMCPEnabled(const bool enabled, const quint16 port, QString& erro
     }
 
     // A listening socket cannot be moved to another port, so a port change means a bounce.
+    const quint16 previousPort = mpMCPServer->getPort();
+    const bool wasRunning = mpMCPServer->running();
     mpMCPServer->stopServer();
 
     const MCPStartResult start = mpMCPServer->startServer(port);
@@ -3452,6 +3454,12 @@ bool mudlet::setMCPEnabled(const bool enabled, const quint16 port, QString& erro
         // be written straight back out by writeSettings(), losing the setting for good over
         // what is usually another program holding the port for the moment.
         error = start.error;
+        // Go back to the port that was working rather than leave the user with nothing: a
+        // typo in the port box would otherwise take down a server that was serving fine,
+        // and mMCPServerPort would persist the port that does not work.
+        if (wasRunning && mpMCPServer->startServer(previousPort).started) {
+            mMCPServerPort = previousPort;
+        }
         return false;
     }
     return true;
