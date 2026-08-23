@@ -191,6 +191,9 @@ add_functional_test_binary(UndoServerWrapReplay UndoServerWrapReplay.cpp)
 # also registers it with ctest.
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_functional_test_binary(PipelineBenchmark PipelineBenchmark.cpp)
+# The 2D mapper's companion. Never registered with ctest at all: it needs a map
+# file too big to commit, handed to it in MUDLET_BENCH_MAP, and skips without one.
+add_functional_test_binary(MapRenderBenchmark MapRenderBenchmark.cpp)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
