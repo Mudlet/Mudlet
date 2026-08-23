@@ -81,6 +81,7 @@
 #include <QSettings>
 #include <QTemporaryFile>
 #include <QTextStream>
+#include <QVersionNumber>
 #include <QThread>
 #include <zip.h>
 #include <memory>
@@ -2711,6 +2712,133 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mpPackageManager->resetPackageList();
     }
     return true;
+}
+
+// Reads a single file out of a zip archive without unpacking the rest of it.
+// The bundled packages live in Qt's resource system, which zip_open() cannot
+// reach at all, so the archive goes to libzip as a buffer instead of a path.
+static QByteArray readArchiveEntry(const QString& archivePath, const QString& entryName)
+{
+    QFile archiveFile(archivePath);
+    if (!archiveFile.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    const QByteArray archiveBytes = archiveFile.readAll();
+
+    zip_error_t error;
+    zip_error_init(&error);
+    zip_source_t* source = zip_source_buffer_create(archiveBytes.constData(), archiveBytes.size(), 0, &error);
+    if (!source) {
+        zip_error_fini(&error);
+        return {};
+    }
+    zip_t* archive = zip_open_from_source(source, ZIP_RDONLY, &error);
+    if (!archive) {
+        zip_source_free(source);
+        zip_error_fini(&error);
+        return {};
+    }
+    zip_error_fini(&error);
+
+    QByteArray contents;
+    zip_stat_t entryStat;
+    const QByteArray entry = entryName.toUtf8();
+    if (!zip_stat(archive, entry.constData(), 0, &entryStat) && (entryStat.valid & ZIP_STAT_SIZE)) {
+        if (zip_file_t* entryFile = zip_fopen(archive, entry.constData(), 0)) {
+            contents.resize(static_cast<qsizetype>(entryStat.size));
+            const zip_int64_t bytesRead = zip_fread(entryFile, contents.data(), entryStat.size);
+            zip_fclose(entryFile);
+            if (bytesRead < 0 || static_cast<zip_uint64_t>(bytesRead) != entryStat.size) {
+                contents.clear();
+            }
+        }
+    }
+    // this frees the source that was handed to it as well
+    zip_close(archive);
+    return contents;
+}
+
+// What name and version the copy inside the binary claims, read without
+// disturbing the mPackageInfo entry describing whatever the profile installed.
+std::pair<QString, QString> Host::bundledPackageIdentity(const QString& resourcePath)
+{
+    const QByteArray config = readArchiveEntry(resourcePath, qsl("config.lua"));
+    if (config.isEmpty()) {
+        return {};
+    }
+
+    lua_State* L = luaL_newstate();
+    setupSandboxedLuaState(L);
+
+    std::pair<QString, QString> identity;
+    if (luaL_loadbuffer(L, config.constData(), config.size(), "config.lua") || lua_pcall(L, 0, 0, 0)) {
+        qWarning().nospace().noquote() << "Host::bundledPackageIdentity() WARNING - could not read the config.lua in \"" << resourcePath << "\": " << lua_tostring(L, -1);
+    } else {
+        lua_getglobal(L, "mpackage");
+        if (lua_isstring(L, -1)) {
+            identity.first = lua_tostring(L, -1);
+        }
+        lua_pop(L, 1);
+        lua_getglobal(L, "version");
+        if (lua_isstring(L, -1)) {
+            identity.second = lua_tostring(L, -1);
+        }
+        lua_pop(L, 1);
+    }
+
+    lua_close(L);
+    return identity;
+}
+
+// A profile installs the bundled packages once, when it is created, and never
+// looks at them again - so it keeps whatever version it first saw. Content fixes
+// shipped with a newer Mudlet never arrive, and a package able to update itself
+// over the network does that on every launch rather than using the copy it was
+// handed. Only packages the profile still has are considered, so one the player
+// deliberately removed stays removed; and, as with any other package update,
+// replacing one discards local edits to its own items.
+void Host::refreshBundledPackages()
+{
+    const QDir bundled(qsl(":/packages"));
+    for (const QString& folder : bundled.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        const QString archive = qsl(":/packages/%1/%1.mpackage").arg(folder);
+        if (!QFile::exists(archive)) {
+            continue;
+        }
+
+        const auto [bundledName, bundledVersion] = bundledPackageIdentity(archive);
+        if (bundledName.isEmpty() || bundledVersion.isEmpty()) {
+            continue;
+        }
+
+        const QString packageName = sanitizePackageName(bundledName);
+        if (!mInstalledPackages.contains(packageName)) {
+            continue;
+        }
+
+        const QString installedVersion = mPackageInfo.value(packageName).value(qsl("version"));
+        if (installedVersion.isEmpty()) {
+            continue;
+        }
+
+        // a package the player updated past what this build carries is left alone
+        if (QVersionNumber::fromString(bundledVersion) <= QVersionNumber::fromString(installedVersion)) {
+            continue;
+        }
+
+        qDebug().nospace().noquote() << "Host::refreshBundledPackages() INFO - replacing \"" << packageName << "\" version " << installedVersion << " with the bundled version " << bundledVersion
+                                     << ".";
+        if (!uninstallPackage(packageName, enums::PackageModuleType::Package)) {
+            continue;
+        }
+        if (auto [installed, error] = installPackage(archive, enums::PackageModuleType::Package); !installed) {
+            // the old copy is already gone by now, and nothing queues a bundled
+            // package for a profile that has been through this once, so say so
+            // rather than leaving the profile quietly short of a package
+            qWarning().nospace().noquote() << "Host::refreshBundledPackages() WARNING - could not reinstall \"" << packageName << "\": " << error;
+            postMessage(tr("[ ERROR ] - Could not update the bundled package \"%1\": %2").arg(packageName, error));
+        }
+    }
 }
 
 void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule)
