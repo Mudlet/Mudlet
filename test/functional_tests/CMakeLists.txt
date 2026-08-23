@@ -124,6 +124,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
+    MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
