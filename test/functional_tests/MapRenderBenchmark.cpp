@@ -46,8 +46,17 @@
  *   mid    a quarter of the level's span across the widget
  *   fit    the whole Z level in the viewport, the worst case
  * and each frame pans by one map unit, so no frame is a repeat of the last.
+ *
+ * MUDLET_BENCH_FRAME_HASH=1 swaps the timed passes for a correctness pass: it
+ * renders a fixed number of frames per scenario and prints one
+ * `FRAMEHASH <scenario> <frame> <digest>` line each. Two builds that print the
+ * same digests drew the same pixels, which is how a change that claims to only
+ * cull work off-screen proves it did not also cull work on-screen. The frame
+ * count is fixed rather than derived from a warm-up frame's duration, since a
+ * timing-dependent count would not line up between two builds.
  */
 
+#include <QCryptographicHash>
 #include <QFileInfo>
 #include <QPixmap>
 #include <QSignalSpy>
@@ -124,6 +133,8 @@ private:
     // reported per frame, so the count does not have to match between two runs.
     static constexpr int kMaxFramesPerPass = 8;
     static constexpr double kTargetPassMs = 600.0;
+    // Frames hashed per scenario when MUDLET_BENCH_FRAME_HASH is set.
+    static constexpr int kHashFrames = 4;
 
     struct Scenario
     {
@@ -164,6 +175,18 @@ private:
             }
         }
         return false;
+    }
+
+    // A digest of the frame's pixels, in a fixed format so that two builds are
+    // not told apart by the platform's preferred pixmap depth.
+    static QByteArray frameDigest(const QImage& frame)
+    {
+        const QImage canonical = frame.convertToFormat(QImage::Format_ARGB32);
+        QCryptographicHash hash(QCryptographicHash::Sha1);
+        for (int y = 0; y < canonical.height(); ++y) {
+            hash.addData(QByteArrayView(reinterpret_cast<const char*>(canonical.constScanLine(y)), canonical.width() * 4));
+        }
+        return hash.result().toHex();
     }
 
     static qint64 readPeakRssKb()
@@ -240,6 +263,10 @@ private slots:
     // every later slot pay it again.
     void benchMapRender()
     {
+        const bool hashFrames = qEnvironmentVariableIntValue("MUDLET_BENCH_FRAME_HASH") != 0;
+        // Somewhere to write the hashed frames to, for when two digests differ
+        // and the question becomes which pixels did.
+        const QString frameDir = hashFrames ? qEnvironmentVariable("MUDLET_BENCH_FRAME_DIR") : QString();
         mudlet::self()->mSkipDefaultPackageInstall = true;
         Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
         QVERIFY(host);
@@ -285,6 +312,9 @@ private slots:
         emitMetric("bench_z_level", static_cast<qint64>(zLevel));
         emitMetric("bench_rooms_on_z_level", static_cast<qint64>(roomsOnLevel));
         emitMetric("bench_grid_mode", static_cast<qint64>(pArea->gridMode ? 1 : 0));
+        if (hashFrames) {
+            emitMetric("bench_z_colocated_rooms", coLocatedRoomCount(pMap, pArea, zLevel));
+        }
         emitMetric("bench_widget_width", static_cast<qint64>(kWidgetWidth));
         emitMetric("bench_widget_height", static_cast<qint64>(kWidgetHeight));
 
@@ -358,28 +388,51 @@ private slots:
             // drew somewhere else is not the workload these numbers claim.
             QCOMPARE(p2dMap->getAreaId(), areaId);
 
-            const int framesPerPass = qBound(1, static_cast<int>(kTargetPassMs / std::max(0.001, warmUpMs)), kMaxFramesPerPass);
-
-            double best = std::numeric_limits<double>::max();
-            for (int pass = 0; pass < kPasses; ++pass) {
-                QElapsedTimer timer;
-                timer.start();
-                for (int frame = 0; frame < framesPerPass; ++frame) {
-                    // Pan by a map unit per frame so no frame is a repeat of
-                    // the one before it, the way a walking player's is not.
-                    p2dMap->mMapCenterX = centerX + frame;
-                    p2dMap->render(&target);
+            const QString prefix = qsl("render_%1").arg(QString::fromUtf8(scenario.name));
+            if (hashFrames) {
+                for (int frame = 0; frame < kHashFrames; ++frame) {
+                    // A quarter of a room per frame, and on both axes, so the
+                    // four frames slide the room lattice through a whole cell:
+                    // a cull that is a room out at an edge shows up in one of
+                    // them even though this map repeats every room.
+                    p2dMap->mMapCenterX = centerX + frame / static_cast<double>(kHashFrames);
+                    p2dMap->mMapCenterY = centerY + frame / static_cast<double>(kHashFrames);
+                    // Rendering into a pixmap the last frame already wrote to
+                    // would let anything the paint path leaves untouched carry
+                    // over, so the digest would depend on the frame before it.
+                    target.fill(Qt::magenta);
+                    // The widget only, without its children: one of them holds a
+                    // blinking text cursor, which would make the digest a
+                    // function of the wall clock rather than of the paint path.
+                    p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+                    const QImage frameImage = target.toImage();
+                    std::printf("FRAMEHASH %s %d %s\n", scenario.name, frame, frameDigest(frameImage).constData());
+                    if (!frameDir.isEmpty()) {
+                        frameImage.save(qsl("%1/%2-%3.png").arg(frameDir, QString::fromUtf8(scenario.name), QString::number(frame)));
+                    }
                 }
-                best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+            } else {
+                const int framesPerPass = qBound(1, static_cast<int>(kTargetPassMs / std::max(0.001, warmUpMs)), kMaxFramesPerPass);
+                double best = std::numeric_limits<double>::max();
+                for (int pass = 0; pass < kPasses; ++pass) {
+                    QElapsedTimer timer;
+                    timer.start();
+                    for (int frame = 0; frame < framesPerPass; ++frame) {
+                        // Pan by a map unit per frame so no frame is a repeat of
+                        // the one before it, the way a walking player's is not.
+                        p2dMap->mMapCenterX = centerX + frame;
+                        p2dMap->render(&target);
+                    }
+                    best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+                }
+                emitMetric(qsl("%1_ms").arg(prefix), (best / framesPerPass) * 1000.0);
+                emitMetric(qsl("%1_fps").arg(prefix), framesPerPass / best);
+                emitMetric(qsl("%1_frames_per_pass").arg(prefix), static_cast<qint64>(framesPerPass));
             }
             p2dMap->mMapCenterX = centerX;
             p2dMap->mMapCenterY = centerY;
 
-            const QString prefix = qsl("render_%1").arg(QString::fromUtf8(scenario.name));
-            emitMetric(qsl("%1_ms").arg(prefix), (best / framesPerPass) * 1000.0);
-            emitMetric(qsl("%1_fps").arg(prefix), framesPerPass / best);
             emitMetric(qsl("%1_zoom").arg(prefix), pArea->get2DMapZoom());
-            emitMetric(qsl("%1_frames_per_pass").arg(prefix), static_cast<qint64>(framesPerPass));
             // xspan: how many map units fit across the widget, so also the
             // number of rooms across a fully populated level.
             emitMetric(qsl("%1_units_across").arg(prefix), p2dMap->mRoomWidth > 0.0f ? kWidgetWidth / static_cast<double>(p2dMap->mRoomWidth) : 0.0);
@@ -436,6 +489,32 @@ private:
             }
         }
         return bestZ;
+    }
+
+    // How many rooms on the level share their (x, y) with another room. They are
+    // the one thing that can legitimately move pixels when the paint path's
+    // iteration order changes: paintEvent() gives whichever of a co-located
+    // group it reaches first the un-collided styling and the rest the collided
+    // one, and which that is has never been specified.
+    static qint64 coLocatedRoomCount(TMap* pMap, TArea* pArea, int zLevel)
+    {
+        const QSet<int>& roomsOnLevel = pArea->getRoomsForZ(zLevel);
+        QHash<qint64, int> roomsPerCell;
+        roomsPerCell.reserve(roomsOnLevel.size());
+        for (const int roomId : roomsOnLevel) {
+            TRoom* pRoom = pMap->mpRoomDB->getRoom(roomId);
+            if (!pRoom) {
+                continue;
+            }
+            ++roomsPerCell[(static_cast<qint64>(pRoom->x()) << 32) | static_cast<quint32>(pRoom->y())];
+        }
+        qint64 coLocated = 0;
+        for (const int roomsHere : roomsPerCell) {
+            if (roomsHere > 1) {
+                coLocated += roomsHere;
+            }
+        }
+        return coLocated;
     }
 
     // The room nearest the middle of the level, so the player stands in the
