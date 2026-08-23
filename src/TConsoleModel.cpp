@@ -32,6 +32,7 @@
 TConsoleModel::TConsoleModel(Host* pHost)
 : buffer(pHost)
 , mpHost(pHost)
+, mHyperlinkVisibilityManager(*this)
 {
 }
 

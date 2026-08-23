@@ -21,6 +21,9 @@
  ***************************************************************************/
 
 #include "TBuffer.h"
+#include "THyperlinkCompactManager.h"
+#include "THyperlinkSelectionManager.h"
+#include "THyperlinkVisibilityManager.h"
 
 #include <QColor>
 #include <QFile>
@@ -34,8 +37,9 @@ class Host;
 // The per-console data model: the slice of former TConsole state that the
 // telnet -> trigger pipeline drives without needing a widget. That is the text
 // buffer, the cursor/prompt state Host::runTriggers() updates on every line,
-// the fg/bg colours colour-triggers match against, and the log lifecycle the
-// buffer writes through. Splitting it out of the widget is what lets the
+// the fg/bg colours colour-triggers match against, the log lifecycle the buffer
+// writes through, and the OSC 8 hyperlink state the buffer translation
+// registers as it goes. Splitting it out of the widget is what lets the
 // pipeline run with no view at all, which is the point of the Widgets-free
 // core (#8681).
 //
@@ -80,6 +84,18 @@ struct TConsoleModel
     int mEngineCursor = -1;
     QPoint mUserCursor;
     bool mIsPromptLine = false;
+
+    // The OSC 8 hyperlink managers. Concealing and revealing rewrite this
+    // model's buffer, so they run with or without a view; repainting afterwards
+    // is the view's job. Registering a link is not view-free yet - TBuffer
+    // reaches the manager through its own console back-pointer.
+    //
+    // Declared after the buffer so that the manager which writes into it is
+    // destroyed first - keep it that way if a field is ever added between them.
+    THyperlinkCompactManager mHyperlinkCompactManager;
+    THyperlinkSelectionManager mHyperlinkSelectionManager;
+    THyperlinkVisibilityManager mHyperlinkVisibilityManager;
+
     // The log destination. TBuffer writes into mLogStream directly, and
     // TMainConsole keeps references aliasing all four.
     // mLogStream holds a bare pointer to mLogFile, so the declaration order
