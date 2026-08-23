@@ -63,10 +63,15 @@ public:
     bool hasTool(const QString& toolName) const;
     MCPToolResult callTool(const QString& toolName, const QJsonObject& arguments);
 
+    // Runs one snippet on an already-chosen interpreter. Separate from callTool() so that
+    // deciding which profile to run in stays apart from running, and so the runner can be
+    // exercised against a bare lua_State.
+    static MCPToolResult runLua(lua_State* L, const QString& luaCode);
+
     static constexpr const char* MCP_LUA_TOOL = "lua";
 
 private:
-    MCPToolResult runLua(const QString& luaCode, const QString& profileName);
+    Host* targetHost(const QString& profileName, QString& failure) const;
     static QJsonValue luaToJson(lua_State* L, int index, int depth);
     static QJsonValue luaTableToJson(lua_State* L, int index, int depth);
     static QString jsonToText(const QJsonValue& value);

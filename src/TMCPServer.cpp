@@ -38,7 +38,6 @@ static constexpr int csmCacheTtlMs = 3600000;
 
 TMCPServer::TMCPServer(Host* pHost, QObject* parent)
 : QObject(parent)
-, mpHost(pHost)
 , mpLuaBridge(new TMCPLuaBridge(pHost, this))
 {
 }
@@ -58,7 +57,9 @@ bool TMCPServer::startServer(int port)
 
     // Everything rides one POST endpoint in this revision. /mcp is the conventional
     // path, and / is accepted as well so a bare host:port still reaches the server.
-    const auto onPost = [this](const QHttpServerRequest& request) { return respondToPost(request); };
+    const auto onPost = [this](const QHttpServerRequest& request) {
+        return respondToPost(request);
+    };
     httpServer->route(qsl("/"), QHttpServerRequest::Method::Post, onPost);
     httpServer->route(qsl("/mcp"), QHttpServerRequest::Method::Post, onPost);
 
@@ -132,16 +133,14 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(requestBody, &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        return error(QJsonValue(), ParseError, tr("JSON parse error: %1").arg(parseError.errorString()), QJsonValue(),
-                     QHttpServerResponse::StatusCode::BadRequest);
+        return error(QJsonValue(), ParseError, tr("JSON parse error: %1").arg(parseError.errorString()), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
     }
 
     const QJsonObject message = document.object();
     const QJsonValue id = message.value(qsl("id"));
 
     if (message.value(qsl("jsonrpc")).toString() != qsl("2.0")) {
-        return error(id, InvalidRequest, tr("Not a JSON-RPC 2.0 message"), QJsonValue(),
-                     QHttpServerResponse::StatusCode::BadRequest);
+        return error(id, InvalidRequest, tr("Not a JSON-RPC 2.0 message"), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
     }
 
     // A message without an id is a notification and is never answered. The core protocol
@@ -160,14 +159,15 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
         QJsonObject data;
         data[qsl("supported")] = QJsonArray{QString::fromLatin1(MCP_PROTOCOL_VERSION)};
         data[qsl("requested")] = params.value(qsl("protocolVersion"));
-        return error(id, UnsupportedProtocolVersion,
+        return error(id,
+                     UnsupportedProtocolVersion,
                      tr("This server speaks MCP %1 only, which has no initialize handshake.").arg(QString::fromLatin1(MCP_PROTOCOL_VERSION)),
-                     data, QHttpServerResponse::StatusCode::BadRequest);
+                     data,
+                     QHttpServerResponse::StatusCode::BadRequest);
     }
 
     if (!meta.contains(QString::fromLatin1(META_CLIENT_CAPABILITIES))) {
-        return error(id, InvalidParams, tr("Missing required _meta field: %1").arg(QString::fromLatin1(META_CLIENT_CAPABILITIES)),
-                     QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
+        return error(id, InvalidParams, tr("Missing required _meta field: %1").arg(QString::fromLatin1(META_CLIENT_CAPABILITIES)), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
     }
 
     const QString mismatch = headerMismatch(headers, method, params, meta);
@@ -180,8 +180,7 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
         QJsonObject data;
         data[qsl("supported")] = QJsonArray{QString::fromLatin1(MCP_PROTOCOL_VERSION)};
         data[qsl("requested")] = requestedVersion;
-        return error(id, UnsupportedProtocolVersion, tr("Unsupported protocol version"), data,
-                     QHttpServerResponse::StatusCode::BadRequest);
+        return error(id, UnsupportedProtocolVersion, tr("Unsupported protocol version"), data, QHttpServerResponse::StatusCode::BadRequest);
     }
 
     return dispatch(method, id, params);
@@ -201,8 +200,7 @@ MCPReply TMCPServer::dispatch(const QString& method, const QJsonValue& id, const
 
     // The JSON-RPC body on this 404 is what tells a client it has reached a modern MCP
     // endpoint that lacks the method, rather than a server hosting no endpoint at all.
-    return error(id, MethodNotFound, tr("Method not found: %1").arg(method), QJsonValue(),
-                 QHttpServerResponse::StatusCode::NotFound);
+    return error(id, MethodNotFound, tr("Method not found: %1").arg(method), QJsonValue(), QHttpServerResponse::StatusCode::NotFound);
 }
 
 MCPReply TMCPServer::discover(const QJsonValue& id) const
@@ -264,8 +262,7 @@ QString TMCPServer::headerMismatch(const QHttpHeaders& headers, const QString& m
     }
     const QString metaVersion = meta.value(QString::fromLatin1(META_PROTOCOL_VERSION)).toString();
     if (QString::fromUtf8(versionHeader) != metaVersion) {
-        return tr("Header mismatch: MCP-Protocol-Version header value '%1' does not match body value '%2'")
-                .arg(QString::fromUtf8(versionHeader), metaVersion);
+        return tr("Header mismatch: MCP-Protocol-Version header value '%1' does not match body value '%2'").arg(QString::fromUtf8(versionHeader), metaVersion);
     }
 
     const QByteArrayView methodHeader = headers.value("Mcp-Method");
@@ -273,8 +270,7 @@ QString TMCPServer::headerMismatch(const QHttpHeaders& headers, const QString& m
         return tr("Missing required header: Mcp-Method");
     }
     if (QString::fromUtf8(methodHeader) != method) {
-        return tr("Header mismatch: Mcp-Method header value '%1' does not match body value '%2'")
-                .arg(QString::fromUtf8(methodHeader), method);
+        return tr("Header mismatch: Mcp-Method header value '%1' does not match body value '%2'").arg(QString::fromUtf8(methodHeader), method);
     }
 
     if (method == qsl("tools/call")) {
@@ -284,8 +280,7 @@ QString TMCPServer::headerMismatch(const QHttpHeaders& headers, const QString& m
         }
         const QString name = decodeHeaderValue(nameHeader);
         if (name != params.value(qsl("name")).toString()) {
-            return tr("Header mismatch: Mcp-Name header value '%1' does not match body value '%2'")
-                    .arg(name, params.value(qsl("name")).toString());
+            return tr("Header mismatch: Mcp-Name header value '%1' does not match body value '%2'").arg(name, params.value(qsl("name")).toString());
         }
     }
 

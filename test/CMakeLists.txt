@@ -57,6 +57,12 @@ set(UNIT_TESTS
     ProfileNameValidationTest
 )
 
+# The MCP server only lands in the Mudlet library when configured with USE_MCPSERVER, so
+# its test is gated the same way. Qt6::HttpServer reaches it through that library.
+if(USE_MCPSERVER)
+    list(APPEND UNIT_TESTS TMCPServerTest)
+endif()
+
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
@@ -161,40 +167,6 @@ set_tests_properties(XdgRecipeConsistencyTest PROPERTIES
 if(NOT WIN32)
     add_test(NAME ReleaseChecksumsTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-checksums-test.sh
-    )
-endif()
-
-# MCP tests exercise the sources that only land in the Mudlet library when it is
-# configured with USE_MCPSERVER, so they are gated on the same option.
-if(USE_MCPSERVER)
-    find_package(Qt6 COMPONENTS HttpServer REQUIRED)
-
-    # Inherit sanitizer flags from parent project if set
-    if(DEFINED CACHE{SANITIZER_COMPILE_OPTIONS_GLOBAL_CACHE})
-        set(MCP_TEST_COMPILE_OPTIONS ${SANITIZER_COMPILE_OPTIONS_GLOBAL_CACHE})
-        set(MCP_TEST_LINK_OPTIONS ${SANITIZER_COMPILE_OPTIONS_GLOBAL_CACHE})
-    endif()
-
-    add_executable(TMCPLuaBridgeTest TMCPLuaBridgeTest.cpp)
-    add_dependencies(TMCPLuaBridgeTest ${LIB_MUDLET_TARGET})
-    target_compile_definitions(TMCPLuaBridgeTest PRIVATE TMCPLuaBridge_Test)
-    target_compile_options(TMCPLuaBridgeTest PRIVATE ${MCP_TEST_COMPILE_OPTIONS})
-    target_link_options(TMCPLuaBridgeTest PRIVATE ${MCP_TEST_LINK_OPTIONS})
-    target_link_libraries(TMCPLuaBridgeTest PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
-    add_test(NAME TMCPLuaBridgeTest COMMAND $<TARGET_FILE:TMCPLuaBridgeTest>)
-    set_tests_properties(TMCPLuaBridgeTest PROPERTIES
-        ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
-    )
-
-    add_executable(TMCPServerTest TMCPServerTest.cpp)
-    add_dependencies(TMCPServerTest ${LIB_MUDLET_TARGET})
-    target_compile_definitions(TMCPServerTest PRIVATE TMCPServer_Test TMCPLuaBridge_Test)
-    target_compile_options(TMCPServerTest PRIVATE ${MCP_TEST_COMPILE_OPTIONS})
-    target_link_options(TMCPServerTest PRIVATE ${MCP_TEST_LINK_OPTIONS})
-    target_link_libraries(TMCPServerTest PRIVATE Qt6::Test Qt6::HttpServer ${LIB_MUDLET_TARGET})
-    add_test(NAME TMCPServerTest COMMAND $<TARGET_FILE:TMCPServerTest>)
-    set_tests_properties(TMCPServerTest PROPERTIES
-        ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     )
 endif()
 

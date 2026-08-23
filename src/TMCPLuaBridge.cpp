@@ -114,22 +114,10 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
         return {false, tr("The 'code' argument is required and cannot be empty.")};
     }
 
-    return runLua(luaCode, arguments.value(qsl("profile")).toString());
-}
-
-MCPToolResult TMCPLuaBridge::runLua(const QString& luaCode, const QString& profileName)
-{
-    Host* pTarget = mpHost;
-    if (!profileName.isEmpty()) {
-        pTarget = mudlet::self() ? mudlet::self()->getHostManager().getHost(profileName) : nullptr;
-        if (!pTarget) {
-            return {false, tr("No profile named '%1' is open.").arg(profileName)};
-        }
-    } else if (!pTarget) {
-        pTarget = mudlet::self() ? mudlet::self()->getActiveHost() : nullptr;
-        if (!pTarget) {
-            return {false, tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.")};
-        }
+    QString failure;
+    Host* pTarget = targetHost(arguments.value(qsl("profile")).toString(), failure);
+    if (!pTarget) {
+        return {false, failure};
     }
 
     lua_State* L = pTarget->getLuaInterpreter()->pGlobalLua;
@@ -137,6 +125,34 @@ MCPToolResult TMCPLuaBridge::runLua(const QString& luaCode, const QString& profi
         return {false, tr("That profile has no Lua interpreter running.")};
     }
 
+    return runLua(L, luaCode);
+}
+
+Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure) const
+{
+    if (!profileName.isEmpty()) {
+        Host* pNamed = mudlet::self() ? mudlet::self()->getHostManager().getHost(profileName) : nullptr;
+        if (!pNamed) {
+            failure = tr("No profile named '%1' is open.").arg(profileName);
+        }
+        return pNamed;
+    }
+
+    if (mpHost) {
+        return mpHost;
+    }
+
+    // The server can outlive the profile it was started for, and a client need not name
+    // one, so fall back to whichever profile the user is looking at.
+    Host* pActive = mudlet::self() ? mudlet::self()->getActiveHost() : nullptr;
+    if (!pActive) {
+        failure = tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.");
+    }
+    return pActive;
+}
+
+MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
+{
     const int stackBefore = lua_gettop(L);
 
     if (luaL_loadstring(L, csmLuaRunner) != 0) {
@@ -169,7 +185,9 @@ MCPToolResult TMCPLuaBridge::runLua(const QString& luaCode, const QString& profi
     }
 
     if (!ok) {
-        const QString message = firstValue <= lastValue ? QString::fromUtf8(lua_tostring(L, firstValue)) : tr("unknown error");
+        // error() can be handed a table rather than a string, and lua_tostring() answers
+        // null for one of those, which would drop the message entirely.
+        const QString message = firstValue <= lastValue ? jsonToText(luaToJson(L, firstValue, 0)) : tr("unknown error");
         pieces << tr("Lua error: %1").arg(message);
         lua_settop(L, stackBefore);
         return {false, pieces.join(QChar::LineFeed)};

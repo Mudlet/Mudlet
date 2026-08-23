@@ -94,7 +94,11 @@ private:
     QString headerMismatch(const QHttpHeaders& headers, const QString& method, const QJsonObject& params, const QJsonObject& meta) const;
 
     MCPReply result(const QJsonValue& id, QJsonObject payload, QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok) const;
-    MCPReply error(const QJsonValue& id, JsonRpcErrorCode code, const QString& message, const QJsonValue& data = QJsonValue(), QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok) const;
+    MCPReply error(const QJsonValue& id,
+                   JsonRpcErrorCode code,
+                   const QString& message,
+                   const QJsonValue& data = QJsonValue(),
+                   QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok) const;
 
     QJsonObject serverImplementation() const;
     static QString decodeHeaderValue(QByteArrayView raw);
@@ -102,7 +106,6 @@ private:
 
     QHttpServerResponse respondToPost(const QHttpServerRequest& request);
 
-    Host* mpHost;
     TMCPLuaBridge* mpLuaBridge;
     // Recreated on every start: QHttpServer has no way to drop a route or unbind a
     // socket, so a restart would otherwise stack a second copy of each route.

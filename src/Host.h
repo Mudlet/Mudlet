@@ -212,10 +212,7 @@ public:
     int getTimeout() { return mTimeout; }
     void setTimeout(const int seconds) { mTimeout = seconds; }
 #ifdef INCLUDE_MCPSERVER
-    bool getMCPEnabled() const { return mEnableMCP; }
     void setMCPEnabled(const bool enabled);
-    int getMCPServerPort() const { return mMCPServerPort; }
-    void setMCPServerPort(const int port) { mMCPServerPort = port; }
 #endif
     bool wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
