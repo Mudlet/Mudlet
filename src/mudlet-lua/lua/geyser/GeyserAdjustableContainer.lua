@@ -1100,12 +1100,7 @@ function Adjustable.Container:type_delete()
         self:detach()
     end
     self:disconnect()
-    -- not disableAutoSave(), which kills an already nil handler and errors
-    if self.autoSaveHandler then
-        killAnonymousEventHandler(self.autoSaveHandler)
-        self.autoSaveHandler = nil
-    end
-    self.autoSave = false
+    self:disableAutoSave()
     -- a container recreated under the same name has taken over the registration,
     -- so only unregister while it is still ours
     if Adjustable.Container.all[self.name] == self then
@@ -1269,10 +1264,13 @@ function Adjustable.Container:enableAutoSave()
     self.autoSaveHandler = self.autoSaveHandler or registerAnonymousEventHandler("sysExitEvent", function() self:save() end)
 end
 
---- disableAutoSave function to disable a before enabled autoSave
+--- disableAutoSave function to turn autoSave off, whether or not it was enabled
 function Adjustable.Container:disableAutoSave()
     self.autoSave = false
-    killAnonymousEventHandler(self.autoSaveHandler)
+    if self.autoSaveHandler then
+        killAnonymousEventHandler(self.autoSaveHandler)
+        self.autoSaveHandler = nil
+    end
 end
 
 --- constructor for the Adjustable Container

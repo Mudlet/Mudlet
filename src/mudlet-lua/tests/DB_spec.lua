@@ -2548,6 +2548,9 @@ describe("Tests DB.lua functions", function()
           _unique = "name",
         }
       })
+      -- db:create stores the list form, so the string _drop still accepts has to be
+      -- put back by hand to be reached at all
+      db.__schema["dropstrtestingonly"].pets.options._unique = "name"
       local ok, err = pcall(function() sdb:_drop("pets") end)
       db:close("dropstrtestingonly")
       os.remove(getMudletHomeDir() .. "/Database_dropstrtestingonly.db")
@@ -3770,6 +3773,213 @@ describe("Tests db:create with a single column name as _index", function()
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, '_index names "_row_id"', 1, true))
     assert.are.same({}, indexNames("people"))
+  end)
+end)
+
+describe("Tests db:create with _unique naming unknown columns", function()
+  local dbName = "uniqueskipstestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  -- db:create reports a constraint it cannot make through printError and carries
+  -- on, so what it says is collected rather than caught
+  local function createCollectingWarnings(sheets)
+    local collected = {}
+    -- through _G: a spec file's globals are its own, so plain assignment would
+    -- leave db:create with the printError it already has
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = db:create(dbName, sheets)
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function tableSql(sheetName)
+    local cursor = db.__conn[dbName]:execute(
+      "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = '" .. sheetName .. "'"
+    )
+    local row = cursor:fetch({}, "a")
+    cursor:close()
+    return row and row.sql
+  end
+
+  local function indexNames(sheetName)
+    local cursor = db.__conn[dbName]:execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '" .. sheetName .. "' AND sql IS NOT NULL"
+    )
+    local names = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      names[#names + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    table.sort(names)
+    return names
+  end
+
+  after_each(function()
+    -- a db:create that raises part way through leaves a cursor open, and closing
+    -- then raises as well. Forget just this database in that case, so a regression
+    -- here costs this block's specs rather than every db spec that runs after it.
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("warns about a column the sheet does not have and accepts the sheet (form 1)", function()
+    local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = "nosuchcol"}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_unique names "nosuchcol", which is not one of the sheet\'s columns: that constraint is skipped', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(2, #rows)
+  end)
+
+  it("warns about an unknown column in a compound constraint and still builds the table (form 2)", function()
+    local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = {{"name", "nosuchcol"}}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, '_unique names "nosuchcol", which is not one of the sheet\'s columns: that constraint is skipped', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(2, #rows)
+  end)
+
+  it("still enforces a valid _unique constraint", function()
+    local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = "name"}})
+    assert.is_table(mydb)
+    assert.are.equal("", warnings)
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    local ok, _ = db:add(mydb.people, {name = "Bob"})
+    assert.is_nil(ok)
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+  end)
+
+  it("leaves a compound constraint that only differs in case alone", function()
+    -- sqlite resolves the names in a UNIQUE(...) itself, and does it
+    -- case-insensitively, so this constraint is real and enforced: reading the
+    -- sheet's columns with an exact-match lookup would throw away a working rule
+    local mydb, warnings = createCollectingWarnings({people = {Name = "", City = "", _unique = {{"name", "city"}}}})
+    assert.are.equal("", warnings)
+    assert.is_true(db:add(mydb.people, {Name = "Bob", City = "Ankh-Morpork"}))
+    assert.is_nil(db:add(mydb.people, {Name = "Bob", City = "Ankh-Morpork"}))
+    assert.are.equal(1, #db:fetch(mydb.people))
+  end)
+
+  it("warns about a compound constraint naming _row_id but leaves it alone", function()
+    -- _row_id is a column of the table even though no sheet definition names it, so
+    -- sqlite takes this constraint - and it can then never refuse a row. Skipping it
+    -- would change the sheet's SQL and put every database that has one through
+    -- db:_migrate's table rebuild, so the warning is all this can do about it
+    local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = {{"name", "_row_id"}}}})
+    assert.is_truthy(string.find(warnings, '_unique names "_row_id" among the columns of an entry', 1, true))
+    assert.is_truthy(string.find(warnings, "can never refuse a row", 1, true))
+    assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("name", "_row_id")', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("warns about _row_id given on its own, which is never applied", function()
+    -- the single-column form is attached by matching the sheet's own columns, and
+    -- _row_id is not among them, so this asked for a rule that was never made
+    local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = "_row_id"}})
+    assert.is_truthy(string.find(warnings, '_unique names "_row_id", the key every sheet is given, which is unique already', 1, true))
+    -- the compound spelling is not the fix, and the message has to say so rather
+    -- than leave it looking like one
+    assert.is_truthy(string.find(warnings, "can never refuse a row either", 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("warns about an entry with no column names in it and still builds the table", function()
+    -- UNIQUE("") is refused by sqlite the same way an unknown column is, so an
+    -- empty entry costs the whole sheet - including the entries that were fine
+    local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = {{"name"}, {}}}})
+    assert.is_truthy(string.find(warnings, "_unique has an entry with no column names in it", 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_nil(db:add(mydb.people, {name = "Bob"}))
+    assert.are.equal(1, #db:fetch(mydb.people))
+  end)
+
+  it("keeps the entries that are fine when another one is skipped", function()
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "nosuchcol"}, "city"}}})
+    assert.is_truthy(string.find(warnings, '_unique names "nosuchcol"', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+    assert.is_nil(db:add(mydb.people, {name = "Ada", city = "Ankh-Morpork"}))
+    assert.are.equal(1, #db:fetch(mydb.people))
+  end)
+
+  it("gives a single column name the same SQL as the one-entry list", function()
+    -- the two are documented as meaning the same thing, and the shape they build
+    -- is what db:_migrate compares a sheet against: a single name that turned into
+    -- a table constraint would rebuild every existing sheet on the next db:create
+    db:create(dbName, {people = {name = "", _unique = "name"}})
+    local stringForm = tableSql("people")
+    db:close(dbName)
+    os.remove(dbFile)
+
+    db:create(dbName, {people = {name = "", _unique = {"name"}}})
+    assert.are.equal(stringForm, tableSql("people"))
+  end)
+
+  it("lets db:merge_unique read a single column name", function()
+    -- db:merge_unique measures _unique with #, so before db:create stored the list
+    -- form it counted the letters of the column name and refused the sheet
+    local mydb = db:create(dbName, {people = {name = "", city = "", _unique = "name"}})
+    db:add(mydb.people, {name = "Ada", city = "Boston"})
+    db:merge_unique(mydb.people, {{name = "Ada", city = "Rome"}, {name = "Bram", city = "Denver"}})
+
+    local byName = {}
+    for _, row in ipairs(db:fetch(mydb.people)) do
+      byName[row.name] = row.city
+    end
+    assert.are.same({Ada = "Rome", Bram = "Denver"}, byName)
+  end)
+
+  it("leaves the sheet's indexes to be pruned as usual when a constraint is skipped", function()
+    -- unlike a skipped _index, a skipped _unique must not stop db:create pruning:
+    -- what is left of _index is still the whole set the sheet asked for
+    createCollectingWarnings({people = {name = "", city = "", _unique = "nosuchcol", _index = {"name", "city"}}})
+    assert.are.equal(2, #indexNames("people"))
+    db:close(dbName)
+
+    createCollectingWarnings({people = {name = "", city = "", _unique = "nosuchcol", _index = "city"}})
+    assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("leaves the constraint a sheet already has alone when a later db:create misspells it", function()
+    -- what is left of _unique is not the set the sheet asked for, so rebuilding the
+    -- live table to match it would take a uniqueness rule off a typo - and the create
+    -- that spells the column right again cannot put it back over the duplicates the
+    -- meantime let in
+    local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}}}})
+    assert.is_true(db:add(mydb.people, {name = "Ada", city = "London"}))
+    assert.is_nil(db:add(mydb.people, {name = "Ada", city = "London"}))
+
+    local typoed, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "citty"}}}})
+    assert.is_truthy(string.find(warnings, '_unique names "citty"', 1, true))
+    assert.is_nil(db:add(typoed.people, {name = "Ada", city = "London"}))
+    assert.are.equal(1, #db:fetch(typoed.people))
+
+    local fixed = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}}}})
+    assert.is_nil(db:add(fixed.people, {name = "Ada", city = "London"}))
+    assert.are.equal(1, #db:fetch(fixed.people))
+  end)
+
+  it("takes a sheet that gave one of its columns a number for a name", function()
+    -- the keyed form takes every key that is not an option for a column name, so
+    -- this sheet really does have a column called 2, which _unique cannot name
+    local mydb, warnings = createCollectingWarnings({people = {name = "", [2] = "extra", _unique = "name"}})
+    assert.are.equal("", warnings)
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_nil(db:add(mydb.people, {name = "Bob"}))
   end)
 end)
 

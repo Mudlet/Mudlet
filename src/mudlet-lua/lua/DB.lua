@@ -449,6 +449,14 @@ local lua_reserved_words = {
 ---   sheet asks for is made as usual. The indexes the sheet already has are left
 ---   alone in that case, since what is left of _index is no longer the whole set
 ---   it asked for.
+---   A _unique entry naming a column the sheet does not have is skipped and warned
+---   about the same way, but that one costs more than an index would: a sheet made
+---   from scratch is built without the uniqueness it asked for, so db:add takes rows
+---   the constraint would have refused. A sheet that already carries the constraint
+---   keeps it, for the same reason its indexes are left alone.
+---   Naming _row_id in a _unique entry of several columns is warned about but kept,
+---   since a sheet's _row_id is unique on its own and the constraint is therefore
+---   one that can never refuse a row.
 function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
@@ -468,6 +476,7 @@ function db:create(db_name, sheets, force)
     local columns = {}
     local options = {}
     local has_skipped_index = false
+    local has_skipped_unique = false
 
     -- the sheet was provided in {"column1", "column2"} format
     if sheet[1] ~= nil then
@@ -572,6 +581,91 @@ function db:create(db_name, sheets, force)
         is_valid = false
         table.insert(msgs, "db:create - "..sheet_name.." - "..msg)
       end
+
+      -- the readers of _unique want the list: the loop below walks it with ipairs,
+      -- and db:merge_unique measures it with #, which on a string gives the length
+      -- of the column name rather than one constraint and raises. db.__schema is
+      -- only written here, so normalising once covers both
+      if type(options._unique) == "string" then
+        options._unique = { options._unique }
+      end
+
+      if type(options._unique) == "table" then
+        -- the two forms reach the database by different routes, so what counts as a
+        -- column the sheet has differs too: a compound entry is written into the
+        -- CREATE TABLE for sqlite to resolve, which matches names case-insensitively
+        -- and knows the _row_id every sheet is given, while a single column name is
+        -- attached by an exact-match lookup in db:_build_create_table_sql
+        local resolvable = { _row_id = true }
+        for column_name in pairs(columns) do
+          -- the keyed form takes every key that is not an option for a column
+          -- name, numbers included, and a number has no :lower()
+          if type(column_name) == "string" then
+            resolvable[column_name:lower()] = true
+          end
+        end
+
+        local wanted = {}
+
+        for _, unique_entry in ipairs(options._unique) do
+          local compound = type(unique_entry) == "table"
+          local unique_columns = compound and unique_entry or {unique_entry}
+          local unknown_column
+          local names_row_id
+
+          for _, column_name in ipairs(unique_columns) do
+            if type(column_name) == "string" then
+              local known
+              if compound then
+                known = resolvable[column_name:lower()] ~= nil
+                names_row_id = names_row_id or column_name:lower() == "_row_id"
+              else
+                known = columns[column_name] ~= nil
+              end
+
+              if not known and not unknown_column then
+                unknown_column = column_name
+              end
+            end
+          end
+
+          -- a UNIQUE naming a column sqlite cannot resolve is refused, and takes the
+          -- whole CREATE TABLE with it, leaving no sheet at all. Dropping the
+          -- constraint keeps the sheet, at the price of db:add then taking the
+          -- duplicates it was meant to refuse; the single-column form was never
+          -- attached in the first place, so there it only adds the message
+          if compound and #unique_entry == 0 then
+            has_skipped_unique = true
+            table.insert(warnings, "db:create - "..sheet_name.." - _unique has an entry with no "..
+              "column names in it: that constraint is skipped.")
+          elseif not unknown_column then
+            -- sqlite takes a compound entry naming _row_id, and the constraint can
+            -- then never refuse a row, since a sheet's key is unique on its own. It
+            -- is kept anyway: dropping it would change the sheet's SQL and put every
+            -- database that has one through db:_migrate's table rebuild
+            if names_row_id then
+              table.insert(warnings, "db:create - "..sheet_name.." - _unique names \"_row_id\" among "..
+                "the columns of an entry, and a sheet's _row_id is unique already, so that constraint "..
+                "can never refuse a row: drop it, or name the columns you meant.")
+            end
+
+            wanted[#wanted + 1] = unique_entry
+          elseif unknown_column == "_row_id" then
+            has_skipped_unique = true
+            table.insert(warnings, "db:create - "..sheet_name.." - _unique names \"_row_id\", the key "..
+              "every sheet is given, which is unique already: that constraint is skipped. Naming it "..
+              "in a compound entry makes one that can never refuse a row either.")
+          else
+            has_skipped_unique = true
+            table.insert(warnings, "db:create - "..sheet_name.." - _unique names \""..unknown_column..
+              "\", which is not one of the sheet's columns: that constraint is skipped.")
+          end
+        end
+
+        -- nil rather than an empty list, so db:merge_unique can still tell a sheet
+        -- with no unique index from one with several by which of its asserts fires
+        options._unique = #wanted > 0 and wanted or nil
+      end
     end
 
     -- A falsy _index means the sheet wants no indexes, the same as _unique and
@@ -641,7 +735,12 @@ function db:create(db_name, sheets, force)
       end
     end
 
-    schema[sheet_name] = { columns = columns, options = options, has_skipped_index = has_skipped_index }
+    schema[sheet_name] = {
+      columns = columns,
+      options = options,
+      has_skipped_index = has_skipped_index,
+      has_skipped_unique = has_skipped_unique,
+    }
   end
 
   assert(is_valid, table.concat(msgs, "\n"))
@@ -868,8 +967,12 @@ function db:_migrate(db_name, s_name, force)
       end
     end
 
-    -- If the table-level constraints have changed, we need to recreate the table
-    if table_constraints_changed then
+    -- If the table-level constraints have changed, we need to recreate the table.
+    -- Not when db:create dropped a _unique entry naming a column the sheet does not
+    -- have: rebuilding to match what is left of _unique would take a uniqueness rule
+    -- the live table has today off a typo, and the create that spells the column
+    -- right again cannot put it back over the duplicates the meantime let in.
+    if table_constraints_changed and not schema.has_skipped_unique then
       -- Commit any pending transaction before table recreation
       db:echo_sql("COMMIT")
       conn:commit()
@@ -2499,8 +2602,9 @@ function db.Database:_drop(s_name)
 
   local schema = db.__schema[self._db_name][s_name]
 
-  -- _index and _unique can each be a single column name (a string) or a list of
-  -- them, so normalise to a list before iterating to drop the matching indexes.
+  -- db:create normalises _index and _unique to a list before they reach
+  -- db.__schema, which is written nowhere else: the string form only arrives here
+  -- from a schema built by hand
   local index_groups = { schema.options._index, schema.options._unique }
   for _, group in pairs(index_groups) do
     if type(group) == "string" then

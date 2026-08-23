@@ -94,6 +94,145 @@ bool jsonBoolValue(const QJsonValue& val)
     return val.toBool() || (val.isDouble() && val.toDouble() != 0);
 }
 
+// One parameter of an OSC 8 URI query, kept exactly as it arrived. The styling parser decodes
+// only the values it consumes and decodeOSC() rebuilds the URL it opens out of the rest, so
+// neither can work from a query that has already been decoded.
+struct RawQueryParameter
+{
+    QString text;  // the whole parameter as it appeared, for rebuilding the query
+    QString key;   // raw key, empty when the parameter has no separator
+    QString value; // raw value, empty when the parameter has no separator
+    bool hasSeparator = false;
+};
+
+// One character of a possibly percent-encoded value, with how much of the raw query it took up.
+// A server may encode part of a config object and leave the rest raw, so the scan below has to
+// recognise a brace whether it arrived as '{' or as %7B.
+struct DecodedChar
+{
+    QChar ch;
+    int width = 1;
+};
+
+DecodedChar decodedCharAt(const QString& text, const int index)
+{
+    if (text.at(index) == '%' && index + 2 < text.size()) {
+        bool ok = false;
+        const int code = QStringView{text}.mid(index + 1, 2).toInt(&ok, 16);
+        if (ok) {
+            return {QChar(code), 3};
+        }
+    }
+    return {text.at(index), 1};
+}
+
+// Splits a query into parameters without decoding any of it, so that an escaped parameter name
+// is not mistaken for a reserved one (RFC 3986 2.4). A config value sent as unencoded JSON can
+// carry '&' inside its strings, so the end of one is found by counting braces rather than at
+// the next '&' - both callers have to agree on that or one of them sees a parameter the other
+// does not. Mirrors QString::split('&') otherwise, empty parameters included.
+QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
+{
+    QList<RawQueryParameter> parameters;
+
+    int pos = 0;
+    while (true) {
+        const int nextAmp = query.indexOf('&', pos);
+        const int ampEnd = (nextAmp == -1) ? query.size() : nextAmp;
+
+        // Accept '%3D' as the key/value separator as well as '=', taking whichever comes first
+        const int literalEq = query.indexOf('=', pos);
+        const int encodedEq = query.indexOf(qsl("%3D"), pos, Qt::CaseInsensitive);
+        int eqPos = -1;
+        int eqLength = 0;
+        if (literalEq >= 0 && literalEq < ampEnd && (encodedEq < 0 || literalEq < encodedEq)) {
+            eqPos = literalEq;
+            eqLength = 1;
+        } else if (encodedEq >= 0 && encodedEq < ampEnd) {
+            eqPos = encodedEq;
+            eqLength = 3;
+        }
+
+        RawQueryParameter parameter;
+        int paramEnd = ampEnd;
+
+        if (eqPos >= 0) {
+            const int valueStart = eqPos + eqLength;
+            int valueEnd = ampEnd;
+            parameter.hasSeparator = true;
+            parameter.key = query.mid(pos, eqPos - pos);
+
+            // JSON allows insignificant whitespace before the object, so the brace the scan
+            // needs may not be the first character of the value
+            int objectStart = valueStart;
+            while (objectStart < query.size()) {
+                const DecodedChar decoded = decodedCharAt(query, objectStart);
+                if (!decoded.ch.isSpace()) {
+                    break;
+                }
+                objectStart += decoded.width;
+            }
+
+            if (parameter.key == qsl("config") && objectStart < query.size() && decodedCharAt(query, objectStart).ch == '{') {
+                int depth = 0;
+                bool inString = false;
+                bool escaped = false;
+                // valueEnd keeps its initial ampEnd if the scan finds no closing brace: the JSON
+                // is malformed, so the parser gets what there is and fails on it. Stopping at the
+                // next '&' rather than running to the end keeps one unterminated object from
+                // swallowing every parameter behind it and dropping them from the rebuilt URL
+
+                for (int i = objectStart; i < query.size();) {
+                    const DecodedChar decoded = decodedCharAt(query, i);
+                    const QChar ch = decoded.ch;
+                    i += decoded.width;
+
+                    if (escaped) {
+                        escaped = false;
+                        continue;
+                    }
+                    if (ch == '\\') {
+                        escaped = true;
+                        continue;
+                    }
+                    if (ch == '"') {
+                        inString = !inString;
+                        continue;
+                    }
+                    if (!inString) {
+                        if (ch == '{') {
+                            ++depth;
+                        } else if (ch == '}') {
+                            --depth;
+                            if (depth == 0) {
+                                valueEnd = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // The parameter still runs to the next '&', so that anything a server appended
+                // after the object goes with it rather than being left on the rebuilt URL
+                const int afterObject = query.indexOf('&', valueEnd);
+                paramEnd = (afterObject == -1) ? query.size() : afterObject;
+            }
+
+            parameter.value = query.mid(valueStart, valueEnd - valueStart);
+        }
+
+        parameter.text = query.mid(pos, paramEnd - pos);
+        parameters.append(parameter);
+
+        if (paramEnd >= query.size()) {
+            break;
+        }
+        pos = paramEnd + 1;
+    }
+
+    return parameters;
+}
+
 } // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -3566,27 +3705,17 @@ void TBuffer::decodeOSC(const QString& sequence)
                     const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
                     const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
 
-                    // Compare keys against literal strings only; percent-encoded key names
-                    // (e.g. %63%6F%6E%66%69%67 for "config") are intentionally not stripped
-                    const QStringList rawPairs = baseUrl.mid(queryStart + 1).split('&');
+                    // Mudlet only removes what the style parser claims, which leaves two kinds of
+                    // parameter in place: one whose name is percent-encoded (%63%6F%6E%66%69%67
+                    // for "config"), since keys are compared as literal strings, and one with no
+                    // '=' at all, since the split gives that no key and the style parser passes
+                    // over it. Both are the server's own URL data.
                     QStringList kept;
-                    for (const auto& pair : rawPairs) {
-                        // Find the separator between key and value - use earliest of '=' or '%3D' (percent-encoded =)
-                        int literalEq = pair.indexOf('=');
-                        int encodedEq = pair.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
-                        int eqPos = -1;
-                        if (literalEq >= 0 && encodedEq >= 0) {
-                            eqPos = qMin(literalEq, encodedEq);
-                        } else if (literalEq >= 0) {
-                            eqPos = literalEq;
-                        } else {
-                            eqPos = encodedEq;
-                        }
-                        const auto key = eqPos >= 0 ? pair.left(eqPos) : pair;
-                        if ((stripConfig && key == qsl("config")) || (stripPreset && key == qsl("preset"))) {
+                    for (const auto& parameter : splitOscQueryParameters(baseUrl.mid(queryStart + 1))) {
+                        if (parameter.hasSeparator && ((stripConfig && parameter.key == qsl("config")) || (stripPreset && parameter.key == qsl("preset")))) {
                             continue;
                         }
-                        kept.append(pair);
+                        kept.append(parameter.text);
                     }
 
                     baseUrl = baseUrl.left(queryStart);
@@ -3806,94 +3935,30 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     qDebug() << "[OSC] Query string:" << queryString;
 #endif
 
-    // Extract config= and preset= from the query string, splitting it into parameters first
-    // and decoding only the values (RFC 3986 2.4). Decoding the whole query first would turn
-    // an escaped name - %63%6F%6E%66%69%67, the escape servers are told to use for a literal
-    // "config" in a web URL - back into "config" and consume it as styling. So a key counts
-    // as reserved only when it is raw and literal, which is the same key decodeOSC() compares
-    // when deciding what to strip out of the URL it opens: both leave an escaped name as URL
-    // data. The two still divide the query into parameters differently, as decodeOSC() splits
-    // on '&' alone and the brace matching below does not.
+    // Extract config= and preset= from the query string. The split leaves the query undecoded
+    // and only the values taken from it are decoded (RFC 3986 2.4): decoding the whole query
+    // first would turn an escaped name - %63%6F%6E%66%69%67, the escape servers are told to use
+    // for a literal "config" in a web URL - back into "config" and consume it as styling. So a
+    // key counts as reserved only when it is raw and literal, which is the same key decodeOSC()
+    // compares when deciding what to strip out of the URL it opens.
     QString configJson;
     QString presetName;
-    QString remaining = queryString;
 
-    while (!remaining.isEmpty()) {
-        const int ampPos = remaining.indexOf('&');
-        const int paramEnd = (ampPos == -1) ? remaining.size() : ampPos;
-        const QString laterParams = (ampPos == -1) ? QString() : remaining.mid(ampPos + 1);
-
-        // Accept '%3D' as the key/value separator as well, matching decodeOSC()
-        const int literalEq = remaining.indexOf('=');
-        const int encodedEq = remaining.indexOf(qsl("%3D"), 0, Qt::CaseInsensitive);
-        int eqPos = -1;
-        int eqLength = 0;
-        if (literalEq >= 0 && literalEq < paramEnd && (encodedEq < 0 || literalEq < encodedEq)) {
-            eqPos = literalEq;
-            eqLength = 1;
-        } else if (encodedEq >= 0 && encodedEq < paramEnd) {
-            eqPos = encodedEq;
-            eqLength = 3;
-        }
-
-        if (eqPos < 0) {
-            remaining = laterParams;
+    for (const auto& parameter : splitOscQueryParameters(queryString)) {
+        if (!parameter.hasSeparator) {
             continue;
         }
-
-        const QString key = remaining.left(eqPos);
-        const int valueStart = eqPos + eqLength;
-
-        if (key != qsl("config")) {
-            if (key == qsl("preset")) {
-                presetName = QUrl::fromPercentEncoding(remaining.mid(valueStart, paramEnd - valueStart).toUtf8());
+        if (parameter.key == qsl("config")) {
+            // Only an object counts, which is the same thing the split brace-scans for. Without
+            // this a second "config" carrying anything else - an empty value, or a word - would
+            // overwrite a valid one earlier in the query and take its styling with it
+            const QString value = QUrl::fromPercentEncoding(parameter.value.toUtf8());
+            if (value.trimmed().startsWith('{')) {
+                configJson = value;
             }
-            remaining = laterParams;
-            continue;
+        } else if (parameter.key == qsl("preset")) {
+            presetName = QUrl::fromPercentEncoding(parameter.value.toUtf8());
         }
-
-        // A config value sent as unencoded JSON can carry '&' inside its strings, so find
-        // where the object ends by brace depth rather than at the next '&'
-        int valueEnd = paramEnd;
-        if (valueStart < remaining.size() && remaining.at(valueStart) == '{') {
-            int depth = 0;
-            bool inString = false;
-            bool escaped = false;
-            // Stands if the scan finds no closing brace: the JSON is malformed, so take the
-            // rest as config and let the parser handle it
-            valueEnd = remaining.size();
-
-            for (int i = valueStart; i < remaining.size(); ++i) {
-                const QChar ch = remaining.at(i);
-                if (escaped) {
-                    escaped = false;
-                    continue;
-                }
-                if (ch == '\\') {
-                    escaped = true;
-                    continue;
-                }
-                if (ch == '"') {
-                    inString = !inString;
-                    continue;
-                }
-                if (!inString) {
-                    if (ch == '{') {
-                        ++depth;
-                    } else if (ch == '}') {
-                        --depth;
-                        if (depth == 0) {
-                            valueEnd = i + 1;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        configJson = QUrl::fromPercentEncoding(remaining.mid(valueStart, valueEnd - valueStart).toUtf8());
-        // Skip past the value and any trailing '&'
-        remaining = (valueEnd < remaining.size() && remaining.at(valueEnd) == '&') ? remaining.mid(valueEnd + 1) : remaining.mid(valueEnd);
     }
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5223,18 +5288,14 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    // The log destination lives on the main console view, which the model this
-    // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
-    // log to once the view has gone. Test this buffer's own back-pointer:
-    // TConsole unbinds it as it starts to tear down, whereas Host::mpConsole
-    // only nulls itself in ~QObject(), i.e. once the widget it still points at
-    // is long since half-destroyed:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
-        return;
-    }
-
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+    // The log file, its stream and the on/off flag are core model state, so
+    // this needs a Host but no view - which is what lets a profile with no main
+    // console widget write a log at all. The one thing that still notices a
+    // missing view is the HTML timestamp background in bufferToHtml().
+    // See TBuffer::clear() on why the model is reached through the
+    // null-tolerant accessor.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
     }
 
@@ -5251,8 +5312,8 @@ void TBuffer::log(int fromLine, int toLine)
     // if we've been called to log the same line - which can happen when the user
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        mpHost->mpConsole->mLogStream << lastTextToLog;
-        mpHost->mpConsole->mLogStream.flush();
+        pModel->mLogStream << lastTextToLog;
+        pModel->mLogStream.flush();
     }
 
     // record the last log call into a temporary buffer - we'll actually log
@@ -5288,31 +5349,31 @@ void TBuffer::logRemainingOutput()
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
 
-    // The log file is the view's; see TBuffer::log() on why this buffer's own
-    // back-pointer is the one to test:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // No mLogToLogFile test on purpose: both callers have already decided the
+    // pending line must be flushed - toggleLogging() once it has cleared the
+    // flag, clear() while it is still set. The file being open is tested
+    // instead, because a QTextStream written to after its device closed latches
+    // WriteFailed and then silently keeps every later write in its own buffer,
+    // to be replayed into the next log file the moment setDevice() rearms it.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogFile.isOpen()) {
         return;
     }
 
-    mpHost->mpConsole->mLogStream << pendingText;
-    mpHost->mpConsole->mLogStream.flush();
+    pModel->mLogStream << pendingText;
+    pModel->mLogStream.flush();
 }
 
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
-    // See TBuffer::log() on why this buffer's own back-pointer is the one to
-    // test for the view still being there:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // See TBuffer::log() on why the model is reached this way:
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
     }
 
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
-        return;
-    }
-
-    mpHost->mpConsole->mLogStream << text;
+    pModel->mLogStream << text;
 }
 
 // Rewraps everything from startLine to the end of the buffer, and answers where
@@ -5602,8 +5663,12 @@ void TBuffer::clear()
 {
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
-    // was still pending for logging is not lost from the log file
-    if (!mpConsole.isNull() && !mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+    // was still pending for logging is not lost from the log file.
+    // mainConsoleModelOrNull() rather than mainConsoleModel() because this runs
+    // from the TBuffer constructor, and the main console's buffer is built
+    // inside the very model Host has not taken hold of yet.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (pModel && this == &pModel->buffer && pModel->mLogToLogFile) {
         logRemainingOutput();
 
         // A line whose own trigger calls clearWindow() has been committed and
@@ -5613,10 +5678,10 @@ void TBuffer::clear()
         // are not lost. mCommitLineIndices holds them in display order.
         for (const int commitLineIndex : mCommitLineIndices) {
             if (commitLineIndex >= 0 && commitLineIndex < static_cast<int>(lineBuffer.size())) {
-                mpHost->mpConsole->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
+                pModel->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
             }
         }
-        mpHost->mpConsole->mLogStream.flush();
+        pModel->mLogStream.flush();
 
         lastTextToLog.clear();
         lastLoggedFromLine = -1;
@@ -5643,10 +5708,15 @@ void TBuffer::clear()
     promptBuffer.push_back(false);
 }
 
-void TBuffer::clearLinkState()
+void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
 {
+    if (mLinkStore.pristine() && mLinkStates.isEmpty() && mVisitedLinks.isEmpty() && mLinkSelectionState.isEmpty() && mLinkOriginalBackgrounds.isEmpty() && mLinkOriginalCharacters.isEmpty()
+        && mLinkOriginalText.isEmpty() && mPendingSelectionStyling.isEmpty() && !mCurrentHoveredLinkIndex && !mCurrentActiveLinkIndex && !mCurrentFocusedLinkIndex && !mLastClickedLinkIndex) {
+        return;
+    }
+
     Host* pH = mpHost;
-    const QSet<int> activeLinkIds = collectActiveLinkIds();
+    const QSet<int> activeLinkIds = collectActiveLinkIds() | stillLiveLinkIds;
 
     if (pH) {
         mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
@@ -5764,8 +5834,18 @@ void TBuffer::shrinkBuffer()
         }
     }
 
-    // Clean up unreferenced links after removing old lines
-    clearLinkState();
+    // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
+    // everything else - any whose line just went away are dropped
+    QSet<int> trackedLinkIds;
+    if (mpConsole) {
+        auto& hyperlinkManager = mpConsole->getHyperlinkVisibilityManager();
+        hyperlinkManager.adjustLineNumbers(0, mBatchDeleteSize);
+        trackedLinkIds = hyperlinkManager.trackedLinkIds();
+    }
+
+    // Clean up unreferenced links after removing old lines. A concealed link's
+    // characters carry no index, so it has to be named to survive the sweep
+    clearLinkState(trackedLinkIds);
 
     // Everything below needs the Host, whether or not there is a view: on app
     // quit the profile is destroyed while its widgets are still only queued for

@@ -1261,6 +1261,18 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       end)
     end)
 
+    -- getLabelText() answers with the text after the styling pass has rewritten
+    -- it, which is the only readable trace the injected colour leaves
+    it("colours an anchor whichever whitespace follows its tag name", function()
+      label:setLinkStyle("#00ffff", "#ff00ff")
+
+      label:echo([[<a href='https://example.com'>go</a>]])
+      assert.is_truthy(getLabelText("glfLink"):find("#00ffff", 1, true))
+
+      label:echo("<a\nhref='https://example.com'>go</a>")
+      assert.is_truthy(getLabelText("glfLink"):find("#00ffff", 1, true))
+    end)
+
     pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the three wrappers discard the nil and error message their global answers with, and Mudlet has no link style getter")
   end)
 

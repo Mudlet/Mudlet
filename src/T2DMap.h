@@ -413,6 +413,8 @@ private:
 
     void updateSelectionWidget();
     void resizeMultiSelectionWidget();
+    void hideSelectionWidget();
+    void pruneRoomSelectionToArea(int areaId);
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;

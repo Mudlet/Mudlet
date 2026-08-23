@@ -850,7 +850,6 @@ void TDetachedWindow::createToolBar()
     mpToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpToolBar);
     mpToolBar->setMovable(false);
-    mpToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 
     // Intercept the toggle action that Qt's default menu bar context menu uses,
     // so we can persist visibility and prevent lockout
@@ -887,7 +886,6 @@ void TDetachedWindow::createToolBar()
     mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonConnect->setAutoRaise(true);
-    mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonConnect);
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
@@ -961,7 +959,6 @@ void TDetachedWindow::createToolBar()
     mpButtonMute->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonMute->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonMute->setAutoRaise(true);
-    mpButtonMute->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonMute);
 
     mpActionMuteMedia = new QAction(tr("Mute all media"), this);
@@ -993,7 +990,6 @@ void TDetachedWindow::createToolBar()
     mpButtonDiscord->setObjectName(qsl("discord"));
     mpButtonDiscord->setContextMenuPolicy(Qt::DefaultContextMenu);
     mpButtonDiscord->setAutoRaise(true);
-    mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonDiscord);
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
@@ -1010,6 +1006,7 @@ void TDetachedWindow::createToolBar()
 
 
     mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     // Map and other tools
     mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
@@ -1039,7 +1036,6 @@ void TDetachedWindow::createToolBar()
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonPackageManagers->setAutoRaise(true);
-    mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mpToolBar->addWidget(mpButtonPackageManagers);
 
     mpActionPackageManager = new QAction(tr("Package Manager"), this);
@@ -1145,6 +1141,30 @@ void TDetachedWindow::connectToolBarActions()
     // Discord/IRC actions - use our custom slots to ensure correct profile context
     connect(mpActionDiscord, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
     connect(mpActionMudletDiscord, &QAction::triggered, this, &TDetachedWindow::slot_mudletDiscord);
+
+    // The signal only fires on a change, so a window detached afterwards has to
+    // read the size that is already in force for itself
+    connect(mudletInstance, &mudlet::signal_setToolBarIconSize, this, &TDetachedWindow::slot_setToolBarIconSize);
+    slot_setToolBarIconSize(mudletInstance->mToolbarIconSize);
+}
+
+void TDetachedWindow::slot_setToolBarIconSize(const int size)
+{
+    if (size <= 0 || !mpToolBar) {
+        return;
+    }
+
+    const Qt::ToolButtonStyle style = (size > 2) ? Qt::ToolButtonTextUnderIcon : Qt::ToolButtonIconOnly;
+    mpToolBar->setIconSize(QSize(size * 8, size * 8));
+    mpToolBar->setToolButtonStyle(style);
+
+    // A button put in with addWidget() does not follow the toolbar's own style
+    // the way one the toolbar built for an action does
+    for (QToolButton* pButton : {mpButtonConnect, mpButtonMute, mpButtonDiscord, mpButtonPackageManagers}) {
+        if (pButton) {
+            pButton->setToolButtonStyle(style);
+        }
+    }
 }
 
 QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequence& fallback) const
