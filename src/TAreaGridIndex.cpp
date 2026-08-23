@@ -21,6 +21,63 @@
 
 const QSet<int> TAreaGridIndex::csmEmptySet;
 
+// There are two ways to reach the cells of a Y range: probe the range's keys
+// one at a time, or walk the keys the column holds and drop the ones outside
+// it. A zoomed-in viewport covers a handful of the rows a level occupies and a
+// zoomed-out one covers more rows than exist, so neither wins outright - the
+// smaller key count is the one to get through.
+static void appendRoomsInYRange(const QHash<int, QSet<int>>& yMap, int minY, int maxY, QList<int>& result)
+{
+    const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;
+    if (wantedRows > 0 && wantedRows < yMap.size()) {
+        for (int y = minY; y <= maxY; ++y) {
+            const auto yIt = yMap.constFind(y);
+            if (yIt == yMap.constEnd()) {
+                continue;
+            }
+            for (const int roomId : *yIt) {
+                result.append(roomId);
+            }
+        }
+        return;
+    }
+    for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
+        if (yIt.key() < minY || yIt.key() > maxY) {
+            continue;
+        }
+        for (const int roomId : *yIt) {
+            result.append(roomId);
+        }
+    }
+}
+
+static void appendRoomsInYRangeWithCollisions(const QHash<int, QSet<int>>& yMap, int minY, int maxY, QList<QPair<int, bool>>& result)
+{
+    const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;
+    if (wantedRows > 0 && wantedRows < yMap.size()) {
+        for (int y = minY; y <= maxY; ++y) {
+            const auto yIt = yMap.constFind(y);
+            if (yIt == yMap.constEnd()) {
+                continue;
+            }
+            const bool collision = yIt->size() > 1;
+            for (const int roomId : *yIt) {
+                result.append({roomId, collision});
+            }
+        }
+        return;
+    }
+    for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
+        if (yIt.key() < minY || yIt.key() > maxY) {
+            continue;
+        }
+        const bool collision = yIt->size() > 1;
+        for (const int roomId : *yIt) {
+            result.append({roomId, collision});
+        }
+    }
+}
+
 void TAreaGridIndex::addRoom(int id, int z, int x, int y)
 {
     auto& cell = mIndex[z][x][y];
@@ -131,21 +188,22 @@ QList<int> TAreaGridIndex::roomsInViewport(int z, int minX, int maxX, int minY, 
         return result;
     }
     const auto& xyMap = *zIt;
-    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
-        const int x = xIt.key();
-        if (x < minX || x > maxX) {
-            continue;
-        }
-        const auto& yMap = *xIt;
-        for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
-            const int y = yIt.key();
-            if (y < minY || y > maxY) {
+    const qint64 wantedColumns = static_cast<qint64>(maxX) - minX + 1;
+    if (wantedColumns > 0 && wantedColumns < xyMap.size()) {
+        for (int x = minX; x <= maxX; ++x) {
+            const auto xIt = xyMap.constFind(x);
+            if (xIt == xyMap.constEnd()) {
                 continue;
             }
-            for (const int roomId : *yIt) {
-                result.append(roomId);
-            }
+            appendRoomsInYRange(*xIt, minY, maxY, result);
         }
+        return result;
+    }
+    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
+        if (xIt.key() < minX || xIt.key() > maxX) {
+            continue;
+        }
+        appendRoomsInYRange(*xIt, minY, maxY, result);
     }
     return result;
 }
@@ -158,22 +216,22 @@ QList<QPair<int, bool>> TAreaGridIndex::roomsInViewportWithCollisions(int z, int
         return result;
     }
     const auto& xyMap = *zIt;
-    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
-        const int x = xIt.key();
-        if (x < minX || x > maxX) {
-            continue;
-        }
-        const auto& yMap = *xIt;
-        for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
-            const int y = yIt.key();
-            if (y < minY || y > maxY) {
+    const qint64 wantedColumns = static_cast<qint64>(maxX) - minX + 1;
+    if (wantedColumns > 0 && wantedColumns < xyMap.size()) {
+        for (int x = minX; x <= maxX; ++x) {
+            const auto xIt = xyMap.constFind(x);
+            if (xIt == xyMap.constEnd()) {
                 continue;
             }
-            const bool collision = yIt->size() > 1;
-            for (const int roomId : *yIt) {
-                result.append({roomId, collision});
-            }
+            appendRoomsInYRangeWithCollisions(*xIt, minY, maxY, result);
         }
+        return result;
+    }
+    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
+        if (xIt.key() < minX || xIt.key() > maxX) {
+            continue;
+        }
+        appendRoomsInYRangeWithCollisions(*xIt, minY, maxY, result);
     }
     return result;
 }
