@@ -5288,18 +5288,14 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 // This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    // The log destination lives on the main console view, which the model this
-    // buffer belongs to can outlive (Host co-owns it), so there is nowhere to
-    // log to once the view has gone. Test this buffer's own back-pointer:
-    // TConsole unbinds it as it starts to tear down, whereas Host::mpConsole
-    // only nulls itself in ~QObject(), i.e. once the widget it still points at
-    // is long since half-destroyed:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
-        return;
-    }
-
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+    // The log file, its stream and the on/off flag are core model state, so
+    // this needs a Host but no view - which is what lets a profile with no main
+    // console widget write a log at all. The one thing that still notices a
+    // missing view is the HTML timestamp background in bufferToHtml().
+    // See TBuffer::clear() on why the model is reached through the
+    // null-tolerant accessor.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
     }
 
@@ -5316,8 +5312,8 @@ void TBuffer::log(int fromLine, int toLine)
     // if we've been called to log the same line - which can happen when the user
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        mpHost->mpConsole->mLogStream << lastTextToLog;
-        mpHost->mpConsole->mLogStream.flush();
+        pModel->mLogStream << lastTextToLog;
+        pModel->mLogStream.flush();
     }
 
     // record the last log call into a temporary buffer - we'll actually log
@@ -5353,31 +5349,31 @@ void TBuffer::logRemainingOutput()
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
 
-    // The log file is the view's; see TBuffer::log() on why this buffer's own
-    // back-pointer is the one to test:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // No mLogToLogFile test on purpose: both callers have already decided the
+    // pending line must be flushed - toggleLogging() once it has cleared the
+    // flag, clear() while it is still set. The file being open is tested
+    // instead, because a QTextStream written to after its device closed latches
+    // WriteFailed and then silently keeps every later write in its own buffer,
+    // to be replayed into the next log file the moment setDevice() rearms it.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogFile.isOpen()) {
         return;
     }
 
-    mpHost->mpConsole->mLogStream << pendingText;
-    mpHost->mpConsole->mLogStream.flush();
+    pModel->mLogStream << pendingText;
+    pModel->mLogStream.flush();
 }
 
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
-    // See TBuffer::log() on why this buffer's own back-pointer is the one to
-    // test for the view still being there:
-    if (mpConsole.isNull() || mpHost.isNull() || mpHost->mpConsole.isNull()) {
+    // See TBuffer::log() on why the model is reached this way:
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
     }
 
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
-        return;
-    }
-
-    mpHost->mpConsole->mLogStream << text;
+    pModel->mLogStream << text;
 }
 
 // Rewraps everything from startLine to the end of the buffer, and answers where
@@ -5667,8 +5663,12 @@ void TBuffer::clear()
 {
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
-    // was still pending for logging is not lost from the log file
-    if (!mpConsole.isNull() && !mpHost.isNull() && mpHost->mpConsole && this == &mpHost->mpConsole->buffer && mpHost->mpConsole->mLogToLogFile) {
+    // was still pending for logging is not lost from the log file.
+    // mainConsoleModelOrNull() rather than mainConsoleModel() because this runs
+    // from the TBuffer constructor, and the main console's buffer is built
+    // inside the very model Host has not taken hold of yet.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (pModel && this == &pModel->buffer && pModel->mLogToLogFile) {
         logRemainingOutput();
 
         // A line whose own trigger calls clearWindow() has been committed and
@@ -5678,10 +5678,10 @@ void TBuffer::clear()
         // are not lost. mCommitLineIndices holds them in display order.
         for (const int commitLineIndex : mCommitLineIndices) {
             if (commitLineIndex >= 0 && commitLineIndex < static_cast<int>(lineBuffer.size())) {
-                mpHost->mpConsole->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
+                pModel->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
             }
         }
-        mpHost->mpConsole->mLogStream.flush();
+        pModel->mLogStream.flush();
 
         lastTextToLog.clear();
         lastLoggedFromLine = -1;
@@ -5708,7 +5708,7 @@ void TBuffer::clear()
     promptBuffer.push_back(false);
 }
 
-void TBuffer::clearLinkState()
+void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
 {
     if (mLinkStore.pristine() && mLinkStates.isEmpty() && mVisitedLinks.isEmpty() && mLinkSelectionState.isEmpty() && mLinkOriginalBackgrounds.isEmpty() && mLinkOriginalCharacters.isEmpty()
         && mLinkOriginalText.isEmpty() && mPendingSelectionStyling.isEmpty() && !mCurrentHoveredLinkIndex && !mCurrentActiveLinkIndex && !mCurrentFocusedLinkIndex && !mLastClickedLinkIndex) {
@@ -5716,7 +5716,7 @@ void TBuffer::clearLinkState()
     }
 
     Host* pH = mpHost;
-    const QSet<int> activeLinkIds = collectActiveLinkIds();
+    const QSet<int> activeLinkIds = collectActiveLinkIds() | stillLiveLinkIds;
 
     if (pH) {
         mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
@@ -5834,8 +5834,18 @@ void TBuffer::shrinkBuffer()
         }
     }
 
-    // Clean up unreferenced links after removing old lines
-    clearLinkState();
+    // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
+    // everything else - any whose line just went away are dropped
+    QSet<int> trackedLinkIds;
+    if (mpConsole) {
+        auto& hyperlinkManager = mpConsole->getHyperlinkVisibilityManager();
+        hyperlinkManager.adjustLineNumbers(0, mBatchDeleteSize);
+        trackedLinkIds = hyperlinkManager.trackedLinkIds();
+    }
+
+    // Clean up unreferenced links after removing old lines. A concealed link's
+    // characters carry no index, so it has to be named to survive the sweep
+    clearLinkState(trackedLinkIds);
 
     // Everything below needs the Host, whether or not there is a view: on app
     // quit the profile is destroyed while its widgets are still only queued for
