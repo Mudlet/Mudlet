@@ -4152,7 +4152,8 @@ Le faltan TANTOS datos que te valdría más la pena empezar de nuevo...</transla
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Error al cargar el archivo de mapa de Mudlet JSON, razón: %1; el archivo es:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1653"/>
@@ -4163,7 +4164,7 @@ Le faltan TANTOS datos que te valdría más la pena empezar de nuevo...</transla
       <location filename="../src/TMap.cpp" line="1831"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - No se encontró el área predeterminada (reiniciada, para las habitaciones que no han sido asignadas a un área). Se añade el ID reservado -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1922"/>
@@ -4194,7 +4195,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2460"/>
       <source>Room issues</source>
-      <translation>Problemas de habitación</translation>
+      <translation>Problemas de sala</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2467"/>
@@ -4204,7 +4205,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2469"/>
       <source>Room id: %1</source>
-      <translation>Id de habitación: %1</translation>
+      <translation>Id de la sala: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2479"/>
@@ -4219,7 +4220,11 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ALERTA] - Se detectó al menos un problema durante la última operación de mapeo.
+Se recomienda revisar el informe más reciente en el archivo:
+&quot;%1&quot;
+- busque el (último) informe con el título:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2493"/>
@@ -4229,14 +4234,18 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La información equivalente a la anterior sobre la última operación de mapeo se ha guardado para su revisión como el informe más reciente en
+el archivo:
+&quot;%1&quot;
+- busque el (último) informe con el título:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2515"/>
       <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - Se intentó descargar un mapa XML cuando ya se había solicitado o se estaba importando desde un archivo local. Espere a que finalice la operación (si no se puede cancelar) antes de volver a intentarlo.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2524"/>
@@ -4244,14 +4253,17 @@ operation to complete (if it cannot be canceled) before retrying!</source>
 export is already in progress - wait for that operation to complete
 before retrying!</source>
       <extracomment>Shown in the main console when a map download is refused</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - Se intentó descargar un mapa XML mientras ya se estaba realizando una importación o exportación de mapas.
+Espere a que finalice esa operación antes de volver a intentarlo.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2545"/>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ADVERTENCIA] - Se intentó descargar un archivo XML desde una URL no válida. La URL era:
+%1
+y el mensaje de error (puede contener detalles técnicos) fue:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2559"/>
@@ -4282,20 +4294,21 @@ already in progress.</source>
 export is already in progress - wait for that operation to complete
 before retrying!</source>
       <extracomment>Shown in the main console when a map import is refused</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ADVERTENCIA] - Se intentó importar un mapa XML mientras ya se estaba importando o exportando un mapa.
+¡Espere a que finalice esa operación antes de volver a intentarlo!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2738"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Se produjo un error al descargar el mapa: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2788"/>
       <source>[ ALERT ] - Map download failed, unable to save destination file:
 %1
 reason: %2</source>
-      <translation>[ ALERTA ] - La descarga del mapa ha fallado, no se puede guardar el archivo de destino:
+      <translation>[ALERTA] - Falló la descarga del mapa, no se pudo guardar el archivo de destino:
 %1
 razón: %2</translation>
     </message>
@@ -4317,19 +4330,18 @@ razón: %2</translation>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <translation>Exportando los datos del mapa JSON de %1
-Áreas: %2 de: %3  Salas %4 de: %5  Etiquetas: %6 de: %7...</translation>
+Áreas: %2 de: %3   Salas %4 de: %5   Etiquetas: %6 de: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3229"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation>Exportando el archivo del mapa JSON de %1 - escribiendo datos al archivo:
-%2...</translation>
+      <translation>Exportando el archivo del mapa JSON de %1, escribiendo datos al archivo: %2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3256"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>Importación o exportación ya en progreso</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3262"/>
@@ -4349,7 +4361,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3291"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>se ha detectado un formato de versión no válido &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3296"/>
@@ -4395,7 +4407,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
       <translation>[ ERROR ] - El formato de la versión &quot;%1&quot; que está intentando guardar el mapa es demasiado nueva
-para esta versión de Mudlet. Soportado solo formatos hasta la versión %2.</translation>
+para esta versión de Mudlet. Soporta solo formatos hasta la versión %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1141"/>
@@ -4438,7 +4450,7 @@ Mudlet que puede manejar (%2)! El archivo es:
     <message>
       <location filename="../src/TMap.cpp" line="1565"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation>[ INFO ] - Necesitará actualizar su Mudlet para leer el archivo de mapa.</translation>
+      <translation>[ INFO ] - Necesitarás actualizar tu Mudlet para leer el archivo de mapa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1574"/>
@@ -4454,8 +4466,7 @@ El archivo es: &quot;%2&quot;.</translation>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ INFO ] - Leyendo mapa. Versión de formato: %1. Archivo:
-&quot;%2&quot;,
+      <translation>[ INFO ] - Leyendo mapa. Versión de formato: %1. Archivo: &quot;%2&quot;,
 espere...</translation>
     </message>
     <message>
@@ -4496,7 +4507,7 @@ espere...</translation>
       <location filename="../src/TMap.cpp" line="2611"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation>loadMap: no se puede cargar el mapa, ya hay unos descargandose o siendo
+      <translation>loadMap: no se puede cargar el mapa, ya hay unos descargándose o siendo
 importado a petición del usuario.</translation>
     </message>
     <message>
@@ -4515,13 +4526,13 @@ importado a petición del usuario.</translation>
       <location filename="../src/TMap.cpp" line="2687"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation>loadMap: ¡Falla al importar el archivo de mapa XML, puede que haya más información disponible
+      <translation>loadMap: ¡Falló al importar el archivo del mapa XML, puede que haya más información disponible
 en la consola principal!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2722"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation>[ ALERTA ] - La descarga de mapa ha sido cancelada, a petición del usuario.</translation>
+      <translation>[ ALERTA ] - La descarga del mapa ha sido cancelada, a petición del usuario.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2775"/>
@@ -4546,14 +4557,14 @@ en la consola principal!</translation>
       <location filename="../src/TMap.cpp" line="2837"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation>[ ERROR ] -Problema de descarga de mapa, fallo en el análisis del archivo de destino:
+      <translation>[ ERROR ] - Problema al descargar el mapa, error al analizar el archivo de destino:
 %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2817"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation>[ ERROR ] - Problema de descarga del mapa, no se puede leer el archivo de destino:
+      <translation>[ ERROR ] - Problema al descargar el mapa, no se puede leer el archivo de destino:
 %1.</translation>
     </message>
   </context>
@@ -4609,7 +4620,7 @@ Se eliminó al jugador activo más antiguo.</translation>
     <message>
       <location filename="../src/TMedia.cpp" line="1514"/>
       <source>Maximum allowed active media players reached for media type. Cannot play additional media.</source>
-      <translation>Máximo permitido de reproductores de medios activos alcanzado para el tipo de medio. No se puede reproducir medios adicionales.</translation>
+      <translation>Se ha alcanzado el número máximo de reproductores multimedia activos permitidos para este tipo de contenido. No se pueden reproducir más archivos multimedia.</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="688"/>
@@ -4764,19 +4775,20 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="1264"/>
       <source>[ INFO ]  - In room with ID: %1 correcting special exit &quot;%2&quot; that was to room with an exit to invalid room: %3 to now go to: %4.</source>
       <extracomment>%1 is the room ID, %2 is the exit name, %3 is the old destination room ID, %4 is the new destination room ID</extracomment>
-      <translation>[ INFO ] - En la habitación con ID: %1 corrigiendo la salida especial "%2" que era a la habitación con una salida a la habitación inválida: %3 para ir ahora a: %4.</translation>
+      <translation>[ INFO ]  - En la sala con ID: %1 corrigiendo la salida especial &quot;%2&quot; que se dirigía a una sala con salida a la sala inválida a %3, para que ahora vaya a: %4.
+</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1295"/>
       <source>[ WARN ]  - Room with ID: %1 has a special exit &quot;%2&quot; with an exit to: %3 but that room does not exist.  The exit will be removed (but the destination room ID will be stored in the room user data under a key: &quot;%4&quot;).</source>
       <extracomment>%1 is the room ID, %2 is the exit name, %3 is the destination room ID, %4 is the audit key</extracomment>
-      <translation>[ ADVERTENCIA ] - La habitación con ID: %1 tiene una salida especial "%2" con destino a: %3, pero esa habitación no existe. La salida se eliminará (pero el ID de la habitación de destino se almacenará en los datos del usuario de la habitación bajo la clave "%4").</translation>
+      <translation>[ ADVERTENCIA ] - La sala con ID: %1 tiene una salida especial &quot;%2&quot; con destino a: %3, pero esa sala no existe. La salida se eliminará (pero el ID de la sala de destino se almacenará en los datos del usuario de la sala bajo la clave &quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1339"/>
       <source>[ INFO ]  - In room with ID: %1 special exit &quot;%2&quot; that was to room with an invalid ID: %3 that does not exist.  The exit will be removed (the bad destination room ID will be stored in the room user data under a key: &quot;%4&quot;).</source>
       <extracomment>%1 is the room ID, %2 is the exit name, %3 is the invalid destination room ID, %4 is the audit key</extracomment>
-      <translation>[ ADVERTENCIA ] - La sala con ID: %1 tiene una salida especial "%2" con destino a: %3, pero esa habitación no existe. La salida se eliminará (pero el ID de la habitación de destino se almacenará en los datos del usuario de la habitación bajo la clave "%4").</translation>
+      <translation>[ ADVERTENCIA ] - La sala con ID: %1 tiene una salida especial &quot;%2&quot; con destino a: %3, pero esa sala no existe. La salida se eliminará (pero el ID de la sala de destino se almacenará en los datos del usuario de la habitación bajo la clave &quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1392"/>
@@ -4788,7 +4800,7 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="1409"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus weight items that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of weight items</extracomment>
-      <translation>[ INFO ]  - En la sala con ID %1 se han encontrado uno o más pesos sobrantes que han sido eliminados: %2.</translation>
+      <translation>[ INFO ] - En la habitación con ID: %1 se encontraron uno o más elementos de peso excedente que fueron retirados: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1426"/>
@@ -4818,7 +4830,7 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="1606"/>
       <source>[ ALERT ] - Room with ID: %1 has an exit &quot;%2&quot; to: %3 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
       <extracomment>%1 is the room ID, %2 is the exit direction, %3 is the destination room ID</extracomment>
-      <translation>[ ALERTA ] - La sala con ID %1 tiene una salida &quot;%2&quot; hacia %3, ¡pero también tiene una salida pendiente en la misma dirección! Dado que una salida real excluye una salida pendiente, esta última será eliminada.</translation>
+      <translation>[ ALERTA ] - La sala con ID %1 tiene una salida &quot;%2&quot; hacia %3, ¡Pero también tiene una salida pendiente en la misma dirección! Dado que una salida real excluye una salida pendiente, esta última será eliminada.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1664"/>
