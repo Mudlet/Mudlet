@@ -2412,7 +2412,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
                                      const TArea* pDrawnArea,
                                      const int zLevel,
                                      const int playerRoomId,
-                                     const QRect& roomBounds,
+                                     const QList<int>& viewportRooms,
                                      const float widgetWidth,
                                      const float widgetHeight,
                                      bool& isPlayerRoomVisible,
@@ -2439,12 +2439,9 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     QList<QPair<TRoom*, QPointF>> highlightedRooms;
     QList<QRect> selectedRoomRects;
 
-    const QList<int> candidateRooms = pDrawnArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
-    const qreal timeIndex = timer.nsecsElapsed() / 1000000.0;
-    timer.start();
     int roomCount = 0;
 
-    for (const int roomId : candidateRooms) {
+    for (const int roomId : viewportRooms) {
         TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
@@ -2540,9 +2537,8 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
         // Handed back to paintEvent to print rather than printed here, so that
         // the qDebug() call does not land inside the phase this is timing.
         QDebug dbg(profileOutput);
-        dbg.noquote().nospace() << "drawNonGridModeRoomsLod timing (ms):" << " total:" << (timeIndex + timeCollect + timeBlit) << " index:" << timeIndex << " collect+pixelWrite:" << timeCollect
-                                << " imageBlit:" << timeBlit << " candidates:" << candidateRooms.size() << " drawnRooms:" << roomCount << " roomSizePx:" << mRoomWidth << " blobPx:" << blobPixelWidth
-                                << "x" << blobPixelHeight;
+        dbg.noquote().nospace() << "drawNonGridModeRoomsLod timing (ms):" << " total:" << (timeCollect + timeBlit) << " collect+pixelWrite:" << timeCollect << " imageBlit:" << timeBlit
+                                << " candidates:" << viewportRooms.size() << " drawnRooms:" << roomCount << " roomSizePx:" << mRoomWidth << " blobPx:" << blobPixelWidth << "x" << blobPixelHeight;
     }
 
     // drawRoom() resolves a double-click into a speed-walk and is not called
@@ -2979,8 +2975,19 @@ void T2DMap::paintEvent(QPaintEvent* e)
     phaseTimer.restart();
 
     // draw room exits
+    qreal timeViewportQuery = 0.0;
+    QList<int> viewportRooms;
     if (!pDrawnArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
+        // The exit pass here and the room pass below want the same rooms, and
+        // once the rooms themselves are cheap to draw this query is the most
+        // expensive thing either pass does, so it is made once and shared.
+        // Grid mode is left out: it paints no exits, and its room loop needs
+        // the collision flag that only the other query returns.
+        QElapsedTimer viewportQueryTimer;
+        viewportQueryTimer.start();
+        viewportRooms = pDrawnArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+        timeViewportQuery = viewportQueryTimer.nsecsElapsed() / 1000000.0;
+        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, roomBounds, viewportRooms, exitWidth, areaExitsMap);
     }
 
     phase5Time = phaseTimer.nsecsElapsed() / 1000000.0;
@@ -2990,7 +2997,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     // The room collection time is printed by the final profiling block below
     // rather than here, to avoid inflating phase6Time with qDebug() overhead on
     // Windows.
-    qreal timeGetRoomsForZ = 0.0;
     QString roomLoopProfileOutput;
     QElapsedTimer phase6Sub;
     phase6Sub.start();
@@ -3015,17 +3021,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
     } else if (mRoomWidth < cLodPixelThreshold) {
         // Non-grid mode, drawn too small for a room to have any detail worth
         // building a QPainter shape for.
-        drawNonGridModeRoomsLod(painter, pDrawnArea, zLevel, playerRoomId, roomBounds, widgetWidth, widgetHeight, isPlayerRoomVisible, playerRoomOnWidgetCoordinates, &roomLoopProfileOutput);
+        drawNonGridModeRoomsLod(painter, pDrawnArea, zLevel, playerRoomId, viewportRooms, widgetWidth, widgetHeight, isPlayerRoomVisible, playerRoomOnWidgetCoordinates, &roomLoopProfileOutput);
     } else {
         // Non-grid mode: use full-featured per-room rendering
-        QElapsedTimer getRoomsTimer;
-        getRoomsTimer.start();
-        // Only the rooms that can land on screen. Every room of the level is
-        // otherwise looked at on every frame, and past the zoom where the whole
-        // level fits, all but a handful of them fail the test below.
-        const QList<int> currentLevelRooms = pDrawnArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
-        timeGetRoomsForZ = getRoomsTimer.nsecsElapsed() / 1000000.0;
-        for (const int currentAreaRoom : currentLevelRooms) {
+        for (const int currentAreaRoom : viewportRooms) {
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
                 continue;
@@ -3225,7 +3224,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         // call reduces that to a fixed per-frame cost of one call.
         QString profileOut;
         QDebug pdbg(&profileOut);
-        pdbg.nospace().noquote() << "getRoomsForZ: " << timeGetRoomsForZ << "ms\n";
+        pdbg.nospace().noquote() << "viewportQuery: " << timeViewportQuery << "ms (phase5, shared with phase6)\n";
         if (!roomLoopProfileOutput.isEmpty()) {
             pdbg << roomLoopProfileOutput << "\n";
         }
@@ -3367,7 +3366,16 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
+void T2DMap::paintRoomExits(QPainter& painter,
+                            QPen& pen,
+                            QList<int>& exitList,
+                            QList<int>& oneWayExits,
+                            const TArea* pArea,
+                            int zLevel,
+                            const QRect& roomBounds,
+                            const QList<int>& viewportRooms,
+                            float exitWidth,
+                            QMap<int, QPointF>& areaExitsMap)
 {
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
@@ -3415,9 +3423,9 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
     }
     // The rooms with something to draw here are those in the viewport, plus
     // every room on the level that has custom exit lines: one of those lines
-    // can cross the whole level, so its room owes pixels from anywhere.
-    const QRect roomBounds = viewportRoomBounds(mRX, mRY, mRoomWidth, mRoomHeight, widgetWidth, widgetHeight);
-    QList<int> roomsToPaint = pArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+    // can cross the whole level, so its room owes pixels from anywhere. The
+    // copy is free unless the loop below actually appends to it.
+    QList<int> roomsToPaint = viewportRooms;
     for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
         TRoom* pRoomWithCustomLines = mpMap->mpRoomDB->getRoom(customLineRoomId);
         // Rooms inside the bounds are in the list already, and painting a
@@ -3428,7 +3436,7 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         roomsToPaint.append(customLineRoomId);
     }
 
-    for (const int _id : roomsToPaint) {
+    for (const int _id : std::as_const(roomsToPaint)) {
         TRoom* room = mpMap->mpRoomDB->getRoom(_id);
         if (!room) {
             continue;

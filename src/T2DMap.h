@@ -455,14 +455,15 @@ private:
                                  const TArea* pDrawnArea,
                                  const int zLevel,
                                  const int playerRoomId,
-                                 const QRect& roomBounds,
+                                 const QList<int>& viewportRooms,
                                  const float widgetWidth,
                                  const float widgetHeight,
                                  bool& isPlayerRoomVisible,
                                  QPointF& playerRoomOnWidgetCoordinates,
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
-    void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
+    void paintRoomExits(
+            QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
