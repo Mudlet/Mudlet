@@ -462,6 +462,7 @@ private:
                                  QPointF& playerRoomOnWidgetCoordinates,
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
+    QSize lodRoomBlobSize() const;
     void paintRoomExits(
             QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);

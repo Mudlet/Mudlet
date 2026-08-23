@@ -1833,13 +1833,17 @@ QColor T2DMap::environmentColor(int env) const
 // environment colour and nothing else.
 static constexpr float cLodPixelThreshold = 4.0f;
 
-// The drawn length, in pixels, below which an exit line is left out in that
-// same tier. The test is on the length of the line itself and not on the zoom,
-// which matters: an exit to the room next door is this short and says nothing
-// the two rooms drawn on top of it do not already say, while an exit to a
-// distant room stays long however far the map is zoomed out and is the only
-// thing on the map that shows it exists.
-static constexpr float cLodExitPixelThreshold = 2.0f;
+// The whole pixels a room is drawn as in that tier. It also decides which
+// exits can be left out there, since the rooms are painted over the exits: an
+// exit whose two ends are within one blob of each other on both axes runs
+// under the two blobs it joins. Not quite - a door tick is drawn on the exit
+// and so goes with it - so this tier simplifies those, it does not leave them
+// pixel for pixel.
+// Never smaller than one pixel, or the rooms would not be drawn at all.
+QSize T2DMap::lodRoomBlobSize() const
+{
+    return QSize(qMax(1, qRound(mRoomWidth * rSize)), qMax(1, qRound(mRoomHeight * rSize)));
+}
 
 // The inclusive range of room coordinates that can put a room on screen, given
 // where the map is panned and how big a room is drawn. The forward transform is
@@ -2428,12 +2432,12 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     lodImage.fill(0); // transparent: the background and the exit lines are already under us
 
     // Non-grid rooms are drawn at a fraction of their cell, so the blob is
-    // sized from that fraction and not from the cell, but it never shrinks
-    // below the one pixel it has to occupy to be seen at all.
+    // sized from that fraction and not from the cell.
     const float blobWidth = mRoomWidth * static_cast<float>(rSize);
     const float blobHeight = mRoomHeight * static_cast<float>(rSize);
-    const int blobPixelWidth = qMax(1, qRound(static_cast<double>(blobWidth)));
-    const int blobPixelHeight = qMax(1, qRound(static_cast<double>(blobHeight)));
+    const QSize blobSize = lodRoomBlobSize();
+    const int blobPixelWidth = blobSize.width();
+    const int blobPixelHeight = blobSize.height();
 
     QHash<int, QRgb> envColorCache;
     QList<QPair<TRoom*, QPointF>> highlightedRooms;
@@ -3380,11 +3384,12 @@ void T2DMap::paintRoomExits(QPainter& painter,
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
     const float widgetHeight = height();
-    // At this zoom the rooms are drawn as single blobs on top of these lines,
-    // so a line that does not reach past the blobs at its two ends is worth
-    // nothing to look at. Which lines those are is decided one line at a time,
-    // further down, from the length that line is actually drawn at.
+    // At this zoom the rooms are drawn as blobs on top of these lines, so a
+    // line that stays under the blobs at its two ends has next to nothing to
+    // contribute. Which lines those are is decided one line at a time, further
+    // down, from where that line is actually drawn.
     const bool lodTier = mRoomWidth < cLodPixelThreshold;
+    const QSize lodBlobSize = lodTier ? lodRoomBlobSize() : QSize();
 
     int customLineDestinationTarget = 0;
     if (mCustomLinesRoomTo > 0) {
@@ -3783,9 +3788,6 @@ void T2DMap::paintRoomExits(QPainter& painter,
                 // do not support special exit stubs (yet?)
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
                 const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
-                if (lodTier && stubLine.length() < cLodExitPixelThreshold) {
-                    continue;
-                }
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 // Draw the door lines before we draw the stub or the filled
                 // circle on the end - so that the latter overlays the doors
@@ -3827,19 +3829,18 @@ void T2DMap::paintRoomExits(QPainter& painter,
             const float ey = pE->y() * mRoomHeight * -1 + mRY;
             const int ez = pE->z();
 
-            // Level of detail. Only this one line is judged, and only on how
-            // long it is drawn: an exit to the room next door is shorter than
-            // the two blobs it joins and they are painted over the top of it,
-            // while an exit to a distant room stays long however far the map
-            // is zoomed out and is the only thing that shows it exists. Area
-            // exits are never dropped either - their marker is a fixed size
-            // and it is the click target for a speed walk into that area.
-            if (lodTier && !areaExit) {
-                const float exitPixelDx = ex - rx;
-                const float exitPixelDy = ey - ry;
-                if ((exitPixelDx * exitPixelDx) + (exitPixelDy * exitPixelDy) < (cLodExitPixelThreshold * cLodExitPixelThreshold)) {
-                    continue;
-                }
+            // Level of detail. Only this one line is judged, and only on
+            // where it is actually drawn: an exit to the room next door ends
+            // inside the blob it started from and those blobs are painted over
+            // the top of it, while an exit to a distant room stays long
+            // however far the map is zoomed out and is the only thing that
+            // shows it exists. The test is per axis rather than on the length,
+            // because a blob is a rectangle: a diagonal exit as long as the
+            // blob's diagonal is still inside it. Area exits are never dropped
+            // either - their marker is a fixed size and it is the click target
+            // for a speed walk into that area.
+            if (lodTier && !areaExit && qAbs(ex - rx) <= lodBlobSize.width() && qAbs(ey - ry) <= lodBlobSize.height()) {
+                continue;
             }
 
             const QVector3D p1(ex, ey, ez);
