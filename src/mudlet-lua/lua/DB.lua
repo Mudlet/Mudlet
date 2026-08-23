@@ -454,11 +454,11 @@ local lua_reserved_words = {
 ---   from scratch is built without the uniqueness it asked for, so db:add takes rows
 ---   the constraint would have refused. A sheet that already enforces that uniqueness
 ---   keeps it and is warned about again, since taking a rule off a typo is not
----   something a later, correct db:create can undo. The two therefore differ until
----   the entry is spelled right; everything else the sheet asks for, a constraint it
----   does not have yet and a _violations change among it, is applied either way.
----   The one case where an existing sheet does lose the rule is a db:create that
----   also drops a column, since removing a column is itself a rebuild.
+---   something a later, correct db:create can undo: its constraints are then left
+---   exactly as they are, a constraint it has newly asked for and a change to
+---   _violations among them, until the entry is spelled right. A db:create that
+---   loses the sheet nothing is applied as usual, and one that also drops a column
+---   does lose the rule, since removing a column is a rebuild in its own right.
 ---   Naming _row_id in a _unique entry written as a list is warned about but kept,
 ---   since a sheet's _row_id is unique on its own and the constraint is therefore
 ---   one that can never refuse a row.
@@ -867,24 +867,83 @@ end
 
 
 
--- Whether rebuilding a table to match the schema would leave it without a
--- uniqueness rule it carries today. Only what a constraint covers is compared:
--- db:create can drop a whole _unique entry but never half of one, so a difference
--- in ON CONFLICT alone is a _violations change, which costs no uniqueness. A
--- column-level UNIQUE reaches here without its column name, so those are counted
--- rather than named.
-local function drops_a_unique(expected_constraints, actual_constraints)
-  local function targets(constraints)
-    local counts = {}
-    for constraint in constraints:gmatch("[^|]+") do
-      local target = constraint:gsub("%s+on%s+conflict%s+%w+$", "")
-      counts[target] = (counts[target] or 0) + 1
-    end
+-- The columns each UNIQUE in a CREATE TABLE covers, sorted and counted. Sorted
+-- because sqlite enforces the same rule whichever order they are written in, and
+-- without the ON CONFLICT clause because that is a _violations change, which
+-- costs no uniqueness. db:_extract_table_constraints is no use for this: it drops
+-- the column name of a column-level UNIQUE, so a rule moving from one column to
+-- another looks to it like no change at all.
+local function unique_targets(sql)
+  local counts = {}
+  local content = normalize_sql(sql or ""):match("^create table [^(]+%((.+)%)$")
+  if not content then
     return counts
   end
 
-  local expected = targets(expected_constraints)
-  for target, count in pairs(targets(actual_constraints)) do
+  -- a column name and a default value are both quoted, and either can hold a
+  -- comma, a bracket or the word itself, so the scan runs over a copy with the
+  -- quoted parts blanked out. Same-length blanks keep the offsets lined up
+  local function blank(quoted)
+    return (" "):rep(#quoted)
+  end
+  local searchable = content:gsub('"[^"]*"', blank):gsub("'[^']*'", blank)
+
+  -- split on the commas between the body's own parts: a compound UNIQUE's column
+  -- list is bracketed, so tracking the depth keeps it in one piece
+  local parts = {}
+  local depth, part_start = 0, 1
+  for position = 1, #searchable do
+    local char = searchable:sub(position, position)
+    if char == "(" then
+      depth = depth + 1
+    elseif char == ")" then
+      depth = depth - 1
+    elseif char == "," and depth == 0 then
+      parts[#parts + 1] = part_start
+      part_start = position + 1
+    end
+  end
+  parts[#parts + 1] = part_start
+
+  for index, start_at in ipairs(parts) do
+    local stop_at = (parts[index + 1] or #content + 2) - 2
+    local text = content:sub(start_at, stop_at)
+    local scan = searchable:sub(start_at, stop_at)
+
+    local start, stop = scan:find("unique", 1, true)
+    while start and (scan:sub(start - 1, start - 1):match("[%w_]") or scan:sub(stop + 1, stop + 1):match("[%w_]")) do
+      -- a column called unique_id is not one
+      start, stop = scan:find("unique", stop + 1, true)
+    end
+
+    if start then
+      -- a table-level UNIQUE names its columns in the brackets that follow, a
+      -- column-level one covers the column it is written on, which is the name
+      -- the part opens with
+      local columns = {}
+      local column_list = text:match("^%s*%((.-)%)", stop + 1)
+      for column_name in (column_list or text):gmatch('"([^"]*)"') do
+        columns[#columns + 1] = column_name
+        if not column_list then
+          break
+        end
+      end
+
+      table.sort(columns)
+      local target = table.concat(columns, ",")
+      counts[target] = (counts[target] or 0) + 1
+    end
+  end
+
+  return counts
+end
+
+
+-- Whether rebuilding a table to match the schema would leave it without a
+-- uniqueness rule it carries today.
+local function drops_a_unique(expected_sql, actual_sql)
+  local expected = unique_targets(expected_sql)
+  for target, count in pairs(unique_targets(actual_sql)) do
     if (expected[target] or 0) < count then
       return true
     end
@@ -986,6 +1045,7 @@ function db:_migrate(db_name, s_name, force)
     local sql_cur, sql_err = conn:execute(get_actual_sql)
     local table_constraints_changed = false
     local would_drop_a_unique = false
+    local unique_lost_to_column_removal = false
 
     if sql_cur and type(sql_cur) ~= "number" then
       local sql_row = sql_cur:fetch({}, "a")
@@ -1005,7 +1065,7 @@ function db:_migrate(db_name, s_name, force)
           -- rebuild would do, adding a constraint or changing _violations among it,
           -- is still applied: freezing those too loses the sheet changes it asked
           -- for and says nothing about them
-          if schema.has_skipped_unique and drops_a_unique(expected_constraints, actual_constraints) then
+          if schema.has_skipped_unique and drops_a_unique(expected_sql, actual_sql) then
             -- removing a column is a rebuild in its own right, further down and from
             -- the same pruned _unique, so holding this one back would only move where
             -- the rule is lost - and leaving the column instead is worse, since
@@ -1025,9 +1085,9 @@ function db:_migrate(db_name, s_name, force)
                 "kept rather than rebuilt to match what is left of _unique: spell the skipped "..
                 "entries right and it is applied then.", true, false)
             else
-              printError("db:create - "..s_name.." - the uniqueness this sheet enforces goes with "..
-                "the column this db:create removes, and what is left of _unique cannot put it back: "..
-                "spell the skipped entries right before removing the column.", true, false)
+              -- said once the rebuild is past the guard that can still halt it, so
+              -- this reports what happened rather than what was about to
+              unique_lost_to_column_removal = true
             end
           end
         end
@@ -1070,6 +1130,12 @@ function db:_migrate(db_name, s_name, force)
         assert(not not_blank[1] or force,
                "db:_migrate halted due to data present in undefined columns: " .. table.concat(not_blank, ", ") ..
                "\nuse force option to drop anyway.")
+      end
+
+      if unique_lost_to_column_removal then
+        printError("db:create - "..s_name.." - the uniqueness this sheet enforced goes with the "..
+          "column this db:create removes, and what is left of _unique cannot put it back: spell "..
+          "the skipped entries right before removing the column.", true, false)
       end
 
       -- Build the list of columns to preserve (only columns that exist in both current and new schema)

@@ -4052,6 +4052,43 @@ describe("Tests db:create with _unique naming unknown columns", function()
     assert.is_true(db:add(mydb.people, {Name = "Bob"}))
   end)
 
+  it("keeps a constraint a later db:create moves to another column", function()
+    -- both are column-level UNIQUEs, which the sheet's SQL carries without naming
+    -- the column they sit on: counting them would read the move as no change and
+    -- let the rule the sheet enforces today go
+    local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = "name"}})
+    assert.is_true(db:add(mydb.people, {name = "Ada", city = "London"}))
+    assert.is_nil(db:add(mydb.people, {name = "Ada", city = "Paris"}))
+
+    -- the compound entry is what makes the sheet's SQL differ at all: two
+    -- column-level UNIQUEs on their own compare equal whichever column they sit on,
+    -- so the rule would survive by accident rather than by being kept
+    local moved = createCollectingWarnings({people = {name = "", city = "",
+      _unique = {"city", {"name", "city"}, "nmae"}}})
+    assert.is_nil(db:add(moved.people, {name = "Ada", city = "Berlin"}))
+    assert.are.equal(1, #db:fetch(moved.people))
+  end)
+
+  it("reads a compound constraint written the other way round as the same one", function()
+    -- sqlite enforces UNIQUE("city", "name") and UNIQUE("name", "city") alike, so
+    -- comparing them as written would hold back a sheet that lost nothing
+    createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}}, _violations = "FAIL"}})
+    createCollectingWarnings({people = {name = "", city = "", _unique = {{"city", "name"}, "nmae"}, _violations = "IGNORE"}})
+    assert.is_truthy(string.find(tableSql("people"), "ON CONFLICT IGNORE", 1, true))
+  end)
+
+  it("still applies a second constraint to a sheet that already has one", function()
+    -- the sheet keeps what it has and gains what it asked for, which only works if
+    -- the two constraint sets are compared entry by entry rather than as a whole
+    createCollectingWarnings({people = {name = "", city = "", town = "", _unique = {{"name", "city"}}}})
+
+    local mydb = createCollectingWarnings({people = {name = "", city = "", town = "",
+      _unique = {{"name", "city"}, {"city", "town"}, "nmae"}}})
+    assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("city", "town")', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Ada", city = "London", town = "Bow"}))
+    assert.is_nil(db:add(mydb.people, {name = "Bram", city = "London", town = "Bow"}))
+  end)
+
   it("leaves db:merge_unique reporting a sheet with no unique index at all", function()
     -- _unique is set back to nil rather than an empty list when nothing survives, so
     -- db:merge_unique reaches the assert that names the real problem
