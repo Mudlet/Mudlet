@@ -3884,7 +3884,10 @@ describe("Tests db:create with _unique naming unknown columns", function()
     -- the single-column form is attached by matching the sheet's own columns, and
     -- _row_id is not among them, so this asked for a rule that was never made
     local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = "_row_id"}})
-    assert.is_truthy(string.find(warnings, '_unique names "_row_id" on its own', 1, true))
+    assert.is_truthy(string.find(warnings, '_unique names "_row_id", the key every sheet is given, which is unique already', 1, true))
+    -- the compound spelling is the one shape this message must not send anyone to:
+    -- it is taken silently and can never refuse a row
+    assert.is_truthy(string.find(warnings, "can never refuse a row", 1, true))
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
     assert.are.equal(2, #db:fetch(mydb.people))
@@ -3944,6 +3947,34 @@ describe("Tests db:create with _unique naming unknown columns", function()
 
     createCollectingWarnings({people = {name = "", city = "", _unique = "nosuchcol", _index = "city"}})
     assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
+  end)
+
+  it("leaves the constraint a sheet already has alone when a later db:create misspells it", function()
+    -- what is left of _unique is not the set the sheet asked for, so rebuilding the
+    -- live table to match it would take a uniqueness rule off a typo - and the create
+    -- that spells the column right again cannot put it back over the duplicates the
+    -- meantime let in
+    local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}}}})
+    assert.is_true(db:add(mydb.people, {name = "Ada", city = "London"}))
+    assert.is_nil(db:add(mydb.people, {name = "Ada", city = "London"}))
+
+    local typoed, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "citty"}}}})
+    assert.is_truthy(string.find(warnings, '_unique names "citty"', 1, true))
+    assert.is_nil(db:add(typoed.people, {name = "Ada", city = "London"}))
+    assert.are.equal(1, #db:fetch(typoed.people))
+
+    local fixed = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}}}})
+    assert.is_nil(db:add(fixed.people, {name = "Ada", city = "London"}))
+    assert.are.equal(1, #db:fetch(fixed.people))
+  end)
+
+  it("takes a sheet that gave one of its columns a number for a name", function()
+    -- the keyed form takes every key that is not an option for a column name, so
+    -- this sheet really does have a column called 2, which _unique cannot name
+    local mydb, warnings = createCollectingWarnings({people = {name = "", [2] = "extra", _unique = "name"}})
+    assert.are.equal("", warnings)
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_nil(db:add(mydb.people, {name = "Bob"}))
   end)
 end)
 
