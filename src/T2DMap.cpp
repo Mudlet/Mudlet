@@ -1761,6 +1761,22 @@ void T2DMap::drawRoom(QPainter& painter,
     }
 }
 
+// The inclusive range of room coordinates that can put a room on screen, given
+// where the map is panned and how big a room is drawn. The forward transform is
+//     rx = room->x() * roomWidth + rx0
+//     ry = room->y() * -1 * roomHeight + ry0
+// so inverting it gives the range, and a cell of margin keeps a room whose rect
+// straddles a widget edge inside it. Callers still test each room's own rx and
+// ry: this only says which rooms are worth asking the index about.
+static QRect viewportRoomBounds(const float rx0, const float ry0, const float roomWidth, const float roomHeight, const float widgetWidth, const float widgetHeight)
+{
+    const int minX = static_cast<int>(std::floor(static_cast<double>(-rx0) / roomWidth)) - 1;
+    const int maxX = static_cast<int>(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth)) + 1;
+    const int minY = static_cast<int>(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight)) - 1;
+    const int maxY = static_cast<int>(std::ceil(static_cast<double>(ry0) / roomHeight)) + 1;
+    return QRect(QPoint(minX, minY), QPoint(maxX, maxY));
+}
+
 // Grid mode rendering driven by the spatial grid index.
 // Only rooms inside the current viewport rectangle are fetched from the index,
 // reducing the collect phase from O(Z-level rooms) to O(visible cells).
@@ -1783,16 +1799,11 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     QElapsedTimer timer;
     timer.start();
 
-    // Compute viewport bounds in integer map coordinates.
-    // The forward transform is:  rx = room->x() * mRoomWidth + mRX
-    //                            ry = room->y() * -1 * mRoomHeight + mRY
-    // Inverting gives the integer range of rooms that can appear on screen.
-    // A 1-cell margin is added so rooms whose rect straddles the widget edge
-    // are not clipped.
-    const int minX = static_cast<int>(std::floor(static_cast<double>(-mRX) / mRoomWidth)) - 1;
-    const int maxX = static_cast<int>(std::ceil(static_cast<double>(widgetWidth - mRX) / mRoomWidth)) + 1;
-    const int minY = static_cast<int>(std::floor(static_cast<double>(mRY - widgetHeight) / mRoomHeight)) - 1;
-    const int maxY = static_cast<int>(std::ceil(static_cast<double>(mRY) / mRoomHeight)) + 1;
+    const QRect roomBounds = viewportRoomBounds(mRX, mRY, mRoomWidth, mRoomHeight, widgetWidth, widgetHeight);
+    const int minX = roomBounds.left();
+    const int maxX = roomBounds.right();
+    const int minY = roomBounds.top();
+    const int maxY = roomBounds.bottom();
 
     const qreal timeIndex = timer.nsecsElapsed() / 1000000.0;
     timer.start();
@@ -2574,6 +2585,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
     mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
+    const QRect roomBounds = viewportRoomBounds(mRX, mRY, mRoomWidth, mRoomHeight, widgetWidth, widgetHeight);
     QFont roomVNumFont = mpMap->mMapSymbolFont;
 
     bool isFontBigEnoughToShowRoomVnum = false;
@@ -2792,12 +2804,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
     phaseTimer.restart();
 
     // Draw rooms on selected z-level - use batch rendering for grid mode
-    QElapsedTimer getRoomsTimer;
-    getRoomsTimer.start();
-    const QSet<int>& currentLevelRooms = pDrawnArea->getRoomsForZ(zLevel);
-    qreal timeGetRoomsForZ = getRoomsTimer.nsecsElapsed() / 1000000.0;
-    // getRoomsForZ print is deferred to the final profiling block below
-    // to avoid inflating phase6Time with qDebug() overhead on Windows.
+    // The room collection time is printed by the final profiling block below
+    // rather than here, to avoid inflating phase6Time with qDebug() overhead on
+    // Windows.
+    qreal timeGetRoomsForZ = 0.0;
     QString gridModeProfileOutput;
     QElapsedTimer phase6Sub;
     phase6Sub.start();
@@ -2821,6 +2831,13 @@ void T2DMap::paintEvent(QPaintEvent* e)
                           &gridModeProfileOutput);
     } else {
         // Non-grid mode: use full-featured per-room rendering
+        QElapsedTimer getRoomsTimer;
+        getRoomsTimer.start();
+        // Only the rooms that can land on screen. Every room of the level is
+        // otherwise looked at on every frame, and past the zoom where the whole
+        // level fits, all but a handful of them fail the test below.
+        const QList<int> currentLevelRooms = pDrawnArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+        timeGetRoomsForZ = getRoomsTimer.nsecsElapsed() / 1000000.0;
         for (const int currentAreaRoom : currentLevelRooms) {
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -3203,9 +3220,22 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             }
         }
     }
-    QSetIterator<int> itRoom2(pArea->getRoomsForZ(zLevel));
-    while (itRoom2.hasNext()) {
-        const int _id = itRoom2.next();
+    // The rooms with something to draw here are those in the viewport, plus
+    // every room on the level that has custom exit lines: one of those lines
+    // can cross the whole level, so its room owes pixels from anywhere.
+    const QRect roomBounds = viewportRoomBounds(mRX, mRY, mRoomWidth, mRoomHeight, widgetWidth, widgetHeight);
+    QList<int> roomsToPaint = pArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+    for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
+        TRoom* pRoomWithCustomLines = mpMap->mpRoomDB->getRoom(customLineRoomId);
+        // Rooms inside the bounds are in the list already, and painting a
+        // room's exits twice does not look like painting them once.
+        if (!pRoomWithCustomLines || roomBounds.contains(pRoomWithCustomLines->x(), pRoomWithCustomLines->y())) {
+            continue;
+        }
+        roomsToPaint.append(customLineRoomId);
+    }
+
+    for (const int _id : roomsToPaint) {
         TRoom* room = mpMap->mpRoomDB->getRoom(_id);
         if (!room) {
             continue;
@@ -6061,6 +6091,9 @@ void T2DMap::slot_setCustomLine2()
 
     QList<QPointF> const list;
     room->customLines[mCustomLinesRoomExit] = list;
+    // The line has no points yet, so calcRoomDimensions() has nothing to do,
+    // but the room now counts as one with custom lines.
+    room->indexCustomLines();
     //    qDebug("T2DMap::slot_setCustomLine2() NORMAL EXIT: %s", qPrintable(exitKey));
     room->customLinesColor[mCustomLinesRoomExit] = mCurrentLineColor;
     /*
@@ -6096,6 +6129,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     }
     QList<QPointF> const _list;
     room->customLines[exit] = _list;
+    room->indexCustomLines();
     //    qDebug("T2DMap::slot_setCustomLine2B() SPECIAL EXIT: %s", qPrintable(exit));
     room->customLinesColor[exit] = mCurrentLineColor;
     /*

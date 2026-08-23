@@ -356,6 +356,9 @@ void TArea::addRoom(int id)
             rooms.insert(id);
             mZLevelIndex.addRoom(id, pR->z());
             mGridIndex.addRoom(id, pR->z(), pR->x(), pR->y());
+            if (!pR->customLines.empty()) {
+                mCustomLineIndex.addRoom(id, pR->z());
+            }
             if (mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z())) {
                 publishSpanForZ(pR->z());
             }
@@ -366,6 +369,18 @@ void TArea::addRoom(int id)
         const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
         mpMap->mpHost->mpConsole->printSystemMessage(error);
     }
+}
+
+void TArea::addRoomWithCustomLines(int id, int z)
+{
+    if (!rooms.contains(id)) {
+        // Rooms are read in before they are handed to an area, so this gets
+        // called for rooms this area does not hold yet. calcSpan() picks those
+        // up once it does; claiming one here would have this area's renderer
+        // paint a room belonging to another area.
+        return;
+    }
+    mCustomLineIndex.addRoom(id, z);
 }
 
 void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY)
@@ -379,6 +394,11 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
 
     mZLevelIndex.moveRoom(id, fromZ, toZ);
     mGridIndex.moveRoom(id, fromZ, fromX, fromY, toZ, toX, toY);
+    // moveRoom() adds to the destination unconditionally, so a room without
+    // custom lines has to be kept out of it by hand:
+    if (mCustomLineIndex.roomsForZ(fromZ).contains(id)) {
+        mCustomLineIndex.moveRoom(id, fromZ, toZ);
+    }
     const bool fromExtremesMoved = mSpanIndex.removeRoom(fromX, -1 * fromY, fromZ);
     const bool toExtremesMoved = mSpanIndex.addRoom(toX, -1 * toY, toZ);
     if (fromExtremesMoved) {
@@ -456,6 +476,7 @@ void TArea::calcSpan()
     QHash<int, int> roomIdToZ;
     roomIdToZ.reserve(rooms.size());
     QHash<int, QHash<int, QPair<int, int>>> zToRoomXY;
+    QHash<int, int> customLineRoomIdToZ;
 
     QSetIterator<int> itRoom(rooms);
     while (itRoom.hasNext()) {
@@ -468,12 +489,16 @@ void TArea::calcSpan()
         roomIdToZ.insert(id, pR->z());
         zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
         mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z());
+        if (!pR->customLines.empty()) {
+            customLineRoomIdToZ.insert(id, pR->z());
+        }
     }
 
     publishSpan();
 
     mZLevelIndex.rebuild(roomIdToZ);
     mGridIndex.rebuild(zToRoomXY);
+    mCustomLineIndex.rebuild(customLineRoomIdToZ);
 }
 
 void TArea::removeRoom(int room)
@@ -482,6 +507,7 @@ void TArea::removeRoom(int room)
     if (pR && rooms.contains(room)) {
         mZLevelIndex.removeRoom(room, pR->z());
         mGridIndex.removeRoom(room, pR->z(), pR->x(), pR->y());
+        mCustomLineIndex.removeRoom(room, pR->z());
         if (mSpanIndex.removeRoom(pR->x(), -1 * pR->y(), pR->z())) {
             publishSpanForZ(pR->z());
         }

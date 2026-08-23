@@ -69,6 +69,16 @@ public:
     const QSet<int>& getRoomsForZ(int z) const { return mZLevelIndex.roomsForZ(z); }
     // Returns a const reference to the grid index for read-only access by the renderer.
     const TAreaGridIndex& getGridIndex() const { return mGridIndex; }
+    // Returns the rooms on the given Z level that have custom exit lines. Such
+    // a line can run right across the level, so the renderer has to consider
+    // its room even when the room itself is nowhere near the viewport and a
+    // viewport query would never hand it over.
+    // The set is deliberately a superset: a room that loses its last custom
+    // line stays in it until removeRoom() or calcSpan() drops it, which costs
+    // a cull test rather than a missing line.
+    const QSet<int>& getCustomLineRoomsForZ(int z) const { return mCustomLineIndex.roomsForZ(z); }
+    // Records that one of this area's rooms has custom exit lines.
+    void addRoomWithCustomLines(int id, int z);
     void calcSpan();
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
@@ -165,6 +175,9 @@ private:
     TAreaZLevelIndex mZLevelIndex;
     // Per-(z,x,y) grid index for efficient viewport queries in grid mode.
     TAreaGridIndex mGridIndex;
+    // Per-Z-level index of the rooms that have custom exit lines, kept because
+    // those are the rooms a viewport query can miss and still owe pixels for.
+    TAreaZLevelIndex mCustomLineIndex;
     // Source of truth for the public extremes above (min_x, xminForZ, zLevels
     // and friends), which stay plain members because the map file format
     // stores them and a lot of code reads them directly.

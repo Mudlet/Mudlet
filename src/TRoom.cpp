@@ -738,6 +738,17 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
     }
 }
 
+void TRoom::indexCustomLines()
+{
+    if (customLines.empty() || !mpRoomDB) {
+        return;
+    }
+    TArea* pA = mpRoomDB->getArea(area);
+    if (pA) {
+        pA->addRoomWithCustomLines(id, mZ);
+    }
+}
+
 void TRoom::calcRoomDimensions()
 {
     min_x = mX;
@@ -748,6 +759,8 @@ void TRoom::calcRoomDimensions()
     if (customLines.empty()) {
         return;
     }
+
+    indexCustomLines();
 
     QMapIterator<QString, QList<QPointF>> it(customLines);
     while (it.hasNext()) {
