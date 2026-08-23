@@ -144,10 +144,16 @@ public:
     QMap<QString, TScrollBox*> mScrollBoxMap;
     mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
-    QFile mLogFile;
-    QString mLogFileName;
-    QTextStream mLogStream;
-    bool mLogToLogFile = false;
+    // The log lifecycle lives in the core console model so a profile with no
+    // view can run one; these four are references aliasing the model's fields,
+    // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
+    // are what keep TLuaInterpreter::startLogging() compiling unchanged; the
+    // other two are kept so the set does not have to be reasoned about in
+    // halves.
+    QFile& mLogFile;
+    QString& mLogFileName;
+    QTextStream& mLogStream;
+    bool& mLogToLogFile;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
@@ -162,6 +168,13 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+
+
+private slots:
+    // The two halves of a logging change that need this view: the core model
+    // owns everything else about it.
+    void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
+    void slot_loggingStateChanged(const bool isLogging);
 
 
 signals:

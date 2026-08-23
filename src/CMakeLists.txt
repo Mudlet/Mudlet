@@ -131,6 +131,7 @@ set(mudlet_SRCS
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
+    TConsoleModel.cpp
     TDebug.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp

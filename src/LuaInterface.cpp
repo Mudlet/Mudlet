@@ -20,7 +20,6 @@
  ***************************************************************************/
 
 #include <QDebug>
-#include <QRegularExpression>
 
 #include "LuaInterface.h"
 #include "VarUnit.h"
@@ -386,24 +385,48 @@ static bool nameSharedWithASibling(TVar* var)
     return false;
 }
 
-// Names the Variables view will write back through, which is narrower than what
-// the write paths can reach: they push keys through the C API, which carries any
-// key at all, while a string key holding a quote or a backslash and a root that
-// is not a plain identifier are refused here rather than written (#9908).
-static bool nameTheEditorWritesThrough(TVar* var, const bool asRoot)
+// Whether what the saved and hidden bookkeeping holds under a root's name is
+// about that root alone. It keys a variable by the dotted path of names down to
+// it, so a root's own name is its whole key there - and, unlike the lookup above,
+// the key type is no part of that key. Two roots that read alike therefore share
+// one entry, and so do a root with a dot in its name and the member that path
+// names, which is why VarUnit::shouldSave() fences the latter off from the save.
+// The write has to be refused as well: renameVariableBookkeeping() moves the
+// entry, and would carry the other variable's marks off with it.
+static bool rootNameIsSharedBookkeeping(TVar* var)
 {
     const QString name = var->getName();
-    if (asRoot) {
-        static const QRegularExpression identifier(qsl("^[A-Za-z_][A-Za-z0-9_]*$"));
-        static const QSet<QString> luaKeywords{qsl("and"),   qsl("break"), qsl("do"),  qsl("else"), qsl("elseif"), qsl("end"),    qsl("false"), qsl("for"),  qsl("function"), qsl("if"),   qsl("in"),
-                                               qsl("local"), qsl("nil"),   qsl("not"), qsl("or"),   qsl("repeat"), qsl("return"), qsl("then"),  qsl("true"), qsl("until"),    qsl("while")};
-        // a keyword reads as an identifier but parses as itself
-        return var->getKeyType() == LUA_TSTRING && identifier.match(name).hasMatch() && !luaKeywords.contains(name);
-    }
-    if (var->getKeyType() != LUA_TSTRING) {
+    if (name.contains(QLatin1Char('.'))) {
         return true;
     }
-    return !name.contains(QLatin1Char('\\')) && !name.contains(QLatin1Char('"')) && !name.contains(QLatin1Char('\n')) && !name.contains(QLatin1Char('\r'));
+    TVar* parent = var->getParent();
+    if (!parent) {
+        return false;
+    }
+    int matches = 0;
+    for (const TVar* sibling : parent->getChildren(false)) {
+        if (sibling->getName() == name && ++matches > 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Names the Variables view writes through. A key reaches Lua as bytes rather than
+// as text spliced into a chunk to be compiled, so what a key holds is nothing a
+// name has to survive, and whether that name still finds the variable is settled
+// by the lookup below. Two things are left, and both are about roots: getValue()
+// pushes a root's key itself rather than through loadKey() as it does every level
+// below, and builds only a string, a number or a boolean key - so a table- or
+// function-keyed global shows no value at all, which a write back would commit
+// over the real one - and the bookkeeping under the name has to be the root's own.
+static bool nameTheEditorWritesThrough(TVar* var, const bool asRoot)
+{
+    if (!asRoot) {
+        return true;
+    }
+    const int keyType = var->getKeyType();
+    return (keyType == LUA_TSTRING || keyType == LUA_TNUMBER || keyType == LUA_TBOOLEAN) && !rootNameIsSharedBookkeeping(var);
 }
 
 // Whether a variable can be written back through the name the variable tree gave
@@ -416,7 +439,7 @@ static bool nameTheEditorWritesThrough(TVar* var, const bool asRoot)
 //    one (#9903). A variable a script has deleted since the tree was built is
 //    not found either.
 //  - no other member of the same table is shown under that name too.
-//  - the name is one the Variables view writes through, see above.
+//  - the root's name is one the Variables view writes through, see above.
 // What the variable holds is not part of the question: a script is free to have
 // changed that since the tree was built, and the name still finds it.
 bool LuaInterface::writableByName(TVar* var)
@@ -725,6 +748,16 @@ bool LuaInterface::renameVar(TVar* var)
                                        << "\": its key is a table or a function, which has no name to change.";
         var->abandonNewName();
         return false;
+    }
+
+    if (var->getNewName() == var->getName() && var->getNewKeyType() == var->getKeyType()) {
+        // The value goes onto the new key and the old key is nil'ed afterwards,
+        // so when the two are one key that pair is a delete. saveVar() arrives
+        // here whenever the user picks a key type its own coercion puts straight
+        // back - a string-keyed variable whose name reads as a number, told to
+        // take a number key.
+        var->clearNewName();
+        return true;
     }
 
     if (!newNameIsFree(var)) {
