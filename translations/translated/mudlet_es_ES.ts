@@ -57,7 +57,10 @@
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Tienes un mapa cargado (%n sala, pero Mudlet no sabe dónde te encuentras en este momento.</numerusform>
+        <numerusform>Tienes un mapa cargado (%n salas, pero Mudlet no sabe dónde te encuentras en este momento.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -66,13 +69,13 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="256"/>
       <source>[ WARN ]  - Not using your saved sign-in because this connection is not encrypted; please sign in again.</source>
       <extracomment>Shown when a saved password-less sign-in cannot be reused because this connection to the game is not encrypted.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No estás usando tu inicio de sesión guardado porque esta conexión no está cifrada; por favor inicie sesión de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="326"/>
       <source>[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again.</source>
       <extracomment>Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No se pudo guardar el inicio de sesión para la próxima vez; es posible que deba iniciar sesión de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="361"/>
@@ -96,7 +99,7 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="479"/>
       <source>[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1</source>
       <extracomment>%1 is the sign-in web address the user should open manually in their browser.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No se pudo abrir el navegador. Abre este enlace manualmente para iniciar sesión: %1</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="490"/>
@@ -136,7 +139,7 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="800"/>
       <source>[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again.</source>
       <extracomment>Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Tu sesión guardada ha expirado; reconectando para que puedas iniciar sesión de nuevo.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="895"/>
@@ -150,7 +153,7 @@
     <message>
       <location filename="../src/Host.cpp" line="392"/>
       <source>Text to send to the game</source>
-      <translation>Mensaje para enviar en el juego</translation>
+      <translation>Texto para enviar al juego</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="524"/>
@@ -161,13 +164,13 @@
       <location filename="../src/Host.cpp" line="841"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</extracomment>
-      <translation>Error al abrir el archivo xml &quot;%1&quot; entra en el módulo %2 para actualizarlo. El mensaje del error fue: &quot;%3&quot;.</translation>
+      <translation>No se pudo abrir el archivo xml &quot;%1&quot; dentro del módulo %2 para actualizarlo. El mensaje de error fue: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="854"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when a module is saved as package but cannot be done for some reason.</extracomment>
-      <translation>Error al guardar &quot;%1&quot; en el módulo &quot;%2&quot;. El mensaje de error fue: &quot;%3&quot;.</translation>
+      <translation>No se pudo guardar &quot;%1&quot; en el módulo &quot;%2&quot;.  El mensaje de error fue: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1094"/>
@@ -228,7 +231,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3205"/>
       <source>Playing %1</source>
-      <translation>En juego %1</translation>
+      <translation>Jugando a %1 %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3210"/>
@@ -313,7 +316,7 @@ Por favor, espere...</translation>
       <location filename="../src/MMCPClient.cpp" line="149"/>
       <source>[ CHAT ]  - You are now disconnected from %1 - %2:%3.</source>
       <extracomment>This message is used when a MMCP peer with a name disconnects, * %1 is the peer&apos;s name, %2 is the peer&apos;s IP address (numbers or URL), * %3 is the port they are listening on. Should be similiar to the one when * we do not have a name.</extracomment>
-      <translation>[ CHAT ] - Ahora está desconectado de %1 - %2:%3.</translation>
+      <translation>[ CHAT ] - Ahora estás desconectado de %1 - %2:%3.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="171"/>
@@ -363,7 +366,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPClient.cpp" line="426"/>
       <source>[ CHAT ]  - The peer closed or refused the connection.</source>
-      <translation>[ CHAT ] - El par/nodo remoto cerró o denegó la conexión.</translation>
+      <translation>[ CHAT ] - El par/nodo remoto se cerró o denegó la conexión.</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="429"/>
@@ -383,7 +386,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPClient.cpp" line="471"/>
       <source>[ CHAT ]  - Pinging %1...</source>
-      <translation>[ CHAT ] - Hacer ping %1...</translation>
+      <translation>[ CHAT ]  - Haciendo ping a %1...</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="485"/>
@@ -413,7 +416,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPClient.cpp" line="717"/>
       <source>[ CHAT ]  - %1 is trying to request your connections!</source>
-      <translation>[ CHAT ] - %1 está intentando solicitar tus conexiones!</translation>
+      <translation>[ CHAT ] - ¡%1 está intentando solicitar tus conexiones!</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="723"/>
@@ -463,11 +466,10 @@ Por favor, espere...</translation>
 %1
 %2==== ==================== =============== =====%3
 </source>
-      <translation>Id  Nombre Dirección Puerto
+      <translation>Id   Nombre            Dirección       Puerto
 ==== ==================== =============== =====
 %1
-%2==== ==================== =============== =====%3
-</translation>
+%2==== ==================== =============== =====%3</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="882"/>
@@ -597,7 +599,8 @@ Por favor, espere...</translation>
       <location filename="../src/MMCPServer.cpp" line="452"/>
       <source>%1:  F - %2,  I - %3,  P - %4,  S - %5
         n - %6,  N - %7</source>
-      <translation type="unfinished"/>
+      <translation>%1:  F - %2,  I - %3,  P - %4,  S - %5
+        n - %6,  N - %7</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="454"/>
@@ -622,17 +625,17 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/MMCPServer.cpp" line="455"/>
       <source>Allow Snooping</source>
-      <translation>Permitir Espiar</translation>
+      <translation>Permitir el espionaje</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="455"/>
       <source>Being Snooped</source>
-      <translation>Siendo Espiado</translation>
+      <translation>Siendo espiado</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="469"/>
       <source>[ CHAT ]  - Invalid chat name: tilde (~) and comma (,) are not allowed.</source>
-      <translation>[ CHAT ] - Nombre para el chat inválido: no se permite la tilde (~) ni la coma (,).</translation>
+      <translation>[ CHAT ] - Nombre para el chat no válido: no se permite la tilde (~) ni la coma (,).</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="489"/>
@@ -653,7 +656,7 @@ Por favor, espere...</translation>
       <location filename="../src/MMCPServer.cpp" line="609"/>
       <source>You emote to everyone: &apos;%1 %2&apos;</source>
       <extracomment>%1 is player&apos;s name, %2 is the emote message sent to everyone</extracomment>
-      <translation>Haces gesto a todos: &apos;%1 %2&apos;</translation>
+      <translation>Haces un gesto a todos: &apos;%1 %2&apos;</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="614"/>
@@ -786,14 +789,14 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message>
       <location filename="../src/modern_glwidget.cpp" line="256"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation>No hay habitaciones en el mapa: carga otro, o comience a mapear desde cero para empezar.</translation>
+      <translation>No hay salas en el mapa: carga otro, o comience a mapear desde cero para empezar.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/modern_glwidget.cpp" line="258"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
       <translation>
-        <numerusform>Tienes un mapa cargado (%n sala(s)), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
-        <numerusform>Tienes un mapa cargado (%n sala(s)), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
+        <numerusform>Tienes un mapa cargado (%n sala, pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
+        <numerusform>Tienes un mapa cargado (%n salas, pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
       </translation>
     </message>
     <message>
@@ -1127,7 +1130,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="80"/>
       <source>No data found!</source>
-      <translation>Ninguna información encontrada!</translation>
+      <translation>¡Ninguna información encontrada!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="87"/>
@@ -1206,7 +1209,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message>
       <location filename="../src/TBuffer.cpp" line="3628"/>
       <source>Open browser to</source>
-      <translation>Abra el navegador para</translation>
+      <translation>Abrir navegador para</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="3687"/>
@@ -1252,7 +1255,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/EditorAddItemCommand.cpp" line="604"/>
       <source>add timer group &quot;%1&quot;</source>
       <extracomment>Undo/redo menu text for adding a timer folder</extracomment>
-      <translation>agregar grupo de temporizadores &quot;%1&quot;</translation>
+      <translation>añadir grupo de temporizadores &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/EditorAddItemCommand.cpp" line="607"/>
@@ -1378,7 +1381,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/EditorDeleteItemCommand.cpp" line="886"/>
       <source>delete %1 keys</source>
       <extracomment>Undo/redo menu text for deleting multiple key bindings. %1 = count</extracomment>
-      <translation>borrar teclas %1</translation>
+      <translation>eliminar teclas %1</translation>
     </message>
     <message>
       <location filename="../src/EditorDeleteItemCommand.cpp" line="889"/>
@@ -1606,7 +1609,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/LuaInterface.cpp" line="108"/>
       <source>Cannot move variable here - the target is not a table</source>
       <extracomment>Error message shown when user tries to drag a variable onto a non-table variable</extracomment>
-      <translation>No se puede mover la variable aquí - el objetivo no es una tabla</translation>
+      <translation>No se puede mover la variable aquí, el objetivo no es una tabla</translation>
     </message>
     <message>
       <location filename="../src/TKey.cpp" line="225"/>
@@ -1624,7 +1627,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/main.cpp" line="930"/>
       <source>Another application is set to handle telnet:// and telnets:// links.</source>
       <extracomment>Text shown when another application is already handling telnet:// and telnets:// links</extracomment>
-      <translation>Otra aplicación está configurada para gestionar enlaces telnet:// y telnets:// .</translation>
+      <translation>Otra aplicación está configurada para gestionar enlaces telnet:// y telnets://.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="932"/>
@@ -1701,7 +1704,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip
 ----------
 2D Mapper context menu (custom line editing) item tooltip</extracomment>
-      <translation>Adherir los puntos actuales y mantener alineadas las ediciones de líneas personalizadas a la cuadrícula del mapa</translation>
+      <translation>Ajustar los puntos actuales y mantener las ediciones de línea personalizadas alineadas con la cuadrícula del mapa.</translation>
     </message>
     <message>
       <location filename="../src/CustomLineDrawContextMenuHandler.cpp" line="97"/>
@@ -1794,7 +1797,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/RoomContextMenuHandler.cpp" line="201"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation>Establecer el nombre de la sala&apos; el color del icono, el peso, el bloqueo para el movimiento rápido y el símbolo para marcar las salas especiales</translation>
+      <translation>Establecer el nombre y el color del icono de la sala, el peso y el bloqueo para recorridos rápidos, así como un símbolo para marcar salas especiales.</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="208"/>
@@ -1869,7 +1872,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/RoomContextMenuHandler.cpp" line="265"/>
       <source>Move to area...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation>Mueve al área...</translation>
+      <translation>Moverse al área...</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="271"/>
@@ -1899,7 +1902,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/RoomContextMenuHandler.cpp" line="285"/>
       <source>Export area to image...</source>
       <extracomment>2D Mapper context menu (area) item</extracomment>
-      <translation>Exportar área a imagen...</translation>
+      <translation>Exportar el área a imagen...</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="287"/>
@@ -1917,7 +1920,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/RoomContextMenuHandler.cpp" line="302"/>
       <source>Set the player&apos;s current location to here</source>
       <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
-      <translation>Establecer aquí &apos; la ubicación actual del jugador</translation>
+      <translation>Establecer la ubicación actual del jugador aquí</translation>
     </message>
     <message>
       <location filename="../src/RoomContextMenuHandler.cpp" line="158"/>
@@ -1953,13 +1956,13 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="79"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</extracomment>
-      <translation>Divide el segmento añadiendo un nuevo punto a mitad de camino</translation>
+      <translation>Dividir segmento añadiendo un punto intermedio</translation>
     </message>
     <message>
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="83"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</extracomment>
-      <translation>Selecciona un punto primero y luego añade un nuevo punto a mitad del segmento hacia la habitación</translation>
+      <translation>Seleccione primero un punto y, a continuación, añada un nuevo punto a mitad del segmento en dirección la sala.</translation>
     </message>
     <message>
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="87"/>
@@ -1977,13 +1980,13 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="96"/>
       <source>Remove last segment by removing this point</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</extracomment>
-      <translation>Remueve el último segmento eliminando este punto</translation>
+      <translation>Elimine el último segmento quitando este punto.</translation>
     </message>
     <message>
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="101"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <extracomment>(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action))</extracomment>
-      <translation>usa &quot;borrar línea&quot; para eliminar el único segmento que termina en un punto editable</translation>
+      <translation>Utiliza &quot;eliminar línea&quot; para quitar el único segmento que termina en un punto editable.</translation>
     </message>
     <message>
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="106"/>
@@ -2006,12 +2009,12 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
       <location filename="../src/CustomLineEditContextMenuHandler.cpp" line="139"/>
       <source>Delete all of this custom line</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip</extracomment>
-      <translation>Eliminar todo de esta línea personalizada</translation>
+      <translation>Eliminar toda esta línea personalizada</translation>
     </message>
     <message>
       <location filename="../src/SelectionRectangleHandler.cpp" line="108"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation>Arrastre para seleccionar múltiples habitaciones o etiquetas, suelte para terminar...</translation>
+      <translation>Arrastra para seleccionar varias salas o etiquetas, suelta para finalizar...</translation>
     </message>
     <message>
       <location filename="../src/SelectionRectangleHandler.cpp" line="111"/>
@@ -2097,7 +2100,7 @@ Puedes cambiar esto más tarde en Ajustes &gt; General.
     <message>
       <location filename="../src/T2DMap.cpp" line="4743"/>
       <source>Click to finish moving the selected room(s).</source>
-      <translation>Haga clic para terminar de mover la(s) sala(s).</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5222"/>
@@ -2204,7 +2207,7 @@ Warning message shown when trying to delete an area fails.</extracomment>
       <location filename="../src/T2DMap.cpp" line="6106"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation>Haz clic izquierdo y arrastra un cuadrado para el tamaño y la posición de tu etiqueta</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="6979"/>
@@ -2229,7 +2232,7 @@ Warning message shown when trying to delete an area fails.</extracomment>
     <message>
       <location filename="../src/T2DMap.cpp" line="7039"/>
       <source>[MAP]: Export failed - %1</source>
-      <translation>[MAP]: Error al exportar - %1</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1170"/>
