@@ -454,6 +454,9 @@ local lua_reserved_words = {
 ---   from scratch is built without the uniqueness it asked for, so db:add takes rows
 ---   the constraint would have refused. A sheet that already carries the constraint
 ---   keeps it, for the same reason its indexes are left alone.
+---   Naming _row_id in a _unique entry of several columns is warned about but kept,
+---   since a sheet's _row_id is unique on its own and the constraint is therefore
+---   one that can never refuse a row.
 function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
@@ -608,17 +611,19 @@ function db:create(db_name, sheets, force)
           local compound = type(unique_entry) == "table"
           local unique_columns = compound and unique_entry or {unique_entry}
           local unknown_column
+          local names_row_id
 
           for _, column_name in ipairs(unique_columns) do
-            if not unknown_column and type(column_name) == "string" then
+            if type(column_name) == "string" then
               local known
               if compound then
                 known = resolvable[column_name:lower()] ~= nil
+                names_row_id = names_row_id or column_name:lower() == "_row_id"
               else
                 known = columns[column_name] ~= nil
               end
 
-              if not known then
+              if not known and not unknown_column then
                 unknown_column = column_name
               end
             end
@@ -634,12 +639,22 @@ function db:create(db_name, sheets, force)
             table.insert(warnings, "db:create - "..sheet_name.." - _unique has an entry with no "..
               "column names in it: that constraint is skipped.")
           elseif not unknown_column then
+            -- sqlite takes a compound entry naming _row_id, and the constraint can
+            -- then never refuse a row, since a sheet's key is unique on its own. It
+            -- is kept anyway: dropping it would change the sheet's SQL and put every
+            -- database that has one through db:_migrate's table rebuild
+            if names_row_id then
+              table.insert(warnings, "db:create - "..sheet_name.." - _unique names \"_row_id\" among "..
+                "the columns of an entry, and a sheet's _row_id is unique already, so that constraint "..
+                "can never refuse a row: drop it, or name the columns you meant.")
+            end
+
             wanted[#wanted + 1] = unique_entry
           elseif unknown_column == "_row_id" then
             has_skipped_unique = true
             table.insert(warnings, "db:create - "..sheet_name.." - _unique names \"_row_id\", the key "..
-              "every sheet is given, which is unique already: that constraint is skipped. Putting it "..
-              "in a compound entry instead makes one that can never refuse a row.")
+              "every sheet is given, which is unique already: that constraint is skipped. Naming it "..
+              "in a compound entry makes one that can never refuse a row either.")
           else
             has_skipped_unique = true
             table.insert(warnings, "db:create - "..sheet_name.." - _unique names \""..unknown_column..

@@ -3871,13 +3871,18 @@ describe("Tests db:create with _unique naming unknown columns", function()
     assert.are.equal(1, #db:fetch(mydb.people))
   end)
 
-  it("leaves a compound constraint naming _row_id alone", function()
-    -- _row_id is a column of the table even though no sheet definition names it,
-    -- so sqlite takes this constraint. Skipping it would change the sheet's SQL
-    -- and put every database that has one through db:_migrate's table rebuild
+  it("warns about a compound constraint naming _row_id but leaves it alone", function()
+    -- _row_id is a column of the table even though no sheet definition names it, so
+    -- sqlite takes this constraint - and it can then never refuse a row. Skipping it
+    -- would change the sheet's SQL and put every database that has one through
+    -- db:_migrate's table rebuild, so the warning is all this can do about it
     local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = {{"name", "_row_id"}}}})
-    assert.are.equal("", warnings)
+    assert.is_truthy(string.find(warnings, '_unique names "_row_id" among the columns of an entry', 1, true))
+    assert.is_truthy(string.find(warnings, "can never refuse a row", 1, true))
     assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("name", "_row_id")', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.are.equal(2, #db:fetch(mydb.people))
   end)
 
   it("warns about _row_id given on its own, which is never applied", function()
@@ -3885,9 +3890,9 @@ describe("Tests db:create with _unique naming unknown columns", function()
     -- _row_id is not among them, so this asked for a rule that was never made
     local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = "_row_id"}})
     assert.is_truthy(string.find(warnings, '_unique names "_row_id", the key every sheet is given, which is unique already', 1, true))
-    -- the compound spelling is the one shape this message must not send anyone to:
-    -- it is taken silently and can never refuse a row
-    assert.is_truthy(string.find(warnings, "can never refuse a row", 1, true))
+    -- the compound spelling is not the fix, and the message has to say so rather
+    -- than leave it looking like one
+    assert.is_truthy(string.find(warnings, "can never refuse a row either", 1, true))
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
     assert.are.equal(2, #db:fetch(mydb.people))
