@@ -44,6 +44,7 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 class Host;
@@ -151,6 +152,14 @@ public:
     // we should also have a destructor and an assignment operator but they can,
     // in this case, be default ones:
     TChar& operator=(const TChar&) = default;
+    // Moving is not copying: a std::vector of TChars relocates its elements
+    // when it outgrows its allocation, and the characters of a line the user
+    // has selected have to stay selected when that happens. Declaring the
+    // copy-constructor above suppressed the implicit move, so without these
+    // the vector would relocate through the copy-constructor and quietly
+    // deselect every line that text was appended to.
+    TChar(TChar&&) = default;
+    TChar& operator=(TChar&&) = default;
     ~TChar() = default;
 
     bool operator==(const TChar&);
@@ -283,6 +292,9 @@ private:
     // for memory efficiency - they are looked up via linkIndex() at render time.
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
+// std::vector only relocates by moving if the move cannot throw; otherwise it
+// falls back to the copy-constructor, which deselects.
+static_assert(std::is_nothrow_move_constructible_v<TChar>);
 
 
 class TBuffer

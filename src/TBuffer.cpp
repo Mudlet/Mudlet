@@ -5469,9 +5469,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
         const QString qIndent(indent, QChar::Space);
         const QString qHangingIndent(hangingIndent, QChar::Space);
-        // newBufferCharPosition walks the source line instead of the source
-        // line being consumed from its front, which a vector cannot do without
-        // shuffling every remaining TChar down one place per character.
+        // The source line is read through a cursor rather than consumed from
+        // its front, which a vector cannot do without shuffling every
+        // remaining TChar down one place per character. It is therefore left
+        // fully populated here; the loop below this one pops the whole range
+        // off the back of the buffer, which is what discards it.
         const std::vector<TChar>& sourceChars = buffer[i];
         const int sourceSize = static_cast<int>(sourceChars.size());
         for (const WrapInfo w : std::as_const(lineBreaks)) {
@@ -5480,7 +5482,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 newBufferCharPosition = std::min(w.firstChar, sourceSize);
             }
             if (w.needsIndent && newBufferCharPosition < sourceSize) {
-                // background color of indentation spaces should match first char in the line
+                // indentation takes the styling of the character it precedes, so
+                // that it reads as part of the same run of text
                 const TChar& indentSpace = sourceChars[newBufferCharPosition];
                 // add indentation to TChar buffer and newLineText
                 if (w.isNewline) {
