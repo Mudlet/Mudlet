@@ -81,7 +81,6 @@ public:
     bool loadValue(lua_State*, TVar*, int);
     bool setValue(TVar*);
     void deleteVar(TVar*);
-    bool renameCVar(QList<TVar*>);
     // false when the rename did not happen - the variable keeps the name it had
     // and the node keeps naming it, which the caller has to tell the user about
     bool renameVar(TVar*);

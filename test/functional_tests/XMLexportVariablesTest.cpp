@@ -1115,6 +1115,52 @@ private slots:
         QCOMPARE(luaL_dostring(L, "secondSessionTable = nil"), 0);
     }
 
+    // What a package stores when it keeps a line the game sent it (#9992).
+    // Restoring a variable used to be a line of generated Lua source with the
+    // value in a [[...]] literal and the key in a quoted one: a value holding
+    // "]]" closed the literal early, so the line did not parse and the variable
+    // came back missing, and a value beginning with "]]" left the rest of it
+    // parsed as statements - data the profile had saved ran as Lua on load.
+    void test_savedStringHoldingClosingLongBracketsSurvivesAReload()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        // long brackets one level up, so the payloads below can hold "]]"
+        QCOMPARE(luaL_dostring(L,
+                               "bracketReload = {} "
+                               "bracketReload.lastQuote = [==[the guard says \"]] and that is that\"]==] "
+                               "bracketReload.note = [==[]] bracketReloadRanAsCode = 'yes' --]==] "
+                               "bracketReload['a\"b'] = 'value under a quoted key'"),
+                 0);
+        vu->savedVars.insert(qsl("bracketReload"));
+
+        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
+        auto writer = std::make_shared<XMLexport>(mpHost);
+        QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
+        QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
+
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(luaL_dostring(L, "assert(bracketReload.lastQuote == [==[the guard says \"]] and that is that\"]==])") == 0,
+                 "a saved string holding a closing long bracket did not come back as it was saved");
+        QVERIFY2(luaL_dostring(L, "assert(bracketReload.note == [==[]] bracketReloadRanAsCode = 'yes' --]==])") == 0,
+                 "a saved string beginning with a closing long bracket did not come back as it was saved");
+        QVERIFY2(luaL_dostring(L, "assert(bracketReloadRanAsCode == nil)") == 0, "a saved value is data, and loading the profile it was saved in must not run it");
+        QVERIFY2(luaL_dostring(L, "assert(bracketReload['a\"b'] == 'value under a quoted key')") == 0, "a saved member whose key holds a quote did not come back");
+
+        for (const auto& name : {qsl("bracketReload"), qsl("bracketReload.lastQuote"), qsl("bracketReload.note"), qsl("bracketReload.a\"b")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
+    }
+
 private:
     // Returns false rather than asserting: a QVERIFY here would only return from
     // this helper, leaving the caller to dereference a null editor.

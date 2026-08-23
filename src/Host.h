@@ -279,9 +279,19 @@ public:
     // per-line trigger pipeline (runTriggers) can drive it without a view. The
     // view reaches the same instance via TConsole::model().
     TConsoleModel& mainConsoleModel();
+    // Null until the very end of this Host's constructor: the model owns a
+    // TBuffer, and a TBuffer clears itself while being built - so core buffer
+    // code that can run that early has to be able to see "not there yet"
+    // rather than dereference the shared_ptr.
+    TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     void refreshMainConsoleColors();
     void runTriggers(int line);
+    // The log lifecycle lives in the core console model, which is a plain
+    // struct and cannot emit, so it raises the two view-only halves of a
+    // logging change through here.
+    void raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName);
+    void raiseLoggingStateChanged(const bool isLogging);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
@@ -913,6 +923,13 @@ signals:
     void signal_showMapperScriptReminder();
     void signal_showUnpackingProgress(const QString& message, const QString& title);
     void signal_hideUnpackingProgress();
+    // Raised while logging is still off when a log starts, and already off when
+    // one stops, so that the frontend's print lands on screen but outside the
+    // log file. That only holds while the connection is direct - a queued one
+    // would deliver it after the flag has moved and log the announcement.
+    void signal_loggingAnnouncement(const bool isLogging, const QString& logFileName);
+    // Raised once a logging change has settled, for the frontend's log button.
+    void signal_loggingStateChanged(const bool isLogging);
 
 private slots:
     void slot_purgeTemps();

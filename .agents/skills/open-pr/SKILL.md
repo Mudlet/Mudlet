@@ -3,11 +3,11 @@ name: open-pr
 description: >-
   Publish the current branch and open a pull request against the upstream Mudlet repository,
   using the project's PR template and the title prefix that Danger enforces. Use when asked to
-  open a PR, create a pull request, or push changes upstream.
+  open a PR, create a pull request, or push changes upstream - whether that is asked for by a
+  person, or reached at the end of an agent's task.
 license: GPL-2.0-or-later
 argument-hint: Optional hint about what this PR does (e.g. "adds shimmer blink effect")
 user-invocable: true
-disable-model-invocation: true
 ---
 
 ## When to use
@@ -15,6 +15,10 @@ disable-model-invocation: true
 Use when the user asks to open a pull request, create a PR, or push their changes upstream. This
 publishes the current branch to their fork if needed, then opens a PR against upstream
 `development`.
+
+Agents opening a pull request at the end of their own task use this too; steps 5 and 6 say what to
+do when there is nobody to ask. Either way the branch must be finished first - reviewed, formatted,
+committed - because every push after the PR opens re-runs the automated reviewers.
 
 ## Procedure
 
@@ -70,12 +74,16 @@ publishes the current branch to their fork if needed, then opens a PR against up
 
    House style on top of the template: keep each section terse, 1-3 bullet points for the overview
    and a single sentence of motivation. Add a `**Test case:**` line at the end giving brief steps
-   to verify the change — not part of the template, but reviewers expect it. No fluff.
+   to verify the change — not part of the template, but reviewers expect it. No fluff; about one
+   screen in total.
 
-5. **Show the draft title and body to the user, and ask whether to open it as a draft PR or as
-   ready for review.** Wait for both answers before anything is published — never assume either.
-   Draft suits work that is still moving, wants early CI feedback, or needs discussion before
-   reviewers spend time on it; ready for review suits a change that is complete and tested.
+   For AI-assisted work, end the body with the `Assisted-by: AGENT_NAME:MODEL_VERSION` trailer from
+   `docs/CONTRIBUTING.md`; a squash merge drops commit trailers, so the body is the copy that lasts.
+
+5. **Settle draft versus ready for review.** With a person in the conversation, show them the
+   draft title and body and ask which to open, and wait for both answers. Unattended, open ready
+   for review and report the title and body with the URL — draft only when the branch is knowingly
+   unfinished. `gh pr ready <number>` promotes a draft later, so draft is the reversible choice.
 
 6. **Confirm the fork before pushing anything.** `origin` is not guaranteed to be the user's fork,
    and pushing to the wrong remote is awkward to undo, so establish this before the push rather
@@ -97,7 +105,9 @@ publishes the current branch to their fork if needed, then opens a PR against up
    `/`, `:` or `@`, the URL was not in a form this understands — stop and report it rather than
    building a malformed `--head`.
 
-   Show `$FORK_OWNER` to the user and confirm it is the fork the pull request should come from.
+   `$FORK_OWNER` must not be `Mudlet` — that is upstream, the mistake this step exists to catch.
+   Matching `gh api user --jq .login`, the account `gh pr create` acts as, is confirmation enough
+   unattended; otherwise show both values and ask before pushing.
 
 7. **Publish the branch** with `git push -u origin "$BRANCH"`. Do this every time, not only when
    the branch lacks an upstream — a branch that already tracks `origin` can still hold local
@@ -106,7 +116,7 @@ publishes the current branch to their fork if needed, then opens a PR against up
    The push must succeed before continuing. If it fails, stop and report the error; do not open a
    pull request against a branch whose commits are not on the fork.
 
-8. **Open the PR** against upstream, adding `--draft` if that is what the user chose:
+8. **Open the PR** against upstream, adding `--draft` if that is what step 5 settled on:
 
    ```bash
    gh pr create --repo Mudlet/Mudlet --base development \
@@ -121,10 +131,11 @@ publishes the current branch to their fork if needed, then opens a PR against up
    A draft can be marked ready later with `gh pr ready <number>`, so choosing draft is the
    reversible option.
 
-9. **Report the result** — the PR URL on success, the error output on failure.
+9. **Report the result** — the PR URL on success, the error output on failure. AI-assisted work is
+   not done there: ask the human to build and manually test the branch, then to supply the name and
+   email for the `Signed-off-by` trailer that `docs/ai-instructions.md` requires. Never fabricate
+   one, and never imply the change is finished without it.
 
 ## Notes
 
-- Before a human signs off on AI-assisted work they must have built and manually tested it; see
-  the commit-trailer policy in `docs/ai-instructions.md`. Do not fabricate a `Signed-off-by`.
 - Never force-push to a remote branch.
