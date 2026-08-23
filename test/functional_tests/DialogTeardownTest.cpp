@@ -44,12 +44,16 @@
 
 #include <QAction>
 #include <QKeySequenceEdit>
+#include <QCheckBox>
+#include <QDoubleSpinBox>
+#include <QFontComboBox>
 #include <QLineEdit>
 #include <QScopeGuard>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "TMap.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "TriggerUnit.h"
@@ -280,6 +284,81 @@ private slots:
         QCOMPARE(chatNameSpy.count(), 1);
 
         QCOMPARE(preferences->lineEdit_mmcpChatName->text(), setElsewhere);
+    }
+
+    // The same exposure for the 2D map room symbol settings, which a script can
+    // change with setMapSymbolFont()/setMapSymbolFontOnlyUseSelected()/
+    // setMapSymbolFontScaling() while the preferences are open. The dialog only
+    // hears about it through TMap::signal_mapSymbolFontChanged. Cut that connect
+    // and the open dialog goes on showing - and, on Save, writing back - the
+    // values the map no longer has, which silently reverts the script's change.
+    void test_openPreferencesFollowTheMapSymbolSettings()
+    {
+        mudlet::self()->showOptionsDialog(qsl("tab_mapper"), mpHost);
+        QTest::qWait(100ms);
+        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "Preferences dialog was not created");
+
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap);
+        const QFont fontBefore = pMap->getSymbolFont();
+        const bool onlyUseBefore = pMap->getOnlySymbolFontUsed();
+        const qreal scalingBefore = pMap->getSymbolFontFudgeFactor();
+        auto restoreState = qScopeGuard([preferences, pMap, fontBefore, onlyUseBefore, scalingBefore]() {
+            delete preferences;
+            pMap->setSymbolFont(fontBefore);
+            pMap->setOnlySymbolFontUsed(onlyUseBefore);
+            pMap->setSymbolFontFudgeFactor(scalingBefore);
+        });
+
+        // The spin-box is created in code rather than coming from the .ui file,
+        // so it has to be found through the group box that holds it:
+        auto* pScalingSpinBox = preferences->groupBox_mapSymbols->findChild<QDoubleSpinBox*>();
+        QVERIFY2(pScalingSpinBox, "The symbol scaling spin-box was not found in the Symbols group box");
+
+        const qreal scalingSetElsewhere = qFuzzyCompare(scalingBefore, 1.5) ? 1.75 : 1.5;
+        const bool onlyUseSetElsewhere = !onlyUseBefore;
+
+        // tells "the map never took it" apart from "the dialog never heard it"
+        QSignalSpy symbolFontSpy(pMap, &TMap::signal_mapSymbolFontChanged);
+        QVERIFY2(pMap->setSymbolFontFudgeFactor(scalingSetElsewhere), "The map refused the scaling factor this test set");
+        QVERIFY2(pMap->setOnlySymbolFontUsed(onlyUseSetElsewhere), "The map refused the only-use-selected flag this test set");
+        QCOMPARE(symbolFontSpy.count(), 2);
+
+        QCOMPARE(pScalingSpinBox->value(), scalingSetElsewhere);
+        QCOMPARE(preferences->checkBox_isOnlyMapSymbolFontToBeUsed->isChecked(), onlyUseSetElsewhere);
+
+        // ...and the open dialog must not have written its own values back over
+        // what was set from outside it:
+        QCOMPARE(pMap->getSymbolFontFudgeFactor(), scalingSetElsewhere);
+        QCOMPARE(pMap->getOnlySymbolFontUsed(), onlyUseSetElsewhere);
+    }
+
+    // The half of that which actually reverts a script's change: Save writes the
+    // controls back to the map, so a stale control silently undoes it.
+    void test_savingPreferencesKeepsMapSymbolSettingsSetElsewhere()
+    {
+        mudlet::self()->showOptionsDialog(qsl("tab_mapper"), mpHost);
+        QTest::qWait(100ms);
+        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "Preferences dialog was not created");
+
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap);
+        const qreal scalingBefore = pMap->getSymbolFontFudgeFactor();
+        auto restoreState = qScopeGuard([pMap, scalingBefore]() {
+            pMap->setSymbolFontFudgeFactor(scalingBefore);
+        });
+
+        const qreal scalingSetElsewhere = qFuzzyCompare(scalingBefore, 1.75) ? 1.5 : 1.75;
+        QVERIFY2(pMap->setSymbolFontFudgeFactor(scalingSetElsewhere), "The map refused the scaling factor this test set");
+
+        // Save and close, the way clicking the dialog's own button does:
+        preferences->closeButton->click();
+        QTest::qWait(100ms);
+        QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed by Save");
+
+        QCOMPARE(pMap->getSymbolFontFudgeFactor(), scalingSetElsewhere);
     }
 
     // Opening the preferences at all used to be enough to end the run: the
