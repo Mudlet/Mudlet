@@ -1154,11 +1154,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (!pHost || !pHost->mpMap) {
                 return;
             }
-            pHost->mpMap->mMapSymbolFontFudgeFactor = value;
-            if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-                pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-                pHost->mpMap->mpMapper->mp2dMap->update();
-            }
+            pHost->mpMap->setSymbolFontFudgeFactor(value);
         });
 
         label_mapSymbolsFont->setEnabled(true);
@@ -1175,6 +1171,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
+        connect(pHost->mpMap.data(), &TMap::signal_mapSymbolFontChanged, this, &dlgProfilePreferences::slot_mapSymbolFontChanged, Qt::UniqueConnection);
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
@@ -3395,7 +3392,7 @@ void dlgProfilePreferences::slot_saveAndClose()
             }
 
             if (mpDoubleSpinBox_mapSymbolFontFudge) {
-                pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+                pHost->mpMap->setSymbolFontFudgeFactor(mpDoubleSpinBox_mapSymbolFontFudge->value());
             }
 
             if (pHost->mpMap->mpMapper) {
@@ -4470,24 +4467,7 @@ void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUse
         return;
     }
 
-    if (pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed != isToOnlyUseSelectedFont) {
-        pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed = isToOnlyUseSelectedFont;
-        if (isToOnlyUseSelectedFont) {
-            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
-        } else {
-            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
-        }
-        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-            pHost->mpMap->mpMapper->mp2dMap->repaint();
-            pHost->mpMap->mpMapper->update();
-        }
-
-        if (mpDialogMapGlyphUsage) {
-            generateMapGlyphDisplay();
-        }
-    }
+    pHost->mpMap->setOnlySymbolFontUsed(isToOnlyUseSelectedFont);
 }
 
 void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
@@ -4497,20 +4477,33 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
         return;
     }
 
-    const int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
-    if (pHost->mpMap->mMapSymbolFont != font) {
-        pHost->mpMap->mMapSymbolFont = font;
-        pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
-        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-            pHost->mpMap->mpMapper->mp2dMap->repaint();
-            pHost->mpMap->mpMapper->update();
-        }
+    pHost->mpMap->setSymbolFont(font);
+}
 
-        if (mpDialogMapGlyphUsage) {
-            generateMapGlyphDisplay();
-        }
+// Keeps the controls (and the glyph usage dialog, when open) in step with the
+// map's symbol settings however they were changed - including from Lua:
+void dlgProfilePreferences::slot_mapSymbolFontChanged()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    {
+        const QSignalBlocker blocker(fontComboBox_mapSymbols);
+        fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->getSymbolFont());
+    }
+    {
+        const QSignalBlocker blocker(checkBox_isOnlyMapSymbolFontToBeUsed);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(pHost->mpMap->getOnlySymbolFontUsed());
+    }
+    if (mpDoubleSpinBox_mapSymbolFontFudge) {
+        const QSignalBlocker blocker(mpDoubleSpinBox_mapSymbolFontFudge);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->getSymbolFontFudgeFactor());
+    }
+
+    if (mpDialogMapGlyphUsage) {
+        generateMapGlyphDisplay();
     }
 }
 

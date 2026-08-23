@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
+#include "TMapView.h"
 #include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
@@ -3037,6 +3038,80 @@ bool TMap::getRoomNamesShown()
 void TMap::setRoomNamesShown(bool shown)
 {
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
+}
+
+// The style strategy carries the rendering flags applied when the map was
+// loaded, along with the NoFontMerging bit that mIsOnlyMapSymbolFontToBeUsed
+// owns. A font picked from a font combo-box or named from Lua has neither, so
+// carry the existing strategy (and size) over instead of taking the incoming
+// font wholesale.
+bool TMap::setSymbolFont(const QFont& font)
+{
+    QFont wantedFont = font;
+    wantedFont.setPointSize(mMapSymbolFont.pointSize());
+    wantedFont.setStyleStrategy(mMapSymbolFont.styleStrategy());
+    if (mMapSymbolFont == wantedFont) {
+        return false;
+    }
+
+    mMapSymbolFont = wantedFont;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+bool TMap::setOnlySymbolFontUsed(const bool onlyUseSelectedFont)
+{
+    if (mIsOnlyMapSymbolFontToBeUsed == onlyUseSelectedFont) {
+        return false;
+    }
+
+    mIsOnlyMapSymbolFontToBeUsed = onlyUseSelectedFont;
+    if (onlyUseSelectedFont) {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+    } else {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+    }
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+bool TMap::setSymbolFontFudgeFactor(const qreal fudgeFactor)
+{
+    if (qFuzzyCompare(mMapSymbolFontFudgeFactor, fudgeFactor)) {
+        return false;
+    }
+
+    mMapSymbolFontFudgeFactor = fudgeFactor;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// Every 2D map keeps its own cache of rendered symbol pixmaps, so all of them
+// have to be dropped - the main mapper and any secondary map views.
+void TMap::flushSymbolCaches()
+{
+    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
+        mpMapper->mp2dMap->flushSymbolPixmapCache();
+        mpMapper->mp2dMap->update();
+        mpMapper->update();
+    }
+
+    if (!mpViewManager) {
+        return;
+    }
+    for (const int viewId : mpViewManager->getViewIds()) {
+        auto* pView = mpViewManager->getView(viewId);
+        if (pView && pView->get2DMap()) {
+            pView->get2DMap()->flushSymbolPixmapCache();
+            pView->get2DMap()->update();
+        }
+    }
 }
 
 /*

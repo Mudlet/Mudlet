@@ -5765,6 +5765,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "getMapZoom", TLuaInterpreter::getMapZoom);
+    lua_register(pGlobalLua, "setMapSymbolFont", TLuaInterpreter::setMapSymbolFont);
+    lua_register(pGlobalLua, "getMapSymbolFont", TLuaInterpreter::getMapSymbolFont);
+    lua_register(pGlobalLua, "setMapSymbolFontOnlyUseSelected", TLuaInterpreter::setMapSymbolFontOnlyUseSelected);
+    lua_register(pGlobalLua, "getMapSymbolFontOnlyUseSelected", TLuaInterpreter::getMapSymbolFontOnlyUseSelected);
+    lua_register(pGlobalLua, "setMapSymbolFontScaling", TLuaInterpreter::setMapSymbolFontScaling);
+    lua_register(pGlobalLua, "getMapSymbolFontScaling", TLuaInterpreter::getMapSymbolFontScaling);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
     lua_register(pGlobalLua, "setExitWeightFilter", TLuaInterpreter::setExitWeightFilter);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);

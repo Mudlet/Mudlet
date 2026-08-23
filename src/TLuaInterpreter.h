@@ -187,6 +187,12 @@ public:
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State*);
     static int getMapZoom(lua_State*);
+    static int setMapSymbolFont(lua_State*);
+    static int getMapSymbolFont(lua_State*);
+    static int setMapSymbolFontOnlyUseSelected(lua_State*);
+    static int getMapSymbolFontOnlyUseSelected(lua_State*);
+    static int setMapSymbolFontScaling(lua_State*);
+    static int getMapSymbolFontScaling(lua_State*);
     static int createMapImageLabel(lua_State*);
     static int installPackage(lua_State*);
     static int installModule(lua_State*);
