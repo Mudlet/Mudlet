@@ -11,7 +11,7 @@
     <message>
       <location filename="../src/crash_reporter/main.cpp" line="79"/>
       <source>&lt;div align=&apos;center&apos;&gt;&lt;b&gt;Mudlet has encountered a problem.&lt;/b&gt;&lt;br&gt;&lt;br&gt;You can choose to send a crash report to help us improve the application.&lt;/div&gt;</source>
-      <translation>&lt;div align=&apos;center&apos;&gt;&lt;b&gt;Mudlet ha encontrado un problema.&lt;/b&gt;&lt;br&gt;&lt;br&gt;Puede elegir enviar un informe de error para ayudarnos a mejorar la aplicación.&lt;/div&gt;</translation>
+      <translation>&lt;div align=&apos;center&apos;&gt;&lt;b&gt;Mudlet ha encontrado un problema.&lt;/b&gt;&lt;br&gt;&lt;br&gt;Puedes optar por enviar un informe de error para ayudarnos a mejorar la aplicación.&lt;/div&gt;</translation>
     </message>
     <message>
       <location filename="../src/crash_reporter/main.cpp" line="86"/>
@@ -42,7 +42,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="286"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation>No hay habitaciones en el mapa: carga otro, o comience a mapear desde cero para empezar.</translation>
+      <translation>No hay salas en el mapa: carga otro o empieza a mapear desde cero.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="291"/>
@@ -66,13 +66,13 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="256"/>
       <source>[ WARN ]  - Not using your saved sign-in because this connection is not encrypted; please sign in again.</source>
       <extracomment>Shown when a saved password-less sign-in cannot be reused because this connection to the game is not encrypted.</extracomment>
-      <translation>[ ADVERTENCIA ] - No está usando su inicio de sesión guardado porque esta conexión no está cifrada; por favor inicie sesión de nuevo.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="326"/>
       <source>[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again.</source>
       <extracomment>Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.</extracomment>
-      <translation>[ ADVERTENCIA ] - No se pudo guardar su inicio de sesión para la próxima vez; es posible que tenga que iniciar sesión de nuevo.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="361"/>
@@ -96,7 +96,7 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="479"/>
       <source>[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1</source>
       <extracomment>%1 is the sign-in web address the user should open manually in their browser.</extracomment>
-      <translation>[ ADVERTENCIA ] - No se pudo abrir el navegador. Abra este enlace manualmente para iniciar sesión: %1</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="490"/>
@@ -136,7 +136,7 @@
       <location filename="../src/GMCPAuthenticator.cpp" line="800"/>
       <source>[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again.</source>
       <extracomment>Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.</extracomment>
-      <translation>[ INFO ] - Su inicio de sesión guardado ha expirado; reconectando para que pueda iniciar sesión de nuevo.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="895"/>
@@ -18923,7 +18923,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1802"/>
       <location filename="../src/ui/room_exits.ui" line="1986"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Impide que se cree una ruta a través de esta salida; equivale a un valor de salida infinito.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="53"/>
@@ -18944,7 +18944,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1555"/>
       <location filename="../src/ui/room_exits.ui" line="1818"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Crea una salida en esta dirección con destino desconocido, incompatibles entre sí con el ID de sala de una salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="114"/>
@@ -18961,7 +18961,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1851"/>
       <location filename="../src/ui/room_exits.ui" line="2004"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;No se dibuja ningún símbolo de puerta en el mapa 2D para esta salida.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="133"/>
@@ -18973,7 +18973,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1339"/>
       <location filename="../src/ui/room_exits.ui" line="1473"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El símbolo de puerta verde (abierta) se dibuja en el mapa 2D y puede colocarse tanto en un extremo de pasillo como en una salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="149"/>
@@ -18985,7 +18985,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1355"/>
       <location filename="../src/ui/room_exits.ui" line="1489"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El símbolo de puerta naranja (cerrada) se dibuja en el mapa 2D y configurar tanto en una salida sin conectar como en un a salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="165"/>
@@ -18997,7 +18997,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1371"/>
       <location filename="../src/ui/room_exits.ui" line="1505"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Se puede configurar tanto en una salida sin conectar como en una salida real.</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="187"/>
@@ -19020,7 +19020,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1607"/>
       <location filename="../src/ui/room_exits.ui" line="1870"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;En el mapa 2D se dibuja un símbolo con un color de relleno verde (abierto); puede colocarse tanto una salida sin conectar como en una salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="551"/>
@@ -19028,7 +19028,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1623"/>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Se dibuja un símbolo con un color de relleno naranja (cerrado) en el mapa 2D; puede colocarse tanto en una salida sin conectar como en una salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="567"/>
@@ -19036,7 +19036,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1639"/>
       <location filename="../src/ui/room_exits.ui" line="1902"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;En el mapa 2D se dibuja un símbolo con un color de relleno rojo (bloqueado); puede colocarse tanto en una salida sin conectar como en una salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="589"/>
@@ -19046,7 +19046,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="729"/>
       <source>This room</source>
-      <translation type="unfinished"/>
+      <translation>Esta sala</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="842"/>
@@ -19086,7 +19086,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="1708"/>
       <source>Exit RoomID number</source>
-      <translation type="unfinished"/>
+      <translation>Salida número RoomID</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1735"/>
@@ -19117,52 +19117,53 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1973"/>
       <source>Exit
 Status</source>
-      <translation type="unfinished"/>
+      <translation>Salir
+Estado</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1977"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Indica si la salida es inválida, conduce a otra sala de esta zona o conduce a una sala de otra zona.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2013"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El símbolo de puerta verde (abierta) se dibuja en el mapa 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2022"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El símbolo de puerta naranja (cerrada) se dibuja en el mapa 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2031"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;El símbolo de puerta roja (bloqueada) se dibuja en el mapa 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2108"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utiliza este botón para guardar los cambios; también se eliminarán las salidas especiales inválidas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2124"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utiliza este botón para cerrar el cuadro de diálogo sin realizar cambios.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1968"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Establece el número de la sala a la que conduce esta salida; si se establece en cero, la salida se eliminará al guardar las salidas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Añade un elemento vacío a las salidas especiales para editarlo según sea necesario.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2076"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pulse este botón para desactivar la selección de una salida especial.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2111"/>
@@ -19172,7 +19173,7 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1720"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>Valor de la salida (0=Sin sobreescribir)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2127"/>
@@ -19187,7 +19188,8 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1930"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, either: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Haz clic en un elemento para editarlo o modificarlo. Para eliminar una salida especial, puedes: seleccionarla y pulsar la tecla suprimir  del teclado; establecer su ID de sala de salida en un valor inferior a uno; o borrar el contenido del campo de nombre o comando.&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1964"/>
@@ -19327,22 +19329,22 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>Color of the room border</source>
-      <translation type="unfinished"/>
+      <translation>Color del borde de la sala</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="294"/>
       <source>Set border color</source>
-      <translation type="unfinished"/>
+      <translation>Establecer el color del borde</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="332"/>
       <source>Thickness:</source>
-      <translation type="unfinished"/>
+      <translation>Grosor:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="345"/>
       <source>(use global)</source>
-      <translation type="unfinished"/>
+      <translation>(usar global)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="364"/>
@@ -19571,13 +19573,13 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="449"/>
       <source> lines)</source>
       <extracomment>This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text.</extracomment>
-      <translation type="unfinished"/>
+      <translation> líneas)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
       <source>AND / Multi-line (within: </source>
       <extracomment>This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Y / Multilínea (dentro de:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="481"/>
@@ -19621,7 +19623,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="407"/>
       <source>&lt;p&gt;If set to any value but the first the trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;If set to the first value the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Si se establece en cualquier valor distinto del primero, el disparador solo se activará si se cumplen &lt;u&gt;todas&lt;/u&gt; las condiciones de la lista dentro del intervalo de líneas especificado, y las capturas se guardarán en &lt;tt&gt;multimatches&lt;/tt&gt; en lugar de en &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;Si se establece en el primer valor, el disparador se activará si se cumple &lt;u&gt;alguna&lt;/u&gt; condición de la lista.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
@@ -19632,7 +19634,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
       <source>&lt;p&gt;&lt;b&gt;Multi-line Trigger Range&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Specifies within how many consecutive lines all trigger patterns must match.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Example:&lt;/b&gt; If set to 3 and pattern 1 matches on line 100, pattern 2 must match somewhere between lines 100-103 for the trigger to fire.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Rango de activación multilínea&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Especifica el número de líneas consecutivas dentro del cual deben coincidir todos los patrones de activación.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Ejemplo:&lt;/b&gt; Si se establece en 3 y el patrón 1 coincide en la línea 100, el patrón 2 debe coincidir en algún punto entre las líneas 100 y 103 para que se produzca la activación.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
@@ -19706,7 +19708,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="302"/>
       <source>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger&apos;s children?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;¿Cuántas líneas más, después de la que activó el disparador, deben pasarse a los elementos secundarios del disparador?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="371"/>
@@ -19814,7 +19816,7 @@ desde GUI)</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="154"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷ Tipo de valor:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="176"/>
