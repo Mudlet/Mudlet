@@ -588,7 +588,7 @@ private slots:
 
     // The same XML arrives as a package import into a live profile, and there
     // the model on its own is not enough - the view has to be restyled with it,
-    // or text in the new foreground lands on the old background.
+    // or the console keeps painting the old background behind the panes.
     void test_importingColoursIntoALiveProfileRestylesTheView()
     {
         pinTheFixtureColoursAreNotTheDefaults();
@@ -606,6 +606,10 @@ private slots:
         QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
         QVERIFY2(host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground),
                  qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
+        // changeColors() leaves the buffer's copy of the colours to
+        // refreshMainConsoleColors(), and this is the only assertion that walks
+        // that hand-off with a view present:
+        QCOMPARE(plainStamp(host->mainConsoleModel().buffer).background(), mProfileBgColor);
     }
 
     // The server can redefine the sixteen ANSI colours, and the buffer stamps
@@ -617,16 +621,20 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
-        host->setMayRedefineColors(true);
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
         const QColor redefinedRed(0x12, 0x34, 0x56);
         QVERIFY2(host->mRed != redefinedRed, "The profile's red is already the redefined one, so the assertions on it cannot fail.");
-        QCOMPARE(ansiRedStamp(model->buffer), host->mRed);
+        QCOMPARE(ansiRedStamp(model->buffer), QColor(QColorConstants::DarkRed));
 
         // <OSC>P<colour number><RRGGBB><BEL> - the xterm palette redefinition
+        std::string refused = "\x1b]P1123456\x07";
+        model->buffer.translateToPlainText(refused, true);
+        QVERIFY2(host->mRed != redefinedRed, "A server redefined the palette although the profile forbids it.");
+
+        host->setMayRedefineColors(true);
         std::string redefine = "\x1b]P1123456\x07";
         model->buffer.translateToPlainText(redefine, true);
         QCOMPARE(host->mRed, redefinedRed);
@@ -636,6 +644,30 @@ private slots:
         model->buffer.translateToPlainText(reset, true);
         QCOMPARE(host->mRed, QColor(QColorConstants::DarkRed));
         QCOMPARE(ansiRedStamp(model->buffer), QColor(QColorConstants::DarkRed));
+    }
+
+    // setBackgroundColor("main") writes the profile's background itself and
+    // leans on the view to carry it into the model, so without one the console
+    // it reaches through is not merely absent - dereferencing it is a crash
+    // before it is ever a stale colour.
+    void test_scriptedBackgroundColourReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor scriptedBackground(0x11, 0x22, 0x33);
+        QVERIFY2(host->mBgColor != scriptedBackground, "The profile already carries the scripted background, so the assertions below cannot fail.");
+
+        runLua(host, qsl("setBackgroundColor(0x11, 0x22, 0x33)"));
+
+        QCOMPARE(host->mBgColor, scriptedBackground);
+        QCOMPARE(model->mBgColor, scriptedBackground);
+        QCOMPARE(plainStamp(model->buffer).background(), scriptedBackground);
     }
 
     void cleanup()
@@ -738,6 +770,20 @@ private:
         const QString line = text + QChar::LineFeed;
         buffer.append(line, 0, line.size(), fgColor, bgColor, TChar::None, 0);
         return buffer.getLastLineNumber() - 1;
+    }
+
+    // Utility function feeding one unstyled line and handing back the character
+    // it was stamped with, which carries the buffer's own copy of the profile's
+    // colours. A default-constructed TChar back means the line never landed.
+    TChar plainStamp(TBuffer& buffer)
+    {
+        std::string plainText = "Model stamp\n";
+        buffer.translateToPlainText(plainText, true);
+        const int line = buffer.getLastLineNumber() - 1;
+        if (line < 0 || buffer.buffer.at(line).empty()) {
+            return {};
+        }
+        return buffer.buffer.at(line).at(0);
     }
 
     // Utility function feeding one SGR-red line and handing back the colour it
