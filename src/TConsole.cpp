@@ -1157,9 +1157,9 @@ void TConsole::changeColors()
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
         }
-        // A MainConsole's mBgColor/mFgColor are references onto the model Host
-        // co-owns, so this is the same write as `mBgColor = mpHost->mBgColor`;
-        // keep it a call so the core-side refresh remains its one definition:
+        // The same write as `mBgColor = mpHost->mBgColor` - a MainConsole's pair
+        // are references onto the model - made as a call so the sync has one
+        // definition:
         mpHost->refreshMainConsoleColors();
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;

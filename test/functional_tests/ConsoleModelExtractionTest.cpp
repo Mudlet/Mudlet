@@ -77,9 +77,6 @@ private:
     const QString mColourHostname = "Test-ConsoleModelColours";
     const QString mLocalhost = "localhost";
     QString mPort;
-    // Neither of these is a built-in default (a model starts out light grey on
-    // black), so a model still holding a default was plainly never given the
-    // profile's colours.
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
     const QColor mProfileBgColor{0x00, 0x00, 0x80};
 
@@ -489,12 +486,8 @@ private slots:
         QFile::remove(logFileName);
     }
 
-    // A profile's colours are only known once its save has been read, and
-    // loading one happens before any view exists - the console is built later,
-    // by mudlet::addConsoleForNewHost(). So the load itself has to leave the
-    // colours in the model; nothing view-side is there to supply them, and
-    // seeding them when the model is constructed cannot work either, because
-    // Host still holds the built-in defaults at that point.
+    // A profile is loaded before it has a view, so the load itself has to leave
+    // the colours in the model - nothing view-side is there to supply them.
     void test_profileLoadFillsTheModelColoursWithNoView()
     {
         pinTheFixtureColoursAreNotTheDefaults();
@@ -517,10 +510,8 @@ private slots:
         QCOMPARE(model.mFgColor, mProfileFgColor);
         QCOMPARE(model.mBgColor, mProfileBgColor);
 
-        // The pair above is what triggers match against; text that arrives with
-        // no SGR sequence is stamped with the buffer's own copy of the same two
-        // colours, and the load has to have landed those too or the model
-        // disagrees with itself.
+        // The buffer keeps its own copy of the same two colours - what unstyled
+        // text is stamped with - and the load has to have landed those too:
         std::string plainText = "ProfileColour plain\n";
         model.buffer.translateToPlainText(plainText, true);
         const int plainLine = model.buffer.getLastLineNumber() - 1;
@@ -530,11 +521,10 @@ private slots:
     }
 
     // What the model's colours are for: a "match the default foreground colour"
-    // trigger resolves "default" through the model as it matches, so a model the
-    // profile's colours never reached matches against the built-in default
-    // instead. The trigger is deliberately made before the colours change - a
-    // colour pattern also snapshots the colour it was built with, and one made
-    // afterwards would match on that snapshot whatever the model held.
+    // trigger resolves "default" through the model as it matches. The trigger is
+    // made before the colours change on purpose - a colour pattern also
+    // snapshots the colour it was built with, and one made afterwards would
+    // match on that snapshot whatever the model held.
     void test_colourTriggerMatchesTheProfileColoursWithNoView()
     {
         startProfile();
@@ -542,10 +532,9 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
 
-        // The trigger body records the matched text rather than the whole line,
-        // so a match on some other part of the line cannot satisfy the
-        // assertions. Long brackets have to be levelled: plain [[ ]] would end
-        // at the first ]] inside matches[1].
+        // matches[1] rather than line, so a match elsewhere on the line cannot
+        // satisfy the assertions. The long bracket has to be levelled: plain
+        // [[ ]] would end at the first ]] inside matches[1].
         runLua(host,
                qsl("colourTriggerHit = 'none'\n"
                    "tempAnsiColorTrigger(%1, %2, [==[colourTriggerHit = matches[1]]==])\n")
@@ -557,10 +546,9 @@ private slots:
         // profile that simply never had a view would not do:
         host->reenableAllTriggers();
 
-        // Magenta is not the default colour yet - a new profile is still on the
-        // built-in defaults - so this line must not match. That is what proves
-        // the match further down turns on the model rather than on the colour
-        // the pattern snapshotted when it was built:
+        // Magenta is not the default yet, so this line must not match - which is
+        // what proves the match below turns on the model and not on the
+        // pattern's snapshot:
         QCOMPARE(model->mFgColor, QColorConstants::LightGray);
         const int staleLine = appendModelLine(model->buffer, qsl("ProfileColour before"), mProfileFgColor, mProfileBgColor);
         host->runTriggers(staleLine);
@@ -575,11 +563,10 @@ private slots:
         QCOMPARE(luaGlobalString(host, "colourTriggerHit"), qsl("ProfileColour delta"));
     }
 
-    // The other half of the same wire: the profile preferences write Host's
-    // colours and then restyle the console, and the model has to come out of
-    // that carrying them too, or colour triggers go on matching the colours the
-    // user just replaced. Driven both ways, so the model is shown to track the
-    // profile rather than to have been set to one colour once.
+    // The other half of the same wire: the preferences write Host's colours and
+    // restyle the console, and the model has to come out of that carrying them
+    // too. Driven both ways, so it is shown to track rather than to have been
+    // set once.
     void test_restylingTheViewKeepsTheModelColoursInStep()
     {
         pinTheFixtureColoursAreNotTheDefaults();
@@ -707,9 +694,8 @@ private:
         return buffer.getLastLineNumber() - 1;
     }
 
-    // Utility function pinning what makes the colour assertions mean anything:
-    // a model that was never given the profile's colours holds these two, so an
-    // assertion written against a colour that happened to be one of them would
+    // Utility function: a model that was never given the profile's colours holds
+    // the built-in pair, so an assertion written against either of those would
     // pass whether the refresh ran or not.
     void pinTheFixtureColoursAreNotTheDefaults()
     {
@@ -717,12 +703,11 @@ private:
         QVERIFY2(mProfileBgColor != QColorConstants::Black, "The background colour under test is the built-in default, so the assertions on it cannot fail.");
     }
 
-    // Utility function writing the smallest profile save readHost() accepts -
-    // the colour elements exactly as XMLexport::exportHost() writes them. Note
-    // the import is not surgical: readHost() reads a missing boolean attribute
-    // as "off", so putting this into a live profile also turns some three dozen
-    // of its settings off and zeroes its borders. Harmless where only the
-    // colours are asserted on, a trap for any other use.
+    // Utility function writing the smallest profile save readHost() accepts, the
+    // colour elements spelled as XMLexport::exportHost() writes them. Not
+    // surgical: readHost() reads a missing boolean attribute as "off", so
+    // importing this into a live profile also turns some three dozen of its
+    // settings off and zeroes its borders.
     void writeProfileColourSave(const QString& filePath)
     {
         QFile file(filePath);
@@ -742,10 +727,9 @@ private:
         QVERIFY2(out.status() == QTextStream::Ok && file.error() == QFile::NoError, qPrintable(qsl("Writing the profile save %1 failed: %2").arg(filePath, file.errorString())));
     }
 
-    // Utility function reading a profile's Host settings into a live profile,
-    // which is what loading a profile does with the <Host> element of its save.
-    // importPackage() only reports XML well-formedness, so the colour it was
-    // asked for is checked here rather than left to each caller.
+    // Utility function reading a profile's Host settings into a live profile, as
+    // a profile load does. importPackage() only reports XML well-formedness, so
+    // the colour it was asked for is checked here rather than by each caller.
     void importProfileColours(Host* host)
     {
         QTemporaryDir importDir;
