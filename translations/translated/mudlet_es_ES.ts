@@ -3577,7 +3577,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1069"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation>Te desconecta del juego y vuelve a conectarte a él</translation>
+      <translation>Te desconecta del juego y te vuelve a conectar.</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="543"/>
@@ -3650,7 +3650,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/TDetachedWindow.cpp" line="1380"/>
       <source>Mudlet (%1 profiles) - %2 (Detached)</source>
       <extracomment>This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %1 is the number of profiles, %2 is the name of the profile currently shown.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mudlet (Perfiles %1) - %2 (Separado)</translation>
     </message>
   </context>
   <context>
@@ -3658,7 +3658,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="63"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation>Barra de botones fáciles- %1 - %2</translation>
+      <translation>Barra de botones fáciles - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3719,7 +3719,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5277"/>
       <source>No error message available from Lua</source>
-      <translation>No hay mensaje de error disponible de Lua</translation>
+      <translation>No hay ningún mensaje de error disponible desde Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="4413"/>
@@ -3738,7 +3738,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5279"/>
       <source>Lua error: %1</source>
-      <translation>Error de Lua:</translation>
+      <translation>Error de Lua: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="5288"/>
@@ -3749,7 +3749,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6067"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation>Probablemente no podré acceder al código Lua de Mudlet.</translation>
+      <translation>Probablemente no podrá acceder al código Lua de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6085"/>
@@ -3759,7 +3759,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6092"/>
       <source>Database support will not be available.</source>
-      <translation>El soporte de base de datos no está disponible.</translation>
+      <translation>El soporte de la base de datos no estará disponible.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6099"/>
@@ -3779,7 +3779,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6296"/>
       <source>No error message available from Lua.</source>
-      <translation>No hay mensaje de error disponible de Lua.</translation>
+      <translation>No hay ningún mensaje de error disponible desde Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6298"/>
@@ -3819,7 +3819,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
 Tried these locations:
 %1</source>
       <translation>[ ERROR ] - No se pudo encontrar, cargar ni ejecutar con éxito LuaGlobal.lua - ¡Tu Mudlet está roto!
-Intentó estas ubicaciones:
+Se intentó en estas ubicaciones:
 %1</translation>
     </message>
   </context>
@@ -3849,12 +3849,12 @@ Intentó estas ubicaciones:
       <location filename="../src/TMainConsole.cpp" line="257"/>
       <source>logfile</source>
       <extracomment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).</extracomment>
-      <translation>archivo_de_registro</translation>
+      <translation>archivo de registro</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="309"/>
       <source>Logging has been stopped. Log file is %1</source>
-      <translation>Registro detenido. Archivo: %1</translation>
+      <translation>Se ha detenido el registro. El archivo de registro es %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="387"/>
@@ -3877,12 +3877,12 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMainConsole.cpp" line="923"/>
       <source>Pre-Map loading(2) report</source>
-      <translation>Cargar el mapa previo(2) informar</translation>
+      <translation>Cargar el mapa previo(2) informe</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="934"/>
       <source>Loading map(2) at %1 report</source>
-      <translation>Cargando el mapa(2) en %1 informar</translation>
+      <translation>Cargando el mapa(2) en %1 informe</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1446"/>
@@ -3904,12 +3904,12 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1650"/>
       <source>Pre-Map loading(1) report</source>
-      <translation>Cargar el mapa previo(1) informar</translation>
+      <translation>Cargar el mapa previo(1) informe</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1668"/>
       <source>Loading map(1) at %1 report</source>
-      <translation>Cargando el mapa(1) en %1 informar</translation>
+      <translation>Cargando el mapa(1) en %1 informe</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1670"/>
@@ -3919,21 +3919,21 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1714"/>
       <source>Pre-Map importing(1) report</source>
-      <translation>Informe de importación de pre-mapa(1)</translation>
+      <translation>Informe de importación de premapa (1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1737"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation>[ ERROR ] - Archivo de mapa no encontrado, ruta de acceso y nombre utilizado fue:
-%1.</translation>
+      <translation>[ ERROR ] - No se encontró el archivo de mapa; la ruta y el nombre utilizados fueron:
+%1.
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1743"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation>loadMap: mal argumento #1 valor (nombre del archivo usado: 
-&quot;%1&quot; no fue encontrado).</translation>
+      <translation>loadMap: valor incorrecto del argumento #1 (el nombre de archivo utilizado: &quot;%1&quot; no se encontró).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1752"/>
@@ -3943,7 +3943,7 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1759"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation>Importando el mapa(1) &quot;%1&quot; en el informe %2</translation>
+      <translation>Importando mapa(1) &quot;%1&quot; en el informe %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1762"/>
@@ -3954,18 +3954,17 @@ Intentó estas ubicaciones:
       <location filename="../src/TMainConsole.cpp" line="1765"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation>loadMap: mal argumento en el valor #1 (nombre del archivo usado: 
-&quot;%1&quot; no fue encontrado).</translation>
+      <translation>loadMap: valor incorrecto del argumento #1 (el nombre de archivo utilizado: &quot;%1&quot; no se pudo abrir para lectura).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1789"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[ INFO ] - Solicitud de recarga del mapa recibida en el sistema...</translation>
+      <translation>[ INFO ] - Se recibió una solicitud de recarga de mapa del sistema...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1794"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[ OK ] - ... Solicitud de recarga del mapa en el sistema ha sido completada.</translation>
+      <translation>[ OK ] - ... Solicitud de recarga del mapa del sistema completada.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1796"/>
@@ -3998,7 +3997,7 @@ Intentó estas ubicaciones:
       <location filename="../src/TMainConsole.cpp" line="2140"/>
       <source>Channel102 events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Eventos del canal 102:</translation>
+      <translation>Eventos del Canal102:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="2145"/>
@@ -4022,7 +4021,7 @@ Intentó estas ubicaciones:
       <location filename="../src/TMainConsole.cpp" line="2169"/>
       <source>Telnet Options:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Opciones de Telnet:</translation>
+      <translation>Opciones de telnet:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="2173"/>
@@ -4063,12 +4062,12 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMainConsole.cpp" line="2249"/>
       <source>Save profile?</source>
-      <translation>Guardar perfil?</translation>
+      <translation>¿Guardar perfil?</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="2249"/>
       <source>Do you want to save the profile %1?</source>
-      <translation>¿Desea guardar el perfil %1?</translation>
+      <translation>¿Quieres guardar el perfil %1?</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="2263"/>
@@ -4083,12 +4082,12 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMainConsole.cpp" line="2272"/>
       <source>Could not save map</source>
-      <translation>No se pudo guardar el mapa.</translation>
+      <translation>No se pudo guardar el mapa</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="2273"/>
       <source>Sorry, could not save the map. Would you like to retry or close without saving the map?</source>
-      <translation>Lo sentimos, no se pudo guardar el mapa. ¿Desea volver a intentarlo o cerrar sin guardar el mapa?</translation>
+      <translation>Lo sentimos, no se pudo guardar el mapa. ¿Quieres volver a intentarlo o cerrar sin guardar el mapa?</translation>
     </message>
   </context>
   <context>
@@ -4096,27 +4095,27 @@ Intentó estas ubicaciones:
     <message>
       <location filename="../src/TMap.cpp" line="617"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>[ INFO ] - CONVERTING: etiqueta de estilo antigua, areaID:%1 Etiqueta:%2.</translation>
+      <translation>[ INFO ] - CONVIRTIENDO: etiqueta de estilo antigua, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="620"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[ INFO ] - Convirtiendo la id de la etiqueta antigua: %1.</translation>
+      <translation>[ INFO ] - Convirtiendo la etiqueta de estilo antiguo id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="625"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation>[ ADVERTENCIA ] - CONVERTIR: no se puede convertir la etiqueta de estilo antiguo en el área con la id: %1, la id de la etiqueta es: %2.</translation>
+      <translation>[ ADVERTENCIA ] - CONVIRTIENDO: no se puede convertir la etiqueta de estilo antiguo en el área con id: %1, el id de la etiqueta es: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="628"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation>[ ADVERTENCIA ] - CONVERTIR: no se puede convertir la etiqueta de estilo antiguo con id: %1.</translation>
+      <translation>[ ADVERTENCIA ] - CONVIRTIENDO: no se puede convertir la etiqueta de estilo antiguo con id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="655"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[ OK ] - Se completó el seguimiento del mapa (%1s). Disfruta de tu juego...</translation>
+      <translation>[ OK ] - Auditoría del mapa completada (%1s). ¡Disfruta del juego!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="88"/>
@@ -4153,9 +4152,7 @@ Le faltan TANTOS datos que te valdría más la pena empezar de nuevo...</transla
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation>[ ALERTA ] - Error al cargar el archivo de mapa de Mudlet JSON, razón:
-%1; el archivo es:
-&quot;%2&quot;.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1653"/>
@@ -4166,8 +4163,7 @@ Le faltan TANTOS datos que te valdría más la pena empezar de nuevo...</transla
       <location filename="../src/TMap.cpp" line="1831"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[ INFO ] - Área predeterminada (restablecida para salas que no han sido asignadas a un área
-) no encontrada, agregando el reservado id -1.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1922"/>
@@ -4223,12 +4219,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[ ALERTA ] - Se detectó al menos un inconveniente durante la última operación del mapa y
-que se recomienda que revise el informe más reciente en
-el archivo:
-&quot;%1&quot;
-- busque el (último) informe con el título:
-&quot;%2&quot;.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2493"/>
@@ -4238,20 +4229,14 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[ INFO ] - El equivalente a la información anterior sobre ese último mapa
-operación ha sido guardado para su revisión como el informe más reciente en
-el archivo:
-&quot;%1&quot;
-- busque el (último) informe con el título:
-&quot;%2&quot;.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2515"/>
       <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
-      <translation>[ ADVERTENCIA ] - Intento de descargar un mapa XML cuando ya se ha solicitado
-o se está importando desde un archivo local - espere a que la operación se complete (si no se puede cancelar) antes de reintentar!</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2524"/>
@@ -4259,17 +4244,14 @@ o se está importando desde un archivo local - espere a que la operación se com
 export is already in progress - wait for that operation to complete
 before retrying!</source>
       <extracomment>Shown in the main console when a map download is refused</extracomment>
-      <translation>[ ADVERTENCIA ]  - Se ha intentado descargar un mapa XML mientras ya hay una importación o exportación de mapa en curso. 
-¡Espera a que se complete esa operación antes de reintentarlo!</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2545"/>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation>[ ADVERTENCIA ] - Intento de descargar un XML desde una URL no válida. La URL era:
-%1
-y el mensaje de error (puede contener detalles técnicos) era:&quot;%2&quot;.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2559"/>
@@ -4300,16 +4282,13 @@ already in progress.</source>
 export is already in progress - wait for that operation to complete
 before retrying!</source>
       <extracomment>Shown in the main console when a map import is refused</extracomment>
-      <translation>[ ADVERTENCIA ]  - Se ha intentado importar un mapa XML mientras ya hay una importación o
-exportación de mapa en curso. 
-¡Espera a que se complete esa operación antes de reintentarlo!</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2738"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1</source>
-      <translation>[ ERROR ] - La descarga del mapa encontró un error:
-%1</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2788"/>
@@ -4350,7 +4329,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3256"/>
       <source>import or export already in progress</source>
-      <translation>importar o exportar ya en progreso</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3262"/>
@@ -4370,7 +4349,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3291"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation>versión de formato no válido &quot;%1&quot; detectado</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3296"/>
