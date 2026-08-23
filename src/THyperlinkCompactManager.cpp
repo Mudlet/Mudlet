@@ -35,14 +35,11 @@ THyperlinkCompactManager::THyperlinkCompactManager()
 
 THyperlinkCompactManager::~THyperlinkCompactManager() = default;
 
-// The shorthand and preset-property tables the OSC 8 compact syntax is parsed
-// against. Filled in here rather than by the view: Host builds the main
-// console's model before any widget exists, so anything that waited for a
-// TConsole would leave a model with empty tables and silently stop expanding
-// "s" into "style".
+// Filled in here rather than by the view: Host builds the main console's model
+// before any widget exists, and a table left empty stops expanding "s" into
+// "style" without saying so.
 void THyperlinkCompactManager::registerBuiltInFeatures()
 {
-    // Style
     registerShorthand(qsl("s"), qsl("style"));
     registerShorthand(qsl("c"), qsl("color"));
     registerShorthand(qsl("bg"), qsl("bg"));
@@ -62,31 +59,24 @@ void THyperlinkCompactManager::registerBuiltInFeatures()
     registerShorthand(qsl("sl"), qsl("selected"));
     registerPresetProperty(qsl("style"));
 
-    // Menu
     registerShorthand(qsl("m"), qsl("menu"));
     registerPresetProperty(qsl("menu"));
 
-    // Tooltip
     registerShorthand(qsl("t"), qsl("tooltip"));
     registerPresetProperty(qsl("tooltip"));
 
-    // Visibility
     registerShorthand(qsl("v"), qsl("visibility"));
     registerPresetProperty(qsl("visibility"));
 
-    // Selection
     registerShorthand(qsl("sel"), qsl("selection"));
     registerPresetProperty(qsl("selection"));
 
-    // Spoiler
     registerShorthand(qsl("sp"), qsl("spoiler"));
     registerPresetProperty(qsl("spoiler"));
 
-    // Disabled
     registerShorthand(qsl("d"), qsl("disabled"));
     registerPresetProperty(qsl("disabled"));
 
-    // Title
     registerShorthand(qsl("ti"), qsl("title"));
     registerPresetProperty(qsl("title"));
 }

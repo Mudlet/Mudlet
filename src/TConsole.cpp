@@ -137,11 +137,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     // before any widget exists), so point its buffer at this view now.
     buffer.setConsole(this);
 
-    // Redraw whichever panes this console has when the model conceals or
-    // reveals a link. Only the main console's buffer is ever translated, so
-    // only it registers tracked links today, but the manager is per model and
-    // this is the view's whole half of the hyperlink split - so every console
-    // gets it rather than the main one alone.
+    // Every console, not just the main one: the manager is per model, and only
+    // the main console's buffer is translated today but nothing here relies on
+    // that.
     connect(&model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::visibilityChanged, this, &TConsole::slot_hyperlinkVisibilityChanged);
 
     auto quitShortcut = new QShortcut(this);
@@ -296,12 +294,10 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // Connect user input trigger (command submission only, not typing)
         connect(mpCommandLine, &TCommandLine::commandSubmitted, &model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onUserInput);
 
-        // Connect GA/EOR prompt signal from telnet. Unique because both ends of
-        // this one outlive the widget that makes it - the sender is the Host's
-        // telnet and the receiver is now the Host's model - so a second main
-        // console built against a live Host would otherwise double-deliver every
-        // prompt and expire links a prompt early. mudlet::addConsoleForNewHost()
-        // refuses to build that second console today, but nothing here says so.
+        // Unique because both ends outlive the widget making the connection -
+        // Host's telnet and Host's model - so a second main console built
+        // against a live Host would double-deliver every prompt and expire links
+        // a prompt early.
         connect(&(pH->mTelnet), &cTelnet::signal_promptReceived, &model().mHyperlinkVisibilityManager, &THyperlinkVisibilityManager::onPromptReceived, Qt::UniqueConnection);
     }
 
@@ -2947,12 +2943,9 @@ void TConsole::slot_clearSearchResults()
     mLowerPane->forceUpdate();
 }
 
-// The view's half of the OSC 8 visibility split: the model has just rewritten a
-// line of the buffer, so whatever this console shows of it is stale. forceUpdate()
-// rather than update() because a plain repaint is served from the pane's cached
-// screen pixmap, which still holds the text that has just been concealed.
-// The panes are only null in the constructor window - the connection is made
-// some 190 lines before they are built.
+// forceUpdate() rather than update(): a plain repaint is served from the pane's
+// cached screen pixmap, which still holds the text just concealed. The panes are
+// only null in the constructor window, before they are built.
 void TConsole::slot_hyperlinkVisibilityChanged()
 {
     if (mUpperPane) {

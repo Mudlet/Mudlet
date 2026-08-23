@@ -49,8 +49,6 @@ class THyperlinkCompactManager : public QObject
     Q_DISABLE_COPY(THyperlinkCompactManager)
 
 public:
-    // No QObject parent: this is a field of the core TConsoleModel, which is not
-    // a QObject and outlives the console widget that reaches it.
     THyperlinkCompactManager();
     ~THyperlinkCompactManager();
 

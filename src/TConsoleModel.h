@@ -85,13 +85,10 @@ struct TConsoleModel
     QPoint mUserCursor;
     bool mIsPromptLine = false;
 
-    // The OSC 8 hyperlink managers. Only their state is here: concealing and
-    // revealing a link rewrite this model's buffer, so they run with or without
-    // a view, while repainting afterwards is the view's job - TConsole observes
-    // THyperlinkVisibilityManager::visibilityChanged and forces both panes to
-    // redraw. Registering a link is not view-free yet: TBuffer reaches the
-    // manager through its own console back-pointer, so the translate path still
-    // needs a widget.
+    // The OSC 8 hyperlink managers. Concealing and revealing rewrite this
+    // model's buffer, so they run with or without a view; repainting afterwards
+    // is the view's job. Registering a link is not view-free yet - TBuffer
+    // reaches the manager through its own console back-pointer.
     //
     // Declared after the buffer so that the manager which writes into it is
     // destroyed first - keep it that way if a field is ever added between them.

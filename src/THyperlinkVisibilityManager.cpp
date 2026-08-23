@@ -32,8 +32,8 @@
 
 using namespace std::chrono_literals;
 
-// No QObject parent: this is a field of the core TConsoleModel, which is not a
-// QObject and outlives the console widget that reaches it.
+// No QObject parent - the owning TConsoleModel is not one - so the timers below
+// are parented to this manager and die with the model, not with a widget.
 THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsoleModel& model)
 : QObject(nullptr)
 , mModel(model)
@@ -726,11 +726,9 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 
 // Gotcha: the screen-reader announcements below are the one view concern still
 // wired straight from this class, so unlike the repaint they no longer stop when
-// the console does. mudlet::closeHost() normally destroys the Host on the very
-// next event-loop turn, too soon for the 100ms timer, but it retries every 50ms
-// for as long as a map operation is running - so closing a profile mid-map-import
-// with a link still pending can announce about a console that has already gone.
-// They move to the frontend with the rest of this file's mudlet:: reach-ins.
+// the console does - closing a profile mid-map-import, where closeHost() keeps
+// retrying every 50ms, can announce about a console that has already gone. They
+// move to the frontend with the rest of this file's mudlet:: reach-ins.
 void THyperlinkVisibilityManager::queueHiddenAnnouncement()
 {
     ++mPendingHiddenCount;

@@ -257,9 +257,8 @@ public:
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
 
-    // The three OSC 8 managers are model state, not view state - see
-    // TConsoleModel. The main console shares Host's, so a link concealed while
-    // the profile was open is still concealed in the model once the widget has
+    // Model state, not view state: the main console shares Host's, so a link
+    // concealed while the profile was open stays concealed once the widget has
     // gone.
     THyperlinkCompactManager& getHyperlinkCompactManager() { return mpModel->mHyperlinkCompactManager; }
     THyperlinkSelectionManager& getHyperlinkSelectionManager() { return mpModel->mHyperlinkSelectionManager; }
