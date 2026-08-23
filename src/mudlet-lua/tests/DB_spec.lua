@@ -3854,8 +3854,7 @@ describe("Tests db:create with _unique naming unknown columns", function()
     assert.is_table(mydb)
     assert.are.equal("", warnings)
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
-    local ok, _ = db:add(mydb.people, {name = "Bob"})
-    assert.is_nil(ok)
+    assert.is_nil(db:add(mydb.people, {name = "Bob"}))
     local rows = db:fetch(mydb.people)
     assert.are.equal(1, #rows)
   end)
@@ -3877,7 +3876,7 @@ describe("Tests db:create with _unique naming unknown columns", function()
     -- would change the sheet's SQL and put every database that has one through
     -- db:_migrate's table rebuild, so the warning is all this can do about it
     local mydb, warnings = createCollectingWarnings({people = {name = "", _unique = {{"name", "_row_id"}}}})
-    assert.is_truthy(string.find(warnings, '_unique names "_row_id" among the columns of an entry', 1, true))
+    assert.is_truthy(string.find(warnings, '_unique names "_row_id" in an entry written as a list', 1, true))
     assert.is_truthy(string.find(warnings, "can never refuse a row", 1, true))
     assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("name", "_row_id")', 1, true))
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
@@ -3975,11 +3974,91 @@ describe("Tests db:create with _unique naming unknown columns", function()
 
   it("takes a sheet that gave one of its columns a number for a name", function()
     -- the keyed form takes every key that is not an option for a column name, so
-    -- this sheet really does have a column called 2, which _unique cannot name
+    -- this sheet really does have a column called 2. The single-column form cannot
+    -- name it, since that one is matched against the keys themselves
     local mydb, warnings = createCollectingWarnings({people = {name = "", [2] = "extra", _unique = "name"}})
     assert.are.equal("", warnings)
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
     assert.is_nil(db:add(mydb.people, {name = "Bob"}))
+  end)
+
+  it("lets a compound entry name a column whose name is a number", function()
+    -- sqlite resolves UNIQUE("2") against that column like any other, so reading
+    -- the sheet's columns as strings only is what would throw away a working rule
+    local mydb, warnings = createCollectingWarnings({people = {name = "", [2] = "extra", _unique = {{"2"}}}})
+    assert.are.equal("", warnings)
+    assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("2")', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_nil(db:add(mydb.people, {name = "Ada"}))
+  end)
+
+  it("still applies a constraint the sheet does not have yet when another entry is skipped", function()
+    -- keeping what a sheet already enforces is about not losing uniqueness, so it
+    -- has to leave everything else the sheet asks for alone: hold the lot back and
+    -- one typo quietly costs the sheet every constraint change it makes from then on
+    createCollectingWarnings({people = {name = "", city = ""}})
+
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = {"nosuchcol", "name"}}})
+    assert.is_truthy(string.find(warnings, '_unique names "nosuchcol"', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Ada", city = "London"}))
+    assert.is_nil(db:add(mydb.people, {name = "Ada", city = "Paris"}))
+    assert.are.equal(1, #db:fetch(mydb.people))
+  end)
+
+  it("still applies a _violations change when another entry is skipped", function()
+    createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}}, _violations = "FAIL"}})
+    createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}, "nosuchcol"}, _violations = "IGNORE"}})
+    assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("name", "city") ON CONFLICT IGNORE', 1, true))
+  end)
+
+  it("still applies a constraint when the skipped entry could never have made one", function()
+    -- _row_id on its own was never attached to anything, so the sheet has nothing to
+    -- lose by it and no reason for it to hold back the entry that is fine
+    createCollectingWarnings({people = {name = "", city = ""}})
+
+    local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name", "_row_id"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_nil(db:add(mydb.people, {name = "Bob"}))
+  end)
+
+  it("says so when it keeps the uniqueness a sheet already has", function()
+    -- the create-time warning names the entry it skipped, which reads as though the
+    -- rest of _unique went in: what the sheet is left enforcing has to be said too
+    createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "city"}}}})
+
+    local _, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = {{"name", "citty"}}}})
+    assert.is_truthy(string.find(warnings, "the uniqueness this sheet already enforces is kept", 1, true))
+  end)
+
+  it("says so when removing a column takes the uniqueness with it", function()
+    -- removing a column is a rebuild of its own further down, from the same pruned
+    -- _unique, so the rule goes anyway. Holding that rebuild back instead would
+    -- leave the sheet a column its schema has no entry for, which reading it raises on
+    createCollectingWarnings({people = {name = "", city = "", notes = "", _unique = "name"}})
+
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = "nmae"}})
+    assert.is_truthy(string.find(warnings, "goes with the column this db:create removes", 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Ada"}))
+    assert.is_true(db:add(mydb.people, {name = "Ada"}))
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("warns about a single column name that only differs in case", function()
+    -- the single-column form is attached by exact match, so unlike a compound entry
+    -- a difference in case really does leave the sheet without the constraint
+    local mydb, warnings = createCollectingWarnings({people = {Name = "", _unique = "name"}})
+    assert.is_truthy(string.find(warnings, '_unique names "name", which is not one of the sheet\'s columns', 1, true))
+    assert.is_true(db:add(mydb.people, {Name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {Name = "Bob"}))
+  end)
+
+  it("leaves db:merge_unique reporting a sheet with no unique index at all", function()
+    -- _unique is set back to nil rather than an empty list when nothing survives, so
+    -- db:merge_unique reaches the assert that names the real problem
+    local mydb = createCollectingWarnings({people = {name = "", _unique = "nosuchcol"}})
+    local ok, err = pcall(function() db:merge_unique(mydb.people, {{name = "Ada"}}) end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "only works on a sheet with a unique index", 1, true))
   end)
 end)
 
