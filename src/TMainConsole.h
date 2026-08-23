@@ -116,7 +116,6 @@ public:
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
-    const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
     // Either returns the handle of the per profile or the shared Mudlet one or
@@ -187,10 +186,10 @@ signals:
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
 
-    // Was public in Host class but made private there and cloned to here
-    // (for main TConsole) to prevent it being changed without going through the
-    // process to load in the changed dictionary:
-    QString mSpellDic;
+    // Names the dictionary mpHunspell_system currently holds, so asking for the
+    // same one again does not reload it. The profile's setting is Host's
+    // mSpellDic - this is only ever what has been loaded from it.
+    QString mLoadedSystemDictionary;
 
     // Cloned from Host
     bool mEnableUserDictionary = true;

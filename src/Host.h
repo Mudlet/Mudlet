@@ -227,7 +227,7 @@ public:
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
     void setSpellDic(const QString&);
-    QString getSpellDic();
+    QString getSpellDic() const;
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
     {
@@ -1097,7 +1097,9 @@ private:
     bool mServerMayRedefineColors = false;
 
     // Was public but hidden to prevent it being changed without going through
-    // the process to signal to users that they need to change dictionaries:
+    // the process to signal to users that they need to change dictionaries.
+    // Empty until one is chosen - getSpellDic() answers with the starting
+    // dictionary for the platform meanwhile:
     QString mSpellDic;
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be

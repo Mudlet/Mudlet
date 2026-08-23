@@ -1161,13 +1161,16 @@ QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
 
 void TMainConsole::setSystemSpellDictionary(const QString& newDict)
 {
-    if (newDict.isEmpty() || mSpellDic == newDict) {
+    if (newDict.isEmpty() || mLoadedSystemDictionary == newDict) {
         return;
     }
 
-    mSpellDic = newDict;
+    mLoadedSystemDictionary = newDict;
 
-    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, mpHost->getSpellDic());
+    // On the platforms that look for system dictionaries this probes for
+    // "<name>.aff" to settle which directory to use, so it has to be given the
+    // same name the two files are then loaded by.
+    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, newDict);
     QString spell_aff = qsl("%1%2.aff").arg(path, newDict);
     QString spell_dic = qsl("%1%2.dic").arg(path, newDict);
 
