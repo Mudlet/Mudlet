@@ -84,27 +84,43 @@ void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QS
     }
 }
 
+enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
+
+struct MapFileCheck
+{
+    MapFileCheckResult result;
+    QString errorString;
+};
+
 // A file holds map data only if its root element is <map>. XMLimport reads a
 // <MudletPackage> document as a package, and anything else - a game's HTML "no
 // map here" page answered with a 200, say - as a well-formed document full of
 // elements it does not recognise: either way it reports success having put no
-// rooms on the map it was asked to fill.
-bool fileHoldsMapData(QFile& file)
+// rooms on the map it was asked to fill. A file that is not XML at all is told
+// apart from those, so that a damaged map is not reported as somebody else's
+// web page.
+MapFileCheck fileHoldsMapData(QFile& file)
 {
     const qint64 startPosition = file.pos();
-    bool result = false;
+    MapFileCheck check{MapFileCheckResult::NotAMap, QString()};
     QXmlStreamReader reader(&file);
     while (!reader.atEnd()) {
         if (reader.readNext() == QXmlStreamReader::StartElement) {
             // XML allows only one root element, so the first start element is it
-            result = (reader.name() == qsl("map"));
+            check.result = (reader.name() == qsl("map")) ? MapFileCheckResult::ValidMap : MapFileCheckResult::NotAMap;
             break;
         }
     }
+
+    if (reader.hasError()) {
+        check.result = MapFileCheckResult::ParseError;
+        check.errorString = reader.errorString();
+    }
+
     // The reader buffers ahead, so the parse proper has to be given the file
     // back where it was rather than where the scan above left it
     file.seek(startPosition);
-    return result;
+    return check;
 }
 } // anonymous namespace
 
@@ -2677,21 +2693,45 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         return false;
     }
 
-    if (!fileHoldsMapData(file)) {
-        if (errMsg) {
-            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read
-            *errMsg = tr("loadMap: the file:\n"
-                         "\"%1\"\n"
-                         "does not contain a map, so the current map has been left as it was.")
-                              .arg(file.fileName());
+    const MapFileCheck check = fileHoldsMapData(file);
+    if (check.result != MapFileCheckResult::ValidMap) {
+        // Both wordings are built before either is used: which one is wanted turns on what
+        // was wrong with the file, and where it goes turns on who asked, and keeping those
+        // two questions apart is what stops this being four near-identical branches
+        QString luaMessage;
+        QString consoleMessage;
+
+        if (check.result == MapFileCheckResult::ParseError) {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "is damaged or unreadable (%2), so the current map has been left as it was.")
+                                 .arg(file.fileName(), check.errorString);
+            //: Shown in the main console. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "is damaged or unreadable (%2) - so the current map has been\n"
+                                "left as it was.")
+                                     .arg(file.fileName(), check.errorString);
         } else {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "does not contain a map, so the current map has been left as it was.")
+                                 .arg(file.fileName());
             //: Shown in the main console. %1 is the path and name of the file that was read
-            postMessage(tr("[ ERROR ] - The file:\n"
-                           "\"%1\"\n"
-                           "does not contain a map - a game with no map to offer can answer a\n"
-                           "download with an error page instead of one - so the current map has\n"
-                           "been left as it was.")
-                                .arg(file.fileName()));
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "does not contain a map - a game with no map to offer can answer a\n"
+                                "download with an error page instead of one - so the current map has\n"
+                                "been left as it was.")
+                                     .arg(file.fileName());
+        }
+
+        if (errMsg) {
+            *errMsg = luaMessage;
+        } else {
+            postMessage(consoleMessage);
         }
         return false;
     }
