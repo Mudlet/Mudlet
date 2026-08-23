@@ -65,8 +65,8 @@ using namespace std::chrono_literals;
 // that the aliasing really is one object, that the pipeline runs off the model,
 // and that the model stays usable once its view has been destroyed - the
 // co-ownership exists precisely so the two can outlive each other. The chosen
-// system spell dictionary makes the same trip for the same reason: a profile is
-// loaded and saved with no view in sight, so its name has to live on Host.
+// system spell dictionary lives on Host for the same reason: a profile is
+// loaded and saved before any view exists.
 class ConsoleModelExtractionTest : public QObject
 {
     Q_OBJECT
@@ -82,10 +82,9 @@ private:
     QString mPort;
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
     const QColor mProfileBgColor{0x00, 0x00, 0x80};
-    // Deliberately not a locale code: getSpellDic() answers with the platform's
-    // starting dictionary when the profile has not chosen one, and a name that
-    // could never be that answer means the save is the only place this can come
-    // from.
+    // Deliberately not a locale code, so it can never be the starting dictionary
+    // getSpellDic() falls back to: the seeded save is then the only place a
+    // profile could have got this name from.
     const QString mProfileSpellDic = "mudlet_test_dictionary";
 
 private slots:
@@ -603,8 +602,8 @@ private slots:
 
     // A profile is loaded and saved before it has a view, so the name of the
     // system spell dictionary it chose has to make the whole round trip through
-    // Host. The save read it off the main console widget until now, which has no
-    // answer to give here at all.
+    // Host - a save that reaches into the main console widget for it has nothing
+    // to read here.
     void test_spellDictionaryRoundTripsWithNoView()
     {
         const QString saveFolder = mudlet::getMudletPath(enums::profileXmlFilesPath, mSpellHostname);
@@ -628,9 +627,9 @@ private slots:
     }
 
     // The other side of the same read: a profile that never chose a dictionary
-    // has an empty Host::mSpellDic and is saved with the platform's starting one
-    // instead, which is what the console used to be seeded with and hand back.
-    // Saving the bare member would quietly wipe the setting from every profile.
+    // holds an empty name and is saved with the platform's starting one instead.
+    // Writing the bare member would quietly wipe the setting from every profile
+    // that had been relying on the fallback.
     void test_spellDictionarySaveKeepsTheStartingDictionary()
     {
         startProfile();
