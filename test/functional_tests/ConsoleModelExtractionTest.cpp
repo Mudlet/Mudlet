@@ -608,6 +608,36 @@ private slots:
                  qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
     }
 
+    // The server can redefine the sixteen ANSI colours, and the buffer stamps
+    // text from its own copy of them rather than from the Host's - so the copy
+    // has to be refreshed whether or not there is a console to refresh it.
+    void test_ansiPaletteRedefinitionReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->setMayRedefineColors(true);
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor redefinedRed(0x12, 0x34, 0x56);
+        QVERIFY2(host->mRed != redefinedRed, "The profile's red is already the redefined one, so the assertions on it cannot fail.");
+        QCOMPARE(ansiRedStamp(model->buffer), host->mRed);
+
+        // <OSC>P<colour number><RRGGBB><BEL> - the xterm palette redefinition
+        std::string redefine = "\x1b]P1123456\x07";
+        model->buffer.translateToPlainText(redefine, true);
+        QCOMPARE(host->mRed, redefinedRed);
+        QCOMPARE(ansiRedStamp(model->buffer), redefinedRed);
+
+        std::string reset = "\x1b]R\x07";
+        model->buffer.translateToPlainText(reset, true);
+        QCOMPARE(host->mRed, QColor(QColorConstants::DarkRed));
+        QCOMPARE(ansiRedStamp(model->buffer), QColor(QColorConstants::DarkRed));
+    }
+
     void cleanup()
     {
         delete mpServer;
@@ -708,6 +738,20 @@ private:
         const QString line = text + QChar::LineFeed;
         buffer.append(line, 0, line.size(), fgColor, bgColor, TChar::None, 0);
         return buffer.getLastLineNumber() - 1;
+    }
+
+    // Utility function feeding one SGR-red line and handing back the colour it
+    // was stamped with, which is the buffer's copy of red rather than the
+    // Host's. An invalid colour back means the line never landed.
+    QColor ansiRedStamp(TBuffer& buffer)
+    {
+        std::string redText = "\x1b[31mPalette red\n";
+        buffer.translateToPlainText(redText, true);
+        const int line = buffer.getLastLineNumber() - 1;
+        if (line < 0 || buffer.buffer.at(line).empty()) {
+            return {};
+        }
+        return buffer.buffer.at(line).at(0).foreground();
     }
 
     // Utility function: a model that was never given the profile's colours holds
