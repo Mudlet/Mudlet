@@ -33,9 +33,6 @@
 #include "dlgProfilePreferences.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
-#ifdef INCLUDE_MCPSERVER
-#include "TMCPServer.h"
-#endif
 #include "LuaInterface.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
@@ -49,6 +46,9 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapViewManager.h"
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPServer.h"
+#endif
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
@@ -5543,7 +5543,10 @@ bool Host::shouldStripOscHyperlinkPresetParam()
 #ifdef INCLUDE_MCPSERVER
 void Host::setMCPEnabled(const bool enabled)
 {
-    if (mEnableMCP == enabled) {
+    // Compare against what the server is actually doing rather than the flag alone: a
+    // start that failed leaves the two disagreeing, and this is the path a retry arrives
+    // through, so an early return on the flag would make the retry a no-op.
+    if (mEnableMCP == enabled && mpMCPServer->running() == enabled) {
         return;
     }
 
@@ -5551,18 +5554,24 @@ void Host::setMCPEnabled(const bool enabled)
 
     if (!enabled) {
         mpMCPServer->stopServer();
-        qDebug() << "MCP server stopped for profile" << mHostName;
         return;
     }
 
-    if (!mpMCPServer->startServer(mMCPServerPort)) {
-        qWarning() << "MCP server could not start for profile" << mHostName;
-        mEnableMCP = false;
+    const MCPStartResult start = mpMCPServer->startServer(mMCPServerPort);
+    if (!start.started) {
+        // mEnableMCP deliberately stays set. The user asked for this, and clearing it
+        // would be written straight back out by XMLexport, losing the setting for good.
+        // Every profile defaults to the same port, so a second one enabling MCP lands
+        // here as a matter of course rather than as an edge case.
+        qWarning() << "MCP server could not start for profile" << mHostName << "-" << start.error;
+        //: %1 is a TCP port number, %2 the reason the socket could not be opened.
+        postMessage(tr("[ ERROR ] - Could not start the MCP server on port %1: %2\n"
+                       "Another profile may already be using that port.")
+                            .arg(QString::number(mMCPServerPort), start.error));
         return;
     }
 
-    // Port 0 asks the OS to pick one, so read back what it actually bound to.
-    mMCPServerPort = mpMCPServer->getPort();
-    qDebug() << "MCP server for profile" << mHostName << "is listening on" << mpMCPServer->getEndpoint();
+    //: %1 is a URL the user gives to their MCP client, e.g. http://127.0.0.1:11235/mcp
+    postMessage(tr("[ INFO ]  - MCP server for this profile is listening on %1").arg(mpMCPServer->getEndpoint()));
 }
 #endif

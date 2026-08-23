@@ -34,6 +34,7 @@
 #include <QtTest/QtTest>
 
 #include <QTemporaryDir>
+#include <QTemporaryFile>
 
 #include <functional>
 
@@ -625,6 +626,36 @@ private slots:
         QVERIFY(mpTarget->mEventHandlerMap.contains(qsl("日本語イベント")));
         QVERIFY(mpTarget->mEventHandlerMap.contains(qsl("emojiEvent🎉")));
     }
+
+#ifdef INCLUDE_MCPSERVER
+    void test_anInstalledPackageCannotEnableTheMcpServer()
+    {
+        // readHost() runs for the <Host> element of an installed package as well as for
+        // the profile's own file. The MCP server executes arbitrary Lua, so honouring the
+        // attribute during an install would let any downloaded .mpackage open a code
+        // execution endpoint without ever asking the user.
+        const quint16 portBefore = mpTarget->mMCPServerPort;
+        QVERIFY(!mpTarget->mEnableMCP);
+
+        const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
+                                      "<Host mEnableMCP=\"yes\" mMCPServerPort=\"11299\"></Host>"
+                                      "</HostPackage></MudletPackage>";
+
+        QTemporaryFile packageFile;
+        QVERIFY(packageFile.open());
+        QCOMPARE(packageFile.write(packageXml), static_cast<qint64>(packageXml.size()));
+        packageFile.close();
+
+        QFile file(packageFile.fileName());
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpTarget);
+        auto [imported, importError] = importer.importPackage(&file, qsl("hostilePackage"));
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(!mpTarget->mEnableMCP, "an installed package switched the MCP server on");
+        QCOMPARE(mpTarget->mMCPServerPort, portBefore);
+    }
+#endif
 };
 
 void initializeQRCResourcesForProfileRoundTripTest()

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
+ *   Copyright (C) 2025-2026 Vadim Peretokin - vadim.peretokin@mudlet.org  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,12 +26,14 @@
 #include "utils.h"
 
 #include <QJsonDocument>
+#include <QLocale>
+#include <QSet>
 #include <QStringList>
 
 // Runs the caller's code with print() diverted into a table, then puts print back.
-// Keeping the whole dance inside one chunk keeps the saved print and the collected lines
-// as locals; an earlier version parked them in _G, where they outlived the call and
-// collided with any script that happened to use those names.
+// The whole dance stays inside one chunk so that the saved print and the collected lines
+// are locals: anything kept in _G would outlive the call and collide with a script that
+// happened to use the same name.
 static const char* csmLuaRunner = R"LUA(
 local code = ...
 local lines = {}
@@ -50,10 +52,19 @@ if not chunk then
     return false, table.concat(lines, '\n'), syntaxError
 end
 
-local returned = { pcall(chunk) }
+-- Count the results rather than measuring them afterwards. A nil anywhere in the list
+-- leaves a hole, and both # and unpack() stop at the first one, so the Lua idiom
+-- "return nil, reason" would otherwise reach the caller as no values at all.
+local returned, count = {}, 0
+local function collect(...)
+    count = select('#', ...)
+    for i = 1, count do
+        returned[i] = (select(i, ...))
+    end
+end
+collect(pcall(chunk))
 print = realPrint
-local ok = table.remove(returned, 1)
-return ok, table.concat(lines, '\n'), unpack(returned)
+return returned[1], table.concat(lines, '\n'), unpack(returned, 2, count)
 )LUA";
 
 // A table that refers to itself would otherwise recurse until the C stack gives out, and
@@ -81,7 +92,7 @@ QJsonArray TMCPLuaBridge::getAvailableTools() const
     QJsonObject profileArgument;
     profileArgument[qsl("type")] = qsl("string");
     //: Describes an argument of the MCP "lua" tool to an AI model.
-    profileArgument[qsl("description")] = tr("Name of the profile to run the code in. Defaults to the active profile.");
+    profileArgument[qsl("description")] = tr("Name of the profile to run the code in. Defaults to the profile this server belongs to.");
 
     QJsonObject properties;
     properties[qsl("code")] = codeArgument;
@@ -120,7 +131,7 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
         return {false, failure};
     }
 
-    lua_State* L = pTarget->getLuaInterpreter()->pGlobalLua;
+    lua_State* L = pTarget->getLuaInterpreter()->getLuaGlobalState();
     if (!L) {
         return {false, tr("That profile has no Lua interpreter running.")};
     }
@@ -142,8 +153,9 @@ Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure) co
         return mpHost;
     }
 
-    // The server can outlive the profile it was started for, and a client need not name
-    // one, so fall back to whichever profile the user is looking at.
+    // mpHost is only null when the server is driven without a profile behind it, which
+    // is what the tests do - a running Mudlet always reaches here through the owning
+    // Host. Fall back to whichever profile the user is looking at.
     Host* pActive = mudlet::self() ? mudlet::self()->getActiveHost() : nullptr;
     if (!pActive) {
         failure = tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.");
@@ -161,7 +173,10 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode)
         return {false, tr("Could not compile Mudlet's Lua runner: %1").arg(message)};
     }
 
-    lua_pushstring(L, luaCode.toUtf8().constData());
+    // Push the length too: lua_pushstring() would stop at the first embedded NUL and
+    // silently run only the leading fragment of the snippet.
+    const QByteArray code = luaCode.toUtf8();
+    lua_pushlstring(L, code.constData(), code.size());
     if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
         const QString message = QString::fromUtf8(lua_tostring(L, -1));
         lua_settop(L, stackBefore);
@@ -224,8 +239,13 @@ QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth)
         return QJsonValue(lua_toboolean(L, index) != 0);
     case LUA_TNUMBER:
         return QJsonValue(lua_tonumber(L, index));
-    case LUA_TSTRING:
-        return QJsonValue(QString::fromUtf8(lua_tostring(L, index)));
+    case LUA_TSTRING: {
+        // Read the length rather than treating it as a C string: Lua strings may hold
+        // NULs, and stopping at the first one would truncate the value.
+        size_t length = 0;
+        const char* text = lua_tolstring(L, index, &length);
+        return QJsonValue(QString::fromUtf8(text, static_cast<int>(length)));
+    }
     case LUA_TTABLE:
         return luaTableToJson(L, index, depth);
     default:
@@ -239,13 +259,28 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
         return QJsonValue(qsl("<table nested too deeply>"));
     }
 
+    // Each level holds a key and a value from lua_next while it recurses, and the C API
+    // promises only LUA_MINSTACK free slots, so ask for room rather than assume it.
+    if (!lua_checkstack(L, 4)) {
+        return QJsonValue(qsl("<table too large to read>"));
+    }
+
     // A Lua table is a list and a map at once. Render a plain 1..n sequence as a JSON
     // array so that a model reading the result sees a list, not {"1":..., "2":...}.
     const int length = static_cast<int>(lua_objlen(L, index));
     int keyCount = 0;
+    QSet<QString> stringKeys;
+    QSet<QString> numberKeys;
     lua_pushnil(L);
     while (lua_next(L, index) != 0) {
         ++keyCount;
+        // lua_tostring() on a number key would rewrite the key in place, and lua_next()
+        // then loses its place in the table - so read numbers without converting them.
+        if (lua_type(L, -2) == LUA_TSTRING) {
+            stringKeys.insert(QString::fromUtf8(lua_tostring(L, -2)));
+        } else if (lua_type(L, -2) == LUA_TNUMBER) {
+            numberKeys.insert(numberKey(lua_tonumber(L, -2)));
+        }
         lua_pop(L, 1);
     }
 
@@ -259,16 +294,23 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
         return array;
     }
 
+    // t[1] and t["1"] are separate keys in Lua but the same key in JSON. Where a table
+    // carries both, bracket the numeric ones so neither entry silently overwrites the
+    // other. Decided before the walk because lua_next's order is unspecified, so picking
+    // a loser mid-iteration would make the same table render differently between calls.
+    const bool bracketNumbers = stringKeys.intersects(numberKeys);
+
     QJsonObject object;
     lua_pushnil(L);
     while (lua_next(L, index) != 0) {
-        // lua_tostring() on a number key would rewrite the key in place, and lua_next()
-        // then loses its place in the table - so read numbers without converting them.
         QString key;
         if (lua_type(L, -2) == LUA_TSTRING) {
             key = QString::fromUtf8(lua_tostring(L, -2));
         } else if (lua_type(L, -2) == LUA_TNUMBER) {
-            key = QString::number(lua_tonumber(L, -2));
+            key = numberKey(lua_tonumber(L, -2));
+            if (bracketNumbers) {
+                key = qsl("[%1]").arg(key);
+            }
         } else {
             key = qsl("<%1>").arg(QString::fromUtf8(lua_typename(L, lua_type(L, -2))));
         }
@@ -276,6 +318,11 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth)
         lua_pop(L, 1);
     }
     return object;
+}
+
+QString TMCPLuaBridge::numberKey(double value)
+{
+    return QString::number(value, 'g', QLocale::FloatingPointShortest);
 }
 
 QString TMCPLuaBridge::jsonToText(const QJsonValue& value)
@@ -286,7 +333,10 @@ QString TMCPLuaBridge::jsonToText(const QJsonValue& value)
     case QJsonValue::Bool:
         return value.toBool() ? qsl("true") : qsl("false");
     case QJsonValue::Double:
-        return QString::number(value.toDouble());
+        // Not plain QString::number(): that renders six significant digits, so a room id
+        // or a timestamp comes back as 1.23457e+06. FloatingPointShortest produces the
+        // same text QJsonDocument would, so a number reads alike bare and inside a table.
+        return QString::number(value.toDouble(), 'g', QLocale::FloatingPointShortest);
     case QJsonValue::Array:
         return QString::fromUtf8(QJsonDocument(value.toArray()).toJson(QJsonDocument::Compact));
     case QJsonValue::Object:

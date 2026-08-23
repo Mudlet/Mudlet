@@ -2,7 +2,7 @@
 #define MUDLET_TMCPSERVER_H
 
 /***************************************************************************
- *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
+ *   Copyright (C) 2025-2026 Vadim Peretokin - vadim.peretokin@mudlet.org  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,22 +30,31 @@ class TMCPLuaBridge;
 class QHttpHeaders;
 class QHttpServer;
 class QHttpServerRequest;
-class QTcpServer;
 
 // The answer to one MCP message, before it becomes a QHttpServerResponse. Split out
-// because QHttpServerRequest cannot be constructed outside QtHttpServer, so this is the
-// only seam at which the protocol can be driven without opening a real socket.
+// because a QHttpServerRequest can be default-constructed but not populated outside
+// QtHttpServer, so this is the only seam at which the protocol can be driven without
+// opening a real socket.
 struct MCPReply
 {
     QJsonObject body;
     QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok;
 };
 
+// Whether the listener came up, and why not if it did not. The reason has to travel back
+// to the caller: a bind clash is the one failure a user can actually do something about.
+struct MCPStartResult
+{
+    bool started = false;
+    QString error;
+};
+
 // A Model Context Protocol server speaking revision 2026-07-28 over Streamable HTTP.
+// Specification: https://modelcontextprotocol.io/specification/2026-07-28
 //
 // That revision is stateless: there is no initialize handshake, no Mcp-Session-Id and no
-// ping, and every request repeats its protocol version, client identity and capabilities
-// in _meta. Nothing here may therefore carry state between requests.
+// ping, and every request repeats its protocol version and capabilities in _meta. No
+// per-request or per-session protocol state may therefore be held here.
 class TMCPServer : public QObject
 {
     Q_OBJECT
@@ -54,10 +63,11 @@ public:
     explicit TMCPServer(Host* pHost, QObject* parent = nullptr);
     ~TMCPServer();
 
-    bool startServer(int port = 0);
+    // Port 0 asks the OS for a free one, which getPort() then reports back.
+    MCPStartResult startServer(quint16 port = 0);
     void stopServer();
     bool running() const { return mpHttpServer != nullptr; }
-    int getPort() const { return mPort; }
+    quint16 getPort() const { return mPort; }
     QString getEndpoint() const;
 
     // Answers one JSON-RPC message. Public because it is the protocol seam - see MCPReply.
@@ -66,10 +76,10 @@ public:
     static constexpr const char* MCP_PROTOCOL_VERSION = "2026-07-28";
     static constexpr const char* MCP_SERVER_NAME = "mudlet";
 
-    // _meta keys the specification reserves for per-request protocol metadata
+    // _meta keys the specification reserves, on the way in from the client...
     static constexpr const char* META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
     static constexpr const char* META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
-    static constexpr const char* META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo";
+    // ...and on the way back out with every result.
     static constexpr const char* META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
     enum JsonRpcErrorCode {
@@ -90,8 +100,11 @@ private:
     MCPReply listTools(const QJsonValue& id) const;
     MCPReply callTool(const QJsonValue& id, const QJsonObject& params);
 
-    // Returns an empty string when the mirrored headers agree with the body.
+    // Returns an empty string when the required mirror headers are present and agree
+    // with the body, and the complaint to send back otherwise.
     QString headerMismatch(const QHttpHeaders& headers, const QString& method, const QJsonObject& params, const QJsonObject& meta) const;
+
+    MCPReply unsupportedVersion(const QJsonValue& id, const QJsonValue& requested, const QString& message) const;
 
     MCPReply result(const QJsonValue& id, QJsonObject payload, QHttpServerResponse::StatusCode status = QHttpServerResponse::StatusCode::Ok) const;
     MCPReply error(const QJsonValue& id,
@@ -110,7 +123,7 @@ private:
     // Recreated on every start: QHttpServer has no way to drop a route or unbind a
     // socket, so a restart would otherwise stack a second copy of each route.
     QHttpServer* mpHttpServer = nullptr;
-    int mPort = 0;
+    quint16 mPort = 0;
 };
 
 #endif // MUDLET_TMCPSERVER_H

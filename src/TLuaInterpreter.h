@@ -82,7 +82,6 @@ class TLuaInterpreter : public QThread
 
     friend class TForkedProcess;
     friend class LuaInterface;
-    friend class TMCPLuaBridge;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)

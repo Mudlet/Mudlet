@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
+ *   Copyright (C) 2025-2026 Vadim Peretokin - vadim.peretokin@mudlet.org  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,11 +23,13 @@
 
 #include <QtTest/QtTest>
 
+#include <QHostAddress>
 #include <QHttpHeaders>
 #include <QJsonArray>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QTcpServer>
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -58,26 +60,26 @@ QByteArray bodyFor(const QString& method, const QJsonObject& params = QJsonObjec
     meta[QString::fromLatin1(TMCPServer::META_CLIENT_CAPABILITIES)] = QJsonObject();
 
     QJsonObject withMeta = params;
-    withMeta[QStringLiteral("_meta")] = meta;
+    withMeta[qsl("_meta")] = meta;
 
     QJsonObject message;
-    message[QStringLiteral("jsonrpc")] = QStringLiteral("2.0");
+    message[qsl("jsonrpc")] = qsl("2.0");
     if (!id.isUndefined()) {
-        message[QStringLiteral("id")] = id;
+        message[qsl("id")] = id;
     }
-    message[QStringLiteral("method")] = method;
-    message[QStringLiteral("params")] = withMeta;
+    message[qsl("method")] = method;
+    message[qsl("params")] = withMeta;
     return QJsonDocument(message).toJson(QJsonDocument::Compact);
 }
 
 QJsonObject resultOf(const MCPReply& reply)
 {
-    return reply.body.value(QStringLiteral("result")).toObject();
+    return reply.body.value(qsl("result")).toObject();
 }
 
 QJsonObject errorOf(const MCPReply& reply)
 {
-    return reply.body.value(QStringLiteral("error")).toObject();
+    return reply.body.value(qsl("error")).toObject();
 }
 } // namespace
 
@@ -337,8 +339,8 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
     void testStringRequestIdSurvivesTheRoundTrip()
     {
-        // An earlier revision of this server read the id with toInt(), which turned every
-        // string id into 0 and broke correlation for clients that use them.
+        // A string id has to come back as the same string: anything that coerces it to a
+        // number collapses every id to 0, and a client can no longer match reply to call.
         const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list"), QJsonObject(), QJsonValue(qsl("discover-1"))), headersFor(qsl("tools/list")));
 
         QCOMPARE(reply.body.value(qsl("id")).toString(), qsl("discover-1"));
@@ -375,53 +377,84 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(reply.status, StatusCode::Ok);
     }
 
-    void testSessionHeaderIsIgnoredAndNeverMinted()
+    void testALeftOverSessionHeaderIsIgnoredRatherThanRejected()
     {
-        // Sessions left the protocol in 2026-07-28; an old client sending one must not
-        // be handed a session id back, or it will keep talking the old dialect.
+        // Sessions left the protocol in 2026-07-28. A client still sending the header has
+        // to be served normally rather than rejected, so that it keeps working; there is
+        // no session to resume and nothing in the reply should suggest otherwise.
         QHttpHeaders headers = headersFor(qsl("tools/list"));
         headers.append("Mcp-Session-Id", "left-over-from-2025");
 
         const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list")), headers);
 
         QCOMPARE(reply.status, StatusCode::Ok);
-        QVERIFY(!resultOf(reply).contains(qsl("sessionId")));
+        QVERIFY(!resultOf(reply).value(qsl("tools")).toArray().isEmpty());
     }
 
     // ---------- listening ----------
 
     void testStartingAndStoppingCanBeRepeated()
     {
-        // Routes used to be registered onto a long-lived QHttpServer on every start, so
-        // a second start stacked a duplicate of each one.
+        // A restart has to release the old port and come back actually serving. Routes
+        // cannot be removed from a QHttpServer, so a restart that reuses one stacks a
+        // second copy of every route - which only a real request over the socket shows.
         QVERIFY(!server->running());
-        QVERIFY(server->startServer(0));
+        QVERIFY(server->startServer(0).started);
         QVERIFY(server->running());
-        const int firstPort = server->getPort();
+        const quint16 firstPort = server->getPort();
         QVERIFY(firstPort > 0);
         QVERIFY(server->getEndpoint().contains(QString::number(firstPort)));
 
         server->stopServer();
         QVERIFY(!server->running());
-        QCOMPARE(server->getPort(), 0);
+        QCOMPARE(server->getPort(), quint16(0));
 
-        QVERIFY(server->startServer(0));
+        // Re-take the same port: if stopServer() leaked the socket this cannot bind.
+        QVERIFY(server->startServer(firstPort).started);
         QVERIFY(server->running());
+        QCOMPARE(server->getPort(), firstPort);
+
+        QNetworkAccessManager manager;
+        QNetworkRequest request{QUrl(server->getEndpoint())};
+        request.setHeader(QNetworkRequest::ContentTypeHeader, qsl("application/json"));
+        request.setRawHeader("MCP-Protocol-Version", currentVersion.toUtf8());
+        request.setRawHeader("Mcp-Method", "server/discover");
+        const QScopedPointer<QNetworkReply> reply(manager.post(request, bodyFor(qsl("server/discover"))));
+        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5000);
+        QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
+
         server->stopServer();
     }
 
     void testStartingTwiceIsRefused()
     {
-        QVERIFY(server->startServer(0));
-        QVERIFY(!server->startServer(0));
+        QVERIFY(server->startServer(0).started);
+        QVERIFY(!server->startServer(0).started);
         server->stopServer();
+    }
+
+    void testATakenPortIsReportedWithAReason()
+    {
+        // Every profile defaults to the same port, so a second profile enabling MCP takes
+        // this path as a matter of course. The reason has to survive back to the caller,
+        // because it is the only thing that can be put in front of the user.
+        QTcpServer squatter;
+        QVERIFY(squatter.listen(QHostAddress::LocalHost, 0));
+        const quint16 taken = squatter.serverPort();
+
+        const MCPStartResult result = server->startServer(taken);
+
+        QVERIFY(!result.started);
+        QVERIFY2(!result.error.isEmpty(), "a failed start must say why");
+        QVERIFY(!server->running());
+        QCOMPARE(server->getPort(), quint16(0));
     }
 
     void testARealPostOverTheSocketIsAnswered()
     {
-        // Everything above drives handleMessage() directly; this is the only case that
-        // proves the route, the binding and the QHttpServerResponse conversion as well.
-        QVERIFY(server->startServer(0));
+        // The cases above drive handleMessage() directly; this one goes over the socket,
+        // so it covers the route, the binding and the QHttpServerResponse conversion.
+        QVERIFY(server->startServer(0).started);
 
         QNetworkAccessManager manager;
         QNetworkRequest request{QUrl(server->getEndpoint())};
@@ -444,7 +477,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     {
         // GET was the standalone SSE endpoint until 2025-11-25. An old client has to be
         // told no, or it sits waiting for a stream that will never carry anything.
-        QVERIFY(server->startServer(0));
+        QVERIFY(server->startServer(0).started);
 
         QNetworkAccessManager manager;
         const QScopedPointer<QNetworkReply> reply(manager.get(QNetworkRequest{QUrl(server->getEndpoint())}));
@@ -473,12 +506,81 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(result.text, qsl("42"));
     }
 
+    void testAReasonReturnedAlongsideNilIsNotLost()
+    {
+        // "return nil, reason" is the standard Mudlet API failure idiom. Collecting the
+        // results into a table and unpacking it drops everything from the nil onwards,
+        // because # stops at the hole - so the caller is told there was no output at all.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("return nil, 'no such room'"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(qsl("no such room")), qPrintable(result.text));
+    }
+
+    void testValuesAfterANilStillArrive()
+    {
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("return 1, nil, 3"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(QChar('3')), qPrintable(result.text));
+    }
+
+    void testReturningNilIsNotTheSameAsReturningNothing()
+    {
+        const MCPToolResult explicitNil = TMCPLuaBridge::runLua(L, qsl("return nil"));
+        const MCPToolResult nothing = TMCPLuaBridge::runLua(L, qsl("local x = 1"));
+
+        QVERIFY(explicitNil.success);
+        QVERIFY(nothing.success);
+        QVERIFY2(explicitNil.text != nothing.text, qPrintable(explicitNil.text));
+    }
+
+    void testALargeNumberKeepsAllItsDigits()
+    {
+        // QString::number(double) renders six significant digits, which turns a room id
+        // or a timestamp into 1.23457e+06 - and the same value nested in a table goes
+        // through QJsonDocument and stays exact, so the two disagree.
+        const MCPToolResult bare = TMCPLuaBridge::runLua(L, qsl("return 1787506774"));
+        const MCPToolResult nested = TMCPLuaBridge::runLua(L, qsl("return {1787506774}"));
+
+        QCOMPARE(bare.text, qsl("1787506774"));
+        QVERIFY2(nested.text.contains(qsl("1787506774")), qPrintable(nested.text));
+    }
+
+    void testALargeNumericTableKeyKeepsAllItsDigits()
+    {
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} t[1234567] = 'roomid' return t"));
+
+        QVERIFY2(result.text.contains(qsl("1234567")), qPrintable(result.text));
+    }
+
+    void testANumericAndAStringKeyDoNotOverwriteEachOther()
+    {
+        // t[1] and t["1"] are different keys in Lua but the same key in JSON, so one
+        // entry would silently vanish from the object the model is reasoning about.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} t[1] = 'fromNumber' t['1'] = 'fromString' return t"));
+
+        QVERIFY2(result.text.contains(qsl("fromNumber")), qPrintable(result.text));
+        QVERIFY2(result.text.contains(qsl("fromString")), qPrintable(result.text));
+    }
+
+    void testCodeIsNotSilentlyTruncatedAtAnEmbeddedNul()
+    {
+        // Handing Lua a bare char* stops at the first NUL, so what actually runs is the
+        // leading fragment - which can be a shorter but still valid program that does
+        // something other than what was sent. Rejecting it is fine; running "return 1"
+        // and reporting success is not.
+        const QString code = qsl("return 1") + QChar(u'\0') + qsl("+ 41");
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, code);
+
+        QVERIFY2(!(result.success && result.text == qsl("1")), qPrintable(result.text));
+    }
+
     void testPrintIsPutBackAfterTheCallAndLeavesNoGlobals()
     {
-        // The capture used to park its saved print and its collected lines in _G, where
-        // they outlived the call and collided with any script using those names. Read _G
-        // from outside the runner and by name rather than checking for the two names that
-        // version happened to use, so this still bites if the runner is rewritten.
+        // Read _G by enumeration from outside the runner rather than checking for the
+        // particular names the current implementation uses, so this still bites if the
+        // runner is rewritten to leak a differently-named global.
         const QStringList before = globalNames();
         const void* printBefore = globalPrint();
 
@@ -522,7 +624,8 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
     void testAnErrorRaisedWithATableStillCarriesItsMessage()
     {
-        // lua_tostring() answers null for a table, which used to drop the message.
+        // lua_tostring() answers null for a table, so reading the error that way loses
+        // the message entirely.
         const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("error({reason = 'structured'})"));
 
         QVERIFY(!result.success);

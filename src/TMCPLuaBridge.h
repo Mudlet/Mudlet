@@ -2,7 +2,7 @@
 #define MUDLET_TMCPLUABRIDGE_H
 
 /***************************************************************************
- *   Copyright (C) 2025-2026 by Vadim Peretokin - vadim.peretokin@mudlet.org *
+ *   Copyright (C) 2025-2026 Vadim Peretokin - vadim.peretokin@mudlet.org  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -74,6 +74,7 @@ private:
     Host* targetHost(const QString& profileName, QString& failure) const;
     static QJsonValue luaToJson(lua_State* L, int index, int depth);
     static QJsonValue luaTableToJson(lua_State* L, int index, int depth);
+    static QString numberKey(double value);
     static QString jsonToText(const QJsonValue& value);
 
     Host* mpHost;

@@ -567,7 +567,7 @@ public:
     bool mEnableGMCP = true;
 #ifdef INCLUDE_MCPSERVER
     bool mEnableMCP = false;
-    int mMCPServerPort = 11235;
+    quint16 mMCPServerPort = 11235;
 #endif
     bool mEnableMSSP = true;
     bool mEnableMSDP = false;
