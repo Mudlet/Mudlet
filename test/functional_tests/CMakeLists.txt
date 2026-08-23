@@ -43,6 +43,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
+    CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
     LabelBackgroundPaintTest.cpp
