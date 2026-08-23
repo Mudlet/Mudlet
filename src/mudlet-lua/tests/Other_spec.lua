@@ -861,6 +861,83 @@ describe("Tests Other.lua functions", function()
       originalValues.showSentText = nil
     end)
 
+    it("round-trips the 2D map room symbol font", function()
+      -- Unlike the other map keys these do not need an open mapper, because the
+      -- settings live on the map object rather than the mapper widget.
+      local original = getConfig("mapSymbolFont")
+      assert.is_string(original)
+      snapshot("mapSymbolFont")
+
+      -- pick an installed font that is not the one in use, so the assertion
+      -- cannot pass by doing nothing. pairs() has no defined order, so sort.
+      local names = {}
+      for name in pairs(getAvailableFonts()) do
+        names[#names + 1] = name
+      end
+      table.sort(names)
+      local otherFont
+      for _, name in ipairs(names) do
+        if name ~= original then
+          otherFont = name
+          break
+        end
+      end
+      assert.is_string(otherFont)
+
+      assert.is_true(setConfig("mapSymbolFont", otherFont))
+      assert.equals(otherFont, getConfig("mapSymbolFont"))
+
+      -- matched case-insensitively, read back as the font database spells it
+      assert.is_true(setConfig("mapSymbolFont", otherFont:upper()))
+      assert.equals(otherFont, getConfig("mapSymbolFont"))
+
+      local ok, err = setConfig("mapSymbolFont", "No Such Font At All")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.equals(otherFont, getConfig("mapSymbolFont"))
+
+      restore("mapSymbolFont")
+    end)
+
+    it("round-trips the 2D map room symbol scaling factor", function()
+      snapshot("mapSymbolFontScaling")
+      assert.is_true(setConfig("mapSymbolFontScaling", 1.25))
+      assert.equals(1.25, getConfig("mapSymbolFontScaling"))
+      -- the ends of the range the preferences spin-box offers
+      assert.is_true(setConfig("mapSymbolFontScaling", 0.50))
+      assert.equals(0.50, getConfig("mapSymbolFontScaling"))
+      assert.is_true(setConfig("mapSymbolFontScaling", 2.00))
+      assert.equals(2.00, getConfig("mapSymbolFontScaling"))
+
+      assert.is_true(setConfig("mapSymbolFontScaling", 1.10))
+      for _, value in ipairs({0.49, 2.01, -1, 0}) do
+        local ok, err = setConfig("mapSymbolFontScaling", value)
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_truthy(err:find("out of range", 1, true), err)
+      end
+      assert.equals(1.10, getConfig("mapSymbolFontScaling"))
+
+      restore("mapSymbolFontScaling")
+    end)
+
+    it("keeps the symbol font when the only-use-selected flag is toggled", function()
+      snapshot("mapSymbolFont")
+      snapshot("mapSymbolFontOnlyUseSelected")
+      local font = getConfig("mapSymbolFont")
+
+      assert.is_true(setConfig("mapSymbolFontOnlyUseSelected", true))
+      assert.is_true(getConfig("mapSymbolFontOnlyUseSelected"))
+      assert.equals(font, getConfig("mapSymbolFont"))
+
+      assert.is_true(setConfig("mapSymbolFontOnlyUseSelected", false))
+      assert.is_false(getConfig("mapSymbolFontOnlyUseSelected"))
+      assert.equals(font, getConfig("mapSymbolFont"))
+
+      restore("mapSymbolFontOnlyUseSelected")
+      restore("mapSymbolFont")
+    end)
+
     it("round-trips the string enum options", function()
       local enums = {
         caretShortcut = {"none", "tab", "ctrltab", "f6"},

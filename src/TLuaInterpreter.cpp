@@ -5765,12 +5765,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "getMapZoom", TLuaInterpreter::getMapZoom);
-    lua_register(pGlobalLua, "setMapSymbolFont", TLuaInterpreter::setMapSymbolFont);
-    lua_register(pGlobalLua, "getMapSymbolFont", TLuaInterpreter::getMapSymbolFont);
-    lua_register(pGlobalLua, "setMapSymbolFontOnlyUseSelected", TLuaInterpreter::setMapSymbolFontOnlyUseSelected);
-    lua_register(pGlobalLua, "getMapSymbolFontOnlyUseSelected", TLuaInterpreter::getMapSymbolFontOnlyUseSelected);
-    lua_register(pGlobalLua, "setMapSymbolFontScaling", TLuaInterpreter::setMapSymbolFontScaling);
-    lua_register(pGlobalLua, "getMapSymbolFontScaling", TLuaInterpreter::getMapSymbolFontScaling);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
     lua_register(pGlobalLua, "setExitWeightFilter", TLuaInterpreter::setExitWeightFilter);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);
@@ -8048,6 +8042,47 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    // The 2D map room symbol settings live on the map rather than the profile.
+    // Unlike the map keys above they do not need an open mapper, so they are
+    // guarded separately - a script can pick the font before a map exists:
+    if (host.mpMap) {
+        if (key == qsl("mapSymbolFont")) {
+            const QString fontName = getVerifiedString(L, __func__, 2, "value");
+            if (fontName.trimmed().isEmpty()) {
+                return warnArgumentValue(L, __func__, "mapSymbolFont must not be empty");
+            }
+            // Match case-insensitively but store the family as the font database
+            // spells it, so that getConfig() reads back a canonical name:
+            QString matchedFontName;
+            for (const QString& availableFont : mudlet::self()->getAvailableFonts()) {
+                if (!availableFont.compare(fontName, Qt::CaseInsensitive)) {
+                    matchedFontName = availableFont;
+                    break;
+                }
+            }
+            if (matchedFontName.isEmpty()) {
+                return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+            }
+            QFont font(host.mpMap->getSymbolFont());
+            font.setFamily(matchedFontName);
+            host.mpMap->setSymbolFont(font);
+            return success();
+        }
+        if (key == qsl("mapSymbolFontOnlyUseSelected")) {
+            host.mpMap->setOnlySymbolFontUsed(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapSymbolFontScaling")) {
+            const double scaling = getVerifiedDouble(L, __func__, 2, "value");
+            // Matches the range of the preferences dialog spin-box:
+            if (scaling < 0.50 || scaling > 2.00) {
+                return warnArgumentValue(L, __func__, qsl("mapSymbolFontScaling %1 is out of range, it must be between 0.50 and 2.00").arg(scaling));
+            }
+            host.mpMap->setSymbolFontFudgeFactor(scaling);
+            return success();
+        }
+    }
+
     if (key == qsl("compactInputLine")) {
         const bool value = getVerifiedBool(L, __func__, 2, "value");
         host.setCompactInputLine(value);
@@ -8291,6 +8326,18 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapExitSize"),
              [&]() {
                  lua_pushnumber(L, host.mLineSize);
+             }},
+            {qsl("mapSymbolFont"),
+             [&]() {
+                 lua_pushstring(L, host.mpMap ? host.mpMap->getSymbolFont().family().toUtf8().constData() : "");
+             }},
+            {qsl("mapSymbolFontOnlyUseSelected"),
+             [&]() {
+                 lua_pushboolean(L, host.mpMap && host.mpMap->getOnlySymbolFontUsed());
+             }},
+            {qsl("mapSymbolFontScaling"),
+             [&]() {
+                 lua_pushnumber(L, host.mpMap ? host.mpMap->getSymbolFontFudgeFactor() : 1.0);
              }},
             {qsl("mapRoundRooms"),
              [&]() {
