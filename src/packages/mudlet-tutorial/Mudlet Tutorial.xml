@@ -518,9 +518,12 @@ function hq.itemFromWords(words)
 
   local text = words:lower()
 
+  -- whole words only, or "give pineapple" hands over the apples
   local function mentions(...)
-    for _, word in ipairs({...}) do
-      if text:find(word, 1, true) then return true end
+    for token in text:gmatch("%a+") do
+      for _, word in ipairs({...}) do
+        if token == word or token == word .. "s" then return true end
+      end
     end
     return false
   end
