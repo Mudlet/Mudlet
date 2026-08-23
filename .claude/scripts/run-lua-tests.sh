@@ -62,10 +62,13 @@ if ! loads_this_worktree; then
   mkdir -p "$TMP/shim/build/src"
   # A hardlink rather than a symlink: Qt 6.12 derives applicationDirPath() from
   # argv[0], under which either would work, but a hardlink is also correct if it
-  # ever goes back to resolving /proc/self/exe. -p because a bare cp applies the
-  # umask and can drop the execute bit. Copy only when the donor is on another
-  # filesystem, where a hardlink is impossible.
-  ln "$BINARY" "$TMP/shim/build/src/mudlet" 2>/dev/null \
+  # ever goes back to resolving /proc/self/exe. readlink -f first because the
+  # argument may itself be a symlink: hard-linking one stages a link straight back
+  # into the donor tree, which voids that hedge and disagrees with the cp -p
+  # fallback, since cp dereferences. -p because a bare cp applies the umask and can
+  # drop the execute bit. Copy only when the donor is on another filesystem, where
+  # a hardlink is impossible.
+  ln "$(readlink -f "$BINARY")" "$TMP/shim/build/src/mudlet" 2>/dev/null \
     || cp -p "$BINARY" "$TMP/shim/build/src/mudlet" \
     || { echo "could not stage $BINARY into $TMP - out of space, or /tmp not writable"; exit 2; }
   ln -s "$WS/src" "$TMP/shim/src" || { echo "could not link $WS/src into $TMP"; exit 2; }
@@ -150,6 +153,10 @@ export QUIT_MUDLET_AFTER_TESTS=true
 # concurrent runs cannot read each other's.
 export MUDLET_TEST_FAILURE_MARKER="$TMP/busted-tests-failed"
 
+# Names the library this run is meant to be exercising, so MudletBusted_spec.lua
+# can check that it is the one loadGlobal() settled on rather than the donor's.
+export MUDLET_TEST_EXPECTED_LUA_PATH="$(readlink -f "$WS/src/mudlet-lua/lua")"
+
 cd "$WS"
 rc=0
 timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline 2>&1 \
@@ -158,7 +165,8 @@ timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --m
 # loadGlobal() walks on to its next candidate when one fails to run, so a syntax
 # error anywhere in this worktree's mudlet-lua silently hands the whole library
 # over to the donor's LUA_SOURCE_PATH and the suite passes against that instead.
-# The warning it emits on the way past is the only evidence, so treat it as fatal.
+# The warning it emits on the way past names the file and the Lua error, so treat
+# it as fatal. MudletBusted_spec.lua backs this up with a positive check.
 if grep -q "loadGlobal() loading" "$TMP/run.log"; then
   echo "This worktree's mudlet-lua failed to load, so the specs ran against the"
   echo "binary's own copy - the result above is meaningless. The failure was:"
