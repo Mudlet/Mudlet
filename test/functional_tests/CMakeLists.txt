@@ -37,6 +37,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     FrontendRefreshSeamTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     GlyphOverflowTest.cpp
+    HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
@@ -411,6 +412,10 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 # FrontendRefreshSeamTest creates a fresh profile per test method, and one of them waits out the
 # post-load tab indicator refresh before it can prove anything, so it needs a longer timeout
 set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
+
+# HyperlinkModelSplitTest creates a fresh profile per test method, and one of
+# them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
+set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)

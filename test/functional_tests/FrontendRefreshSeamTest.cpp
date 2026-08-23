@@ -27,12 +27,13 @@
 //    per-tab connection indicator as the socket moves. Cut them and a dropped
 //    profile goes on showing a connected tab. Only the main window's tab bar is
 //    read here; the same slot's detached-window half is not gated.
-//  - THyperlinkVisibilityManager::visibilityChanged reaches the lambda the
-//    TConsole constructor wires for main consoles only, which forces both text
-//    panes to redraw. Cut it and text the model has just concealed can stay on
-//    screen out of the panes' cached pixmap. Only what is drawn is at stake:
-//    hit-testing reads TChar::linkIndex() out of the buffer, so a stale pixmap
-//    cannot leave a dead link clickable.
+//  - THyperlinkVisibilityManager::visibilityChanged reaches
+//    TConsole::slot_hyperlinkVisibilityChanged, which the constructor wires for
+//    every console and which forces both text panes to redraw. Cut it and text
+//    the model has just concealed can stay on screen out of the panes' cached
+//    pixmap. Only what is drawn is at stake: hit-testing reads
+//    TChar::linkIndex() out of the buffer, so a stale pixmap cannot leave a
+//    dead link clickable.
 //
 // Both are read through a second observer attached to the same signal after the
 // production connect. Qt delivers to receivers in connection order, so what the
@@ -307,10 +308,11 @@ private slots:
         // valid, which is why the text is replaced space for space.
         QCOMPARE(console->buffer.lineBuffer.at(lineNumber), qsl("OSCSEAM1(          )OSCSEAM1"));
 
-        // performReveal() calls update() on both panes itself, so counting
-        // paints cannot tell the wire apart from its absence. forceUpdate()
-        // additionally sets mForceUpdate, which is what stops the next paint
-        // short-cutting to the cached screen pixmap instead of re-rendering the
+        // Counting paints cannot tell this wire apart from its absence: half a
+        // dozen unrelated things repaint a pane. mForceUpdate is what proves
+        // forceUpdate() ran rather than a stray update(), because it is the flag
+        // that stops the next paint short-cutting to the cached screen pixmap
+        // instead of re-rendering the line the model has just rewritten.
         console->mUpperPane->mForceUpdate = false;
         console->mLowerPane->mForceUpdate = false;
 
