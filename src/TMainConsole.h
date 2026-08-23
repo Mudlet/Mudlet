@@ -186,9 +186,10 @@ signals:
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
 
-    // Names the dictionary mpHunspell_system currently holds, so asking for the
-    // same one again does not reload it. The profile's setting is Host's
-    // mSpellDic - this is only ever what has been loaded from it.
+    // Names the dictionary mpHunspell_system was last built for. Assigned before
+    // the load is attempted and never rolled back, so a dictionary whose files
+    // are missing is remembered as loaded and never retried. Host's mSpellDic is
+    // the profile's setting; this is only ever what has been loaded from it.
     QString mLoadedSystemDictionary;
 
     // Cloned from Host

@@ -1096,10 +1096,10 @@ private:
     // 16 basic colors (and OSC "R\" to reset them).
     bool mServerMayRedefineColors = false;
 
-    // Was public but hidden to prevent it being changed without going through
-    // the process to signal to users that they need to change dictionaries.
-    // Empty until one is chosen - getSpellDic() answers with the starting
-    // dictionary for the platform meanwhile:
+    // Empty until a dictionary is chosen: getSpellDic() substitutes the
+    // platform's starting one, so reading this member directly under-reports
+    // what the profile is using. Private so that setSpellDic() can push the
+    // change into a live console:
     QString mSpellDic;
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be
