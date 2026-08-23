@@ -4877,6 +4877,83 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_mcpServer">
+         <property name="title">
+          <string>AI assistant access (MCP)</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_mcpServer">
+          <item row="0" column="0" colspan="3">
+           <widget class="QCheckBox" name="checkBox_enableMCPServer">
+            <property name="toolTip">
+             <string>&lt;p&gt;Runs a Model Context Protocol (MCP) server so an AI assistant can run Lua inside Mudlet on your behalf. The server listens on this computer only, and there is one for the whole application rather than one per profile.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Anything that can reach the port can run any Lua code in your profiles.&lt;/b&gt; Leave this off unless you are using it.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, Mudlet runs a Model Context Protocol server so an AI assistant can run Lua inside Mudlet. The server listens on this computer only and covers every open profile. Anything that can reach the port can run any Lua code in your profiles, so leave this off unless you are using it.</string>
+            </property>
+            <property name="text">
+             <string>Let an AI assistant run Lua in Mudlet</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_mcpServerPort">
+            <property name="text">
+             <string>Port:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spinBox_mcpServerPort</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spinBox_mcpServerPort">
+            <property name="toolTip">
+             <string>&lt;p&gt;The port the MCP server listens on. Change this if another program on this computer is already using it.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>The port the MCP server listens on. Change this if another program on this computer is already using it.</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="value">
+             <number>11235</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <spacer name="hSpacer_mcpServerPort">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="2" column="0" colspan="3">
+           <widget class="QLabel" name="label_mcpServerEndpoint">
+            <property name="text">
+             <string notr="true"/>
+            </property>
+            <property name="textInteractionFlags">
+             <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupbox_searchEngineSelection">
          <property name="title">
           <string>Search Engine</string>

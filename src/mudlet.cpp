@@ -39,6 +39,9 @@
 #include "TEvent.h"
 #include "TFeatureCallout.h"
 #include "TMap.h"
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPServer.h"
+#endif
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
@@ -95,6 +98,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <zip.h>
 #include <QStyle>
@@ -3249,6 +3253,24 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
     slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
+
+#ifdef INCLUDE_MCPSERVER
+    const int savedMcpPort = settings.value(qsl("mcpServerPort"), QVariant(mMCPServerPort)).toInt();
+    if (savedMcpPort > 0 && savedMcpPort <= std::numeric_limits<quint16>::max()) {
+        mMCPServerPort = static_cast<quint16>(savedMcpPort);
+    } else {
+        qWarning() << "mudlet::readLateSettings(...) WARNING - ignoring unusable saved MCP port" << savedMcpPort << "- keeping" << mMCPServerPort;
+    }
+    if (settings.value(qsl("mcpServerEnabled"), QVariant(false)).toBool()) {
+        QString mcpError;
+        if (!setMCPEnabled(true, mMCPServerPort, mcpError)) {
+            // No console exists yet to tell the user on, and refusing to start Mudlet over
+            // this would be worse than starting without the server. The preferences dialog
+            // shows the state, and a retry from there does report the reason.
+            qWarning() << "mudlet::readLateSettings(...) WARNING - the MCP server could not start:" << mcpError;
+        }
+    }
+#endif
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -3393,6 +3415,49 @@ bool mudlet::isControlsVisible() const
     return mpMainToolBar->isVisible() || menuBar()->isVisible();
 }
 
+#ifdef INCLUDE_MCPSERVER
+QString mudlet::mcpEndpoint() const
+{
+    return mpMCPServer ? mpMCPServer->getEndpoint() : QString();
+}
+
+bool mudlet::setMCPEnabled(const bool enabled, const quint16 port, QString& error)
+{
+    mEnableMCP = enabled;
+    mMCPServerPort = port;
+
+    if (!enabled) {
+        if (mpMCPServer) {
+            mpMCPServer->stopServer();
+        }
+        return true;
+    }
+
+    if (!mpMCPServer) {
+        // Created on first use rather than in the constructor: most people never turn this
+        // on, and until they do there is no reason to carry a HTTP server around.
+        mpMCPServer.reset(new TMCPServer(this));
+    }
+
+    if (mpMCPServer->running() && mpMCPServer->getPort() == port) {
+        return true;
+    }
+
+    // A listening socket cannot be moved to another port, so a port change means a bounce.
+    mpMCPServer->stopServer();
+
+    const MCPStartResult start = mpMCPServer->startServer(port);
+    if (!start.started) {
+        // mEnableMCP deliberately stays set. The user asked for this, and clearing it would
+        // be written straight back out by writeSettings(), losing the setting for good over
+        // what is usually another program holding the port for the moment.
+        error = start.error;
+        return false;
+    }
+    return true;
+}
+#endif
+
 void mudlet::writeSettings()
 {
     QSettings& settings = *getQSettings();
@@ -3428,6 +3493,10 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+#ifdef INCLUDE_MCPSERVER
+    settings.setValue(qsl("mcpServerEnabled"), mEnableMCP);
+    settings.setValue(qsl("mcpServerPort"), mMCPServerPort);
+#endif
 #if !defined(Q_OS_MACOS)
     if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
         settings.setValue(qsl("highDpiScaleFactorRoundingPolicy"), qsl("PassThrough"));
@@ -5391,6 +5460,13 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
+#ifdef INCLUDE_MCPSERVER
+    // Before the profiles go: a request arriving mid-teardown would otherwise reach for a
+    // Lua interpreter that is being pulled out from under it.
+    if (mpMCPServer) {
+        mpMCPServer->stopServer();
+    }
+#endif
     if (mpHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         Hunspell_destroy(mpHunspell_sharedDictionary);

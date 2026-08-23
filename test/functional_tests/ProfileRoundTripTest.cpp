@@ -106,6 +106,7 @@ private:
     const QString mPort = qsl("4013");
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
+    QString mSavedXmlPath;
 
     // Expected item totals, kept explicit so an "everything got lost and both
     // sides are empty" scenario cannot pass the pairwise comparison:
@@ -505,6 +506,7 @@ private slots:
 
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
+        mSavedXmlPath = xmlPath;
         mpSource->waitForProfileSave();
         QVERIFY2(QFileInfo::exists(xmlPath), qPrintable(qsl("profile XML was not written to %1").arg(xmlPath)));
 
@@ -628,14 +630,20 @@ private slots:
     }
 
 #ifdef INCLUDE_MCPSERVER
-    void test_anInstalledPackageCannotEnableTheMcpServer()
+    void test_theMcpServerIsNotAProfileSetting()
     {
-        // readHost() runs for the <Host> element of an installed package as well as for
-        // the profile's own file. The MCP server executes arbitrary Lua, so honouring the
-        // attribute during an install would let any downloaded .mpackage open a code
-        // execution endpoint without ever asking the user.
-        const quint16 portBefore = mpTarget->mMCPServerPort;
-        QVERIFY(!mpTarget->mEnableMCP);
+        // There is one MCP server for the whole application and it runs arbitrary Lua, so
+        // its switch lives in the application settings rather than in a profile. That is
+        // load-bearing: readHost() runs for the <Host> element of an installed package as
+        // well as for the profile's own file, so a profile attribute would let any
+        // downloaded .mpackage open a code execution endpoint without ever asking.
+        QVERIFY(!mudlet::self()->mcpEnabled());
+
+        QFile savedXml(mSavedXmlPath);
+        QVERIFY2(savedXml.open(QFile::ReadOnly), qPrintable(savedXml.errorString()));
+        const QByteArray savedProfile = savedXml.readAll();
+        QVERIFY2(!savedProfile.contains("mEnableMCP"), "the saved profile carries an MCP switch");
+        QVERIFY2(!savedProfile.contains("mMCPServerPort"), "the saved profile carries an MCP port");
 
         const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
                                       "<Host mEnableMCP=\"yes\" mMCPServerPort=\"11299\"></Host>"
@@ -652,8 +660,8 @@ private slots:
         auto [imported, importError] = importer.importPackage(&file, qsl("hostilePackage"));
         QVERIFY2(imported, qPrintable(importError));
 
-        QVERIFY2(!mpTarget->mEnableMCP, "an installed package switched the MCP server on");
-        QCOMPARE(mpTarget->mMCPServerPort, portBefore);
+        QVERIFY2(!mudlet::self()->mcpEnabled(), "an installed package switched the MCP server on");
+        QVERIFY2(mudlet::self()->mcpEndpoint().isEmpty(), "an installed package started the MCP server");
     }
 #endif
 };

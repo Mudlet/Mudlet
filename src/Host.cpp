@@ -46,9 +46,6 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapViewManager.h"
-#ifdef INCLUDE_MCPSERVER
-#include "TMCPServer.h"
-#endif
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
@@ -252,9 +249,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
-#ifdef INCLUDE_MCPSERVER
-, mpMCPServer(new TMCPServer(this))
-#endif
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
@@ -496,10 +490,6 @@ Host::~Host()
     // otherwise it'll be cleared when the Host object is being destroyed,
     // which can lead to a crash when closing multiple profiles at once.
     mpLastCommandLineUsed.clear();
-
-#ifdef INCLUDE_MCPSERVER
-    mpMCPServer->stopServer();
-#endif
 
     mStopWatchMap.clear();
 
@@ -5539,39 +5529,3 @@ bool Host::shouldStripOscHyperlinkPresetParam()
 {
     return mTelnet.oscHyperlinkPresetsEnabled();
 }
-
-#ifdef INCLUDE_MCPSERVER
-void Host::setMCPEnabled(const bool enabled)
-{
-    // Compare against what the server is actually doing rather than the flag alone: a
-    // start that failed leaves the two disagreeing, and this is the path a retry arrives
-    // through, so an early return on the flag would make the retry a no-op.
-    if (mEnableMCP == enabled && mpMCPServer->running() == enabled) {
-        return;
-    }
-
-    mEnableMCP = enabled;
-
-    if (!enabled) {
-        mpMCPServer->stopServer();
-        return;
-    }
-
-    const MCPStartResult start = mpMCPServer->startServer(mMCPServerPort);
-    if (!start.started) {
-        // mEnableMCP deliberately stays set. The user asked for this, and clearing it
-        // would be written straight back out by XMLexport, losing the setting for good.
-        // Every profile defaults to the same port, so a second one enabling MCP lands
-        // here as a matter of course rather than as an edge case.
-        qWarning() << "MCP server could not start for profile" << mHostName << "-" << start.error;
-        //: %1 is a TCP port number, %2 the reason the socket could not be opened.
-        postMessage(tr("[ ERROR ] - Could not start the MCP server on port %1: %2\n"
-                       "Another profile may already be using that port.")
-                            .arg(QString::number(mMCPServerPort), start.error));
-        return;
-    }
-
-    //: %1 is a URL the user gives to their MCP client, e.g. http://127.0.0.1:11235/mcp
-    postMessage(tr("[ INFO ]  - MCP server for this profile is listening on %1").arg(mpMCPServer->getEndpoint()));
-}
-#endif

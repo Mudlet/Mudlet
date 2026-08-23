@@ -139,6 +139,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
 
+#ifdef INCLUDE_MCPSERVER
+    checkBox_enableMCPServer->setChecked(pMudlet->mcpEnabled());
+    spinBox_mcpServerPort->setValue(pMudlet->mcpServerPort());
+    connect(checkBox_enableMCPServer, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(spinBox_mcpServerPort, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    slot_updateMCPServerEndpoint();
+#else
+    groupBox_mcpServer->hide();
+#endif
+
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
 
@@ -1013,13 +1023,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
-
-#ifdef INCLUDE_MCPSERVER
-    mEnableMCP = new QAction(tr("MCP: Model Context Protocol Server"), protocolMenu);
-    mEnableMCP->setCheckable(true);
-    mEnableMCP->setChecked(pHost->mEnableMCP);
-    protocolMenu->addAction(mEnableMCP);
-#endif
 
     mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), protocolMenu);
     mEnableMNES->setCheckable(true);
@@ -3336,11 +3339,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
-#ifdef INCLUDE_MCPSERVER
-        // Through the setter, not the field: this is what starts and stops the server,
-        // and it clears the flag again if the port turns out to be taken.
-        pHost->setMCPEnabled(mEnableMCP->isChecked());
-#endif
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mEnableMSP = mEnableMSP->isChecked();
@@ -3593,6 +3591,18 @@ void dlgProfilePreferences::slot_saveAndClose()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
+#ifdef INCLUDE_MCPSERVER
+    QString mcpError;
+    if (!pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), static_cast<quint16>(spinBox_mcpServerPort->value()), mcpError)) {
+        //: %1 is a TCP port number, %2 the reason the socket could not be opened.
+        QMessageBox::warning(this,
+                             //: Title of a warning shown when the AI assistant (MCP) server could not be started.
+                             tr("Could not start the MCP server"),
+                             tr("Mudlet could not listen on port %1: %2\n\n"
+                                "Another program may already be using that port. The setting has been kept, so you can pick a different port and try again.")
+                                     .arg(QString::number(spinBox_mcpServerPort->value()), mcpError));
+    }
+#endif
     pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
 
     mudlet::self()->mDiscord.UpdatePresence();
@@ -4675,6 +4685,29 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
         checkBox_reportMapIssuesOnScreen->setChecked(state);
     }
 }
+
+#ifdef INCLUDE_MCPSERVER
+void dlgProfilePreferences::slot_updateMCPServerEndpoint()
+{
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Shown beneath the AI assistant settings while the MCP server is switched off.
+        label_mcpServerEndpoint->setText(tr("The server is off, so nothing can reach Mudlet."));
+        return;
+    }
+
+    const QString endpoint = qsl("http://127.0.0.1:%1/mcp").arg(spinBox_mcpServerPort->value());
+    if (mudlet::self()->mcpEndpoint() == endpoint) {
+        //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp
+        label_mcpServerEndpoint->setText(tr("Listening. Give your AI assistant this address: %1").arg(endpoint));
+        return;
+    }
+
+    // The port box and the checkbox only take effect on Save, so say so rather than show
+    // an address that nothing is answering on yet.
+    //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp
+    label_mcpServerEndpoint->setText(tr("Press Save to start listening on %1").arg(endpoint));
+}
+#endif
 
 // We do not use the QSpinBox::valueChanged() signal and it is only emitted if
 // the new value is different - so there is no need to worry about if we are or

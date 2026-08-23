@@ -152,6 +152,9 @@ private slots:
     void slot_changeEditorTextOptions(const QTextOption::Flags);
     void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
+#ifdef INCLUDE_MCPSERVER
+    void slot_updateMCPServerEndpoint();
+#endif
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
     void slot_setTreeWidgetIconSize(const int);
@@ -245,9 +248,6 @@ private:
     QMap<QString, QKeySequence> currentShortcuts;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;
-#ifdef INCLUDE_MCPSERVER
-    QPointer<QAction> mEnableMCP;
-#endif
     QPointer<QAction> mEnableMSDP;
     QPointer<QAction> mEnableMSSP;
     QPointer<QAction> mEnableMSP;

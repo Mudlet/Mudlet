@@ -82,9 +82,6 @@ class dlgPackageManager;
 class dlgModuleManager;
 class dlgProfilePreferences;
 class cTelnet;
-#ifdef INCLUDE_MCPSERVER
-class TMCPServer;
-#endif
 
 class stopWatch
 {
@@ -211,9 +208,6 @@ public:
     void setRetries(const int retries) { mRetries = retries; }
     int getTimeout() { return mTimeout; }
     void setTimeout(const int seconds) { mTimeout = seconds; }
-#ifdef INCLUDE_MCPSERVER
-    void setMCPEnabled(const bool enabled);
-#endif
     bool wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
     void setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
@@ -565,10 +559,6 @@ public:
     bool mEchoLuaErrors = false;
     QString mCommandSeparator = qsl(";;");
     bool mEnableGMCP = true;
-#ifdef INCLUDE_MCPSERVER
-    bool mEnableMCP = false;
-    quint16 mMCPServerPort = 11235;
-#endif
     bool mEnableMSSP = true;
     bool mEnableMSDP = false;
     bool mEnableMSP = true;
@@ -618,9 +608,6 @@ public:
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-#ifdef INCLUDE_MCPSERVER
-    QScopedPointer<TMCPServer> mpMCPServer;
-#endif
     QPointer<dlgNotepad> mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:

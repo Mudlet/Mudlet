@@ -40,7 +40,6 @@
 #include <QtMath>
 #include <QVersionNumber>
 
-#include <limits>
 #include <memory>
 
 XMLimport::XMLimport(Host* pH)
@@ -773,29 +772,6 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mFORCE_NO_COMPRESSION"), pHost->mFORCE_NO_COMPRESSION);
     setBoolAttribute(qsl("mFORCE_GA_OFF"), pHost->mFORCE_GA_OFF);
     setBoolAttribute(qsl("mEnableGMCP"), pHost->mEnableGMCP);
-#ifdef INCLUDE_MCPSERVER
-    // Only the profile's own file may switch this on. readHost() also runs for the <Host>
-    // element of an installed package, and the MCP server executes arbitrary Lua, so
-    // honouring the attribute there would let any downloaded .mpackage open a code
-    // execution endpoint on install without ever asking the user.
-    if (mPackageName.isEmpty()) {
-        if (attributes().hasAttribute(qsl("mMCPServerPort"))) {
-            bool ok = false;
-            const int port = attributes().value(qsl("mMCPServerPort")).toInt(&ok);
-            if (ok && port > 0 && port <= std::numeric_limits<quint16>::max()) {
-                pHost->mMCPServerPort = static_cast<quint16>(port);
-            } else {
-                qWarning() << "XMLimport::readHost(...) WARNING: ignoring unusable saved MCP port" << attributes().value(qsl("mMCPServerPort")).toString() << "- keeping" << pHost->mMCPServerPort;
-            }
-        }
-        // Read the port first, because the setter binds to whatever mMCPServerPort holds
-        // by then. Going through the setter rather than assigning the field is what
-        // actually starts the server, so a profile saved with it on comes back listening.
-        bool enableMCP = false;
-        setBoolAttribute(qsl("mEnableMCP"), enableMCP);
-        pHost->setMCPEnabled(enableMCP);
-    }
-#endif
     setBoolAttribute(qsl("mEnableMSSP"), pHost->mEnableMSSP);
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);

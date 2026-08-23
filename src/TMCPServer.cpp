@@ -37,9 +37,9 @@
 // underneath that is the interface language, since the tool descriptions are translated.
 static constexpr int csmCacheTtlMs = 60 * 60 * 1000;
 
-TMCPServer::TMCPServer(Host* pHost, QObject* parent)
+TMCPServer::TMCPServer(QObject* parent)
 : QObject(parent)
-, mpLuaBridge(new TMCPLuaBridge(pHost, this))
+, mpLuaBridge(new TMCPLuaBridge(this))
 {
 }
 

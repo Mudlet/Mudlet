@@ -118,9 +118,9 @@ private:
 private slots: // NOLINT(readability-redundant-access-specifiers)
     void init()
     {
-        // No Host: every case here is either protocol handling or a Lua snippet run
-        // against the bare interpreter below, neither of which needs a profile.
-        server = new TMCPServer(nullptr, nullptr);
+        // Every case here is either protocol handling or a Lua snippet run against the
+        // bare interpreter below, neither of which needs a profile.
+        server = new TMCPServer(nullptr);
         L = luaL_newstate();
         luaL_openlibs(L);
     }

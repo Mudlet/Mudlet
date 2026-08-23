@@ -43,6 +43,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
@@ -89,6 +90,9 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+#ifdef INCLUDE_MCPSERVER
+class TMCPServer;
+#endif
 class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
@@ -323,6 +327,16 @@ public:
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
+#ifdef INCLUDE_MCPSERVER
+    bool mcpEnabled() const { return mEnableMCP; }
+    quint16 mcpServerPort() const { return mMCPServerPort; }
+    // The URL to paste into an MCP client, or an empty string while the server is down.
+    QString mcpEndpoint() const;
+    // Starts or stops the one application-wide MCP server. Returns false and fills in
+    // error when a start was asked for and the port could not be opened; the caller has
+    // to show that, because the port being taken is the failure a user can act on.
+    bool setMCPEnabled(bool enabled, quint16 port, QString& error);
+#endif
     bool profileExists(const QString& profileName);
     QString getCanonicalProfileName(const QString& profileName);
     bool showSplitscreenTutorial();
@@ -652,6 +666,11 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+#ifdef INCLUDE_MCPSERVER
+    bool mEnableMCP = false;
+    quint16 mMCPServerPort = 11235;
+    QScopedPointer<TMCPServer> mpMCPServer;
+#endif
     QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;

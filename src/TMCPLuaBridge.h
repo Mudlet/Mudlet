@@ -52,12 +52,15 @@ struct MCPToolResult
 //
 // One tool rather than one per Lua API function: the API runs to hundreds of functions,
 // which would swamp a model's context, and any of them can be reached from a snippet.
+//
+// Not bound to a profile: there is one MCP server for the whole application, so which
+// profile a snippet runs in is decided per call, from the tool's "profile" argument.
 class TMCPLuaBridge : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit TMCPLuaBridge(Host* pHost, QObject* parent = nullptr);
+    explicit TMCPLuaBridge(QObject* parent = nullptr);
 
     QJsonArray getAvailableTools() const;
     bool hasTool(const QString& toolName) const;
@@ -71,13 +74,11 @@ public:
     static constexpr const char* MCP_LUA_TOOL = "lua";
 
 private:
-    Host* targetHost(const QString& profileName, QString& failure) const;
+    static Host* targetHost(const QString& profileName, QString& failure);
     static QJsonValue luaToJson(lua_State* L, int index, int depth);
     static QJsonValue luaTableToJson(lua_State* L, int index, int depth);
     static QString numberKey(double value);
     static QString jsonToText(const QJsonValue& value);
-
-    Host* mpHost;
 };
 
 #endif // MUDLET_TMCPLUABRIDGE_H

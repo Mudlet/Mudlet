@@ -25,7 +25,6 @@
 #include <QObject>
 #include <QString>
 
-class Host;
 class TMCPLuaBridge;
 class QHttpHeaders;
 class QHttpServer;
@@ -55,12 +54,16 @@ struct MCPStartResult
 // That revision is stateless: there is no initialize handshake, no Mcp-Session-Id and no
 // ping, and every request repeats its protocol version and capabilities in _meta. No
 // per-request or per-session protocol state may therefore be held here.
+//
+// One server serves the whole application rather than one per profile. An MCP client is
+// configured with a single URL, so a per-profile endpoint would move about as profiles are
+// opened and closed, and the servers would all contend for the same port anyway.
 class TMCPServer : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit TMCPServer(Host* pHost, QObject* parent = nullptr);
+    explicit TMCPServer(QObject* parent = nullptr);
     ~TMCPServer();
 
     // Port 0 asks the OS for a free one, which getPort() then reports back.

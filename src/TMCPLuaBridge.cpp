@@ -71,9 +71,8 @@ return returned[1], table.concat(lines, '\n'), unpack(returned, 2, count)
 // the code being rendered here is written by a model, so _G is a plausible return value.
 static constexpr int csmMaxTableDepth = 12;
 
-TMCPLuaBridge::TMCPLuaBridge(Host* pHost, QObject* parent)
+TMCPLuaBridge::TMCPLuaBridge(QObject* parent)
 : QObject(parent)
-, mpHost(pHost)
 {
 }
 
@@ -92,7 +91,7 @@ QJsonArray TMCPLuaBridge::getAvailableTools() const
     QJsonObject profileArgument;
     profileArgument[qsl("type")] = qsl("string");
     //: Describes an argument of the MCP "lua" tool to an AI model.
-    profileArgument[qsl("description")] = tr("Name of the profile to run the code in. Defaults to the profile this server belongs to.");
+    profileArgument[qsl("description")] = tr("Name of the profile to run the code in. Defaults to the profile the user is currently looking at.");
 
     QJsonObject properties;
     properties[qsl("code")] = codeArgument;
@@ -139,7 +138,7 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
     return runLua(L, luaCode);
 }
 
-Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure) const
+Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure)
 {
     if (!profileName.isEmpty()) {
         Host* pNamed = mudlet::self() ? mudlet::self()->getHostManager().getHost(profileName) : nullptr;
@@ -149,13 +148,8 @@ Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure) co
         return pNamed;
     }
 
-    if (mpHost) {
-        return mpHost;
-    }
-
-    // mpHost is only null when the server is driven without a profile behind it, which
-    // is what the tests do - a running Mudlet always reaches here through the owning
-    // Host. Fall back to whichever profile the user is looking at.
+    // The foreground profile, which is the one the user would mean by "here". A model that
+    // needs to be sure of which profile it is in should name it instead.
     Host* pActive = mudlet::self() ? mudlet::self()->getActiveHost() : nullptr;
     if (!pActive) {
         failure = tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.");
