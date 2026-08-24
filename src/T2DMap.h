@@ -463,8 +463,19 @@ private:
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
     QSize lodRoomBlobSize() const;
-    void paintRoomExits(
-            QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
+    // One exit line waiting to be drawn. The destination room is carried
+    // rather than just its id because the drawing pass needs its coordinates,
+    // and looking it up again there costs a second room-database probe for
+    // every exit of every room in the viewport.
+    struct ExitToPaint
+    {
+        TRoom* destination = nullptr;
+        int destinationId = 0;
+        // The destination's exit in the opposite direction does not come back
+        // here, so this one is drawn as an arrow rather than a plain line.
+        bool oneWay = false;
+    };
+    void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
