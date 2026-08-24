@@ -311,6 +311,19 @@ private:
         QVERIFY(pAreaA->gridMode);
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
 
+        // Nothing on the load path sets out to build the per-area index of
+        // rooms holding custom lines. It falls out of three separate calls
+        // made for something else - TRoom::restore()'s room dimensions, the
+        // span recalculation at the end of TMap::restore(), and TArea::clean()
+        // during the audit - so cutting any one of them leaves it built by the
+        // other two and every other assertion here still passing. This is what
+        // is left to notice the day the last one goes: the mapper consults the
+        // index only for rooms that are off screen, so what silently stops
+        // being drawn is a custom line running into view from outside it.
+        QVERIFY2(
+                pAreaA->getCustomLineRoomsForZ(0).contains(scmRoom1),
+                qPrintable(qsl("room %1 holds a custom line but is missing from area A's index for z 0, loaded from format version %2").arg(QString::number(scmRoom1), QString::number(savedVersion))));
+
         TArea* pAreaB = pDB->getArea(mAreaB);
         QVERIFY(pAreaB);
         verifyArea(pAreaB, mBoundsB, qsl("area B"));
