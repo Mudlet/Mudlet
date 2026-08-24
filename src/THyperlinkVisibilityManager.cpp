@@ -470,8 +470,7 @@ void THyperlinkVisibilityManager::clear()
     if (mpOutputGapTimer) {
         mpOutputGapTimer->stop();
     }
-    // a concealment queues its screen-reader announcement for 300ms later, so
-    // drop one still waiting rather than announce links that have just gone
+    // drop a queued screen-reader announcement rather than name links that have just gone
     if (mpAnnouncementTimer) {
         mpAnnouncementTimer->stop();
     }
