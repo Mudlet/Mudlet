@@ -5698,6 +5698,11 @@ void TBuffer::clear()
     mCurrentHyperlinkLinkId = 0;
     mHyperlinkActive = false;
 
+    // clear before the lines go lest a pending visibility change write the link's text into whichever line ultimately takes the index being tracked
+    if (mpConsole) {
+        mpConsole->getHyperlinkVisibilityManager().clear();
+    }
+
     while (!buffer.empty()) {
         if (!deleteLines(0, 0)) {
             break;

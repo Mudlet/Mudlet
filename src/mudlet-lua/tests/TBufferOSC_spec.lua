@@ -528,6 +528,46 @@ describe("Tests TBuffer OSC sequence handling", function()
         end
       end)
     end)
+
+    -- clearWindow() discards every line, so a tracked link's line number stops
+    -- meaning anything - the same defect as above reached by a second route. The
+    -- buffer is refilled afterwards so a broken reveal has something to overwrite.
+    it("does not rewrite an unrelated line after clearWindow() discarded the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscclrseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCCLR1(" .. link .. ")OSCCLR1\n"))
+        local registeredAt, concealed = findLine("OSCCLR1")
+        assert.is_truthy(registeredAt, "the line carrying the link never reached the buffer")
+        -- concealment proves the link registered, so there is tracked state for
+        -- clearWindow() to leave behind
+        assert.equals("OSCCLR1(          )OSCCLR1", concealed)
+
+        clearWindow()
+        assert.is_nil(findLine("OSCCLR1"), "clearWindow() left the link's line in the buffer")
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscclrfiller padded out well past the link column " .. i .. "\n") end
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        for lineNumber = 0, lastLine do
+          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+            "a link tracked across clearWindow() rewrote line " .. lineNumber)
+        end
+      end)
+    end)
   end)
 
 end)
