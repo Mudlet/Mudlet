@@ -172,7 +172,7 @@ std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, 
         // all zoom levels.
         const int worldX = qRound(static_cast<double>(mx - fx) / mRoomWidth);
         const int worldY = qRound(static_cast<double>(fy - my) / mRoomHeight);
-        const QSet<int>& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
+        const TAreaGridIndex::RoomIds& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
         if (!cellRooms.isEmpty()) {
             return *cellRooms.constBegin();
         }
@@ -222,8 +222,8 @@ QSet<int> T2DMap::roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TA
         // Grid mode: look up the exact cell under the cursor.
         const int worldX = qRound(static_cast<double>(mx - fx) / mRoomWidth);
         const int worldY = qRound(static_cast<double>(fy - my) / mRoomHeight);
-        const QSet<int>& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
-        return cellRooms;
+        const TAreaGridIndex::RoomIds& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
+        return QSet<int>(cellRooms.constBegin(), cellRooms.constEnd());
     }
 
     const int halfW = qMax(1, qRound(mRoomWidth * rSize / 2.0));
@@ -1943,7 +1943,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                         lastWorldX = worldX;
                         currentColor = 0;
 
-                        const QSet<int>& rooms = gridIndex.roomsAt(zLevel, worldX, worldY);
+                        const TAreaGridIndex::RoomIds& rooms = gridIndex.roomsAt(zLevel, worldX, worldY);
                         // Iterate to find the first non-hidden room at this cell.
                         for (const int roomId : rooms) {
                             TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
@@ -2078,7 +2078,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         if (mPick) {
             const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
             const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
-            const QSet<int>& clickedRooms = gridIndex.roomsAt(zLevel, clickWorldX, clickWorldY);
+            const TAreaGridIndex::RoomIds& clickedRooms = gridIndex.roomsAt(zLevel, clickWorldX, clickWorldY);
             if (!clickedRooms.isEmpty()) {
                 const int clickedRoomId = *clickedRooms.constBegin();
                 mPick = false;
@@ -2376,7 +2376,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     if (mPick) {
         const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
         const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
-        const QSet<int>& clickedRooms = gridIndex.roomsAt(zLevel, clickWorldX, clickWorldY);
+        const TAreaGridIndex::RoomIds& clickedRooms = gridIndex.roomsAt(zLevel, clickWorldX, clickWorldY);
         if (!clickedRooms.isEmpty()) {
             const int clickedRoomId = *clickedRooms.constBegin();
             mPick = false;
@@ -2553,7 +2553,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     if (mPick) {
         const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
         const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
-        const QSet<int>& clickedRooms = pDrawnArea->getGridIndex().roomsAt(zLevel, clickWorldX, clickWorldY);
+        const TAreaGridIndex::RoomIds& clickedRooms = pDrawnArea->getGridIndex().roomsAt(zLevel, clickWorldX, clickWorldY);
         if (!clickedRooms.isEmpty()) {
             mPick = false;
             if (mStartSpeedWalk) {

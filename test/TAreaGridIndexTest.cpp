@@ -62,7 +62,7 @@ private slots:
         TAreaGridIndex idx;
         idx.addRoom(1, 0, 2, 2);
         idx.addRoom(2, 0, 2, 2);
-        const QSet<int>& cell = idx.roomsAt(0, 2, 2);
+        const TAreaGridIndex::RoomIds& cell = idx.roomsAt(0, 2, 2);
         QVERIFY(cell.contains(1));
         QVERIFY(cell.contains(2));
         QCOMPARE(cell.size(), 2);
@@ -265,8 +265,10 @@ private slots:
         TAreaGridIndex idx;
         idx.addRoom(7, 2, 10, 20);
         idx.addRoom(8, 2, 10, 20);
-        const QSet<int> expected = {7, 8};
-        QCOMPARE(idx.roomsAt(2, 10, 20), expected);
+        const TAreaGridIndex::RoomIds& cell = idx.roomsAt(2, 10, 20);
+        QCOMPARE(cell.size(), 2);
+        QVERIFY(cell.contains(7));
+        QVERIFY(cell.contains(8));
     }
 
     void roomsAt_nonExistentCell_returnsEmptySet()
@@ -281,9 +283,9 @@ private slots:
     {
         TAreaGridIndex idx;
         // Two calls to a non-existent cell must return references to the same
-        // static empty set (no dangling references).
-        const QSet<int>& ref1 = idx.roomsAt(77, 1, 2);
-        const QSet<int>& ref2 = idx.roomsAt(77, 1, 2);
+        // static empty cell (no dangling references).
+        const TAreaGridIndex::RoomIds& ref1 = idx.roomsAt(77, 1, 2);
+        const TAreaGridIndex::RoomIds& ref2 = idx.roomsAt(77, 1, 2);
         QVERIFY(&ref1 == &ref2);
         QVERIFY(ref1.isEmpty());
     }
