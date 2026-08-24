@@ -107,6 +107,9 @@ private:
     static constexpr int kEnvHidden = 502;
     static constexpr int kEnvAreaExitDestination = 503;
     static constexpr int kEnvDark = 504;
+    // setCustomEnvColor() takes an alpha, so an environment colour that is
+    // only partly opaque is something a script can ask for.
+    static constexpr int kEnvTranslucent = 505;
 
     static QColor exitColour() { return QColor(0, 255, 128); }
     static QColor customLineColour() { return QColor(255, 0, 255); }
@@ -114,6 +117,7 @@ private:
     static QColor hiddenRoomColour() { return QColor(0, 128, 255); }
     static QColor areaExitColour() { return QColor(0, 255, 255); }
     static QColor borderColour() { return QColor(0, 255, 0); }
+    static QColor translucentRoomColour() { return QColor(255, 200, 100, 128); }
 
     // At these zooms an exit pen is a twentieth of a pixel wide and Qt draws it
     // at a matching fraction of its colour, so hardly any pixel in a frame
@@ -152,6 +156,32 @@ private:
             }
         }
         return count;
+    }
+
+    // The colour a room was actually drawn in, taken as the brightest pixel in
+    // the frame. A room a few pixels across lands on fractional coordinates, so
+    // its edge pixels carry a fraction of the colour however the fill was
+    // composited and only the interior carries the whole of it.
+    static QColor brightestPixel(const QImage& image)
+    {
+        QColor brightest(0, 0, 0);
+        int brightestSum = -1;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                const QColor pixel = image.pixelColor(x, y);
+                const int sum = pixel.red() + pixel.green() + pixel.blue();
+                if (sum > brightestSum) {
+                    brightestSum = sum;
+                    brightest = pixel;
+                }
+            }
+        }
+        return brightest;
+    }
+
+    static bool coloursMatch(const QColor& lhs, const QColor& rhs, const int tolerance)
+    {
+        return qAbs(lhs.red() - rhs.red()) <= tolerance && qAbs(lhs.green() - rhs.green()) <= tolerance && qAbs(lhs.blue() - rhs.blue()) <= tolerance;
     }
 
     // A frame is far quicker to read than a pixel count when working out
@@ -195,6 +225,7 @@ private:
         pMap->mCustomEnvColors[kEnvHidden] = hiddenRoomColour();
         pMap->mCustomEnvColors[kEnvAreaExitDestination] = areaExitColour();
         pMap->mCustomEnvColors[kEnvDark] = QColor(0, 0, 0);
+        pMap->mCustomEnvColors[kEnvTranslucent] = translucentRoomColour();
 
         const int areaId = pMap->mpRoomDB->addArea(name);
         if (areaId <= 0 || !addRoomAt(kPlayerRoomId, areaId, 0, kPlayerRoomY, kEnvRoom)) {
@@ -481,6 +512,66 @@ private slots:
         if (hiddenPixels != 0) {
             QFAIL(qPrintable(
                     qsl("the hidden room was drawn - %1 pixels of its environment colour are in the frame, saved at %2").arg(QString::number(hiddenPixels), saveFrame(frame, qsl("blobs-hidden")))));
+        }
+    }
+
+    // The reduced tiers write their colours straight into the scanlines of a
+    // premultiplied image rather than handing them to a QPainter, so an
+    // environment colour that is not fully opaque has to be premultiplied on
+    // the way in. Left alone it composites at full strength and the room
+    // brightens as the map crosses the threshold, which is the one zoom step
+    // where nothing about a room is supposed to change but its size.
+    //
+    // There are three such scanline loops - one for a non-grid area, and two
+    // for a grid one, which splits at a room narrower than a pixel - and each
+    // arrives at its colour separately.
+    void test_aTranslucentEnvironmentColourSurvivesTheThresholdUnchanged_data()
+    {
+        QTest::addColumn<bool>("gridMode");
+        QTest::addColumn<double>("reducedTierZoom");
+
+        QTest::newRow("non-grid") << false << kZoomThreePixelRooms;
+        QTest::newRow("grid") << true << kZoomThreePixelRooms;
+        QTest::newRow("grid, room narrower than a pixel") << true << kZoomHalfPixelRooms;
+    }
+
+    void test_aTranslucentEnvironmentColourSurvivesTheThresholdUnchanged()
+    {
+        QFETCH(bool, gridMode);
+        QFETCH(double, reducedTierZoom);
+
+        const int areaId = freshArea(qsl("Translucent Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvTranslucent));
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        pArea->gridMode = gridMode;
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomAtThreshold, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        const QImage atThreshold = renderFrame(p2dMap);
+        QCOMPARE(p2dMap->mRoomWidth, 4.0f);
+        const QColor fullDetailColour = brightestPixel(atThreshold);
+
+        p2dMap = prepareWidget(areaId, reducedTierZoom, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        const QImage insideTier = renderFrame(p2dMap);
+        QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the second frame was not drawn inside the reduced level of detail");
+        const QColor reducedTierColour = brightestPixel(insideTier);
+
+        // The colour the QPainter fill of the full-detail path arrives at: the
+        // environment colour scaled by its own alpha, over the black background.
+        const QColor overBlack(qRound(translucentRoomColour().red() * translucentRoomColour().alphaF()),
+                               qRound(translucentRoomColour().green() * translucentRoomColour().alphaF()),
+                               qRound(translucentRoomColour().blue() * translucentRoomColour().alphaF()));
+        if (!coloursMatch(fullDetailColour, overBlack, 4)) {
+            QFAIL(qPrintable(qsl("the full-detail room was not drawn as its translucent environment colour over the background - expected %1, drew %2, frame saved at %3")
+                                     .arg(overBlack.name(), fullDetailColour.name(), saveFrame(atThreshold, qsl("translucent-at-threshold")))));
+        }
+        if (!coloursMatch(reducedTierColour, fullDetailColour, 4)) {
+            QFAIL(qPrintable(
+                    qsl("the room changed colour on crossing into the reduced tier - drawn %1 at four pixels a room and %2 below that, frames saved at %3 and %4")
+                            .arg(fullDetailColour.name(), reducedTierColour.name(), saveFrame(atThreshold, qsl("translucent-at-threshold")), saveFrame(insideTier, qsl("translucent-inside-tier")))));
         }
     }
 

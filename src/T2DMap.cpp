@@ -1907,6 +1907,10 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         lodImage.fill(0); // transparent: background was already rendered beneath us
 
         // Cache env -> QRgb so environmentColor() is called at most once per env ID.
+        // Premultiplied, because these go straight into the scanlines of a
+        // premultiplied image rather than through a QPainter: setCustomEnvColor()
+        // takes an alpha, and a translucent colour left unpremultiplied here
+        // composites at full strength.
         QHash<int, QRgb> envColorCache;
 
         if (mRoomWidth < 1.0f) {
@@ -1960,7 +1964,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                                 if (colorIt != envColorCache.constEnd()) {
                                     currentColor = *colorIt;
                                 } else {
-                                    currentColor = environmentColor(room->environment).rgba();
+                                    currentColor = qPremultiply(environmentColor(room->environment).rgba());
                                     envColorCache.insert(room->environment, currentColor);
                                 }
                             }
@@ -2009,7 +2013,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                 if (colorIt != envColorCache.constEnd()) {
                     colorRgb = *colorIt;
                 } else {
-                    colorRgb = environmentColor(room->environment).rgba();
+                    colorRgb = qPremultiply(environmentColor(room->environment).rgba());
                     envColorCache.insert(room->environment, colorRgb);
                 }
 
@@ -2439,6 +2443,9 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     const int blobPixelWidth = blobSize.width();
     const int blobPixelHeight = blobSize.height();
 
+    // Premultiplied for the same reason as in drawGridModeRooms(): a
+    // translucent environment colour written raw into a premultiplied image
+    // composites at full strength.
     QHash<int, QRgb> envColorCache;
     QList<QPair<TRoom*, QPointF>> highlightedRooms;
     QList<QRect> selectedRoomRects;
@@ -2484,7 +2491,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
         if (colorIt != envColorCache.constEnd()) {
             colorRgb = *colorIt;
         } else {
-            colorRgb = environmentColor(room->environment).rgba();
+            colorRgb = qPremultiply(environmentColor(room->environment).rgba());
             envColorCache.insert(room->environment, colorRgb);
         }
 
