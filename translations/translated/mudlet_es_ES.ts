@@ -6256,7 +6256,7 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/VarUnit.cpp" line="325"/>
       <source>Saved variables are remembered by their dotted path, so a global with a dot in its own name cannot be told apart from a member of a table and cannot be saved.</source>
       <extracomment>Tooltip explaining why a global whose own name contains a dot cannot be saved</extracomment>
-      <translation type="unfinished"/>
+      <translation>Las variables guardadas se recuerdan por su ruta de puntos, por lo que una variable global con un punto en su propio nombre no se puede distinguir de un miembro de una tabla y no se puede guardar.</translation>
     </message>
     <message>
       <location filename="../src/VarUnit.cpp" line="333"/>
@@ -6276,7 +6276,7 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/XMLexport.cpp" line="817"/>
       <source>[ ALERT ] - Lua could not be read while these saved variables were being saved, so this save leaves them out: %1. Everything else in the profile was saved. An earlier save that still has them is under &apos;Connect - Options - Profile history&apos;.</source>
       <extracomment>%1 is a comma separated list of Lua variable names</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - No se pudo leer Lua mientras se guardaban estas variables, por lo que esta partida guardada no las incluye: %1. El resto del perfil se guardó correctamente. Una partida anterior que aún las contiene se encuentra en &apos;Connect - Options - Profile history&apos;.</translation>
     </message>
     <message>
       <location filename="../src/XMLexport.cpp" line="825"/>
@@ -6637,20 +6637,23 @@ The package is hosted on a server with an SSL certificate problem. The URL may b
       <source>[ ERROR ] - Unable to connect to %1:%2 via proxy - %3.
 Check the proxy details entered in the profile preferences.</source>
       <extracomment>%1 is the URL or the IP address (suitably wrapped if it is an IPv6 one) of the Game Server, %2 is the port number and %3 is the reason the connection could not be made, as reported by the operating system, e.g. &quot;Connection refused&quot;. The connection that failed was the one to the proxy rather than to the game itself.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se pudo conectar a %1:%2 a través del proxy - %3. Verifique los datos del proxy introducidos en las preferencias del perfil.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="770"/>
       <source>[ ERROR ] - Unable to connect to %1:%2 - %3.
 Check your internet connection and the details entered for the game server.</source>
       <extracomment>%1 is the URL or the IP address (suitably wrapped if it is an IPv6 one) of the Game Server, %2 is the port number and %3 is the reason the connection could not be made, as reported by the operating system, e.g. &quot;Connection refused&quot;.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se pudo conectar a %1:%2 - %3. Verifique su conexión a internet y los datos introducidos para el servidor del juego.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/ctelnet.cpp" line="809"/>
       <source>[ INFO ]  - Trying again in %n second(s)...</source>
       <extracomment>%n is the number of seconds before Mudlet tries the connection again.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ]  - Reintentando en %n segundo...</numerusform>
+        <numerusform>[ INFO ]  - Reintentando en %n segundos...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="904"/>
@@ -7772,7 +7775,7 @@ Error shown when the update server response cannot be understood</extracomment>
       <location filename="../src/updater/UpdateDialog.cpp" line="609"/>
       <source>[See every change between your version and this update](%1) on GitHub.</source>
       <extracomment>Shown above the update changelog; the text in [] is a clickable link, %1 is the GitHub comparison URL</extracomment>
-      <translation type="unfinished"/>
+      <translation>[Consulta todos los cambios entre tu versión y de esta actualización](%1) en GitHub.</translation>
     </message>
     <message>
       <location filename="../src/updater/UpdateDialog.cpp" line="626"/>
@@ -8390,17 +8393,21 @@ Cuenta</translation>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet&apos;s own source code is released under the &lt;a href=&quot;https://www.gnu.org/licenses/old-licenses/gpl-2.0.html#SEC1&quot;&gt;GNU Public License version 2&lt;/a&gt; or later; however, because we use elements from other projects with (or which are only compatible with) a GPL version 3 licence, the combined work has to be offered to you under a GNU Public Licence 3.0 only. This is reproduced below:&lt;/p&gt;</source>
       <extracomment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;As only the English form is considered the official version of the license, the following is stated in that language:&apos; to replace &apos;This is reproduced below:&apos;...</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet fue escrito originalmente por Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
+&lt;p&gt;El propio código fuente de Mudlet se publica bajo la  &lt;a href=&quot;https://gnu.org Pública General de GNU versión 2&lt;/a&gt; o posterior; sin embargo, debido a que utilizamos elementos de otros proyectos con una licencia GPL versión 3 (o que solo son compatibles con ella), la obra combinada se le debe ofrecer bajo los términos exclusivos de la Licencia Pública General de GNU 3.0. Esta se reproduce a continuación:&lt;/p&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1250"/>
       <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre2 - Enlace a biblioteca de expresiones regulares (variante PCRE2).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1260"/>
       <source>&lt;h2&gt;&lt;u&gt;Edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2026 by Rick Blommers&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Edbee - Componente de edición multifunción &lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2026 por Rick Blommers&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1263"/>
