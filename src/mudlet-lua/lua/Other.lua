@@ -612,8 +612,14 @@ function phpTable(...)
   end
   setmetatable(newTable, {
     __newindex = function(self, key, value)
-      if not self[key] then
-        table.insert(keys, key)
+      -- Only a nil read means the key is absent: `not self[key]` also matched a
+      -- stored false, which appended a second copy of the key to the order list
+      -- and left it undeletable. Assigning nil to an absent key must not
+      -- register one either.
+      if self[key] == nil then
+        if value ~= nil then
+          table.insert(keys, key)
+        end
       elseif value == nil then
         -- Handle item delete
         local count = 1
