@@ -5312,79 +5312,79 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2941"/>
       <source>{non-breaking space}</source>
       <extracomment>Unicode U+00A0 codepoint.</extracomment>
-      <translation>{non-breaking space}</translation>
+      <translation>{espacio de no separación}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2943"/>
       <source>{soft hyphen}</source>
       <extracomment>Unicode U+00AD codepoint.</extracomment>
-      <translation>{soft hyphen}</translation>
+      <translation>{guion opcional}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2945"/>
       <source>{combining grapheme joiner}</source>
       <extracomment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</extracomment>
-      <translation>{combining grapheme joiner}</translation>
+      <translation>{carácter de unión de grafemas}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2947"/>
       <source>{ogham space mark}</source>
       <extracomment>Unicode U+1680 codepoint.</extracomment>
-      <translation>{ogham space mark}</translation>
+      <translation>{marca de espacio ogham}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2949"/>
       <source>{&apos;n&apos; quad}</source>
       <extracomment>Unicode U+2000 codepoint.</extracomment>
-      <translation>{&apos;n&apos; cuadrado}</translation>
+      <translation>{cuadrado &apos;n&apos;}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2951"/>
       <source>{&apos;m&apos; quad}</source>
       <extracomment>Unicode U+2001 codepoint.</extracomment>
-      <translation>{&apos;m&apos; cuadrado}</translation>
+      <translation>{espacio &apos;m&apos;}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2953"/>
       <source>{&apos;n&apos; space}</source>
       <extracomment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</extracomment>
-      <translation>{&apos;n&apos; espacio}</translation>
+      <translation>{espacio &apos;n&apos;}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2955"/>
       <source>{&apos;m&apos; space}</source>
       <extracomment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</extracomment>
-      <translation>{&apos;m&apos; espacio}</translation>
+      <translation>{espacio &apos;m&apos;}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2957"/>
       <source>{3-per-em space}</source>
       <extracomment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</extracomment>
-      <translation>{3-per-em space}</translation>
+      <translation>{espacio 3-per-em}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2959"/>
       <source>{4-per-em space}</source>
       <extracomment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</extracomment>
-      <translation>{4-per-em space}</translation>
+      <translation>{espacio 4-per-em}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2961"/>
       <source>{6-per-em space}</source>
       <extracomment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</extracomment>
-      <translation>{6-per-em space}</translation>
+      <translation>{espacio 6-per-em}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2963"/>
       <source>{digit space}</source>
       <extracomment>Unicode U+2007 codepoint - figure (digit) wide space.</extracomment>
-      <translation>{digit space}</translation>
+      <translation>{espacio para dígito}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2965"/>
       <source>{punctuation wide space}</source>
       <extracomment>Unicode U+2008 codepoint.</extracomment>
-      <translation>{punctuation wide space}</translation>
+      <translation>{Espacio de ancho de puntuación}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2967"/>
@@ -5396,313 +5396,313 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2969"/>
       <source>{hair width space}</source>
       <extracomment>Unicode U+200A codepoint - thinnest space.</extracomment>
-      <translation>{hair width space}</translation>
+      <translation>{espacio ultrafino}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2971"/>
       <source>{zero width space}</source>
       <extracomment>Unicode U+200B codepoint.</extracomment>
-      <translation>{zero width space}</translation>
+      <translation>{espacio de anchura cero}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2973"/>
       <source>{Zero width non-joiner}</source>
       <extracomment>Unicode U+200C codepoint.</extracomment>
-      <translation>{Zero width non-joiner}</translation>
+      <translation>{Separador de ancho cero}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2975"/>
       <source>{zero width joiner}</source>
       <extracomment>Unicode U+200D codepoint.</extracomment>
-      <translation>{zero width joiner}</translation>
+      <translation>{carácter de unión de ancho cero}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2977"/>
       <source>{left-to-right mark}</source>
       <extracomment>Unicode U+200E codepoint.</extracomment>
-      <translation>{left-to-right mark}</translation>
+      <translation>{marca de izquierda a derecha}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2979"/>
       <source>{right-to-left mark}</source>
       <extracomment>Unicode U+200F codepoint.</extracomment>
-      <translation>{right-to-left mark}</translation>
+      <translation>{marca de derecha a izquierda}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2981"/>
       <source>{line separator}</source>
       <extracomment>Unicode 0x2028 codepoint.</extracomment>
-      <translation>{line separator}</translation>
+      <translation>{salto de línea}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2983"/>
       <source>{paragraph separator}</source>
       <extracomment>Unicode U+2029 codepoint.</extracomment>
-      <translation>{paragraph separator}</translation>
+      <translation>{separador de párrafos}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2985"/>
       <source>{Left-to-right embedding}</source>
       <extracomment>Unicode U+202A codepoint.</extracomment>
-      <translation>{Left-to-right embedding}</translation>
+      <translation>{Incrustación de izquierda a derecha}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2987"/>
       <source>{right-to-left embedding}</source>
       <extracomment>Unicode U+202B codepoint.</extracomment>
-      <translation>{right-to-left embedding}</translation>
+      <translation>{incrustación de derecha a izquierda}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2989"/>
       <source>{pop directional formatting}</source>
       <extracomment>Unicode U+202C codepoint - pop (undo last) directional formatting.</extracomment>
-      <translation>{pop directional formatting}</translation>
+      <translation>{restaurar formato direccional}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2991"/>
       <source>{Left-to-right override}</source>
       <extracomment>Unicode U+202D codepoint.</extracomment>
-      <translation>{Left-to-right override}</translation>
+      <translation>{anulación de izquierda a derecha}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2993"/>
       <source>{right-to-left override}</source>
       <extracomment>Unicode U+202E codepoint.</extracomment>
-      <translation>{right-to-left override}</translation>
+      <translation>{anulación de derecha a izquierda}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2995"/>
       <source>{narrow width no-break space}</source>
       <extracomment>Unicode U+202F codepoint.</extracomment>
-      <translation>{narrow width no-break space}</translation>
+      <translation>{espacio sin ruptura}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2997"/>
       <source>{medium width mathematical space}</source>
       <extracomment>Unicode U+205F codepoint.</extracomment>
-      <translation>{medium width mathematical space}</translation>
+      <translation>{espacio matemático de anchura media}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2999"/>
       <source>{zero width non-breaking space}</source>
       <extracomment>Unicode U+2060 codepoint.</extracomment>
-      <translation>{zero width non-breaking space}</translation>
+      <translation>{espacio de no separación de anchura cero}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3001"/>
       <source>{function application}</source>
       <extracomment>Unicode U+2061 codepoint - function application (whatever that means!)</extracomment>
-      <translation>{function application}</translation>
+      <translation>{aplicación de función}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3003"/>
       <source>{invisible times}</source>
       <extracomment>Unicode U+2062 codepoint.</extracomment>
-      <translation>{invisible times}</translation>
+      <translation>{tiempos invisibles}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3005"/>
       <source>{invisible separator}</source>
       <extracomment>Unicode U+2063 codepoint - invisible separator or comma.</extracomment>
-      <translation>{invisible separator}</translation>
+      <translation>{separador invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3007"/>
       <source>{invisible plus}</source>
       <extracomment>Unicode U+2064 codepoint.</extracomment>
-      <translation>{invisible plus}</translation>
+      <translation>{más invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3009"/>
       <source>{left-to-right isolate}</source>
       <extracomment>Unicode U+2066 codepoint.</extracomment>
-      <translation>{left-to-right isolate}</translation>
+      <translation>{aislamiento de izquierda a derecha}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3011"/>
       <source>{right-to-left isolate}</source>
       <extracomment>Unicode U+2067 codepoint.</extracomment>
-      <translation>{right-to-left isolate}</translation>
+      <translation>{aislamiento de derecha a izquierda}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3013"/>
       <source>{first strong isolate}</source>
       <extracomment>Unicode U+2068 codepoint.</extracomment>
-      <translation>{first strong isolate}</translation>
+      <translation>{primer aislamiento fuerte}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3015"/>
       <source>{pop directional isolate}</source>
       <extracomment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</extracomment>
-      <translation>{pop directional isolate}</translation>
+      <translation>{restaurar aislamiento direccional}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3017"/>
       <source>{inhibit symmetrical swapping}</source>
       <extracomment>Unicode U+206A codepoint.</extracomment>
-      <translation>{inhibit symmetrical swapping}</translation>
+      <translation>{inhibir el intercambio simétrico}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3019"/>
       <source>{activate symmetrical swapping}</source>
       <extracomment>Unicode U+206B codepoint.</extracomment>
-      <translation>{activate symmetrical swapping}</translation>
+      <translation>{activar intercambio simétrico}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3021"/>
       <source>{inhibit arabic form-shaping}</source>
       <extracomment>Unicode U+206C codepoint.</extracomment>
-      <translation>{inhibit arabic form-shaping}</translation>
+      <translation>{inhibir la forma arábica}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3023"/>
       <source>{activate arabic form-shaping}</source>
       <extracomment>Unicode U+206D codepoint.</extracomment>
-      <translation>{activate arabic form-shaping}</translation>
+      <translation>{activar la forma arábica}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3025"/>
       <source>{national digit shapes}</source>
       <extracomment>Unicode U+206E codepoint.</extracomment>
-      <translation>{national digit shapes}</translation>
+      <translation>{formas nacionales de los dígitos}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3027"/>
       <source>{nominal Digit shapes}</source>
       <extracomment>Unicode U+206F codepoint.</extracomment>
-      <translation>{nominal Digit shapes}</translation>
+      <translation>{formas nominales de los dígitos}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3029"/>
       <source>{ideographic space}</source>
       <extracomment>Unicode U+3000 codepoint - ideographic (CJK Wide) space</extracomment>
-      <translation>{ideographic space}</translation>
+      <translation>{espacio ideográfico}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3031"/>
       <source>{variation selector 1}</source>
       <extracomment>Unicode U+FE00 codepoint.</extracomment>
-      <translation>{variation selector 1}</translation>
+      <translation>{selector de variación 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3033"/>
       <source>{variation selector 2}</source>
       <extracomment>Unicode U+FE01 codepoint.</extracomment>
-      <translation>{variation selector 2}</translation>
+      <translation>{selector de variación 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3035"/>
       <source>{variation selector 3}</source>
       <extracomment>Unicode U+FE02 codepoint.</extracomment>
-      <translation>{variation selector 3}</translation>
+      <translation>{selector de variación 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3037"/>
       <source>{variation selector 4}</source>
       <extracomment>Unicode U+FE03 codepoint.</extracomment>
-      <translation>{variation selector 4}</translation>
+      <translation>{selector de variación 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3039"/>
       <source>{variation selector 5}</source>
       <extracomment>Unicode U+FE04 codepoint.</extracomment>
-      <translation>{variation selector 5}</translation>
+      <translation>{selector de variación 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3041"/>
       <source>{variation selector 6}</source>
       <extracomment>Unicode U+FE05 codepoint.</extracomment>
-      <translation>{variation selector 6}</translation>
+      <translation>{selector de variación 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3043"/>
       <source>{variation selector 7}</source>
       <extracomment>Unicode U+FE06 codepoint.</extracomment>
-      <translation>{variation selector 7}</translation>
+      <translation>{selector de variación 7}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3045"/>
       <source>{variation selector 8}</source>
       <extracomment>Unicode U+FE07 codepoint.</extracomment>
-      <translation>{variation selector 8}</translation>
+      <translation>{selector de variación 8}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3047"/>
       <source>{variation selector 9}</source>
       <extracomment>Unicode U+FE08 codepoint.</extracomment>
-      <translation>{variation selector 9}</translation>
+      <translation>{selector de variación 9}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3049"/>
       <source>{variation selector 10}</source>
       <extracomment>Unicode U+FE09 codepoint.</extracomment>
-      <translation>{variation selector 10}</translation>
+      <translation>{selector de variación 10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3051"/>
       <source>{variation selector 11}</source>
       <extracomment>Unicode U+FE0A codepoint.</extracomment>
-      <translation>{variation selector 11}</translation>
+      <translation>{selector de variación 11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3053"/>
       <source>{variation selector 12}</source>
       <extracomment>Unicode U+FE0B codepoint.</extracomment>
-      <translation>{variation selector 12}</translation>
+      <translation>{selector de variación 12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3055"/>
       <source>{variation selector 13}</source>
       <extracomment>Unicode U+FE0C codepoint.</extracomment>
-      <translation>{variation selector 13}</translation>
+      <translation>{selector de variación 13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3057"/>
       <source>{variation selector 14}</source>
       <extracomment>Unicode U+FE0D codepoint.</extracomment>
-      <translation>{variation selector 14}</translation>
+      <translation>{selector de variación 14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3059"/>
       <source>{variation selector 15}</source>
       <extracomment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</extracomment>
-      <translation>{variation selector 15}</translation>
+      <translation>{selector de variación 15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3061"/>
       <source>{variation selector 16}</source>
       <extracomment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</extracomment>
-      <translation>{variation selector 16}</translation>
+      <translation>{selector de variación 16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3063"/>
       <source>{zero width no-break space}</source>
       <extracomment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</extracomment>
-      <translation>{zero width no-break space}</translation>
+      <translation>{espacio de anchura cero sin salto de línea}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3071"/>
       <source>{interlinear annotation anchor}</source>
       <extracomment>Unicode U+FFF9 codepoint.</extracomment>
-      <translation>{interlinear annotation anchor}</translation>
+      <translation>{anclaje de anotación interlineal}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3073"/>
       <source>{interlinear annotation separator}</source>
       <extracomment>Unicode U+FFFA codepoint.</extracomment>
-      <translation>{interlinear annotation separator}</translation>
+      <translation>{separador de anotación interlineal}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3075"/>
       <source>{interlinear annotation terminator}</source>
       <extracomment>Unicode U+FFFB codepoint</extracomment>
-      <translation>{interlinear annotation terminator}</translation>
+      <translation>{terminador de anotación interlineal}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3077"/>
       <source>{object replacement character}</source>
       <extracomment>Unicode U+FFFC codepoint.</extracomment>
-      <translation>{object replacement character}</translation>
+      <translation>{carácter de reemplazo de objeto}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3090"/>
@@ -5720,31 +5720,31 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="3103"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <extracomment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</extracomment>
-      <translation>{FitzPatrick modifier 1 or 2}</translation>
+      <translation>{Modificador de Fitzpatrick 1 o 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3105"/>
       <source>{FitzPatrick modifier 3}</source>
       <extracomment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</extracomment>
-      <translation>{FitzPatrick modifier 3}</translation>
+      <translation>{Modificador de Fitzpatrick 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3107"/>
       <source>{FitzPatrick modifier 4}</source>
       <extracomment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</extracomment>
-      <translation>{FitzPatrick modifier 4}</translation>
+      <translation>{Modificador de Fitzpatrick 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3109"/>
       <source>{FitzPatrick modifier 5}</source>
       <extracomment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</extracomment>
-      <translation>{FitzPatrick modifier 5}</translation>
+      <translation>{Modificador de Fitzpatrick 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3111"/>
       <source>{FitzPatrick modifier 6}</source>
       <extracomment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</extracomment>
-      <translation>{FitzPatrick modifier 6}</translation>
+      <translation>{Modificador de Fitzpatrick 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3392"/>
@@ -5758,7 +5758,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="3463"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <extracomment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</extracomment>
-      <translation>U+&lt;i&gt;####&lt;/i&gt; Punto de código Unicode &lt;i&gt;(Altos:Subrogados Bajos)&lt;/i&gt;</translation>
+      <translation>U+&lt;i&gt;####&lt;/i&gt; Punto de código Unicode &lt;i&gt;(Sustitutos alto y bajo)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="3402"/>
@@ -5877,7 +5877,9 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTrigger.cpp" line="126"/>
       <source>The trigger &quot;%1&quot; was saved with a list of patterns and a list of pattern types of different lengths. Any pattern left without a type has been set to substring and any type left without a pattern dropped, so the trigger can be seen and repaired - until then it will probably not work as expected.</source>
       <extracomment>%1 is the name of the trigger. Shown when a saved profile holds a trigger whose list of patterns and list of pattern types are of different lengths.</extracomment>
-      <translation>El disparador &quot;%1&quot; se guardó con una lista de patrones y una lista de tipos de patrones de longitudes diferentes. Cualquier patrón dejado sin un tipo se ha asignado a subcadena y cualquier tipo dejado sin patrón se ha eliminado, para que el disparador pueda ser visto y reparado - hasta entonces es probable que no funcione como se esperaba.</translation>
+      <translation>El disparador &quot;%1&quot; se guardó con una lista de patrones y una lista de tipos de patrones de longitudes diferentes. Cualquier patrón sin un tipo asignado, se le ha asignado el tipo subcadena y cualquier tipo sin patrón se ha eliminado, para que el disparador pueda verse y repararse.  Hasta entonces, probablemente no funcionará como se espera.
+
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="138"/>
@@ -5897,7 +5899,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message>
       <location filename="../src/TTrigger.cpp" line="217"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
-      <translation>Error: en el elemento %1, no se establecieron colores coincidentes; al menos &lt;i&gt;uno&lt;/i&gt; de los colores de primer plano o de fondo no debe ser &lt;i&gt;ignorado&lt;/i&gt;>.</translation>
+      <translation>Error: en el elemento %1, no se establecieron colores que coincidan; al menos &lt;i&gt;uno&lt;/i&gt; de los colores de primer plano o de fondo no debe ser &lt;i&gt;ignorado&lt;/i&gt;>.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1142"/>
@@ -5908,7 +5910,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTrigger.cpp" line="1147"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
       <translation>
-        <numerusform>El disparador nombre=%1 se activará %n una vez.</numerusform>
+        <numerusform>El disparador nombre=%1 se activará %n vez.</numerusform>
         <numerusform>El disparador nombre=%1 se activará %n veces más.</numerusform>
       </translation>
     </message>
@@ -5992,7 +5994,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TUiTour.cpp" line="226"/>
       <source>Make Mudlet yours</source>
       <extracomment>Title of the interface tour step highlighting the preferences</extracomment>
-      <translation>Personaliza el Mudlet</translation>
+      <translation>Haz tuyo el Mudlet</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="228"/>
@@ -6070,8 +6072,9 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/updater/update_dialog.ui" line="113"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation>%APPNAME% %UPDATE_VERSION% está disponible (usted tiene %CURRENT_VERSION%).
-¿Desea actualizar ahora?</translation>
+      <translation>%APPNAME% %UPDATE_VERSION% está disponible (tienes la versión %CURRENT_VERSION%).
+¿Quieres actualizar ahora?
+</translation>
     </message>
     <message>
       <location filename="../src/updater/update_dialog.ui" line="151"/>
@@ -6294,8 +6297,7 @@ Error shown when the batch file for managing the update process cannot be create
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
       <translation>[ ALERTA ] - Lo sentimos, el archivo que se está leyendo:
-&quot;%1&quot;
-indica que tiene una versión (%2) que debe provenir de una versión posterior de Mudlet,
+&quot;%1&quot; indica que tiene una versión (%2) que debe provenir de una versión posterior de Mudlet,
 y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más reciente!</translation>
     </message>
     <message>
@@ -8412,12 +8414,13 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1263"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates another component with a licence that must be noted as well, it is:</source>
-      <translation type="unfinished"/>
+      <translation>El propio widget &lt;b&gt;edbee-lib&lt;/b&gt; incorpora otro componente cuya licencia también debe tenerse en cuenta; se trata de:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1265"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2021 K.Kosako &amp;lt;kkosako0@gmail.com&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LICENCIA de Oniguruma&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2021 K.Kosako &amp;lt;kkosako0@gmail.com&amp;gt;&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1296"/>
@@ -8428,18 +8431,20 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1299"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.com&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - parte de KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, una empresa del Grupo KDAB, &amp;lt;info@kdab.com&amp;gt;.&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1319"/>
       <source>&lt;h2&gt;&lt;u&gt;OpenSSL 3.x - Open Source Toolkit for Secure Transport Layer Security&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1995-2026 The OpenSSL Project Authors.&lt;br&gt;All Rights Reserved&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;OpenSSL 3.x - Kit de herramientas de código abierto para la Seguridad de la Capa de Transporte (TLS)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1995-2026 Autores del Proyecto OpenSSL.&lt;br&gt;Todos los derechos reservados&lt;/h3&gt;
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1520"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1548"/>
       <source>CPU (64-bits)</source>
-      <translation type="unfinished"/>
+      <translation>CPU (%1-bits)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1531"/>
@@ -8866,19 +8871,20 @@ Cuenta</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1066"/>
       <source>Nothing has been saved for %1 yet, so there is nothing to remove</source>
       <extracomment>%1 is a game name, e.g. Achaea, that has never been played and so has no profile to remove</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aún no se ha guardado nada para %1, por lo que no hay nada que eliminar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1174"/>
       <source>Removed everything saved for &apos;%1&apos;. The game itself stays in the list, ready to play again.</source>
       <extracomment>%1 is a game name, e.g. Achaea</extracomment>
-      <translation type="unfinished"/>
+      <translation>Se ha eliminado todo, excepto &apos;%1&apos;. El juego en sí permanece en la lista, listo para volver a jugar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1177"/>
       <source>Nothing has been saved for &apos;%1&apos; yet, so there was nothing to remove.</source>
       <extracomment>%1 is a game name, e.g. Achaea, that has never been played and so has nothing saved to remove</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aún no se ha guardado nada para &apos;%1&apos;, por lo que no hay nada que eliminar.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1898"/>
@@ -11834,7 +11840,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="224"/>
       <source>How to add a new timer from the input line</source>
       <extracomment>Name of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cómo añadir un nuevo temporizador desde la línea de entrada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="231"/>
@@ -12035,13 +12041,13 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <extracomment>Package item warning shown in trigger editor when editing package items. Should only be announced to screen readers once per item, not repeatedly on every edit.
 ----------
 Package item warning banner shown in trigger editor when selecting package items</extracomment>
-      <translation type="unfinished"/>
+      <translation>Este elemento forma parte de un paquete. Para conservar mejor los cambios, copie el elemento antes de editarlo, ya que las actualizaciones del paquete podrían sobrescribir las modificaciones.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6878"/>
       <source>&quot;%1&quot; was not renamed: another member of the same table already has that name, or this variable&apos;s key is a table or a function, which has no name to change.</source>
       <extracomment>Warning shown in the editor&apos;s Variables view when a rename could not be carried out. %1 is the name the variable keeps.</extracomment>
-      <translation type="unfinished"/>
+      <translation>No se cambió el nombre de &quot;%1&quot;: otro miembro de la misma tabla ya tiene ese nombre, o bien la clave de esta variable es una tabla o una función, las cuales no tienen nombre que modificar.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7638"/>
@@ -12109,7 +12115,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="8358"/>
       <source>&quot;%1&quot; cannot be changed here: Mudlet has no way to reach it in Lua under the name it is shown with, so anything saved for it would go somewhere else. Its value may show up blank for the same reason. A script can still change it.</source>
       <extracomment>Warning shown in the editor&apos;s Variables view for a variable it cannot write back to Lua. %1 is the name the variable is shown under.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&quot;%1&quot; no se puede modificar aquí: Mudlet no tiene la forma de acceder a él en Lua con el nombre que se muestra, por lo que cualquier dato guardado para él acabaría en otro lugar. Es posible que su valor aparezca vacío por la misma razón. No obstante, un script sí puede modificarlo.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8421"/>
@@ -12325,7 +12331,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10062"/>
       <source>Apply button/menu/toolbar changes (does not save to disk).</source>
       <extracomment>Status tip for saving button changes</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aplicar cambios en botones, menús o barras de herramientas (no se guarda en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.h" line="595"/>
@@ -13227,7 +13233,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgVarsMainArea.cpp" line="60"/>
       <source>key (boolean)</source>
       <extracomment>Shown in the Variables editor for a table member whose key is the boolean true or false, a key type that cannot be created from the GUI</extracomment>
-      <translation type="unfinished"/>
+      <translation>tecla (booleano)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="88"/>
@@ -13396,7 +13402,11 @@ Package item warning banner shown in trigger editor when selecting package items
       <source>       --offline                    open the profiles loaded at startup
                                     without connecting to their game
                                     server.</source>
-      <translation type="unfinished"/>
+      <translation>       --offline                abre los perfiles cargados al inicio
+                                    sin conectarse a su servidor
+                                    de juego.
+
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="463"/>
@@ -13530,7 +13540,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="539"/>
       <source>Licence GPLv3: GNU GPL version 3 - http://gnu.org/licenses/gpl.html</source>
-      <translation type="unfinished"/>
+      <translation>Licencia GPLv3: GNU GPL versión 3 - http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="443"/>
@@ -17255,12 +17265,14 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1358"/>
       <source>Undo the game&apos;s own wrapping (experimental) at:</source>
-      <translation type="unfinished"/>
+      <translation>Deshacer el ajuste de línea automático del propio juego (experimental)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1406"/>
       <source>&lt;i&gt;Experimental: the odd line can still be joined or left split when it should not be. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Tell us how it works for you&lt;/a&gt; - your feedback is what will make this better.&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;Experimental: es posible que alguna línea se una o permanezca dividida cuando no debería. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Cuéntanos cómo te funciona&lt;/a&gt;: tus comentarios son lo que permitirá mejorarlo.&lt;/i&gt;
+
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2777"/>
@@ -19385,7 +19397,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="147"/>
       <source>Add User Event:</source>
-      <translation type="unfinished"/>
+      <translation>Añadir evento de usuario:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="181"/>
