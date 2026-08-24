@@ -219,7 +219,13 @@ public:
     bool setOnlySymbolFontUsed(bool);
     qreal getSymbolFontFudgeFactor() const { return mMapSymbolFontFudgeFactor; }
     bool setSymbolFontFudgeFactor(qreal);
-    void flushSymbolCaches();
+    // The range setSymbolFontFudgeFactor() accepts; also what the preferences
+    // spin-box offers. Zero and below blanks every symbol (issue #10176):
+    static constexpr qreal scmMinimumSymbolFontFudgeFactor = 0.50;
+    static constexpr qreal scmMaximumSymbolFontFudgeFactor = 2.00;
+    // Which of the symbols in use would be drawn as the replacement character
+    // if the given font were the symbol font:
+    QStringList symbolsNotInFont(const QFont&);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
@@ -447,6 +453,7 @@ private:
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
+    void flushSymbolCaches();
 
     QStringList mStoredMessages;
 
