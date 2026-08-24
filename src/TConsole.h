@@ -41,10 +41,10 @@
 
 #include <hunspell/hunspell.h>
 
-#include <deque>
 #include <list>
 #include <map>
 #include <memory>
+#include <vector>
 
 // This contains the details of a font that we might want to maintain a record
 // of, independently of a QFont instance:
@@ -271,7 +271,7 @@ public:
     void print(const QString& msg);
     void print(const char*);
     void print(const QString& msg, QColor fgColor, QColor bgColor);
-    void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
