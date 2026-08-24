@@ -1861,10 +1861,13 @@ QSize T2DMap::lodRoomBlobSize() const
 // where the map is panned and how big a room is drawn. The forward transform is
 //     rx = room->x() * roomWidth + rx0
 //     ry = room->y() * -1 * roomHeight + ry0
-// so inverting it gives the range, and a cell of margin keeps a room whose rect
-// straddles a widget edge inside it. Callers still test each room's own rx and
-// ry: this only says which rooms are worth asking the index about.
-static QRect viewportRoomBounds(const float rx0, const float ry0, const float roomWidth, const float roomHeight, const float widgetWidth, const float widgetHeight)
+// so inverting it gives the range, rounded outwards and then given a cell of
+// margin. Both room loops go on to keep only the rooms whose centre lands on
+// the widget, which is a narrower set than this, so the margin is not load
+// bearing - it is there so that no rounding of the float arithmetic here can
+// cost a room that would have been drawn, and an extra cell only costs an index
+// lookup that comes back empty.
+QRect T2DMap::viewportRoomBounds(const float rx0, const float ry0, const float roomWidth, const float roomHeight, const float widgetWidth, const float widgetHeight)
 {
     const int minX = static_cast<int>(std::floor(static_cast<double>(-rx0) / roomWidth)) - 1;
     const int maxX = static_cast<int>(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth)) + 1;

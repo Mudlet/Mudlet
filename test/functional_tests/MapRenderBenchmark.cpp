@@ -318,6 +318,9 @@ private slots:
         }
         emitMetric("bench_widget_width", static_cast<qint64>(kWidgetWidth));
         emitMetric("bench_widget_height", static_cast<qint64>(kWidgetHeight));
+        // So that compare-perf-baseline.py can say that a run has no timings
+        // rather than that the gate names a metric nobody emits.
+        emitMetric("bench_frame_hash_mode", static_cast<qint64>(hashFrames ? 1 : 0));
 
         // The mapper is inside a dock widget whose layout would otherwise clip
         // it; sizing the widget itself is what decides the drawn rect, since
@@ -440,6 +443,9 @@ private slots:
             // How many rooms the frame could possibly have drawn. The whole
             // point of the exercise is the gap between this and the room count
             // the paint path actually walks, so it is worth a metric of its own.
+            // It moves with where the map happened to be panned when the last
+            // frame of a pass finished, so it is reported rather than gated -
+            // see the note on it in compare-perf-baseline.py.
             const int roomsVisible = visibleRoomCount(p2dMap, pArea, zLevel);
             emitMetric(qsl("%1_rooms_visible").arg(prefix), static_cast<qint64>(roomsVisible));
             QVERIFY2(roomsVisible > 0,
@@ -544,19 +550,17 @@ private:
         return bestId;
     }
 
-    // Rooms whose grid cell lies in the viewport - the same bounds
-    // drawGridModeRooms() derives, so this is what an ideally-culled frame
-    // would have to touch.
+    // Rooms whose grid cell lies in the viewport, asked of the paint path's own
+    // bounds rather than a copy of them: a copy would go on reporting the old
+    // number after a change to the real ones, which is the number this is here
+    // to catch moving.
     static int visibleRoomCount(T2DMap* p2dMap, TArea* pArea, int zLevel)
     {
         if (p2dMap->mRoomWidth <= 0.0f || p2dMap->mRoomHeight <= 0.0f) {
             return 0;
         }
-        const int minX = static_cast<int>(std::floor(static_cast<double>(-p2dMap->mRX) / p2dMap->mRoomWidth)) - 1;
-        const int maxX = static_cast<int>(std::ceil(static_cast<double>(kWidgetWidth - p2dMap->mRX) / p2dMap->mRoomWidth)) + 1;
-        const int minY = static_cast<int>(std::floor(static_cast<double>(p2dMap->mRY - kWidgetHeight) / p2dMap->mRoomHeight)) - 1;
-        const int maxY = static_cast<int>(std::ceil(static_cast<double>(p2dMap->mRY) / p2dMap->mRoomHeight)) + 1;
-        return pArea->getGridIndex().roomsInViewport(zLevel, minX, maxX, minY, maxY).size();
+        const QRect bounds = T2DMap::viewportRoomBounds(p2dMap->mRX, p2dMap->mRY, p2dMap->mRoomWidth, p2dMap->mRoomHeight, kWidgetWidth, kWidgetHeight);
+        return pArea->getGridIndex().roomsInViewport(zLevel, bounds.left(), bounds.right(), bounds.top(), bounds.bottom()).size();
     }
 
     static std::pair<double, double> zLevelSpan(TArea* pArea, int zLevel)

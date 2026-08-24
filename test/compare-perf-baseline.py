@@ -62,6 +62,14 @@ HARNESSES = {
             "display_rows_per_paint",
             "display_cols_per_paint",
         ),
+        # Throughput for the text and trigger pipelines, plus the shipped default
+        # packages on the same corpus - the pipeline metrics run on a bare
+        # profile, so only defaults_text_lines_per_sec can see a package costing
+        # every new user throughput. trigger_overhead_ms is deliberately absent:
+        # it is a difference of two noisy best-passes (up to ~16% run to run,
+        # wider than the 10% gate) so it would fire on noise. It stays emitted
+        # and reportable, and --gate trigger_overhead_ms turns it on for a change
+        # that targets matching.
         "gate": ("text_lines_per_sec", "trigger_lines_per_sec", "defaults_text_lines_per_sec"),
     },
     "MapRenderBenchmark": {
@@ -83,32 +91,38 @@ HARNESSES = {
             # drawing the map, and without these that reads as a large win.
             "render_close_zoom",
             "render_close_units_across",
-            "render_close_rooms_visible",
             "render_near_zoom",
             "render_near_units_across",
-            "render_near_rooms_visible",
             "render_mid_zoom",
             "render_mid_units_across",
-            "render_mid_rooms_visible",
             "render_fit_zoom",
             "render_fit_units_across",
+        ),
+        # Reported, and a difference is worth a note, but not a reason to refuse
+        # the comparison. render_*_rooms_visible is read off the viewport at the
+        # end of a scenario, and a faster build fits more frames into a pass, so
+        # it stops with the map panned somewhere else and counts a different
+        # number of rooms - a 0.1% move that says nothing about what was drawn.
+        # It is also derived from the same viewport bounds the paint path uses
+        # rather than from the frame, so it could not catch a build that stopped
+        # drawing the map anyway: the FRAMEHASH digests are what guard the
+        # pixels, and MUDLET_BENCH_FRAME_HASH=1 on both builds is how to compare
+        # them.
+        "soft_invariants": (
+            "render_close_rooms_visible",
+            "render_near_rooms_visible",
+            "render_mid_rooms_visible",
             "render_fit_rooms_visible",
         ),
         "gate": ("render_close_ms", "render_near_ms", "render_mid_ms", "render_fit_ms"),
     },
 }
 
-INVARIANTS = COMMON_INVARIANTS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"])
+# Not compared for equality - a dump captured before the metric existed does not
+# have it - but never read as a result either, so it stays out of the table.
+MODE_METRICS = ("bench_frame_hash_mode",)
 
-# Gated by default: throughput (lines/sec) for the text and trigger pipelines,
-# plus the shipped default packages on the same corpus - the pipeline metrics run
-# on a bare profile, so only defaults_text_lines_per_sec can see a package
-# costing every new user throughput.
-# trigger_overhead_ms is intentionally NOT here - it is a difference of two noisy
-# best-passes (up to ~16% run-to-run worst case, wider than the 10% gate), so it
-# would fire on noise. It stays emitted and reportable, and can be gated
-# explicitly with --gate trigger_overhead_ms when a change targets matching.
-DEFAULT_GATE = HARNESSES["PipelineBenchmark"]["gate"]
+INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"])
 
 # Wall-clock ceiling for a single benchmark run under --run. The ASan/offscreen
 # functional-test build feeds a huge corpus several times, so this is generous.
@@ -238,6 +252,10 @@ def check_invariants(before, after):
                 "different workloads or build configurations and cannot be compared. "
                 f"Rebuild both trees from the same {before_harness} harness, built the same way."
             )
+
+    for name in HARNESSES[before_harness].get("soft_invariants", ()):
+        if name in before and name in after and before[name] != after[name]:
+            sys.stderr.write(f"note: {name} moved {before[name]:g} -> {after[name]:g}; see the note on it in this script - it does not invalidate the comparison.\n")
     return before_harness
 
 
@@ -293,7 +311,7 @@ def compare(before, after, threshold, gate):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Compare two PipelineBenchmark runs (older vs newer Mudlet, same machine).",
+        description="Compare two benchmark runs of the same harness (older vs newer Mudlet, same machine).",
         epilog="See docs/libmudlet-perf-baseline.md for the full before/after workflow.",
     )
     parser.add_argument("before", help="'before' METRIC file, or benchmark binary with --run")
@@ -314,6 +332,15 @@ def main():
     after = load(args.after, args.run)
     if not before or not after:
         fail("no METRIC lines found in one of the runs")
+
+    for label, metrics in (("before", before), ("after", after)):
+        if metrics.get("bench_frame_hash_mode", 0):
+            fail(
+                f"the {label} run was made with MUDLET_BENCH_FRAME_HASH set, which replaces the timed "
+                "passes with a pixel-digest pass, so it has no timings to gate on. Diff the two runs' "
+                "FRAMEHASH lines to compare the pixels, and re-run both builds without "
+                "MUDLET_BENCH_FRAME_HASH to compare the speed."
+            )
 
     harness = check_invariants(before, after)
     gate = {name.strip() for name in (args.gate or ",".join(HARNESSES[harness]["gate"])).split(",") if name.strip()}
