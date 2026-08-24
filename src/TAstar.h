@@ -64,7 +64,13 @@ class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    distance_heuristic(LocMap l, Vertex goal)
+    // The location map is held by reference, not copied: on a large map it is
+    // tens of megabytes (35MB at 2.3 million rooms) and a copy per search costs
+    // more than the search does. That makes the caller responsible for the
+    // referent outliving the heuristic - fine while every user builds one as a
+    // local for the duration of a single search, but storing one across calls
+    // would leave it dangling the next time initGraph() rebuilds locations.
+    distance_heuristic(const LocMap& l, Vertex goal)
     : m_location(l)
     , m_goal(goal)
     {}
@@ -82,7 +88,7 @@ public:
     }
 
 private:
-    LocMap m_location;
+    const LocMap& m_location;
     Vertex m_goal;
 };
 

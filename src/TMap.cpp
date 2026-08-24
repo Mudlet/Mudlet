@@ -50,6 +50,12 @@
 #include <QSaveFile>
 #include <QSizeF>
 #include <chrono>
+#include <limits>
+#include <queue>
+
+#ifndef Q_MOC_RUN
+#include <boost/range/iterator_range.hpp>
+#endif
 
 using namespace std::chrono_literals;
 
@@ -844,6 +850,23 @@ void TMap::initGraph()
         boost::add_vertex(g);
     }
 
+    // searchGraph() keeps its per-room state between searches, so this is the
+    // one place it can go stale: rebuilding the graph renumbers the vertices,
+    // and a leftover mSearchTouched would then have the next search "restore"
+    // indices that now mean different rooms. That is safe because this function
+    // is the only place g is cleared or given vertices, and findPath() is its
+    // only caller - so room deletion, area deletion and a map reload all reach
+    // it through the mMapGraphNeedsUpdate flag rather than touching the graph
+    // themselves. Reinitialise rather than merely resize, or entries below the
+    // old room count survive.
+    mSearchPredecessor.resize(roomCount);
+    for (unsigned int i = 0; i < roomCount; ++i) {
+        mSearchPredecessor[i] = i;
+    }
+    mSearchDistance.assign(roomCount, std::numeric_limits<cost>::max());
+    mSearchState.assign(roomCount, 0);
+    mSearchTouched.clear();
+
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
     for (auto l : locations) {
         unsigned const int source = l.id;
@@ -893,6 +916,76 @@ void TMap::initGraph()
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+}
+
+// A* from one room to another, leaving the route in mSearchPredecessor.
+//
+// boost::astar_search() would do the same job, but before it looks at a single
+// exit it resets one entry per room in the WHOLE map - four property maps' worth
+// - so a two-room walk on a 2.3 million room map pays for 2.3 million rooms.
+// Measured on Ssaliss' Aetherspace map that fixed toll is ~55ms, an order of
+// magnitude more than an ordinary search costs. Here the state lives across
+// searches instead and only the rooms the last search wrote to are put back.
+bool TMap::searchGraph(const vertex start, const vertex goal)
+{
+    // mSearchState values: a room not yet reached is 0, one waiting in the
+    // frontier is 1, and one already expanded is 2.
+    static constexpr quint8 stateFrontier = 1;
+    static constexpr quint8 stateExpanded = 2;
+
+    for (const vertex touched : mSearchTouched) {
+        mSearchPredecessor[touched] = touched;
+        mSearchDistance[touched] = std::numeric_limits<cost>::max();
+        mSearchState[touched] = 0;
+    }
+    mSearchTouched.clear();
+
+    const WeightMap weights = boost::get(boost::edge_weight, g);
+    distance_heuristic<mygraph_t, cost, std::vector<location>> heuristic(locations, goal);
+
+    typedef std::pair<cost, vertex> frontierEntry;
+    std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
+
+    mSearchDistance[start] = 0;
+    mSearchState[start] = stateFrontier;
+    mSearchTouched.push_back(start);
+    frontier.push({heuristic(start), start});
+
+    while (!frontier.empty()) {
+        const vertex current = frontier.top().second;
+        frontier.pop();
+        if (mSearchState[current] == stateExpanded) {
+            // A cheaper route to this room was found after it was queued, so
+            // the frontier holds it more than once; this is the stale copy.
+            continue;
+        }
+        mSearchState[current] = stateExpanded;
+        if (current == goal) {
+            return true;
+        }
+
+        for (const auto& exit : boost::make_iterator_range(boost::out_edges(current, g))) {
+            const vertex neighbour = boost::target(exit, g);
+            const cost throughCurrent = mSearchDistance[current] + boost::get(weights, exit);
+            if (throughCurrent >= mSearchDistance[neighbour]) {
+                continue;
+            }
+            if (mSearchState[neighbour] == 0) {
+                mSearchTouched.push_back(neighbour);
+            }
+            mSearchDistance[neighbour] = throughCurrent;
+            mSearchPredecessor[neighbour] = current;
+            // An already expanded room goes back into the frontier: the
+            // heuristic measures map coordinates while the costs are room
+            // weights, so the two need not agree and a better route to a room
+            // already left behind can still turn up. boost::astar_search()
+            // re-opens rooms for the same reason.
+            mSearchState[neighbour] = stateFrontier;
+            frontier.push({throughCurrent + heuristic(neighbour), neighbour});
+        }
+    }
+
+    return false;
 }
 
 bool TMap::findPath(int from, int to)
@@ -1003,111 +1096,101 @@ bool TMap::findPath(int from, int to)
         return false;
     }
 
-    std::vector<vertex> p(vertexCount);
-    // Somehow p is an ascending, monotonic series of numbers start at 0, it
-    // seems we have a redundant indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
-    std::vector<cost> d(vertexCount);
-    try {
-        astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
-    } catch (const found_goal&) {
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-        t.restart();
-        if (!roomidToIndex.contains(to)) {
-            qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: target room not in map graph!";
-            return false;
-        }
-
-        vertex currentVertex = roomidToIndex.value(to);
-        unsigned int currentRoomId = (locations.at(currentVertex)).id;
-
-        // We step through the found path BACKWARDS so advance (well retard)
-        // the "previous" one first, and it will be the SOURCE vertex for the
-        // edge and current will be the TARGET vertex:
-        vertex previousVertex = currentVertex;
-        do {
-            previousVertex = p[currentVertex];
-            if (previousVertex == currentVertex) {
-                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-                mPathList.clear();
-                mDirList.clear();
-                mWeightList.clear(); // Reset any partial results...
-                return false;
-            }
-            const unsigned int previousRoomId = (locations.at(previousVertex)).id;
-            QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
-            const route r = edgeHash.value(edgeRoomIdPair);
-            mPathList.prepend(currentRoomId);
-            Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
-            // Above was found to be triggered by the situation described in:
-            // https://bugs.launchpad.net/mudlet/+bug/1263447 on 2015-07-17 but
-            // this is because previousVertex was the same as currentVertex after
-            // the "previousVertex = p[currentVertex]" operation at the start of
-            // the do{} loop - added a test for this so should bail out if it
-            // happens - Slysven
-            mWeightList.prepend(r.cost);
-            switch (r.direction) {
-                /*
-                 * Do not translate the directions into the user's locale here,
-                 * that is to be done in the profile specific doSpeedwalk()
-                 * function of the mapper package as the language of the MUD
-                 * need not be the native language of the user - translating
-                 * them here makes the mapper harder to code as it has to
-                 * accommodate all the possible languages the GUI of Mudlet was
-                 * configured to support!
-                 */
-            case DIR_NORTH:
-                mDirList.prepend(qsl("n"));
-                break;
-            case DIR_NORTHEAST:
-                mDirList.prepend(qsl("ne"));
-                break;
-            case DIR_EAST:
-                mDirList.prepend(qsl("e"));
-                break;
-            case DIR_SOUTHEAST:
-                mDirList.prepend(qsl("se"));
-                break;
-            case DIR_SOUTH:
-                mDirList.prepend(qsl("s"));
-                break;
-            case DIR_SOUTHWEST:
-                mDirList.prepend(qsl("sw"));
-                break;
-            case DIR_WEST:
-                mDirList.prepend(qsl("w"));
-                break;
-            case DIR_NORTHWEST:
-                mDirList.prepend(qsl("nw"));
-                break;
-            case DIR_UP:
-                mDirList.prepend(qsl("up"));
-                break;
-            case DIR_DOWN:
-                mDirList.prepend(qsl("down"));
-                break;
-            case DIR_IN:
-                mDirList.prepend(qsl("in"));
-                break;
-            case DIR_OUT:
-                mDirList.prepend(qsl("out"));
-                break;
-            case DIR_OTHER:
-                mDirList.prepend(r.specialExitName);
-                break;
-            default:
-                qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId
-                                               << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
-            }
-            currentVertex = previousVertex;
-            currentRoomId = previousRoomId;
-        } while (currentVertex != start);
-
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-        return true;
+    if (!searchGraph(start, goal)) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+        return false;
     }
 
-    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-    return false;
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+    t.restart();
+
+    vertex currentVertex = goal;
+    unsigned int currentRoomId = (locations.at(currentVertex)).id;
+
+    // We step through the found path BACKWARDS so advance (well retard)
+    // the "previous" one first, and it will be the SOURCE vertex for the
+    // edge and current will be the TARGET vertex:
+    vertex previousVertex = currentVertex;
+    do {
+        previousVertex = mSearchPredecessor[currentVertex];
+        if (previousVertex == currentVertex) {
+            qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+            mPathList.clear();
+            mDirList.clear();
+            mWeightList.clear(); // Reset any partial results...
+            return false;
+        }
+        const unsigned int previousRoomId = (locations.at(previousVertex)).id;
+        QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
+        const route r = edgeHash.value(edgeRoomIdPair);
+        mPathList.prepend(currentRoomId);
+        Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
+        // Above was found to be triggered by the situation described in:
+        // https://bugs.launchpad.net/mudlet/+bug/1263447 on 2015-07-17 but
+        // this is because previousVertex was the same as currentVertex after
+        // the "previousVertex = p[currentVertex]" operation at the start of
+        // the do{} loop - added a test for this so should bail out if it
+        // happens - Slysven
+        mWeightList.prepend(r.cost);
+        switch (r.direction) {
+            /*
+             * Do not translate the directions into the user's locale here,
+             * that is to be done in the profile specific doSpeedwalk()
+             * function of the mapper package as the language of the MUD
+             * need not be the native language of the user - translating
+             * them here makes the mapper harder to code as it has to
+             * accommodate all the possible languages the GUI of Mudlet was
+             * configured to support!
+             */
+        case DIR_NORTH:
+            mDirList.prepend(qsl("n"));
+            break;
+        case DIR_NORTHEAST:
+            mDirList.prepend(qsl("ne"));
+            break;
+        case DIR_EAST:
+            mDirList.prepend(qsl("e"));
+            break;
+        case DIR_SOUTHEAST:
+            mDirList.prepend(qsl("se"));
+            break;
+        case DIR_SOUTH:
+            mDirList.prepend(qsl("s"));
+            break;
+        case DIR_SOUTHWEST:
+            mDirList.prepend(qsl("sw"));
+            break;
+        case DIR_WEST:
+            mDirList.prepend(qsl("w"));
+            break;
+        case DIR_NORTHWEST:
+            mDirList.prepend(qsl("nw"));
+            break;
+        case DIR_UP:
+            mDirList.prepend(qsl("up"));
+            break;
+        case DIR_DOWN:
+            mDirList.prepend(qsl("down"));
+            break;
+        case DIR_IN:
+            mDirList.prepend(qsl("in"));
+            break;
+        case DIR_OUT:
+            mDirList.prepend(qsl("out"));
+            break;
+        case DIR_OTHER:
+            mDirList.prepend(r.specialExitName);
+            break;
+        default:
+            qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId
+                                           << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
+        }
+        currentVertex = previousVertex;
+        currentRoomId = previousRoomId;
+    } while (currentVertex != start);
+
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+    return true;
 }
 
 bool TMap::serialize(QDataStream& ofs, int saveVersion)

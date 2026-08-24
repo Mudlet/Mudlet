@@ -301,6 +301,16 @@ public:
     mygraph_t g;
     QHash<QPair<unsigned int, unsigned int>, route> edgeHash; // For Mudlet to decode BGL edges
     std::vector<location> locations;
+    // Per-room search state, sized to the graph and kept between searches - see
+    // searchGraph(). mSearchTouched lists every room the last search wrote to,
+    // which is what lets the next one put the defaults back without walking the
+    // whole map. initGraph() has to reinitialise all four when it rebuilds the
+    // graph, for the reason given there.
+    std::vector<vertex> mSearchPredecessor;
+    std::vector<cost> mSearchDistance;
+    std::vector<quint8> mSearchState;
+    std::vector<vertex> mSearchTouched;
+    bool searchGraph(const vertex start, const vertex goal);
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
