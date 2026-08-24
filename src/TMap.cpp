@@ -850,22 +850,15 @@ void TMap::initGraph()
         boost::add_vertex(g);
     }
 
-    // searchGraph() keeps its per-room state between searches, so this is the
-    // one place it can go stale: rebuilding the graph renumbers the vertices,
-    // and a leftover mSearchTouched would then have the next search "restore"
-    // indices that now mean different rooms. That is safe because this function
-    // is the only place g is cleared or given vertices, and findPath() is its
-    // only caller - so room deletion, area deletion and a map reload all reach
-    // it through the mMapGraphNeedsUpdate flag rather than touching the graph
-    // themselves. Reinitialise rather than merely resize, or entries below the
-    // old room count survive.
-    mSearchPredecessor.resize(roomCount);
-    for (unsigned int i = 0; i < roomCount; ++i) {
-        mSearchPredecessor[i] = i;
-    }
-    mSearchDistance.assign(roomCount, std::numeric_limits<cost>::max());
-    mSearchState.assign(roomCount, 0);
-    mSearchTouched.clear();
+    // searchGraph() keeps its per-room state between searches, so a rebuild has
+    // to put that state back in step with the graph. This function is the only
+    // one that clears g or gives it vertices, which makes it the only place the
+    // state can go stale - room deletion, area deletion and a map reload all
+    // arrive here through mMapGraphNeedsUpdate rather than touching the graph
+    // themselves. A surviving mSearchTouched would be worse than merely wrong:
+    // the next search restores the rooms it names, so an entry past a shrunken
+    // roomCount is an out-of-bounds write.
+    resetSearchState(roomCount);
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
     for (auto l : locations) {
@@ -918,6 +911,20 @@ void TMap::initGraph()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
 
+// Put every room back to "not yet reached". Refills the three per-room vectors
+// rather than only resizing them, or stale values below the old room count
+// survive a rebuild that shrank the map.
+void TMap::resetSearchState(const std::size_t roomCount)
+{
+    mSearchPredecessor.resize(roomCount);
+    for (std::size_t i = 0; i < roomCount; ++i) {
+        mSearchPredecessor[i] = i;
+    }
+    mSearchDistance.assign(roomCount, std::numeric_limits<cost>::max());
+    mSearchState.assign(roomCount, 0);
+    mSearchTouched.clear();
+}
+
 // A* from one room to another, leaving the route in mSearchPredecessor.
 //
 // boost::astar_search() would do the same job, but before it looks at a single
@@ -928,17 +935,30 @@ void TMap::initGraph()
 // searches instead and only the rooms the last search wrote to are put back.
 bool TMap::searchGraph(const vertex start, const vertex goal)
 {
-    // mSearchState values: a room not yet reached is 0, one waiting in the
-    // frontier is 1, and one already expanded is 2.
+    // A room not yet reached is 0, one that has been reached is stateFrontier,
+    // and one already expanded is stateExpanded - though a re-opened room drops
+    // back to stateFrontier. Only 0 and stateExpanded are ever tested: writing
+    // stateFrontier is what stops a room being listed in mSearchTouched twice.
     static constexpr quint8 stateFrontier = 1;
     static constexpr quint8 stateExpanded = 2;
 
-    for (const vertex touched : mSearchTouched) {
-        mSearchPredecessor[touched] = touched;
-        mSearchDistance[touched] = std::numeric_limits<cost>::max();
-        mSearchState[touched] = 0;
+    // A search that finds nothing has to settle every room it can reach, so one
+    // getPath() to an unreachable room leaves the touched list naming most of the
+    // map - 8 bytes a room, held for the rest of the session, where the old code
+    // freed its scratch after every search. Past half the map give the memory
+    // back and refill instead; the list has stopped being the smaller job by
+    // then anyway, though the point where that happens was not measured.
+    if (mSearchTouched.size() > mSearchPredecessor.size() / 2) {
+        resetSearchState(mSearchPredecessor.size());
+        std::vector<vertex>().swap(mSearchTouched);
+    } else {
+        for (const vertex touched : mSearchTouched) {
+            mSearchPredecessor[touched] = touched;
+            mSearchDistance[touched] = std::numeric_limits<cost>::max();
+            mSearchState[touched] = 0;
+        }
+        mSearchTouched.clear();
     }
-    mSearchTouched.clear();
 
     const WeightMap weights = boost::get(boost::edge_weight, g);
     distance_heuristic<mygraph_t, cost, std::vector<location>> heuristic(locations, goal);
@@ -1094,6 +1114,17 @@ bool TMap::findPath(int from, int to)
     if (static_cast<std::size_t>(start) >= vertexCount || static_cast<std::size_t>(goal) >= vertexCount) {
         qWarning().nospace().noquote() << "TMap::findPath(" << from << "," << to << ") FAIL: start or target vertex outside of graph range (vertexCount=" << vertexCount << ").";
         return false;
+    }
+
+    // The check above is what keeps searchGraph()'s unchecked indexing in range,
+    // so the search state has to be the same size as the graph for it to mean
+    // anything. Sizing it is initGraph()'s job and nothing else adds vertices,
+    // but boost::add_edge() on a vecS graph grows one silently to fit an
+    // out-of-range index, which would part the two without saying so.
+    if (mSearchPredecessor.size() != vertexCount) {
+        qWarning().nospace().noquote() << "TMap::findPath(" << from << "," << to << ") WARN: search state (" << mSearchPredecessor.size() << ") is out of step with the graph (" << vertexCount
+                                       << ") - resetting it.";
+        resetSearchState(vertexCount);
     }
 
     if (!searchGraph(start, goal)) {

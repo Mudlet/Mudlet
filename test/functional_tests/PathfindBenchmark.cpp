@@ -29,7 +29,9 @@
  *
  *   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./PathfindBenchmark
  *
- * Scenarios walk between rooms of the busiest Z level of the busiest area, at
+ * Set MUDLET_BENCH_AREA to pin a particular area instead of the busiest one.
+ *
+ * Scenarios walk between rooms of the busiest Z level of the chosen area, at
  * increasing separations, because A* cost scales with how much of the graph the
  * frontier has to sweep - and the whole question is how much of the per-search
  * cost is that sweep and how much is a fixed toll paid on every search
@@ -45,7 +47,6 @@
 #include <clocale>
 #include <cstdio>
 #include <limits>
-#include <queue>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -75,9 +76,10 @@
 #endif
 
 // Prototype of the per-vertex arrays A* could keep between searches. A map
-// over one of them remembers every vertex it wrote to, so the next search puts
-// the defaults back for just those rather than for every room on the map -
-// which is the whole of what astar_search() does before it looks at an edge.
+// over one of them records each write, so the next search puts the defaults
+// back for just those rather than for every room on the map - which is the
+// whole of what astar_search() does before it looks at an edge. Repeat writes
+// are recorded again, so the touched list counts writes, not distinct rooms.
 template <typename Value>
 class ScratchMap
 {
@@ -135,11 +137,13 @@ private:
     struct Scenario
     {
         const char* name;
-        // Separation between the two rooms, in map units along one axis.
+        // Added to BOTH the x and y of the start room, so the target of
+        // {"near", 10} is 10 map units away on each axis, not 10 in total.
         int offset;
     };
 
-    // 0 means "the far corner of the level", the longest walk it can hold.
+    // 0 means "the room nearest the far corner". The start is the middle of
+    // the level, so that is about a half-diagonal, not its longest walk.
     static constexpr Scenario kScenarios[] = {
             {"adjacent", 1},
             {"near", 10},
@@ -299,9 +303,9 @@ private slots:
                 continue;
             }
 
-            // One untimed search first: it settles any lazily-grown property
-            // map inside BGL, and proves the pair really is connected before
-            // the timings claim to describe a successful search.
+            // One untimed search first, so the timed passes cannot be the run
+            // that faults in whatever the first search touches, and so a failed
+            // search is caught here rather than silently timed as a success.
             QVERIFY2(pMap->findPath(startId, targetId),
                      qPrintable(qsl("scenario \"%1\" found no path from %2 to %3, so its timings would describe a failed search")
                                         .arg(QString::fromUtf8(scenario.name), QString::number(startId), QString::number(targetId))));
@@ -310,24 +314,37 @@ private slots:
             double best = std::numeric_limits<double>::max();
             for (int pass = 0; pass < kPasses; ++pass) {
                 timer.restart();
-                pMap->findPath(startId, targetId);
+                const bool found = pMap->findPath(startId, targetId);
                 best = std::min(best, timer.nsecsElapsed() / 1.0e6);
+                // These are the repeats, so they are the passes running on state
+                // the previous search left behind. A pass that stopped finding
+                // the route would otherwise be reported as a faster one.
+                QVERIFY2(found, qPrintable(qsl("scenario \"%1\" pass %2 found no path the first search found").arg(QString::fromUtf8(scenario.name), QString::number(pass))));
+                QCOMPARE(pMap->mPathList.size(), steps);
             }
 
             const QString prefix = qsl("path_%1").arg(QString::fromUtf8(scenario.name));
             emitMetric(qsl("%1_ms").arg(prefix), best);
-            // Workload invariants: a build that walked a different distance, or
-            // found a different route, did not do the same work.
+            // Workload invariant: a build that walked a different distance, or
+            // to a different room, did not do the same work. Two routes of equal
+            // length through different rooms would pass this.
             emitMetric(qsl("%1_steps").arg(prefix), static_cast<qint64>(steps));
             emitMetric(qsl("%1_target_room").arg(prefix), static_cast<qint64>(targetId));
         }
 
-        // Where a search's fixed toll goes. findPath() allocates two
-        // vertex-sized vectors of its own, and astar_search() then writes four
-        // property maps for every vertex in the WHOLE map - both before it has
-        // looked at a single edge - so a two-room walk on a 2.3M room map pays
-        // for 2.3M rooms. Measured on the shortest scenario, where the search
-        // proper is a couple of vertices and everything else is that toll.
+        // Where the fixed toll used to go. findPath() allocated two vertex-sized
+        // vectors of its own and handed them to astar_search(), which writes four
+        // property maps for every vertex in the WHOLE map before it looks at a
+        // single edge - so a two-room walk paid for every room. Run on the
+        // shortest scenario, where the search proper is a couple of vertices and
+        // everything else is that toll.
+        //
+        // These describe the shape of that cost rather than reproducing what it
+        // totalled: they report the best of several passes, so the arrays are
+        // warm by then, and the heuristic no longer copies the location list per
+        // search because that fix lives in the shared header this includes. For
+        // the end-to-end figure compare path_adjacent_ms against a build made
+        // without this change.
         {
             const int targetId = nearestTo(byCoordinate, centreX + 1, centreY, maxX - minX);
             const auto vertexCount = static_cast<std::size_t>(boost::num_vertices(pMap->g));
@@ -356,8 +373,8 @@ private slots:
             emitMetric("toll_astar_search_ms", bestSearch);
 
             // Same search, but with every per-vertex array allocated once and
-            // handed in: astar_search() still writes all 2.3M entries, it just
-            // no longer faults in fresh pages to do it.
+            // handed in: astar_search() still writes one entry per vertex, it
+            // just no longer faults in fresh pages to do it.
             std::vector<TMap::vertex> predecessor(vertexCount);
             std::vector<cost> distance(vertexCount);
             std::vector<cost> rank(vertexCount);
@@ -416,57 +433,8 @@ private slots:
             emitMetric("toll_astar_no_init_ms", bestNoInit);
             emitMetric("toll_astar_no_init_touched", static_cast<qint64>(touched.size()));
 
-            // And the same search written out by hand over the same persistent
-            // arrays: a binary heap with lazy deletion, no BGL scaffolding, and
-            // so nothing at all that is sized by the map rather than by the
-            // search.
-            const boost::property_map<TMap::mygraph_t, boost::edge_weight_t>::type weights = boost::get(boost::edge_weight, pMap->g);
-            distance_heuristic<TMap::mygraph_t, cost, std::vector<location>> heuristic(pMap->locations, goal);
-            typedef std::pair<cost, TMap::vertex> queueEntry;
-            std::priority_queue<queueEntry, std::vector<queueEntry>, std::greater<queueEntry>> open;
-            double bestManual = std::numeric_limits<double>::max();
-            std::size_t manualExamined = 0;
-            for (int pass = 0; pass < kPasses; ++pass) {
-                timer.restart();
-                for (const std::size_t index : touched) {
-                    predecessor[index] = index;
-                    distance[index] = infinite;
-                    rank[index] = infinite;
-                    colour[index] = boost::white_color;
-                }
-                touched.clear();
-                open = {};
-                manualExamined = 0;
-                distance[start] = 0;
-                touched.push_back(start);
-                open.push({heuristic(start), start});
-                while (!open.empty()) {
-                    const TMap::vertex u = open.top().second;
-                    open.pop();
-                    if (colour[u] == boost::black_color) {
-                        continue;
-                    }
-                    colour[u] = boost::black_color;
-                    touched.push_back(u);
-                    ++manualExamined;
-                    if (u == goal) {
-                        break;
-                    }
-                    for (const auto& edge : boost::make_iterator_range(boost::out_edges(u, pMap->g))) {
-                        const TMap::vertex v = boost::target(edge, pMap->g);
-                        const cost through = distance[u] + boost::get(weights, edge);
-                        if (through < distance[v]) {
-                            distance[v] = through;
-                            predecessor[v] = u;
-                            touched.push_back(v);
-                            open.push({through + heuristic(v), v});
-                        }
-                    }
-                }
-                bestManual = std::min(bestManual, timer.nsecsElapsed() / 1.0e6);
-            }
-            emitMetric("toll_astar_manual_ms", bestManual);
-            emitMetric("toll_astar_manual_examined", static_cast<qint64>(manualExamined));
+            // What replaced all of this is not measured again here: it is what
+            // findPath() now runs, so the path_* timings above are already it.
         }
 
         if (const qint64 peakRssKb = readPeakRssKb(); peakRssKb > 0) {
@@ -510,8 +478,10 @@ private:
         return bestZ;
     }
 
-    // The room at (x, y) if the level holds one, else the nearest in an
-    // outward ring search, so a level with holes in it still yields a pair.
+    // The room at (x, y) if the level holds one, else one found by an outward
+    // ring search, so a level with holes in it still yields a pair. The rings
+    // are square, so this is nearest by Chebyshev distance, and ties within a
+    // ring go to the lowest room id.
     static int nearestTo(const QHash<QPair<int, int>, int>& byCoordinate, int x, int y, int maxRadius)
     {
         if (const auto it = byCoordinate.constFind({x, y}); it != byCoordinate.constEnd()) {

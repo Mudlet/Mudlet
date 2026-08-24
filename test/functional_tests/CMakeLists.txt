@@ -191,9 +191,11 @@ add_functional_test_binary(UndoServerWrapReplay UndoServerWrapReplay.cpp)
 # also registers it with ctest.
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_functional_test_binary(PipelineBenchmark PipelineBenchmark.cpp)
-# The A* speedwalk search's companion. Never registered with ctest at all: it
-# needs a map file too big to commit, handed to it in MUDLET_BENCH_MAP, and
-# skips without one.
+# Report-only baseline for the A* speedwalk search and the graph rebuild that
+# feeds it, run as
+#   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./PathfindBenchmark
+# Never registered with ctest at all, because the map it needs is far too big to
+# commit and it skips without one.
 add_functional_test_binary(PathfindBenchmark PathfindBenchmark.cpp)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
