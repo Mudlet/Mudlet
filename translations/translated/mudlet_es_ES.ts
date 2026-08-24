@@ -4883,7 +4883,7 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="1684"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
       <extracomment>%1 is the audit key for the weight</extracomment>
-      <translation>Tenía un peso; esto se registra como datos de usuario con la clave: &quot;%1&quot;</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1694"/>
@@ -4939,10 +4939,7 @@ que están en estas áreas...</numerusform>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation>
-        <numerusform>[ INFO ]  - El área faltante se llama ahora: (ID) ==&gt; &quot;nombre&quot;</numerusform>
-        <numerusform>[ INFO ]  - Las áreas faltantes se llama ahora: (ID) ==&gt; &quot;nombre&quot;</numerusform>
-      </translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="813"/>
@@ -4965,7 +4962,7 @@ Anterior ==&gt; Nuevo</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="844"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ]  - Este área se ha renumerado desde el ID no válido: %1</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="881"/>
@@ -4977,9 +4974,7 @@ Anterior ==&gt; Nuevo</translation>
       <location filename="../src/TRoomDB.cpp" line="892"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation>[ ALERTA ] - Se han encontrado ID de sala no válidos (menores a +1) en el mapa (cantidad: %1); 
-
-calculando ahora qué nuevos números de ID usar.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="904"/>
