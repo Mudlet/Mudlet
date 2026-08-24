@@ -4030,17 +4030,80 @@ describe("Tests db:create with _unique naming unknown columns", function()
     assert.is_truthy(string.find(warnings, "the uniqueness this sheet already enforces is kept", 1, true))
   end)
 
-  it("says so when removing a column takes the uniqueness with it", function()
+  it("says so when removing a column costs the sheet its uniqueness", function()
     -- removing a column is a rebuild of its own further down, from the same pruned
     -- _unique, so the rule goes anyway. Holding that rebuild back instead would
-    -- leave the sheet a column its schema has no entry for, which reading it raises on
+    -- leave the sheet a column its schema has no entry for, which reading it raises on.
+    -- notes is what goes here and the rule that is lost is on name, which stays, so
+    -- what the message may not say is that the rule went with the column
     createCollectingWarnings({people = {name = "", city = "", notes = "", _unique = "name"}})
 
     local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = "nmae"}})
-    assert.is_truthy(string.find(warnings, "goes with the column this db:create removes", 1, true))
+    assert.is_truthy(string.find(warnings, "removing a column rebuilds this sheet from what is left of _unique", 1, true))
+    assert.is_falsy(string.find(warnings, "goes with the column", 1, true))
     assert.is_true(db:add(mydb.people, {name = "Ada"}))
     assert.is_true(db:add(mydb.people, {name = "Ada"}))
     assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("keeps the uniqueness of a sheet with a column that defaults to false", function()
+    -- a column is looked up rather than tested for truth: one declared with a default
+    -- of false is a column the sheet has, and reading it as one that is on its way out
+    -- lets the rebuild past the guard with the very rule the guard is there to keep
+    createCollectingWarnings({people = {name = "", city = "", active = false, _unique = {{"name", "city"}}}})
+
+    local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", active = false,
+      _unique = {{"name", "citty"}}}})
+    assert.is_truthy(string.find(warnings, "the uniqueness this sheet already enforces is kept", 1, true))
+    assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("name", "city")', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Ada", city = "London"}))
+    assert.is_nil(db:add(mydb.people, {name = "Ada", city = "London"}))
+  end)
+
+  it("still applies a constraint to a sheet with a column that defaults to false", function()
+    -- the same lookup on the other side of the guard: a column that is staying must
+    -- not be read as redundant either, or the rebuild this guard lets through halts
+    -- on the data that column holds
+    local mydb = createCollectingWarnings({people = {name = "", city = "", active = false, _unique = "name"}})
+    assert.is_true(db:add(mydb.people, {name = "Ada", city = "London", active = true}))
+
+    local gained = createCollectingWarnings({people = {name = "", city = "", active = false,
+      _unique = {"name", {"name", "city"}, "nosuchcol"}}})
+    assert.is_table(gained)
+    assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("name", "city")', 1, true))
+    assert.are.equal(1, #db:fetch(gained.people))
+  end)
+
+  it("keeps the uniqueness of a column whose name holds a comma", function()
+    -- each UNIQUE is reduced to the columns it covers, and joining those on a comma
+    -- makes a column called a,b read as a UNIQUE over a and b: one rule then counts
+    -- as the other and the sheet's own goes
+    local mydb = createCollectingWarnings({people = {["a,b"] = "", a = "", b = "", _unique = "a,b"}})
+    assert.is_true(db:add(mydb.people, {["a,b"] = "x", a = "1", b = "2"}))
+    assert.is_nil(db:add(mydb.people, {["a,b"] = "x", a = "3", b = "4"}))
+
+    local kept, warnings = createCollectingWarnings({people = {["a,b"] = "", a = "", b = "",
+      _unique = {{"a", "b"}, "nosuchcol"}}})
+    assert.is_truthy(string.find(warnings, "the uniqueness this sheet already enforces is kept", 1, true))
+    assert.is_nil(db:add(kept.people, {["a,b"] = "x", a = "5", b = "6"}))
+    assert.are.equal(1, #db:fetch(kept.people))
+  end)
+
+  it("reads the uniqueness of a sheet whose table this module did not write", function()
+    -- such a table need not quote its column names, and reading quoted names only
+    -- reduces every UNIQUE it has to the same empty one: a sheet whose rules all look
+    -- alike is a sheet that can be told it is losing one it is not
+    createCollectingWarnings({people = {a = "", b = ""}})
+    db.__conn[dbName]:execute("DROP TABLE people")
+    db.__conn[dbName]:execute('CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, ' ..
+      'a TEXT NULL DEFAULT "" UNIQUE ON CONFLICT FAIL, b TEXT NULL DEFAULT "")')
+
+    local mydb, warnings = createCollectingWarnings({people = {a = "", b = "",
+      _unique = {"a", {"a", "b"}, "nosuchcol"}}})
+    assert.is_falsy(string.find(warnings, "the uniqueness this sheet already enforces is kept", 1, true))
+    assert.is_truthy(string.find(tableSql("people"), 'UNIQUE("a", "b")', 1, true))
+    assert.is_true(db:add(mydb.people, {a = "1", b = "2"}))
+    assert.is_nil(db:add(mydb.people, {a = "1", b = "3"}))
   end)
 
   it("warns about a single column name that only differs in case", function()

@@ -867,6 +867,51 @@ end
 
 
 
+-- The pieces a CREATE TABLE body, or a UNIQUE column list, is written in: split
+-- on the commas outside any brackets, so a compound UNIQUE stays in one piece.
+-- The commas are counted off a copy with the quoted parts blanked out, which is
+-- what keeps a comma inside a name or a default value from being one of them,
+-- and both copies are returned since the caller reads names off the text and
+-- searches the blanked one.
+local function split_on_commas(text, searchable)
+  local pieces = {}
+  local depth, piece_start = 0, 1
+
+  local function add(stop_at)
+    pieces[#pieces + 1] = { text = text:sub(piece_start, stop_at), scan = searchable:sub(piece_start, stop_at) }
+  end
+
+  for position = 1, #searchable do
+    local char = searchable:sub(position, position)
+    if char == "(" then
+      depth = depth + 1
+    elseif char == ")" then
+      depth = depth - 1
+    elseif char == "," and depth == 0 then
+      add(position - 1)
+      piece_start = position + 1
+    end
+  end
+  add(#text)
+
+  return pieces
+end
+
+
+-- The column name a piece of a CREATE TABLE opens with. This module quotes every
+-- name it writes, but a sheet whose table was not written by it need not: reading
+-- quoted names only reduces each of that table's UNIQUEs to the same empty name,
+-- and a sheet whose rules all look alike is one that can be told it is losing a
+-- rule it is not. A name written in some other way sqlite takes, [name] among
+-- them, does come back empty, which no expected CREATE TABLE ever holds, so that
+-- sheet is left as it is rather than losing a rule to a misreading.
+local function leading_column_name(text)
+  local trimmed = text:match("^%s*(.-)%s*$")
+
+  return trimmed:match('^"([^"]*)"') or trimmed:match("^([%w_$]+)") or ""
+end
+
+
 -- The columns each UNIQUE in a CREATE TABLE covers, sorted and counted. Sorted
 -- because sqlite enforces the same rule whichever order they are written in, and
 -- without the ON CONFLICT clause because that is a _violations change, which
@@ -888,27 +933,8 @@ local function unique_targets(sql)
   end
   local searchable = content:gsub('"[^"]*"', blank):gsub("'[^']*'", blank)
 
-  -- split on the commas between the body's own parts: a compound UNIQUE's column
-  -- list is bracketed, so tracking the depth keeps it in one piece
-  local parts = {}
-  local depth, part_start = 0, 1
-  for position = 1, #searchable do
-    local char = searchable:sub(position, position)
-    if char == "(" then
-      depth = depth + 1
-    elseif char == ")" then
-      depth = depth - 1
-    elseif char == "," and depth == 0 then
-      parts[#parts + 1] = part_start
-      part_start = position + 1
-    end
-  end
-  parts[#parts + 1] = part_start
-
-  for index, start_at in ipairs(parts) do
-    local stop_at = (parts[index + 1] or #content + 2) - 2
-    local text = content:sub(start_at, stop_at)
-    local scan = searchable:sub(start_at, stop_at)
+  for _, part in ipairs(split_on_commas(content, searchable)) do
+    local text, scan = part.text, part.scan
 
     local start, stop = scan:find("unique", 1, true)
     while start and (scan:sub(start - 1, start - 1):match("[%w_]") or scan:sub(stop + 1, stop + 1):match("[%w_]")) do
@@ -921,16 +947,22 @@ local function unique_targets(sql)
       -- column-level one covers the column it is written on, which is the name
       -- the part opens with
       local columns = {}
-      local column_list = text:match("^%s*%((.-)%)", stop + 1)
-      for column_name in (column_list or text):gmatch('"([^"]*)"') do
-        columns[#columns + 1] = column_name
-        if not column_list then
-          break
+      local list_start, list_stop = scan:find("^%s*%b()", stop + 1)
+
+      if list_start then
+        local list_text = text:sub(list_start, list_stop):match("^%s*%((.*)%)$")
+        local list_scan = scan:sub(list_start, list_stop):match("^%s*%((.*)%)$")
+        for _, entry in ipairs(split_on_commas(list_text, list_scan)) do
+          columns[#columns + 1] = leading_column_name(entry.text)
         end
+      else
+        columns[1] = leading_column_name(text)
       end
 
       table.sort(columns)
-      local target = table.concat(columns, ",")
+      -- "\0" rather than a comma, which a column name can hold: joining on one
+      -- makes a column called a,b compare equal to a UNIQUE over a and b
+      local target = table.concat(columns, "\0")
       counts[target] = (counts[target] or 0) + 1
     end
   end
@@ -1072,7 +1104,10 @@ function db:_migrate(db_name, s_name, force)
             -- db.Sheet's __index raises for a column the schema has no entry for
             local removes_a_column = false
             for column_name in pairs(current_columns) do
-              if column_name ~= "_row_id" and not schema.columns[column_name] then
+              -- against nil rather than for truth: a column declared with a default
+              -- of false is one the sheet has, and reading it as one that is going
+              -- costs the sheet the very rule this guard is here to keep
+              if column_name ~= "_row_id" and schema.columns[column_name] == nil then
                 removes_a_column = true
                 break
               end
@@ -1103,7 +1138,9 @@ function db:_migrate(db_name, s_name, force)
       -- Check if we're deleting columns that contain data (unless force flag is set)
       local redundant_columns = {}
       for k, _ in pairs(current_columns) do
-        if not schema.columns[k] and k ~= "_row_id" then
+        -- against nil rather than for truth, for the reason the guard above gives:
+        -- a column defaulting to false is declared, so it is not redundant
+        if schema.columns[k] == nil and k ~= "_row_id" then
           redundant_columns[#redundant_columns + 1] = k
         end
       end
@@ -1133,9 +1170,9 @@ function db:_migrate(db_name, s_name, force)
       end
 
       if unique_lost_to_column_removal then
-        printError("db:create - "..s_name.." - the uniqueness this sheet enforced goes with the "..
-          "column this db:create removes, and what is left of _unique cannot put it back: spell "..
-          "the skipped entries right before removing the column.", true, false)
+        printError("db:create - "..s_name.." - removing a column rebuilds this sheet from what is "..
+          "left of _unique, so the uniqueness it enforces today is lost whichever column that rule "..
+          "sits on: spell the skipped entries right before removing a column.", true, false)
       end
 
       -- Build the list of columns to preserve (only columns that exist in both current and new schema)
