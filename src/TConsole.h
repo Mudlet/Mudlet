@@ -279,6 +279,9 @@ public:
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
+    // Repaint just the lines the current selection covers, for the callers that
+    // change their text where it stands instead of appending new text.
+    void markSelectionDirty();
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     void setFontSize(int);
     void setFontName(const QString& fontName);
