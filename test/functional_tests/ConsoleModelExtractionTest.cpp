@@ -31,7 +31,9 @@
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTrigger.h"
 #include "TelnetServerStub.h"
+#include "XMLimport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -72,8 +74,11 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-ConsoleModelExtraction";
+    const QString mColourHostname = "Test-ConsoleModelColours";
     const QString mLocalhost = "localhost";
     QString mPort;
+    const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
+    const QColor mProfileBgColor{0x00, 0x00, 0x80};
 
 private slots:
     void initTestCase()
@@ -111,6 +116,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mColourHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -480,11 +486,134 @@ private slots:
         QFile::remove(logFileName);
     }
 
+    void test_profileLoadFillsTheModelColoursWithNoView()
+    {
+        pinTheFixtureColoursAreNotTheDefaults();
+        const QString saveFolder = mudlet::getMudletPath(enums::profileXmlFilesPath, mColourHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        const QString savePath = qsl("%1profileColours.xml").arg(saveFolder);
+        writeProfileColourSave(savePath);
+        // loadProfile() reports a profile with no save at all as loaded fine, so
+        // a save that never landed would read as a bare colour mismatch below:
+        QVERIFY2(QFileInfo(savePath).size() > 0, "The seeded profile save is missing or empty.");
+
+        Host* host = mudlet::self()->loadProfile(mColourHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QCOMPARE(host->mFgColor, mProfileFgColor);
+        QCOMPARE(host->mBgColor, mProfileBgColor);
+
+        TConsoleModel& model = host->mainConsoleModel();
+        QCOMPARE(model.mFgColor, mProfileFgColor);
+        QCOMPARE(model.mBgColor, mProfileBgColor);
+
+        // The buffer's own copy of the pair is what unstyled text is stamped
+        // with, so the load has to have landed that too:
+        std::string plainText = "ProfileColour plain\n";
+        model.buffer.translateToPlainText(plainText, true);
+        const int plainLine = model.buffer.getLastLineNumber() - 1;
+        QVERIFY2(plainLine >= 0, "The plain text never reached the view-less buffer.");
+        QCOMPARE(model.buffer.line(plainLine), qsl("ProfileColour plain"));
+        QCOMPARE(model.buffer.buffer.at(plainLine).at(0).foreground(), mProfileFgColor);
+    }
+
+    // The trigger is made before the colours change on purpose - a colour
+    // pattern also snapshots the colour it was built with, and one made
+    // afterwards would match on that snapshot whatever the model held.
+    void test_colourTriggerMatchesTheProfileColoursWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        // matches[1] rather than line, so a match elsewhere on the line cannot
+        // satisfy the assertions. The long bracket has to be levelled: plain
+        // [[ ]] would end at the first ]] inside matches[1].
+        runLua(host,
+               qsl("colourTriggerHit = 'none'\n"
+                   "tempAnsiColorTrigger(%1, %2, [==[colourTriggerHit = matches[1]]==])\n")
+                       .arg(QString::number(TTrigger::scmDefault), QString::number(TTrigger::scmIgnored)));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        // Closing the profile emergency-stops the trigger engine, which a
+        // profile that simply never had a view would not do:
+        host->reenableAllTriggers();
+
+        // Magenta is not the default yet, so this line must not match - which is
+        // what proves the match below turns on the model rather than on the
+        // pattern's snapshot:
+        QCOMPARE(model->mFgColor, QColorConstants::LightGray);
+        const int staleLine = appendModelLine(model->buffer, qsl("ProfileColour before"), mProfileFgColor, mProfileBgColor);
+        host->runTriggers(staleLine);
+        QCOMPARE(luaGlobalString(host, "colourTriggerHit"), qsl("none"));
+
+        importProfileColours(host);
+        QCOMPARE(model->mFgColor, mProfileFgColor);
+
+        const int fedLine = appendModelLine(model->buffer, qsl("ProfileColour delta"), mProfileFgColor, mProfileBgColor);
+        host->runTriggers(fedLine);
+
+        QCOMPARE(luaGlobalString(host, "colourTriggerHit"), qsl("ProfileColour delta"));
+    }
+
+    // Driven both ways, so the model is shown to track the restyle rather than
+    // to have been set once.
+    void test_restylingTheViewKeepsTheModelColoursInStep()
+    {
+        pinTheFixtureColoursAreNotTheDefaults();
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QCOMPARE(host->mainConsoleModel().mFgColor, QColorConstants::LightGray);
+        QCOMPARE(host->mainConsoleModel().mBgColor, QColorConstants::Black);
+
+        host->mFgColor = mProfileFgColor;
+        host->mBgColor = mProfileBgColor;
+        host->mpConsole->changeColors();
+
+        QCOMPARE(host->mainConsoleModel().mFgColor, mProfileFgColor);
+        QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
+
+        host->mFgColor = QColorConstants::LightGray;
+        host->mBgColor = QColorConstants::Black;
+        host->mpConsole->changeColors();
+
+        QCOMPARE(host->mainConsoleModel().mFgColor, QColorConstants::LightGray);
+        QCOMPARE(host->mainConsoleModel().mBgColor, QColorConstants::Black);
+    }
+
+    // The same XML arrives as a package import into a live profile, and there
+    // the model on its own is not enough - the view has to be restyled with it,
+    // or text in the new foreground lands on the old background.
+    void test_importingColoursIntoALiveProfileRestylesTheView()
+    {
+        pinTheFixtureColoursAreNotTheDefaults();
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mpConsole->mBgImageMode, "A background image is set, so the console is not styled by colour here.");
+
+        const QString expectedBackground = qsl("rgba(%1,%2,%3,%4)").arg(mProfileBgColor.red()).arg(mProfileBgColor.green()).arg(mProfileBgColor.blue()).arg(mProfileBgColor.alpha());
+        QVERIFY2(!host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground), "The console already carries the imported background, so the assertion below cannot fail.");
+
+        importProfileColours(host);
+
+        QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
+        QVERIFY2(host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground),
+                 qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
+    }
+
     void cleanup()
     {
         delete mpServer;
         mpServer = nullptr;
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mColourHostname);
         delete mudlet::self();
     }
 
@@ -574,11 +703,63 @@ private:
 
     // Utility function appending one whole line - only a line feed starts a new
     // buffer line - and handing back the index it landed on.
-    int appendModelLine(TBuffer& buffer, const QString& text)
+    int appendModelLine(TBuffer& buffer, const QString& text, const QColor& fgColor = QColorConstants::LightGray, const QColor& bgColor = QColorConstants::Black)
     {
         const QString line = text + QChar::LineFeed;
-        buffer.append(line, 0, line.size(), QColorConstants::LightGray, QColorConstants::Black, TChar::None, 0);
+        buffer.append(line, 0, line.size(), fgColor, bgColor, TChar::None, 0);
         return buffer.getLastLineNumber() - 1;
+    }
+
+    // Utility function: a model that was never given the profile's colours holds
+    // the built-in pair, so an assertion written against either of those would
+    // pass whether the refresh ran or not.
+    void pinTheFixtureColoursAreNotTheDefaults()
+    {
+        QVERIFY2(mProfileFgColor != QColorConstants::LightGray, "The foreground colour under test is the built-in default, so the assertions on it cannot fail.");
+        QVERIFY2(mProfileBgColor != QColorConstants::Black, "The background colour under test is the built-in default, so the assertions on it cannot fail.");
+    }
+
+    // Utility function writing the smallest profile save readHost() accepts, the
+    // colour elements spelled as XMLexport::exportHost() writes them. Not
+    // surgical: readHost() reads a missing boolean attribute as "off", so
+    // importing this into a live profile also turns some three dozen of its
+    // settings off and zeroes its borders.
+    void writeProfileColourSave(const QString& filePath)
+    {
+        QFile file(filePath);
+        QVERIFY2(file.open(QFile::WriteOnly | QFile::Text), qPrintable(qsl("Could not write the profile save %1.").arg(filePath)));
+        QTextStream out(&file);
+        out << qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                   "<MudletPackage version=\"1.001\">\n"
+                   "  <HostPackage>\n"
+                   "    <Host>\n"
+                   "      <mFgColor>%1</mFgColor>\n"
+                   "      <mBgColor alpha=\"%2\">%3</mBgColor>\n"
+                   "    </Host>\n"
+                   "  </HostPackage>\n"
+                   "</MudletPackage>\n")
+                        .arg(mProfileFgColor.name(), QString::number(mProfileBgColor.alpha()), mProfileBgColor.name());
+        out.flush();
+        QVERIFY2(out.status() == QTextStream::Ok && file.error() == QFile::NoError, qPrintable(qsl("Writing the profile save %1 failed: %2").arg(filePath, file.errorString())));
+    }
+
+    // Utility function reading a profile's Host settings into a live profile, as
+    // a profile load does. importPackage() only reports XML well-formedness, so
+    // the colour it was asked for is checked here rather than by each caller.
+    void importProfileColours(Host* host)
+    {
+        QTemporaryDir importDir;
+        QVERIFY2(importDir.isValid(), "Could not create a directory to write the profile save into.");
+        const QString filePath = qsl("%1/profileColours.xml").arg(importDir.path());
+        writeProfileColourSave(filePath);
+
+        QFile file(filePath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), "Could not read back the profile save just written.");
+        XMLimport importer(host);
+        const auto [success, message] = importer.importPackage(&file);
+        QVERIFY2(success, qPrintable(qsl("Reading the profile save failed: %1").arg(message)));
+        QCOMPARE(host->mFgColor, mProfileFgColor);
+        QCOMPARE(host->mBgColor, mProfileBgColor);
     }
 
     // Utility function: the console word-wraps, and joinedBuffer() glues the
