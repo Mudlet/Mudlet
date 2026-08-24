@@ -298,6 +298,41 @@ private slots:
         QVERIFY(pRoomDB->removeRoom(1));
         QVERIFY2(!pOtherArea->getCustomLineRoomsForZ(4).contains(1), "a deleted room stayed in the custom-line index");
     }
+
+    // The index is read once per frame, so a room left in it after its last
+    // custom line has gone costs a room lookup and a cull test on every frame
+    // for the rest of the session - a script that clears lines across a lot of
+    // rooms pays that for all of them.
+    void test_customLineIndexDropsARoomThatLostItsLastLine()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Losing Lines Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0));
+
+        TArea* pArea = pRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        TRoom* pRoom = pRoomDB->getRoom(1);
+        QVERIFY(pRoom);
+
+        pRoom->customLines[qsl("n")] = QList<QPointF>{QPointF(0.0, 3.0)};
+        pRoom->customLines[qsl("s")] = QList<QPointF>{QPointF(0.0, -3.0)};
+        pRoom->calcRoomDimensions();
+        QVERIFY(pArea->getCustomLineRoomsForZ(0).contains(1));
+
+        // Dropping one line and recomputing is what removeCustomLine() does;
+        // the room still owes the renderer the other line's pixels.
+        pRoom->customLines.remove(qsl("n"));
+        pRoom->calcRoomDimensions();
+        QVERIFY2(pArea->getCustomLineRoomsForZ(0).contains(1), "a room that still has a custom line was dropped from the index");
+
+        pRoom->customLines.remove(qsl("s"));
+        pRoom->calcRoomDimensions();
+        QVERIFY2(!pArea->getCustomLineRoomsForZ(0).contains(1), "a room that lost its last custom line stayed in the index");
+    }
 };
 
 #include "MapOffscreenCustomLineTest.moc"

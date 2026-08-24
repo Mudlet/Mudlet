@@ -383,6 +383,11 @@ void TArea::addRoomWithCustomLines(int id, int z)
     mCustomLineIndex.addRoom(id, z);
 }
 
+void TArea::removeRoomWithCustomLines(int id, int z)
+{
+    mCustomLineIndex.removeRoom(id, z);
+}
+
 void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY)
 {
     if (!rooms.contains(id)) {

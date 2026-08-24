@@ -73,12 +73,17 @@ public:
     // a line can run right across the level, so the renderer has to consider
     // its room even when the room itself is nowhere near the viewport and a
     // viewport query would never hand it over.
-    // The set is deliberately a superset: a room that loses its last custom
-    // line stays in it until removeRoom() or calcSpan() drops it, which costs
-    // a cull test rather than a missing line.
+    // The set can still be a superset: calcRoomDimensions() drops a room that
+    // has lost its last custom line, but the exit removal paths that never
+    // recompute a room's dimensions leave their entry behind until
+    // removeRoom() or calcSpan() drops it, which costs a cull test rather than
+    // a missing line.
     const QSet<int>& getCustomLineRoomsForZ(int z) const { return mCustomLineIndex.roomsForZ(z); }
     // Records that one of this area's rooms has custom exit lines.
     void addRoomWithCustomLines(int id, int z);
+    // Drops a room that no longer has any. The room stays in every other index
+    // this area holds, so this is not a counterpart to removeRoom().
+    void removeRoomWithCustomLines(int id, int z);
     void calcSpan();
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
