@@ -442,11 +442,11 @@ private:
     // The non-grid room loop for zooms where a room is a few pixels across.
     void drawNonGridModeRoomsLod(QPainter&,
                                  const TArea* pDrawnArea,
-                                 const int zLevel,
-                                 const int playerRoomId,
+                                 int zLevel,
+                                 int playerRoomId,
                                  const QList<int>& viewportRooms,
-                                 const float widgetWidth,
-                                 const float widgetHeight,
+                                 float widgetWidth,
+                                 float widgetHeight,
                                  bool& isPlayerRoomVisible,
                                  QPointF& playerRoomOnWidgetCoordinates,
                                  QString* profileOutput = nullptr);
@@ -455,13 +455,18 @@ private:
     // One exit line waiting to be drawn. The destination room is carried
     // rather than just its id because the drawing pass needs its coordinates,
     // and looking it up again there costs a second room-database probe for
-    // every exit of every room in the viewport.
+    // every exit of every room in the viewport. It is only good for the one
+    // paintRoomExits() room iteration that gathered it, which clears and
+    // refills the list before moving on to the next room.
     struct ExitToPaint
     {
-        TRoom* destination = nullptr;
+        const TRoom* destination = nullptr;
         int destinationId = 0;
-        // The destination's exit in the opposite direction does not come back
-        // here, so this one is drawn as an arrow rather than a plain line.
+        // Set when the destination's exit in the opposite direction does not
+        // come back here. This alone does not decide whether an arrow is drawn:
+        // the drawing pass looks at every exit to the same destination, so an
+        // exit that is not one-way still gets an arrow when a sibling exit to
+        // that same room is.
         bool oneWay = false;
     };
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);

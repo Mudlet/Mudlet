@@ -204,7 +204,7 @@ private slots:
         QVERIFY2(!pArea->gridMode, "grid mode takes a different paint path, which draws no custom lines");
         QVERIFY2(pArea->getCustomLineRoomsForZ(0).contains(kFarRoomId), "calcRoomDimensions() did not put the room into its area's custom-line index");
         // The premise of the test: the viewport query cannot reach this room.
-        // The rectangle the renderer builds at this zoom is 32 by 22 cells, so
+        // The rectangle the renderer builds at this zoom is 33 by 23 cells, so
         // asking for one ten times that in each direction and still not being
         // given the room leaves no room for argument about rounding.
         QVERIFY2(!pArea->getGridIndex().roomsInViewport(0, -kGenerousBound, kGenerousBound, -kGenerousBound, kGenerousBound).contains(kFarRoomId),

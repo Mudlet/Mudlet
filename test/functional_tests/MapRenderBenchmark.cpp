@@ -43,6 +43,7 @@
  * Every scenario draws the same area and Z level at a different zoom, since
  * zoom - not room count - is what decides how many rooms land on screen:
  *   close  the mapper's own default zoom, a handful of rooms
+ *   near   a twentieth of the level's span across the widget
  *   mid    a quarter of the level's span across the widget
  *   fit    the whole Z level in the viewport, the worst case
  * and each frame pans by one map unit, so no frame is a repeat of the last.
@@ -127,10 +128,10 @@ private:
     // isolates intrinsic speed from transient CPU contention, which is what a
     // before/after gate wants.
     static constexpr int kPasses = 5;
-    // Frames per pass are chosen per scenario from a warm-up frame, because the
-    // zoomed-out scenarios are three orders of magnitude slower than the zoomed-in
-    // ones and a count that suits one wastes minutes on the other. Every timing is
-    // reported per frame, so the count does not have to match between two runs.
+    // Frames per pass are chosen per scenario from a warm-up frame, because a
+    // zoomed-out frame costs many times what a zoomed-in one does and a count
+    // that suits one wastes minutes on the other. Every timing is reported per
+    // frame, so the count does not have to match between two runs.
     static constexpr int kMaxFramesPerPass = 8;
     static constexpr double kTargetPassMs = 600.0;
     // Frames hashed per scenario when MUDLET_BENCH_FRAME_HASH is set.
