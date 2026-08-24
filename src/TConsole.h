@@ -367,7 +367,10 @@ public:
     QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    QColor mSystemMessageBgColor = mBgColor;
+    // Not mBgColor: captured once and never updated, so it only ever held the
+    // built-in default - which the model can now have replaced with the
+    // profile's before the console is built.
+    QColor mSystemMessageBgColor = QColorConstants::Black;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:

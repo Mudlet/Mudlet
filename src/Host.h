@@ -285,6 +285,7 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    void refreshMainConsoleColors();
     void runTriggers(int line);
     // The log lifecycle lives in the core console model, which is a plain
     // struct and cannot emit, so it raises the two view-only halves of a

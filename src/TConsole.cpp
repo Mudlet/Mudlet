@@ -1140,8 +1140,9 @@ void TConsole::changeColors()
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
         }
-        mBgColor = mpHost->mBgColor;
-        mFgColor = mpHost->mFgColor;
+        // A MainConsole's mBgColor/mFgColor are references onto the model, so
+        // this writes them too:
+        mpHost->refreshMainConsoleColors();
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
@@ -1150,7 +1151,10 @@ void TConsole::changeColors()
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
     }
 
-    buffer.updateColors();
+    if (mType != MainConsole) {
+        // refreshMainConsoleColors() above already did this one
+        buffer.updateColors();
+    }
     if (mType & (MainConsole | Buffer)) {
         buffer.mWrapAt = mpHost->mWrapAt;
         buffer.mWrapIndent = mpHost->mWrapIndentCount;

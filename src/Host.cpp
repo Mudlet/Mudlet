@@ -1941,6 +1941,17 @@ TConsoleModel& Host::mainConsoleModel()
     return *mpMainConsoleModel;
 }
 
+// A colour trigger matching "the default colour" compares against the model's
+// pair, so it has to carry the profile's colours whether or not a console was
+// ever built to copy them over. Seeding them in the model's constructor would
+// not do - this Host still holds the built-in defaults at that point.
+void Host::refreshMainConsoleColors()
+{
+    mpMainConsoleModel->mFgColor = mFgColor;
+    mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->buffer.updateColors();
+}
+
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
     emit signal_loggingAnnouncement(isLogging, logFileName);
