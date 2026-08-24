@@ -7787,6 +7787,19 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 1;
     };
 
+    // The setting was made - but with a consequence a script has no other way
+    // of learning about, so it comes back as a second return value rather than
+    // only reaching a user who happens to have the debug console open:
+    auto successWithWarning = [&](const QString& warning) {
+        if (mudlet::smDebugMode) {
+            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(QString::fromUtf8(lua_tostring(L, 1))) >> &host;
+            TDebug(Qt::white, QColorConstants::Svg::orange) << qsl("setConfig: %1\n").arg(warning) >> &host;
+        }
+        lua_pushboolean(L, true);
+        lua_pushstring(L, warning.toUtf8().constData());
+        return 2;
+    };
+
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
             host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
@@ -8042,48 +8055,64 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    // The 2D map room symbol settings live on the map rather than the profile.
-    // Unlike the map keys above they do not need an open mapper, so they are
-    // guarded separately - a script can pick the font before a map exists:
-    if (host.mpMap) {
-        if (key == qsl("mapSymbolFont")) {
-            const QString fontName = getVerifiedString(L, __func__, 2, "value");
-            if (fontName.trimmed().isEmpty()) {
-                return warnArgumentValue(L, __func__, "mapSymbolFont must not be empty");
-            }
-            // Match case-insensitively but store the family as the font database
-            // spells it, so that getConfig() reads back a canonical name:
-            QString matchedFontName;
-            for (const QString& availableFont : mudlet::self()->getAvailableFonts()) {
-                if (!availableFont.compare(fontName, Qt::CaseInsensitive)) {
-                    matchedFontName = availableFont;
-                    break;
-                }
-            }
-            if (matchedFontName.isEmpty()) {
-                return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
-            }
-            QFont font(host.mpMap->getSymbolFont());
-            font.setFamily(matchedFontName);
-            host.mpMap->setSymbolFont(font);
-            return success();
+    // The 2D map room symbol settings live on the map rather than the profile,
+    // so unlike the map keys above they do not need an open mapper - a script
+    // can pick the font before the mapper is ever shown:
+    if (key == qsl("mapSymbolFont")) {
+        const QString fontName = getVerifiedString(L, __func__, 2, "value");
+        if (fontName.trimmed().isEmpty()) {
+            return warnArgumentValue(L, __func__, "mapSymbolFont must not be empty");
         }
-        if (key == qsl("mapSymbolFontOnlyUseSelected")) {
-            host.mpMap->setOnlySymbolFontUsed(getVerifiedBool(L, __func__, 2, "value"));
-            return success();
-        }
-        if (key == qsl("mapSymbolFontScaling")) {
-            const double scaling = getVerifiedDouble(L, __func__, 2, "value");
-            // Matches the range of the preferences dialog spin-box. The finite
-            // check is not redundant: NaN compares false against both bounds, so
-            // without it a NaN would be stored and every symbol's geometry would
-            // then be NaN, making room symbols vanish:
-            if (!qIsFinite(scaling) || scaling < 0.50 || scaling > 2.00) {
-                return warnArgumentValue(L, __func__, qsl("mapSymbolFontScaling %1 is out of range, it must be between 0.50 and 2.00").arg(scaling));
+        // Match case-insensitively but store the family as the font database
+        // spells it, so that getConfig() reads back a canonical name:
+        QString matchedFontName;
+        for (const QString& availableFont : mudlet::self()->getAvailableFonts()) {
+            if (!availableFont.compare(fontName, Qt::CaseInsensitive)) {
+                matchedFontName = availableFont;
+                break;
             }
-            host.mpMap->setSymbolFontFudgeFactor(scaling);
-            return success();
         }
+        if (matchedFontName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+        }
+        QFont font(host.mpMap->getSymbolFont());
+        font.setFamily(matchedFontName);
+        host.mpMap->setSymbolFont(font);
+        // The font is taken either way, but any symbol it has no glyph for is
+        // drawn as the replacement character instead. The preferences have a
+        // dialog that shows which ones those are; a script has only what it is
+        // handed back, and this is not a corner case - the default symbol font
+        // is missing the glyphs for symbols as ordinary as ☠ and ★:
+        const QStringList missingSymbols = host.mpMap->symbolsNotInFont(host.mpMap->getSymbolFont());
+        if (!missingSymbols.isEmpty()) {
+            constexpr qsizetype maximumSymbolsListed = 10;
+            QStringList listedSymbols = missingSymbols.mid(0, maximumSymbolsListed);
+            if (missingSymbols.size() > maximumSymbolsListed) {
+                listedSymbols << qsl("(and %1 more)").arg(missingSymbols.size() - maximumSymbolsListed);
+            }
+            return successWithWarning(qsl("font '%1' has no glyph for these room symbols, which will show as the replacement character: %2").arg(matchedFontName, listedSymbols.join(QChar::Space)));
+        }
+        return success();
+    }
+    if (key == qsl("mapSymbolFontOnlyUseSelected")) {
+        host.mpMap->setOnlySymbolFontUsed(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("mapSymbolFontScaling")) {
+        const double scaling = getVerifiedDouble(L, __func__, 2, "value");
+        // TMap enforces this too, so that a map file cannot carry a factor no
+        // script may set; the check is repeated here only to say which value
+        // was refused and why. NaN needs the separate test: it compares false
+        // against both bounds, so a plain range check would let it through.
+        if (!qIsFinite(scaling) || scaling < TMap::scmMinimumSymbolFontFudgeFactor || scaling > TMap::scmMaximumSymbolFontFudgeFactor) {
+            return warnArgumentValue(
+                    L,
+                    __func__,
+                    qsl("mapSymbolFontScaling %1 is out of range, it must be between %2 and %3")
+                            .arg(QString::number(scaling), QString::number(TMap::scmMinimumSymbolFontFudgeFactor, 'f', 2), QString::number(TMap::scmMaximumSymbolFontFudgeFactor, 'f', 2)));
+        }
+        host.mpMap->setSymbolFontFudgeFactor(scaling);
+        return success();
     }
 
     if (key == qsl("compactInputLine")) {
@@ -8332,15 +8361,15 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("mapSymbolFont"),
              [&]() {
-                 lua_pushstring(L, host.mpMap ? host.mpMap->getSymbolFont().family().toUtf8().constData() : "");
+                 lua_pushstring(L, host.mpMap->getSymbolFont().family().toUtf8().constData());
              }},
             {qsl("mapSymbolFontOnlyUseSelected"),
              [&]() {
-                 lua_pushboolean(L, host.mpMap && host.mpMap->getOnlySymbolFontUsed());
+                 lua_pushboolean(L, host.mpMap->getOnlySymbolFontUsed());
              }},
             {qsl("mapSymbolFontScaling"),
              [&]() {
-                 lua_pushnumber(L, host.mpMap ? host.mpMap->getSymbolFontFudgeFactor() : 1.0);
+                 lua_pushnumber(L, host.mpMap->getSymbolFontFudgeFactor());
              }},
             {qsl("mapRoundRooms"),
              [&]() {
