@@ -243,6 +243,9 @@ private:
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
+    // The map symbol font the glyph usage table was last built from, so that
+    // the other symbol settings changing does not cost a rebuild:
+    QFont mGlyphDisplayFont;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
