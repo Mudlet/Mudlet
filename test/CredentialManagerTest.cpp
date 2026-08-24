@@ -57,6 +57,7 @@ private slots:
     void testLongKeyNamesDoNotShareOneCredential();
     void testCredentialsFiledUnderTheTruncatedPathSurvive();
     void testLegacySharedKeyPathOwnershipIsUndecidable();
+    void testLegacyKeyAtTheLengthCapClaimsNoLongerKeysCredential();
     void testPathTraversalPrevention();
     void testConcurrentAccess();
     void testAsyncStoreAndRetrieve();
@@ -369,6 +370,43 @@ void CredentialManagerTest::testLegacySharedKeyPathOwnershipIsUndecidable()
 
     QVERIFY(QFile::remove(legacyPath));
     CredentialManager::removeCredential(profile, firstKey);
+}
+
+// The cap is the boundary, not the far side of it: a key of exactly the legacy 50
+// characters was cut to the same path as every longer key starting with them, because
+// truncation left it unchanged. That file is no more decidably its own than a longer
+// key's is, so it may neither be handed what it holds nor delete it. A profile name long
+// enough to have moved is what brings a key this length past migration at all, hence one
+// here.
+void CredentialManagerTest::testLegacyKeyAtTheLengthCapClaimsNoLongerKeysCredential()
+{
+    const QString shortenedProfile(50, QChar('p'));
+    const QString profile = shortenedProfile + "LongEnoughToHaveBeenShortenedItself";
+    const QString sharedPrefix(50, QChar('K'));
+    const QString keyAtTheCap = sharedPrefix;
+    const QString longerKey = sharedPrefix + "second";
+
+    const QString legacyDir = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), shortenedProfile);
+    QVERIFY(QDir().mkpath(legacyDir));
+
+    // planted the way the old scheme wrote the longer key: both keys cut to the same 50
+    // characters, under the profile name cut to its own first 50
+    const QString legacyPath = qsl("%1/%2").arg(legacyDir, sharedPrefix);
+    QFile legacyFile(legacyPath);
+    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    const QString encrypted = SecureStringUtils::encryptStringForProfile("the_longer_keys_secret", profile);
+    QVERIFY(!encrypted.isEmpty());
+    QVERIFY(legacyFile.write(encrypted.toUtf8()) != -1);
+    legacyFile.close();
+
+    QVERIFY2(CredentialManager::retrieveCredential(profile, keyAtTheCap).isEmpty(), "a key at the length cap was handed a longer key's legacy secret");
+
+    // and the removal half, as in the case above
+    QVERIFY(CredentialManager::removeCredential(profile, keyAtTheCap));
+    QVERIFY2(QFile::exists(legacyPath), "removing a key at the length cap deleted a longer key's legacy credential");
+
+    QVERIFY(QFile::remove(legacyPath));
+    CredentialManager::removeCredential(profile, longerKey);
 }
 
 void CredentialManagerTest::testPathTraversalPrevention()

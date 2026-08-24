@@ -1444,8 +1444,9 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
 }
 
 // Where a credential was filed while both path components were simply truncated to 50
-// characters. Empty when that is the path in use anyway, so only a profile name or key
-// long enough to have been shortened has anything to migrate.
+// characters. Empty when nothing there can safely be claimed: either that is the path in
+// use anyway, or the key is long enough that another key's credential could be sitting
+// under it.
 QString CredentialManager::generateLegacyFilePath(const QString& profileName, const QString& key)
 {
     const QString currentPath = generateFilePath(profileName, key);
@@ -1454,12 +1455,14 @@ QString CredentialManager::generateLegacyFilePath(const QString& profileName, co
         return QString();
     }
 
-    // Two keys this long collide on one legacy file, and they share the profile's
-    // encryption key - so decrypting it proves only that some key in this profile wrote
-    // it, never which. Migrating would hand one key the other's secret and removing would
-    // delete it, so an undecidable file is left alone: the password for a key this long is
-    // re-entered rather than guessed at.
-    if (key.length() > scmLegacyMaxPathComponentLength) {
+    // Keys this long collide on one legacy file, and they share the profile's encryption
+    // key - so decrypting it proves only that some key in this profile wrote it, never
+    // which. Migrating would hand one key the other's secret and removing would delete it,
+    // so an undecidable file is left alone: the password for a key this long is re-entered
+    // rather than guessed at. The cap itself is on the undecidable side, because a key of
+    // exactly that length came through truncation unchanged and so was already filed at
+    // the same path every longer key was cut down to.
+    if (key.length() >= scmLegacyMaxPathComponentLength) {
         return QString();
     }
 
