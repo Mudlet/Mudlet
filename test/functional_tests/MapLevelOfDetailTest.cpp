@@ -37,6 +37,11 @@
  * checked is that the rule does not reach any further than that, and
  * test_adjacentRoomExitsSurviveJustInsideTheTier() is that check.
  *
+ * One test here is a level down from all that, on the viewport query that
+ * decides which rooms either tier is offered in the first place. It runs at
+ * forty pixels a room, well above the threshold, because that is the zoom at
+ * which where a room stops can be read off the frame at all.
+ *
  * A Lua spec cannot reach any of this: the only evidence is pixels, and
  * nothing in the Lua API reads back what the mapper drew.
  *
@@ -91,6 +96,9 @@ private:
     static constexpr double kZoomThreePixelRooms = 400.0 / 3.0;
     static constexpr double kZoomNearlyFourPixelRooms = 400.0 / 3.9;
     static constexpr double kZoomOnePixelRooms = 400.0;
+    // Well clear of the threshold, so the full-detail room loop runs and a room
+    // is big enough that where its rectangle stops can be read off the frame.
+    static constexpr double kZoomFortyPixelRooms = 10.0;
     // Half a pixel per room, so a quarter of a pixel of room once the room size
     // fraction is applied, which rounds to none.
     static constexpr double kZoomHalfPixelRooms = 800.0;
@@ -651,6 +659,141 @@ private slots:
         if (roomPixels < roomCount - 1) {
             QFAIL(qPrintable(qsl("the area vanished instead of being drawn a pixel a room - only %1 pixels of the environment colour are in the frame, saved at %2")
                                      .arg(QString::number(roomPixels), saveFrame(frame, qsl("sub-pixel-rooms")))));
+        }
+    }
+
+    // Both room loops draw whatever the viewport query hands them, so a query
+    // that hands over too little quietly loses the rooms at the edges of the
+    // widget - the one place someone looking at the map would blame the map.
+    // Every other case in this file is inside the reduced tier; this is the
+    // full-detail loop, which reaches the same query by the other branch.
+    //
+    // The rooms are two cells apart so no room can stand in for its neighbour,
+    // and the map is panned across a whole cell in fifths, because an
+    // off-by-one in the bounds only shows at some sub-cell offsets.
+    //
+    // What this cannot pin is the query's own margins: it already hands over a
+    // cell or two more on each side than the loops go on to draw, so taking
+    // all four away leaves the frame identical. It is the cull closing in past
+    // that slack which shows up here.
+    void test_theViewportCullKeepsEveryRoomThatTouchesTheWidget()
+    {
+        const int areaId = freshArea(qsl("Viewport Cull Area"));
+        QVERIFY(areaId > 0);
+
+        // A row and a column, both running well past the widget at every pan
+        // offset used below.
+        QList<QPoint> roomPositions;
+        for (int i = -8; i <= 8; ++i) {
+            roomPositions.append(QPoint(i * 2, 0));
+        }
+        for (int j = -5; j <= 5; ++j) {
+            if (j != 0) {
+                roomPositions.append(QPoint(0, j * 2));
+            }
+        }
+        int nextRoomId = 1;
+        for (const QPoint& position : roomPositions) {
+            QVERIFY(addRoomAt(nextRoomId++, areaId, position.x(), position.y(), kEnvRoom));
+        }
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 1.0, 10.0);
+        QVERIFY(p2dMap);
+
+        constexpr int panSteps = 5;
+        for (int step = 0; step < panSteps; ++step) {
+            const double pan = static_cast<double>(step) / panSteps;
+            p2dMap->mMapCenterX = pan;
+            p2dMap->mMapCenterY = pan;
+            const QImage frame = renderFrame(p2dMap);
+            QCOMPARE(p2dMap->mRoomWidth, 40.0f);
+
+            for (const QPoint& position : roomPositions) {
+                const double rx = position.x() * static_cast<double>(p2dMap->mRoomWidth) + p2dMap->mRX;
+                const double ry = position.y() * -1.0 * static_cast<double>(p2dMap->mRoomHeight) + p2dMap->mRY;
+                // The room loop draws a room whose centre is on the widget and
+                // skips one whose centre is not, whatever its rectangle does
+                // at the edge, so that is the set the query has to cover.
+                if (rx < 0.0 || ry < 0.0 || rx > kWidgetWidth || ry > kWidgetHeight) {
+                    continue;
+                }
+                const QRectF roomRectangle(rx - p2dMap->mRoomWidth / 2.0, ry - p2dMap->mRoomHeight / 2.0, p2dMap->mRoomWidth, p2dMap->mRoomHeight);
+                const QRect onScreen = roomRectangle.toRect().intersected(frame.rect());
+                if (countPixels(frame.copy(onScreen), roomColour()) < 1) {
+                    QFAIL(qPrintable(qsl("the room at %1,%2 was culled although its centre is on the widget at %3,%4, at a pan of %5 of a cell. The frame is at %6")
+                                             .arg(QString::number(position.x()),
+                                                  QString::number(position.y()),
+                                                  QString::number(qRound(rx)),
+                                                  QString::number(qRound(ry)),
+                                                  QString::number(pan),
+                                                  saveFrame(frame, qsl("viewport-cull")))));
+                }
+            }
+        }
+    }
+
+    // The player's room is drawn in full and given its "you are here" ring by
+    // paintEvent() rather than by the room loop, so each loop has to hand back
+    // the fact that it saw the room. Nothing else in this file has the player
+    // on screen - kPlayerRoomY parks it far away so its ring cannot be counted
+    // as something else - which leaves the reduced tier's half of that
+    // handover untested: cut it and the marker goes missing from every map
+    // zoomed past four pixels a room, with every other case here still green.
+    //
+    // A blob written for the player room as well would leave no mark of its
+    // own to assert on, since the room and then the ring are painted over the
+    // same pixels afterwards.
+    void test_thePlayerRoomKeepsItsMarkerInTheReducedTier_data()
+    {
+        QTest::addColumn<double>("zoom");
+        QTest::addColumn<bool>("reducedTier");
+
+        // The full-detail row is the control: it says the ring is found the
+        // same way in both, so a missing one is the tier and not the search.
+        QTest::newRow("full detail") << kZoomAtThreshold << false;
+        QTest::newRow("reduced tier") << kZoomOnePixelRooms << true;
+    }
+
+    void test_thePlayerRoomKeepsItsMarkerInTheReducedTier()
+    {
+        QFETCH(double, zoom);
+        QFETCH(bool, reducedTier);
+
+        const int areaId = freshArea(qsl("Player Marker Area"));
+        QVERIFY(areaId > 0);
+        // The one test that wants the player in the viewport rather than
+        // parked outside it.
+        QVERIFY(map()->setRoomCoordinates(kPlayerRoomId, 0, 0, 0));
+        // A witness that the map was drawn at all, far enough off that the
+        // marker cannot reach it.
+        QVERIFY(addRoomAt(1, areaId, 20, 0, kEnvRoom));
+
+        T2DMap* p2dMap = prepareWidget(areaId, zoom, 1.0, 2.0);
+        QVERIFY(p2dMap);
+        const QImage frame = renderFrame(p2dMap);
+
+        if (reducedTier) {
+            QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
+        } else {
+            QCOMPARE(p2dMap->mRoomWidth, 4.0f);
+        }
+
+        const int witnessPixels = countPixels(frame, roomColour());
+        if (witnessPixels < 1) {
+            QFAIL(qPrintable(qsl("the map was not drawn - no pixels of the witness room's environment colour are in the frame, saved at %1").arg(saveFrame(frame, qsl("player-marker")))));
+        }
+
+        // The default player room style is a red ring around a white centre,
+        // and it is the only red in this palette.
+        const QRect markerRect(p2dMap->mRX - 12, p2dMap->mRY - 12, 25, 25);
+        const int markerPixels = countPixels(frame.copy(markerRect.intersected(frame.rect())), QColor(255, 0, 0));
+        if (markerPixels < 1) {
+            QFAIL(qPrintable(qsl("the player room was drawn without its marker - no ring pixels within %1,%2 %3x%4, frame saved at %5")
+                                     .arg(QString::number(markerRect.x()),
+                                          QString::number(markerRect.y()),
+                                          QString::number(markerRect.width()),
+                                          QString::number(markerRect.height()),
+                                          saveFrame(frame, qsl("player-marker")))));
         }
     }
 
