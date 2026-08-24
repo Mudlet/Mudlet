@@ -910,9 +910,11 @@ describe("Tests Other.lua functions", function()
       assert.equals(2.00, getConfig("mapSymbolFontScaling"))
 
       assert.is_true(setConfig("mapSymbolFontScaling", 1.10))
-      -- NaN and the infinities belong here: NaN compares false against both
-      -- bounds, so a plain range check lets it through and every room symbol's
-      -- geometry then becomes NaN, making the symbols vanish.
+      -- NaN belongs in this list because it is the one value a plain range
+      -- check does not stop: it compares false against both bounds. The
+      -- infinities are here only to pin that they stay refused - the range
+      -- check already handles those, and 0 is the value that would really do
+      -- damage, blanking every room symbol.
       for _, value in ipairs({0.49, 2.01, -1, 0, 0/0, 1/0, -1/0}) do
         local ok, err = setConfig("mapSymbolFontScaling", value)
         assert.is_nil(ok, "setConfig accepted out-of-range value: " .. tostring(value))
@@ -924,20 +926,51 @@ describe("Tests Other.lua functions", function()
       restore("mapSymbolFontScaling")
     end)
 
-    it("keeps the symbol font when the only-use-selected flag is toggled", function()
-      snapshot("mapSymbolFont")
+    -- The flag's whole effect on the font is the NoFontMerging style strategy
+    -- bit, which is not visible from Lua at all - getConfig("mapSymbolFont")
+    -- reports the family. So this only pins the round-trip; that setting a
+    -- font afterwards does not silently drop the bit is pinned by
+    -- test_pickingAFontKeepsTheOnlyUseSelectedStrategy in
+    -- test/functional_tests/MapSymbolFontTest.cpp.
+    it("round-trips the only-use-selected symbol font flag", function()
       snapshot("mapSymbolFontOnlyUseSelected")
-      local font = getConfig("mapSymbolFont")
 
       assert.is_true(setConfig("mapSymbolFontOnlyUseSelected", true))
       assert.is_true(getConfig("mapSymbolFontOnlyUseSelected"))
-      assert.equals(font, getConfig("mapSymbolFont"))
 
       assert.is_true(setConfig("mapSymbolFontOnlyUseSelected", false))
       assert.is_false(getConfig("mapSymbolFontOnlyUseSelected"))
-      assert.equals(font, getConfig("mapSymbolFont"))
 
       restore("mapSymbolFontOnlyUseSelected")
+    end)
+
+    -- The preferences have a whole dialog listing which room symbols the chosen
+    -- font can draw; a script has only what setConfig hands back. The font is
+    -- still taken, so the warning rides along with a true rather than
+    -- replacing it.
+    it("warns when the chosen symbol font cannot draw a symbol the map uses", function()
+      snapshot("mapSymbolFont")
+
+      -- U+10FFFD, the last codepoint of Private Use Plane 16. Nothing is
+      -- assigned there, so no font on any machine this runs on has a glyph for
+      -- it and the map is guaranteed to hold a symbol that cannot be drawn.
+      local unrenderable = "\244\143\191\189"
+      local roomId = createRoomID()
+      assert.is_true(addRoom(roomId))
+      assert.is_true(setRoomChar(roomId, unrenderable))
+
+      local ok, warning = setConfig("mapSymbolFont", getConfig("mapSymbolFont"))
+      assert.is_true(ok, "the font was refused outright rather than taken with a warning")
+      assert.is_string(warning, "setConfig said nothing about a symbol that will show as the replacement character")
+      assert.is_truthy(warning:find(unrenderable, 1, true), warning)
+
+      -- and it stops saying so once nothing in the map needs that glyph
+      assert.is_true(setRoomChar(roomId, "A"))
+      local okAgain, warningAgain = setConfig("mapSymbolFont", getConfig("mapSymbolFont"))
+      assert.is_true(okAgain)
+      assert.is_falsy(warningAgain and warningAgain:find(unrenderable, 1, true), tostring(warningAgain))
+
+      deleteRoom(roomId)
       restore("mapSymbolFont")
     end)
 
