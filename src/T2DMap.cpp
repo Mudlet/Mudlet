@@ -1193,7 +1193,6 @@ void T2DMap::drawRoom(QPainter& painter,
                       const int speedWalkStartRoomId,
                       const float rx,
                       const float ry,
-                      const QMap<int, QPointF>& areaExitsMap,
                       const bool showRoomCollision)
 {
     const int currentRoomId = pRoom->getId();
@@ -1718,46 +1717,59 @@ void T2DMap::drawRoom(QPainter& painter,
     }
 
     painter.restore();
-    if (!isGridMode) {
-        QMapIterator<int, QPointF> it(areaExitsMap);
-        while (it.hasNext()) {
-            it.next();
-            const QPointF roomCenter = it.value();
-            const QRectF dr = QRectF(roomCenter.x(), roomCenter.y(), mRoomWidth * rSize, mRoomHeight * rSize);
+}
 
-            // clang-format off
-            if ((mPick
-                 && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0)
-                 && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0)
-                 && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
-                 && mPHighlight.y() <= (dr.y() + mRoomHeight / 3.0))
-                && mStartSpeedWalk) {
-                // clang-format on
-                mStartSpeedWalk = false;
-                // This draws a red circle around the out of area exit that
-                // was chosen as the target for the speedwalk, but it is
-                // only shown for one paintEvent call and it is not obvious
-                // that it is useful, note that there is similar code for a
-                // room being clicked on that is WITHIN the area, that is
-                // above this point in the source code:
-                const float roomRadius = (0.8 * mRoomWidth) / 2.0;
-                QRadialGradient gradient(roomCenter, roomRadius);
-                gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-                gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-                gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-                gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-                gradient.setColorAt(0, Qt::white);
-                const QPen transparentPen(Qt::transparent);
-                QPainterPath myPath;
-                painter.setBrush(gradient);
-                painter.setPen(transparentPen);
-                myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                painter.drawPath(myPath);
+// A click on an area exit marker starts a speed walk into the area that marker
+// points at. The markers belong to the frame rather than to any one room -
+// paintRoomExits() gathers them from every room it draws - so the hit test runs
+// once, after the room passes, rather than out of a room loop. Hanging it off a
+// room made it conditional on that room being drawn in full, which below four
+// pixels a room is true of the player's room alone.
+void T2DMap::resolveAreaExitClick(QPainter& painter, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId)
+{
+    if (!mPick || !mStartSpeedWalk) {
+        return;
+    }
+    QMapIterator<int, QPointF> it(areaExitsMap);
+    while (it.hasNext()) {
+        it.next();
+        const QPointF roomCenter = it.value();
+        const QRectF dr = QRectF(roomCenter.x(), roomCenter.y(), mRoomWidth * rSize, mRoomHeight * rSize);
 
-                mPick = false;
-                initiateSpeedWalk(speedWalkStartRoomId, it.key());
-            }
+        // clang-format off
+        if (mPHighlight.x() < (dr.x() - mRoomWidth / 3.0)
+            || mPHighlight.x() > (dr.x() + mRoomWidth / 3.0)
+            || mPHighlight.y() < (dr.y() - mRoomHeight / 3.0)
+            || mPHighlight.y() > (dr.y() + mRoomHeight / 3.0)) {
+            // clang-format on
+            continue;
         }
+
+        mStartSpeedWalk = false;
+        // This draws a red circle around the out of area exit that
+        // was chosen as the target for the speedwalk, but it is
+        // only shown for one paintEvent call and it is not obvious
+        // that it is useful, note that there is similar code for a
+        // room being clicked on that is WITHIN the area, in drawRoom():
+        painter.save();
+        const float roomRadius = (0.8 * mRoomWidth) / 2.0;
+        QRadialGradient gradient(roomCenter, roomRadius);
+        gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
+        gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
+        gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
+        gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
+        gradient.setColorAt(0, Qt::white);
+        const QPen transparentPen(Qt::transparent);
+        QPainterPath myPath;
+        painter.setBrush(gradient);
+        painter.setPen(transparentPen);
+        myPath.addEllipse(roomCenter, roomRadius, roomRadius);
+        painter.drawPath(myPath);
+        painter.restore();
+
+        mPick = false;
+        initiateSpeedWalk(speedWalkStartRoomId, it.key());
+        return;
     }
 }
 
@@ -2552,11 +2564,11 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
                                 << " candidates:" << viewportRooms.size() << " drawnRooms:" << roomCount << " roomSizePx:" << mRoomWidth << " blobPx:" << blobPixelWidth << "x" << blobPixelHeight;
     }
 
-    // drawRoom() resolves a double-click into a speed-walk and is not called
-    // from here, so the click has to be resolved against the grid instead.
-    // mPick is only cleared when a room was actually under the pointer: the
-    // player room is still drawn in full afterwards, and that is what offers
-    // the click to the area exit markers.
+    // drawRoom() resolves a double-click on a room into a speed-walk and is not
+    // called from here, so the click has to be resolved against the grid
+    // instead. mPick is only cleared when a room was actually under the
+    // pointer, because paintEvent() offers what is left of the click to the
+    // area exit markers after this returns.
     if (mPick) {
         const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
         const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
@@ -3055,7 +3067,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 const QPair<int, int> roomPos{room->x(), room->y()};
                 const bool roomCollision = usedRoomPositions.contains(roomPos);
                 usedRoomPositions.insert(roomPos);
-                drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap, roomCollision);
+                drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, roomCollision);
             }
         }
     }
@@ -3084,7 +3096,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
                  playerRoomId,
                  static_cast<float>(playerRoomOnWidgetCoordinates.x()),
                  static_cast<float>(playerRoomOnWidgetCoordinates.y()),
-                 areaExitsMap,
                  roomCollision);
         timePhase6DrawRoom = phase6Sub.nsecsElapsed() / 1000000.0;
         phase6Sub.restart();
@@ -3126,6 +3137,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         timePhase6Gradient = phase6Sub.nsecsElapsed() / 1000000.0;
     }
     painter.restore(); // end of player-room save
+
+    resolveAreaExitClick(painter, areaExitsMap, playerRoomId);
 
     phase6Time = phaseTimer.nsecsElapsed() / 1000000.0;
     phaseTimer.restart();
@@ -6696,8 +6709,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
     }
 
-    // Set up area exits map and exit lists (like paintEvent does)
-    QMap<int, QPointF> areaExitsMap;
+    // Set up exit lists (like paintEvent does)
     QList<int> exitList;
     QList<int> oneWayExits;
 
@@ -7181,19 +7193,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
 
         // Use the existing drawRoom method!
-        drawRoom(painter,
-                 roomVNumFont,
-                 mapNameFont,
-                 pen,
-                 pRoom,
-                 pArea->gridMode,
-                 areRoomIdsLegible,
-                 false /* showRoomNames */,
-                 -1 /* speedWalkStartRoomId */,
-                 rx,
-                 ry,
-                 areaExitsMap,
-                 false /* showRoomCollision */);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, pRoom, pArea->gridMode, areRoomIdsLegible, false /* showRoomNames */, -1 /* speedWalkStartRoomId */, rx, ry, false /* showRoomCollision */);
 
         roomsDrawn++;
     }

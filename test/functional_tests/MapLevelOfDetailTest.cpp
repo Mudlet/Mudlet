@@ -480,6 +480,58 @@ private slots:
         }
     }
 
+    // Drawing the marker is only half of it: it is also the click target for a
+    // speed walk into the area it points at, and that hit test runs over every
+    // marker in the frame rather than over anything belonging to one room. The
+    // reduced tier draws no room in full except the player's, so hanging the
+    // test off a room left every marker on screen dead whenever the player was
+    // somewhere else - which, at a zoom that fits an area on screen, is most of
+    // the time.
+    void test_anAreaExitMarkerAnswersAClickWithThePlayerOffScreen_data()
+    {
+        QTest::addColumn<double>("zoom");
+
+        // The full-detail row is the control: the marker has always answered
+        // there, and it is the only thing that says the reduced-tier row is
+        // measuring the tier rather than the way the click is delivered.
+        QTest::newRow("full detail") << kZoomAtThreshold;
+        QTest::newRow("reduced tier") << kZoomNearlyFourPixelRooms;
+    }
+
+    void test_anAreaExitMarkerAnswersAClickWithThePlayerOffScreen()
+    {
+        QFETCH(double, zoom);
+
+        TMap* pMap = map();
+        const int areaId = freshArea(qsl("Area Exit Click Source"));
+        QVERIFY(areaId > 0);
+        const int otherAreaId = pMap->mpRoomDB->addArea(qsl("Area Exit Click Destination"));
+        QVERIFY(otherAreaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        QVERIFY(addRoomAt(2, otherAreaId, 1, 0, kEnvAreaExitDestination));
+        QVERIFY(pMap->setExit(1, 2, DIR_EAST));
+
+        T2DMap* p2dMap = prepareWidget(areaId, zoom, 1.0, 10.0, 1.0);
+        QVERIFY(p2dMap);
+        // The first frame is what settles where the map is panned to, which is
+        // what turns a room coordinate into a widget one.
+        renderFrame(p2dMap);
+
+        // paintRoomExits() puts an east exit's click point one room cell east
+        // of the room the exit leaves.
+        const QPoint markerPoint(qRound(p2dMap->mRX + static_cast<double>(p2dMap->mRoomWidth)), p2dMap->mRY);
+        p2dMap->mTargetRoomId = 0;
+        p2dMap->mPHighlight = markerPoint;
+        p2dMap->mPick = true;
+        p2dMap->mStartSpeedWalk = true;
+        const QImage frame = renderFrame(p2dMap);
+
+        if (p2dMap->mTargetRoomId != 2) {
+            QFAIL(qPrintable(qsl("a double-click on the area exit marker at %1,%2 started no speed walk into the area it points at - the target room is %3, frame saved at %4")
+                                     .arg(QString::number(markerPoint.x()), QString::number(markerPoint.y()), QString::number(p2dMap->mTargetRoomId), saveFrame(frame, qsl("area-exit-click")))));
+        }
+    }
+
     // What the reduced tier does draw: one blob of the environment colour per
     // room, and nothing at all for a hidden one.
     void test_roomsBecomeTheirEnvironmentColourAndHiddenOnesStayUndrawn()
