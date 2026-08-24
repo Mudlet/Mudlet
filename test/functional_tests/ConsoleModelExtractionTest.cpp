@@ -493,8 +493,6 @@ private slots:
         QFile::remove(logFileName);
     }
 
-    // A profile is loaded before it has a view, so the load itself has to leave
-    // the colours in the model - nothing view-side is there to supply them.
     void test_profileLoadFillsTheModelColoursWithNoView()
     {
         pinTheFixtureColoursAreNotTheDefaults();
@@ -517,8 +515,8 @@ private slots:
         QCOMPARE(model.mFgColor, mProfileFgColor);
         QCOMPARE(model.mBgColor, mProfileBgColor);
 
-        // The buffer keeps its own copy of the same two colours - what unstyled
-        // text is stamped with - and the load has to have landed those too:
+        // The buffer's own copy of the pair is what unstyled text is stamped
+        // with, so the load has to have landed that too:
         std::string plainText = "ProfileColour plain\n";
         model.buffer.translateToPlainText(plainText, true);
         const int plainLine = model.buffer.getLastLineNumber() - 1;
@@ -527,11 +525,9 @@ private slots:
         QCOMPARE(model.buffer.buffer.at(plainLine).at(0).foreground(), mProfileFgColor);
     }
 
-    // What the model's colours are for: a "match the default foreground colour"
-    // trigger resolves "default" through the model as it matches. The trigger is
-    // made before the colours change on purpose - a colour pattern also
-    // snapshots the colour it was built with, and one made afterwards would
-    // match on that snapshot whatever the model held.
+    // The trigger is made before the colours change on purpose - a colour
+    // pattern also snapshots the colour it was built with, and one made
+    // afterwards would match on that snapshot whatever the model held.
     void test_colourTriggerMatchesTheProfileColoursWithNoView()
     {
         startProfile();
@@ -554,7 +550,7 @@ private slots:
         host->reenableAllTriggers();
 
         // Magenta is not the default yet, so this line must not match - which is
-        // what proves the match below turns on the model and not on the
+        // what proves the match below turns on the model rather than on the
         // pattern's snapshot:
         QCOMPARE(model->mFgColor, QColorConstants::LightGray);
         const int staleLine = appendModelLine(model->buffer, qsl("ProfileColour before"), mProfileFgColor, mProfileBgColor);
@@ -570,10 +566,8 @@ private slots:
         QCOMPARE(luaGlobalString(host, "colourTriggerHit"), qsl("ProfileColour delta"));
     }
 
-    // The other half of the same wire: the preferences write Host's colours and
-    // restyle the console, and the model has to come out of that carrying them
-    // too. Driven both ways, so it is shown to track rather than to have been
-    // set once.
+    // Driven both ways, so the model is shown to track the restyle rather than
+    // to have been set once.
     void test_restylingTheViewKeepsTheModelColoursInStep()
     {
         pinTheFixtureColoursAreNotTheDefaults();
@@ -597,6 +591,28 @@ private slots:
 
         QCOMPARE(host->mainConsoleModel().mFgColor, QColorConstants::LightGray);
         QCOMPARE(host->mainConsoleModel().mBgColor, QColorConstants::Black);
+    }
+
+    // The same XML arrives as a package import into a live profile, and there
+    // the model on its own is not enough - the view has to be restyled with it,
+    // or text in the new foreground lands on the old background.
+    void test_importingColoursIntoALiveProfileRestylesTheView()
+    {
+        pinTheFixtureColoursAreNotTheDefaults();
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mpConsole->mBgImageMode, "A background image is set, so the console is not styled by colour here.");
+
+        const QString expectedBackground = qsl("rgba(%1,%2,%3,%4)").arg(mProfileBgColor.red()).arg(mProfileBgColor.green()).arg(mProfileBgColor.blue()).arg(mProfileBgColor.alpha());
+        QVERIFY2(!host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground), "The console already carries the imported background, so the assertion below cannot fail.");
+
+        importProfileColours(host);
+
+        QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
+        QVERIFY2(host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground),
+                 qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
     }
 
     // A profile is loaded and saved before it has a view, so the name of the

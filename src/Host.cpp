@@ -1941,18 +1941,14 @@ TConsoleModel& Host::mainConsoleModel()
     return *mpMainConsoleModel;
 }
 
-// Every writer of mFgColor/mBgColor owes this call: the model's pair is what a
-// colour trigger matching "the default colour" compares against
-// (TTrigger::match_color_pattern), and it is the only copy a profile with no
-// console has. Seeding it in the model's constructor would not do - this Host
-// still holds the built-in defaults at that point. Main console only; a
-// sub-console model owns its colours outright.
+// A colour trigger matching "the default colour" compares against the model's
+// pair, so it has to carry the profile's colours whether or not a console was
+// ever built to copy them over. Seeding them in the model's constructor would
+// not do - this Host still holds the built-in defaults at that point.
 void Host::refreshMainConsoleColors()
 {
     mpMainConsoleModel->mFgColor = mFgColor;
     mpMainConsoleModel->mBgColor = mBgColor;
-    // Two copies to keep in step: the pair above is what triggers match, the
-    // buffer's is what unstyled text gets stamped with.
     mpMainConsoleModel->buffer.updateColors();
 }
 
