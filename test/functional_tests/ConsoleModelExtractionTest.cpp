@@ -774,14 +774,16 @@ private:
 
     // Utility function feeding one unstyled line and handing back the character
     // it was stamped with, which carries the buffer's own copy of the profile's
-    // colours. A default-constructed TChar back means the line never landed.
+    // colours. A blank TChar back means the line never landed; it is spelled out
+    // because TChar's no-argument constructor is explicit, which rules out
+    // `return {}`.
     TChar plainStamp(TBuffer& buffer)
     {
         std::string plainText = "Model stamp\n";
         buffer.translateToPlainText(plainText, true);
         const int line = buffer.getLastLineNumber() - 1;
         if (line < 0 || buffer.buffer.at(line).empty()) {
-            return {};
+            return TChar();
         }
         return buffer.buffer.at(line).at(0);
     }
