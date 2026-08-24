@@ -4883,7 +4883,7 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TRoom.cpp" line="1684"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
       <extracomment>%1 is the audit key for the weight</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tenía un peso asignado, este se registra en los datos de usuario con la clave: &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1694"/>
@@ -4939,7 +4939,10 @@ que están en estas áreas...</numerusform>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ]  - El área faltante se llama ahora: (ID) ==&gt; &quot;nombre&quot;</numerusform>
+        <numerusform>[ INFO ]  - Las áreas faltantes se llaman ahora: (ID) ==&gt; &quot;nombre&quot;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="813"/>
@@ -4962,7 +4965,7 @@ Anterior ==&gt; Nuevo</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="844"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Esta área se ha renumerado desde el ID no válido: %1</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="881"/>
@@ -4974,7 +4977,8 @@ Anterior ==&gt; Nuevo</translation>
       <location filename="../src/TRoomDB.cpp" line="892"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Se han encontrado ID de sala no válidos (menores a +1) en el mapa (cantidad: %1); 
+calculando ahora qué nuevos números de ID usar.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="904"/>
@@ -5006,7 +5010,7 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="571"/>
       <source>Area not added. An unnamed area (empty area name) is (no longer) permitted!</source>
-      <translation>Área no añadida. (Ya no) se permite un área sin nombre (nombre de área vacío).</translation>
+      <translation>Área no añadida. ¡Ya no se permite un área sin nombre (nombre de área vacío)!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="575"/>
@@ -5021,11 +5025,9 @@ be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
         <numerusform>[ ALERTA ] - Se ha detectado %n área faltante en el mapa: añadiéndola.
-Busque más mensajes relacionados con las salas que se supone que
-están en esta área...</numerusform>
+Busque más mensajes relacionados con las salas que se supone que están en esta área...</numerusform>
         <numerusform>[ ALERTA ] - Se ha detectado %n áreas faltantes en el mapa: añadiéndolas.
-Busque más mensajes relacionados con las salas que se supone que
-están en estas áreas...</numerusform>
+Busque más mensajes relacionados con las salas que se supone que están en estas áreas...</numerusform>
       </translation>
     </message>
     <message>
