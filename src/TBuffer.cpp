@@ -3435,9 +3435,12 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
-                        // changed by this method:
+                        // changed by this method. With no console there is
+                        // nothing to restyle, but the model still has to be told:
                         if (pHost->mpConsole) {
                             pHost->mpConsole->changeColors();
+                        } else {
+                            pHost->refreshMainConsoleColors();
                         }
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
@@ -4843,9 +4846,12 @@ void TBuffer::resetColors()
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
-    // decodeOSC(...) method:
+    // decodeOSC(...) method. With no console there is nothing to restyle, but
+    // the model still has to be told:
     if (pHost->mpConsole) {
         pHost->mpConsole->changeColors();
+    } else {
+        pHost->refreshMainConsoleColors();
     }
 
     // Also need to update the Lua sub-system's "color_table"

@@ -2694,7 +2694,11 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     const QString windowName{windowNameArg};
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
-        host.mpConsole->setConsoleBgColor(r, g, b, alpha);
+        if (host.mpConsole) {
+            host.mpConsole->setConsoleBgColor(r, g, b, alpha);
+        } else {
+            host.refreshMainConsoleColors();
+        }
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
         return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
     }
