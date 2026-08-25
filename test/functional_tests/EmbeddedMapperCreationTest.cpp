@@ -153,6 +153,35 @@ private slots:
         QVERIFY2(mapOpenEventCountIs(1), "a repeat createMapper() raised mapOpenEvent again");
     }
 
+    // An embedded mapper stops redrawing once the toolbar's own map dock has
+    // been opened and closed again. slot_showMapperDialog() repoints
+    // TMap::mpMapper at the mapper it puts in that dock, and on hide restores
+    // it only from mpConsole->mpDockableMapWidget - which is never where
+    // createMapper() put the embedded one, so the restore matches nothing and
+    // the QPointer is left null once the dock's own mapper dies with it. What
+    // the player sees is rooms being created and never drawn until the profile
+    // is reloaded.
+    void test_theEmbeddedMapperSurvivesTheToolbarMapDockClosing()
+    {
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        dlgMapper* pEmbedded = mpHost->mpConsole->mpMapper.data();
+        QVERIFY2(pEmbedded, "createMapper() left no embedded mapper to lose");
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+
+        mudlet::self()->slot_showMapperDialog();
+        const QString mapKey = qsl("map_%1").arg(mHostname);
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(mapKey);
+        QVERIFY2(pDock, "the toolbar action created no map dock, so this case covers nothing");
+        QVERIFY2(mpHost->mpMap->mpMapper.data() != pEmbedded, "the dock did not take the map over, so restoring it below would prove nothing");
+
+        pDock->setVisible(false);
+        qApp->processEvents();
+
+        QVERIFY2(mpHost->mpMap->mpMapper, "closing the toolbar map dock left the map with no mapper at all, so nothing redraws it");
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+    }
+
     void test_createMapperWithNoMapToLoad()
     {
         QVERIFY2(mpHost->mpMap->mpRoomDB->isEmpty(), "a freshly created profile was expected to have no rooms");

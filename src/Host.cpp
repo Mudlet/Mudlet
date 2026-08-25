@@ -3742,6 +3742,28 @@ QDockWidget* Host::mapWidget() const
     return mpConsole->mpDockableMapWidget;
 }
 
+// Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
+// detached windows borrow it while they show a map of their own, and every one
+// of them gives it back through here. createMapper() records the embedded
+// mapper on the console and puts it in the main frame or a user window, so a
+// profile that has one is never the mpDockableMapWidget case below.
+void Host::restoreOwnMapper()
+{
+    if (!mpMap) {
+        return;
+    }
+
+    if (mpConsole && mpConsole->mpMapper) {
+        mpMap->mpMapper = mpConsole->mpMapper;
+    } else if (mpConsole && mpConsole->mpDockableMapWidget) {
+        auto hostMapWidget = mpConsole->mpDockableMapWidget->widget();
+
+        if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
+            mpMap->mpMapper = hostMapper;
+        }
+    }
+}
+
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
     auto pM = mapWidget();

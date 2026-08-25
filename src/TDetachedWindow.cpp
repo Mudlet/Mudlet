@@ -131,16 +131,7 @@ TDetachedWindow::~TDetachedWindow()
                 QString profileName = key.mid(4); // Remove "map_" prefix
                 if (auto mudletInstance = mudlet::self()) {
                     if (auto pHost = mudletInstance->getHostManager().getHost(profileName)) {
-                        auto pMap = pHost->mpMap.data();
-
-                        if (pMap && pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                            // Find the main window's mapper
-                            auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                            if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                                pMap->mpMapper = mainMapper;
-                            }
-                        }
+                        pHost->restoreOwnMapper();
                     }
                 }
             }
@@ -156,16 +147,7 @@ TDetachedWindow::~TDetachedWindow()
         if (!mCurrentProfileName.isEmpty()) {
             if (auto mudletInstance = mudlet::self()) {
                 if (auto pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
-                    auto pMap = pHost->mpMap.data();
-
-                    if (pMap && pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                        // Find the main window's mapper
-                        auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                        if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                            pMap->mpMapper = mainMapper;
-                        }
-                    }
+                    pHost->restoreOwnMapper();
                 }
             }
         }
@@ -1593,16 +1575,10 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                 if (auto pMudlet = mudlet::self()) {
                     if (auto pHost = pMudlet->getHostManager().getHost(dockProfileName)) {
                         if (auto pMap = pHost->mpMap.data()) {
-                            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                                    pMap->mpMapper = mainMapper;
+                            pHost->restoreOwnMapper();
 #if defined(DEBUG_WINDOW_HANDLING)
-                                    qDebug() << "TDetachedWindow: Restored main mapper for profile" << dockProfileName;
+                            qDebug() << "TDetachedWindow: Restored main mapper for profile" << dockProfileName;
 #endif
-                                }
-                            }
                         }
                     }
                 }
@@ -2086,16 +2062,10 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             if (auto pMudlet = mudlet::self()) {
                 if (auto pHost = pMudlet->getHostManager().getHost(profileName)) {
                     if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                            auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                            if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                                pMap->mpMapper = mainMapper;
+                        pHost->restoreOwnMapper();
 #if defined(DEBUG_WINDOW_HANDLING)
-                                qDebug() << "TDetachedWindow::removeProfile: Restored main mapper for profile" << profileName;
+                        qDebug() << "TDetachedWindow::removeProfile: Restored main mapper for profile" << profileName;
 #endif
-                            }
-                        }
                     }
                 }
             }
@@ -2817,12 +2787,7 @@ void TDetachedWindow::slot_showMapperDialog()
             mpMapDockWidget = nullptr;
 
             // Restore the main window's mapper as the active one
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                    pMap->mpMapper = mainMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         }
         return;
     }
@@ -2913,12 +2878,7 @@ void TDetachedWindow::slot_showMapperDialog()
             }
 
             // Restore the main window's mapper as the active one when hiding
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                    pMap->mpMapper = mainMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         } else {
             // When showing, set this as the active mapper
             mpMapDockWidget = mapDockWidget;
@@ -3283,13 +3243,7 @@ void TDetachedWindow::addTransferredDockWidget(const QString& mapKey, QDockWidge
             }
 
             // Restore the main window's mapper as the active one when hiding
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto mainMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                if (auto mainMapper = qobject_cast<dlgMapper*>(mainMapWidget)) {
-                    pMap->mpMapper = mainMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         } else {
             // When showing, set this as the active mapper
             mpMapDockWidget = mapDockWidget;
