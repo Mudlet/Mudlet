@@ -203,5 +203,5 @@ cmake --build --preset linux-debug
 ./build/src/mudlet          # macOS: ./build/src/mudlet.app/Contents/MacOS/mudlet
 ```
 
-Variant presets such as `linux-debug-nosan` build into `build-<preset-name>/`, so the binary is
+Variant presets such as `linux-debug-asan` build into `build-<preset-name>/`, so the binary is
 under that directory rather than `build/`.

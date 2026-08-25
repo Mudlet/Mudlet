@@ -30,12 +30,11 @@ ctest --preset macos-debug            # run the test suite
 
 | Preset | Platform | Notes |
 | --- | --- | --- |
-| `macos-debug` / `linux-debug` | macOS / Linux | Ninja, Debug, AddressSanitizer on |
-| `windows-debug` | Windows | MSYS2 CLANG64, Ninja, Debug |
-| `<platform>-debug-nosan` | macOS / Linux | No sanitizers — faster to build and to run |
-| `<platform>-debug-tsan` | macOS / Linux | ThreadSanitizer instead of AddressSanitizer |
-| `<platform>-debug-ubsan` | macOS / Linux | UndefinedBehaviorSanitizer |
-| `<platform>-static-analysis` | macOS / Linux | Runs clang-tidy and cppcheck during compilation |
+| `<platform>-debug` | macOS / Linux / Windows (MSYS2) | Ninja, Debug, No sanitizers — faster to build and to run |
+| `<platform>-debug-asan` | macOS / Linux / Windows (MSYS2, CLANG64) | AddressSanitizer |
+| `<platform>-debug-tsan` | macOS / Linux | ThreadSanitizer |
+| `<platform>-debug-ubsan` | macOS / Linux / Windows (MSYS2, CLANG64) | UndefinedBehaviorSanitizer |
+| `<platform>-static-analysis` | macOS / Linux / Windows (MSYS2, CLANG64) | Runs clang-tidy and cppcheck during compilation |
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
 
 Every configure preset has a matching build and test preset of the same name, and all three are
@@ -68,8 +67,6 @@ sets in each of its shells, so it follows whichever one is provisioned. On an AR
 environment is `CLANGARM64`, which the setup script does not currently handle, so dependencies have
 to come from a CLANG64 shell.
 
-Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
-
 ## Running the result
 
 ```bash
@@ -78,21 +75,28 @@ Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 
 # Linux
 ./build/src/mudlet
+
+# Windows
+./build/src/mudlet.exe
+
+# replace 'build' with the suffixed form for CMake presets other than the
+# base one.
 ```
 
 Mudlet is a graphical desktop application; launching it opens a window. Variant presets put the
-binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build.
+binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build, or even longer
+on low specification platforms.
 
 ## Claude Code on the web (remote sessions)
 
 The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
 apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
-than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug-nosan`
+than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug`
 preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
 commands work unchanged. On a warm container the hook finishes in seconds and a full build is
 mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
 versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
-The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
+The hook also pre-configures the build with `-DUSE_ALTERNATE_LINKER=mold`:
 linking is the bulk of a warm rebuild and mold shrinks it dramatically (PR #9927 measured a CI
 link tail of 4m13s → 29s). Keep that flag if you reconfigure the tree from scratch.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
@@ -100,7 +104,7 @@ Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted
 successes):
 
-- **C++ tests**: `QT_QPA_PLATFORM=offscreen ctest --preset linux-debug-nosan`. The functional
+- **C++ tests**: `QT_QPA_PLATFORM=offscreen ctest --preset linux-debug`. The functional
   tests load `LuaGlobal.lua`, which needs the `--local` Lua rocks on `LUA_PATH`/`LUA_CPATH` —
   the hook exports both; without them ~12 tests fail with `attempt to index global 'yajl'` or
   `'rex'` errors.
@@ -123,7 +127,7 @@ successes):
   ```bash
   export DISPLAY=:78
   Xvfb :78 -screen 0 1280x800x24 & sleep 2; openbox & sleep 1
-  HOME=$(mktemp -d) ./build-linux-debug-nosan/src/mudlet & sleep 8
+  HOME=$(mktemp -d) ./build/src/mudlet & sleep 8
   xdotool mousemove <x> <y> click 1        # or: xdotool key Return, xdotool type "text"
   import -window root /tmp/shot.png        # screenshot; read it to verify, then iterate
   ```
@@ -143,31 +147,43 @@ modernised — do not reach for it in remote sessions.
 with no number passes a bare `-j` to make, which imposes no limit on concurrent jobs: make starts
 as many compilers as the dependency graph allows, exhausting RAM and swap. Ninja defaults to a
 bounded job count, which is why the presets use it. In a pre-existing Makefiles tree, use
-`make -j $(nproc)` on Linux or `make -j $(sysctl -n hw.ncpu)` on macOS.
+`make -j $(nproc)` on Linux / Windows or `make -j $(sysctl -n hw.ncpu)` on macOS.
 
 **ccache is wired in automatically** — `CMakeLists.txt` sets it as the compiler launcher whenever
 ccache is installed. A full cache evicts objects continuously, so switching branches can trigger a
 near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`, raise it with
 `ccache -M <n>G`.
 
-**Sanitizers are on by default** on every non-Windows build, regardless of build type
-(`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile
-time and runtime speed. Use a `-nosan` preset when not chasing a memory bug.
+**Sanitizers are off by default** on every build, regardless of build type
+(`CMakeLists.txt` defaults `USE_SANITIZERS` to `OFF` in the absence of a `WITH_SANITIZER`
+enviromental variable set to `YES`), they are enabled by the
+`CMakePresets.json` file that configures `WITH_SANITIZERS` and `MUDLET_SANITIZERS`.
+Sanitizers cost both compile time and runtime speed. Use the `<platform>-debug` preset
+when not chasing a bug.
 
-For a combination the presets do not cover, pass a **CMake list — semicolon-separated, not
-comma-separated**: `-DUSE_SANITIZER="Address;Undefined"`. A comma-separated value is treated as one
-name, which silently skips the per-sanitizer options such as `-fno-omit-frame-pointer`.
+For a combination the presets do not cover, set the **Environmental variable to
+a semicolon-separated (not comma-separated) list**: `WITH_SANITIZERS="address;undefined"`.
+A comma-separated value is treated as one name which will be rejected as will an
+incorrectly (not "camelCase") cased sanitizer name.
 
-Usable names are `Address`, `Thread` and `Undefined` on macOS, plus `Memory` and `Leak` on Linux.
-`MemoryWithOrigins` appears in the `USE_SANITIZER` cache docstring but has no mapping declared, so
-it always fails. An unavailable or incompatible selection raises a `SEND_ERROR`: configure runs to
-completion, but generation is blocked.
+Usable names are `address`, `undefined` on all three main supported OSes, with
+`thread` on macOS and Linux, plus additionally `memory` and `leak` on Linux.
+`memoryWithOrigins` and `type` appear in the CMake `cmake/EnableSanitizers.cmake`
+file; the former is derived from the parent `memory` sanitizer but both of those
+require all libraries - including "system" ones - to also be compiled with it,
+so it is not a trivial exercise to make use of them. An unavailable or incompatible
+selection raises a CMake error and configuration aborts.
 
-**Static analysis** (`<platform>-static-analysis`) needs clang-tidy and cppcheck on `PATH`. They
-are independent: whichever is present runs. A missing clang-tidy produces a CMake warning, but a
-missing cppcheck only prints a `STATUS` line that is easy to miss — so check the configure output
-rather than assuming both ran. On macOS, Homebrew's llvm is keg-only, so clang-tidy is not on
-`PATH` by default.
+**Static analysis** (`<platform>-static-analysis`) needs clang-tidy and cppcheck
+in `PATH`; except that on macOS, Homebrew's llvm is keg-only, so clang-tidy is
+not in `PATH` by default.
+
+Static analysis (clang-tidy and cppcheck) is available on all three plaforms and
+they run during compilation with the `<platform>-static-analysis` presets, which
+set `ENABLE_STATIC_ANALYSIS=ON`. The two tools are independent — whichever is on
+`PATH` runs. If one of them is missing a CMake warning will be produced, but if
+both are absent when requested this will be elevated to an error and configuration
+will fail.
 
 **Configuring a second generator in an existing build directory fails.** CMake cannot switch
 generator in place; configure into a fresh directory instead.

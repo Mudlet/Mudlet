@@ -71,12 +71,12 @@ file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
 )
 
 file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
-  .github/**
-  .devcontainer/**
-  .vscode/**
-  .claude/**
   .agents/**
+  .claude/**
+  .devcontainer/**
+  .github/**
   .signpath/**
+  .vscode/**
   3rdparty/discord/rpc/lib/*
   CI/**
   docker/**
@@ -202,13 +202,35 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SANITIZERS
                         DEFAULT OFF)
 find_package(Qt6 6.8.2 REQUIRED)
 
-# Fail LOUDLY if any old control variable for the Address sanitizer is seen
+# Fail LOUDLY if any old control variable for any sanitizer is seen
+if(DEFINED ENV{WITH_SANITIZER})
+  message(FATAL_ERROR "Environmental variable 'WITH_SANITIZER' seen, this is not supported, use "
+    "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
+    "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
+    "separated list of sanitizers to include.\n"
+    "To fix this clear the unwanted environmental variable with 'unset WITH_SANTIZER' "
+    "{assuming a 'bash' shell}.")
+endif()
+
 if(DEFINED ENV{USE_SANITIZER})
-  message(FATAL_ERROR "Environmental variable 'USE_SANITIZER' seen, this is no longer supported, use environmetal variables 'WITH_SANITIZERS' set to 'YES' as a master switch {defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon separated list of sanitizers to include.")
+  message(FATAL_ERROR "Environmental variable 'USE_SANITIZER' seen, this is no longer supported, use "
+    "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
+    "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
+    "separated list of sanitizers to include.\n"
+    "To fix this clear the unwanted environmental variable with 'unset USE_SANTIZER' "
+    "{assuming a 'bash' shell}.")
 endif()
 
 if(DEFINED USE_SANITIZER)
-  message(FATAL_ERROR "CMake variable 'USE_SANITIZER' seen, this is no longer supported, use environmetal variables 'WITH_SANITIZERS' set to 'YES' as a master switch {defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon separated list of sanitizers to include.")
+  message(FATAL_ERROR "CMake variable 'USE_SANITIZER' seen, this is no longer supported, use "
+    "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
+    "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
+    "separated list of sanitizers to include.\n"
+    "This build directory still holds the obsolete entry from an earlier configure "
+    "— to fix this clear it with 'cmake -U USE_SANITIZER -S . -B <builddir>' from "
+    "the top level of the local Mudlet git repository and replace '<builddir>' with "
+    "the sub-directory under there where the build is done; this should leave the "
+    "rest of your cache alone.")
 endif()
 
 if(WIN32 AND DEFINED ENV{MSYSTEM} AND NOT "$ENV{MSYSTEM}" STREQUAL "CLANG64" AND USE_SANITIZERS)

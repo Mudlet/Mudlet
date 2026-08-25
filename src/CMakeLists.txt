@@ -503,11 +503,11 @@ if(USE_SANITIZERS)
   include(cmake/EnableSanitizers.cmake)
   # The above script sets the SANITIZERS_AS_STRING and UNRECOGNISED_AS_STRING variable:
   if (SANITIZERS_REQUESTED)
-      message(WARNING "Unknown or unhandled sanitizer(s) requested: '${UNRECOGNISED_AS_STRING}' - it/they have NOT been incorporated into the build!")
+      message(FATAL_ERROR "Unknown or unhandled sanitizer(s) requested: '${UNRECOGNISED_AS_STRING}'!")
   endif()
 
   if (NOT SANITIZERS_AS_STRING)
-    message(STATUS "No sanitizers selected, if required add them to the environment variable MUDLET_SANITIZERS.")
+    message(SEND_ERROR "Sanitizers enabled but none selected; either add them to the environment variable MUDLET_SANITIZERS or unset the WITH_SANITIZERS one.")
   else()
     message(STATUS "Compiling with the following sanitizer(s) enabled: ${SANITIZERS_AS_STRING}")
   endif()

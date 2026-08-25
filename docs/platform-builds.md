@@ -52,8 +52,7 @@ cmake --preset windows-debug
 cmake --build --preset windows-debug
 ```
 
-Some sanitizers are theoretically available on Windows but not all of them seem
-to work on Windows -- further investigation is needed.
+Some sanitizers are available on Windows (Address and UndefinedBehaviour).
 
 ## Sanitizers and static analysis
 
@@ -62,22 +61,27 @@ Sanitizers are available but not enabled on every build; the environmental varia
 the environmental variable `MUDLET_SANTIZERS` needs to be set to one (or more,
 separated by semi-colons) of the sanitizers to include.
 
-Use the `-asan` / `-tsan` / `-ubsan` presets or pass something in that variable
-such as `MUDLET_SANITIZER="address;undefined"` as prefix to the commandline
+Use the `-asan` / `-tsan` / `-ubsan` presets or pass something in the second of
+those variables, e.g. `MUDLET_SANITIZER="address;undefined"` as prefix to the commandline
 that calls `cmake`. Invalid sanitizers or combinations will be detected and cause
-`cmake` to emit a warning and not be included.
+`cmake` to generate an error. The default preset (without one of those suffixes)
+does not include any sanitizer; however the `CMakePresets.json` file
+that defines the possible options is likely to need to be reorganised further to
+properly provide presets for "Release" type builds.
 
-Usable names are `address`, `thread` and `undefined` on macOS, plus `memory` and
-`leak` on Linux. `memoryWithOrigins` appears in the internal `USE_SANITIZER`
-cache docstring and is also available but both that and the parent `memory`
-sanitizer requires all libraries - including "system" ones - to also be compiled
-with it, so it is not a trivial exercise to make use of it.
+Usable names are `address`, and `undefined` on all three main supported OSes;
+plus 'thread' on macOS; plus `thread`, `memory` and`leak` on Linux. `memoryWithOrigins`
+and `type` appear in the CMake `cmake/EnableSanitizers.cmake` file; the former
+is derived from the parent `memory` sanitizer but both require all libraries
+- including "system" ones - to also be compiled with it, so it is not a trivial
+exercise to make use of them.
 
-Static analysis (clang-tidy and cppcheck) runs during compilation with the
-`<platform>-static-analysis` presets, which set `ENABLE_STATIC_ANALYSIS=ON`. The
-two tools are independent — whichever is on `PATH` runs. A missing clang-tidy
-produces a CMake warning, but a missing cppcheck only emits a `STATUS` line, so
-read the configure output rather than assuming both are active.
+Static analysis (clang-tidy and cppcheck) is available on all three plaforms and
+they run during compilation with the `<platform>-static-analysis` presets, which
+set `ENABLE_STATIC_ANALYSIS=ON`. The two tools are independent — whichever is on
+`PATH` runs. If one of them is missing a CMake warning will be produced, but if
+both are absent when requested this will be elevated to an error and configuration
+will fail.
 
 Because IDEs read `CMakePresets.json` natively, selecting one of these presets
 in CLion, VS Code or Qt Creator is enough — no per-IDE sanitizer configuration
@@ -110,7 +114,7 @@ There was previously a `WITH_OWN_QTKEYCHAIN` environmental variable that
 controlled the setting of the CMake `USE_OWN_QTKEYCHAIN` - which was used to
 determine whether the "QtKeyChain" library was built from source code (default
 to an affirmative) or sourced from the build system's packaged version. This was
-removed and `USE_OWN_QTKEYCHAIN` is now managed internally on an OS dependent
+removed and `USE_OWN_QTKEYCHAIN` is now managed internally in an OS dependent
 manner.
 
 ## Debugging options

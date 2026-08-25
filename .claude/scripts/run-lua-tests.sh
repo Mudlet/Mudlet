@@ -16,7 +16,7 @@
 set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/../.." && pwd)"
-BINARY="${1:-$WS/build-linux-debug-nosan/src/mudlet}"
+BINARY="${1:-$WS/build/src/mudlet}"
 TMP="$(mktemp -d /tmp/mudlet-luatests-XXXX)"
 
 [ -x "$BINARY" ] || { echo "no mudlet binary at $BINARY - build first"; exit 1; }
