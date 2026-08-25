@@ -8961,12 +8961,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
-                    if (auto pMap = pHost->mpMap.data()) {
-                        pHost->restoreOwnMapper();
-#if defined(DEBUG_WINDOW_HANDLING)
-                        qDebug() << "mudlet: Restored host mapper for main window profile" << dockProfileName;
-#endif
-                    }
+                    pHost->restoreOwnMapper();
                 }
             }
         }

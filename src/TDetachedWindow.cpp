@@ -1574,12 +1574,7 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                 // Restore main mapper for the other profile
                 if (auto pMudlet = mudlet::self()) {
                     if (auto pHost = pMudlet->getHostManager().getHost(dockProfileName)) {
-                        if (auto pMap = pHost->mpMap.data()) {
-                            pHost->restoreOwnMapper();
-#if defined(DEBUG_WINDOW_HANDLING)
-                            qDebug() << "TDetachedWindow: Restored main mapper for profile" << dockProfileName;
-#endif
-                        }
+                        pHost->restoreOwnMapper();
                     }
                 }
             }
@@ -2061,12 +2056,7 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             // Restore the main window's mapper before deleting our dock widget
             if (auto pMudlet = mudlet::self()) {
                 if (auto pHost = pMudlet->getHostManager().getHost(profileName)) {
-                    if (auto pMap = pHost->mpMap.data()) {
-                        pHost->restoreOwnMapper();
-#if defined(DEBUG_WINDOW_HANDLING)
-                        qDebug() << "TDetachedWindow::removeProfile: Restored main mapper for profile" << profileName;
-#endif
-                    }
+                    pHost->restoreOwnMapper();
                 }
             }
 

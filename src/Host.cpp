@@ -3762,6 +3762,9 @@ void Host::restoreOwnMapper()
             mpMap->mpMapper = hostMapper;
         }
     }
+#if defined(DEBUG_WINDOW_HANDLING)
+    qDebug() << "Host::restoreOwnMapper:" << getName() << "- map is now drawn by" << mpMap->mpMapper.data();
+#endif
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
