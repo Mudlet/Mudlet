@@ -578,6 +578,44 @@ private slots:
         QCOMPARE(pTargetR1->userData, expectedRoom1UserData());
         QCOMPARE(pTargetR1->mSymbol, qsl("⚔"));
     }
+
+    // Every production caller clears the map before restoring onto it, but
+    // nothing makes that a precondition and restoring onto a populated one used
+    // to leak every colliding room: TRoomDB::addRoom() refuses an id that is
+    // already taken and takes no ownership when it does. Deleting the refused
+    // room is only half the fix - TRoom::restore() has already stamped the
+    // colliding id on it, so ~TRoom() would use that id to evict the room
+    // legitimately holding it. This checks that half; the leak itself is what
+    // the leak-detecting Linux CI build catches.
+    void test_restoringOntoAPopulatedMapKeepsTheRoomsAlreadyThere()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString fileName = qsl("%1/map_onto_populated.dat").arg(mSaveDir.path());
+        QVERIFY(saveMapToFile(pSourceMap, fileName, pSourceMap->mDefaultVersion));
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+        QList<int> roomsAfterFirstLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterFirstLoad.begin(), roomsAfterFirstLoad.end());
+        QVERIFY(!roomsAfterFirstLoad.isEmpty());
+
+        // the same file again, this time without clearing first
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+
+        QList<int> roomsAfterSecondLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterSecondLoad.begin(), roomsAfterSecondLoad.end());
+        QVERIFY2(roomsAfterSecondLoad == roomsAfterFirstLoad,
+                 qPrintable(qsl("restoring onto a populated map lost rooms: %1 became %2").arg(roomsAfterFirstLoad.size()).arg(roomsAfterSecondLoad.size())));
+
+        // and the rooms that stayed are the real ones, not husks
+        TRoom* pRoom1 = pTargetMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY2(pRoom1, "the room that was already there was evicted by the room refused for its id");
+        QCOMPARE(pRoom1->mSymbol, qsl("⚔"));
+        QCOMPARE(pRoom1->userData, expectedRoom1UserData());
+    }
 };
 
 #include "MapRoundTripTest.moc"
