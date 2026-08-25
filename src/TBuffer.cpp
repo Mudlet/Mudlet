@@ -3436,9 +3436,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
                         // changed by this method. With no console there is
-                        // nothing to restyle, but this buffer's own copy of the
-                        // palette still has to be refreshed - it is what stamps
-                        // the text, not the Host's:
+                        // nothing to restyle, but the model still has to be told:
                         if (pHost->mpConsole) {
                             pHost->mpConsole->changeColors();
                         } else {
@@ -4849,8 +4847,7 @@ void TBuffer::resetColors()
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
     // decodeOSC(...) method. With no console there is nothing to restyle, but
-    // this buffer's own copy of the palette still has to be refreshed - it is
-    // what stamps the text, not the Host's:
+    // the model still has to be told:
     if (pHost->mpConsole) {
         pHost->mpConsole->changeColors();
     } else {

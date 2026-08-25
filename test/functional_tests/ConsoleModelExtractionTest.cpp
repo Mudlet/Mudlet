@@ -607,15 +607,14 @@ private slots:
         QVERIFY2(host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground),
                  qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
         // changeColors() leaves the buffer's copy of the colours to
-        // refreshMainConsoleColors(), so this walks that hand-off with a view
-        // present:
+        // refreshMainConsoleColors(), and this is the only assertion that walks
+        // that hand-off with a view present:
         QCOMPARE(plainStamp(host->mainConsoleModel().buffer).background(), mProfileBgColor);
     }
 
-    // The server can redefine the sixteen ANSI colours (<OSC>P) and reset them
-    // again (<OSC>R), and the buffer stamps text from its own copy of them
-    // rather than from the Host's - so both paths have to refresh that copy
-    // whether or not there is a console to refresh it.
+    // The server can redefine the sixteen ANSI colours, and the buffer stamps
+    // text from its own copy of them rather than from the Host's - so the copy
+    // has to be refreshed whether or not there is a console to refresh it.
     void test_ansiPaletteRedefinitionReachesTheModelWithNoView()
     {
         startProfile();
@@ -630,8 +629,7 @@ private slots:
         QVERIFY2(host->mRed != redefinedRed, "The profile's red is already the redefined one, so the assertions on it cannot fail.");
         QCOMPARE(ansiRedStamp(model->buffer), QColor(QColorConstants::DarkRed));
 
-        // <OSC>P<colour number><RRGGBB><BEL> - the xterm palette redefinition,
-        // hex throughout, so this makes colour 1 (red) #123456
+        // <OSC>P<colour number><RRGGBB><BEL> - the xterm palette redefinition
         std::string refused = "\x1b]P1123456\x07";
         model->buffer.translateToPlainText(refused, true);
         QVERIFY2(host->mRed != redefinedRed, "A server redefined the palette although the profile forbids it.");
@@ -648,10 +646,10 @@ private slots:
         QCOMPARE(ansiRedStamp(model->buffer), QColor(QColorConstants::DarkRed));
     }
 
-    // setBackgroundColor with no window name targets the main console: it
-    // writes the profile's background itself and leaves the view to carry that
-    // into the model. This pins that the model and the buffer's copy of the
-    // colours still get it when there is no view to route it through.
+    // setBackgroundColor("main") writes the profile's background itself and
+    // leans on the view to carry it into the model, so without one the console
+    // it reaches through is not merely absent - dereferencing it is a crash
+    // before it is ever a stale colour.
     void test_scriptedBackgroundColourReachesTheModelWithNoView()
     {
         startProfile();
@@ -776,11 +774,9 @@ private:
 
     // Utility function feeding one unstyled line and handing back the character
     // it was stamped with, which carries the buffer's own copy of the profile's
-    // colours - as long as no earlier feed left SGR state latched in this
-    // buffer. A blank TChar back means the line never landed; it is spelled out
+    // colours. A blank TChar back means the line never landed; it is spelled out
     // because TChar's no-argument constructor is explicit, which rules out
-    // `return {}`, and it is white on black - so a caller expecting either of
-    // those cannot tell a miss from a pass.
+    // `return {}`.
     TChar plainStamp(TBuffer& buffer)
     {
         std::string plainText = "Model stamp\n";
