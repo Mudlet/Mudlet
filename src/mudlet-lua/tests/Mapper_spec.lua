@@ -2493,6 +2493,23 @@ describe("Tests saveMap and loadMap", function()
       return true
     end
 
+    -- Two different libraries answer to the global `zip`: Mudlet asks for
+    -- lua-zip (brimworks) first and falls back to luazip (Kepler), and only
+    -- the latter's entry:read() takes io.read's "*a". brimworks wants a byte
+    -- count and raises "number expected, got string" for anything else, so
+    -- read in fixed chunks, which both understand, until one comes back empty.
+    local function readEntry(entry)
+      local chunks = {}
+      while true do
+        local chunk = entry:read(1024 * 1024)
+        if not chunk or chunk == "" then
+          break
+        end
+        chunks[#chunks + 1] = chunk
+      end
+      return table.concat(chunks)
+    end
+
     local function areasVisited()
       local seen, count = {}, 0
       for _, id in ipairs(speedWalkPath) do
@@ -2513,7 +2530,7 @@ describe("Tests saveMap and loadMap", function()
       local archive, openError = zip.open(archivePath)
       assert(archive, ("could not open %s: %s"):format(archivePath, tostring(openError)))
       local entry = assert(archive:open("achaea-map.xml"), "achaea-map.zip does not hold achaea-map.xml")
-      local document = entry:read("*a")
+      local document = readEntry(entry)
       entry:close()
       archive:close()
       local out = assert(io.open(extractedPath, "wb"))
