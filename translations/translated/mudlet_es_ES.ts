@@ -12608,7 +12608,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13366"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Formatear Todo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13372"/>
@@ -12620,7 +12620,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="13376"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="13385"/>
       <source>Select All</source>
-      <translation>Seleccionar todo</translation>
+      <translation>Seleccionar Todo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13547"/>
@@ -12654,7 +12654,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>Triggers react on game output.</source>
       <extracomment>Headline for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>Los activadores reaccionan a la salida del juego.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="156"/>
@@ -12666,7 +12666,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="158"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Trigger intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Define el &lt;strong&gt;patrón&lt;/strong&gt; que deseas que active la acción.&lt;/li&gt;&lt;li&gt;Selecciona el &lt;strong&gt;tipo&lt;/strong&gt; de patrón adecuado.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; de texto claro que quieras enviar al juego si el disparador encuentra el patrón en el texto del juego, o escribe un script para necesidades más complejas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el disparador.&lt;/li&gt;&lt;/ol&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="189"/>
@@ -12684,7 +12684,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="193"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Introduce un script en el cuadro de abajo. Puedes, por ejemplo, definir &lt;strong&gt;funciones&lt;/strong&gt; para que sean llamadas por otros disparadores, alias, etc.&lt;/li&gt;&lt;li&gt;Si escribes &lt;strong&gt;comandos&lt;/strong&gt; de lua sin definir una función, se ejecutarán al iniciar Mudlet y cada vez que abras el script para editarlo.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el script.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Los scripts se ejecutan automáticamente cuando se visualizan, incluso si están desactivados.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="199"/>
@@ -12696,7 +12696,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="201"/>
       <source>&lt;p&gt;You can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Script intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Puedes registrar una lista de &lt;strong&gt;eventos&lt;/strong&gt; con los símbolos + y -. Si suceden uno de estos eventos, se llamará a la función que tenga el mismo nombre que el propio elemento del script.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Los eventos también se pueden añadir a un script desde la línea de comandos en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="214"/>
@@ -12714,14 +12714,14 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="218"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Define el &lt;strong&gt;intervalo de tiempo&lt;/strong&gt; tras el cual debe reaccionar el temporizador en este formato: horas : minutos : segundos.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; en texto claro que quieras enviar al juego cuando haya transcurrido el tiempo, o escribe un script para necesidades más complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el temporizador.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Si quieres que el activador reaccione solo una vez y no de forma regular, utiliza en su lugar la función tempTimer() de Lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="226"/>
       <source>&lt;p&gt;Timers can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Timer intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Los temporizadores también se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hola!\n&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Esto te saludará exactamente 3 segundos después de haber sido creado.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="237"/>
@@ -12751,13 +12751,13 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="262"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Haz clic en &lt;strong&gt;&apos;grabar tecla&apos;&lt;/strong&gt; (capturar tecla) y luego presiona tu combinación de teclas, por ejemplo, incluyendo teclas modificadoras como Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; en texto claro que quieras enviar al juego si se presiona la tecla, o escribe un script para necesidades más complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; la nueva combinación de teclas.&lt;/li&gt;&lt;/ol&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="269"/>
       <source>&lt;p&gt;Keys can be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Pressing F8 will make you jump.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Keys intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Las teclas se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;mi tecla de salto&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;saltar&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Presionar F8 te hará saltar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="282"/>
@@ -12775,13 +12775,13 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="286"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba. Para añadir una tabla en su lugar, haz clic en &apos;Añadir grupo&apos;.&lt;/li&gt;&lt;li&gt;Selecciona el tipo de valor de la variable (puede ser una cadena de texto, un número entero o un booleano)&lt;/li&gt;&lt;li&gt;Introduce el valor que quieres almacenar en esta variable.&lt;/li&gt;&lt;li&gt;Si quieres mantener la variable en tus próximas sesiones de Mudlet, marca la casilla en la lista de variables de la izquierda.&lt;/li&gt;&lt;li&gt;Para eliminar una variable manualmente, establécela en &apos;cero/nula&apos; o haz clic en el icono &apos;Borrar&apos; de arriba.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Las variables creadas aquí no se guardarán cuando Mudlet se cierre a menos que marques su casilla en la lista de variables de la izquierda. También podrías crear scripts con las variables en su lugar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="295"/>
       <source>&lt;p&gt;Variables and tables can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Variable intro</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Las variables y las tablas también se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Esto creará una cadena de texto llamada &apos;foo&apos; con &apos;bar&apos; como su valor.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="307"/>
@@ -12877,7 +12877,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="850"/>
       <source>Show/Hide the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation>Mostrar/ocultar la Consola Central de Depuración independiente (cuando se muestra, el sistema irá más lento).</translation>
+      <translation>Mostrar/ocultar la Consola de Depuración Central, cuando se muestra, el sistema funciona más lentamente.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="985"/>
@@ -13017,7 +13017,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="2717"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2722"/>
       <source>Event Handler</source>
-      <translation>Controlador De Eventos</translation>
+      <translation>Controlador de Eventos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2611"/>
@@ -13032,32 +13032,31 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="883"/>
       <source>Add Group (%1)</source>
       <extracomment>%1 is a keyboard shortcut, e.g. &apos;Ctrl+Shift+N&apos; on Windows/Linux or &apos;⌘⇧N&apos; on macOS</extracomment>
-      <translation>Añadir grupo (%1)</translation>
+      <translation>Añadir Grupo (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="893"/>
       <source>&lt;p&gt;Saves the selected item. (%1)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
       <extracomment>%1 is a keyboard shortcut, e.g. &apos;Ctrl+S&apos; on Windows/Linux or &apos;⌘S&apos; on macOS</extracomment>
-      <translation>&lt;p&gt;Guarda el elemento seleccionado. (%1)&lt;/p&gt;&lt;p&gt;Guardar hace que los cambios en el elemento surtan efecto. No se guardará en el disco, por lo que los cambios se perderán en caso de fallo del ordenador o del programa (pero Guardar Perfil a la derecha sí será seguro).&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Guarda el elemento seleccionado. (%1)&lt;/p&gt;&lt;p&gt;Guardar hace que los cambios en el elemento surtan efecto. No se guardará en el disco, por lo que los cambios se perderán en caso de fallo del ordenador o del programa (pero Guardar Perfil a la derecha sí será seguro).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2620"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2625"/>
       <source>Command {Down}</source>
-      <translation>Comando {Abajo}</translation>
+      <translation>Comando {Down}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2637"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2642"/>
       <source>Command {Up}</source>
-      <translation>Comando {Arriba}</translation>
+      <translation>Comando {Up}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2663"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2668"/>
       <source>Stylesheet {L: %1 C: %2}</source>
-      <translation>Hoja De Estilos {L: %1 C: %2}</translation>
+      <translation>Hoja de estilos {L: %1 C: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2493"/>
@@ -13112,7 +13111,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="57"/>
       <source>table (use &quot;Add Group&quot; to create)</source>
-      <translation>tabla (usa &quot;Añadir grupo&quot; para crear)</translation>
+      <translation>tabla (usa &quot;Añadir Grupo&quot; para crear)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="58"/>
@@ -13171,7 +13170,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="566"/>
       <source>Select All</source>
-      <translation>Seleccionar todo</translation>
+      <translation>Seleccionar Todo</translation>
     </message>
   </context>
   <context>
@@ -13192,8 +13191,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Elige un nombre bueno e idealmente único para tu tecla o grupo de teclas. Este se mostrará en el árbol de teclas.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Elige un nombre bueno e idealmente único para tu tecla o grupo de teclas. Este se mostrará en el árbol de teclas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="61"/>
@@ -13218,12 +13216,12 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="110"/>
       <source>Key Binding:</source>
-      <translation>Combinaciones de teclas:</translation>
+      <translation>Combinaciones de Teclas:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="127"/>
       <source>Grab New Key</source>
-      <translation>Capturar nueva tecla</translation>
+      <translation>Capturar Nueva Tecla</translation>
     </message>
   </context>
   <context>
@@ -13279,13 +13277,13 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/main.cpp" line="455"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation>       -o, --solo=&lt;predefined&gt;               hacer que Mudlet solo muestre el juego
+      <translation>       -o, --only=&lt;predefined&gt;               hacer que Mudlet solo muestre el juego
                                     predefinido específico, puede repetirse.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="458"/>
       <source>       -f, --fullscreen             start Mudlet in fullscreen mode.</source>
-      <translation>       -f, --pantallacompleta                iniciar Mudlet en modo pantalla completa.</translation>
+      <translation>       -f, --fullscreen               iniciar Mudlet en modo pantalla completa.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="459"/>
@@ -13294,9 +13292,7 @@ Package item warning banner shown in trigger editor when selecting package items
                                     server.</source>
       <translation>       --offline                abre los perfiles cargados al inicio
                                     sin conectarse a su servidor
-                                    de juego.
-
-</translation>
+                                    de juego.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="463"/>
@@ -13327,7 +13323,7 @@ less likely to be useful for normal use of this application:</source>
                                     running in the gdb debugger under Linux.</source>
       <translation>       --nograb                      la aplicación nunca debe capturar el ratón ni el
                                      teclado. Esta opción se activa por defecto cuando Mudlet se
-                                    está ejecutando en el depurador gdb bajo Linux</translation>
+                                    está ejecutando en el depurador gdb bajo Linux.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="480"/>
@@ -13355,13 +13351,12 @@ less likely to be useful for normal use of this application:</source>
                                     estilos adicionales o tiene estilos adicionales como complementos
                                     estos estaran disponibles para la linea de comandos -style.
                                     También puedes establecer el estilo para todas
-                                    las aplicaciones Qt configurando la variable de entorno QT_STYLE_OVERRIDE.
-                                    </translation>
+                                    las aplicaciones Qt configurando la variable de entorno QT_STYLE_OVERRIDE.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="493"/>
       <source>       --style style                is the same as listed above.</source>
-      <translation>       --style style         establece el estilo de la interfaz gráfica (GUI) de la aplicación.</translation>
+      <translation>       --style style         es lo mismo que se indica más arriba.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="494"/>
@@ -13372,13 +13367,12 @@ less likely to be useful for normal use of this application:</source>
       <translation>       --stylesheet=stylesheet      establece la hoja de estilo de la aplicación.
                                     El valor debe ser la ruta a un archivo que contenga
                                     la hoja estilo. Nota: Las URL relativas en el archivo de la hoja de estilos
-                                    son relativas a la ruta del propio archivo de la hoja de estilo.
-</translation>
+                                    son relativas a la ruta del propio archivo de la hoja de estilo.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="500"/>
       <source>       --stylesheet stylesheet      is the same as listed above.</source>
-      <translation>       --stylesheet stylesheet      coincide con lo detallado arriba.</translation>
+      <translation>       --stylesheet stylesheet      es lo mismo que se indica más arriba.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="503"/>
@@ -13388,7 +13382,7 @@ less likely to be useful for normal use of this application:</source>
                                     option is only valid for the X11 version of Qt.</source>
       <translation>       --sync                       fuerza al servidor X a ejecutar cada solicitud del cliente X
                                     de inmediato y sin utilizar la optimización de búfer. Hace que
-                                     el programa sea más fácil de depurar y, a menudo, mucho más lento. 
+                                     el programa sea más fácil de depurar y, a menudo, mucho más lento.
                                     La opción --sync solo es válida para la versión X11 de Qt.version of Qt.</translation>
     </message>
     <message>
@@ -13407,7 +13401,7 @@ less likely to be useful for normal use of this application:</source>
                                     optional and will make the application wait until a
                                     debugger connects to it.</source>
       <translation>       --qmljsdebugger=1234[,block] activa el depurador de QML/JS con un
-                                     puerto especificado. El número es el valor del puerto y el bloque es
+                                    puerto especificado. El número es el valor del puerto y el bloque es
                                     es opcional y hará que la aplicación espere hasta que
                                     depurador se conecte a ella.
 </translation>
@@ -13446,7 +13440,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="451"/>
       <source>       -s, --splashscreen           show splashscreen on startup.</source>
-      <translation>       -s, --splashscreen           mostrar pantalla de inicio al arrancar</translation>
+      <translation>       -s, --splashscreen           mostrar pantalla de inicio al arrancar.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="521"/>
@@ -13488,7 +13482,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="95"/>
       <source>Toolbox</source>
-      <translation>Caja de herramientas</translation>
+      <translation>Caja de Herramientas</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="112"/>
@@ -13604,7 +13598,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="293"/>
       <source>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Abre una colección (en línea) de &quot;videotutoriales educativos de Mudlet&quot; en el navegador web de tu sistema.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Abre una colección (en línea) de &quot;Videotutoriales Educativos de Mudlet&quot; en el navegador web de tu sistema.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="301"/>
@@ -13619,7 +13613,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="322"/>
       <source>&lt;p&gt;Opens a connect to an IRC server (LiberaChat) in your system web-browser.&lt;/p&gt;</source>
-      <translation>Abre una conexión a un servidor IRC (LiberaChat) en el navegador web de tu sistema.</translation>
+      <translation>&lt;p&gt;Abre una conexión a un servidor IRC (LiberaChat) en el navegador web de tu sistema.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
@@ -14013,7 +14007,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/mapper.ui" line="597"/>
       <source>Player Icon Adjustments:</source>
-      <translation>Ajustes del icono del jugador:</translation>
+      <translation>Ajustes del Icono del Jugador:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="607"/>
@@ -14139,8 +14133,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
       <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Los módulos son una forma de utilizar un paquete común en múltiples sesiones, a diferencia de los paquetes, que se instalan por perfil.&lt;/p&gt; Los módulos se cargan en orden de prioridad ascendente (el 1 se cargará antes que el 2, y así sucesivamente); los módulos que tengan la misma prioridad se cargarán en orden alfabético.&lt;/p&gt;
 &lt;p&gt;Los módulos con prioridad negativa se cargarán antes que los paquetes de scripts.&lt;/p&gt;&lt;p&gt;La opción &lt;b&gt;&lt;i&gt;Sincronizar&lt;/i&gt;&lt;/b&gt;, si está activada, hará que cuando el módulo de &lt;b&gt;este perfil&lt;/b&gt; se guarde &lt;b&gt;en el disco&lt;/b&gt;, se vuelva a cargar automáticamente en todos los demás perfiles que también utilicen el mismo archivo que contiene el módulo. Para hacer que varios perfiles utilicen el mismo módulo, instálalo en cada perfil a través de este gestor de módulos (el cual debe abrirse cuando el perfil en cuestión sea el que esté actualmente en primer plano).&lt;/p&gt;&lt;p&gt;
 &lt;p&gt;Por cada operación de guardado, se crea una copia de seguridad de los módulos en un directorio llamado &lt;i&gt;moduleBackups&lt;/i&gt;, dentro del directorio de tu perfil de Mudlet.&lt;/p&gt;
-&lt;/body&gt;&lt;/html&gt;
-</translation>
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="147"/>
@@ -14155,7 +14148,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/ui/module_manager.ui" line="167"/>
       <source>Module Help</source>
-      <translation>Ayuda del módulo</translation>
+      <translation>Ayuda del Módulo</translation>
     </message>
   </context>
   <context>
@@ -14538,7 +14531,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="458"/>
       <source>Show Main Toolbar</source>
-      <translation>Mostrar barra de herramientas principal</translation>
+      <translation>Mostrar Barra de Herramientas Principal</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="514"/>
@@ -14561,7 +14554,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="538"/>
       <source>Full Screen</source>
-      <translation>Pantalla completa</translation>
+      <translation>Pantalla Completa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
@@ -14601,22 +14594,22 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="732"/>
       <source>Toggle Time Stamps</source>
-      <translation>Activar/desactivar marcas de tiempo</translation>
+      <translation>Activar/desactivar Marcas de Tiempo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="733"/>
       <source>Toggle Replay</source>
-      <translation>Activar/desactivar reproducción</translation>
+      <translation>Activar/desactivar Reproducción</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="734"/>
       <source>Toggle Logging</source>
-      <translation>Activar/desactivar registro</translation>
+      <translation>Activar/desactivar Registro</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="735"/>
       <source>Toggle Emergency Stop</source>
-      <translation>Activar/desactivar parada de emergencia</translation>
+      <translation>Activar/desactivar Parada de Emergencia</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="736"/>
@@ -14668,13 +14661,13 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1071"/>
       <source>English (Canada)</source>
-      <translation>Inglés (Canada)</translation>
+      <translation>Inglés (Canadá)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1072"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation>Inglés (Canada, Grande)</translation>
+      <translation>Inglés (Canadá, Grande)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1073"/>
@@ -14979,7 +14972,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1137"/>
       <source>Gaelic (United Kingdom {Scots})</source>
-      <translation>Gaélico (Reino Unido  {Scots})</translation>
+      <translation>Gaélico (Reino Unido {Scots})</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1138"/>
@@ -15176,9 +15169,8 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
       <translation>
-        <numerusform>&lt;p&gt;Acerca de Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;¡Ya está disponible la %n actualización!&lt;/i&gt;&lt;p&gt;
-</numerusform>
-        <numerusform>&lt;p&gt;Acerca de Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;¡Ya están disponibles la %n actualizaciones!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Acerca de Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;¡Ya está disponible la %n actualización!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Acerca de Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;¡Ya están disponibles las %n actualizaciones!&lt;/i&gt;&lt;p&gt;</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -15569,7 +15561,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="1239"/>
       <source>Swedish (Finland)</source>
-      <translation>Sueco (Finlania)</translation>
+      <translation>Sueco (Finlandia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1240"/>
@@ -15913,7 +15905,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
       <location filename="../src/mudlet.cpp" line="1349"/>
       <source>KOI8-R (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO-889-5 (Cirílico)</translation>
+      <translation>KOI8-R (Cirílico)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1351"/>
@@ -15985,7 +15977,8 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
       <location filename="../src/mudlet.cpp" line="6092"/>
       <source>Update check failed. Error: %1
 </source>
-      <translation>Fallo en la comprobación de actualizaciones. Error: %1</translation>
+      <translation>Fallo en la comprobación de actualizaciones. Error: %1
+</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="6255"/>
@@ -16197,17 +16190,17 @@ Toggle action in the tab bar context menu to show/hide the main toolbar</extraco
     <message>
       <location filename="../src/mudlet.cpp" line="471"/>
       <source>Package Manager</source>
-      <translation>Gestor de paquetes</translation>
+      <translation>Gestor de Paquetes</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="476"/>
       <source>Module Manager</source>
-      <translation>Gestor de módulo</translation>
+      <translation>Gestor de Módulo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="480"/>
       <source>Package Exporter</source>
-      <translation>Exportador de paquetes</translation>
+      <translation>Exportador de Paquetes</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="490"/>
@@ -16223,7 +16216,7 @@ Toggle action in the tab bar context menu to show/hide the main toolbar</extraco
     <message>
       <location filename="../src/mudlet.cpp" line="496"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation>Te desconecta del juego y vuelve a conectarte a él</translation>
+      <translation>Desconéctate del juego y vuelve a conectarte a él</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="501"/>
@@ -16241,7 +16234,7 @@ Toggle action in the tab bar context menu to show/hide the main toolbar</extraco
       <location filename="../src/mudlet.cpp" line="526"/>
       <location filename="../src/mudlet.cpp" line="6144"/>
       <source>About</source>
-      <translation>Acerca de...</translation>
+      <translation>Acerca de</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1160"/>
@@ -16288,7 +16281,7 @@ Toggle action in the tab bar context menu to show/hide the main toolbar</extraco
     <message>
       <location filename="../src/mudlet.cpp" line="4855"/>
       <source>Central Debug Console</source>
-      <translation>Consola central de depuración</translation>
+      <translation>Consola Central de Depuración</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="539"/>
@@ -16455,7 +16448,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager_unpack.ui" line="24"/>
       <source>unpacking please wait ...</source>
-      <translation>Desempaquetando, por favor espere...</translation>
+      <translation>desempaquetando, por favor espere...</translation>
     </message>
   </context>
   <context>
@@ -16463,7 +16456,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation>Preferencias de perfil</translation>
+      <translation>Preferencias del perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
@@ -16559,7 +16552,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="441"/>
       <source>Reset</source>
-      <translation>Reestablecer</translation>
+      <translation>Restablecer</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="448"/>
@@ -16599,7 +16592,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="222"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Si estás jugando a un juego que no está en inglés y ves � en lugar de texto, o si letras especiales como &lt;span style=&quot; font-weight:600;&quot;&gt;ñ &lt;/span&gt;no se muestran correctamente, intenta cambiar la codificación a UTF-8 o a la que sugiera tu juego. &lt;/p&gt;&lt;p&gt;En el caso de algunas codificaciones en ciertos sistemas operativos, el propio Mudlet debe proporcionar el códec necesario; si ese es el caso para este Mudlet, se aplicará un prefijo &lt;tt&gt;m&lt;/tt&gt; a esos nombres de codificación (¡Así, si hay errores, se podrá culpar al responsable correcto!).&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Si estás jugando a un juego que no está en inglés y ves � en lugar de texto, o letras especiales como &lt;span style=&quot; font-weight:600;&quot;&gt;ñ &lt;/span&gt;no se muestran correctamente, intenta cambiar la codificación a UTF-8 o a la que sugiera tu juego. &lt;/p&gt;&lt;p&gt;En el caso de algunas codificaciones en ciertos sistemas operativos, el propio Mudlet debe proporcionar el códec necesario; si ese es el caso para este Mudlet, se aplicará un prefijo &lt;tt&gt;m&lt;/tt&gt; a esos nombres de codificación (¡Así, si hay errores, se podrá culpar al responsable correcto!).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="397"/>
@@ -16704,12 +16697,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="910"/>
       <source>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Utilizar el suavizado de fuentes (anti-aliasing). Suaviza las fuentes si tienes una alta resolución de pantalla y puedes usar fuentes más grandes. Ten en cuenta que en resoluciones bajas y tamaños de fuente pequeños, la fuente se vuelve borrosa.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Utilizar el suavizado de fuentes (antialiasing). Suaviza las fuentes si tienes una alta resolución de pantalla y puedes usar fuentes más grandes. Ten en cuenta que en resoluciones bajas y tamaños de fuente pequeños, la fuente se vuelve borrosa.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="916"/>
       <source>Enable anti-aliasing</source>
-      <translation>Habilitar anti-aliasing</translation>
+      <translation>Habilitar el suavizado de las fuentes (antialiasing)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="957"/>
@@ -16781,12 +16774,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1255"/>
       <source>Indent wrapped lines by:</source>
-      <translation>Identar las líneas ajustadas:</translation>
+      <translation>Sangra las líneas ajustadas:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1309"/>
       <source>&lt;p&gt;Subsequent wrapped lines will be indented by this amount.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Las líneas siguientes que se ajusten al ancho se identarán esta cantidad.</translation>
+      <translation>&lt;p&gt;Las líneas siguientes que se ajusten al ancho se sangrarán esta cantidad.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1513"/>
@@ -16937,8 +16930,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="775"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Estará disponible un diccionario de usuario específico para este perfil. Estará activo en la línea de comandos (las palabras que estén en él aparecerán con un subrayado discontinuo de color cian) y en el subsistema Lua.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Estará disponible un diccionario de usuario específico para este perfil. Estará activo en la línea de comandos (las palabras que estén en él aparecerán con un subrayado discontinuo de color cian) y en el subsistema Lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="781"/>
@@ -16963,13 +16955,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1529"/>
       <source>&lt;p&gt;Enter the characters you&apos;d like double-clicking to stop selecting text on here. If you don&apos;t enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on &apos; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Introduce aquí los caracteres donde quieres que se detenga la selección de texto al hacer doble clic. Si no introduces ninguno, al hacer doble clic en una palabra la selección solo se detendrá ante un espacio, e incluirá caracteres como comillas dobles o simples. Por ejemplo, al hacer doble clic en la palabra &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt; en el siguiente ejemplo, se seleccionará &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;¡Hola!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Dices: &lt;span style=&quot; font-weight:600;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;¡Hola!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Si configuras los caracteres en el campo correspondiente&lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;  significará que la selección debe detenerse&apos;&lt;span style=&quot; font-style:italic;&quot;&gt;o&lt;/span&gt;&amp;quot;&lt;span style=&quot; font-style:italic;&quot;&gt;o&lt;/span&gt;!,entonces al hacer doble clic en &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt; solo se seleccionará &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Dices: &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hola&lt;/span&gt;!&amp;quot;&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Introduce aquí los caracteres donde quieres que se detenga la selección de texto al hacer doble clic. Si no introduces ninguno, al hacer doble clic en una palabra la selección solo se detendrá ante un espacio, e incluirá caracteres como comillas dobles o simples. Por ejemplo, al hacer doble clic en la palabra &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt; en el siguiente ejemplo, se seleccionará &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;¡Hola!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Dices: &lt;span style=&quot; font-weight:600;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;¡Hola!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Si configuras los caracteres en el campo correspondiente&lt;span style=&quot; font-weight:600;&quot;&gt;&apos;&amp;quot;  significará que la selección debe detenerse&apos;&lt;span style=&quot; font-style:italic;&quot;&gt;o&lt;/span&gt;&amp;quot;&lt;span style=&quot; font-style:italic;&quot;&gt;o&lt;/span&gt;!,entonces al hacer doble clic en &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt; solo se seleccionará &lt;span style=&quot; font-style:italic;&quot;&gt;Hola&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Dices: &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hola&lt;/span&gt;!&amp;quot;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1538"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation>Caracteres a ignorar en la selección (por ejemplo, &apos; o &quot;)</translation>
+      <translation>(Caracteres a ignorar en la selección, por ejemplo, &apos; o &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1554"/>
@@ -17040,12 +17031,12 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2643"/>
       <location filename="../src/ui/profile_preferences.ui" line="2659"/>
       <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;En los juegos que ofrecen mapas para descargar, puede presionar este botón para obtener el mapa más reciente. Tenga en cuenta que esto &lt;span style=&quot; font-weight:600;&quot;&gt;sobrescribirá&lt;/span&gt; cualquier cambio que hayasrealizado en tu mapa y utilizará únicamente el mapa nuevo.</translation>
+      <translation>&lt;p&gt;En los juegos que ofrecen mapas para descargar, puede presionar este botón para obtener el mapa más reciente. Tenga en cuenta que esto &lt;span style=&quot; font-weight:600;&quot;&gt;sobrescribirá&lt;/span&gt; cualquier cambio que hayas realizado en tu mapa y utilizará únicamente el mapa nuevo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2752"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;El área predeterminada (ID de área -1) es utilizada por algunos scripts de mapas como una &apos;zona de espera&apos;" temporal para las salas antes de colocarlas en el área correcta.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;El área predeterminada (ID de área -1) es utilizada por algunos scripts de mapas como una &apos;zona de espera&apos; temporal para las salas antes de colocarlas en el área correcta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2726"/>
@@ -17125,7 +17116,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3882"/>
       <source>MMCPUser123</source>
-      <translation>MMCPUsuario123</translation>
+      <translation>MMCPUser123</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3940"/>
@@ -17135,17 +17126,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3866"/>
       <source>Chat Name:</source>
-      <translation>Nombre del chat:</translation>
+      <translation>Nombre del Chat:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3927"/>
       <source>Default Port:</source>
-      <translation>Puerto por defecto:</translation>
+      <translation>Puerto por Defecto:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3972"/>
       <source>Chat Message Prefix:</source>
-      <translation>Prefijo del mensaje de chat:</translation>
+      <translation>Prefijo del Mensaje de Chat:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3901"/>
@@ -17155,14 +17146,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1358"/>
       <source>Undo the game&apos;s own wrapping (experimental) at:</source>
-      <translation>Deshacer el ajuste de línea automático del propio juego (experimental)</translation>
+      <translation>Deshacer el ajuste de línea automático del propio juego (experimental):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1406"/>
       <source>&lt;i&gt;Experimental: the odd line can still be joined or left split when it should not be. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Tell us how it works for you&lt;/a&gt; - your feedback is what will make this better.&lt;/i&gt;</source>
-      <translation>&lt;i&gt;Experimental: es posible que alguna línea se una o permanezca dividida cuando no debería. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Cuéntanos cómo te funciona&lt;/a&gt;: tus comentarios son lo que permitirá mejorarlo.&lt;/i&gt;
-
-</translation>
+      <translation>&lt;i&gt;Experimental: es posible que alguna línea se una o permanezca dividida cuando no debería. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Cuéntanos cómo te funciona&lt;/a&gt;: tus comentarios son lo que permitirá mejorarlo.&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2777"/>
@@ -17178,7 +17167,8 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="3849"/>
       <source>Hide server login time
 (Discord shows activity timer when hidden)</source>
-      <translation>Ocultar la hora de inicio de sesión del servidor (Discord muestra el temporizador de actividad cuando está oculto)</translation>
+      <translation>Ocultar la hora de inicio de sesión del servidor 
+(Discord muestra el temporizador de actividad cuando está oculto)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3904"/>
@@ -17193,8 +17183,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3965"/>
       <source>Prefix emote messages</source>
-      <translation>Anteponer el prefijo a los mensajes de tipo emote
-</translation>
+      <translation>Anteponer el prefijo a los mensajes de tipo emoción</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3982"/>
@@ -17254,8 +17243,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4529"/>
       <source>Main window shortcuts</source>
-      <translation>Atajos de la ventana principal
-</translation>
+      <translation>Atajos de la ventana principal</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4541"/>
@@ -17265,13 +17253,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4576"/>
       <source>Reset to defaults</source>
-      <translation>Restablecer valores predeterminados
-</translation>
+      <translation>Restablecer valores predeterminados</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4612"/>
       <source>&lt;p&gt;On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;En algunas plataformas, como macOS, la herramienta de lectura de pantalla presenta problemas para anunciar el texto entrante en su totalidad, omitiendo partes del mismo. Puedes optar por desactivar los anuncios de texto nuevo del juego mediante esta opción, y utilizar en su lugar un sistema de síntesis de voz (TTS) personalizado, lo que evita dichos problemas.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;En algunas plataformas, como macOS, la herramienta de lectura de pantalla presenta problemas para anunciar el texto entrante en su totalidad, omitiendo partes del mismo. Puedes optar por desactivar los anuncios de texto nuevo del juego mediante esta opción, y utilizar en su lugar un sistema de síntesis de voz TTS personalizado, lo que evita dichos problemas.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4615"/>
@@ -17286,14 +17273,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4632"/>
       <source>Enable closed caption for media</source>
-      <translation>Activar los subtítulos para el contenido multimedia
-</translation>
+      <translation>Activar los subtítulos para el contenido multimedia</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4678"/>
       <source>&lt;p&gt;In caret mode, hyperlinks in the main window can be navigated with &lt;b&gt;Ctrl+]&lt;/b&gt; (next link) and &lt;b&gt;Ctrl+[&lt;/b&gt; (previous link), activated with &lt;b&gt;Enter&lt;/b&gt; or &lt;b&gt;Space&lt;/b&gt;, and their context menu opened with the &lt;b&gt;Menu&lt;/b&gt; key or &lt;b&gt;Shift+F10&lt;/b&gt;. Press &lt;b&gt;Ctrl+End&lt;/b&gt; to jump to the latest content (Mac: &lt;b&gt;Ctrl+Fn+Right Arrow&lt;/b&gt;) or &lt;b&gt;Ctrl+Home&lt;/b&gt; to jump to the start (Mac: &lt;b&gt;Ctrl+Fn+Left Arrow&lt;/b&gt;). Choosing &lt;b&gt;Ctrl+Tab&lt;/b&gt; or &lt;b&gt;F6&lt;/b&gt; here keeps plain &lt;b&gt;Tab&lt;/b&gt; available for stepping through links.&lt;/p&gt;</source>
       <translation>&lt;p&gt;En el modo de cursor, es posible navegar por los hipervínculos de la ventana principal mediante &lt;b&gt;Ctrl+]&lt;/b&gt; (enlace siguiente) y &lt;b&gt;Ctrl+[&lt;/b&gt; (enlace anterior), activarlos con &lt;b&gt;Intro&lt;/b&gt; o &lt;b&gt;Espacio&lt;/b&gt;, y abrir su menú contextual con la tecla &lt;b&gt;Menú&lt;/b&gt; o &lt;b&gt;Mayús+F10&lt;/b&gt;. Pulse &lt;b&gt;Ctrl+Fin&lt;/b&gt; para ir al final del contenido (Mac: &lt;b&gt;Ctrl+Fn+Flecha derecha&lt;/b&gt;) o &lt;b&gt;Ctrl+Inicio&lt;/b&gt; para ir al principio (Mac: &lt;b&gt;Ctrl+Fn+Flecha izquierda&lt;/b&gt;). El uso de &lt;b&gt;Ctrl+Tab&lt;/b&gt; o &lt;b&gt;F6&lt;/b&gt; en este caso permite seguir utilizando la tecla &lt;b&gt;Tab&lt;/b&gt; para desplazarse entre los enlaces.&lt;/p&gt;
-
 </translation>
     </message>
     <message>
@@ -17551,7 +17536,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="913"/>
       <source>Use anti aliasing on fonts. Smooths fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.</source>
-      <translation>Utiliza el suavizado de fuentes (anti-aliasing). Esto suaviza las fuentes si dispones de una resolución de pantalla alta y utilizas tamaños de letra mayores. Ten en cuenta que, con resoluciones bajas y tamaños de letra pequeños, la fuente se verá borrosa.</translation>
+      <translation>Utiliza el suavizado de fuentes (antialiasing). Esto suaviza las fuentes si dispones de una resolución de pantalla alta y utilizas tamaños de letra mayores. Ten en cuenta que, con resoluciones bajas y tamaños de letra pequeños, la fuente se verá borrosa.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="940"/>
@@ -17559,7 +17544,7 @@ try again when it has finished.</source>
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
       <translation>Esta fuente no es monoespaciada, lo cual puede no ser ideal para jugar a algunos juegos de texto:
-puedes usarla, pero podría haber problemas al alinear columnas de texto.</translation>
+puedes usarla, pero podría haber problemas al alinear columnas de texto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
@@ -17584,12 +17569,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1312"/>
       <source>Subsequent wrapped lines will be indented by this amount.</source>
-      <translation>Las líneas siguientes que se ajusten al ancho se indentarán en esta medida.</translation>
+      <translation>Las líneas siguientes que se ajusten al ancho se sangrarán en esta medida.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1315"/>
       <source>Indent hanging wrapped lines by:</source>
-      <translation>Identar las líneas ajustadas:</translation>
+      <translation>Sangrar las líneas ajustadas:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1425"/>
@@ -17639,7 +17624,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1503"/>
       <source>Use maximum lines possible</source>
-      <translation>Utilice el máximo número de líneas posible.</translation>
+      <translation>Utilice el máximo número de líneas posible</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1532"/>
@@ -17654,7 +17639,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1574"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation>Hacer que los caracteres de ancho &apos;ambiguo&apos; de Asia Oriental ocupen el ancho completo</translation>
+      <translation>Hacer que los caracteres de ancho &apos;ambiguos&apos; de Asia Oriental ocupen el ancho completo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="375"/>
@@ -17694,7 +17679,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1619"/>
       <source>Unicode Control Pictures</source>
-      <translation>Imágenes de control Unicode</translation>
+      <translation>Imágenes de Control Unicode</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1624"/>
@@ -17739,7 +17724,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1804"/>
       <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Muestra el número de identificación &lt;b&gt;único&lt;/b&gt; que Mudlet utiliza internamente para identificar cada instancia de un elemento; este es el mismo número que devuelven las funciones de la API de Lua (para crear alias, asignaciones de teclas, etc.) cuando se ejecutan correctamente. Esta información resulta útil cuando existen varios elementos del mismo tipo y nombre, y se incorporará a los nombres de los scripts Lua de dichos elementos en la salida de la consola de depuración central.&lt;/p&gt;&lt;p&gt;Ten en cuenta que, aunque el número asignado a un elemento permanece constante durante una sesión del perfil, puede variar la próxima vez que se cargue el perfil si se añaden o eliminan otros elementos.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Muestra el número de ID &lt;b&gt;único&lt;/b&gt; que Mudlet utiliza internamente para identificar cada instancia de un elemento; este es el mismo número que devuelven las funciones de la API de Lua (para crear alias, asignaciones de teclas, etc.) cuando se ejecutan correctamente. Esta información resulta útil cuando existen varios elementos del mismo tipo y nombre, y se incorporará a los nombres de los scripts Lua de dichos elementos en la salida de la consola de depuración central.&lt;/p&gt;&lt;p&gt;Ten en cuenta que, aunque el número asignado a un elemento permanece constante durante una sesión del perfil, puede variar la próxima vez que se cargue el perfil si se añaden o eliminan otros elementos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1807"/>
@@ -18006,12 +17991,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2390"/>
       <source>&lt;p&gt;If this option is checked the Mud Server may send codes to change the above 16 colors or to reset them to their defaults by using standard ANSI &lt;tt&gt;OSC&lt;/tt&gt; Escape codes.&lt;/p&gt;&lt;p&gt;Specifically &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; will set the color with index &lt;i&gt;i&lt;/i&gt; to have the color with the given &lt;i&gt;rr&lt;/i&gt; red, &lt;i&gt;gg&lt;/i&gt; green and &lt;i&gt;bb&lt;/i&gt;  blue components where i is a single hex-digit (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos; to give a number between 0 an d15) and rr, gg and bb are two digit hex-digits numbers (between 0 to 255); &amp;lt;OSC&amp;gt; is &lt;i&gt;Operating System Command&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;[&lt;/tt&gt; and &amp;lt;ST&amp;gt; is the &lt;i&gt;String Terminator&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Conversely &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; will reset the colors to the defaults like the button to the right does.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Si se marca esta opción, el servidor MUD puede enviar códigos para cambiar los 16 colores mencionados o para restablecerlos a sus valores predeterminados utilizando códigos de escape ANSI &lt;tt&gt;OSC&lt;/tt&gt; estándar.&lt;/p&gt;&lt;p&gt;Expresamente, &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; establecerá el color con índice &lt;i&gt;i&lt;/i&gt; para que tenga los componentes de color rojo &lt;i&gt;rr&lt;/i&gt;, verde &lt;i&gt;gg&lt;/i&gt; y azul &lt;i&gt;bb&lt;/i&gt;, donde i es un único dígito hexadecimal (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos;, para obtener un número entre 0 y 15) y rr, gg y bb son números hexadecimales de dos dígitos (entre 0 y 255); &amp;lt;OSC&amp;gt; es el &lt;i&gt;Comando de Sistemas Operativos,&lt;/i&gt; que normalmente se codifican como carácter ASCII &amp;lt;ESC&amp;gt; seguido de &lt;tt&gt;;[&lt;/tt&gt;, y &amp;lt;ST&amp;gt; es el &lt;i&gt;Terminador de Cadena&lt;/i&gt;, que normalmente se codifica como el carácter ASCII &amp;lt;ESC&amp;gt; seguido de &lt;tt&gt;\&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;Por el contrario, &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; restablecerá los colores a los valores predeterminados, tal como lo hace el botón de la derecha.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Si se marca esta opción, el servidor MUD puede enviar códigos para cambiar los 16 colores mencionados o para restablecerlos a sus valores predeterminados utilizando códigos de escape ANSI &lt;tt&gt;OSC&lt;/tt&gt; estándar.&lt;/p&gt;&lt;p&gt;Expresamente, &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; establecerá el color con índice &lt;i&gt;i&lt;/i&gt; para que tenga los componentes de color rojo &lt;i&gt;rr&lt;/i&gt;, verde &lt;i&gt;gg&lt;/i&gt; y azul &lt;i&gt;bb&lt;/i&gt;, donde i es un único dígito hexadecimal (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos;, para obtener un número entre 0 y d15) y rr, gg y bb son números hexadecimales de dos dígitos (entre 0 y 255); &amp;lt;OSC&amp;gt; es el &lt;i&gt;Comando de Sistemas Operativos,&lt;/i&gt; que normalmente se codifican como carácter ASCII &amp;lt;ESC&amp;gt; seguido de &lt;tt&gt;;[&lt;/tt&gt;, y &amp;lt;ST&amp;gt; es el &lt;i&gt;Terminador de Cadena&lt;/i&gt;, que normalmente se codifica como el carácter ASCII &amp;lt;ESC&amp;gt; seguido de &lt;tt&gt;\&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;Por el contrario, &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; restablecerá los colores a los valores predeterminados, tal como lo hace el botón de la derecha.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2396"/>
       <source>Server allowed to redefine these colors</source>
-      <translation>El servidor tiene permiso para redefinir estos colores.</translation>
+      <translation>El servidor tiene permiso para redefinir estos colores</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2427"/>
@@ -18129,7 +18114,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2700"/>
       <source>Draw rooms on upper and lower levels</source>
-      <translation>Dibuja las salas en los niveles superior e inferior.</translation>
+      <translation>Dibuja las salas en los niveles superior e inferior</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2713"/>
@@ -18139,12 +18124,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2755"/>
       <source>The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.</source>
-      <translation>Algunos scripts de mapeo utilizan el área predeterminada (con ID -1) como una &apos;zona de espera&apos; temporal para las salas antes de que sean ubicadas en el área correcta.</translation>
+      <translation>Algunos scripts de mapeo utilizan el área predeterminada (con id-1) como una &apos;zona de espera&apos; temporal para las salas antes de que sean ubicadas en el área correcta.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2729"/>
       <source>This enables borders around room. Color can be set in Mapper colors tab.</source>
-      <translation>Esto permite habilitar los bordes alrededor de la sala. El color se puede configurar en la pestaña de colores del Mapper.</translation>
+      <translation>Esto permite habilitar los bordes alrededor de la sala. El color se puede configurar en la pestaña de colores del mapeador.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2684"/>
@@ -18159,7 +18144,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3540"/>
       <source>Outer ring color</source>
-      <translation>Color del anillo exterior:</translation>
+      <translation>Color del anillo exterior</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3550"/>
@@ -18179,7 +18164,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3574"/>
       <source>Blue/Yellow ring</source>
-      <translation>Anillo azul/amarillo</translation>
+      <translation>Anillo Azul/Amarillo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3579"/>
@@ -18240,7 +18225,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4760"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation>Se requieren opciones especiales para algunos controladores de juegos antiguos (es necesario reiniciar el cliente para que surtan efecto).</translation>
+      <translation>Se requieren opciones especiales para algunos controladores de juegos antiguos (es necesario reiniciar el cliente para que surtan efecto)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4959"/>
@@ -18315,7 +18300,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2537"/>
       <source>Copy map to other profile(s):</source>
-      <translation>Copiar mapa a otro(s) perfil(es):</translation>
+      <translation>Copiar mapa a otro perfil(es):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2627"/>
@@ -18356,7 +18341,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2687"/>
       <source>Use high quality graphics in 2D view</source>
-      <translation>Utiliza gráficos de alta calidad en la vista 2D.</translation>
+      <translation>Utiliza gráficos de alta calidad en la vista 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
@@ -18366,12 +18351,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="694"/>
       <source>Text to separate commands or blank to disable</source>
-      <translation>Texto para separar comandos, o vacío para desactivar.</translation>
+      <translation>Texto para separar comandos, o vacío para desactivar</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="768"/>
       <source>User dictionary: </source>
-      <translation>Diccionario de usuario:</translation>
+      <translation>Diccionario de usuario: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2449"/>
@@ -18386,7 +18371,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2985"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation>Utilice únicamente símbolos (glifos) de la fuente seleccionada.</translation>
+      <translation>Utilice únicamente símbolos (glifos) de la fuente seleccionada</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2978"/>
@@ -18504,8 +18489,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4721"/>
       <source>&lt;p&gt;When enabled, text with the blinking attribute (SGR codes 5 and 6) is displayed with a smooth pulsing effect. When disabled, blinking text is shown in italics instead.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Cuando está activado, el texto con el atributo de parpadeo (códigos SGR 5 y 6) se muestra con un efecto de pulsación suave. Cuando está desactivado, el texto parpadeante se muestra en cursiva en su lugar.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Cuando está activado, el texto con el atributo de parpadeo (códigos SGR 5 y 6) se muestra con un efecto de pulsación suave. Cuando está desactivado, el texto parpadeante se muestra en cursiva en su lugar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4754"/>
@@ -18565,7 +18549,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4414"/>
       <source>Connect to the game via proxy</source>
-      <translation>Conéctate al juego a través de un proxy.</translation>
+      <translation>Conéctate al juego a través de un proxy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4429"/>
@@ -18611,8 +18595,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5078"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;La señalización &lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) y &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) indica a Mudlet cuándo el servidor del juego ha terminado de enviar texto. En los juegos que no proporcionan &lt;tt&gt;GA&lt;/tt&gt; ni &lt;tt&gt;EOR&lt;/tt&gt;, esta opción controla cuánto tiempo esperará Mudlet a que llegue más texto. Unos valores más altos ayudarán a reducir el riesgo de que Mudlet divida un fragmento de texto extenso (introduciendo saltos de línea no deseados en medio), lo cual puede impedir el funcionamiento de algunos disparadores. Unos valores más bajos aumentan el riesgo de que el texto se fragmente, pero pueden hacer que el juego se perciba con mayor capacidad de respuesta.&lt;/p&gt;&lt;p&gt;&lt;i&gt;El valor predeterminado, que es el que utilizaba Mudlet antes de que se añadiera este control, es de 0,300 segundos.&lt;/i&gt;&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;La señalización &lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) y &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) indica a Mudlet cuándo el servidor del juego ha terminado de enviar texto. En los juegos que no proporcionan &lt;tt&gt;GA&lt;/tt&gt; ni &lt;tt&gt;EOR&lt;/tt&gt;, esta opción controla cuánto tiempo esperará Mudlet a que llegue más texto. Unos valores más altos ayudarán a reducir el riesgo de que Mudlet divida un fragmento de texto extenso (introduciendo saltos de línea no deseados en medio), lo cual puede impedir el funcionamiento de algunos disparadores. Unos valores más bajos aumentan el riesgo de que el texto se fragmente, pero pueden hacer que el juego se perciba con mayor capacidad de respuesta.&lt;/p&gt;&lt;p&gt;&lt;i&gt;El valor predeterminado, que es el que utilizaba Mudlet antes de que se añadiera este control, es de 0,300 segundos.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5084"/>
@@ -18659,7 +18642,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4685"/>
       <source>no key</source>
-      <translation>sin clave</translation>
+      <translation>sin tecla</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4690"/>
@@ -18684,8 +18667,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5081"/>
       <source>How long Mudlet waits for more text on games that do not send Go-Ahead or End-of-record signals. Larger values reduce the chance that long output is split mid-sentence and breaks triggers; smaller values feel more responsive. Default is 0.300 seconds.</source>
-      <translation>Cuánto tiempo espera Mudlet a que llegue más texto en los juegos que no envían señales Go-Ahead o End-of-Record. Los valores más altos reducen la probabilidad de que una salida extensa se divida a mitad de una frase y rompa los disparadores; los valores más bajos se perciben con una mayor velocidad de respuesta. El valor predeterminado es 0,300 segundos.
-</translation>
+      <translation>Cuánto tiempo espera Mudlet a que llegue más texto en los juegos que no envían señales Go-Ahead o End-of-Record. Los valores más altos reducen la probabilidad de que una salida extensa se divida a mitad de una frase y rompa los disparadores; los valores más bajos se perciben con una mayor velocidad de respuesta. El valor predeterminado es 0,300 segundos.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5183"/>
@@ -18754,14 +18736,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="804"/>
       <source>Weight:</source>
-      <translation>Peso:</translation>
+      <translation>Valor:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="817"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Este es el valor predeterminado para esta sala; se utilizará para cualquier salida &lt;i&gt;que conduzca a &lt;u&gt;esta sala&lt;/u&gt;&lt;/i&gt; y que no tenga su propio valor definido.&lt;/p&gt;
-
-</translation>
+      <translation>&lt;p&gt;Este es el valor predeterminado para esta sala; se utilizará para cualquier salida &lt;i&gt;que conduzca a &lt;u&gt;esta sala&lt;/u&gt;&lt;/i&gt; y que no tenga su propio valor definido.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="880"/>
@@ -18844,7 +18824,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1555"/>
       <location filename="../src/ui/room_exits.ui" line="1818"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Crea una salida en esta dirección con destino desconocido, incompatibles entre sí con el ID de sala de una salida real.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Crea una salida en esta dirección con destino desconocido, incompatibles entre sí con el id de sala de una salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="114"/>
@@ -18897,7 +18877,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
       <location filename="../src/ui/room_exits.ui" line="1371"/>
       <location filename="../src/ui/room_exits.ui" line="1505"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation>Se puede configurar tanto en una salida sin conectar como en una salida real.</translation>
+      <translation>&lt;p&gt;Se puede configurar tanto en una salida sin conectar como en una salida real.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="187"/>
@@ -18976,7 +18956,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="1527"/>
       <source>In</source>
-      <translation>Adentro</translation>
+      <translation>Dentro</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1667"/>
@@ -19006,12 +18986,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto.</trans
     <message>
       <location filename="../src/ui/room_exits.ui" line="1774"/>
       <source>Locked door</source>
-      <translation>Puerta asegurada</translation>
+      <translation>Puerta cerrada con llave</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1790"/>
       <source>Out</source>
-      <translation>Afuera</translation>
+      <translation>Fuera</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1973"/>
@@ -19088,8 +19068,7 @@ Estado</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1930"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, either: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Haz clic en un elemento para editarlo o modificarlo. Para eliminar una salida especial, puedes: seleccionarla y pulsar la tecla suprimir  del teclado; establecer su ID de sala de salida en un valor inferior a uno; o borrar el contenido del campo de nombre o comando.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Haz clic en un elemento para editarlo o modificarlo. Para eliminar una salida especial, puedes: seleccionarla y pulsar la tecla suprimir  del teclado; establecer su ID de sala de salida en un valor inferior a uno; o borrar el contenido del campo de nombre o comando.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1964"/>
@@ -19219,7 +19198,7 @@ or LUA script</source>
       <location filename="../src/ui/room_properties.ui" line="307"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation>Reestablecer</translation>
+      <translation>Restablecer</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
@@ -19479,7 +19458,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
       <source>AND / Multi-line (within: </source>
       <extracomment>This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.</extracomment>
-      <translation>Y / Multilínea (dentro de:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="481"/>
