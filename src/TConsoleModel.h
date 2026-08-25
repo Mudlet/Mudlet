@@ -78,8 +78,10 @@ struct TConsoleModel
     // model, so it can be left holding one whose Host has gone.
     QPointer<Host> mpHost;
     // On the main console model, the profile's colours, kept there by
-    // Host::refreshMainConsoleColors(); a sub-console's are its own, and no
-    // trigger reads them.
+    // Host::refreshMainConsoleColors(); colour triggers set to "default" match
+    // against these. A sub-console model's hold that one window's own colours
+    // instead, written by TConsole::setConsoleBgColor() and read back only by
+    // that console.
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QString mCurrentLine;
