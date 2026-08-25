@@ -2118,6 +2118,12 @@ bool Host::killTrigger(const QString& name)
     return mTriggerUnit.killTrigger(name);
 }
 
+// The only inputs installPackage() unpacks a folder into the profile for
+static bool packageUnpacksAFolder(const QString& fileName)
+{
+    return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
+}
+
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
@@ -2163,8 +2169,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QString actualFileName = fileName;
     std::unique_ptr<QTemporaryFile> tempFile;
 
-    if ((fileName.startsWith(QStringLiteral(":/")) || fileName.startsWith(QStringLiteral("qrc:/")))
-        && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
+    if ((fileName.startsWith(QStringLiteral(":/")) || fileName.startsWith(QStringLiteral("qrc:/"))) && packageUnpacksAFolder(fileName)) {
         tempFile = std::make_unique<QTemporaryFile>();
         if (!tempFile->open()) {
             return fail(qsl("failed to create a temporary file for the resource package: %1").arg(tempFile->errorString()));
@@ -2233,7 +2238,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         mpEditorDialog->doCleanReset();
     }
     QFile file2;
-    if (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive)) {
+    if (packageUnpacksAFolder(fileName)) {
         const QString _home = mudlet::getMudletPath(enums::profileHomePath, getName());
         const QString _dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
         // home directory for the PROFILE
@@ -2625,7 +2630,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             //get the pre package list so we don't get duplicates
             //report a failure as the restore not happening, not as an install the user never asked for
             if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); restored) {
-                restoredInPlace = true;
+                restoredInPlace = packageUnpacksAFolder(entry[0]);
             } else {
                 //: %1 is the module name, %2 is the reason the package sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed module \"%1\", but its package copy could not be restored: %2").arg(packageName, reason));
@@ -2640,7 +2645,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             mActiveModules.removeAll(packageName);
             mModulesLoadedOk.remove(packageName);
             if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true); restored) {
-                restoredInPlace = true;
+                restoredInPlace = packageUnpacksAFolder(entry[0]);
             } else {
                 //: %1 is the package name, %2 is the reason the module sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed package \"%1\", but its module copy could not be restored: %2").arg(packageName, reason));
@@ -2656,7 +2661,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     getActionUnit()->updateAllToolbars();
 
     // A dual install's restore unpacks the surviving half into this same folder,
-    // so taking it away now would delete what was just put back
+    // so taking it away now would delete what was just put back. A restore from a
+    // bare .xml unpacks nothing, and the folder is still ours to remove.
     if (!restoredInPlace) {
         const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
         removeDir(dest, dest);
