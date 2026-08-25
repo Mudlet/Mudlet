@@ -956,6 +956,17 @@ describe("Tests Other.lua functions", function()
   end)
 
   describe("Tests the functionality of phpTable", function()
+    -- Collects the entire iteration rather than a keyed table: a duplicated key
+    -- and a key left behind with a nil value are both only visible in the
+    -- sequence the pairs iterator yields.
+    local function entries(t)
+      local collected = {}
+      for key, value in t:pairs() do
+        collected[#collected + 1] = tostring(key) .. "=" .. tostring(value)
+      end
+      return collected
+    end
+
     -- specs that assert iteration order seed one key at a time: the constructor
     -- walks its arguments with pairs(), whose order is unspecified and is not
     -- insertion order
@@ -979,6 +990,27 @@ describe("Tests Other.lua functions", function()
         collected[#collected + 1] = tostring(key) .. "=" .. tostring(value)
       end
       assert.same({ "first=1", "second=2" }, collected)
+    end)
+
+    it("should yield a key holding false only once after it is overwritten", function()
+      local t = phpTable({ flag = false })
+      assert.is_false(t.flag)
+      t.flag = true
+      assert.same({ "flag=true" }, entries(t))
+    end)
+
+    it("should delete a key holding false when it is assigned nil", function()
+      local t = phpTable({ flag = false })
+      t.flag = nil
+      assert.is_nil(t.flag)
+      assert.same({}, entries(t))
+    end)
+
+    it("should not register a key that never existed when it is assigned nil", function()
+      local t = phpTable({ kept = 1 })
+      t.ghost = nil
+      assert.is_nil(t.ghost)
+      assert.same({ "kept=1" }, entries(t))
     end)
 
     it("should keep the original position of a key when its value is overwritten", function()

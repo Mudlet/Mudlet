@@ -41,10 +41,10 @@
 
 #include <hunspell/hunspell.h>
 
-#include <deque>
 #include <list>
 #include <map>
 #include <memory>
+#include <vector>
 
 // This contains the details of a font that we might want to maintain a record
 // of, independently of a QFont instance:
@@ -153,9 +153,6 @@ class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
-class THyperlinkCompactManager;
-class THyperlinkSelectionManager;
-class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -260,21 +257,12 @@ public:
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
 
-    THyperlinkCompactManager& getHyperlinkCompactManager()
-    {
-        Q_ASSERT(mpHyperlinkCompactManager);
-        return *mpHyperlinkCompactManager;
-    }
-    THyperlinkSelectionManager& getHyperlinkSelectionManager()
-    {
-        Q_ASSERT(mpHyperlinkSelectionManager);
-        return *mpHyperlinkSelectionManager;
-    }
-    THyperlinkVisibilityManager& getHyperlinkVisibilityManager()
-    {
-        Q_ASSERT(mpHyperlinkVisibilityManager);
-        return *mpHyperlinkVisibilityManager;
-    }
+    // Model state, not view state: the main console shares Host's, so a link
+    // concealed while the profile was open stays concealed once the widget has
+    // gone.
+    THyperlinkCompactManager& getHyperlinkCompactManager() { return mpModel->mHyperlinkCompactManager; }
+    THyperlinkSelectionManager& getHyperlinkSelectionManager() { return mpModel->mHyperlinkSelectionManager; }
+    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
     void changeColors();
@@ -283,7 +271,7 @@ public:
     void print(const QString& msg);
     void print(const char*);
     void print(const QString& msg, QColor fgColor, QColor bgColor);
-    void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
@@ -483,25 +471,13 @@ protected:
 private slots:
     void slot_adjustAccessibleNames();
     void slot_clearSearchResults();
+    void slot_hyperlinkVisibilityChanged();
     void focusOnSearchResultAndAnnounce(int searchX, int searchY);
 
 private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
-    void initializeOSC8StyleFeature();
-    void initializeOSC8MenuFeature();
-    void initializeOSC8TooltipFeature();
-    void initializeOSC8VisibilityFeature();
-    void initializeOSC8SelectionFeature();
-    void initializeOSC8SpoilerFeature();
-    void initializeOSC8DisabledFeature();
-    void initializeOSC8TitleFeature();
-
-    // OSC 8 hyperlink managers
-    std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;
-    std::unique_ptr<THyperlinkSelectionManager> mpHyperlinkSelectionManager;
-    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
