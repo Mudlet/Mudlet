@@ -2694,6 +2694,8 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     const QString windowName{windowNameArg};
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
+        // Host outlives its main console, so there may be no view to restyle -
+        // the buffer's copy of the colours still has to follow:
         if (host.mpConsole) {
             host.mpConsole->setConsoleBgColor(r, g, b, alpha);
         } else {
