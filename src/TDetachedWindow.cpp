@@ -336,6 +336,7 @@ void TDetachedWindow::createMenus()
     //: This explains the "Show map" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuShowMapAction->setStatusTip(tr("Show or hide the game map."));
     connect(mpMenuShowMapAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleMap);
+    connect(toolboxMenu, &QMenu::aboutToShow, this, &TDetachedWindow::slot_updateShowMapActionText);
     toolboxMenu->addAction(mpMenuShowMapAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
@@ -3313,6 +3314,24 @@ void TDetachedWindow::slot_toggleMap()
     withCurrentProfileActive([this]() {
         mudlet::self()->slot_showMapperDialog();
     });
+}
+
+// The Toolbox map entry toggles the mapper, so its label has to say which way
+// the next activation will take it. Computed as the menu opens rather than
+// tracked on every path that can show or hide a mapper.
+void TDetachedWindow::slot_updateShowMapActionText()
+{
+    Host* pHost = nullptr;
+    if (!mCurrentProfileName.isEmpty() && mudlet::self()) {
+        pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    }
+    if (pHost && pHost->mapperShown()) {
+        //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map
+        mpMenuShowMapAction->setText(tr("Hide &map"));
+    } else {
+        //: Toolbox menu entry of a detached window while no map is on screen - activating it shows the map, creating it if need be
+        mpMenuShowMapAction->setText(tr("Show &map"));
+    }
 }
 
 void TDetachedWindow::slot_toggleCompactInputLine()

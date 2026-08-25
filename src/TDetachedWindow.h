@@ -152,6 +152,7 @@ private slots:
 
     // Additional slots for new menu actions
     void slot_toggleMap();
+    void slot_updateShowMapActionText();
     void slot_toggleCompactInputLine();
     void slot_toggleReplay();
     void slot_toggleLogging();

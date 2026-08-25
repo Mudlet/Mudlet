@@ -4989,19 +4989,33 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
     createMapper(loadDefaultMap);
 }
 
+// Whether the profile's mapper currently counts as on screen - the same
+// reading that toggleMapperVisibility() bases its decision on, shared so a
+// menu label saying what the next activation will do cannot disagree with it.
+bool Host::mapperShown() const
+{
+    if (!mpMap || !mpMap->mpMapper) {
+        return false;
+    }
+    if (mpMap->mpMapper->isFloatAndDockable()) {
+        // When in a dock widget, check the parent's visibility, not the child's,
+        // to correctly handle the case where the dock widget was closed via X button.
+        return mpMap->mpMapper->parentWidget()->isVisible();
+    }
+    return mpMap->mpMapper->isVisible();
+}
+
 void Host::toggleMapperVisibility()
 {
     auto pMap = mpMap.data();
+    const bool shown = mapperShown();
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
         // to a minimal size} the mapper inside the container dock widget). This
         // is the same as the case for a TConsole inside a TDockWidget in
         // (void) TDockWidget::setVisible(bool).
-        // When in a dock widget, check the parent's visibility, not the child's,
-        // to correctly handle the case where the dock widget was closed via X button.
-        const bool isCurrentlyVisible = pMap->mpMapper->parentWidget()->isVisible();
-        if (isCurrentlyVisible) {
+        if (shown) {
             pMap->mpMapper->parentWidget()->setVisible(false);
         } else {
             // When showing, show child first then parent - same pattern as TDockWidget
@@ -5009,8 +5023,7 @@ void Host::toggleMapperVisibility()
             pMap->mpMapper->parentWidget()->setVisible(true);
         }
     } else {
-        const bool visStatus = pMap->mpMapper->isVisible();
-        pMap->mpMapper->setVisible(!visStatus);
+        pMap->mpMapper->setVisible(!shown);
     }
 }
 

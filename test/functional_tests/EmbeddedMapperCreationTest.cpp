@@ -186,6 +186,28 @@ private slots:
         QVERIFY2(mapOpenEventCountIs(1), "the toolbar map action raised mapOpenEvent over an existing embedded mapper");
     }
 
+    // The Toolbox map entry's label is recomputed as the menu opens so that it
+    // says what the next activation will do. The update slot is driven
+    // directly here - opening the real menu needs a user.
+    void test_showMapMenuLabelSaysWhatTheNextActivationDoes()
+    {
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Show map"));
+
+        mudlet::self()->show();
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        qApp->processEvents();
+        QVERIFY2(mpHost->mapperShown(), "the embedded mapper did not come up on screen, so the Hide map branch cannot be exercised");
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Hide map"));
+
+        // What the menu entry itself runs - with a mapper alive this toggles it away
+        mudlet::self()->slot_mapper();
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Show map"));
+    }
+
 private:
     void watchMapOpenEvent()
     {
