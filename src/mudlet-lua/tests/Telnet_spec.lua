@@ -199,6 +199,49 @@ describe("Tests MSDP subnegotiation handling", function()
     assert.equals("north", msdp.MSDPROOM.EXITS)
     assert.equals("line one\nline two", msdp.MSDPROOM.DESC)
   end)
+
+    -- The specification restricts a name to [A-Za-z_][A-Za-z0-9_]*, so none of the
+    -- names below is one a conforming server can send. They are here because the
+    -- prefix strip sized itself from the raw name while the JSON carried the escaped
+    -- one, so a name that grew when escaped left part of its own prefix behind and
+    -- took the variable down with it.
+    it("keeps a variable whose name carries a control code", function()
+      for _, case in ipairs({{"MSDPNTAB", 9}, {"MSDPNCR", 13}, {"MSDPNBEL", 7}}) do
+        local name = case[1] .. string.char(case[2]) .. "X"
+        feedMsdp(VAR .. name .. VAL .. "value")
+        assert.equals("value", msdp[name], (name:gsub("%c", "?")) .. " went missing, so the strip and the escaped name disagree")
+      end
+    end)
+
+    it("keeps a variable whose name carries a backslash", function()
+      -- two bytes longer once escaped, and the key is the byte the game sent rather
+      -- than the escape the JSON needed
+      feedMsdp(VAR .. "MSDPNSLASHX" .. "\\Y" .. VAL .. "value")
+      assert.equals("value", msdp["MSDPNSLASHX\\Y"])
+    end)
+
+    it("keeps a non-ASCII value as the bytes the game sent", function()
+      -- char is signed on some targets, so every byte >= 0x80 reads as below 0x20 at
+      -- the escape test and arrives as \u00xx mojibake without the cast there
+      -- decimal escapes: Lua 5.1 has no \x form, and "\xC3" there is a literal
+      -- x, C, 3 - which would make this spec pass on ASCII and prove nothing
+      feedMsdp(VAR .. "MSDPUTF8" .. VAL .. "caf\195\169")
+      assert.equals("caf\195\169", msdp.MSDPUTF8)
+    end)
+
+    it("keeps every variable of a batched update, as a string", function()
+      -- a server answering REPORT sends many at once. Flushing one variable threw
+      -- away the opening quote of the next name, so a numeric value came back a
+      -- number and a non-numeric one went missing entirely.
+      feedMsdp(VAR .. "MSDPB1" .. VAL .. "1200"
+               .. VAR .. "MSDPB2" .. VAL .. "1500"
+               .. VAR .. "MSDPB3" .. VAL .. "Market Square"
+               .. VAR .. "MSDPB4" .. VAL .. "a rat")
+      assert.equals("1200", msdp.MSDPB1)
+      assert.equals("1500", msdp.MSDPB2, "a numeric value mid-batch came back as a " .. type(msdp.MSDPB2))
+      assert.equals("Market Square", msdp.MSDPB3, "a non-numeric value mid-batch went missing")
+      assert.equals("a rat", msdp.MSDPB4)
+    end)
 end)
 
 describe("Tests addSupportedTelnetOption", function()
