@@ -3516,7 +3516,7 @@ bool Host::getMMCPShowSnoopInMainConsole()
     return mMMCPShowSnoopInMainConsole;
 }
 
-QString Host::getSpellDic()
+QString Host::getSpellDic() const
 {
     if (!mSpellDic.isEmpty()) {
         return mSpellDic;
@@ -3532,12 +3532,11 @@ QString Host::getSpellDic()
 
 void Host::setSpellDic(const QString& newDict)
 {
-    bool isChanged = false;
-    if (!newDict.isEmpty() && mSpellDic != newDict) {
-        mSpellDic = newDict;
-        isChanged = true;
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
     }
-    if (isChanged && mpConsole) {
+    mSpellDic = newDict;
+    if (mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
     }
 }
