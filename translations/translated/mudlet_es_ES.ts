@@ -6967,59 +6967,61 @@ Es: &quot;%1&quot;
 If the display looks garbled, please reconnect to the game.</source>
       <extracomment>%1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.</extracomment>
       <translation>[ ADVERTENCIA  ]  - Error de descompresión MCCP (%1), compresión desactivada.
-Si la pantalla se ve borrosa o con caracteres extraños, por favor reconéctate al juego.
-</translation>
+Si la pantalla se ve borrosa o con caracteres extraños, por favor reconéctate al juego.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5141"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Cargando archivo de grabación:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5165"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede reproducir el archivo &quot;%1&quot;, el mensaje de error ha sido: &quot;el archivo de grabación parece estar dañado&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5167"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ]  - La grabación se ha abortado porque el archivo parece estar dañado.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5176"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation>No se puede realizar la reproducción, es posible que ya haya otra en curso. Inténtalo de nuevo cuando haya terminado.</translation>
+      <translation>No se puede realizar la grabación, es posible que ya haya otra en curso. Inténtalo de nuevo cuando haya terminado.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5178"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ ADVERTENCIA ] - No se puede realizar la grabación, es posible que ya haya otra en curso.
+Inténtalo de nuevo cuando haya terminado.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5186"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede leer el archivo &quot;%1&quot;, el mensaje de error ha sido: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5188"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - No se puede leer el archivo &quot;%1&quot;,
+el mensaje de error ha sido: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5227"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[  OK  ]  - La reproducción ha finalizado.
+      <translation>[  OK  ]  - La grabación ha finalizado.
 </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5371"/>
       <source>[ WARN  ]  - Too much data to process at once, some may have been lost.</source>
       <extracomment>Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.</extracomment>
-      <translation>[ ADVERTENCIA  ]  - Demasiados datos para procesar a la vez, es posible que algunos se hayan perdido.
-</translation>
+      <translation>[ ADVERTENCIA  ]  - Demasiados datos para procesar a la vez, es posible que algunos se hayan perdido.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5947"/>
@@ -7062,8 +7064,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ctelnet.cpp" line="5992"/>
       <source>[ WARN ]  - This game appears to use character-at-a-time mode, which Mudlet does not support. Input may not work as expected. Consider using keybindings for immediate key response instead.</source>
       <extracomment>Warning shown when server uses character-at-a-time mode which Mudlet doesn&apos;t support</extracomment>
-      <translation>[ ADVERTENCIA ]  - Este juego parece utilizar el modo "carácter a carácter", el cual Mudlet no admite. El texto de entrada podría no funcionar como se espera. Considera usar atajos de teclado para obtener una respuesta inmediata de las teclas en su lugar.
-</translation>
+      <translation>[ ADVERTENCIA ]  - Este juego parece utilizar el modo "carácter a carácter", el cual Mudlet no admite. El texto de entrada podría no funcionar como se espera. Considera usar atajos de teclado para obtener una respuesta inmediata de las teclas en su lugar.</translation>
     </message>
   </context>
   <context>
@@ -7083,8 +7084,7 @@ error message was: &quot;%2&quot;.</source>
       <translation>&lt;small&gt;Elige:&lt;ul&gt;&lt;li&gt;uno de los 16 colores básicos de abajo&lt;/li&gt;
 &lt;li&gt;haz clic en el botón &lt;i&gt;más&lt;/i&gt; para acceder a otros colores del conjunto de 256 colores, luego sigue las instrucciones para seleccionar un color de esa parte de los 256 colores admitidos; si dicho color ya está en uso, esa parte ya se estará mostrando&lt;/li&gt;
 &lt;li&gt;haz clic en los botones &lt;i&gt;Predeterminado&lt;/i&gt; o &lt;i&gt;Ignorar&lt;/i&gt; en la parte inferior para  otros casos especiales&lt;/li&gt;
-&lt;li&gt;haz clic en &lt;i&gt;Cancelar&lt;/i&gt; para cerrar este diálogo sin realizar ningún cambio&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;
-</translation>
+&lt;li&gt;haz clic en &lt;i&gt;Cancelar&lt;/i&gt; para cerrar este diálogo sin realizar ningún cambio&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="59"/>
@@ -7129,7 +7129,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="364"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation>Escala de grises ANSI 24 [232-255] - ajuste el gris y haga clic en el botón para seleccionar el número de color coincidente:</translation>
+      <translation>Escala de grises ANSI 24 [232-255] - Ajuste el gris y haga clic en el botón para seleccionar el número de color que coincida:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="376"/>
@@ -7157,7 +7157,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation>Compositor de noticias y mensajes</translation>
+      <translation>Redactor de noticias y mensajes</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="86"/>
@@ -7167,8 +7167,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="99"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Guardar (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Guardar (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="102"/>
@@ -7211,18 +7210,18 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="535"/>
       <source>Profile name:</source>
-      <translation>Nombre de perfil:</translation>
+      <translation>Nombre del perfil:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="550"/>
       <source>Profile name</source>
-      <translation>Nombre de perfil</translation>
+      <translation>Nombre del perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="553"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation>Un nombre único para el perfil, pero limitado únicamente a un subconjunto de caracteres ASCII.</translation>
+      <translation>Un nombre único para el perfil, pero limitado únicamente a un subconjunto de caracteres ascii.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="563"/>
@@ -7257,8 +7256,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="624"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation>El puerto que se utiliza junto con el nombre del servidor para establecer la conexión con el servidor del juego. Si no se especifica, se usará el valor predeterminado 23 para conexiones &quot;Telnet&quot;. Las conexiones seguras pueden requerir un número de puerto diferente.
-</translation>
+      <translation>El puerto que se utiliza junto con el nombre del servidor para establecer la conexión con el servidor del juego. Si no se especifica, se usará el valor predeterminado 23 para conexiones &quot;Telnet&quot;. Las conexiones seguras pueden requerir un número de puerto diferente.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="643"/>
@@ -7268,7 +7266,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="646"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation>Hacer que Mudlet utilice un protocolo SSL/TLS seguro en lugar de uno no cifrado.</translation>
+      <translation>Hacer que Mudlet utilice un protocolo SSL/TLS seguro en lugar de uno no cifrado</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="652"/>
@@ -7323,7 +7321,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="779"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation>Iniciar automáticamente este perfil cuando se inicie Mudlet.</translation>
+      <translation>Iniciar automáticamente este perfil cuando se inicie Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="792"/>
@@ -7364,8 +7362,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="715"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation>Contraseña del personaje. Ten en cuenta que la contraseña no se cifra en el almacenamiento
-</translation>
+      <translation>Contraseña del personaje. Ten en cuenta que la contraseña no se cifra en el almacenamiento</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="773"/>
@@ -7408,8 +7405,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="44"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Selecciona el estilo, el color y si deseas finalizar la línea con una punta de flecha.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Selecciona el estilo, el color y si deseas finalizar la línea con una punta de flecha.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="123"/>
@@ -7447,7 +7443,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="45"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation>Elige el formato de línea, el color y la opción de flecha, y luego selecciona la opción de salir para comenzar a dibujar.</translation>
+      <translation>Elige el formato de línea, el color y la opción de flecha, y luego selecciona la opción de salir para comenzar a dibujar</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="64"/>
@@ -7472,20 +7468,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="48"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Al seleccionar una salida, se procede inmediatamente a dibujar el primer segmento de línea desde el punto central de la sala.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Al seleccionar una salida, se procede inmediatamente a dibujar el primer segmento de línea desde el punto central de la sala.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="61"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Selecciona el estilo, el color y si deseas finalizar la línea con una punta de flecha ANTES de elegir la salida para la cual dibujar la línea...&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Selecciona el estilo, el color y si deseas finalizar la línea con una punta de flecha ANTES de elegir la salida para la cual dibujar la línea...&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="188"/>
       <source>&lt;p&gt;Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Selecciona una salida normal para comenzar a dibujar una línea para ella; los botones se muestran hundidos si ya tienen una línea personalizada de este tipo y desactivados si no hay una salida en esa dirección.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Selecciona una salida normal para comenzar a dibujar una línea para ella; los botones se muestran hundidos si ya tienen una línea personalizada de este tipo y desactivados si no hay una salida en esa dirección.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="191"/>
@@ -7555,32 +7548,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="445"/>
       <source>&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Selecciona una salida especial para comenzar a dibujar una línea para ella; la primera columna aparecerá marcada si la salida ya tiene una línea personalizada de este tipo.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Selecciona una salida especial para comenzar a dibujar una línea para ella; la primera columna aparecerá marcada si la salida ya tiene una línea personalizada de este tipo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="504"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Indica si ya existe una línea personalizada para esta salida especial; se reemplazará si se selecciona la salida.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Indica si ya existe una línea personalizada para esta salida especial; se reemplazará si se selecciona la salida.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="515"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;La sala a la que conduce esta salida especial.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;La sala a la que conduce esta salida especial.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="526"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;El comando o script de Lua que se dirige a la sala dada.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;El comando o script de Lua que se dirige a la sala dada.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="562"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Para eliminar una línea personalizada: cancela este diálogo, selecciona la línea y haz clic con el botón derecho para obtener la opción de &amp;quot;eliminar&amp;quot;.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Para eliminar una línea personalizada: Cancela este diálogo, selecciona la línea y haz clic con el botón derecho para obtener la opción de &amp;quot;eliminar&amp;quot;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="448"/>
@@ -7591,7 +7579,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/custom_lines.ui" line="500"/>
       <source>Has
 custom line?</source>
-      <translation>Tiene línea personalizada?</translation>
+      <translation>¿Tiene línea personalizada?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="512"/>
@@ -7926,7 +7914,7 @@ Cuenta</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="6179"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>adentro</translation>
+      <translation>dentro</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6181"/>
@@ -7938,7 +7926,7 @@ Cuenta</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="6183"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>afuera</translation>
+      <translation>fuera</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="6185"/>
@@ -7986,8 +7974,7 @@ Cuenta</translation>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentación&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Código fuente&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Funciones/Errores&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-</translation>
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Funciones/Errores&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="278"/>
@@ -8002,68 +7989,57 @@ Cuenta</translation>
 &lt;p&gt;Muchos iconos se han tomado del &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;tema de iconos KDE4 oxygen&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; en &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{archivo de wayback machine}&lt;/sup&gt;&lt;/a&gt; o &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;. La mayoría de los restantes son de Thorsten Wilms, o de Stephen Lyons combinando partes del trabajo de Thorsten con las otras fuentes.&lt;/p&gt;
 &lt;p&gt;Agradecimientos especiales a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; y &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. Han aportado muchas buenas ideas y, por lo tanto, han ayudado a mejorar sustancialmente el entorno de desarrollo de scripts.&lt;/p&gt;
 &lt;p&gt;Gracias a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;), quien nos reunió a todos y nos inspiró con su proyecto KMuddy. Mudlet utiliza parte del código telnet que escribió para su proyecto KMuddy (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
-&lt;p&gt;Agradecimientos especiales a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) por darnos algunos valiosos consejos.&lt;/p&gt;
-</translation>
+&lt;p&gt;Agradecimientos especiales a &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) por darnos algunos valiosos consejos.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="853"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; se construye sobre los hombros de otros proyectos del mundo FOSS (software libre y de código abierto); además de utilizar muchos componentes GPL, también hacemos uso de software de terceros con otras licencias:&lt;/p&gt;
-</translation>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; se construye sobre los hombros de otros proyectos del mundo FOSS (software libre y de código abierto); además de utilizar muchos componentes GPL, también hacemos uso de software de terceros con otras licencias:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1225"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Biblioteca Communi IRC&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Biblioteca Communi IRC&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1228"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Partes del código de &lt;tt&gt;irctextformat.cpp&lt;/tt&gt; provienen de Konversation y los derechos de autor pertenecen a:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Partes del código de &lt;tt&gt;irctextformat.cpp&lt;/tt&gt; provienen de Konversation y los derechos de autor pertenecen a:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1234"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1237"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1240"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Lua_yajl - Interfaz de Lua 5.1 para yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Brian Maher &amp;lt;maherb en brimworks punto com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Lua_yajl - Interfaz de Lua 5.1 para yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Brian Maher &amp;lt;maherb en brimworks punto com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1244"/>
       <source>&lt;h2&gt;&lt;u&gt;Luautf8 - A UTF-8 support module for Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Luautf8 - Un módulo de soporte UTF-8 para Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Luautf8 - Un módulo de soporte UTF-8 para Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1247"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Conectividad de la base de datos para el lenguaje de programación Lua (componente Sqlite3).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Conectividad de la base de datos para el lenguaje de programación Lua (componente Sqlite3).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1303"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifica las funciones estándar de Lua para que funcionen con nombres de archivos en UTF-8 en Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;GitHub GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifica las funciones estándar de Lua para que funcionen con nombres de archivos en UTF-8 en Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;GitHub GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1255"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;LuaZip - Lectura de archivos dentro de archivos zip&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaZip - Lectura de archivos dentro de archivos zip&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Autor: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="153"/>
@@ -8105,7 +8081,7 @@ Cuenta</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="182"/>
       <source>Joined in 2020, reworking much of the 2D mapper and adding many Lua API features. Outside the client they build Mudlet Web, the documentation extract that powers autocompletion in code editors, and the tools that share Mudlet maps online.</source>
       <extracomment>about:Delwing</extracomment>
-      <translation>Se unió en 2020, rediseñando gran parte del mapeador 2D y añadiendo muchas funciones a la API de Lua. Fuera del cliente, desarrolla Mudlet Web, la extracción de documentación que alimenta el autocompletado en los editores de código, y las herramientas que permiten compartir mapas de Mudlet en línea</translation>
+      <translation>Se unió en 2020, rediseñando gran parte del mapeador 2D y añadiendo muchas funciones a la API de Lua. Fuera del cliente, desarrolla Mudlet Web, la extracción de documentación que alimenta el autocompletado en los editores de código, y las herramientas que permiten compartir mapas de Mudlet en línea.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="187"/>
@@ -8147,7 +8123,7 @@ Cuenta</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="212"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <extracomment>about:Bruno Bigras</extracomment>
-      <translation>Desarrolló el script de compilación original de CMake y ha enviado una serie de parches.</translation>
+      <translation>Desarrolló el script de compilación original de cmake y ha enviado una serie de parches.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="215"/>
@@ -8171,7 +8147,7 @@ Cuenta</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="225"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <extracomment>about:TheFae</extracomment>
-      <translation>Hizo maravillas para rejuvenecer nuestro sitio web en 2017, pero prefiere un poco de anonimato —si eres un &lt;i&gt;SpamBot&lt;/i&gt;, ahora no podrás entrar en nuestros foros. También ha realizado algunas contribuciones útiles al código principal en C++ y esperamos con interés futuras revisiones y trabajos en esa área.</translation>
+      <translation>Hizo maravillas para rejuvenecer nuestro sitio web en 2017, pero prefiere un poco de anonimato — Si eres un &lt;i&gt;SpamBot&lt;/i&gt;, ahora no podrás entrar en nuestros foros. También ha realizado algunas contribuciones útiles al código principal en C++ y esperamos con interés futuras revisiones y trabajos en esa área.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="230"/>
@@ -8248,48 +8224,40 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1270"/>
       <source>&lt;h2&gt;&lt;u&gt;Dblsqd (derived work)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Dblsqd (obra derivada)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Dblsqd (obra derivada)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1273"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Sparkle - Actualizador de macOS&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Sparkle - Actualizador de macOS&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1283"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation>&lt;h4&gt;bspatch.c y bsdiff.c, de bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c y sais.c, de sais-lite (07/08/2010) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h4&gt;bspatch.c y bsdiff.c, de bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c y sais.c, de sais-lite (07/08/2010) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1293"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1308"/>
       <source>&lt;h2&gt;&lt;u&gt;Sentry Native - Crash reporting SDK&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Sentry (https://sentry.io) and individual contributors.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Sentry Native - SDK de reporte de errores&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Sentry (https://sentry.io) y colaboradores individuales.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Sentry Native - SDK de reporte de errores&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Sentry (https://sentry.io) y colaboradores individuales.&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1313"/>
       <source>&lt;h2&gt;&lt;u&gt;Sword 3D Model&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Model obtained from &lt;a href=&quot;https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63&quot;&gt;Sketchfab&lt;/a&gt;&lt;br&gt;Author: &lt;a href=&quot;https://sketchfab.com/minghau&quot;&gt;minghauLoh&lt;/a&gt;&lt;br&gt;Licensed under &lt;a href=&quot;https://creativecommons.org/licenses/by/4.0/&quot;&gt;CC BY 4.0&lt;/a&gt;&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Modelo 3D de Sword&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Modelo obtenido de &lt;a href=&quot;https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63&quot;&gt;Sketchfab&lt;/a&gt;&lt;br&gt;Autor: &lt;a href=&quot;https://sketchfab.com/minghau&quot;&gt;minghauLoh&lt;/a&gt;&lt;br&gt;Licenciado bajo &lt;a href=&quot;https://creativecommons.org/licenses/by/4.0/&quot;&gt;CC BY 4.0&lt;/a&gt;&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Modelo 3D de Sword&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Modelo obtenido de &lt;a href=&quot;https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63&quot;&gt;Sketchfab&lt;/a&gt;&lt;br&gt;Autor: &lt;a href=&quot;https://sketchfab.com/minghau&quot;&gt;minghauLoh&lt;/a&gt;&lt;br&gt;Licenciado bajo &lt;a href=&quot;https://creativecommons.org/licenses/by/4.0/&quot;&gt;CC BY 4.0&lt;/a&gt;&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1483"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation>
-                            Estas formidables personas serán recordadas con cariño para siempre&lt;br&gt;por su generoso apoyo financiero en el Patreon de Mudlet:
-                            
-</translation>
+      <translation>                            Estas formidables personas serán recordadas con cariño para siempre&lt;br&gt;por su generoso apoyo financiero en el Patreon de Mudlet:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1492"/>
@@ -8343,20 +8311,17 @@ Cuenta</translation>
 &lt;p&gt;Mudlet&apos;s own source code is released under the &lt;a href=&quot;https://www.gnu.org/licenses/old-licenses/gpl-2.0.html#SEC1&quot;&gt;GNU Public License version 2&lt;/a&gt; or later; however, because we use elements from other projects with (or which are only compatible with) a GPL version 3 licence, the combined work has to be offered to you under a GNU Public Licence 3.0 only. This is reproduced below:&lt;/p&gt;</source>
       <extracomment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;As only the English form is considered the official version of the license, the following is stated in that language:&apos; to replace &apos;This is reproduced below:&apos;...</extracomment>
       <translation>&lt;p&gt;Mudlet fue escrito originalmente por Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
-&lt;p&gt;El propio código fuente de Mudlet se publica bajo la  &lt;a href=&quot;https://gnu.org Pública General de GNU versión 2&lt;/a&gt; o posterior; sin embargo, debido a que utilizamos elementos de otros proyectos con una licencia GPL versión 3 (o que solo son compatibles con ella), la obra combinada se le debe ofrecer bajo los términos exclusivos de la Licencia Pública General de GNU 3.0. Esta se reproduce a continuación:&lt;/p&gt;
-</translation>
+&lt;p&gt;El propio código fuente de Mudlet se publica bajo la  &lt;a href=&quot;https://www.gnu.org/licenses/old-licenses/gpl-2.0.html#SEC1&quot;&gt; Pública General de GNU versión 2&lt;/a&gt; o posterior; sin embargo, debido a que utilizamos elementos de otros proyectos con una licencia GPL versión 3 (o que solo son compatibles con ella), la obra combinada se le debe ofrecer bajo los términos exclusivos de la Licencia Pública General de GNU 3.0. Esta se reproduce a continuación:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1250"/>
       <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre2 - Enlace a biblioteca de expresiones regulares (variante PCRE2).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre2 - Enlace a biblioteca de expresiones regulares (variante PCRE2).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1260"/>
       <source>&lt;h2&gt;&lt;u&gt;Edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2026 by Rick Blommers&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;Edbee - Componente de edición multifunción &lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2026 por Rick Blommers&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;Edbee - Componente de edición multifunción &lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2026 por Rick Blommers&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1263"/>
@@ -8366,32 +8331,28 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1265"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2021 K.Kosako &amp;lt;kkosako0@gmail.com&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;LICENCIA de Oniguruma&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2021 K.Kosako &amp;lt;kkosako0@gmail.com&amp;gt;&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;LICENCIA de Oniguruma&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2021 K.Kosako &amp;lt;kkosako0@gmail.com&amp;gt;&lt;br&gt;Todos los derechos reservados.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1296"/>
       <source>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API for storing passwords securely&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2026 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;QtKeyChain - API de Qt independiente de la plataforma para almacenar contraseñas de forma segura&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2026 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;QtKeyChain - API de Qt independiente de la plataforma para almacenar contraseñas de forma segura&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2026 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1299"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.com&amp;gt;.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - parte de KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, una empresa del Grupo KDAB, &amp;lt;info@kdab.com&amp;gt;.&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - parte de KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, una empresa del Grupo KDAB, &amp;lt;info@kdab.com&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1319"/>
       <source>&lt;h2&gt;&lt;u&gt;OpenSSL 3.x - Open Source Toolkit for Secure Transport Layer Security&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1995-2026 The OpenSSL Project Authors.&lt;br&gt;All Rights Reserved&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;OpenSSL 3.x - Kit de herramientas de código abierto para la Seguridad de la Capa de Transporte (TLS)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1995-2026 Autores del Proyecto OpenSSL.&lt;br&gt;Todos los derechos reservados&lt;/h3&gt;
-</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;OpenSSL 3.x - Kit de herramientas de código abierto para la Seguridad de la Capa de Transporte (TLS)&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1995-2026 Autores del Proyecto OpenSSL.&lt;br&gt;Todos los derechos reservados&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1520"/>
       <location filename="../src/dlgAboutDialog.cpp" line="1548"/>
       <source>CPU (64-bits)</source>
-      <translation>CPU (%1-bits)</translation>
+      <translation>CPU (64-bits)</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1531"/>
@@ -8517,12 +8478,12 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>White (Light gray)</source>
-      <translation>Blanco (gris claro)</translation>
+      <translation>Blanco (Gris claro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Light black (Dark gray)</source>
-      <translation>Negro claro (gris oscuro)</translation>
+      <translation>Negro claro (Gris oscuro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
@@ -8637,12 +8598,12 @@ Cuenta</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="403"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <extracomment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</extracomment>
-      <translation>Botón para seleccionar un juego MUD; haz doble clic en él para conectarte y empezar a jugar.</translation>
+      <translation>Botón para seleccionar un juego mud; haz doble clic en él para conectarte y empezar a jugar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1484"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation>Este perfil está cargado actualmente; ciérrelo antes de cambiar los parámetros de conexión.</translation>
+      <translation>Este perfil está cargado actualmente; ciérralo antes de cambiar los parámetros de conexión.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1871"/>
@@ -8697,8 +8658,7 @@ Cuenta</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="230"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;img src=&quot;tutorialIcon&quot;/&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;Play a short guided adventure to learn&lt;br&gt;how to navigate in games, use triggers, aliases, and scripting.&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;a href=&quot;mudlet-tutorial&quot;&gt;Start Tutorial&lt;/a&gt;&lt;/center&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <extracomment>Welcome message shown on first launch, focused on starting the tutorial.</extracomment>
-      <translation>&lt;p&gt;&lt;center&gt;&lt;img src=&quot;tutorialIcon&quot;/&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;¡Te damos la bienvenida a Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;Juega una breve aventura guiada para aprender&lt;br&gt;a moverte en los juegos, usar activadores, alias y la creación de scripts.&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;a href=&quot;mudlet-tutorial&quot;&gt;Comenzar tutorial&lt;/a&gt;&lt;/center&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;El equipo de Mudlet &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;img src=&quot;tutorialIcon&quot;/&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;¡Te damos la bienvenida a Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;Juega una breve aventura guiada para aprender&lt;br&gt;a moverte en los juegos, usar activadores, alias y la creación de scripts.&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;a href=&quot;mudlet-tutorial&quot;&gt;Comenzar tutorial&lt;/a&gt;&lt;/center&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;El equipo de Mudlet &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="243"/>
@@ -8719,12 +8679,12 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="263"/>
       <source>copy the entire profile to new one that will require a different new name.</source>
-      <translation>Copie el perfil completo a uno nuevo que requerirá un nombre diferente.</translation>
+      <translation>copie el perfil completo a uno nuevo que requerirá un nombre diferente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="275"/>
       <source>copy profile settings</source>
-      <translation>Copiar configuración del perfil</translation>
+      <translation>copiar configuración del perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="276"/>
@@ -8734,7 +8694,7 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="321"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
-      <translation>Copia la configuración y otras partes del perfil a uno nuevo que requerirá un nombre diferente.</translation>
+      <translation>Copia la configuración y otras partes del perfil a uno nuevo que requerirá un nombre diferente</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="398"/>
@@ -8778,7 +8738,7 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="166"/>
       <source>games shown</source>
-      <translation>Juegos mostrados</translation>
+      <translation>juegos mostrados</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="167"/>
@@ -8818,7 +8778,7 @@ Cuenta</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1066"/>
       <source>Nothing has been saved for %1 yet, so there is nothing to remove</source>
       <extracomment>%1 is a game name, e.g. Achaea, that has never been played and so has no profile to remove</extracomment>
-      <translation>Aún no se ha guardado nada para %1, por lo que no hay nada que eliminar.</translation>
+      <translation>Aún no se ha guardado nada para %1, por lo que no hay nada que eliminar</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1174"/>
@@ -8830,8 +8790,7 @@ Cuenta</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1177"/>
       <source>Nothing has been saved for &apos;%1&apos; yet, so there was nothing to remove.</source>
       <extracomment>%1 is a game name, e.g. Achaea, that has never been played and so has nothing saved to remove</extracomment>
-      <translation>Aún no se ha guardado nada para &apos;%1&apos;, por lo que no hay nada que eliminar.
-</translation>
+      <translation>Aún no se ha guardado nada para &apos;%1&apos;, por lo que no hay nada que eliminar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1898"/>
@@ -8857,7 +8816,7 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2430"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation>El número de puerto debe ser mayor que cero y menor que 65535.</translation>
+      <translation>El número de puerto debe ser mayor a cero y menor que 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2450"/>
@@ -8877,13 +8836,12 @@ Cuenta</translation>
       <extracomment>Please use two line-feeds after the first line so the second line can be italicised and spaced out - if appropriate for the locale.</extracomment>
       <translation>Por favor, introduzca la URL del servidor del juego.
 
-&lt;i&gt;Las conexiones SSL/TLS requieren una URL, ya que una dirección IP no es un identificador adecuado para la certificación del servidor del juego.&lt;/i&gt;
-</translation>
+&lt;i&gt;Las conexiones SSL/TLS requieren una URL, ya que una dirección IP no es un identificador adecuado para la certificación del servidor del juego.&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2510"/>
       <source>Load profile without connecting.</source>
-      <translation>Cargar perfil sin conectar</translation>
+      <translation>Cargar perfil sin conectar.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2526"/>
@@ -8952,8 +8910,7 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="137"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation>$ Escribe &lt;b&gt;/help&lt;/b&gt; para ver los comandos o &lt;b&gt;/help [comando]&lt;/b&gt; para ver la sintaxis de un comando.
-</translation>
+      <translation>$ Escribe &lt;b&gt;/help&lt;/b&gt; para ver los comandos o &lt;b&gt;/help [comando]&lt;/b&gt; para ver la sintaxis de un comando.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="198"/>
@@ -8963,8 +8920,7 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation>[Error] ¡MSGLIMIT requiere que &lt;limit&gt; sea un número entero mayor que cero!
-</translation>
+      <translation>[Error] ¡MSGLIMIT requiere que &lt;limit&gt; sea un número entero mayor que cero!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
@@ -9009,13 +8965,12 @@ Cuenta</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="637"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation>! El apodo %1 está reservado. Cambiando automáticamente el apodo a: %2
-</translation>
+      <translation>! El apodo %1 está reservado. Cambiando automáticamente el apodo a: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="648"/>
       <source>Your nick has changed.</source>
-      <translation>Tu nick ha cambiado.</translation>
+      <translation>Tu apodo ha cambiado.</translation>
     </message>
   </context>
   <context>
@@ -9166,7 +9121,7 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="877"/>
       <source>When enabled, room IDs will be displayed on the map.</source>
-      <translation>Cuando está activado, los IDs de las salas se mostrarán en el mapa</translation>
+      <translation>Cuando está activado, los IDs de las salas se mostrarán en el mapa.</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="882"/>
@@ -9260,7 +9215,7 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Location</source>
-      <translation>Ubicación Del Módulo</translation>
+      <translation>Ubicación del Módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="107"/>
@@ -9335,13 +9290,13 @@ reason: %2.</source>
       <location filename="../src/dlgNotepad.cpp" line="209"/>
       <source>New Note</source>
       <extracomment>Default name for a new note tab</extracomment>
-      <translation>Nueva nota</translation>
+      <translation>Nueva Nota</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="243"/>
       <source>Rename Note Tab</source>
       <extracomment>Dialog title for renaming a note tab</extracomment>
-      <translation>Renombrar pestaña de nota</translation>
+      <translation>Renombrar Pestaña de Nota</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="245"/>
@@ -9353,25 +9308,25 @@ reason: %2.</source>
       <location filename="../src/dlgNotepad.cpp" line="267"/>
       <source>New Tab</source>
       <extracomment>Context menu action to create a new note tab</extracomment>
-      <translation>Nueva pestaña</translation>
+      <translation>Nueva Pestaña</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="277"/>
       <source>Rename Tab</source>
       <extracomment>Context menu action to rename a note tab</extracomment>
-      <translation>Renombrar pestaña</translation>
+      <translation>Renombrar Pestaña</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="284"/>
       <source>Close Tab</source>
       <extracomment>Context menu action to close a note tab</extracomment>
-      <translation>Cerrar pestaña</translation>
+      <translation>Cerrar Pestaña</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="292"/>
       <source>Close Other Tabs</source>
       <extracomment>Context menu action to close all note tabs except the clicked one</extracomment>
-      <translation>Cerrar las otras pestañas</translation>
+      <translation>Cerrar las Otras Pestañas</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="386"/>
@@ -9434,7 +9389,7 @@ Default name for the first note tab</extracomment>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="293"/>
       <source>one-line description (recommended)</source>
-      <translation>Descripción de una línea (recomendado)</translation>
+      <translation>descripción de una línea (recomendado)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="300"/>
@@ -9494,8 +9449,7 @@ Si este paquete es una implementación de interfaz gráfica (GUI), considera añ
 Material de lectura adicional. P. ej., un enlace a la wiki de Mudlet, foros, repositorio del paquete en Github o página web.
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
-* [Link 2 might be a webpage](https://example.org)
-</translation>
+* [Link 2 might be a webpage](https://example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="355"/>
@@ -9572,7 +9526,7 @@ Material de lectura adicional. P. ej., un enlace a la wiki de Mudlet, foros, rep
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation>Exportador de paquetes</translation>
+      <translation>Exportador de Paquetes</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="388"/>
@@ -9624,12 +9578,12 @@ Material de lectura adicional. P. ej., un enlace a la wiki de Mudlet, foros, rep
       <location filename="../src/dlgPackageExporter.cpp" line="142"/>
       <source>Package Exporter - %1</source>
       <extracomment>Title of the window. The %1 will be replaced by the current profile&apos;s name</extracomment>
-      <translation>Exportador de paquetes - %1</translation>
+      <translation>Exportador de Paquetes - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="166"/>
       <source>Create Module - %1</source>
-      <translation>Crear módulo - %1</translation>
+      <translation>Crear Módulo - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="169"/>
@@ -9639,7 +9593,7 @@ Material de lectura adicional. P. ej., un enlace a la wiki de Mudlet, foros, rep
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="172"/>
       <source>Create Module</source>
-      <translation>Crear módulo</translation>
+      <translation>Crear Módulo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="175"/>
@@ -9746,8 +9700,7 @@ Si este paquete utiliza alias, muestra algunos ejemplos y el resultado esperado.
 
 Material de lectura adicional. P. ej., enlaces a la documentación o a publicaciones del foro.
 
-* https://wiki.mudlet.org/w/Manual:Modules
-</translation>
+* https://wiki.mudlet.org/w/Manual:Modules</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="415"/>
@@ -9785,7 +9738,7 @@ Material de lectura adicional. P. ej., enlaces a la documentación o a publicaci
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="861"/>
       <source>Cannot create empty package. Please select at least one item to include in the package.</source>
-      <translation>No se puede crear un paquete vacío. Selecciona al menos un elemento para incluir en el paquete</translation>
+      <translation>No se puede crear un paquete vacío. Selecciona al menos un elemento para incluir en el paquete.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1035"/>
@@ -9807,7 +9760,7 @@ Material de lectura adicional. P. ej., enlaces a la documentación o a publicaci
       <location filename="../src/dlgPackageExporter.cpp" line="1542"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <extracomment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</extracomment>
-      <translation>No se pudo comprimir el paquete en formato ZIP. El error es: &quot;%1&quot;.</translation>
+      <translation>No se pudo comprimir el paquete en formato zip. El error es: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1978"/>
@@ -9957,7 +9910,7 @@ Material de lectura adicional. P. ej., enlaces a la documentación o a publicaci
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Package Manager - %1</source>
       <extracomment>Package manager - window title</extracomment>
-      <translation>Gestor de paquetes - %1</translation>
+      <translation>Gestor de Paquetes - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="199"/>
@@ -10001,7 +9954,7 @@ Material de lectura adicional. P. ej., enlaces a la documentación o a publicaci
       <extracomment>Package manager: package couldn&apos;t be downloaded
 ----------
 Package manager: network error, package couldn&apos;t be downloaded</extracomment>
-      <translation>Error en la instalación</translation>
+      <translation>Error en la Instalación</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="398"/>
@@ -10108,22 +10061,22 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="176"/>
       <source>Location which will be used to store log files - matching logs will be appended to.</source>
-      <translation>Ubicación utilizada para almacenar los archivos de registro (logs). Los registros que coincidan se añadirán al final.</translation>
+      <translation>Ubicación utilizada para almacenar los archivos de registro. Los registros que coincidan se añadirán al final.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="177"/>
       <source>Select a directory where logs will be saved.</source>
-      <translation>Selecciona una carpeta donde se guardarán los registros (logs).</translation>
+      <translation>Selecciona una carpeta donde se guardarán los registros.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="178"/>
       <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
-      <translation>Restablecer la carpeta para que los registros se guarden en la carpeta de &lt;i&gt;log&lt;/i&gt; del perfil.</translation>
+      <translation>Restablecer la carpeta para que los registros se guarden en la carpeta de &lt;i&gt;registros&lt;/i&gt; del perfil.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="182"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation>Establece un nombre personalizado para tu registro (log). (Los nuevos registros se añadirán al final si ya existe un archivo de registro con el mismo nombre).</translation>
+      <translation>Establece un nombre personalizado para tu registro. (Los nuevos registros se añadirán al final si ya existe un archivo de registro con el mismo nombre).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="215"/>
@@ -10159,22 +10112,22 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="971"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation>aaa-MM-dd#HH-mm-ss (ej. 1970-01-01#00-00-00html)</translation>
+      <translation>aaa-MM-dd#HH-mm-ss (ej. 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="973"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation>aaa-MM-ddTHH-mm-ss (ej. 1970-01-01T00-00-00html)</translation>
+      <translation>aaa-MM-ddTHH-mm-ss (ej. 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="974"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
-      <translation>yyyy-MM-dd (concatenar registros diarios, ej. 1970-01-01%1)</translation>
+      <translation>aaaa-MM-dd (concatenar registros diarios, ej. 1970-01-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="977"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
-      <translation>yyyy-MM (concatenar registros mensuales, ej. 1970-01%1)</translation>
+      <translation>aaaa-MM (concatenar registros mensuales, ej. 1970-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="978"/>
@@ -10184,12 +10137,12 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1073"/>
       <source>Other profiles to Map to:</source>
-      <translation>Otros perfiles a mapear:</translation>
+      <translation>Otros perfiles a Mapear:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1137"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation>Factor de escala del símbolo de sala en el mapa 2D:</translation>
+      <translation>Factor de Escala del Símbolo de sala en el mapa 2D:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1169"/>
@@ -10227,7 +10180,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="185"/>
       <source>logfile</source>
       <extracomment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).</extracomment>
-      <translation>archivo_de_registro</translation>
+      <translation>archivo de registro</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgProfilePreferences.cpp" line="196"/>
@@ -10235,8 +10188,8 @@ Message on button in package manager initially and when the view is NOT the &quo
       <source>copy to %n destination(s)</source>
       <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
       <translation>
-        <numerusform>Copiar en %n destino</numerusform>
-        <numerusform>Copiar en %n destinos</numerusform>
+        <numerusform>copiar a %n destino</numerusform>
+        <numerusform>copiar a %n destinos</numerusform>
       </translation>
     </message>
     <message>
@@ -10325,7 +10278,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="254"/>
       <source>&lt;p&gt;Controls display width for ambiguous East Asian characters. Auto-detects correct width for most encodings (default), or choose narrow/wide.&lt;/p&gt;</source>
       <extracomment>Tooltip for East Asian ambiguous width character option</extracomment>
-      <translation>&lt;p&gt;Controla el ancho de pantalla para caracteres ambiguos de Asia Oriental. Detecta automáticamente el ancho correcto para la mayoría de las codificaciones (predeterminado), o elige el estrecho/ancho.</translation>
+      <translation>&lt;p&gt;Controla el ancho de pantalla para caracteres ambiguos de Asia Oriental. Detecta automáticamente el ancho correcto para la mayoría de las codificaciones (predeterminado), o elige el estrecho/ancho.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="257"/>
@@ -10348,7 +10301,7 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1006"/>
       <source>CHARSET: Character Encoding Standard</source>
-      <translation>CHARSET: Estándar de codificación de caractere</translation>
+      <translation>CHARSET: Estándar de codificación de caracteres</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1016"/>
@@ -10418,7 +10371,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1680"/>
       <source>Warning: &apos;%1&apos; and &apos;%2&apos; now share the shortcut %3 - neither will work until one of them is changed.</source>
       <extracomment>Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.</extracomment>
-      <translation>Advertencia: '%1' y '%2' ahora comparten el atajo %3; ninguno funcionará hasta que se cambie uno de ellos.</translation>
+      <translation>Advertencia: &apos;%1&apos; y &apos;%2&apos; ahora comparten el atajo %3; ninguno funcionará hasta que se cambie uno de ellos.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1687"/>
@@ -10538,7 +10491,7 @@ Message on button in package manager initially and when the view is NOT the &quo
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation>[ ERROR ] - No se puede utilizar o crear el directorio para almacenar el mapa del otro perfil &quot;%1&quot;.Por favor, compruebe que tiene permisos/acceso a:&quot;%2&quot; 
+      <translation>[ ERROR ] - No se puede utilizar o crear el directorio para almacenar el mapa del otro perfil &quot;%1&quot;. Por favor, compruebe que tiene permisos/acceso a:&quot;%2&quot; 
 y que hay suficiente espacio. La operación de copia ha fallado.</translation>
     </message>
     <message>
@@ -10624,7 +10577,7 @@ y que hay suficiente espacio. La operación de copia ha fallado.</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4089"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation> {falta el script, posiblemente eliminado recientemente}</translation>
+      <translation>{falta el script, posiblemente eliminado recientemente}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4092"/>
@@ -10904,12 +10857,12 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1009"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation>Aquí se espera la roomID de la sala a la que conduce esta salida especial. Si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;save&lt;/tt&gt;.</translation>
+      <translation>Aquí se espera la roomID de la sala a la que conduce esta salida especial. Si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;guardar&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1020"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation>El número introducido no es válido. Si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;save&lt;/tt&gt;.</translation>
+      <translation>El número introducido no es válido. Si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;guardar&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1021"/>
@@ -10919,7 +10872,7 @@ reason: %2.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1035"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation>No se ha introducido ningún comando ni script de Lua; si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;>save&lt;/tt&gt;.</translation>
+      <translation>No se ha introducido ningún comando ni script de Lua; si se deja así, esta salida se eliminará al hacer clic en &lt;tt&gt;guardar&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1082"/>
@@ -10931,7 +10884,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1650"/>
       <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
       <extracomment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</extracomment>
-      <translation>Este es el número de ID de esta sala; esta &lt;b&gt;sala está bloqueada&lt;/b&gt;, por lo que no se utilizará en absoluto para los movimientos rápidos (speed-walks).</translation>
+      <translation>Este es el número de ID de esta sala; esta &lt;b&gt;sala está bloqueada&lt;/b&gt;, por lo que no se utilizará en absoluto para los movimientos rápidos.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1102"/>
@@ -11077,7 +11030,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1494"/>
       <location filename="../src/dlgRoomExits.cpp" line="1800"/>
       <source>Set the number of the room in from this one.</source>
-      <translation> Establecer el número de la sala dentro de esta</translation>
+      <translation> Establecer el número de la sala dentro de esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1412"/>
@@ -11100,7 +11053,7 @@ reason: %2.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1109"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <extracomment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</extracomment>
-      <translation>&lt;b&gt;La salan está bloqueada&lt;/b&gt;; no se utilizará para movimientos rápidos (speed-walks) en ninguna de las salidas que conduzca a esta.</translation>
+      <translation>&lt;b&gt;La salan está bloqueada&lt;/b&gt;; no se utilizará para movimientos rápidos en ninguna de las salidas que conduzca a esta.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1093"/>
@@ -11111,13 +11064,13 @@ reason: %2.</source>
       <extracomment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not
 ----------
 Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</extracomment>
-      <translation>Peso de la &lt;b&gt;sala&lt;/b&gt; de destino: %1.</translation>
+      <translation>Valor de la &lt;b&gt;sala&lt;/b&gt; de destino: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1198"/>
       <location filename="../src/dlgRoomExits.cpp" line="1615"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation>Borrar la salida provisional de esta salida para introducir un Id de sala de salida.</translation>
+      <translation>Borrar la salida provisional de esta salida para introducir la salida roomID.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
@@ -11164,7 +11117,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
  • enter a new positive integer value to use as a new weight. The default is 1.</source>
       <comment>This is for when applying a new room weight to one or more rooms and some have different weights at present. %n is the total number of rooms involved.</comment>
       <translation>
-        <numerusform>Para cambiar el valor de la sala seleccionada, elige una opción:
+        <numerusform>Para cambiar el valor de %n sala seleccionada, elige una opción:
 • un valor de sala existente de la lista de abajo (ordenado por los más usados primero)
 • introduce un nuevo valor entero positivo para usarlo como nuevo valor. El valor por defecto es 1.</numerusform>
         <numerusform>Para cambiar los valores de las %n salas seleccionadas, elige una opción:
@@ -11212,8 +11165,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <source>Lock %n room(s), so it/they will never be used for speedwalking</source>
       <extracomment>room properties dialog, text will be shown at a checkbox, where you can set/unset a number of room&apos;s lock.</extracomment>
       <translation>
-        <numerusform>Bloquea la sala para que nunca se use para caminar rápidamente.</numerusform>
-        <numerusform>Bloquea %n salas para que nunca se usen para caminar rápidamente.</numerusform>
+        <numerusform>Bloquea %n sala para que nunca se use para caminar rápidamente</numerusform>
+        <numerusform>Bloquea %n salas para que nunca se usen para caminar rápidamente</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -11221,7 +11174,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <source>Hide all %n room(s).%1</source>
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset a number of room&apos;s hidden status. More than one room is being considered and some, but not all (%n) of them are hidden and in this case the checkbox also has an partially checked state to be used to leave them all unchanged. A second translatable sentance indicating the number of currently hidden rooms will be inserted as %1.</extracomment>
       <translation>
-        <numerusform>Ocultar la sala.%1</numerusform>
+        <numerusform>Ocultar la %n sala.%1</numerusform>
         <numerusform>Ocultar las %n salas.%1</numerusform>
       </translation>
     </message>
@@ -11229,7 +11182,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="216"/>
       <source> %n room(s) are currently hidden.</source>
       <translation>
-        <numerusform>Actualmente hay una sala oculta.</numerusform>
+        <numerusform>Actualmente hay %n sala oculta.</numerusform>
         <numerusform>Actualmente hay %n salas ocultas.</numerusform>
       </translation>
     </message>
@@ -11244,7 +11197,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <source>Hide (all) %n room(s).</source>
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset the hidden status of one or more rooms where %n is the total number of rooms and all of them are currently hidden or shown.</extracomment>
       <translation>
-        <numerusform>Ocultar la sala.</numerusform>
+        <numerusform>Ocultar la %n sala.</numerusform>
         <numerusform>Ocultar las %n salas (todas).</numerusform>
       </translation>
     </message>
@@ -11254,8 +11207,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <comment>%n is the total number of rooms involved.</comment>
       <extracomment>room properties dialog, setting symbols</extracomment>
       <translation>
-        <numerusform>Introduce el caracter para asignar un nuevo símbolo a la sala. Borra el texto para quitarlo.</numerusform>
-        <numerusform>Introduce más caracteres para asignar un nuevo símbolo a %n salas. Borra el texto para quitarlo.</numerusform>
+        <numerusform>Introduce el caracter para asignar un nuevo símbolo a la %n sala. Borra el texto para quitarlo.</numerusform>
+        <numerusform>Introduce más caracteres para asignar nuevos símbolo a %n salas. Borra el texto para quitarlo.</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -11267,11 +11220,11 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
       <extracomment>room properties dialog, setting symbols</extracomment>
       <translation>
-        <numerusform>Para asignar el símbolo a la sala, elige una opción:
+        <numerusform>Para asignar el símbolo a %n sala, elige una opción:
  • un símbolo existente de la lista,
  • introduce uno o más caracteres para asignar un nuevo símbolo,
  • borra el texto para quitarlo.</numerusform>
-        <numerusform>Para asignar el símbolo a las %n salas, elige una opción:
+        <numerusform>Para asignar el símbolo a %n salas, elige una opción:
  • un símbolo existente de la lista,
  • introduce uno o más caracteres para asignar un nuevo símbolo,
  • borra el texto para quitarlo.</numerusform>
@@ -11316,7 +11269,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="804"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="805"/>
       <source>Show Triggers</source>
-      <translation>Mostrar disparadores</translation>
+      <translation>Mostrar Disparadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="833"/>
@@ -11341,7 +11294,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="809"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="810"/>
       <source>Show Aliases</source>
-      <translation>Mostrar alias</translation>
+      <translation>Mostrar Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="818"/>
@@ -11379,7 +11332,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="824"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="825"/>
       <source>Show Keybindings</source>
-      <translation>Mostrar combinaciones de teclas</translation>
+      <translation>Mostrar Combinaciones de Teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="828"/>
@@ -11407,7 +11360,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="875"/>
       <source>Delete Item</source>
-      <translation>Eliminar elemento</translation>
+      <translation>Eliminar Elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="899"/>
@@ -11420,7 +11373,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="903"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="904"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation>Copiar el disparador/programa/alias/etc</translation>
+      <translation>Copiar el disparador/script/alias/etc</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="913"/>
@@ -11433,7 +11386,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
       <location filename="../src/dlgTriggerEditor.cpp" line="917"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="918"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation>Pegar disparador/scripts/alias/etc desde el portapapeles</translation>
+      <translation>Pegar disparadores/scripts/alias/etc desde el portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="958"/>
@@ -11494,7 +11447,7 @@ Format for showing a room weight with its usage count. %1 is the weight value (e
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="995"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
-      <translation>Algo salió mal al cargar tu perfil de Mudlet y no se pudo abrir. Intenta cargar una versión anterior en &apos;Conectar - Opciones - Historial del perfil&apos;.</translation>
+      <translation>Algo salió mal al cargar tu perfil de Mudlet y no se pudo abrir. Intenta cargar una versión anterior en &apos;Conectar - Opciones - Historial del perfil&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1022"/>
@@ -11771,7 +11724,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="176"/>
       <source>drink water</source>
       <extracomment>Part of the Trigger intro, code example for a trigger - This is the command sent to game after we triggered on text &quot;You are thirsty.&quot; from game.</extracomment>
-      <translation>Bebe agua</translation>
+      <translation>bebe agua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="183"/>
@@ -11792,7 +11745,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="231"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Introduction to Timers&lt;/a&gt; for a detailed overview.</source>
-      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt;Introducción a los Temporizadores&lt;/a&gt;  para obtener una descripción detallada.</translation>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Timers&apos;&gt; Introducción a los Temporizadores&lt;/a&gt;  para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="241"/>
@@ -11803,7 +11756,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="252"/>
       <source>Read the &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introduction to Buttons&lt;/a&gt; for a detailed overview.</source>
-      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introducción a los botones&lt;/a> para obtener una descripción detallada.</translation>
+      <translation>Lee la &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Buttons&apos;&gt;Introducción a los botones&lt;/a&gt; para obtener una descripción detallada.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="267"/>
@@ -11879,7 +11832,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="853"/>
       <source>Show/Hide Debug Console (%1) -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
       <extracomment>%1 is a keyboard shortcut, e.g. &apos;Ctrl+0&apos; on Windows/Linux or &apos;⌘0&apos; on macOS</extracomment>
-      <translation>Mostrar/ocultar la consola de depuración (%1) -&gt; el sistema irá &lt;b&gt;&lt;i&gt;más lento&lt;/i&gt;&lt;/b&gt;.</translation>
+      <translation>Mostrar/Ocultar la Consola de Depuración (%1) -&gt; el sistema irá &lt;b&gt;&lt;i&gt;más lento&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="868"/>
@@ -11947,7 +11900,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4115"/>
       <source>move items</source>
-      <translation>Mover elementos</translation>
+      <translation>mover elementos</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4308"/>
@@ -12088,7 +12041,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8766"/>
       <source>Aliases - Input Triggers</source>
-      <translation>Alias - Disparadores de entrada</translation>
+      <translation>Alias - Disparadores de Entrada</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8780"/>
@@ -12098,7 +12051,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10010"/>
       <source>Add Trigger</source>
-      <translation>Añadir disparador</translation>
+      <translation>Añadir Disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10011"/>
@@ -12108,7 +12061,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10012"/>
       <source>Add Trigger Group</source>
-      <translation>Añadir grupo de disparadores</translation>
+      <translation>Añadir Grupo de Disparadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10013"/>
@@ -12118,7 +12071,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10014"/>
       <source>Delete Trigger</source>
-      <translation>Eliminar disparador</translation>
+      <translation>Eliminar Disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10015"/>
@@ -12129,12 +12082,12 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10016"/>
       <location filename="../src/dlgTriggerEditor.h" line="591"/>
       <source>Save Trigger</source>
-      <translation>Guardar disparador</translation>
+      <translation>Guardar Disparador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10021"/>
       <source>Add Timer</source>
-      <translation>Añadir temporizador</translation>
+      <translation>Añadir Temporizador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10022"/>
@@ -12144,7 +12097,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10023"/>
       <source>Add Timer Group</source>
-      <translation>Añadir grupo de temporizadores</translation>
+      <translation>Añadir Grupo de Temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10024"/>
@@ -12154,7 +12107,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10025"/>
       <source>Delete Timer</source>
-      <translation>Eliminar temporizadores </translation>
+      <translation>Eliminar Temporizadores </translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10026"/>
@@ -12165,12 +12118,12 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10027"/>
       <location filename="../src/dlgTriggerEditor.h" line="592"/>
       <source>Save Timer</source>
-      <translation>Guardar temporizador</translation>
+      <translation>Guardar Temporizador</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10032"/>
       <source>Add Alias</source>
-      <translation>Añadir alias</translation>
+      <translation>Añadir Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10033"/>
@@ -12180,7 +12133,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10034"/>
       <source>Add Alias Group</source>
-      <translation>Añadir grupo de alias</translation>
+      <translation>Añadir Grupo de Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10035"/>
@@ -12190,7 +12143,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10036"/>
       <source>Delete Alias</source>
-      <translation>Eliminar alias</translation>
+      <translation>Eliminar Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10037"/>
@@ -12201,12 +12154,12 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10038"/>
       <location filename="../src/dlgTriggerEditor.h" line="593"/>
       <source>Save Alias</source>
-      <translation>Guardar alias</translation>
+      <translation>Guardar Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10043"/>
       <source>Add Script</source>
-      <translation>Añadir script</translation>
+      <translation>Añadir Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10044"/>
@@ -12216,7 +12169,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10045"/>
       <source>Add Script Group</source>
-      <translation>Añadir grupo de scripts</translation>
+      <translation>Añadir Grupo de Scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10046"/>
@@ -12226,7 +12179,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10047"/>
       <source>Delete Script</source>
-      <translation>Eliminar script</translation>
+      <translation>Eliminar Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10048"/>
@@ -12237,12 +12190,12 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10049"/>
       <location filename="../src/dlgTriggerEditor.h" line="594"/>
       <source>Save Script</source>
-      <translation>Guardar script</translation>
+      <translation>Guardar Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10054"/>
       <source>Add Button</source>
-      <translation>Añadir botón</translation>
+      <translation>Añadir Botón</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10055"/>
@@ -12252,38 +12205,38 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10056"/>
       <source>Add Toolbar or Menu</source>
-      <translation>Añadir barra de herramientas o menú</translation>
+      <translation>Añadir Barra de Herramientas o Menú</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10057"/>
       <source>Add a Toolbar (top level) or Menu (lower levels) to contain menus or buttons</source>
-      <translation>Añadir una barra de herramientas (nivel superior) o menú (nivel inferior) para contener menús o botones</translation>
+      <translation>Añadir una Barra de Herramientas (nivel superior) o Menú (nivel inferior) para contener menús o botones</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10058"/>
       <source>Delete Button, Menu or Toolbar</source>
-      <translation>Eliminar botón, menú o barra de herramientas</translation>
+      <translation>Eliminar Botón, Menú o Barra de Herramientas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10059"/>
       <source>Delete the selected button, menu or toolbar</source>
-      <translation>Eliminar el botón, menú o barra de herramientas seleccionadas</translation>
+      <translation>Eliminar el botón, menú o barra de herramientas seleccionados</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10060"/>
       <source>Save item</source>
-      <translation>Guardar elemento</translation>
+      <translation>Guardar Elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10062"/>
       <source>Apply button/menu/toolbar changes (does not save to disk).</source>
       <extracomment>Status tip for saving button changes</extracomment>
-      <translation>Aplicar cambios en botones, menús o barras de herramientas (no se guarda en el disco).</translation>
+      <translation>Aplicar cambios en botón/menú/barra de herramientas (no se guarda en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.h" line="595"/>
       <source>Save Button</source>
-      <translation>Guardar botón</translation>
+      <translation>Guardar Botón</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10065"/>
@@ -12298,7 +12251,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10067"/>
       <source>Add Key Group</source>
-      <translation>Añadir grupo de teclas</translation>
+      <translation>Añadir Grupo de Teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10068"/>
@@ -12308,7 +12261,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10069"/>
       <source>Delete Key</source>
-      <translation>Eliminar tecla</translation>
+      <translation>Eliminar Tecla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10070"/>
@@ -12319,12 +12272,12 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10071"/>
       <location filename="../src/dlgTriggerEditor.h" line="596"/>
       <source>Save Key</source>
-      <translation>Guardar tecla</translation>
+      <translation>Guardar Tecla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10076"/>
       <source>Add Variable</source>
-      <translation>Añadir variable</translation>
+      <translation>Añadir Variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10077"/>
@@ -12344,7 +12297,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10080"/>
       <source>Delete Variable</source>
-      <translation>Eliminar variable</translation>
+      <translation>Eliminar Variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10081"/>
@@ -12355,12 +12308,12 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10082"/>
       <location filename="../src/dlgTriggerEditor.h" line="597"/>
       <source>Save Variable</source>
-      <translation>Guardar variable</translation>
+      <translation>Guardar Variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10882"/>
       <source>Central Debug Console</source>
-      <translation>Consola central de depuración</translation>
+      <translation>Consola Central de Depuración</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11164"/>
@@ -12500,7 +12453,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11652"/>
       <source>Export Item</source>
-      <translation>Exportar elemento</translation>
+      <translation>Exportar Elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="11669"/>
@@ -12540,7 +12493,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="12518"/>
       <source>Failed to import: %1</source>
       <extracomment>Trigger editor - status message shown when some packages failed to import. %1 is a comma-separated list of package names</extracomment>
-      <translation>Error al importar: %s</translation>
+      <translation>Error al importar: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12608"/>
@@ -12555,7 +12508,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12618"/>
       <source>Backup Profile</source>
-      <translation>Respaldar Perfil</translation>
+      <translation>Copia de Seguridad del Perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="12618"/>
@@ -12614,7 +12567,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="10073"/>
       <source>Apply key changes (does not save to disk).</source>
       <extracomment>Status tip for saving key changes</extracomment>
-      <translation>Aplicar cambios de teclas (no se guardan en el disco). </translation>
+      <translation>Aplicar cambios de teclas (no se guardan en el disco).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10084"/>
@@ -12655,7 +12608,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13366"/>
       <source>Format All</source>
-      <translation>Formatear todo</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="13372"/>
@@ -12701,8 +12654,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>Triggers react on game output.</source>
       <extracomment>Headline for the Trigger intro</extracomment>
-      <translation>Los activadores reaccionan a la salida del juego.
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="156"/>
@@ -12714,8 +12666,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="158"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Trigger intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Define el &lt;strong&gt;patrón&lt;/strong&gt; que deseas que active la acción.&lt;/li&gt;&lt;li&gt;Selecciona el &lt;strong&gt;tipo&lt;/strong&gt; de patrón adecuado.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; de texto claro que quieras enviar al juego si el disparador encuentra el patrón en el texto del juego, o escribe un script para necesidades más complejas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el disparador.&lt;/li&gt;&lt;/ol&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="189"/>
@@ -12733,8 +12684,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="193"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Script intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Introduce un script en el cuadro de abajo. Puedes, por ejemplo, definir &lt;strong&gt;funciones&lt;/strong&gt; para que sean llamadas por otros disparadores, alias, etc.&lt;/li&gt;&lt;li&gt;Si escribes &lt;strong&gt;comandos&lt;/strong&gt; de lua sin definir una función, se ejecutarán al iniciar Mudlet y cada vez que abras el script para editarlo.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el script.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Los scripts se ejecutan automáticamente cuando se visualizan, incluso si están desactivados.&lt;/p&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="199"/>
@@ -12746,8 +12696,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="201"/>
       <source>&lt;p&gt;You can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Script intro</extracomment>
-      <translation>&lt;p&gt;Puedes registrar una lista de &lt;strong&gt;eventos&lt;/strong&gt; con los símbolos + y -. Si suceden uno de estos eventos, se llamará a la función que tenga el mismo nombre que el propio elemento del script.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Los eventos también se pueden añadir a un script desde la línea de comandos en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="214"/>
@@ -12765,16 +12714,14 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="218"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Timer intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Define el &lt;strong&gt;intervalo de tiempo&lt;/strong&gt; tras el cual debe reaccionar el temporizador en este formato: horas : minutos : segundos.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; en texto claro que quieras enviar al juego cuando haya transcurrido el tiempo, o escribe un script para necesidades más complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; el temporizador.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Si quieres que el activador reaccione solo una vez y no de forma regular, utiliza en su lugar la función tempTimer() de Lua.&lt;/p&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="226"/>
       <source>&lt;p&gt;Timers can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Timer intro</extracomment>
-      <translation>&lt;p&gt;Los temporizadores también se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hola!\n&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Esto te saludará exactamente 3 segundos después de haber sido creado.&lt;/p&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="237"/>
@@ -12804,15 +12751,13 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="262"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Keys intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba.&lt;/li&gt;&lt;li&gt;Haz clic en &lt;strong&gt;&apos;grabar tecla&apos;&lt;/strong&gt; (capturar tecla) y luego presiona tu combinación de teclas, por ejemplo, incluyendo teclas modificadoras como Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define un &lt;strong&gt;comando&lt;/strong&gt; en texto claro que quieras enviar al juego si se presiona la tecla, o escribe un script para necesidades más complicadas.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activa&lt;/strong&gt; la nueva combinación de teclas.&lt;/li&gt;&lt;/ol&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="269"/>
       <source>&lt;p&gt;Keys can be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Pressing F8 will make you jump.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Keys intro</extracomment>
-      <translation>&lt;p&gt;Las teclas se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;mi tecla de salto&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;saltar&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Presionar F8 te hará saltar.&lt;/p&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="282"/>
@@ -12830,15 +12775,13 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="286"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Variable intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Haz clic en el icono &apos;Añadir elemento&apos; de arriba. Para añadir una tabla en su lugar, haz clic en &apos;Añadir grupo&apos;.&lt;/li&gt;&lt;li&gt;Selecciona el tipo de valor de la variable (puede ser una cadena de texto, un número entero o un booleano)&lt;/li&gt;&lt;li&gt;Introduce el valor que quieres almacenar en esta variable.&lt;/li&gt;&lt;li&gt;Si quieres mantener la variable en tus próximas sesiones de Mudlet, marca la casilla en la lista de variables de la izquierda.&lt;/li&gt;&lt;li&gt;Para eliminar una variable manualmente, establécela en &apos;cero/nula&apos; o haz clic en el icono &apos;Borrar&apos; de arriba.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Las variables creadas aquí no se guardarán cuando Mudlet se cierre a menos que marques su casilla en la lista de variables de la izquierda. También podrías crear scripts con las variables en su lugar.&lt;/p&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="295"/>
       <source>&lt;p&gt;Variables and tables can also be defined from the input line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Variable intro</extracomment>
-      <translation>&lt;p&gt;Las variables y las tablas también se pueden definir desde la línea de entrada en la ventana principal del perfil de esta manera:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Esto creará una cadena de texto llamada &apos;foo&apos; con &apos;bar&apos; como su valor.&lt;/p&gt;
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="307"/>
