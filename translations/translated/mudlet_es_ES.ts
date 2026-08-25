@@ -19458,7 +19458,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
       <source>AND / Multi-line (within: </source>
       <extracomment>This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Y / Multilínea (dentro de: </translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="481"/>
@@ -19502,7 +19502,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="407"/>
       <source>&lt;p&gt;If set to any value but the first the trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;If set to the first value the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Si se establece en cualquier valor distinto del primero, el disparador solo se activará si se cumplen &lt;u&gt;todas&lt;/u&gt; las condiciones de la lista dentro del intervalo de líneas especificado, y las capturas se guardarán en &lt;tt&gt;multimatches&lt;/tt&gt; en lugar de en &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;Si se establece en el primer valor, el disparador se activará si se cumple &lt;u&gt;alguna&lt;/u&gt; condición de la lista.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Si se establece en cualquier valor distinto del primero, el disparador solo se activará si se cumplen &lt;u&gt;todas&lt;/u&gt; las condiciones de la lista dentro del intervalo de líneas especificado, y las capturas se guardarán en &lt;tt&gt;multicoincidencias&lt;/tt&gt; en lugar de en &lt;tt&gt;coincidencias&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;Si se establece en el primer valor, el disparador se activará si se cumple &lt;u&gt;alguna&lt;/u&gt; condición de la lista.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="413"/>
@@ -19530,7 +19530,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
       <source>&lt;p&gt;Do not pass whole line to children.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;No pase toda la línea a los niños.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;No pase la línea completa a los elementos dependientes.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
@@ -19660,7 +19660,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="119"/>
       <source>key (string)</source>
-      <translation>clave (string)</translation>
+      <translation>clave (cadena)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="124"/>
