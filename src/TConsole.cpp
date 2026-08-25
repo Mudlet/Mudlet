@@ -2002,16 +2002,18 @@ void TConsole::markSelectionDirty()
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
 {
-    buffer.applyLink(P_begin, P_end, linkFunction, linkHint, linkReference);
-    markSelectionDirty();
+    if (buffer.applyLink(P_begin, P_end, linkFunction, linkHint, linkReference)) {
+        markSelectionDirty();
+    }
 }
 
 // Set or Reset ALL the specified (but not others)
 void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)
 {
     mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (b ? attributes : TChar::None));
-    buffer.applyAttribute(P_begin, P_end, attributes, b);
-    markSelectionDirty();
+    if (buffer.applyAttribute(P_begin, P_end, attributes, b)) {
+        markSelectionDirty();
+    }
 }
 
 void TConsole::setFgColor(int r, int g, int b)
@@ -2027,15 +2029,17 @@ void TConsole::setBgColor(int r, int g, int b, int a)
 void TConsole::setBgColor(const QColor& newColor)
 {
     mFormatCurrent.setBackground(newColor);
-    buffer.applyBgColor(P_begin, P_end, newColor);
-    markSelectionDirty();
+    if (buffer.applyBgColor(P_begin, P_end, newColor)) {
+        markSelectionDirty();
+    }
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
-    buffer.applyFgColor(P_begin, P_end, newColor);
-    markSelectionDirty();
+    if (buffer.applyFgColor(P_begin, P_end, newColor)) {
+        markSelectionDirty();
+    }
 }
 
 void TConsole::setCommandBgColor(int r, int g, int b, int a)
