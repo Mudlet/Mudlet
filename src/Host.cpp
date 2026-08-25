@@ -2557,6 +2557,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     }
     //PackageModuleType::ModuleSync seems to be only used for reloading/syncing
     //No need to remove package info as it can cause the info to be lost
+    if (thing != enums::PackageModuleType::ModuleSync) {
+        removePackageInfo(packageName, isModule);
+    }
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
@@ -2586,18 +2589,6 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     detailedUninstallEvent.mArgumentList.append(packageName);
     detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedUninstallEvent);
-
-    // The guard at the top cannot see a save that a handler of the events just
-    // raised has started, and from here the package's items are destroyed: a dual
-    // install's restore would then be deferred, report success and do nothing,
-    // leaving the surviving half listed but empty with nothing said.
-    if (currentlySavingProfile()) {
-        return false;
-    }
-
-    if (thing != enums::PackageModuleType::ModuleSync) {
-        removePackageInfo(packageName, isModule);
-    }
 
     bool restoredInPlace = false;
     int dualInstallations = 0;
