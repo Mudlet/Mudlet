@@ -1043,6 +1043,39 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     -- so writing it out would leave an empty module in place of its contents
     assert.is_nil(lfs.attributes(moduleXml), "the save wrote the emptied module out over its own file")
   end)
+
+  -- withDualInstall() installs the module half from a .mpackage, and only an
+  -- archive unpacks a folder - so the case where the restore puts no folder back
+  -- needs the module to come from a bare .xml. Copied into the profile first for
+  -- the same reason installFixtureModule() copies: a save with sync on rewrites
+  -- the module's own file, and these fixtures are committed.
+  local function withXmlModule()
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. moduleName .. ".xml"
+    copyFile(fixtureDirectory .. "/sources/" .. moduleName .. "/" .. moduleName .. ".xml", path)
+    defer(function()
+      removeFixtureModule(moduleName)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(moduleName) end, "the fixture module " .. moduleName)
+  end
+
+  it("removes the package's folder when the restored module unpacks nothing in its place", function()
+    withFixturePackage(moduleName)
+    local packageDirectory = getMudletHomeDir() .. "/" .. moduleName
+    assert.is_true(fileExists(packageDirectory), "the package's own archive should have unpacked a folder to begin with")
+    withXmlModule()
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(uninstallPackage(moduleName))
+    pumpEvents(200)
+
+    assert.is_true(moduleInstalled(moduleName), "the module the user did not ask to remove has to survive")
+    -- the restore reinstalled the module from a bare .xml, which unpacks nothing,
+    -- so this folder was still the uninstall's to take away and nothing else will
+    assert.is_false(fileExists(packageDirectory), "the package's folder was left behind for good")
+  end)
 end)
 
 describe("Tests installing a package while the profile is being saved", function()
