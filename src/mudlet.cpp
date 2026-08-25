@@ -4360,6 +4360,16 @@ void mudlet::slot_showMapperDialog()
         return;
     }
 
+    // A script-embedded mapper (Lua createMapper()/Geyser.Mapper) lives inside
+    // the profile's own UI and is the only widget that map updates reach via
+    // TMap::mpMapper; creating a competing dock here would steal that pointer
+    // and leave the embedded mapper stale. Toggle the embedded one instead,
+    // matching what the "Show Map" menu entry does.
+    if (pHost->mpConsole && pHost->mpConsole->mpMapper) {
+        pHost->showHideOrCreateMapper(true);
+        return;
+    }
+
     // If the host already has its default dock widget, hide it to avoid conflicts
     if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
         pHost->mpConsole->mpDockableMapWidget->setVisible(false);

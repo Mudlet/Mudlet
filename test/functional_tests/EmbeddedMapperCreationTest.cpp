@@ -20,13 +20,16 @@
 /*
  * Covers TMainConsole::createMapper() - the embedded mapper behind Lua
  * createMapper() and Geyser.Mapper{embedded = true} - on both sides of its
- * already-loaded-map branch.
+ * already-loaded-map branch, and that the main toolbar map action leaves an
+ * embedded mapper in charge of TMap::mpMapper instead of building a
+ * competing main window dock over it.
  *
  * An embedded mapper and the dockable map widget are mutually exclusive for the
  * life of a profile and neither can be destroyed, so the busted suite cannot go
  * here and each test method needs a mudlet of its own.
  */
 
+#include <QDockWidget>
 #include <QFileInfo>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -162,6 +165,25 @@ private slots:
         QVERIFY(mpHost->mpConsole->mpMapper);
 
         QVERIFY2(mapOpenEventCountIs(1), "createMapper() did not raise mapOpenEvent exactly once for a first-run profile");
+    }
+
+    // The main toolbar map button runs mudlet::slot_showMapperDialog(). With a
+    // script-embedded mapper alive it must not build the per-profile main
+    // window dock: that dock takes over TMap::mpMapper - the only widget map
+    // updates are painted through - and the embedded mapper then only repaints
+    // on direct interaction, even after the dock is closed again.
+    void test_toolbarMapActionLeavesEmbeddedMapperInCharge()
+    {
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY(mpHost->mpConsole->mpMapper);
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+
+        mudlet::self()->slot_showMapperDialog();
+
+        QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar map action built a competing main window map dock over an embedded mapper");
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QVERIFY2(mapOpenEventCountIs(1), "the toolbar map action raised mapOpenEvent over an existing embedded mapper");
     }
 
 private:
