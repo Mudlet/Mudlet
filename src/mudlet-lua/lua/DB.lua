@@ -452,9 +452,14 @@ local lua_reserved_words = {
 ---   A _unique entry naming a column the sheet does not have is skipped and warned
 ---   about the same way, but that one costs more than an index would: a sheet made
 ---   from scratch is built without the uniqueness it asked for, so db:add takes rows
----   the constraint would have refused. A sheet that already carries the constraint
----   keeps it, for the same reason its indexes are left alone.
----   Naming _row_id in a _unique entry of several columns is warned about but kept,
+---   the constraint would have refused. A sheet that already enforces that uniqueness
+---   keeps it and is warned about again, since taking a rule off a typo is not
+---   something a later, correct db:create can undo: its constraints are then left
+---   exactly as they are, a constraint it has newly asked for and a change to
+---   _violations among them, until the entry is spelled right. A db:create that
+---   loses the sheet nothing is applied as usual, and one that also drops a column
+---   does lose the rule, since removing a column is a rebuild in its own right.
+---   Naming _row_id in a _unique entry written as a list is warned about but kept,
 ---   since a sheet's _row_id is unique on its own and the constraint is therefore
 ---   one that can never refuse a row.
 function db:create(db_name, sheets, force)
@@ -598,11 +603,10 @@ function db:create(db_name, sheets, force)
         -- attached by an exact-match lookup in db:_build_create_table_sql
         local resolvable = { _row_id = true }
         for column_name in pairs(columns) do
-          -- the keyed form takes every key that is not an option for a column
-          -- name, numbers included, and a number has no :lower()
-          if type(column_name) == "string" then
-            resolvable[column_name:lower()] = true
-          end
+          -- the keyed form takes every key that is not an option for a column name,
+          -- numbers included, and sqlite resolves UNIQUE("2") against a column
+          -- called 2 the same as it resolves any other name
+          resolvable[tostring(column_name):lower()] = true
         end
 
         local wanted = {}
@@ -632,20 +636,23 @@ function db:create(db_name, sheets, force)
           -- a UNIQUE naming a column sqlite cannot resolve is refused, and takes the
           -- whole CREATE TABLE with it, leaving no sheet at all. Dropping the
           -- constraint keeps the sheet, at the price of db:add then taking the
-          -- duplicates it was meant to refuse; the single-column form was never
-          -- attached in the first place, so there it only adds the message
+          -- duplicates it was meant to refuse; the single-column form never reached
+          -- sqlite to be refused, so on a new sheet it only adds the message. On a
+          -- sheet that exists either form can cost a rule the table enforces today,
+          -- which is what has_skipped_unique carries to db:_migrate
           if compound and #unique_entry == 0 then
             has_skipped_unique = true
             table.insert(warnings, "db:create - "..sheet_name.." - _unique has an entry with no "..
               "column names in it: that constraint is skipped.")
           elseif not unknown_column then
-            -- sqlite takes a compound entry naming _row_id, and the constraint can
-            -- then never refuse a row, since a sheet's key is unique on its own. It
-            -- is kept anyway: dropping it would change the sheet's SQL and put every
-            -- database that has one through db:_migrate's table rebuild
+            -- sqlite takes an entry naming _row_id, and the constraint can then never
+            -- refuse a row, since a sheet's key is unique on its own. It is kept
+            -- anyway: dropping it would change the sheet's SQL for no gain, and the
+            -- has_skipped_unique route out of the rebuild is not free either, since a
+            -- sheet with one would then never have its constraints reconciled again
             if names_row_id then
-              table.insert(warnings, "db:create - "..sheet_name.." - _unique names \"_row_id\" among "..
-                "the columns of an entry, and a sheet's _row_id is unique already, so that constraint "..
+              table.insert(warnings, "db:create - "..sheet_name.." - _unique names \"_row_id\" in an "..
+                "entry written as a list, and a sheet's _row_id is unique already, so that constraint "..
                 "can never refuse a row: drop it, or name the columns you meant.")
             end
 
@@ -860,6 +867,124 @@ end
 
 
 
+-- The pieces a CREATE TABLE body, or a UNIQUE column list, is written in: split
+-- on the commas outside any brackets, so a compound UNIQUE stays in one piece.
+-- The commas are counted off a copy with the quoted parts blanked out, which is
+-- what keeps a comma inside a name or a default value from being one of them,
+-- and both copies are returned since the caller reads names off the text and
+-- searches the blanked one.
+local function split_on_commas(text, searchable)
+  local pieces = {}
+  local depth, piece_start = 0, 1
+
+  local function add(stop_at)
+    pieces[#pieces + 1] = { text = text:sub(piece_start, stop_at), scan = searchable:sub(piece_start, stop_at) }
+  end
+
+  for position = 1, #searchable do
+    local char = searchable:sub(position, position)
+    if char == "(" then
+      depth = depth + 1
+    elseif char == ")" then
+      depth = depth - 1
+    elseif char == "," and depth == 0 then
+      add(position - 1)
+      piece_start = position + 1
+    end
+  end
+  add(#text)
+
+  return pieces
+end
+
+
+-- The column name a piece of a CREATE TABLE opens with. This module quotes every
+-- name it writes, but a sheet whose table was not written by it need not: reading
+-- quoted names only reduces each of that table's UNIQUEs to the same empty name,
+-- and a sheet whose rules all look alike is one that can be told it is losing a
+-- rule it is not. A name written in some other way sqlite takes, [name] among
+-- them, does come back empty, which no expected CREATE TABLE ever holds, so that
+-- sheet is left as it is rather than losing a rule to a misreading.
+local function leading_column_name(text)
+  local trimmed = text:match("^%s*(.-)%s*$")
+
+  return trimmed:match('^"([^"]*)"') or trimmed:match("^([%w_$]+)") or ""
+end
+
+
+-- The columns each UNIQUE in a CREATE TABLE covers, sorted and counted. Sorted
+-- because sqlite enforces the same rule whichever order they are written in, and
+-- without the ON CONFLICT clause because that is a _violations change, which
+-- costs no uniqueness. db:_extract_table_constraints is no use for this: it drops
+-- the column name of a column-level UNIQUE, so a rule moving from one column to
+-- another looks to it like no change at all.
+local function unique_targets(sql)
+  local counts = {}
+  local content = normalize_sql(sql or ""):match("^create table [^(]+%((.+)%)$")
+  if not content then
+    return counts
+  end
+
+  -- a column name and a default value are both quoted, and either can hold a
+  -- comma, a bracket or the word itself, so the scan runs over a copy with the
+  -- quoted parts blanked out. Same-length blanks keep the offsets lined up
+  local function blank(quoted)
+    return (" "):rep(#quoted)
+  end
+  local searchable = content:gsub('"[^"]*"', blank):gsub("'[^']*'", blank)
+
+  for _, part in ipairs(split_on_commas(content, searchable)) do
+    local text, scan = part.text, part.scan
+
+    local start, stop = scan:find("unique", 1, true)
+    while start and (scan:sub(start - 1, start - 1):match("[%w_]") or scan:sub(stop + 1, stop + 1):match("[%w_]")) do
+      -- a column called unique_id is not one
+      start, stop = scan:find("unique", stop + 1, true)
+    end
+
+    if start then
+      -- a table-level UNIQUE names its columns in the brackets that follow, a
+      -- column-level one covers the column it is written on, which is the name
+      -- the part opens with
+      local columns = {}
+      local list_start, list_stop = scan:find("^%s*%b()", stop + 1)
+
+      if list_start then
+        local list_text = text:sub(list_start, list_stop):match("^%s*%((.*)%)$")
+        local list_scan = scan:sub(list_start, list_stop):match("^%s*%((.*)%)$")
+        for _, entry in ipairs(split_on_commas(list_text, list_scan)) do
+          columns[#columns + 1] = leading_column_name(entry.text)
+        end
+      else
+        columns[1] = leading_column_name(text)
+      end
+
+      table.sort(columns)
+      -- "\0" rather than a comma, which a column name can hold: joining on one
+      -- makes a column called a,b compare equal to a UNIQUE over a and b
+      local target = table.concat(columns, "\0")
+      counts[target] = (counts[target] or 0) + 1
+    end
+  end
+
+  return counts
+end
+
+
+-- Whether rebuilding a table to match the schema would leave it without a
+-- uniqueness rule it carries today.
+local function drops_a_unique(expected_sql, actual_sql)
+  local expected = unique_targets(expected_sql)
+  for target, count in pairs(unique_targets(actual_sql)) do
+    if (expected[target] or 0) < count then
+      return true
+    end
+  end
+
+  return false
+end
+
+
 local function count_rows(conn, s_name)
   local count_cursor, count_err = conn:execute("SELECT COUNT(*) as cnt FROM " .. s_name);
   if count_cursor == nil then
@@ -951,6 +1076,8 @@ function db:_migrate(db_name, s_name, force)
     db:echo_sql(get_actual_sql)
     local sql_cur, sql_err = conn:execute(get_actual_sql)
     local table_constraints_changed = false
+    local would_drop_a_unique = false
+    local unique_lost_to_column_removal = false
 
     if sql_cur and type(sql_cur) ~= "number" then
       local sql_row = sql_cur:fetch({}, "a")
@@ -963,16 +1090,47 @@ function db:_migrate(db_name, s_name, force)
 
         if expected_constraints ~= actual_constraints then
           table_constraints_changed = true
+          -- what is left of _unique after db:create skipped an entry is not the set
+          -- the sheet asked for, so a rebuild that costs uniqueness costs it off a
+          -- typo - and the create that spells the column right again cannot put the
+          -- rule back over the duplicates the meantime let in. Everything else the
+          -- rebuild would do, adding a constraint or changing _violations among it,
+          -- is still applied: freezing those too loses the sheet changes it asked
+          -- for and says nothing about them
+          if schema.has_skipped_unique and drops_a_unique(expected_sql, actual_sql) then
+            -- removing a column is a rebuild in its own right, further down and from
+            -- the same pruned _unique, so holding this one back would only move where
+            -- the rule is lost - and leaving the column instead is worse, since
+            -- db.Sheet's __index raises for a column the schema has no entry for
+            local removes_a_column = false
+            for column_name in pairs(current_columns) do
+              -- against nil rather than for truth: a column declared with a default
+              -- of false is one the sheet has, and reading it as one that is going
+              -- costs the sheet the very rule this guard is here to keep
+              if column_name ~= "_row_id" and schema.columns[column_name] == nil then
+                removes_a_column = true
+                break
+              end
+            end
+
+            would_drop_a_unique = not removes_a_column
+
+            if would_drop_a_unique then
+              printError("db:create - "..s_name.." - the uniqueness this sheet already enforces is "..
+                "kept rather than rebuilt to match what is left of _unique: spell the skipped "..
+                "entries right and it is applied then.", true, false)
+            else
+              -- said once the rebuild is past the guard that can still halt it, so
+              -- this reports what happened rather than what was about to
+              unique_lost_to_column_removal = true
+            end
+          end
         end
       end
     end
 
-    -- If the table-level constraints have changed, we need to recreate the table.
-    -- Not when db:create dropped a _unique entry naming a column the sheet does not
-    -- have: rebuilding to match what is left of _unique would take a uniqueness rule
-    -- the live table has today off a typo, and the create that spells the column
-    -- right again cannot put it back over the duplicates the meantime let in.
-    if table_constraints_changed and not schema.has_skipped_unique then
+    -- If the table-level constraints have changed, we need to recreate the table
+    if table_constraints_changed and not would_drop_a_unique then
       -- Commit any pending transaction before table recreation
       db:echo_sql("COMMIT")
       conn:commit()
@@ -980,7 +1138,9 @@ function db:_migrate(db_name, s_name, force)
       -- Check if we're deleting columns that contain data (unless force flag is set)
       local redundant_columns = {}
       for k, _ in pairs(current_columns) do
-        if not schema.columns[k] and k ~= "_row_id" then
+        -- against nil rather than for truth, for the reason the guard above gives:
+        -- a column defaulting to false is declared, so it is not redundant
+        if schema.columns[k] == nil and k ~= "_row_id" then
           redundant_columns[#redundant_columns + 1] = k
         end
       end
@@ -1007,6 +1167,12 @@ function db:_migrate(db_name, s_name, force)
         assert(not not_blank[1] or force,
                "db:_migrate halted due to data present in undefined columns: " .. table.concat(not_blank, ", ") ..
                "\nuse force option to drop anyway.")
+      end
+
+      if unique_lost_to_column_removal then
+        printError("db:create - "..s_name.." - removing a column rebuilds this sheet from what is "..
+          "left of _unique, so the uniqueness it enforces today is lost whichever column that rule "..
+          "sits on: spell the skipped entries right before removing a column.", true, false)
       end
 
       -- Build the list of columns to preserve (only columns that exist in both current and new schema)
@@ -1096,7 +1262,8 @@ function db:_migrate(db_name, s_name, force)
         end
       end
     else
-      -- No table definition change, proceed with normal column migration
+      -- No table definition change to apply - either there was none, or applying it
+      -- would have cost the sheet a uniqueness rule it enforces today
       local missing = {}
 
     for k, v in pairs(schema.columns) do

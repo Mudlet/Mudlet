@@ -64,7 +64,8 @@ using namespace std::chrono_literals;
 // the former members as references aliasing the model, so these tests pin down
 // that the aliasing really is one object, that the pipeline runs off the model,
 // and that the model stays usable once its view has been destroyed - the
-// co-ownership exists precisely so the two can outlive each other.
+// co-ownership exists precisely so the two can outlive each other, and the
+// chosen system spell dictionary lives on Host for that same reason.
 class ConsoleModelExtractionTest : public QObject
 {
     Q_OBJECT
@@ -75,10 +76,15 @@ private:
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-ConsoleModelExtraction";
     const QString mColourHostname = "Test-ConsoleModelColours";
+    const QString mSpellHostname = "Test-ConsoleModelSpellDic";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
     const QColor mProfileBgColor{0x00, 0x00, 0x80};
+    // Deliberately not a locale code, so it can never be the starting dictionary
+    // getSpellDic() falls back to: the seeded save is then the only place a
+    // profile could have got this name from.
+    const QString mProfileSpellDic = "mudlet_test_dictionary";
 
 private slots:
     void initTestCase()
@@ -117,6 +123,7 @@ private slots:
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
         deleteProfileDirectory(mColourHostname);
+        deleteProfileDirectory(mSpellHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -608,12 +615,93 @@ private slots:
                  qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
     }
 
+    // A profile is loaded and saved before it has a view, so the name of the
+    // system spell dictionary it chose has to make the whole round trip through
+    // Host - a save that reaches into the main console widget for it dereferences
+    // a null pointer here.
+    void test_spellDictionaryRoundTripsWithNoView()
+    {
+        const QString saveFolder = mudlet::getMudletPath(enums::profileXmlFilesPath, mSpellHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        const QString savePath = qsl("%1profileSpellDic.xml").arg(saveFolder);
+        writeProfileSave(savePath, qsl("      <mSpellDic>%1</mSpellDic>\n").arg(mProfileSpellDic));
+        // loadProfile() reports a profile with no save at all as loaded fine, so
+        // a save that never landed would read as a bare dictionary mismatch below:
+        QVERIFY2(QFileInfo(savePath).size() > 0, "The seeded profile save is missing or empty.");
+
+        Host* host = mudlet::self()->loadProfile(mSpellHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QCOMPARE(host->getSpellDic(), mProfileSpellDic);
+
+        const auto [xml, saveError] = savedProfileXml(host);
+        QVERIFY2(!xml.isEmpty(), qPrintable(qsl("Saving the view-less profile produced nothing: %1").arg(saveError)));
+        QVERIFY2(xml.contains(qsl("<mSpellDic>%1</mSpellDic>").arg(mProfileSpellDic)),
+                 qPrintable(qsl("The view-less profile save did not carry the spell dictionary \"%1\" back out.").arg(mProfileSpellDic)));
+    }
+
+    // The same read the other way round: with nothing chosen the member is empty,
+    // so the save has to go through getSpellDic() to keep naming a dictionary at
+    // all.
+    void test_spellDictionarySaveKeepsTheStartingDictionary()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        // Spelled out rather than read back from getSpellDic(), which is the
+        // expression under test: a fallback quietly changed to some other
+        // non-empty value has to redden this, not follow it. A profile made
+        // moments ago in this test's own config directory has picked nothing.
+#if defined(Q_OS_OPENBSD)
+        const QString startingDictionary = qsl("en-GB");
+#else
+        const QString startingDictionary = qsl("en_US");
+#endif
+        QCOMPARE(host->getSpellDic(), startingDictionary);
+
+        const auto [xml, saveError] = savedProfileXml(host);
+        QVERIFY2(!xml.isEmpty(), qPrintable(qsl("Saving the profile produced nothing: %1").arg(saveError)));
+        QVERIFY2(xml.contains(qsl("<mSpellDic>%1</mSpellDic>").arg(startingDictionary)),
+                 qPrintable(qsl("The profile save did not carry the starting spell dictionary \"%1\".").arg(startingDictionary)));
+    }
+
+    // Saving the name is only half the wire: Host owning it is worth nothing
+    // unless something carries it into the console's Hunspell handle. Both
+    // directions are driven here - the handle a new view builds for itself, and
+    // the reload Host::setSpellDic() has to push into a live one.
+    void test_choosingADictionaryReachesTheConsole()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        Hunhandle* handle = host->mpConsole->getHunspellHandle_system();
+        QVERIFY2(handle, "The view built no system dictionary handle for the profile's dictionary.");
+
+        // Hunspell_create() hands back a usable handle even when neither file
+        // exists, so a non-null handle only proves the load ran. Telling a
+        // reload apart from a failed load needs a dictionary that knows a word,
+        // which a machine with no en_US installed cannot supply.
+        if (!Hunspell_spell(handle, "the")) {
+            QSKIP("no en_US dictionary is installed here, so a reload cannot be told apart from a failed load");
+        }
+
+        host->setSpellDic(mProfileSpellDic);
+        Hunhandle* reloaded = host->mpConsole->getHunspellHandle_system();
+        QVERIFY2(reloaded, "The reload left the profile with no system dictionary handle at all.");
+        QVERIFY2(!Hunspell_spell(reloaded, "the"), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the console.");
+    }
+
     void cleanup()
     {
         delete mpServer;
         mpServer = nullptr;
         deleteProfileDirectory(mHostname);
         deleteProfileDirectory(mColourHostname);
+        deleteProfileDirectory(mSpellHostname);
         delete mudlet::self();
     }
 
@@ -719,12 +807,22 @@ private:
         QVERIFY2(mProfileBgColor != QColorConstants::Black, "The background colour under test is the built-in default, so the assertions on it cannot fail.");
     }
 
-    // Utility function writing the smallest profile save readHost() accepts, the
-    // colour elements spelled as XMLexport::exportHost() writes them. Not
-    // surgical: readHost() reads a missing boolean attribute as "off", so
-    // importing this into a live profile also turns some three dozen of its
-    // settings off and zeroes its borders.
+    // Utility function spelling the colour elements the way
+    // XMLexport::exportHost() writes them.
     void writeProfileColourSave(const QString& filePath)
+    {
+        writeProfileSave(filePath,
+                         qsl("      <mFgColor>%1</mFgColor>\n"
+                             "      <mBgColor alpha=\"%2\">%3</mBgColor>\n")
+                                 .arg(mProfileFgColor.name(), QString::number(mProfileBgColor.alpha()), mProfileBgColor.name()));
+    }
+
+    // Utility function writing the smallest profile save readHost() accepts,
+    // holding nothing but the given <Host> children. Not surgical: readHost()
+    // reads a missing boolean attribute as "off", so importing one into a live
+    // profile also turns some three dozen of its settings off and zeroes its
+    // borders.
+    void writeProfileSave(const QString& filePath, const QString& hostChildren)
     {
         QFile file(filePath);
         QVERIFY2(file.open(QFile::WriteOnly | QFile::Text), qPrintable(qsl("Could not write the profile save %1.").arg(filePath)));
@@ -733,14 +831,40 @@ private:
                    "<MudletPackage version=\"1.001\">\n"
                    "  <HostPackage>\n"
                    "    <Host>\n"
-                   "      <mFgColor>%1</mFgColor>\n"
-                   "      <mBgColor alpha=\"%2\">%3</mBgColor>\n"
+                   "%1"
                    "    </Host>\n"
                    "  </HostPackage>\n"
                    "</MudletPackage>\n")
-                        .arg(mProfileFgColor.name(), QString::number(mProfileBgColor.alpha()), mProfileBgColor.name());
+                        .arg(hostChildren);
         out.flush();
         QVERIFY2(out.status() == QTextStream::Ok && file.error() == QFile::NoError, qPrintable(qsl("Writing the profile save %1 failed: %2").arg(filePath, file.errorString())));
+    }
+
+    // Utility function handing back either the XML the production save wrote or
+    // the reason there is none. Both waits matter: saveProfile() refuses to
+    // start while another save is in flight, and the one it does start only
+    // finishes on a background thread.
+    std::pair<QString, QString> savedProfileXml(Host* host)
+    {
+        QTemporaryDir saveDir;
+        if (!saveDir.isValid()) {
+            return {{}, qsl("could not create a directory to save the profile into")};
+        }
+        host->waitForProfileSave();
+        auto [saved, xmlPath, saveError] = host->saveProfile(saveDir.path(), qsl("spellDictionary"));
+        if (!saved) {
+            return {{}, saveError};
+        }
+        host->waitForProfileSave();
+        QFile file(xmlPath);
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            return {{}, qsl("could not read %1 back: %2").arg(xmlPath, file.errorString())};
+        }
+        const QString xml = QString::fromUtf8(file.readAll());
+        if (xml.isEmpty()) {
+            return {{}, qsl("%1 was written empty").arg(xmlPath)};
+        }
+        return {xml, {}};
     }
 
     // Utility function reading a profile's Host settings into a live profile, as

@@ -23,6 +23,7 @@
  ***************************************************************************/
 
 #include <QApplication>
+#include <QCryptographicHash>
 #include <QEnterEvent>
 #include <QDir>
 #include <QRegularExpression>
@@ -264,16 +265,24 @@ public:
     }
 
     inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
+    static constexpr int scmMaxPathComponentLength = 50;
+    static constexpr int scmPathComponentDigestLength = 16;
+
     // Sanitize a string for safe use as filename/path component
-    // Replaces filesystem-unsafe characters with underscores and limits length
+    // Replaces filesystem-unsafe characters with underscores and limits length.
+    // Callers file data under the result, so shortening has to keep distinct
+    // inputs distinct: a shortened name carries a digest of the whole input,
+    // since plain truncation made two long profile names share - and overwrite -
+    // one stored password.
     static QString sanitizeForPath(const QString& input)
     {
         QString sanitized = input;
         // Replace filesystem-unsafe characters with underscores
         sanitized.replace(scmfileSystemUnsafeChars, qsl("_"));
         // Limit length to prevent filesystem issues
-        if (sanitized.length() > 50) {
-            sanitized = sanitized.left(50);
+        if (sanitized.length() > scmMaxPathComponentLength) {
+            const QString digest = QString::fromLatin1(QCryptographicHash::hash(input.toUtf8(), QCryptographicHash::Sha256).toHex()).left(scmPathComponentDigestLength);
+            sanitized = qsl("%1-%2").arg(sanitized.left(scmMaxPathComponentLength - scmPathComponentDigestLength - 1), digest);
         }
         return sanitized;
     }
