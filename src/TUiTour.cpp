@@ -385,8 +385,9 @@ void TUiTour::keyPressEvent(QKeyEvent* event)
 
 void TUiTour::mouseReleaseEvent(QMouseEvent* event)
 {
+    // the overlay spans the whole window, so a click anywhere on it would otherwise
+    // advance the tour - swallow it and leave that to the Next button
     event->accept();
-    slot_next();
 }
 
 bool TUiTour::eventFilter(QObject* watched, QEvent* event)
