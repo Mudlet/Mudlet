@@ -732,7 +732,8 @@ hq.buttonCSS = [[
 ]]
 
 -- every panel is dismissed the same way, so they all get the same button in the
--- same corner - the panel itself stays clickable for anyone who aims elsewhere
+-- same corner - only the button advances, a click elsewhere on the panel does
+-- nothing
 function hq.addNextButton(panel, callback)
 
   local button = Geyser.Label:new({
@@ -775,7 +776,6 @@ function hq.guiTutorialStart()
     (Multi-User Dungeons) while exploring some of Mudlet's basic features.&lt;/p&gt;&lt;/center&gt;]]
     
   }, hq.mainMenuContainer)
-  hq.mainMenuLabel:setClickCallback(hq.guiTutorialStep1)
   hq.mainMenuLabel:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.mainMenuLabel, hq.guiTutorialStep1)
   
@@ -808,7 +808,6 @@ function hq.guiTutorialStep1()
     - progress and score,&lt;br&gt;
     - and lots more depending on the game.&lt;/p&gt;]]
   }, hq.guiStep1Container) 
-  hq.guiStep1Label:setClickCallback(hq.guiTutorialStep2)
   hq.guiStep1Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep1Label, hq.guiTutorialStep2)
   
@@ -844,7 +843,6 @@ function hq.guiTutorialStep2()
     &lt;p&gt;It is used for sending commands via your keyboard to the game
     to control your character.&lt;/p&gt;]]
   }, hq.guiStep2Container)  
-  hq.guiStep2Label:setClickCallback(hq.guiTutorialStep3)
   hq.guiStep2Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep2Label, hq.guiTutorialStep3)
   
@@ -879,7 +877,6 @@ function hq.guiTutorialStep3()
     and logging facilities.&lt;/p&gt;
     &lt;p&gt;We can learn more about them later.&lt;/p&gt;]]
   }, hq.guiStep3Container)  
-  hq.guiStep3Label:setClickCallback(hq.guiTutorialStep4)
   hq.guiStep3Label:setStyleSheet(f"{hq.labelCSS} qproperty-alignment: AlignRight;")  
   hq.addNextButton(hq.guiStep3Label, hq.guiTutorialStep4)
 
@@ -907,7 +904,6 @@ function hq.guiTutorialStep4()
     from your game, preferences and other tools.&lt;/p&gt;
     &lt;p&gt;We can learn more about them later.&lt;/p&gt;]]
   }, hq.guiStep4Container)  
-  hq.guiStep4Label:setClickCallback(hq.guiTutorialStepFinal)
   hq.guiStep4Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep4Label, hq.guiTutorialStepFinal)
 
@@ -949,7 +945,6 @@ function hq.guiTutorialStepFinal()
     
     &lt;p&gt;Now follow along in the main window.&lt;/p&gt;&lt;/center&gt;]]
   }, hq.guiStepFinalContainer)  
-  hq.guiStepFinalLabel:setClickCallback(hq.newGameScreen)
   hq.guiStepFinalLabel:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStepFinalLabel, hq.newGameScreen)
 
@@ -1053,7 +1048,6 @@ function hq.drawMapHint()
     
   }, hq.mapHintContainer)
   local dismissMapHint = function() hq.mapHintContainer:hide() end
-  hq.mapHintLabel:setClickCallback(dismissMapHint)
   hq.mapHintLabel:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.mapHintLabel, dismissMapHint)
   tempTimer(1, function() hq.mapperWindow:flash(0.2) end)
