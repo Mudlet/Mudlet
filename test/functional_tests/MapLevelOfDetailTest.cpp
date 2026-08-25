@@ -37,13 +37,20 @@
  * checked is that the rule does not reach any further than that, and
  * test_adjacentRoomExitsSurviveJustInsideTheTier() is that check.
  *
- * One test here is a level down from all that, on the viewport query that
- * decides which rooms either tier is offered in the first place. It runs at
- * forty pixels a room, well above the threshold, because that is the zoom at
- * which where a room stops can be read off the frame at all.
+ * The rest is what the tier still has to do besides drawing. A double-click
+ * on a room is answered by the room loop, so the reduced tier has to answer it
+ * too, and answer it the same way - including about a room it is not drawing.
  *
- * A Lua spec cannot reach any of this: the only evidence is pixels, and
- * nothing in the Lua API reads back what the mapper drew.
+ * Two tests here are a level down from all that, on the viewport query that
+ * decides which rooms either tier is offered in the first place. One runs at
+ * forty pixels a room, well above the threshold, because that is the zoom at
+ * which where a room stops can be read off the frame at all; the other at a
+ * zoom nothing in the UI can reach but a script can set, where the range of
+ * room coordinates the query works in stops fitting in the int it returns.
+ *
+ * A Lua spec cannot reach any of this: the only evidence is pixels and the
+ * mapper's own state, and nothing in the Lua API reads back what the mapper
+ * drew or what a click on it resolved to.
  *
  * Run with: ctest -R MapLevelOfDetailTest -V
  */
@@ -102,12 +109,22 @@ private:
     // Half a pixel per room, so a quarter of a pixel of room once the room size
     // fraction is applied, which rounds to none.
     static constexpr double kZoomHalfPixelRooms = 800.0;
+    // A ten-millionth of a pixel per room. Nothing in the UI zooms out this
+    // far, but setMapZoom() and TArea::set2DMapZoom() only reject a zoom that
+    // is too small, so a script can ask for this one.
+    static constexpr double kZoomFarBeyondAPixelPerRoom = 4.0e9;
 
     // Parked outside every viewport used here, so the player room's own
     // full-detail drawing and its highlight gradient cannot be mistaken for
     // anything a test is counting.
     static constexpr int kPlayerRoomId = 999;
     static constexpr int kPlayerRoomY = 1000;
+
+    // The room a click is aimed at, and a hidden one sitting on the origin
+    // that the same click must not reach.
+    static constexpr int kVisibleClickTargetId = 2;
+    static constexpr int kVisibleClickTargetX = 2;
+    static constexpr int kHiddenClickTargetId = 5;
 
     // Environment ids above 255 miss every branch of the built-in palette, so
     // the colour is whatever mCustomEnvColors was given.
@@ -118,6 +135,11 @@ private:
     // setCustomEnvColor() takes an alpha, so an environment colour that is
     // only partly opaque is something a script can ask for.
     static constexpr int kEnvTranslucent = 505;
+    // An environment a map file remapped onto an id that carries no colour of
+    // its own. Nothing rejects the mapping on the way in, so every tier has to
+    // fall back to something, and to the same something.
+    static constexpr int kEnvRemappedToNothing = 506;
+    static constexpr int kEnvWithNoColourOfItsOwn = 4242;
 
     static QColor exitColour() { return QColor(0, 255, 128); }
     static QColor customLineColour() { return QColor(255, 0, 255); }
@@ -159,6 +181,22 @@ private:
         for (int y = 0; y < image.height(); ++y) {
             for (int x = 0; x < image.width(); ++x) {
                 if (isScaledFrom(image.pixelColor(x, y), colour)) {
+                    ++count;
+                }
+            }
+        }
+        return count;
+    }
+
+    // Everything the map put on the widget, whatever colour it ended up: the
+    // background is filled black here, so anything else is a mark.
+    static int countMarkedPixels(const QImage& image)
+    {
+        int count = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                const QColor pixel = image.pixelColor(x, y);
+                if (pixel.red() + pixel.green() + pixel.blue() > 8) {
                     ++count;
                 }
             }
@@ -540,6 +578,80 @@ private slots:
         }
     }
 
+    // A double-click on a room resolves into a speed walk from inside the room
+    // loop, and the reduced tier does not run the full-detail loop that has
+    // always done it - it answers the click from the grid index instead. That
+    // block is the only thing standing between a double-click and nothing
+    // happening at all below four pixels a room, and nothing else here clicks
+    // on a room: the area exit marker test goes through the marker hit test,
+    // which is a different function and runs whichever tier drew the frame.
+    //
+    // A hidden room is where the two ways of answering can disagree. drawRoom()
+    // returns before its hit test for one, so at full detail a click where a
+    // hidden room sits does nothing, while the grid index hands its id over
+    // like any other room's - which would walk the player into a room the map
+    // is not drawing.
+    void test_aClickInTheReducedTierWalksIntoAVisibleRoomOnly_data()
+    {
+        QTest::addColumn<double>("zoom");
+        QTest::addColumn<bool>("reducedTier");
+        QTest::addColumn<int>("clickedRoomX");
+        QTest::addColumn<int>("expectedTargetRoomId");
+
+        // The full-detail rows are the control: they are what the reduced tier
+        // has to agree with, and they say a row that goes green did so because
+        // of the tier and not because the click never arrived.
+        QTest::newRow("visible room, full detail") << kZoomAtThreshold << false << kVisibleClickTargetX << kVisibleClickTargetId;
+        QTest::newRow("visible room, reduced tier") << kZoomThreePixelRooms << true << kVisibleClickTargetX << kVisibleClickTargetId;
+        QTest::newRow("hidden room, full detail") << kZoomAtThreshold << false << 0 << 0;
+        QTest::newRow("hidden room, reduced tier") << kZoomThreePixelRooms << true << 0 << 0;
+    }
+
+    void test_aClickInTheReducedTierWalksIntoAVisibleRoomOnly()
+    {
+        QFETCH(double, zoom);
+        QFETCH(bool, reducedTier);
+        QFETCH(int, clickedRoomX);
+        QFETCH(int, expectedTargetRoomId);
+
+        const int areaId = freshArea(qsl("Room Click Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, -kVisibleClickTargetX, 0, kEnvRoom));
+        QVERIFY(addRoomAt(kVisibleClickTargetId, areaId, kVisibleClickTargetX, 0, kEnvRoom));
+        QVERIFY(addRoomAt(kHiddenClickTargetId, areaId, 0, 0, kEnvHidden));
+        TRoom* pHiddenRoom = map()->mpRoomDB->getRoom(kHiddenClickTargetId);
+        QVERIFY(pHiddenRoom);
+        pHiddenRoom->hidden = true;
+
+        T2DMap* p2dMap = prepareWidget(areaId, zoom, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        // The first frame is what settles where the map is panned to, which is
+        // what turns a room coordinate into a widget one.
+        renderFrame(p2dMap);
+        if (reducedTier) {
+            QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
+        } else {
+            QCOMPARE(p2dMap->mRoomWidth, 4.0f);
+        }
+
+        const QPoint clickPoint(qRound(p2dMap->mRX + clickedRoomX * static_cast<double>(p2dMap->mRoomWidth)), p2dMap->mRY);
+        p2dMap->mTargetRoomId = 0;
+        p2dMap->mPHighlight = clickPoint;
+        p2dMap->mPick = true;
+        p2dMap->mStartSpeedWalk = true;
+        const QImage frame = renderFrame(p2dMap);
+
+        if (p2dMap->mTargetRoomId == expectedTargetRoomId) {
+            return;
+        }
+        if (expectedTargetRoomId) {
+            QFAIL(qPrintable(qsl("a double-click on the room at %1,%2 started no speed walk into it - the target room is %3, frame saved at %4")
+                                     .arg(QString::number(clickPoint.x()), QString::number(clickPoint.y()), QString::number(p2dMap->mTargetRoomId), saveFrame(frame, qsl("room-click")))));
+        }
+        QFAIL(qPrintable(qsl("a double-click at %1,%2, where a hidden room the map did not draw sits, started a speed walk into room %3. The frame is at %4")
+                                 .arg(QString::number(clickPoint.x()), QString::number(clickPoint.y()), QString::number(p2dMap->mTargetRoomId), saveFrame(frame, qsl("room-click-hidden")))));
+    }
+
     // What the reduced tier does draw: one blob of the environment colour per
     // room, and nothing at all for a hidden one.
     void test_roomsBecomeTheirEnvironmentColourAndHiddenOnesStayUndrawn()
@@ -632,6 +744,51 @@ private slots:
             QFAIL(qPrintable(
                     qsl("the room changed colour on crossing into the reduced tier - drawn %1 at four pixels a room and %2 below that, frames saved at %3 and %4")
                             .arg(fullDetailColour.name(), reducedTierColour.name(), saveFrame(atThreshold, qsl("translucent-at-threshold")), saveFrame(insideTier, qsl("translucent-inside-tier")))));
+        }
+    }
+
+    // Two of those scanline loops take their colour from environmentColor()
+    // while the full-detail non-grid loop works it out for itself, so the two
+    // can disagree about a room whose environment has no colour anywhere - and
+    // the room then changes appearance on the one zoom step where nothing
+    // about it is supposed to change but its size.
+    //
+    // The way to get there is an mEnvColors entry pointing at an id that
+    // carries no colour of its own. It has no Lua setter: only a map file can
+    // put an entry in it, and nothing checks what it points at exists.
+    void test_anEnvironmentRemappedOntoNothingKeepsTheRoomVisibleAcrossTheThreshold()
+    {
+        const int areaId = freshArea(qsl("Dangling Environment Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRemappedToNothing));
+        map()->mEnvColors[kEnvRemappedToNothing] = kEnvWithNoColourOfItsOwn;
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomAtThreshold, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        const QImage atThreshold = renderFrame(p2dMap);
+        QCOMPARE(p2dMap->mRoomWidth, 4.0f);
+        const QColor fullDetailColour = brightestPixel(atThreshold);
+
+        p2dMap = prepareWidget(areaId, kZoomThreePixelRooms, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        const QImage insideTier = renderFrame(p2dMap);
+        QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the second frame was not drawn inside the reduced level of detail");
+        const QColor reducedTierColour = brightestPixel(insideTier);
+
+        // The background is filled black here, so a room that took the
+        // background colour is a room that is not there any more.
+        if (countMarkedPixels(atThreshold) < 1 || countMarkedPixels(insideTier) < 1) {
+            QFAIL(qPrintable(qsl("the room disappeared into the background because its environment is remapped onto an id with no colour - %1 marked pixels at four pixels a room and %2 below "
+                                 "that, frames saved at %3 and %4")
+                                     .arg(QString::number(countMarkedPixels(atThreshold)),
+                                          QString::number(countMarkedPixels(insideTier)),
+                                          saveFrame(atThreshold, qsl("dangling-env-at-threshold")),
+                                          saveFrame(insideTier, qsl("dangling-env-inside-tier")))));
+        }
+        if (!coloursMatch(reducedTierColour, fullDetailColour, 4)) {
+            QFAIL(qPrintable(
+                    qsl("the room changed colour on crossing into the reduced tier - drawn %1 at four pixels a room and %2 below that, frames saved at %3 and %4")
+                            .arg(fullDetailColour.name(), reducedTierColour.name(), saveFrame(atThreshold, qsl("dangling-env-at-threshold")), saveFrame(insideTier, qsl("dangling-env-inside-tier")))));
         }
     }
 
@@ -729,6 +886,32 @@ private slots:
                                                   saveFrame(frame, qsl("viewport-cull")))));
                 }
             }
+        }
+    }
+
+    // The same query, asked from the other end: a zoom no wheel can reach but
+    // a script can set. The room coordinates that could be on screen are then
+    // billions apart, which does not fit in the int the query hands back, and
+    // a double that does not fit in an int is undefined to cast - this build
+    // lands on INT_MIN, leaves the rectangle inside out, and the area is not
+    // drawn at all. There is nothing to see at this zoom either way; what
+    // matters is that the map is still there when the zoom comes back.
+    void test_theViewportSurvivesAZoomFarBeyondAPixelPerRoom()
+    {
+        const int areaId = freshArea(qsl("Extreme Zoom Area"));
+        QVERIFY(areaId > 0);
+        for (int i = 0; i < 3; ++i) {
+            QVERIFY(addRoomAt(i + 1, areaId, i, 0, kEnvRoom));
+        }
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFarBeyondAPixelPerRoom, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        const QImage frame = renderFrame(p2dMap);
+
+        QVERIFY2(p2dMap->mRoomWidth > 0.0f && p2dMap->mRoomWidth < 1.0e-6f, "the zoom was clamped somewhere, so this is no longer the case it is meant to be");
+        if (countMarkedPixels(frame) < 1) {
+            QFAIL(qPrintable(
+                    qsl("the area was not drawn at all at a zoom of %1 - the frame is empty, saved at %2").arg(QString::number(kZoomFarBeyondAPixelPerRoom), saveFrame(frame, qsl("extreme-zoom")))));
         }
     }
 
