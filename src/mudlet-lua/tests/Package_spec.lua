@@ -1080,14 +1080,6 @@ end)
 
 describe("Tests installing a package while the profile is being saved", function()
   it("installs a package that is asked for while an earlier install is still saving", function()
-    -- BUG: installing a package starts an asynchronous profile save, and an
-    -- install that arrives during one is postponed until profileSaveFinished().
-    -- That signal is only emitted while the profile writer is being retired, so
-    -- an install asked for after the writers are gone but before the save has
-    -- finished is never carried out - and installPackage() has already answered
-    -- true, so a script has no way to notice. Left pending rather than pinning
-    -- a silently dropped install as correct.
-    pending("installPackage() answers true but drops the install when a save is in progress")
     defer(function()
       removeFixturePackage(minimalPackage)
       removeFixturePackage("mudlet-spec-noconfig")
