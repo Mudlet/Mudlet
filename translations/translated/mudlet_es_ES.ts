@@ -6034,7 +6034,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <source>%n trigger(s) created while processing this line have been stopped: temporary ones removed, permanent ones switched off until the profile is reloaded.</source>
       <extracomment>%n is a count of triggers. Shown in the game window when a trigger keeps creating new triggers that match the same line, which would otherwise never end</extracomment>
       <translation>
-        <numerusform>Se han detenido %n disparador creado al procesar esta línea: se eliminaron los temporales y se desactivaron los permanentes hasta que se vuelva a cargar el perfil.</numerusform>
+        <numerusform>Se ha detenido %n disparador creado al procesar esta línea: se eliminaron los temporales y se desactivaron los permanentes hasta que se vuelva a cargar el perfil.</numerusform>
         <numerusform>Se han detenido los %n disparadores creados al procesar esta línea: se eliminaron los temporales y se desactivaron los permanentes hasta que se vuelva a cargar el perfil.</numerusform>
       </translation>
     </message>
@@ -6042,13 +6042,13 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TriggerUnit.cpp" line="387"/>
       <source>[ ERROR ] - Trigger processing stopped to prevent a freeze: a trigger (or another trigger it creates) keeps creating new triggers that match the line being processed, so that line never finishes. %1 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.</source>
       <extracomment>%1 is the sentence above, about the triggers that were stopped</extracomment>
-      <translation>[ ERROR ] - Se detuvo el procesamiento de los disparadores para evitar un bloqueo: un disparador (o otro disparador creado por este) no deja de crear nuevos disparadores que coinciden con la línea que se está procesando, por lo que esa línea nunca termina. %1 Crea el disparador una sola vez, fuera de su propio script, o asígnale un patrón que no coincida con la línea en la que se crea.</translation>
+      <translation>[ ERROR ] - Se detuvo el procesamiento de los disparadores para evitar un bloqueo: un disparador (o otro disparador creado por este) no se permite crear nuevos disparadores que coinciden con la línea que se está procesando, por lo que esa línea nunca termina. %1 Crea el disparador una sola vez, fuera de su propio script, o asígnale un patrón que no coincida con la línea en la que se crea.</translation>
     </message>
     <message>
       <location filename="../src/TriggerUnit.cpp" line="393"/>
       <source>[ ERROR ] - Trigger processing stopped to prevent a freeze: trigger &apos;%1&apos; (or another trigger it creates) keeps creating new triggers that match the line being processed, so that line never finishes. %2 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.</source>
       <extracomment>%1 is the name of a trigger - the name of a trigger made by tempTrigger() and friends is its id number - and %2 is the sentence above, about the triggers that were stopped</extracomment>
-      <translation>[ ERROR ] - Se detuvo el procesamiento de los disparadores para evitar un bloqueo: el disparador &apos;%1&apos; (o otro disparador creado por este) no deja de crear nuevos disparadores que coinciden con la línea que se está procesando, por lo que esa línea nunca termina. %2 Crea el disparador una sola vez, fuera de su propio script, o asígnale un patrón que no coincida con la línea en la que se crea.</translation>
+      <translation>[ ERROR ] - Se detuvo el procesamiento de los disparadores para evitar un bloqueo: el disparador &apos;%1&apos; (o otro disparador creado por este) no permite crear nuevos disparadores que coinciden con la línea que se está procesando, por lo que esa línea nunca termina. %2 Crea el disparador una sola vez, fuera de su propio script, o asígnale un patrón que no coincida con la línea en la que se crea.</translation>
     </message>
   </context>
   <context>
@@ -6143,7 +6143,7 @@ Label for the update button shown in the update dialog</extracomment>
       <location filename="../src/updater.cpp" line="295"/>
       <source>Changelog Error</source>
       <extracomment>Error title for dialog shown when changelog fails to load</extracomment>
-      <translation>Error del registro de cambios</translation>
+      <translation>Error en el registro de cambios</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="297"/>
@@ -6183,7 +6183,7 @@ Label for the update button shown in the update dialog</extracomment>
       <location filename="../src/updater.cpp" line="546"/>
       <source>Failed to install the update and could not restore the previous version. Your previous version is saved at: %1 - please rename it back manually. Alternatively, download a fresh copy from https://www.mudlet.org/download/</source>
       <extracomment>Error shown when the update fails and the previous version could not be restored automatically. %1 is the file path to the backup copy.</extracomment>
-      <translation>No se pudo instalar la actualización y no se pudo restaurar la versión anterior. Tu versión anterior está guardada en: %1 ; por favor, cámbiale el nombre de nuevo manualmente. En su defecto, descarga una copia limpia desde https://www.mudlet.org/download/</translation>
+      <translation>No se pudo instalar la actualización ni tampoco restaurar la versión anterior. Tu versión anterior está guardada en: %1 ; por favor, cámbiale el nombre de nuevo manualmente. En su defecto, descarga una copia limpia desde https://www.mudlet.org/download/</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="602"/>
@@ -6259,7 +6259,7 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/VarUnit.cpp" line="325"/>
       <source>Saved variables are remembered by their dotted path, so a global with a dot in its own name cannot be told apart from a member of a table and cannot be saved.</source>
       <extracomment>Tooltip explaining why a global whose own name contains a dot cannot be saved</extracomment>
-      <translation>Las variables guardadas se recuerdan por su ruta de puntos, por lo que una variable global con un punto en su propio nombre no se puede distinguir de un miembro de una tabla y no se puede guardar.</translation>
+      <translation>Las variables guardadas se identifican por su ruta con puntos, por lo que una variable global con un punto en su propio nombre no se puede distinguir de un elemento de una tabla y no se puede guardar.</translation>
     </message>
     <message>
       <location filename="../src/VarUnit.cpp" line="333"/>
@@ -6279,13 +6279,13 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/XMLexport.cpp" line="817"/>
       <source>[ ALERT ] - Lua could not be read while these saved variables were being saved, so this save leaves them out: %1. Everything else in the profile was saved. An earlier save that still has them is under &apos;Connect - Options - Profile history&apos;.</source>
       <extracomment>%1 is a comma separated list of Lua variable names</extracomment>
-      <translation>[ ALERTA ] - No se pudo leer Lua mientras se guardaban estas variables, por lo que esta partida guardada no las incluye: %1. El resto del perfil se guardó correctamente. Una partida anterior que aún las contiene se encuentra en &apos;Connect - Options - Profile history&apos;.</translation>
+      <translation>[ ALERTA ] - No se pudo leer Lua mientras se guardaban estas variables, por lo que este guardado las excluye: %1. Todo lo demás en el perfil se guardó correctamente. Encontrarás un guardado anterior que aún las conserva en 'Conectar - Opciones - Historial del perfil'.&apos;</translation>
     </message>
     <message>
       <location filename="../src/XMLexport.cpp" line="825"/>
       <source>[ WARN ]  - These saved variables are nested more than %1 tables deep, so this save holds them as empty tables: %2. Store data that deep with table.save() and table.load() instead.</source>
       <extracomment>%1 is how many levels of nested tables Mudlet reads, %2 is a comma separated list of Lua variable names</extracomment>
-      <translation> ADVERTENCIA ] - Estas variables guardadas tienen un nivel de jerarquía superior a %1 tablas, por lo que este archivo de guardado las almacena como tablas vacías: %2. En su lugar, almacena datos a esa profundidad utilizando table.save() y table.load().</translation>
+      <translation>[ ADVERTENCIA ] - Estas variables guardadas tienen un nivel de jerarquía superior a %1 tablas, por lo que este archivo de guardado las almacena como tablas vacías: %2. En su lugar, almacena datos a esa profundidad utilizando table.save() y table.load().</translation>
     </message>
   </context>
   <context>
@@ -6297,8 +6297,9 @@ Error shown when the batch file for managing the update process cannot be create
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
       <translation>[ ALERTA ] - Lo sentimos, el archivo que se está leyendo:
-&quot;%1&quot; indica que tiene una versión (%2) que debe provenir de una versión posterior de Mudlet,
-y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más reciente!</translation>
+&quot;%1&quot;
+indica que tienes una versión (%2) que proviene de una versión más reciente de Mudlet,
+y esta versión no puede leerlo. ¡Necesitas una versión más reciente de Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="356"/>
@@ -6369,7 +6370,7 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="168"/>
       <source>Button Bar Properties</source>
-      <translation>Propiedades de la barra de botones</translation>
+      <translation>Propiedades de la Barra de Botones</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="226"/>
@@ -6384,27 +6385,27 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="246"/>
       <source>Dock Area Top</source>
-      <translation>Área de acoplamiento superior</translation>
+      <translation>Área de Acoplamiento Superior</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="251"/>
       <source>Dock Area Left</source>
-      <translation>Área de base izquierda</translation>
+      <translation>Área de Acoplamiento a la Izquierda</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Dock Area Right</source>
-      <translation>Área de base derecha</translation>
+      <translation>Área de Acoplamiento a la Derecha</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="261"/>
       <source>Floating Toolbar</source>
-      <translation>Barra De Herramientas Flotante</translation>
+      <translation>Barra de Herramientas Flotante</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="284"/>
       <source>Button Properties</source>
-      <translation>Propiedades Del Botón</translation>
+      <translation>Propiedades del Botón</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="290"/>
@@ -6450,7 +6451,7 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="75"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Elige un nombre bueno e idealmente único para tu botón, menú o barra de herramientas. Este se mostrará en el árbol de botones.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Elige un nombre adecuado y único para tu botón, menú o barra de herramientas. Este se mostrará en el árbol de botones.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
@@ -6465,14 +6466,12 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="348"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Escribe uno o más comandos que quieras que el botón envíe directamente al juego al ser presionado. (Opcional)&lt;/p&gt;&lt;p&gt;Si este es un botón de &lt;i&gt;pulsar &lt;/i&gt;, esto se enviará solo cuando el botón pase del estado &lt;i&gt;desactivado (arriba) &lt;/i&gt; al estado &lt;i&gt;activado (abajo) &lt;/i&gt;. &lt;/p&gt;&lt;p&gt;Para enviar comandos más complejos que dependan de variables o necesiten modificarlas dentro de este perfil, se debe introducir &lt;i&gt;en su lugar&lt;/i&gt; un script de Lua en el área de edición inferior. Cualquier cosa que se escriba aquí se enviará, literalmente, solo al servidor del juego.&lt;/p&gt;&lt;p&gt;Está permitido usar tanto esto &lt;i&gt;como&lt;/i&gt; un script de Lua; esto se enviará &lt;b&gt;antes&lt;/b&gt; de que se ejecute el script.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Escribe uno o más comandos que quieras que el botón envíe directamente al juego al ser presionado. (Opcional)&lt;/p&gt;&lt;p&gt;Si este es un botón de &lt;i&gt;pulsar &lt;/i&gt;, esto se enviará solo cuando el botón pase del estado &lt;i&gt;desactivado (arriba) &lt;/i&gt; al estado &lt;i&gt;activado (abajo) &lt;/i&gt;. &lt;/p&gt;&lt;p&gt;Para enviar comandos más complejos que dependan de variables o necesiten modificarlas dentro de este perfil, debes introducir &lt;i&gt;en su lugar&lt;/i&gt; un script de Lua en el área de edición inferior. Cualquier cosa que se escriba aquí se enviará, literalmente, solo al servidor del juego.&lt;/p&gt;&lt;p&gt;Está permitido usar tanto esto &lt;i&gt;como&lt;/i&gt; un script de Lua; esto se enviará &lt;b&gt;antes&lt;/b&gt; de que se ejecute el script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="371"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Escribe uno o más comandos que quieras que el botón envíe directamente al juego cuando este pase del estado &lt;i&gt;activado (abajo)&lt;/i&gt; al &lt;i&gt;desactivado (arriba)&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Para enviar comandos más complejos que dependan de variables o necesiten modificarlas dentro de este perfil, se debe introducir &lt;i&gt;en su lugar&lt;/i&gt; un script de Lua en el área de edición inferior. Cualquier cosa que se escriba aquí se enviará, literalmente, solo al servidor del juego.&lt;/p&gt;&lt;p&gt;Está permitido usar tanto esto &lt;i&gt;como&lt;/i&gt; un script de Lua; esto se enviará &lt;b&gt;antes&lt;/b&gt; de que se ejecute el script.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Escribe uno o más comandos que quieras que el botón envíe directamente al juego cuando este pase del estado &lt;i&gt;activado (abajo)&lt;/i&gt; al &lt;i&gt;desactivado (arriba)&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Para enviar comandos más complejos que dependan de variables o necesiten modificarlas dentro de este perfil, se debes introducir &lt;i&gt;en su lugar&lt;/i&gt; un script de Lua en el área de edición inferior. Cualquier cosa que se escriba aquí se enviará, literalmente, solo al servidor del juego.&lt;/p&gt;&lt;p&gt;Está permitido usar tanto esto &lt;i&gt;como&lt;/i&gt; un script de Lua; esto se enviará &lt;b&gt;antes&lt;/b&gt; de que se ejecute el script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="384"/>
@@ -6525,8 +6524,7 @@ y esta versión no puede leerlo. ¡Necesitas una versión de Mudlet más recient
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="170"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Introduce uno o más comandos a utilizar si el comando introducido coincide con el patrón. (Opcional)&lt;/p&gt;&lt;p&gt;Este podría ser otro alias o un comando para enviar directamente al juego. Para comandos complejos que requieran modificar variables dentro de este perfil, utiliza en su lugar un script de Lua en el área de edición inferior. Es posible usar tanto este campo como un script de Lua; el contenido de este campo se utilizará antes de ejecutar el script.&lt;/p&gt;
-</translation>
+      <translation>&lt;p&gt;Introduce uno o más comandos a utilizar si el comando introducido coincide con el patrón. (Opcional)&lt;/p&gt;&lt;p&gt;Este podría ser otro alias o un comando para enviar directamente al juego. Para comandos complejos que requieran modificar variables dentro de este perfil, utiliza en su lugar un script de Lua en el área de edición inferior. Es posible usar tanto este campo como un script de Lua; el contenido de este campo se utilizará antes de ejecutar el script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="173"/>
@@ -6564,13 +6562,9 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation>[ ERROR ] - Error interno: no se encontró ningún códec para la configuración actual de {&quot;%1&quot;},
-por lo que Mudlet no puede enviar datos en ese formato al servidor del juego. Por favor,
-comprueba si hay alguna alternativa que el MUD y Mudlet puedan
-utilizar. Mudlet intentará enviar los datos usando la codificación ASCII,
-pero se limitará únicamente a caracteres sin acento del inglés básico.
-Nota: esta advertencia solo se emitirá una vez, hasta que se cambie
-la codificación.</translation>
+      <translation>[ ERROR ] - Error interno: No se encontró ningún códec para la configuración actual de {&quot;%1&quot;},
+por lo que Mudlet no puede enviar datos en ese formato al servidor del juego. Por favor, comprueba si hay alguna alternativa que el MUD y Mudlet puedan utilizar. Mudlet intentará enviar los datos usando la codificación ASCII, pero se limitará únicamente a caracteres sin acento del inglés básico.
+Nota: esta advertencia solo se emitirá una vez, hasta que se cambie la codificación.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1776"/>
@@ -6581,43 +6575,36 @@ la codificación.</translation>
       <location filename="../src/ctelnet.cpp" line="1779"/>
       <source>[ WARN ]  - Package download failed from &apos;%1&apos;, reason: %2</source>
       <extracomment>%1 is the URL, %2 is the error message</extracomment>
-      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete desde &apos;%1&apos;, motivo: %2
-</translation>
+      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete desde &apos;%1&apos;, motivo: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1783"/>
       <source>
 The package is hosted on a server with an SSL certificate problem. The URL may be using HTTPS when it should use HTTP, or the server&apos;s security certificate is not trusted by your system.</source>
-      <translation>El paquete está alojado en un servidor con un problema de certificado SSL. Es posible que la URL esté utilizando HTTPS cuando debería usar HTTP, o que el certificado de seguridad del servidor no sea de confianza para tu sistema.
-</translation>
+      <translation>El paquete está alojado en un servidor con un problema de certificado SSL. Es posible que la URL esté utilizando HTTPS cuando debería usar HTTP, o que el certificado de seguridad del servidor no sea de confianza para tu sistema.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1799"/>
       <source>[ WARN ]  - Package download failed: could not open file &apos;%1&apos; for writing, reason: %2</source>
       <extracomment>%1 is the file path, %2 is the error message</extracomment>
-      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete: no se pudo abrir el archivo &apos;%1&apos; para escritura, motivo: %2
-</translation>
+      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete: no se pudo abrir el archivo &apos;%1&apos; para escritura, motivo: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1810"/>
       <source>[ WARN ]  - Package download failed: could not save file, reason: %1</source>
       <extracomment>%1 is the error message</extracomment>
-      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete: no se pudo guardar el archivo, motivo: %1
-
-</translation>
+      <translation>[ ADVERTENCIA ]  - Error al descargar el paquete: no se pudo guardar el archivo, motivo: %1</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1823"/>
       <source>[ WARN ]  - Package installation failed for &apos;%1&apos;, reason: %2</source>
       <extracomment>%1 is the package file path, %2 is the error message</extracomment>
-      <translation>[ ADVERTENCIA ]  - Error al instalar el paquete &apos;%1&apos;, motivo: %2
-</translation>
+      <translation>[ ADVERTENCIA ]  - Error al instalar el paquete &apos;%1&apos;, motivo: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2797"/>
       <source>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting...</source>
-      <translation>[ INFO ]  - Este juego parece utilizar el manejador de protocolos de KaVir, el cual funciona mejor cuando Mudlet reporta su número de versión durante la conexión. Se ha activado automáticamente el reporte de versión en la terminal tipo para mejorar el soporte de color. Reconectando.
-</translation>
+      <translation>[ INFO ]  - Este juego parece utilizar el manejador de protocolos de KaVir, el cual funciona mejor cuando Mudlet reporta su número de versión durante la conexión. Se ha activado automáticamente el reporte de versión en la terminal tipo para mejorar el soporte de color. Reconectando...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="644"/>
@@ -6631,8 +6618,7 @@ The package is hosted on a server with an SSL certificate problem. The URL may b
       <location filename="../src/ctelnet.cpp" line="647"/>
       <source>Looking up the details of server: %1:%2 ...</source>
       <extracomment>%1 is the URL or an IP address (suitably wrapped if it is an IPv6 one) of the Game Server (or Proxy); %2 is the port number.</extracomment>
-      <translation>Buscando los detalles del servidor: %1:%2 ...
-</translation>
+      <translation>Buscando los detalles del servidor: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="763"/>
@@ -6660,44 +6646,37 @@ Check your internet connection and the details entered for the game server.</sou
     <message>
       <location filename="../src/ctelnet.cpp" line="904"/>
       <source>[  OK  ]  - Secure connection made (IPv6).</source>
-      <translation>[  OK  ]  - Conexión segura establecida (IPv6).
-</translation>
+      <translation>[  OK  ]  - Conexión segura establecida (IPv6).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="906"/>
       <source>[  OK  ]  - Secure connection made (IPv4).</source>
-      <translation>[  OK  ]  - Conexión segura establecida (IPv4).
-</translation>
+      <translation>[  OK  ]  - Conexión segura establecida (IPv4).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="910"/>
       <source>[  OK  ]  - Open connection made (IPv6).</source>
-      <translation>[  OK  ]  - Conexión segura establecida (IPv4).
-</translation>
+      <translation>[  OK  ]  - Conexión segura establecida (IPv4).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="912"/>
       <source>[  OK  ]  - Open connection made (IPv4).</source>
-      <translation>[  OK  ]  - Conexión abierta establecida (IPv4).
-</translation>
+      <translation>[  OK  ]  - Conexión abierta establecida (IPv4).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="917"/>
       <source>[  OK  ]  - Connection made (IPv6).</source>
-      <translation>[  OK  ]  - Conexión establecida (IPv6).
-</translation>
+      <translation>[  OK  ]  - Conexión establecida (IPv6).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="919"/>
       <source>[  OK  ]  - Connection made (IPv4).</source>
-      <translation>[  OK  ]  - Conexión establecida (IPv4).
-</translation>
+      <translation>[  OK  ]  - Conexión establecida (IPv4).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="975"/>
       <source>[ INFO ]  - Connection time: %1.</source>
-      <translation>[ INFO ]  - Tiempo de conexión: %1.
-</translation>
+      <translation>[ INFO ]  - Tiempo de conexión: %1.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/ctelnet.cpp" line="1039"/>
@@ -6706,8 +6685,7 @@ Check your internet connection and the details entered for the game server.</sou
       <extracomment>This message is used when we have been trying to connect or we were connected securely, but the connection has been lost. It is possible with a secure connection that there is MORE than one error message to show, but for English or other locales where the singular case (%n==1) is distinct it would be perfectly feasible to replace &quot;for %n reason(s)&quot; with &quot;because&quot; for that number (1) of errors - however the text should then be repeated in the corresponding situation for an &quot;open&quot; connection which is different in that it only ever has one &quot;reason&quot; to report.</extracomment>
       <translation>
         <numerusform>[ ALERTA ] - El socket se desconectó por %n motivo:
-%1
-</numerusform>
+%1</numerusform>
         <numerusform>[ ALERTA ] - El socket se desconectó por %n motivos:
 %1</numerusform>
       </translation>
@@ -6717,8 +6695,7 @@ Check your internet connection and the details entered for the game server.</sou
       <location filename="../src/ctelnet.cpp" line="1085"/>
       <source>[ ALERT ] - Socket got disconnected.</source>
       <extracomment>This message is used when we have been trying to connect or we were connected securely or in an open manner, but the connection has been lost and we do not have any explaination to give to the user as to why. Anyhow, in this case we do not have anything more to say about it. This text used in two places, ensure the same translation is used in both of them.</extracomment>
-      <translation>[ ALERTA ] - El socket se desconectó.
-</translation>
+      <translation>[ ALERTA ] - El socket se desconectó.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1068"/>
@@ -6732,8 +6709,7 @@ Check your internet connection and the details entered for the game server.</sou
 %1</source>
       <extracomment>This message is used when we have been trying to connect or we were connected in an open, insecure manner, but the connection has been lost. Unlike the secure connection case there is only one error message to show; it would be desirable to use the same text for this message as the &quot;one reason&quot; (%n==1) situation for locales such as English (with a distinct form for the singular) use for the secure type of connection.</extracomment>
       <translation>[ ALERTA ] - El socket se desconectó por el siguiente motivo:
-%1
-</translation>
+%1</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1237"/>
@@ -6743,8 +6719,7 @@ working properly.
 </source>
       <extracomment>This text is used in the (expected) case when the user has provided a URL for the Game Server rather than (unusually) an IP address. After a DNS lookup however, we have NOT found any IP addresses which means that we cannot proceed further to connect to the Game server.</extracomment>
       <translation>¡Error en la resolución del nombre de host! No se puede establecer la conexión.
-El nombre del servidor no es correcto o la dirección de los servidores no están
-funcionando correctamente.
+El nombre del servidor no es correcto o la dirección de los servidores no están funcionando correctamente.
 </translation>
     </message>
     <message>
@@ -6753,8 +6728,7 @@ funcionando correctamente.
 Check your internet connection and the details entered for the game server.</source>
       <extracomment>%1 is the URL of the Game Server</extracomment>
       <translation>[ ERROR ] - No se pudo conectar a &quot;%1&quot;.
-Comprueba tu conexión a internet y los datos introducidos para el servidor del juego.
-</translation>
+Comprueba tu conexión a internet y los datos introducidos para el servidor del juego.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1259"/>
@@ -6789,18 +6763,15 @@ Es: &quot;%1&quot;
       <source>The %n IP address(es) of %1 has/have been found. It/They are:</source>
       <extracomment>This text is used in the (expected) case when the user has provided a URL (%1) for the Game Server rather than (unusually) an IP address. After a DNS lookup we have found at least one but possibly more (%n) IP addresses, which will be listed (one per line) immediately afterwards.</extracomment>
       <translation>
-        <numerusform>La dirección IP %n de %1 ha sido encontrada. Es:
-</numerusform>
-        <numerusform>Las direcciones IP %n de %1 han sido encontradas. Son:
-</numerusform>
+        <numerusform>La dirección IP %n de %1 ha sido encontrada. Es:</numerusform>
+        <numerusform>Las direcciones IP %n de %1 han sido encontradas. Son:</numerusform>
       </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1339"/>
       <source>Trying secure (IPv4 and IPv6) connections to proxy %1:%2 ...</source>
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the server and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
-      <translation>Intentando conexiones seguras (IPv4 e IPv6) al proxy %1:%2 ...
-</translation>
+      <translation>Intentando conexiones seguras (IPv4 e IPv6) al proxy %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1344"/>
@@ -6810,8 +6781,7 @@ Es: &quot;%1&quot;
       <extracomment>We don&apos;t need to worry about %1 being a raw IPv6 address here as we prohibit IP addresses for secure connections so it is a URL; %2 is the port number.
 ----------
 %1 is a URL for the Game Server; %2 is the port number.</extracomment>
-      <translation>[ INFO ]  - Intentando establecer una conexión segura con %1:%2 a través del proxy...
-</translation>
+      <translation>[ INFO ]  - Intentando establecer una conexión segura con %1:%2 a través del proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1350"/>
@@ -6820,8 +6790,7 @@ Es: &quot;%1&quot;
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the Server and %2 is the port number (on BOTH addresses) for the connection.
 ----------
 %1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation>Intentando conexiones seguras (IPv4 e IPv6) a %1:%2 ...
-</translation>
+      <translation>Intentando conexiones seguras (IPv4 e IPv6) a %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1355"/>
@@ -6831,36 +6800,31 @@ Es: &quot;%1&quot;
       <extracomment>We don&apos;t need to worry about %1 being a raw IPv6 address here as we prohibit IP addresses for secure connections so it is a URL; %2 is the port number.
 ----------
 %1 is a URL for the Game Server; %2 is the port number.</extracomment>
-      <translation>[ INFO ]  - Intentando establecer una conexión segura con %1:%2 ...
-</translation>
+      <translation>[ INFO ]  - Intentando establecer una conexión segura con %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1372"/>
       <source>Trying secure (IPv6) connection to %1:%2 via proxy...</source>
       <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation>Intentando una conexión segura (IPv6) a %1:%2 a través del proxy...
-</translation>
+      <translation>Intentando una conexión segura (IPv6) a %1:%2 a través del proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1401"/>
       <source>Trying secure (IPv4) connection to %1:%2 via proxy...</source>
       <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation>Intentando una conexión segura (IPv4) a %1:%2 a través del proxy...
-</translation>
+      <translation>Intentando una conexión segura (IPv4) a %1:%2 a través del proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1409"/>
       <source>Trying secure (IPv4) connection to %1:%2 ...</source>
       <extracomment>%1 is the URL for the Server and %2 is the port number for the connection.</extracomment>
-      <translation>Intentando una conexión segura (IPv4) a %1:%2 ...
-</translation>
+      <translation>Intentando una conexión segura (IPv4) a %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1433"/>
       <source>Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...</source>
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the proxy and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
-      <translation>Intentando conexiones abiertas (IPv4 e IPv6) a %1:%2 a través del proxy...
-</translation>
+      <translation>Intentando conexiones abiertas (IPv4 e IPv6) a %1:%2 a través del proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1436"/>
@@ -6872,15 +6836,13 @@ Es: &quot;%1&quot;
 %1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number.
 ----------
 %1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation>[ INFO ]  - Intentando establecer una conexión abierta con %1:%2 a través del proxy...
-</translation>
+      <translation>[ INFO ]  - Intentando establecer una conexión abierta con %1:%2 a través del proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1442"/>
       <source>Trying open (IPv4 and IPv6) connections to %1:%2 ...</source>
       <extracomment>Happy-Eyeballs (both IPv4 and IPv6 addresses available) case. %1 is the URL for the Server and %2 is the port number (on BOTH addresses) for the connection.</extracomment>
-      <translation>Intentando conexiones abiertas (IPv4 e IPv6) a %1:%2 ...
-</translation>
+      <translation>Intentando conexiones abiertas (IPv4 e IPv6) a %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1445"/>
@@ -6892,22 +6854,19 @@ Es: &quot;%1&quot;
 %1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.
 ----------
 %1 is the URL or IPv4 address for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation>[ INFO ]  - Intentando establecer una conexión abierta con %1:%2 ...
-</translation>
+      <translation>[ INFO ]  - Intentando establecer una conexión abierta con %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1463"/>
       <source>Trying open (IPv6) connection to %1:%2 via proxy...</source>
       <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation>Intentando una conexión abierta (IPv6) a %1:%2 a través del proxy...
-</translation>
+      <translation>Intentando una conexión abierta (IPv6) a %1:%2 a través del proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1471"/>
       <source>Trying open (IPv6) connection to %1:%2 ...</source>
       <extracomment>%1 is the URL or IPv6 address (suitably wrapped) for the Game Server and %2 is the port number for the connection.</extracomment>
-      <translation>Intentando una conexión abierta (IPv6) a %1:%2 ...
-</translation>
+      <translation>Intentando una conexión abierta (IPv6) a %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1490"/>
@@ -6924,25 +6883,22 @@ Es: &quot;%1&quot;
     <message>
       <location filename="../src/ctelnet.cpp" line="2818"/>
       <source>[ INFO ]  - This game appears to support MXP (Mud eXtension Protocol), but has not turned it on properly. MXP processing has been automatically enabled for clickable links, room info, and richer interactions. You can disable this setting in Settings &gt; Special Options.</source>
-      <translation>[ INFO ]  - Este juego parece ser compatible con MXP (Mud eXtension Protocol), pero no se ha activado correctamente. Se ha habilitado automáticamente el procesamiento de MXP para enlaces en los que se puede hacer clic, información de salas e interacciones más completas. Puedes desactivar esta opción en Ajustes &gt; Opciones especiales.
-</translation>
+      <translation>[ INFO ]  - Este juego parece ser compatible con MXP (Mud eXtension Protocol), pero no se ha activado correctamente. Se ha habilitado automáticamente el procesamiento de MXP para enlaces en los que se puede hacer clic, información de salas e interacciones más completas. Puedes desactivar esta opción en Ajustes &gt; Opciones especiales.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3936"/>
       <location filename="../src/ctelnet.cpp" line="4335"/>
       <source>[ INFO ]  - Upgrading the GUI to new version &apos;%1&apos; from version &apos;%2&apos;
 (url=&apos;%3&apos;).</source>
-      <translation>[ INFO ]  - Actualizando la interfaz gráfica (GUI) a la nueva versión &apos;%1&apos; desde la versión &apos;%2&apos;
-(url=&apos;%3&apos;).
-</translation>
+      <translation>[ INFO ]  - Actualizando la interfaz gráfica (GUI) a la nueva versión &apos;%1&apos; desde la versión &apos;%2&apos; 
+(url=&apos;%3&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4272"/>
       <source>[ INFO ]  - Downloading and installing package &apos;%1&apos;
 (url=&apos;%2&apos;).</source>
       <translation>[ INFO ]  - Descargando e instalando el paquete &apos;%1&apos;
-(url=&apos;%2&apos;).
-</translation>
+(url=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4296"/>
@@ -7018,21 +6974,17 @@ Si la pantalla se ve borrosa o con caracteres extraños, por favor reconéctate 
       <location filename="../src/ctelnet.cpp" line="5141"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[ INFO ] - Cargando archivo de repetición:
-&quot;%1&quot;.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5165"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation>No se puede reproducir el archivo &quot;%1&quot;, el mensaje de error ha sido: &quot;el archivo de grabación parece estar dañado&quot;.
-
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5167"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation>[ WARN ]  - La reproducción se ha abortado porque el archivo parece estar dañado.
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5176"/>
@@ -7043,23 +6995,18 @@ Si la pantalla se ve borrosa o con caracteres extraños, por favor reconéctate 
       <location filename="../src/ctelnet.cpp" line="5178"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation>[ADVERTENCIA] - No se puede realizar la reproducción, es posible que ya haya otra en curso.
-
-Inténtalo de nuevo cuando haya terminado.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5186"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation>No se puede leer el archivo &quot;%1&quot;, el mensaje de error ha sido: &quot;%2&quot;.
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5188"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation>[ ERROR ] - No se puede leer el archivo &quot;%1&quot;,
-el mensaje de error ha sido: &quot;%2&quot;.
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5227"/>
