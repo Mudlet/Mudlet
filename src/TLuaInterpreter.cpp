@@ -3874,7 +3874,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         {
             std::string e;
             if (lua_isstring(L, -1)) {
-                e = "Lua error:";
+                e = "could not decode " + protocol.toStdString() + "." + key.toStdString() + " - any previous value is kept: ";
                 e += lua_tostring(L, -1);
             }
             const QString _n = "JSON decoder error:";
@@ -4056,6 +4056,9 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 
     QByteArray script;
     bool no_array_marker_bug = false;
+    // a TABLE_CLOSE or ARRAY_CLOSE with nothing open - the JSON built from it
+    // would carry a stray brace, and what yajl does with that varies by version
+    bool malformed = false;
     // Measured as the name is written rather than recomputed from varList at the
     // strip: a name holding a byte JSON has to escape is longer in script than
     // the raw name is, and the strip then leaves part of the prefix behind.
@@ -4073,6 +4076,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             }
             if (nest) {
                 --nest;
+            } else {
+                malformed = true;
             }
             script.append('}');
             last = MSDP_TABLE_CLOSE;
@@ -4088,6 +4093,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             }
             if (nest) {
                 --nest;
+            } else {
+                malformed = true;
             }
             script.append(']');
             last = MSDP_ARRAY_CLOSE;
@@ -4108,8 +4115,21 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     QString token = varList.front();
                     token = token.remove(QLatin1Char('\"'));
                     script = script.replace(0, topLevelPrefixLength, QByteArray());
-                    mpHost->processDiscordMSDP(token, script);
-                    setMSDPTable(token, script);
+                    if (malformed) {
+                        std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game closed a table or array it never opened";
+                        logError(e, qsl("MSDP"), qsl("msdp2Lua"));
+                        malformed = false;
+                    } else {
+                        mpHost->processDiscordMSDP(token, script);
+                        if (no_array_marker_bug && !script.startsWith('[')) {
+                            script.prepend('[');
+                            script.append(']');
+                        }
+                        setMSDPTable(token, script);
+                    }
+                    // scoped to the variable just flushed, or an unmarked array
+                    // would wrap whichever variable happens to come last
+                    no_array_marker_bug = false;
                     varList.clear();
                     script.clear();
                     // the quote above closed the value just flushed - this one
@@ -4130,7 +4150,13 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 }
             }
             if (last == MSDP_VAL) {
-                no_array_marker_bug = true;
+                // adjacent values with no ARRAY_OPEN are the specification's
+                // "string values together for command-like variables", which only
+                // exists at the top level - inside a structure the array carries
+                // its own markers and this wrap would add a level it never had
+                if (!nest) {
+                    no_array_marker_bug = true;
+                }
                 script.append('\"');
             }
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
@@ -4175,6 +4201,15 @@ void TLuaInterpreter::msdp2Lua(const char* src)
         QString token = varList.front();
         token = token.remove(QLatin1Char('\"'));
         script = script.replace(0, topLevelPrefixLength, QByteArray());
+        if (nest || malformed) {
+            // the game ended the subnegotiation with a structure still open (or
+            // closed one it never opened), so this JSON is cut short - what yajl
+            // makes of that varies by version, from a silent nothing to a stored
+            // null sentinel, so it does not get to decide
+            std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game ended the message with a table or array still open";
+            logError(e, qsl("MSDP"), qsl("msdp2Lua"));
+            return;
+        }
         if (no_array_marker_bug) {
             if (!script.startsWith('[')) {
                 script.prepend('[');

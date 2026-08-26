@@ -242,6 +242,60 @@ describe("Tests MSDP subnegotiation handling", function()
       assert.equals("Market Square", msdp.MSDPB3, "a non-numeric value mid-batch went missing")
       assert.equals("a rat", msdp.MSDPB4)
     end)
+
+    it("keeps a table's shape when it holds an array of two or more elements", function()
+      -- two adjacent values inside an explicit array look, from inside, like the
+      -- top-level unmarked-list pattern, and used to make the whole variable gain
+      -- an array level it never had
+      feedMsdp(VAR .. "MSDPSHAPE" .. VAL .. TABLE_OPEN
+               .. VAR .. "L" .. VAL .. "<05>" .. VAL .. "a" .. VAL .. "b" .. "<06>"
+               .. VAR .. "Z" .. VAL .. "plain"
+               .. TABLE_CLOSE)
+      assert.is_table(msdp.MSDPSHAPE, "the variable went missing entirely")
+      assert.equals("plain", msdp.MSDPSHAPE.Z, "Z is not reachable, so the table gained a spurious array level")
+      assert.same({"a", "b"}, msdp.MSDPSHAPE.L)
+      assert.is_nil(msdp.MSDPSHAPE[1], "the whole table was wrapped in an array it never had")
+    end)
+
+    it("still turns adjacent top-level values into a list", function()
+      -- the specification allows "string values together for command-like
+      -- variables" with no array markers, and that is the one case the wrap is for
+      feedMsdp(VAR .. "MSDPCMD" .. VAL .. "alpha" .. VAL .. "beta")
+      assert.same({"alpha", "beta"}, msdp.MSDPCMD)
+    end)
+
+    it("wraps only the variable that was an unmarked list", function()
+      -- one flag used to serve the whole subnegotiation, so a list flushed
+      -- mid-message went out unwrapped and the wrap landed on whichever variable
+      -- came last instead
+      feedMsdp(VAR .. "MSDPLIST" .. VAL .. "a" .. VAL .. "b" .. VAR .. "MSDPSOLO" .. VAL .. "solo")
+      assert.same({"a", "b"}, msdp.MSDPLIST)
+      assert.equals("solo", msdp.MSDPSOLO, "the unmarked-list wrap leaked onto the wrong variable")
+    end)
+
+    it("drops a variable whose table the game never closed, without an event", function()
+      -- IAC SE already arrived, so there is no more data coming for this message:
+      -- an open structure at its end is malformed, and what yajl makes of the
+      -- truncated JSON varies by version - from a silent nothing to a stored null
+      -- sentinel a script can trip over
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPCUT", function() fired = true end)
+      feedMsdp(VAR .. "MSDPWHOLE" .. VAL .. "fine" .. VAR .. "MSDPCUT" .. VAL .. TABLE_OPEN)
+      killAnonymousEventHandler(id)
+      assert.equals("fine", msdp.MSDPWHOLE, "the complete variable ahead of the truncated one has to survive")
+      assert.is_nil(msdp.MSDPCUT)
+      assert.is_false(fired, "a variable the game never finished sending raised its arrival event")
+    end)
+
+    it("drops a variable that closes a table it never opened", function()
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPOVER", function() fired = true end)
+      feedMsdp(VAR .. "MSDPOVER" .. VAL .. TABLE_CLOSE .. VAR .. "MSDPNEXT" .. VAL .. "ok")
+      killAnonymousEventHandler(id)
+      assert.is_nil(msdp.MSDPOVER)
+      assert.is_false(fired, "a variable with an unbalanced close raised its arrival event")
+      assert.equals("ok", msdp.MSDPNEXT, "the malformed variable took the rest of the message with it")
+    end)
 end)
 
 describe("Tests addSupportedTelnetOption", function()
