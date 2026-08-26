@@ -31,6 +31,9 @@
 #include "TRoomDB.h"
 
 #include <QBuffer>
+
+#include <algorithm>
+#include <array>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -362,6 +365,7 @@ void TArea::addRoom(int id)
             if (mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z())) {
                 publishSpanForZ(pR->z());
             }
+            mLodExitIndex.markDirty();
         } else {
             qDebug() << "TArea::addRoom(" << id << ") No creation! room already exists";
         }
@@ -412,6 +416,9 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
     if (toExtremesMoved) {
         publishSpanForZ(toZ);
     }
+    // The moved room's exit spans change, and so do those of any room with an
+    // exit leading to it:
+    mLodExitIndex.markDirty();
 }
 
 void TArea::publishSpan()
@@ -504,6 +511,78 @@ void TArea::calcSpan()
     mZLevelIndex.rebuild(roomIdToZ);
     mGridIndex.rebuild(zToRoomXY);
     mCustomLineIndex.rebuild(customLineRoomIdToZ);
+    mLodExitIndex.markDirty();
+}
+
+// The only place that computes exit spans: everything that changes a room or
+// a 2D-plane exit just marks the index dirty and this recomputes the lot on
+// the next query. Ids are visited in sorted order, which keeps the room
+// lookups cache-friendly (rooms are laid out in id order on load) and makes
+// the bucket contents deterministic.
+void TArea::rebuildLodExitIndex() const
+{
+    mLodExitIndex.beginRebuild();
+    QList<int> sortedRoomIds{rooms.cbegin(), rooms.cend()};
+    std::sort(sortedRoomIds.begin(), sortedRoomIds.end());
+    for (const int roomId : std::as_const(sortedRoomIds)) {
+        const TRoom* pR = mpRoomDB->getRoom(roomId);
+        if (!pR) {
+            continue;
+        }
+        bool alwaysVisible = false;
+        for (const int direction : pR->exitStubs) {
+            if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
+                alwaysVisible = true;
+                break;
+            }
+        }
+        qint64 span = 0;
+        const std::array<int, 8> planarExits{pR->getNorth(), pR->getNortheast(), pR->getEast(), pR->getSoutheast(), pR->getSouth(), pR->getSouthwest(), pR->getWest(), pR->getNorthwest()};
+        for (const int exitId : planarExits) {
+            if (alwaysVisible) {
+                break;
+            }
+            if (exitId <= 0) {
+                continue;
+            }
+            const TRoom* pE = mpRoomDB->getRoom(exitId);
+            if (!pE) {
+                continue;
+            }
+            if (pE->getArea() != pR->getArea()) {
+                alwaysVisible = true;
+                break;
+            }
+            // qint64 so a delta between extreme coordinates cannot overflow:
+            span = qMax(span, qMax(qAbs(qint64{pE->x()} - pR->x()), qAbs(qint64{pE->y()} - pR->y())));
+        }
+        if (alwaysVisible) {
+            mLodExitIndex.insertRoom(roomId, pR->z(), TAreaLodExitIndex::cAlwaysVisibleSpan);
+        } else if (span >= 2) {
+            // Saturating: a span too large for an int cannot be skipped by any
+            // threshold either, so it may share the always-visible bucket.
+            mLodExitIndex.insertRoom(roomId, pR->z(), int(qMin<qint64>(span, TAreaLodExitIndex::cAlwaysVisibleSpan)));
+        }
+    }
+    mLodExitIndex.endRebuild();
+}
+
+QList<int> TArea::lodVisibleExitRooms(const int z, const int maxSkippableSpan) const
+{
+    if (mLodExitIndex.needsRebuild()) {
+        rebuildLodExitIndex();
+    }
+    QList<int> result;
+    mLodExitIndex.appendRoomsSpanningBeyond(z, maxSkippableSpan, result);
+    return result;
+}
+
+int TArea::lodVisibleExitRoomCount(const int z, const int maxSkippableSpan) const
+{
+    if (mLodExitIndex.needsRebuild()) {
+        rebuildLodExitIndex();
+    }
+    return mLodExitIndex.roomCountSpanningBeyond(z, maxSkippableSpan);
 }
 
 void TArea::removeRoom(int room)
@@ -523,6 +602,7 @@ void TArea::removeRoom(int room)
     }
     rooms.remove(room);
     mAreaExits.remove(room);
+    mLodExitIndex.markDirty();
 }
 
 // Reconstruct the area exit data in a format that actually makes sense - only

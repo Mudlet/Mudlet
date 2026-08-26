@@ -219,6 +219,30 @@ int TRoom::stringToDirCode(const QString& string) const
     return DIR_OTHER;
 }
 
+// Any change to a 2D-plane exit or stub can change what the renderer's
+// reduced-detail tier has to draw for this room, which its area caches - see
+// TAreaLodExitIndex. Load-time paths that write the exit members directly
+// (XMLimport, restore(), the map auditor) do not come through here, which is
+// fine: an area's index is not built until the first paint after loading.
+void TRoom::markLodExitIndexDirty()
+{
+    if (!mpRoomDB) {
+        return;
+    }
+    TArea* pA = mpRoomDB->getArea(area);
+    if (pA) {
+        pA->markLodExitIndexDirty();
+    }
+}
+
+// The 2D-plane exit setters all route through here so that no caller of one
+// has to remember the index needs telling.
+void TRoom::setPlanarExit(int& exit, const int id)
+{
+    exit = id;
+    markLodExitIndexDirty();
+}
+
 bool TRoom::hasExitStub(int direction)
 {
     if (exitStubs.contains(direction)) {
@@ -247,6 +271,9 @@ void TRoom::setExitStub(int direction, bool status)
             // Since there is no change don't proceed to mark map as needing saving
             return;
         }
+    }
+    if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
+        markLodExitIndexDirty();
     }
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
@@ -420,6 +447,9 @@ bool TRoom::setExit(const int to, const int direction)
         break;
     default:
         return false;
+    }
+    if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
+        markLodExitIndexDirty();
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->setUnsaved(__func__);

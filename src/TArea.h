@@ -25,6 +25,7 @@
 
 
 #include "TAreaGridIndex.h"
+#include "TAreaLodExitIndex.h"
 #include "TAreaSpanIndex.h"
 #include "TAreaZLevelIndex.h"
 #include "TMap.h"
@@ -79,6 +80,16 @@ public:
     // removeRoom() or calcSpan() drops it, which costs a cull test rather than
     // a missing line.
     const QSet<int>& getCustomLineRoomsForZ(int z) const { return mCustomLineIndex.roomsForZ(z); }
+    // Rooms on the given Z level whose exits can still draw something in the
+    // 2D renderer's reduced-detail tier once exits spanning no more than
+    // maxSkippableSpan room units per axis are dropped. maxSkippableSpan must
+    // be at least 1. A superset - the renderer still runs its usual per-room
+    // tests on each one - but never misses a room: see TAreaLodExitIndex.
+    QList<int> lodVisibleExitRooms(int z, int maxSkippableSpan) const;
+    // How many rooms the above would return, so the renderer can compare
+    // against a viewport query without materialising the list.
+    int lodVisibleExitRoomCount(int z, int maxSkippableSpan) const;
+    void markLodExitIndexDirty() { mLodExitIndex.markDirty(); }
     // Records that one of this area's rooms has custom exit lines.
     void addRoomWithCustomLines(int id, int z);
     // Drops a room that no longer has any. The room stays in every other index
@@ -187,6 +198,12 @@ private:
     // and friends), which stay plain members because the map file format
     // stores them and a lot of code reads them directly.
     TAreaSpanIndex mSpanIndex;
+    // Unlike the indexes above this one is rebuilt lazily inside the const
+    // queries - the renderer only holds a const TArea* and most maps never
+    // show the reduced-detail tier - hence mutable.
+    mutable TAreaLodExitIndex mLodExitIndex;
+
+    void rebuildLodExitIndex() const;
 
     // In use this has a minimum of 3.0 and a default of 20.0, the latter will
     // be applied in the constructor initialisation list:

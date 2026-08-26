@@ -3387,6 +3387,28 @@ void T2DMap::paintRoomExits(QPainter& painter,
     const bool lodTier = mRoomWidth < cLodPixelThreshold;
     const QSize lodBlobSize = lodRoomBlobSize();
 
+    // The largest per-axis coordinate delta, in room units, at which
+    // keepExit() below is certain to drop an exit. Settled against the very
+    // float test keepExit() performs - the rounding of float(delta) * width
+    // is monotonic in the delta, so passing at this span proves every
+    // smaller one - because the area's exit index is only allowed to be
+    // wrong in the too-many-rooms direction, never too few. The division
+    // lands within a step of the boundary; the loops absorb its rounding.
+    int maxSkippableSpan = 0;
+    if (lodTier && mRoomWidth > 0.0f && mRoomHeight > 0.0f) {
+        const auto exitDropped = [&](const int span) {
+            return float(span) * mRoomWidth <= lodBlobSize.width() && float(span) * mRoomHeight <= lodBlobSize.height();
+        };
+        const double unitsAcrossBlob = qMin(lodBlobSize.width() / double(mRoomWidth), lodBlobSize.height() / double(mRoomHeight));
+        maxSkippableSpan = int(qBound(0.0, std::floor(unitsAcrossBlob), double(INT_MAX / 2)));
+        while (maxSkippableSpan > 0 && !exitDropped(maxSkippableSpan)) {
+            --maxSkippableSpan;
+        }
+        if (exitDropped(maxSkippableSpan + 1)) {
+            ++maxSkippableSpan;
+        }
+    }
+
     int customLineDestinationTarget = 0;
     if (mCustomLinesRoomTo > 0) {
         customLineDestinationTarget = mCustomLinesRoomTo;
@@ -3426,15 +3448,43 @@ void T2DMap::paintRoomExits(QPainter& painter,
     // every room on the level that has custom exit lines: one of those lines
     // can cross the whole level, so its room owes pixels from anywhere. The
     // copy is free unless the loop below actually appends to it.
-    QList<int> roomsToPaint = viewportRooms;
-    for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
-        TRoom* pRoomWithCustomLines = mpMap->mpRoomDB->getRoom(customLineRoomId);
-        // Rooms inside the bounds are in the list already, and painting a
-        // room's exits twice does not look like painting them once.
-        if (!pRoomWithCustomLines || roomBounds.contains(pRoomWithCustomLines->x(), pRoomWithCustomLines->y())) {
-            continue;
+    //
+    // In the reduced tier the area's exit index can instead hand over just
+    // the rooms whose exits survive the cut, which at the furthest zooms is
+    // a handful where the viewport holds hundreds of thousands. Taken only
+    // when it really is the smaller set: the index is not viewport-culled,
+    // so on a level rich in long exits it can exceed the viewport instead.
+    QList<int> roomsToPaint;
+    if (maxSkippableSpan > 0 && pArea->lodVisibleExitRoomCount(zLevel, maxSkippableSpan) < viewportRooms.size()) {
+        roomsToPaint = pArea->lodVisibleExitRooms(zLevel, maxSkippableSpan);
+        QSet<int> alreadyListed{roomsToPaint.cbegin(), roomsToPaint.cend()};
+        for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
+            // All of them this time, not just the ones outside the bounds:
+            // the index only knows about exits drawn as plain lines.
+            if (!alreadyListed.contains(customLineRoomId)) {
+                alreadyListed.insert(customLineRoomId);
+                roomsToPaint.append(customLineRoomId);
+            }
         }
-        roomsToPaint.append(customLineRoomId);
+        // The target ring at the bottom of the loop is drawn on whatever room
+        // the in-progress custom line happens to lead to:
+        if (customLineDestinationTarget > 0 && !alreadyListed.contains(customLineDestinationTarget)) {
+            const TRoom* pTargetRoom = mpMap->mpRoomDB->getRoom(customLineDestinationTarget);
+            if (pTargetRoom && pTargetRoom->getArea() == mAreaID && pTargetRoom->z() == zLevel && roomBounds.contains(pTargetRoom->x(), pTargetRoom->y())) {
+                roomsToPaint.append(customLineDestinationTarget);
+            }
+        }
+    } else {
+        roomsToPaint = viewportRooms;
+        for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
+            TRoom* pRoomWithCustomLines = mpMap->mpRoomDB->getRoom(customLineRoomId);
+            // Rooms inside the bounds are in the list already, and painting a
+            // room's exits twice does not look like painting them once.
+            if (!pRoomWithCustomLines || roomBounds.contains(pRoomWithCustomLines->x(), pRoomWithCustomLines->y())) {
+                continue;
+            }
+            roomsToPaint.append(customLineRoomId);
+        }
     }
 
     for (const int _id : std::as_const(roomsToPaint)) {
@@ -3478,14 +3528,17 @@ void T2DMap::paintRoomExits(QPainter& painter,
         // Kept per axis rather than on the length because a blob is a
         // rectangle, and area exits are never dropped - their marker is a
         // fixed size whatever the exit's length, and is the click target for
-        // a speed walk into that area.
+        // a speed walk into that area. Measured as a coordinate delta scaled
+        // once, not as a difference of two separately rounded screen
+        // positions, so that maxSkippableSpan above can reason about it
+        // exactly.
         const auto keepExit = [&](const TRoom* pDestination) {
             if (!lodTier || pDestination->getArea() != mAreaID) {
                 return true;
             }
-            const float ex = pDestination->x() * mRoomWidth + mRX;
-            const float ey = pDestination->y() * mRoomHeight * -1 + mRY;
-            return qAbs(ex - rx) > lodBlobSize.width() || qAbs(ey - ry) > lodBlobSize.height();
+            const float xReach = float(qAbs(qint64{pDestination->x()} - room->x())) * mRoomWidth;
+            const float yReach = float(qAbs(qint64{pDestination->y()} - room->y())) * mRoomHeight;
+            return xReach > lodBlobSize.width() || yReach > lodBlobSize.height();
         };
 
         // exitList is a list of the destination rooms reached by exit lines
