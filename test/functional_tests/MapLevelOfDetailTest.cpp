@@ -340,6 +340,24 @@ private:
         return p2dMap;
     }
 
+    // Something was drawn hard against an edge of the widget, which is what a
+    // level running off the side looks like from the outside.
+    static bool touchesAnEdge(const QImage& frame)
+    {
+        const QRgb background = frame.pixel(0, 0);
+        for (int x = 0; x < frame.width(); ++x) {
+            if (frame.pixel(x, 0) != background || frame.pixel(x, frame.height() - 1) != background) {
+                return true;
+            }
+        }
+        for (int y = 0; y < frame.height(); ++y) {
+            if (frame.pixel(0, y) != background || frame.pixel(frame.width() - 1, y) != background) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static QImage renderFrame(T2DMap* p2dMap)
     {
         QPixmap target(kWidgetWidth, kWidgetHeight);
@@ -1370,6 +1388,8 @@ private slots:
         QTest::addColumn<double>("zoom");
         QTest::addColumn<double>("roomSize");
         QTest::addColumn<double>("lineSize");
+        QTest::addColumn<double>("panX");
+        QTest::addColumn<double>("panY");
 
         // Each row moves the cut-off along the ladder of exit spans the map is
         // built from, so between them every span sits on both sides of it and
@@ -1380,13 +1400,22 @@ private slots:
         // The first row is the only one where an exit stub still has pixels of
         // its own - a stub is about a room long, so anything zoomed out far
         // enough to drop a one room exit drops the stub with it.
-        QTest::newRow("rooms as wide as the shortest exit") << kZoomThreePixelRooms << 1.0 << 1.0;
-        QTest::newRow("one pixel rooms") << kZoomOnePixelRooms << 0.5 << 10.0;
-        QTest::newRow("half a pixel per room") << kZoomHalfPixelRooms << 0.5 << 10.0;
-        QTest::newRow("a quarter of a pixel per room") << 1600.0 << 0.5 << 10.0;
-        QTest::newRow("a tenth of a pixel per room") << 4000.0 << 0.5 << 10.0;
-        QTest::newRow("every exit on the map too short to show") << 40000.0 << 0.5 << 10.0;
-        QTest::newRow("far beyond a pixel per room") << kZoomFarBeyondAPixelPerRoom << 0.5 << 10.0;
+        QTest::newRow("rooms as wide as the shortest exit") << kZoomThreePixelRooms << 1.0 << 1.0 << 0.0 << 0.0;
+        QTest::newRow("one pixel rooms") << kZoomOnePixelRooms << 0.5 << 10.0 << 0.0 << 0.0;
+        QTest::newRow("half a pixel per room") << kZoomHalfPixelRooms << 0.5 << 10.0 << 0.0 << 0.0;
+        QTest::newRow("a quarter of a pixel per room") << 1600.0 << 0.5 << 10.0 << 0.0 << 0.0;
+        QTest::newRow("a tenth of a pixel per room") << 4000.0 << 0.5 << 10.0 << 0.0 << 0.0;
+        QTest::newRow("every exit on the map too short to show") << 40000.0 << 0.5 << 10.0 << 0.0 << 0.0;
+        QTest::newRow("far beyond a pixel per room") << kZoomFarBeyondAPixelPerRoom << 0.5 << 10.0 << 0.0 << 0.0;
+
+        // The rows above all look at the level head on, where the viewport
+        // holds every room of it. The index knows nothing of where the view
+        // is, so the two paths only agree off centre because both cull inside
+        // the loop - and that is the one leg of the argument nothing above
+        // puts any weight on. These two park the view so that a good part of
+        // the level, exits and all, is off the left and top edges.
+        QTest::newRow("panned off the left and top") << kZoomThreePixelRooms << 1.0 << 1.0 << 60.0 << 30.0;
+        QTest::newRow("panned off the right and bottom") << kZoomThreePixelRooms << 1.0 << 1.0 << -60.0 << -30.0;
     }
 
     void test_theIndexPathDrawsTheSameFrameAsTheLoopOverEveryRoom()
@@ -1394,6 +1423,8 @@ private slots:
         QFETCH(double, zoom);
         QFETCH(double, roomSize);
         QFETCH(double, lineSize);
+        QFETCH(double, panX);
+        QFETCH(double, panY);
 
         TMap* pMap = map();
         const int areaId = freshArea(qsl("Equivalence Area"));
@@ -1466,9 +1497,16 @@ private slots:
 
         T2DMap* p2dMap = prepareWidget(areaId, zoom, roomSize, 10.0, lineSize);
         QVERIFY(p2dMap);
+        p2dMap->mMapCenterX = panX;
+        p2dMap->mMapCenterY = panY;
         const QImage throughTheIndex = renderFrame(p2dMap);
         QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
         QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so there was nothing to compare it against");
+        if (panX != 0.0 || panY != 0.0) {
+            // A pan the widget is wide enough to swallow proves nothing, so
+            // insist the level really does run past an edge.
+            QVERIFY2(touchesAnEdge(throughTheIndex), "the pan left the whole level inside the widget, so nothing was culled");
+        }
 
         p2dMap->mLodExitIndexDisabled = true;
         const QImage throughTheLoop = renderFrame(p2dMap);
