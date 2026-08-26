@@ -148,6 +148,7 @@ private slots:
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
+    void slot_mapSymbolFontChanged();
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
@@ -242,6 +243,9 @@ private:
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
+    // The map symbol font the glyph usage table was last built from, so that
+    // the other symbol settings changing does not cost a rebuild:
+    QFont mGlyphDisplayFont;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;

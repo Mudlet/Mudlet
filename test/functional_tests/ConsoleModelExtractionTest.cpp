@@ -17,6 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFile>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -29,7 +31,9 @@
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTrigger.h"
 #include "TelnetServerStub.h"
+#include "XMLimport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -53,14 +57,15 @@ void initializeQRCResourcesForConsoleModelExtraction();
 
 using namespace std::chrono_literals;
 
-// The main console's text buffer, cursor/prompt state and fg/bg colours were
-// lifted out of the TConsole widget into a core TConsoleModel that Host
-// co-owns, and the per-line trigger orchestration moved from
+// The main console's text buffer, cursor/prompt state, fg/bg colours and log
+// lifecycle were lifted out of the TConsole widget into a core TConsoleModel
+// that Host co-owns, and the per-line trigger orchestration moved from
 // TMainConsole::runTriggers() to Host::runTriggers() (#8681). The widget keeps
 // the former members as references aliasing the model, so these tests pin down
 // that the aliasing really is one object, that the pipeline runs off the model,
 // and that the model stays usable once its view has been destroyed - the
-// co-ownership exists precisely so the two can outlive each other.
+// co-ownership exists precisely so the two can outlive each other, and the
+// chosen system spell dictionary lives on Host for that same reason.
 class ConsoleModelExtractionTest : public QObject
 {
     Q_OBJECT
@@ -70,8 +75,16 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-ConsoleModelExtraction";
+    const QString mColourHostname = "Test-ConsoleModelColours";
+    const QString mSpellHostname = "Test-ConsoleModelSpellDic";
     const QString mLocalhost = "localhost";
     QString mPort;
+    const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
+    const QColor mProfileBgColor{0x00, 0x00, 0x80};
+    // Deliberately not a locale code, so it can never be the starting dictionary
+    // getSpellDic() falls back to: the seeded save is then the only place a
+    // profile could have got this name from.
+    const QString mProfileSpellDic = "mudlet_test_dictionary";
 
 private slots:
     void initTestCase()
@@ -109,6 +122,8 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mColourHostname);
+        deleteProfileDirectory(mSpellHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -132,6 +147,10 @@ private slots:
         QCOMPARE(&console->mEngineCursor, &model.mEngineCursor);
         QCOMPARE(&console->mUserCursor, &model.mUserCursor);
         QCOMPARE(&console->mIsPromptLine, &model.mIsPromptLine);
+        QCOMPARE(&console->mLogFile, &model.mLogFile);
+        QCOMPARE(&console->mLogFileName, &model.mLogFileName);
+        QCOMPARE(&console->mLogStream, &model.mLogStream);
+        QCOMPARE(&console->mLogToLogFile, &model.mLogToLogFile);
 
         model.mFgColor = QColorConstants::Svg::orange;
         QCOMPARE(console->mFgColor, QColorConstants::Svg::orange);
@@ -140,6 +159,10 @@ private slots:
 
         model.mUserCursor = QPoint(7, 11);
         QCOMPARE(console->mUserCursor, QPoint(7, 11));
+
+        console->mLogFileName = qsl("aliased-log-name");
+        QCOMPARE(model.mLogFileName, qsl("aliased-log-name"));
+        model.mLogFileName.clear();
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("cecho('<white>AliasedBufferWrite\\n')\n"));
         QVERIFY2(joinedBuffer().contains(qsl("AliasedBufferWrite")), "Text echoed through the view must be visible in the model's buffer.");
@@ -347,12 +370,76 @@ private slots:
         QVERIFY2(bufferText.contains(qsl("OSC 8 Hyperlink Examples")), "The OSC 8 documentation examples were not injected into the view-less buffer.");
     }
 
-    // Both logging entry points write to a log file that belongs to the view,
-    // so with none attached they have to do nothing rather than reach for it.
-    // logRemainingOutput() still has to drop the deferred line it would have
-    // written: that state is the buffer's, and leaving it behind would let a
-    // later view replay a line from a finished session.
-    void test_loggingCallsWithNoView()
+    // The log file, its stream and the on/off flag are core model state, so the
+    // announcement and the log button are all a logging change still needs this
+    // view for. TConsoleModel raises both through Host and TMainConsole acts on
+    // them; the announcement has to carry the file that was actually opened.
+    void test_loggingChangeIsAnnouncedByTheView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        auto console = host->mpConsole;
+        // Through TMainConsole::tr() rather than the English literal, so the
+        // assertions hold whatever interface language the run picks up.
+        const QString offerToStart = TMainConsole::tr("Start logging game output to log file.");
+        const QString offerToStop = TMainConsole::tr("Stop logging game output to log file.");
+        const QString startAnnouncement = TMainConsole::tr("Logging has started. Log file is %1");
+        const QString stopAnnouncement = TMainConsole::tr("Logging has been stopped. Log file is %1");
+        // The sentinel is what makes logging resume at the next launch
+        // (Host::mLogStatus), so it has to appear and disappear with the log.
+        const QString sentinel = mudlet::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
+        QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
+
+        // Through the toolbar button rather than toggleLogging() directly: that
+        // is the path asking for the announcement, TConsole::slot_toggleLogging.
+        console->logButton->click();
+        QVERIFY2(host->mainConsoleModel().mLogToLogFile, "Clicking the log button did not start a log.");
+        const QString logFileName = host->mainConsoleModel().mLogFileName;
+        QVERIFY2(QFile::exists(sentinel), "Starting a log left no autolog sentinel, so logging would not resume next launch.");
+        QVERIFY2(consoleTextContains(startAnnouncement.arg(logFileName)), "Starting a log was not announced on the console.");
+        QVERIFY2(console->logButton->toolTip().contains(offerToStop), "The log button still offers to start logging while a log is running.");
+
+        // A user window's own text must not be interleaved into the game log -
+        // TBuffer::log() runs for every buffer and only the main one may write.
+        runLua(host, qsl("openUserWindow('logSpy')\n"));
+        auto* subConsole = console->mSubConsoleMap.value(qsl("logSpy"));
+        QVERIFY2(subConsole, "The user window was not created.");
+        // Two lines, because log() holds each one back until the next commits:
+        // with only one the leak would still be sitting in the sub-console
+        // buffer's deferred slot when logging stopped.
+        appendModelLine(subConsole->buffer, qsl("user-window-only-text"));
+        appendModelLine(subConsole->buffer, qsl("user-window-second-line"));
+        appendModelLine(host->mainConsoleModel().buffer, qsl("main-console-logged-text"));
+
+        console->logButton->click();
+        QVERIFY2(!host->mainConsoleModel().mLogToLogFile, "Clicking the log button again did not stop the log.");
+        QVERIFY2(!QFile::exists(sentinel), "Stopping a log left the autolog sentinel behind, so logging would resume unasked.");
+        QVERIFY2(consoleTextContains(stopAnnouncement.arg(logFileName)), "Stopping a log was not announced on the console.");
+        QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging again once the log has stopped.");
+
+        const QString contents = readFile(logFileName);
+        QVERIFY2(!contents.isEmpty(), "The log file that was closed is not readable.");
+        QVERIFY2(contents.contains(qsl("main-console-logged-text")), "The main console's line never reached the log file.");
+        QVERIFY2(!contents.contains(qsl("user-window-only-text")), "A user window's own text was written into the game log.");
+        QVERIFY2(!contents.contains(qsl("user-window-second-line")), "A user window's own text was written into the game log.");
+        // The announcements are printed on the console on purpose either side
+        // of the logging flag, so neither may end up in the file itself.
+        // Whitespace-insensitive, because the console wraps a line this long
+        // and the log records it wrapped - a plain contains() would miss it and
+        // pass for the wrong reason.
+        QVERIFY2(!logTextContains(contents, startAnnouncement.arg(logFileName)), "The start announcement was logged into the file it announced.");
+        QVERIFY2(!logTextContains(contents, stopAnnouncement.arg(logFileName)), "The stop announcement was logged into the file it closed.");
+
+        QFile::remove(logFileName);
+    }
+
+    // The point of moving the whole lifecycle rather than the stream alone: a
+    // profile with no view has to be able to *start* a log, write to it and
+    // stop it. Every step here runs against the model with the widget gone.
+    void test_loggingRunsWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
@@ -362,16 +449,250 @@ private slots:
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
-        model->buffer.appendLog(qsl("view-less appendLog text\n"));
+        // false = no announcement, the way startLogging() calls it from Lua
+        model->toggleLogging(false);
+        QVERIFY2(model->mLogToLogFile, "A view-less profile could not start a log.");
+        const QString logFileName = model->mLogFileName;
+        QVERIFY2(!logFileName.isEmpty(), "Starting a view-less log named no file.");
+        QVERIFY2(QFile::exists(logFileName), "Starting a view-less log opened no file.");
 
-        model->buffer.lastTextToLog = qsl("still pending when the view went away\n");
+        // append() logs the line it completes, so this is the ordinary per-line
+        // path rather than a direct poke at TBuffer::log().
+        appendModelLine(model->buffer, qsl("view-less-logged-line"));
+        model->buffer.appendLog(qsl("view-less-appended-text\n"));
+
+        model->toggleLogging(false);
+        QVERIFY2(!model->mLogToLogFile, "A view-less profile could not stop its log.");
+        QVERIFY2(!model->mLogFile.isOpen(), "Stopping a view-less log left its file open.");
+
+        const QString contents = readFile(logFileName);
+        QVERIFY2(!contents.isEmpty(), "The view-less log file is not readable.");
+        // The literal half of the format string, so the assertion survives a
+        // translated run: "'Log session starting at 'hh:mm..." -> the quoted run.
+        QVERIFY2(contents.contains(QCoreApplication::translate("TMainConsole", "'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.").section(QChar('\''), 1, 1)),
+                 "The view-less log has no session-start banner.");
+        QVERIFY2(contents.contains(QCoreApplication::translate("TMainConsole", "'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.").section(QChar('\''), 1, 1)),
+                 "The view-less log has no session-end banner, so the session was never closed off.");
+        QVERIFY2(contents.contains(qsl("view-less-appended-text")), "appendLog() never reached the view-less log file.");
+        // The most recent line is held back for duplicate detection and only
+        // written out as logging stops, so finding it proves the view-less stop
+        // flushed as well as the view-less writes landing.
+        QVERIFY2(contents.contains(qsl("view-less-logged-line")), "The line the view-less buffer logged never reached the log file.");
+
+        // The deferred-logging state is the buffer's own, so it has to be
+        // cleared whatever the log did - otherwise a later session replays the
+        // last line of this one.
+        model->buffer.lastTextToLog = qsl("still pending once the session ended\n");
         model->buffer.lastLoggedFromLine = 3;
         model->buffer.lastloggedToLine = 4;
         model->buffer.logRemainingOutput();
-
-        QVERIFY2(model->buffer.lastTextToLog.isEmpty(), "logRemainingOutput() left its pending line behind for a later view to replay.");
+        QVERIFY2(model->buffer.lastTextToLog.isEmpty(), "logRemainingOutput() left its pending line behind for a later session to replay.");
         QCOMPARE(model->buffer.lastLoggedFromLine, -1);
         QCOMPARE(model->buffer.lastloggedToLine, -1);
+
+        QFile::remove(logFileName);
+    }
+
+    void test_profileLoadFillsTheModelColoursWithNoView()
+    {
+        pinTheFixtureColoursAreNotTheDefaults();
+        const QString saveFolder = mudlet::getMudletPath(enums::profileXmlFilesPath, mColourHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        const QString savePath = qsl("%1profileColours.xml").arg(saveFolder);
+        writeProfileColourSave(savePath);
+        // loadProfile() reports a profile with no save at all as loaded fine, so
+        // a save that never landed would read as a bare colour mismatch below:
+        QVERIFY2(QFileInfo(savePath).size() > 0, "The seeded profile save is missing or empty.");
+
+        Host* host = mudlet::self()->loadProfile(mColourHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QCOMPARE(host->mFgColor, mProfileFgColor);
+        QCOMPARE(host->mBgColor, mProfileBgColor);
+
+        TConsoleModel& model = host->mainConsoleModel();
+        QCOMPARE(model.mFgColor, mProfileFgColor);
+        QCOMPARE(model.mBgColor, mProfileBgColor);
+
+        // The buffer's own copy of the pair is what unstyled text is stamped
+        // with, so the load has to have landed that too:
+        std::string plainText = "ProfileColour plain\n";
+        model.buffer.translateToPlainText(plainText, true);
+        const int plainLine = model.buffer.getLastLineNumber() - 1;
+        QVERIFY2(plainLine >= 0, "The plain text never reached the view-less buffer.");
+        QCOMPARE(model.buffer.line(plainLine), qsl("ProfileColour plain"));
+        QCOMPARE(model.buffer.buffer.at(plainLine).at(0).foreground(), mProfileFgColor);
+    }
+
+    // The trigger is made before the colours change on purpose - a colour
+    // pattern also snapshots the colour it was built with, and one made
+    // afterwards would match on that snapshot whatever the model held.
+    void test_colourTriggerMatchesTheProfileColoursWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        // matches[1] rather than line, so a match elsewhere on the line cannot
+        // satisfy the assertions. The long bracket has to be levelled: plain
+        // [[ ]] would end at the first ]] inside matches[1].
+        runLua(host,
+               qsl("colourTriggerHit = 'none'\n"
+                   "tempAnsiColorTrigger(%1, %2, [==[colourTriggerHit = matches[1]]==])\n")
+                       .arg(QString::number(TTrigger::scmDefault), QString::number(TTrigger::scmIgnored)));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        // Closing the profile emergency-stops the trigger engine, which a
+        // profile that simply never had a view would not do:
+        host->reenableAllTriggers();
+
+        // Magenta is not the default yet, so this line must not match - which is
+        // what proves the match below turns on the model rather than on the
+        // pattern's snapshot:
+        QCOMPARE(model->mFgColor, QColorConstants::LightGray);
+        const int staleLine = appendModelLine(model->buffer, qsl("ProfileColour before"), mProfileFgColor, mProfileBgColor);
+        host->runTriggers(staleLine);
+        QCOMPARE(luaGlobalString(host, "colourTriggerHit"), qsl("none"));
+
+        importProfileColours(host);
+        QCOMPARE(model->mFgColor, mProfileFgColor);
+
+        const int fedLine = appendModelLine(model->buffer, qsl("ProfileColour delta"), mProfileFgColor, mProfileBgColor);
+        host->runTriggers(fedLine);
+
+        QCOMPARE(luaGlobalString(host, "colourTriggerHit"), qsl("ProfileColour delta"));
+    }
+
+    // Driven both ways, so the model is shown to track the restyle rather than
+    // to have been set once.
+    void test_restylingTheViewKeepsTheModelColoursInStep()
+    {
+        pinTheFixtureColoursAreNotTheDefaults();
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QCOMPARE(host->mainConsoleModel().mFgColor, QColorConstants::LightGray);
+        QCOMPARE(host->mainConsoleModel().mBgColor, QColorConstants::Black);
+
+        host->mFgColor = mProfileFgColor;
+        host->mBgColor = mProfileBgColor;
+        host->mpConsole->changeColors();
+
+        QCOMPARE(host->mainConsoleModel().mFgColor, mProfileFgColor);
+        QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
+
+        host->mFgColor = QColorConstants::LightGray;
+        host->mBgColor = QColorConstants::Black;
+        host->mpConsole->changeColors();
+
+        QCOMPARE(host->mainConsoleModel().mFgColor, QColorConstants::LightGray);
+        QCOMPARE(host->mainConsoleModel().mBgColor, QColorConstants::Black);
+    }
+
+    // The same XML arrives as a package import into a live profile, and there
+    // the model on its own is not enough - the view has to be restyled with it,
+    // or text in the new foreground lands on the old background.
+    void test_importingColoursIntoALiveProfileRestylesTheView()
+    {
+        pinTheFixtureColoursAreNotTheDefaults();
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mpConsole->mBgImageMode, "A background image is set, so the console is not styled by colour here.");
+
+        const QString expectedBackground = qsl("rgba(%1,%2,%3,%4)").arg(mProfileBgColor.red()).arg(mProfileBgColor.green()).arg(mProfileBgColor.blue()).arg(mProfileBgColor.alpha());
+        QVERIFY2(!host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground), "The console already carries the imported background, so the assertion below cannot fail.");
+
+        importProfileColours(host);
+
+        QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
+        QVERIFY2(host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground),
+                 qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
+    }
+
+    // A profile is loaded and saved before it has a view, so the name of the
+    // system spell dictionary it chose has to make the whole round trip through
+    // Host - a save that reaches into the main console widget for it dereferences
+    // a null pointer here.
+    void test_spellDictionaryRoundTripsWithNoView()
+    {
+        const QString saveFolder = mudlet::getMudletPath(enums::profileXmlFilesPath, mSpellHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        const QString savePath = qsl("%1profileSpellDic.xml").arg(saveFolder);
+        writeProfileSave(savePath, qsl("      <mSpellDic>%1</mSpellDic>\n").arg(mProfileSpellDic));
+        // loadProfile() reports a profile with no save at all as loaded fine, so
+        // a save that never landed would read as a bare dictionary mismatch below:
+        QVERIFY2(QFileInfo(savePath).size() > 0, "The seeded profile save is missing or empty.");
+
+        Host* host = mudlet::self()->loadProfile(mSpellHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QCOMPARE(host->getSpellDic(), mProfileSpellDic);
+
+        const auto [xml, saveError] = savedProfileXml(host);
+        QVERIFY2(!xml.isEmpty(), qPrintable(qsl("Saving the view-less profile produced nothing: %1").arg(saveError)));
+        QVERIFY2(xml.contains(qsl("<mSpellDic>%1</mSpellDic>").arg(mProfileSpellDic)),
+                 qPrintable(qsl("The view-less profile save did not carry the spell dictionary \"%1\" back out.").arg(mProfileSpellDic)));
+    }
+
+    // The same read the other way round: with nothing chosen the member is empty,
+    // so the save has to go through getSpellDic() to keep naming a dictionary at
+    // all.
+    void test_spellDictionarySaveKeepsTheStartingDictionary()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        // Spelled out rather than read back from getSpellDic(), which is the
+        // expression under test: a fallback quietly changed to some other
+        // non-empty value has to redden this, not follow it. A profile made
+        // moments ago in this test's own config directory has picked nothing.
+#if defined(Q_OS_OPENBSD)
+        const QString startingDictionary = qsl("en-GB");
+#else
+        const QString startingDictionary = qsl("en_US");
+#endif
+        QCOMPARE(host->getSpellDic(), startingDictionary);
+
+        const auto [xml, saveError] = savedProfileXml(host);
+        QVERIFY2(!xml.isEmpty(), qPrintable(qsl("Saving the profile produced nothing: %1").arg(saveError)));
+        QVERIFY2(xml.contains(qsl("<mSpellDic>%1</mSpellDic>").arg(startingDictionary)),
+                 qPrintable(qsl("The profile save did not carry the starting spell dictionary \"%1\".").arg(startingDictionary)));
+    }
+
+    // Saving the name is only half the wire: Host owning it is worth nothing
+    // unless something carries it into the console's Hunspell handle. Both
+    // directions are driven here - the handle a new view builds for itself, and
+    // the reload Host::setSpellDic() has to push into a live one.
+    void test_choosingADictionaryReachesTheConsole()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        Hunhandle* handle = host->mpConsole->getHunspellHandle_system();
+        QVERIFY2(handle, "The view built no system dictionary handle for the profile's dictionary.");
+
+        // Hunspell_create() hands back a usable handle even when neither file
+        // exists, so a non-null handle only proves the load ran. Telling a
+        // reload apart from a failed load needs a dictionary that knows a word,
+        // which a machine with no en_US installed cannot supply.
+        if (!Hunspell_spell(handle, "the")) {
+            QSKIP("no en_US dictionary is installed here, so a reload cannot be told apart from a failed load");
+        }
+
+        host->setSpellDic(mProfileSpellDic);
+        Hunhandle* reloaded = host->mpConsole->getHunspellHandle_system();
+        QVERIFY2(reloaded, "The reload left the profile with no system dictionary handle at all.");
+        QVERIFY2(!Hunspell_spell(reloaded, "the"), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the console.");
     }
 
     void cleanup()
@@ -379,6 +700,8 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mColourHostname);
+        deleteProfileDirectory(mSpellHostname);
         delete mudlet::self();
     }
 
@@ -468,11 +791,128 @@ private:
 
     // Utility function appending one whole line - only a line feed starts a new
     // buffer line - and handing back the index it landed on.
-    int appendModelLine(TBuffer& buffer, const QString& text)
+    int appendModelLine(TBuffer& buffer, const QString& text, const QColor& fgColor = QColorConstants::LightGray, const QColor& bgColor = QColorConstants::Black)
     {
         const QString line = text + QChar::LineFeed;
-        buffer.append(line, 0, line.size(), QColorConstants::LightGray, QColorConstants::Black, TChar::None, 0);
+        buffer.append(line, 0, line.size(), fgColor, bgColor, TChar::None, 0);
         return buffer.getLastLineNumber() - 1;
+    }
+
+    // Utility function: a model that was never given the profile's colours holds
+    // the built-in pair, so an assertion written against either of those would
+    // pass whether the refresh ran or not.
+    void pinTheFixtureColoursAreNotTheDefaults()
+    {
+        QVERIFY2(mProfileFgColor != QColorConstants::LightGray, "The foreground colour under test is the built-in default, so the assertions on it cannot fail.");
+        QVERIFY2(mProfileBgColor != QColorConstants::Black, "The background colour under test is the built-in default, so the assertions on it cannot fail.");
+    }
+
+    // Utility function spelling the colour elements the way
+    // XMLexport::exportHost() writes them.
+    void writeProfileColourSave(const QString& filePath)
+    {
+        writeProfileSave(filePath,
+                         qsl("      <mFgColor>%1</mFgColor>\n"
+                             "      <mBgColor alpha=\"%2\">%3</mBgColor>\n")
+                                 .arg(mProfileFgColor.name(), QString::number(mProfileBgColor.alpha()), mProfileBgColor.name()));
+    }
+
+    // Utility function writing the smallest profile save readHost() accepts,
+    // holding nothing but the given <Host> children. Not surgical: readHost()
+    // reads a missing boolean attribute as "off", so importing one into a live
+    // profile also turns some three dozen of its settings off and zeroes its
+    // borders.
+    void writeProfileSave(const QString& filePath, const QString& hostChildren)
+    {
+        QFile file(filePath);
+        QVERIFY2(file.open(QFile::WriteOnly | QFile::Text), qPrintable(qsl("Could not write the profile save %1.").arg(filePath)));
+        QTextStream out(&file);
+        out << qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                   "<MudletPackage version=\"1.001\">\n"
+                   "  <HostPackage>\n"
+                   "    <Host>\n"
+                   "%1"
+                   "    </Host>\n"
+                   "  </HostPackage>\n"
+                   "</MudletPackage>\n")
+                        .arg(hostChildren);
+        out.flush();
+        QVERIFY2(out.status() == QTextStream::Ok && file.error() == QFile::NoError, qPrintable(qsl("Writing the profile save %1 failed: %2").arg(filePath, file.errorString())));
+    }
+
+    // Utility function handing back either the XML the production save wrote or
+    // the reason there is none. Both waits matter: saveProfile() refuses to
+    // start while another save is in flight, and the one it does start only
+    // finishes on a background thread.
+    std::pair<QString, QString> savedProfileXml(Host* host)
+    {
+        QTemporaryDir saveDir;
+        if (!saveDir.isValid()) {
+            return {{}, qsl("could not create a directory to save the profile into")};
+        }
+        host->waitForProfileSave();
+        auto [saved, xmlPath, saveError] = host->saveProfile(saveDir.path(), qsl("spellDictionary"));
+        if (!saved) {
+            return {{}, saveError};
+        }
+        host->waitForProfileSave();
+        QFile file(xmlPath);
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            return {{}, qsl("could not read %1 back: %2").arg(xmlPath, file.errorString())};
+        }
+        const QString xml = QString::fromUtf8(file.readAll());
+        if (xml.isEmpty()) {
+            return {{}, qsl("%1 was written empty").arg(xmlPath)};
+        }
+        return {xml, {}};
+    }
+
+    // Utility function reading a profile's Host settings into a live profile, as
+    // a profile load does. importPackage() only reports XML well-formedness, so
+    // the colour it was asked for is checked here rather than by each caller.
+    void importProfileColours(Host* host)
+    {
+        QTemporaryDir importDir;
+        QVERIFY2(importDir.isValid(), "Could not create a directory to write the profile save into.");
+        const QString filePath = qsl("%1/profileColours.xml").arg(importDir.path());
+        writeProfileColourSave(filePath);
+
+        QFile file(filePath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), "Could not read back the profile save just written.");
+        XMLimport importer(host);
+        const auto [success, message] = importer.importPackage(&file);
+        QVERIFY2(success, qPrintable(qsl("Reading the profile save failed: %1").arg(message)));
+        QCOMPARE(host->mFgColor, mProfileFgColor);
+        QCOMPARE(host->mBgColor, mProfileBgColor);
+    }
+
+    // Utility function: the console word-wraps, and joinedBuffer() glues the
+    // pieces back together with a space, so compare with every space removed
+    // rather than betting on where a long line was broken.
+    bool consoleTextContains(const QString& needle)
+    {
+        QString haystack = joinedBuffer();
+        QString wanted = needle;
+        return haystack.remove(QChar::Space).contains(wanted.remove(QChar::Space));
+    }
+
+    // Utility function: the console wraps long lines and the log records them
+    // wrapped, so an assertion about a long message has to ignore where the
+    // break landed.
+    static bool logTextContains(const QString& contents, const QString& needle)
+    {
+        QString haystack = contents;
+        QString wanted = needle;
+        return haystack.remove(QRegularExpression(qsl("\\s"))).contains(wanted.remove(QRegularExpression(qsl("\\s"))));
+    }
+
+    QString readFile(const QString& path)
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return QString();
+        }
+        return QString::fromUtf8(file.readAll());
     }
 
     QString luaGlobalString(Host* host, const char* name)

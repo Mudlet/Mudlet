@@ -44,6 +44,8 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <type_traits>
+#include <vector>
 
 class Host;
 class QJsonArray;
@@ -150,6 +152,14 @@ public:
     // we should also have a destructor and an assignment operator but they can,
     // in this case, be default ones:
     TChar& operator=(const TChar&) = default;
+    // Moving is not copying: a std::vector of TChars relocates its elements
+    // when it outgrows its allocation, and the characters of a line the user
+    // has selected have to stay selected when that happens. Declaring the
+    // copy-constructor above suppressed the implicit move, so without these
+    // the vector would relocate through the copy-constructor and quietly
+    // deselect every line that text was appended to.
+    TChar(TChar&&) = default;
+    TChar& operator=(TChar&&) = default;
     ~TChar() = default;
 
     bool operator==(const TChar&);
@@ -282,6 +292,9 @@ private:
     // for memory efficiency - they are looked up via linkIndex() at render time.
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
+// std::vector only relocates by moving if the move cannot throw; otherwise it
+// falls back to the copy-constructor, which deselects.
+static_assert(std::is_nothrow_move_constructible_v<TChar>);
 
 
 class TBuffer
@@ -334,7 +347,7 @@ public:
     QString& line(int lineNumber);
     // Colors of the current trigger-pass line as committed, before any
     // trigger ran; nullptr when lineNumber is not the line being processed:
-    const std::deque<TChar>* preTriggerPassLine(int lineNumber) const;
+    const std::vector<TChar>* preTriggerPassLine(int lineNumber) const;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -350,7 +363,7 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
-    void clearLinkState();
+    void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
     QSet<int> collectActiveLinkIds() const;
     void clearLastLine();
     QPoint getEndPos();
@@ -369,7 +382,7 @@ public:
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar& format, const int linkID = 0);
-    void appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    void appendFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     void appendEmptyLine();
     void setWrapAt(int i) { mWrapAt = i; }
@@ -399,9 +412,9 @@ public:
     static int lengthInGraphemes(const QString& text);
 
 
-    std::deque<TChar> bufferLine;
+    std::vector<TChar> bufferLine;
     // stores the text attributes (TChars) that make up each line of text in the buffer
-    std::deque<std::deque<TChar>> buffer;
+    std::deque<std::vector<TChar>> buffer;
     // stores the actual content of lines
     QStringList lineBuffer;
     // stores timestamps associated with lines
@@ -436,7 +449,7 @@ private:
     void decodeOSC(const QString&);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
-    void commitLineData(QString line, std::deque<TChar> chars, char ch);
+    void commitLineData(QString line, std::vector<TChar> chars, char ch);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
     static bool segmentEndsSettledSentence(const QString& line);
@@ -543,14 +556,14 @@ private:
     quint8 mAltFont = 0;
 
     QString mMudLine;
-    std::deque<TChar> mMudBuffer;
-    std::deque<TChar> mPreTriggerPassLine;
+    std::vector<TChar> mMudBuffer;
+    std::vector<TChar> mPreTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
     QString mServerWrapPendingLine;
-    std::deque<TChar> mServerWrapPendingBuffer;
+    std::vector<TChar> mServerWrapPendingBuffer;
     // Length of the last game line joined into the above. Once a paragraph
     // has been joined even once the held text is longer than the wrap column,
     // so the column the game actually broke at is only recoverable from this:

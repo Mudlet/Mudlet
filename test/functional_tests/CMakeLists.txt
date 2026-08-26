@@ -37,10 +37,14 @@ set(WINDOW_GROUP_TEST_SOURCES
     FrontendRefreshSeamTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     GlyphOverflowTest.cpp
+    HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
+    TabDetachThresholdTest.cpp
+    DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
+    CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -49,6 +53,8 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
+    RecolouredLineCacheTest.cpp
+    TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
     WindowBackgroundTest.cpp
@@ -80,6 +86,7 @@ set(TELNET_GROUP_TEST_SOURCES
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
     TelnetAtcpMspTest.cpp
+    TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     CrashTestHookTest.cpp
@@ -117,12 +124,14 @@ set(EDITOR_GROUP_TEST_SOURCES
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAreaReassignmentTest.cpp
+    MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
     MapFileStatsTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
+    MapSymbolFontTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
@@ -318,6 +327,11 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
 
+# TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
+# real time by design - every round trip it times, and every stall it places, has
+# to be waited out - so it needs a longer timeout
+set_tests_properties(TelnetLatencyMeasurementTest PROPERTIES TIMEOUT 300)
+
 # TelnetConnectFailureTest creates a fresh profile per test method and waits out a connection
 # attempt that is refused and then retried, so it needs a longer timeout
 set_tests_properties(TelnetConnectFailureTest PROPERTIES TIMEOUT 300)
@@ -342,6 +356,19 @@ set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspT
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
+
+# FeedChecksumRaceTest passes in about 5 seconds, so this timeout is only ever
+# reached by a run that is already failing - and that run has to be allowed to
+# finish, because the assertion message is the whole point of the file. Its
+# nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
+# what it is told: once to poll, then twice more to build the "would have passed
+# after N ms" debug message. Measured with every wire it covers cut, the file
+# takes 263s, so anything below that turns a readable failure into a silent
+# ctest kill. Guarded, because without the updater the test does not exist and
+# naming a test that does not exist is a hard CMake error
+if(USE_UPDATER)
+    set_tests_properties(FeedChecksumRaceTest PROPERTIES TIMEOUT 600)
+endif()
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
 # and each clip has to be waited out in real time, so it needs a longer timeout.
@@ -390,6 +417,10 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 # FrontendRefreshSeamTest creates a fresh profile per test method, and one of them waits out the
 # post-load tab indicator refresh before it can prove anything, so it needs a longer timeout
 set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
+
+# HyperlinkModelSplitTest creates a fresh profile per test method, and one of
+# them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
+set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)

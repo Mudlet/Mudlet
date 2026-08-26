@@ -77,6 +77,7 @@ signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
+    void signal_mapSymbolFontChanged();
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
@@ -209,6 +210,22 @@ public:
     // show room labels on the map?
     bool getRoomNamesShown();
     void setRoomNamesShown(bool shown);
+
+    // The 2D map room symbol settings, shared by the preferences dialog and
+    // the Lua API. Each returns whether the setting actually changed:
+    QFont getSymbolFont() const { return mMapSymbolFont; }
+    bool setSymbolFont(const QFont&);
+    bool getOnlySymbolFontUsed() const { return mIsOnlyMapSymbolFontToBeUsed; }
+    bool setOnlySymbolFontUsed(bool);
+    qreal getSymbolFontFudgeFactor() const { return mMapSymbolFontFudgeFactor; }
+    bool setSymbolFontFudgeFactor(qreal);
+    // The range setSymbolFontFudgeFactor() accepts; also what the preferences
+    // spin-box offers. Zero and below blanks every symbol (issue #10176):
+    static constexpr qreal scmMinimumSymbolFontFudgeFactor = 0.50;
+    static constexpr qreal scmMaximumSymbolFontFudgeFactor = 2.00;
+    // Which of the symbols in use would be drawn as the replacement character
+    // if the given font were the symbol font:
+    QStringList symbolsNotInFont(const QFont&);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
@@ -436,6 +453,7 @@ private:
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
+    void flushSymbolCaches();
 
     QStringList mStoredMessages;
 
