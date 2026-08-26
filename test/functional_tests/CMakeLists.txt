@@ -45,6 +45,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
+    CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -130,6 +131,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
+    MapSymbolFontTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
