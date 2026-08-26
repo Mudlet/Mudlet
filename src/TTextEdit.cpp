@@ -1454,6 +1454,15 @@ bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
+    if (!mPendingPaintRegion.isEmpty()) {
+        // Whatever this paint covers is current now, so a deferred repaint of it
+        // would be redundant. Only the remainder - if a partial expose left one -
+        // still needs the pacer.
+        mPendingPaintRegion -= e->region();
+        if (mPendingPaintRegion.isEmpty()) {
+            mpPaintPacer->stop();
+        }
+    }
     const QRect& rect = e->rect();
 
     if (mFontWidth <= 0 || mFontHeight <= 0) {
