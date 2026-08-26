@@ -3166,7 +3166,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="352"/>
       <source>Opens a free form text editor window for this profile that is saved between sessions.</source>
       <extracomment>This explains the &quot;Notepad&quot; item in the &quot;Toolbox&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>打開當前配置檔的文本編輯器視窗，文件內容會在不同會話之間保存。 </translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="357"/>
@@ -3404,7 +3404,7 @@ This is a sub-item of the &quot;Connect&quot; item in the toolbar of a detached 
       <location filename="../src/TDetachedWindow.cpp" line="537"/>
       <source>Opens the (on-line) Mudlet Forum in your system web-browser.</source>
       <extracomment>This explains the &quot;Online forum&quot; item in the &quot;Help&quot; menu in the menubar of a detached Mudlet window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>在網頁瀏覽器中開啟 Mudlet 線上論壇</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="546"/>
@@ -17176,7 +17176,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5117"/>
       <source>Always send</source>
-      <translation type="unfinished"/>
+      <translation>一律傳送</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5122"/>
@@ -17308,17 +17308,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="742"/>
       <source>This option controls spell-checking on the command line in the main console for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>本选项管理的是本配置中在主窗口命令行的拼写检查。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="778"/>
       <source>A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>可以使用针对本配置的用户词典。这将用在命令行（里面的单词会显示为带有青色虚线的下划线）和Lua分系统中。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="791"/>
       <source>A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>可用于在所有配置中共享的用户词典（要选择此项）。这将用在命令行（里面的单词将会显示为带有青色虚线的下划线）和Lua分系统中。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="913"/>
@@ -17335,7 +17335,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
       <source>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>顶部文本之前额外的空间——可以设置为负数来将文本向上移出屏幕.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
@@ -17490,7 +17490,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1768"/>
       <source>When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.</source>
-      <translation type="unfinished"/>
+      <translation>当在编辑器的主文本编辑区域显示Lua内容时，用可见的制表符和空格标志来代替空白。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1781"/>
@@ -17530,7 +17530,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
       <source>The foreground color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>用于主控制台的默认前景颜色（除非通过Lua命令或游戏服务器进行了修改）。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1885"/>
@@ -17540,7 +17540,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1888"/>
       <source>The background color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>用于主控制台的默认背景颜色（除非通过Lua命令或游戏服务器进行了修改）。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1911"/>
@@ -17874,7 +17874,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2553"/>
       <source>Select profiles that you want to copy map to, then press the Copy button to the right.</source>
-      <translation type="unfinished"/>
+      <translation>选择要复制地图到哪个配置文件，然后按下 右侧的复制按钮.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2569"/>
@@ -17915,7 +17915,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2729"/>
       <source>This enables borders around room. Color can be set in Mapper colors tab.</source>
-      <translation type="unfinished"/>
+      <translation>这将启用房间周围的边框。可以在 “颜色选择器” 中设置颜色.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2684"/>
@@ -18227,7 +18227,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3748"/>
       <source>Large icon:</source>
-      <translation type="unfinished"/>
+      <translation>大图标:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3765"/>
@@ -18260,7 +18260,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3807"/>
       <source>Small icon:</source>
-      <translation type="unfinished"/>
+      <translation>小图标:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3842"/>
