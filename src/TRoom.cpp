@@ -221,17 +221,18 @@ int TRoom::stringToDirCode(const QString& string) const
 
 // Any change to a 2D-plane exit or stub can change what the renderer's
 // reduced-detail tier has to draw for this room, which its area caches - see
-// TAreaLodExitIndex. Load-time paths that write the exit members directly
-// (XMLimport, restore(), the map auditor) do not come through here, which is
-// fine: an area's index is not built until the first paint after loading.
-void TRoom::markLodExitIndexDirty()
+// TAreaLodExitIndex. Only this room's entry moves: no other room's exits are
+// measured against where this one's lead. Paths that write the exit members
+// directly rather than through the setters - XMLimport, restore(), the map
+// auditor - invalidate the whole area's index instead.
+void TRoom::refreshLodExitIndex()
 {
     if (!mpRoomDB) {
         return;
     }
     TArea* pA = mpRoomDB->getArea(area);
     if (pA) {
-        pA->markLodExitIndexDirty();
+        pA->updateLodExitRoom(id);
     }
 }
 
@@ -240,7 +241,7 @@ void TRoom::markLodExitIndexDirty()
 void TRoom::setPlanarExit(int& exit, const int id)
 {
     exit = id;
-    markLodExitIndexDirty();
+    refreshLodExitIndex();
 }
 
 bool TRoom::hasExitStub(int direction)
@@ -273,7 +274,7 @@ void TRoom::setExitStub(int direction, bool status)
         }
     }
     if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
-        markLodExitIndexDirty();
+        refreshLodExitIndex();
     }
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
@@ -399,6 +400,7 @@ bool TRoom::setArea(int areaID)
         // Exits that led to the room from the old area's rooms now leave that
         // area; exits from any third area still do, so they are unaffected.
         pA2->refreshAreaExitsToRoom(id);
+        pA2->refreshLodExitEntrances(id);
     }
 
     mpRoomDB->mpMap->setUnsaved(__func__);
@@ -449,7 +451,7 @@ bool TRoom::setExit(const int to, const int direction)
         return false;
     }
     if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
-        markLodExitIndexDirty();
+        refreshLodExitIndex();
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->setUnsaved(__func__);

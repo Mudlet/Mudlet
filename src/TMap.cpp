@@ -232,6 +232,11 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     const int oldY = pR->y();
     const int oldZ = pR->z();
 
+    // Ahead of moveRoom(), which re-measures the exits leading to this room
+    // and so needs it to be where it says it is. The area indexes are keyed on
+    // the coordinates passed in, not on the room, so the order suits them too.
+    pR->setCoordinates(x, y, z);
+
     if (oldX != x || oldY != y || oldZ != z) {
         TArea* pA = mpRoomDB->getArea(pR->getArea());
         if (pA) {
@@ -239,8 +244,6 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
             pA->moveRoom(id, oldZ, oldX, oldY, z, x, y);
         }
     }
-
-    pR->setCoordinates(x, y, z);
 
     setUnsaved(__func__);
     return true;
@@ -648,6 +651,9 @@ void TMap::audit()
     QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
     while (itArea.hasNext()) {
         itArea.next();
+        // The audit rewrites exits, stubs and area membership behind the
+        // setters' backs, so no room re-filed its own index entry:
+        itArea.value()->markLodExitIndexDirty();
         itArea.value()->clean();
     }
 

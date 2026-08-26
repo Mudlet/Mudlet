@@ -177,7 +177,7 @@ public:
 
 private:
     void setPlanarExit(int&, const int);
-    void markLodExitIndexDirty();
+    void refreshLodExitIndex();
 
     bool readJsonExits(const QJsonObject&);
     void readJsonExitStubs(const QJsonObject&);

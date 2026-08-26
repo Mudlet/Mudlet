@@ -3455,8 +3455,10 @@ void T2DMap::paintRoomExits(QPainter& painter,
     // when it really is the smaller set: the index is not viewport-culled,
     // so on a level rich in long exits it can exceed the viewport instead.
     QList<int> roomsToPaint;
-    if (maxSkippableSpan > 0 && pArea->lodVisibleExitRoomCount(zLevel, maxSkippableSpan) < viewportRooms.size()) {
+    mLodExitIndexRoomsHandedOver = -1;
+    if (!mLodExitIndexDisabled && maxSkippableSpan > 0 && pArea->lodVisibleExitRoomCount(zLevel, maxSkippableSpan) < viewportRooms.size()) {
         roomsToPaint = pArea->lodVisibleExitRooms(zLevel, maxSkippableSpan);
+        mLodExitIndexRoomsHandedOver = int(roomsToPaint.size());
         QSet<int> alreadyListed{roomsToPaint.cbegin(), roomsToPaint.cend()};
         for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
             // All of them this time, not just the ones outside the bounds:

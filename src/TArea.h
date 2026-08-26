@@ -83,13 +83,33 @@ public:
     // Rooms on the given Z level whose exits can still draw something in the
     // 2D renderer's reduced-detail tier once exits spanning no more than
     // maxSkippableSpan room units per axis are dropped. maxSkippableSpan must
-    // be at least 1. A superset - the renderer still runs its usual per-room
-    // tests on each one - but never misses a room: see TAreaLodExitIndex.
+    // be at least 1. Covers only exits drawn from the room's own position: a
+    // caller that also wants custom exit lines, which start anywhere, has to
+    // add getCustomLineRoomsForZ() itself. A superset within that - the
+    // renderer still runs its usual per-room tests on each one - but never
+    // misses a room: see TAreaLodExitIndex.
     QList<int> lodVisibleExitRooms(int z, int maxSkippableSpan) const;
     // How many rooms the above would return, so the renderer can compare
     // against a viewport query without materialising the list.
-    int lodVisibleExitRoomCount(int z, int maxSkippableSpan) const;
+    qsizetype lodVisibleExitRoomCount(int z, int maxSkippableSpan) const;
+    // Wholesale invalidation, for when this area's contents change as a whole.
+    // A rebuild costs a pass over every room, so the callers that know which
+    // room changed use the ones below instead.
     void markLodExitIndexDirty() { mLodExitIndex.markDirty(); }
+    quint32 lodExitIndexRebuildCount() const { return mLodExitIndex.rebuildCount(); }
+    // Re-files one room after its own 2D-plane exits or exit stubs changed.
+    void updateLodExitRoom(int roomId);
+    // As above, and also the rooms with an exit leading to this one: their
+    // spans change too when it moves, or joins this area.
+    void updateLodExitRoomAndEntrances(int roomId);
+    // Drops a room that has left this area. The rooms whose exits to it have
+    // just become exits into another area are left to whoever moved it - at
+    // the point this is called the room still says it belongs here.
+    void dropLodExitRoom(int roomId);
+    // Re-files every room of this area that has an exit leading to the given
+    // one. Callers that change where a room is, or which area it belongs to,
+    // have to do this once the room's new state is settled.
+    void refreshLodExitEntrances(int roomId);
     // Records that one of this area's rooms has custom exit lines.
     void addRoomWithCustomLines(int id, int z);
     // Drops a room that no longer has any. The room stays in every other index
@@ -203,7 +223,19 @@ private:
     // show the reduced-detail tier - hence mutable.
     mutable TAreaLodExitIndex mLodExitIndex;
 
+    // One room's position and area as rebuildLodExitIndex() caches them for
+    // its destination lookups. Sixteen bytes, so a lookup costs one cache
+    // line where going back to the room database costs several.
+    struct LodRoomPos
+    {
+        qint32 x = 0;
+        qint32 y = 0;
+        int area = 0;
+        bool present = false;
+    };
+
     void rebuildLodExitIndex() const;
+    int lodExitSpanOfRoom(const TRoom*, const QList<LodRoomPos>*) const;
 
     // In use this has a minimum of 3.0 and a default of 20.0, the latter will
     // be applied in the constructor initialisation list:

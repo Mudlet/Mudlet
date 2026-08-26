@@ -249,9 +249,9 @@ private:
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
-    bool addRoomAt(const int id, const int areaId, const int x, const int y, const int environment) const
+    bool addRoomAt(const int id, const int areaId, const int x, const int y, const int environment, const int z = 0) const
     {
-        if (!map()->addRoom(id) || !map()->setRoomArea(id, areaId) || !map()->setRoomCoordinates(id, x, y, 0)) {
+        if (!map()->addRoom(id) || !map()->setRoomArea(id, areaId) || !map()->setRoomCoordinates(id, x, y, z)) {
             return false;
         }
         TRoom* pRoom = map()->mpRoomDB->getRoom(id);
@@ -261,6 +261,13 @@ private:
         pRoom->environment = environment;
         return true;
     }
+
+    // The reduced tier only takes rooms from the area's exit index while that
+    // offers fewer of them than a viewport query does, and falls back to the
+    // loop over every room on the level otherwise. The fall-back draws the
+    // same frame, so a test meaning to exercise the index has to say so or it
+    // passes either way.
+    static bool indexPathTaken(const T2DMap* p2dMap) { return p2dMap->mLodExitIndexRoomsHandedOver >= 0; }
 
     // Every test starts from an empty map with the player parked off screen.
     int freshArea(const QString& name) const
@@ -1029,12 +1036,12 @@ private slots:
 
     // The reduced tier no longer asks every room on the level about its exits:
     // the area hands over just the rooms whose exits can beat the cut, from an
-    // index it rebuilds only when told something changed. These three tests
-    // are about the telling. Each draws a frame first, so the index is built
-    // and believed, then changes the map in a way that gives a room something
-    // to draw, and requires the next frame to show it - a missed invalidation
-    // leaves the first frame's answer in charge forever, which no amount of
-    // superset generosity in the index itself can cover for.
+    // index it keeps current as the map changes. These tests are about that
+    // upkeep. Each draws a frame first, so the index is built and believed,
+    // then changes the map in a way that gives a room something to draw, and
+    // requires the next frame to show it - a missed invalidation leaves the
+    // first frame's answer in charge forever, which no amount of superset
+    // generosity in the index itself can cover for.
     //
     // The filler rooms are what keep the index path taken at all: it is only
     // used while it offers fewer rooms than the viewport query does, so a map
@@ -1069,6 +1076,7 @@ private slots:
         T2DMap* p2dMap = prepareWidget(areaId, kZoomOnePixelRooms, 0.5, 10.0);
         QVERIFY(p2dMap);
         const QImage before = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
         QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
         const int exitPixelsBefore = countPixels(before, exitColour());
         QCOMPARE(exitPixelsBefore, 0);
@@ -1084,6 +1092,7 @@ private slots:
             QVERIFY(pMap->setExit(2, 1, DIR_WEST));
         }
         const QImage after = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
 
         const int exitPixels = countPixels(after, exitColour());
         if (exitPixels <= 100) {
@@ -1112,11 +1121,13 @@ private slots:
         T2DMap* p2dMap = prepareWidget(areaId, kZoomOnePixelRooms, 0.5, 10.0);
         QVERIFY(p2dMap);
         const QImage before = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
         QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
         QCOMPARE(countPixels(before, exitColour()), 0);
 
         QVERIFY(pMap->setRoomCoordinates(2, 150, 0, 0));
         const QImage after = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
 
         const int exitPixels = countPixels(after, exitColour());
         if (exitPixels <= 100) {
@@ -1143,6 +1154,7 @@ private slots:
         T2DMap* p2dMap = prepareWidget(areaId, kZoomThreePixelRooms, 1.0, 10.0, 1.0);
         QVERIFY(p2dMap);
         const QImage before = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
         QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
         QCOMPARE(countPixels(before, exitColour()), 0);
 
@@ -1150,6 +1162,7 @@ private slots:
         QVERIFY(pRoom);
         pRoom->setExitStub(DIR_EAST, true);
         const QImage after = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
 
         const int stubPixels = countPixels(after, exitColour());
         if (stubPixels < 1) {
@@ -1159,13 +1172,13 @@ private slots:
     }
 
     // A room can join the area without an exit or a coordinate changing, which
-    // is what the room exits dialog's area field and setRoomArea() do, and it
-    // brings its own exits with it. Nothing else here reopens the question:
-    // the coordinates are untouched, so nothing reaches TArea::moveRoom(), and
-    // the exit was set while the room belonged somewhere else.
+    // is what setRoomArea() does, and it brings its own exits with it. Nothing
+    // else here reopens the question: the coordinates are untouched, so nothing
+    // reaches TArea::moveRoom(), and the exit was set while the room belonged
+    // somewhere else.
     //
     // The exit is deliberately one way, which draws it as a dotted line and so
-    // as fewer pixels than the tests above look for - about 50. Giving room 1 the return
+    // as fewer pixels than the tests above look for. Giving room 1 the return
     // exit would put room 1 into the index at the first frame - as a room with
     // an exit into another area - and it would then draw that same line from
     // its stale entry whether or not the arrival was ever noticed.
@@ -1186,11 +1199,13 @@ private slots:
         T2DMap* p2dMap = prepareWidget(areaId, kZoomOnePixelRooms, 0.5, 10.0);
         QVERIFY(p2dMap);
         const QImage before = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
         QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
         QCOMPARE(countPixels(before, exitColour()), 0);
 
         QVERIFY(pMap->setRoomArea(2, areaId));
         const QImage after = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
 
         const int exitPixels = countPixels(after, exitColour());
         if (exitPixels <= 20) {
@@ -1223,16 +1238,225 @@ private slots:
         T2DMap* p2dMap = prepareWidget(areaId, kZoomOnePixelRooms, 0.5, 10.0);
         QVERIFY(p2dMap);
         const QImage before = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
         QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
         QVERIFY2(countPixels(before, exitColour()) > 20, "the exit that the departing room has to take with it was not drawn in the first place");
 
         QVERIFY(pMap->setRoomArea(2, otherAreaId));
         const QImage after = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
 
         const int exitPixels = countPixels(after, exitColour());
         if (exitPixels > 0) {
             QFAIL(qPrintable(qsl("the exit of the room that left the area was still drawn into it - %1 pixels of the exit colour are in the frame, saved at %2")
                                      .arg(QString::number(exitPixels), saveFrame(after, qsl("departed-room-exit")))));
+        }
+    }
+
+    // Every hook above re-files the one room it touched. The whole-area
+    // rebuild behind them is the fall-back for a map that changed without
+    // saying so, and it costs a pass over every room with a lookup per exit -
+    // 215 ms on the largest map this has been measured against, against the
+    // 511 ms the surrounding calcSpan() takes there - so an ordinary edit
+    // reaching for it would trade one slow frame for a much slower one on
+    // every edit. No frame can tell a rebuilt index from a re-filed one,
+    // which is why the rebuild count is what this asserts on; the frames are
+    // checked as well so that an index which simply stopped being maintained
+    // could not pass.
+    void test_anOrdinaryEditReFilesOneRoomRatherThanRebuildingTheArea()
+    {
+        TMap* pMap = map();
+        const int areaId = freshArea(qsl("Incrementally Maintained Area"));
+        QVERIFY(areaId > 0);
+        const int otherAreaId = pMap->mpRoomDB->addArea(qsl("Somewhere Else"));
+        QVERIFY(otherAreaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        QVERIFY(addRoomAt(2, areaId, 1, 0, kEnvRoom));
+        for (int i = 0; i < 6; ++i) {
+            QVERIFY(addRoomAt(10 + i, areaId, i * 2 - 6, 3, kEnvRoom));
+        }
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomOnePixelRooms, 0.5, 10.0);
+        QVERIFY(p2dMap);
+        const QImage before = renderFrame(p2dMap);
+        QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
+        QCOMPARE(countPixels(before, exitColour()), 0);
+
+        TArea* pArea = pMap->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        const quint32 rebuildsAfterFirstFrame = pArea->lodExitIndexRebuildCount();
+        QVERIFY2(rebuildsAfterFirstFrame > 0, "the first frame did not build the index, so this test cannot tell a rebuild from the lack of one");
+
+        // One edit of each kind that has a hook: an exit, a move, an arrival
+        // and a departure.
+        QVERIFY(pMap->setExit(1, 2, DIR_EAST));
+        QVERIFY(pMap->setExit(2, 1, DIR_WEST));
+        QVERIFY(pMap->setRoomCoordinates(2, 150, 0, 0));
+        QVERIFY(addRoomAt(3, otherAreaId, -150, 0, kEnvRoom));
+        QVERIFY(pMap->setRoomArea(3, areaId));
+        QVERIFY(pMap->setRoomArea(3, otherAreaId));
+
+        const QImage after = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
+        const int exitPixels = countPixels(after, exitColour());
+        if (exitPixels <= 100) {
+            QFAIL(qPrintable(qsl("the exit stretched to 150 units across those edits was not drawn by the next frame - only %1 pixels of the exit colour are in the frame, saved at %2")
+                                     .arg(QString::number(exitPixels), saveFrame(after, qsl("incremental-edits")))));
+        }
+        QCOMPARE(pArea->lodExitIndexRebuildCount(), rebuildsAfterFirstFrame);
+    }
+
+    // The index is only ever allowed to hand over too many rooms, never too
+    // few: a room it leaves out loses whatever that room would have drawn,
+    // and nothing downstream can put it back. The tests above each name one
+    // room that has to be there, which only covers the cases somebody thought
+    // of. This one asks the question the other way round - the same map drawn
+    // both ways has to paint the same pixels - so a span, a Z level or a kind
+    // of exit nobody considered still has to survive.
+    //
+    // The map is built to sit on the edges: exits of every span from one room
+    // unit to ninety, along both axes and diagonally, a stub, an exit out of
+    // the area, a custom line, and a second Z level the frame must not show
+    // anything of.
+    void test_theIndexPathDrawsTheSameFrameAsTheLoopOverEveryRoom_data()
+    {
+        QTest::addColumn<double>("zoom");
+        QTest::addColumn<double>("roomSize");
+        QTest::addColumn<double>("lineSize");
+
+        // Each row moves the cut-off along the ladder of exit spans the map is
+        // built from, so between them every span sits on both sides of it and
+        // several land right on the boundary. Rows where nothing at all can be
+        // dropped are not in the list: the index is not consulted there, so
+        // there would be nothing to compare.
+        //
+        // The first row is the only one where an exit stub still has pixels of
+        // its own - a stub is about a room long, so anything zoomed out far
+        // enough to drop a one room exit drops the stub with it.
+        QTest::newRow("rooms as wide as the shortest exit") << kZoomThreePixelRooms << 1.0 << 1.0;
+        QTest::newRow("one pixel rooms") << kZoomOnePixelRooms << 0.5 << 10.0;
+        QTest::newRow("half a pixel per room") << kZoomHalfPixelRooms << 0.5 << 10.0;
+        QTest::newRow("a quarter of a pixel per room") << 1600.0 << 0.5 << 10.0;
+        QTest::newRow("a tenth of a pixel per room") << 4000.0 << 0.5 << 10.0;
+        QTest::newRow("every exit on the map too short to show") << 40000.0 << 0.5 << 10.0;
+        QTest::newRow("far beyond a pixel per room") << kZoomFarBeyondAPixelPerRoom << 0.5 << 10.0;
+    }
+
+    void test_theIndexPathDrawsTheSameFrameAsTheLoopOverEveryRoom()
+    {
+        QFETCH(double, zoom);
+        QFETCH(double, roomSize);
+        QFETCH(double, lineSize);
+
+        TMap* pMap = map();
+        const int areaId = freshArea(qsl("Equivalence Area"));
+        QVERIFY(areaId > 0);
+        const int otherAreaId = pMap->mpRoomDB->addArea(qsl("Across The Border"));
+        QVERIFY(otherAreaId > 0);
+
+        // A pair per span, each pair on its own row so the lines cannot land
+        // on top of one another.
+        int nextRoomId = 1;
+        const QList<int> spans{1, 2, 3, 4, 5, 6, 7, 8, 12, 30, 90};
+        for (int i = 0; i < spans.size(); ++i) {
+            const int span = spans.at(i);
+            const int row = i * 2 - spans.size();
+            const int from = nextRoomId++;
+            const int to = nextRoomId++;
+            QVERIFY(addRoomAt(from, areaId, -span / 2, row, kEnvRoom));
+            QVERIFY(addRoomAt(to, areaId, -span / 2 + span, row, kEnvRoom));
+            QVERIFY(pMap->setExit(from, to, DIR_EAST));
+            QVERIFY(pMap->setExit(to, from, DIR_WEST));
+        }
+        // The same spans again on the other axis and on a diagonal, since a
+        // blob is a rectangle and the cut is made per axis.
+        for (const int span : spans) {
+            const int from = nextRoomId++;
+            const int to = nextRoomId++;
+            QVERIFY(addRoomAt(from, areaId, 40, -span / 2, kEnvRoom));
+            QVERIFY(addRoomAt(to, areaId, 40, -span / 2 + span, kEnvRoom));
+            QVERIFY(pMap->setExit(from, to, DIR_NORTH));
+            const int diagonalFrom = nextRoomId++;
+            const int diagonalTo = nextRoomId++;
+            QVERIFY(addRoomAt(diagonalFrom, areaId, -40, -span / 2, kEnvRoom));
+            QVERIFY(addRoomAt(diagonalTo, areaId, -40 + span, -span / 2 + span, kEnvRoom));
+            QVERIFY(pMap->setExit(diagonalFrom, diagonalTo, DIR_NORTHEAST));
+        }
+
+        // A stub, an exit out of the area, and a custom line - none of them a
+        // plain line between two rooms of this area.
+        const int stubRoomId = nextRoomId++;
+        QVERIFY(addRoomAt(stubRoomId, areaId, 60, 0, kEnvRoom));
+        TRoom* pStubRoom = pMap->mpRoomDB->getRoom(stubRoomId);
+        QVERIFY(pStubRoom);
+        pStubRoom->setExitStub(DIR_EAST, true);
+
+        const int borderRoomId = nextRoomId++;
+        const int abroadRoomId = nextRoomId++;
+        QVERIFY(addRoomAt(borderRoomId, areaId, 60, 5, kEnvAreaExitDestination));
+        QVERIFY(addRoomAt(abroadRoomId, otherAreaId, 61, 5, kEnvAreaExitDestination));
+        QVERIFY(pMap->setExit(borderRoomId, abroadRoomId, DIR_EAST));
+
+        const int customLineRoomId = nextRoomId++;
+        QVERIFY(addRoomAt(customLineRoomId, areaId, -60, 8, kEnvRoom));
+        TRoom* pCustomLineRoom = pMap->mpRoomDB->getRoom(customLineRoomId);
+        QVERIFY(pCustomLineRoom);
+        pCustomLineRoom->customLines[qsl("n")] = QList<QPointF>{QPointF(-60, 8), QPointF(-20, 60)};
+        pCustomLineRoom->customLinesColor[qsl("n")] = customLineColour();
+        pCustomLineRoom->customLinesStyle[qsl("n")] = Qt::SolidLine;
+        pCustomLineRoom->customLinesArrow[qsl("n")] = false;
+        pCustomLineRoom->calcRoomDimensions();
+
+        // A whole second level, long exits and all, that the frame below must
+        // show nothing of.
+        for (int i = 0; i < 8; ++i) {
+            const int from = nextRoomId++;
+            const int to = nextRoomId++;
+            QVERIFY(addRoomAt(from, areaId, i * 3 - 12, 0, kEnvHidden, 1));
+            QVERIFY(addRoomAt(to, areaId, i * 3 - 12, 120, kEnvHidden, 1));
+            QVERIFY(pMap->setExit(from, to, DIR_NORTH));
+        }
+
+        T2DMap* p2dMap = prepareWidget(areaId, zoom, roomSize, 10.0, lineSize);
+        QVERIFY(p2dMap);
+        const QImage throughTheIndex = renderFrame(p2dMap);
+        QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so there was nothing to compare it against");
+
+        p2dMap->mLodExitIndexDisabled = true;
+        const QImage throughTheLoop = renderFrame(p2dMap);
+        p2dMap->mLodExitIndexDisabled = false;
+        QVERIFY2(!indexPathTaken(p2dMap), "the fall-back was asked for and not taken");
+
+        // Which pixels got painted, not what colour they came out. The two
+        // paths hand the rooms over in different orders, and two overlapping
+        // lines blend to whichever was drawn second, so a handful of pixels
+        // where an arrow head crosses a line legitimately differ in shade.
+        // What may not differ is a pixel one frame paints and the other
+        // leaves as background: that is a room the index left out.
+        const QRgb background = throughTheLoop.pixel(0, 0);
+        int firstDifferenceX = -1;
+        int firstDifferenceY = -1;
+        int differences = 0;
+        for (int y = 0; y < throughTheLoop.height(); ++y) {
+            for (int x = 0; x < throughTheLoop.width(); ++x) {
+                if ((throughTheIndex.pixel(x, y) == background) == (throughTheLoop.pixel(x, y) == background)) {
+                    continue;
+                }
+                if (!differences++) {
+                    firstDifferenceX = x;
+                    firstDifferenceY = y;
+                }
+            }
+        }
+        if (differences) {
+            QFAIL(qPrintable(qsl("the index path painted %1 pixels that the loop over every room did not, or left that many unpainted - first at %2,%3; frames saved at %4 and %5")
+                                     .arg(QString::number(differences),
+                                          QString::number(firstDifferenceX),
+                                          QString::number(firstDifferenceY),
+                                          saveFrame(throughTheIndex, qsl("equivalence-index")),
+                                          saveFrame(throughTheLoop, qsl("equivalence-loop")))));
         }
     }
 };
