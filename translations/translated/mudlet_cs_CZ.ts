@@ -57,7 +57,12 @@
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Máte načtenou mapu (%n místnost), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místnosti), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místností), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místností), ale Mudlet momentálně neví, kde jste.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -776,7 +781,12 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/mapInfoContributorManager.cpp" line="281"/>
       <source>Center of %n selected rooms</source>
       <extracomment>This description is shown when MORE THAN ONE room is selected.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Střed %n vybrané místnosti</numerusform>
+        <numerusform>Střed %n vybraných místností</numerusform>
+        <numerusform>Střed %n vybraných místností</numerusform>
+        <numerusform>Střed %n vybraných místností</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -789,7 +799,12 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message numerus="yes">
       <location filename="../src/modern_glwidget.cpp" line="258"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Máte načtenou mapu (%n místnost), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místnosti), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místností), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místností), ale Mudlet momentálně neví, kde jste.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/modern_glwidget.cpp" line="261"/>
@@ -2244,7 +2259,12 @@ Warning message shown when trying to delete an area fails.</extracomment>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2459"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Máte načtenou mapu (%n místnost), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místnosti), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místností), ale Mudlet momentálně neví, kde jste.</numerusform>
+        <numerusform>Máte načtenou mapu (%n místností), ale Mudlet momentálně neví, kde jste.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="495"/>
@@ -3670,7 +3690,12 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/THyperlinkVisibilityManager.cpp" line="761"/>
       <source>%n link(s) hidden</source>
       <extracomment>Screen-reader announcement when multiple OSC 8 hyperlinks are hidden at once; %n is the count</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n odkaz skryt</numerusform>
+        <numerusform>%n odkazy skryty</numerusform>
+        <numerusform>%n odkazů skryto</numerusform>
+        <numerusform>%n odkazů skryto</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/THyperlinkVisibilityManager.cpp" line="794"/>
@@ -4926,14 +4951,36 @@ paměť?</translation>
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblast: přidává se.
+Sledujte další zprávy k místnostem, které v ní
+mají být...</numerusform>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblasti: přidávají se.
+Sledujte další zprávy k místnostem, které v nich
+mají být...</numerusform>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblastí: přidávají se.
+Sledujte další zprávy k místnostem, které v nich
+mají být...</numerusform>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblastí: přidávají se.
+Sledujte další zprávy k místnostem, které v nich
+mají být...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="778"/>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ]  - Chybějící oblast se teď jmenuje:
+(ID) ==&gt; „název“</numerusform>
+        <numerusform>[ INFO ]  - Chybějící oblasti se teď jmenují:
+(ID) ==&gt; „název“</numerusform>
+        <numerusform>[ INFO ]  - Chybějící oblasti se teď jmenují:
+(ID) ==&gt; „název“</numerusform>
+        <numerusform>[ INFO ]  - Chybějící oblasti se teď jmenují:
+(ID) ==&gt; „název“</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="813"/>
@@ -5015,7 +5062,20 @@ zjišťuje, jaká nová id použít.</translation>
 Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblast: přidává se.
+Sledujte další zprávy k místnostem, které v ní mají
+být...</numerusform>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblasti: přidávají se.
+Sledujte další zprávy k místnostem, které v nich mají
+být...</numerusform>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblastí: přidávají se.
+Sledujte další zprávy k místnostem, které v nich mají
+být...</numerusform>
+        <numerusform>[ ALERT ] - V mapě chybí %n oblastí: přidávají se.
+Sledujte další zprávy k místnostem, které v nich mají
+být...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="897"/>
@@ -5916,7 +5976,12 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1147"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Trigger name=%1 se spustí ještě %n×.</numerusform>
+        <numerusform>Trigger name=%1 se spustí ještě %n×.</numerusform>
+        <numerusform>Trigger name=%1 se spustí ještě %n×.</numerusform>
+        <numerusform>Trigger name=%1 se spustí ještě %n×.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -6037,7 +6102,12 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TriggerUnit.cpp" line="382"/>
       <source>%n trigger(s) created while processing this line have been stopped: temporary ones removed, permanent ones switched off until the profile is reloaded.</source>
       <extracomment>%n is a count of triggers. Shown in the game window when a trigger keeps creating new triggers that match the same line, which would otherwise never end</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n trigger vytvořený při zpracování tohoto řádku byl zastaven: dočasné byly odstraněny, trvalé vypnuty do dalšího načtení profilu.</numerusform>
+        <numerusform>%n triggery vytvořené při zpracování tohoto řádku byly zastaveny: dočasné byly odstraněny, trvalé vypnuty do dalšího načtení profilu.</numerusform>
+        <numerusform>%n triggerů vytvořených při zpracování tohoto řádku bylo zastaveno: dočasné byly odstraněny, trvalé vypnuty do dalšího načtení profilu.</numerusform>
+        <numerusform>%n triggerů vytvořených při zpracování tohoto řádku bylo zastaveno: dočasné byly odstraněny, trvalé vypnuty do dalšího načtení profilu.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TriggerUnit.cpp" line="387"/>
@@ -6646,7 +6716,12 @@ Zkontrolujte připojení k internetu a údaje zadané pro herní server.</transl
       <location filename="../src/ctelnet.cpp" line="809"/>
       <source>[ INFO ]  - Trying again in %n second(s)...</source>
       <extracomment>%n is the number of seconds before Mudlet tries the connection again.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekundu...</numerusform>
+        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekundy...</numerusform>
+        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekund...</numerusform>
+        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekund...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="904"/>
@@ -6688,7 +6763,16 @@ Zkontrolujte připojení k internetu a údaje zadané pro herní server.</transl
       <source>[ ALERT ] - Socket got disconnected, for %n reason(s):
 %1</source>
       <extracomment>This message is used when we have been trying to connect or we were connected securely, but the connection has been lost. It is possible with a secure connection that there is MORE than one error message to show, but for English or other locales where the singular case (%n==1) is distinct it would be perfectly feasible to replace &quot;for %n reason(s)&quot; with &quot;because&quot; for that number (1) of errors - however the text should then be repeated in the corresponding situation for an &quot;open&quot; connection which is different in that it only ever has one &quot;reason&quot; to report.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - Socket byl odpojen, z %n důvodu:
+%1</numerusform>
+        <numerusform>[ ALERT ] - Socket byl odpojen, z %n důvodů:
+%1</numerusform>
+        <numerusform>[ ALERT ] - Socket byl odpojen, z %n důvodů:
+%1</numerusform>
+        <numerusform>[ ALERT ] - Socket byl odpojen, z %n důvodů:
+%1</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1052"/>
@@ -6763,7 +6847,12 @@ Je to: „%1“
       <location filename="../src/ctelnet.cpp" line="1302"/>
       <source>The %n IP address(es) of %1 has/have been found. It/They are:</source>
       <extracomment>This text is used in the (expected) case when the user has provided a URL (%1) for the Game Server rather than (unusually) an IP address. After a DNS lookup we have found at least one but possibly more (%n) IP addresses, which will be listed (one per line) immediately afterwards.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Byla nalezena %n IP adresa pro %1. Je to:</numerusform>
+        <numerusform>Byly nalezeny %n IP adresy pro %1. Jsou to:</numerusform>
+        <numerusform>Bylo nalezeno %n IP adres pro %1. Jsou to:</numerusform>
+        <numerusform>Bylo nalezeno %n IP adres pro %1. Jsou to:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1339"/>
@@ -9774,7 +9863,12 @@ Další materiály ke čtení, např. odkazy na dokumentaci nebo příspěvky na
       <location filename="../src/dlgPackageExporter.cpp" line="1995"/>
       <source>Select what to export (%n item(s))</source>
       <extracomment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Vyberte, co exportovat (%n položka)</numerusform>
+        <numerusform>Vyberte, co exportovat (%n položky)</numerusform>
+        <numerusform>Vyberte, co exportovat (%n položek)</numerusform>
+        <numerusform>Vyberte, co exportovat (%n položek)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1998"/>
@@ -9982,7 +10076,12 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
       <location filename="../src/dlgPackageManager.cpp" line="820"/>
       <source>Update (%n)</source>
       <extracomment>Message on button in package manager to update one or multiple (%n is the count) selected packages.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Aktualizovat (%n)</numerusform>
+        <numerusform>Aktualizovat (%n)</numerusform>
+        <numerusform>Aktualizovat (%n)</numerusform>
+        <numerusform>Aktualizovat (%n)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="823"/>
@@ -10000,7 +10099,12 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
       <location filename="../src/dlgPackageManager.cpp" line="830"/>
       <source>Install (%n)</source>
       <extracomment>Message on button in package manager to install one or multiple (%n is the count) selected packages.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Nainstalovat (%n)</numerusform>
+        <numerusform>Nainstalovat (%n)</numerusform>
+        <numerusform>Nainstalovat (%n)</numerusform>
+        <numerusform>Nainstalovat (%n)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="833"/>
@@ -10022,7 +10126,12 @@ Message on button in package manager initially and when the view is the &quot;In
       <location filename="../src/dlgPackageManager.cpp" line="855"/>
       <source>Remove (%n)</source>
       <extracomment>Message on button in package manager to remove one or multiple (%n is the count) selected packages.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Odebrat (%n)</numerusform>
+        <numerusform>Odebrat (%n)</numerusform>
+        <numerusform>Odebrat (%n)</numerusform>
+        <numerusform>Odebrat (%n)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="858"/>
@@ -10177,7 +10286,12 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="3655"/>
       <source>copy to %n destination(s)</source>
       <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>kopírovat do %n cíle</numerusform>
+        <numerusform>kopírovat do %n cílů</numerusform>
+        <numerusform>kopírovat do %n cílů</numerusform>
+        <numerusform>kopírovat do %n cílů</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="407"/>
@@ -10532,7 +10646,12 @@ a že je dost místa. Kopírování selhalo.</translation>
       <location filename="../src/dlgProfilePreferences.cpp" line="3660"/>
       <source>%n selected - change destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>vybrán %n – změnit cíle...</numerusform>
+        <numerusform>vybrány %n – změnit cíle...</numerusform>
+        <numerusform>vybráno %n – změnit cíle...</numerusform>
+        <numerusform>vybráno %n – změnit cíle...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3665"/>
@@ -11092,7 +11211,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="245"/>
       <source>Enter a new room weight to use as the travel time for all of the %n selected room(s). This will be used for calculating the best path. The minimum and default is 1.</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Zadejte novou váhu místnosti jako dobu průchodu pro %n vybranou místnost. Použije se při hledání nejlepší cesty. Minimum a výchozí hodnota je 1.</numerusform>
+        <numerusform>Zadejte novou váhu místnosti jako dobu průchodu pro %n vybrané místnosti. Použije se při hledání nejlepší cesty. Minimum a výchozí hodnota je 1.</numerusform>
+        <numerusform>Zadejte novou váhu místnosti jako dobu průchodu pro %n vybraných místností. Použije se při hledání nejlepší cesty. Minimum a výchozí hodnota je 1.</numerusform>
+        <numerusform>Zadejte novou váhu místnosti jako dobu průchodu pro %n vybraných místností. Použije se při hledání nejlepší cesty. Minimum a výchozí hodnota je 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="251"/>
@@ -11100,7 +11224,20 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
  • an existing room weight from the list below (sorted by most commonly used first)
  • enter a new positive integer value to use as a new weight. The default is 1.</source>
       <comment>This is for when applying a new room weight to one or more rooms and some have different weights at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Chcete-li změnit váhu pro %n vybranou místnost, zvolte prosím:
+ • existující váhu ze seznamu níže (řazeno od nejčastěji používaných)
+ • nebo zadejte nové kladné celé číslo jako novou váhu. Výchozí je 1.</numerusform>
+        <numerusform>Chcete-li změnit váhu pro %n vybrané místnosti, zvolte prosím:
+ • existující váhu ze seznamu níže (řazeno od nejčastěji používaných)
+ • nebo zadejte nové kladné celé číslo jako novou váhu. Výchozí je 1.</numerusform>
+        <numerusform>Chcete-li změnit váhu pro %n vybraných místností, zvolte prosím:
+ • existující váhu ze seznamu níže (řazeno od nejčastěji používaných)
+ • nebo zadejte nové kladné celé číslo jako novou váhu. Výchozí je 1.</numerusform>
+        <numerusform>Chcete-li změnit váhu pro %n vybraných místností, zvolte prosím:
+ • existující váhu ze seznamu níže (řazeno od nejčastěji používaných)
+ • nebo zadejte nové kladné celé číslo jako novou váhu. Výchozí je 1.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="618"/>
@@ -11141,18 +11278,33 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="193"/>
       <source>Lock %n room(s), so it/they will never be used for speedwalking</source>
       <extracomment>room properties dialog, text will be shown at a checkbox, where you can set/unset a number of room&apos;s lock.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Zamknout %n místnost, aby se nikdy nepoužila pro rychlou chůzi</numerusform>
+        <numerusform>Zamknout %n místnosti, aby se nikdy nepoužily pro rychlou chůzi</numerusform>
+        <numerusform>Zamknout %n místností, aby se nikdy nepoužily pro rychlou chůzi</numerusform>
+        <numerusform>Zamknout %n místností, aby se nikdy nepoužily pro rychlou chůzi</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="209"/>
       <source>Hide all %n room(s).%1</source>
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset a number of room&apos;s hidden status. More than one room is being considered and some, but not all (%n) of them are hidden and in this case the checkbox also has an partially checked state to be used to leave them all unchanged. A second translatable sentance indicating the number of currently hidden rooms will be inserted as %1.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Skrýt %n místnost.%1</numerusform>
+        <numerusform>Skrýt %n místnosti.%1</numerusform>
+        <numerusform>Skrýt všech %n místností.%1</numerusform>
+        <numerusform>Skrýt všech %n místností.%1</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="216"/>
       <source> %n room(s) are currently hidden.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform> %n místnost je momentálně skrytá.</numerusform>
+        <numerusform> %n místnosti jsou momentálně skryté.</numerusform>
+        <numerusform> %n místností je momentálně skrytých.</numerusform>
+        <numerusform> %n místností je momentálně skrytých.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="222"/>
@@ -11164,14 +11316,24 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="229"/>
       <source>Hide (all) %n room(s).</source>
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset the hidden status of one or more rooms where %n is the total number of rooms and all of them are currently hidden or shown.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Skrýt %n místnost.</numerusform>
+        <numerusform>Skrýt %n místnosti.</numerusform>
+        <numerusform>Skrýt (všech) %n místností.</numerusform>
+        <numerusform>Skrýt (všech) %n místností.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="275"/>
       <source>Enter one or more characters to set a new symbol for %n room(s).  Clear to unset.</source>
       <comment>%n is the total number of rooms involved.</comment>
       <extracomment>room properties dialog, setting symbols</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Zadejte jeden nebo více znaků jako nový symbol pro %n místnost.  Vymazáním symbol zrušíte.</numerusform>
+        <numerusform>Zadejte jeden nebo více znaků jako nový symbol pro %n místnosti.  Vymazáním symbol zrušíte.</numerusform>
+        <numerusform>Zadejte jeden nebo více znaků jako nový symbol pro %n místností.  Vymazáním symbol zrušíte.</numerusform>
+        <numerusform>Zadejte jeden nebo více znaků jako nový symbol pro %n místností.  Vymazáním symbol zrušíte.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="281"/>
@@ -11181,7 +11343,24 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
  • clear to unset.</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
       <extracomment>room properties dialog, setting symbols</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Chcete-li nastavit symbol pro %n místnost, zvolte prosím:
+ • existující symbol ze seznamu,
+ • zadejte jeden nebo více znaků jako nový symbol,
+ • nebo vymazáním symbol zrušte.</numerusform>
+        <numerusform>Chcete-li nastavit symbol pro %n místnosti, zvolte prosím:
+ • existující symbol ze seznamu,
+ • zadejte jeden nebo více znaků jako nový symbol,
+ • nebo vymazáním symbol zrušte.</numerusform>
+        <numerusform>Chcete-li nastavit symbol pro %n místností, zvolte prosím:
+ • existující symbol ze seznamu,
+ • zadejte jeden nebo více znaků jako nový symbol,
+ • nebo vymazáním symbol zrušte.</numerusform>
+        <numerusform>Chcete-li nastavit symbol pro %n místností, zvolte prosím:
+ • existující symbol ze seznamu,
+ • zadejte jeden nebo více znaků jako nový symbol,
+ • nebo vymazáním symbol zrušte.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="323"/>
@@ -11968,7 +12147,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="8358"/>
       <source>&quot;%1&quot; cannot be changed here: Mudlet has no way to reach it in Lua under the name it is shown with, so anything saved for it would go somewhere else. Its value may show up blank for the same reason. A script can still change it.</source>
       <extracomment>Warning shown in the editor&apos;s Variables view for a variable it cannot write back to Lua. %1 is the name the variable is shown under.</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ zde nelze změnit: Mudlet se k ní v Lua pod zobrazeným názvem nedostane, takže cokoli uloženého by skončilo jinde. Ze stejného důvodu může být její hodnota prázdná. Skript ji změnit dokáže.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8421"/>
@@ -13076,7 +13255,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgVarsMainArea.cpp" line="60"/>
       <source>key (boolean)</source>
       <extracomment>Shown in the Variables editor for a table member whose key is the boolean true or false, a key type that cannot be created from the GUI</extracomment>
-      <translation type="unfinished"/>
+      <translation>klíč (pravdivostní hodnota)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="88"/>
@@ -13244,7 +13423,9 @@ Package item warning banner shown in trigger editor when selecting package items
       <source>       --offline                    open the profiles loaded at startup
                                     without connecting to their game
                                     server.</source>
-      <translation type="unfinished"/>
+      <translation>       --offline                    otevře profily načtené při startu
+                                    bez připojení k jejich hernímu
+                                    serveru.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="463"/>
@@ -13377,7 +13558,7 @@ aplikace méně užitečné:</translation>
     <message>
       <location filename="../src/main.cpp" line="539"/>
       <source>Licence GPLv3: GNU GPL version 3 - http://gnu.org/licenses/gpl.html</source>
-      <translation type="unfinished"/>
+      <translation>Licence GPLv3: GNU GPL verze 3 - http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="443"/>
@@ -15123,19 +15304,34 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="6139"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;O Mudletu&lt;/p&gt;&lt;p&gt;&lt;i&gt;Je dostupná %n aktualizace!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;O Mudletu&lt;/p&gt;&lt;p&gt;&lt;i&gt;Jsou dostupné %n aktualizace!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;O Mudletu&lt;/p&gt;&lt;p&gt;&lt;i&gt;Je dostupných %n aktualizací!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;O Mudletu&lt;/p&gt;&lt;p&gt;&lt;i&gt;Je dostupných %n aktualizací!&lt;/i&gt;&lt;p&gt;</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="6157"/>
       <source>Review %n update(s)...</source>
       <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Zobrazit %n aktualizaci...</numerusform>
+        <numerusform>Zobrazit %n aktualizace...</numerusform>
+        <numerusform>Zobrazit %n aktualizací...</numerusform>
+        <numerusform>Zobrazit %n aktualizací...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="6159"/>
       <source>Review the update(s) available...</source>
       <extracomment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Zobrazit dostupnou aktualizaci...</numerusform>
+        <numerusform>Zobrazit dostupné aktualizace...</numerusform>
+        <numerusform>Zobrazit dostupné aktualizace...</numerusform>
+        <numerusform>Zobrazit dostupné aktualizace...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1161"/>
@@ -17094,12 +17290,12 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1358"/>
       <source>Undo the game&apos;s own wrapping (experimental) at:</source>
-      <translation type="unfinished"/>
+      <translation>Rušit vlastní zalamování hry (experimentální) na:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1406"/>
       <source>&lt;i&gt;Experimental: the odd line can still be joined or left split when it should not be. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Tell us how it works for you&lt;/a&gt; - your feedback is what will make this better.&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;Experimentální: některý řádek se pořád může spojit nebo zůstat rozdělený, i když neměl. &lt;a href="https://github.com/Mudlet/Mudlet/issues"&gt;Napište nám, jak vám to funguje&lt;/a&gt; – vaše zpětná vazba je to, co tohle vylepší.&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2777"/>
