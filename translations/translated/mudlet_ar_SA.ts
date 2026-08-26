@@ -2575,7 +2575,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="537"/>
       <source>Search</source>
       <extracomment>search bar placeholder text</extracomment>
-      <translation type="unfinished"/>
+      <translation>بحث</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="544"/>
