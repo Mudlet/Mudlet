@@ -17323,12 +17323,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="778"/>
       <source>A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>可以使用针对本配置的用户词典。这将用在命令行（里面的单词会显示为带有青色虚线的下划线）和Lua分系统中。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="791"/>
       <source>A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>可用于在所有配置中共享的用户词典（要选择此项）。这将用在命令行（里面的单词将会显示为带有青色虚线的下划线）和Lua分系统中。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="913"/>
@@ -17345,22 +17345,22 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
       <source>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>顶部文本之前额外的空间——可以设置为负数来将文本向上移出屏幕.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
       <source>Extra space to have before text on the left - can be set to negative to move text left beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>左边文本之前额外的空间——可以设置为负数来将文本向左移出屏幕.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1097"/>
       <source>Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>底部文本之前额外的空间——可以设置为负数来将文本向下移出屏幕.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1147"/>
       <source>Extra space to have before text on the right - can be set to negative to move text right beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>右边文本之前额外的空间——可以设置为负数来将文本向右移出屏幕.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1312"/>
@@ -17500,7 +17500,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1768"/>
       <source>When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.</source>
-      <translation type="unfinished"/>
+      <translation>当在编辑器的主文本编辑区域显示Lua内容时，用可见的制表符和空格标志来代替空白。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1781"/>
