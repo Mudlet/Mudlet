@@ -17326,7 +17326,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5117"/>
       <source>Always send</source>
-      <translation type="unfinished"/>
+      <translation>Immer senden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5122"/>
