@@ -13566,17 +13566,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="496"/>
       <source>Record replay</source>
-      <translation type="unfinished"/>
+      <translation>Записать повтор</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="504"/>
       <source>Record log</source>
-      <translation type="unfinished"/>
+      <translation>Запись журнала</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="512"/>
       <source>Emergency stop</source>
-      <translation type="unfinished"/>
+      <translation>Аварийная остановка</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="515"/>
