@@ -3321,11 +3321,28 @@ void TDetachedWindow::slot_toggleMap()
 // tracked on every path that can show or hide a mapper.
 void TDetachedWindow::slot_updateShowMapActionText()
 {
+    // Unlike the main window's Toolbox entry, this one runs
+    // mudlet::slot_showMapperDialog(), which is not a plain toggle: a map dock
+    // living in a detached window is closed there and shown in the main window
+    // instead. So the label cannot come from where the mapper happens to be
+    // shown - it has to predict that slot's outcome: an embedded mapper is
+    // toggled in place, and otherwise only a visible main window map dock gets
+    // hidden; anything else ends with a map on screen.
     Host* pHost = nullptr;
-    if (!mCurrentProfileName.isEmpty() && mudlet::self()) {
-        pHost = mudlet::self()->getHostManager().getHost(mCurrentProfileName);
+    auto pMudlet = mudlet::self();
+    if (!mCurrentProfileName.isEmpty() && pMudlet) {
+        pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
     }
-    if (pHost && pHost->mapperShown()) {
+    bool willHide = false;
+    if (pHost) {
+        if (pHost->mpConsole && pHost->mpConsole->mpMapper) {
+            willHide = pHost->mapperShown();
+        } else {
+            auto mainMapDock = pMudlet->getMainWindowDockWidget(qsl("map_%1").arg(mCurrentProfileName));
+            willHide = mainMapDock && mainMapDock->isVisible();
+        }
+    }
+    if (willHide) {
         //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map
         mpMenuShowMapAction->setText(tr("Hide &map"));
     } else {
