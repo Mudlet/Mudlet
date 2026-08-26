@@ -116,6 +116,15 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
+    mpPaintPacer = new QTimer(this);
+    mpPaintPacer->setSingleShot(true);
+    connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        if (!mPendingPaintRegion.isEmpty()) {
+            update(mPendingPaintRegion);
+            mPendingPaintRegion = QRegion();
+        }
+    });
+
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
@@ -141,6 +150,23 @@ void TTextEdit::forceUpdate()
     update();
 }
 
+void TTextEdit::scheduleUpdate(const QRect& rect)
+{
+    mPendingPaintRegion += rect.isValid() ? rect : QWidget::rect();
+
+    // Nothing painted recently, so this frame's window is open: Qt still merges
+    // whatever else arrives before the event loop gets around to painting.
+    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+        update(mPendingPaintRegion);
+        mPendingPaintRegion = QRegion();
+        return;
+    }
+
+    if (!mpPaintPacer->isActive()) {
+        mpPaintPacer->start(csmPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+    }
+}
+
 void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
 {
     if (firstLine < 0 || lastLine < firstLine) {
@@ -152,7 +178,7 @@ void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
     if (mFontHeight <= 0 || mScreenHeight <= 0) {
         // Too early to work out where the lines sit, so fall back to the whole
         // pane rather than leave the change unpainted.
-        update();
+        scheduleUpdate();
         return;
     }
 
@@ -164,7 +190,7 @@ void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
         // may scroll onto it before the next paint.
         return;
     }
-    update(QRect(0, top * mFontHeight, width(), (bottom - top + 1) * mFontHeight));
+    scheduleUpdate(QRect(0, top * mFontHeight, width(), (bottom - top + 1) * mFontHeight));
 }
 
 void TTextEdit::needUpdate(int y1, int y2)
@@ -186,7 +212,7 @@ void TTextEdit::needUpdate(int y1, int y2)
     }
     QRect r(0, top * mFontHeight, mScreenWidth * mFontWidth, bottom * mFontHeight);
     mForceUpdate = true;
-    update(r);
+    scheduleUpdate(r);
 }
 
 void TTextEdit::focusInEvent(QFocusEvent* event)
@@ -375,7 +401,7 @@ void TTextEdit::showNewLines()
             updateScrollBar(mpBuffer->mCursorY);
         }
     }
-    update();
+    scheduleUpdate();
 
 
     if (mpHost && QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
@@ -1427,6 +1453,7 @@ bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool
 
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
+    mSincePaint.restart();
     const QRect& rect = e->rect();
 
     if (mFontWidth <= 0 || mFontHeight <= 0) {

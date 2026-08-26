@@ -36,6 +36,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     FrontendRefreshSeamTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
+    FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
