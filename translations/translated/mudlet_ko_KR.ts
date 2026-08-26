@@ -3604,13 +3604,13 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/TDetachedWindow.cpp" line="1795"/>
       <source>%1 (Main Window)</source>
       <extracomment>This is an item in list of profiles in the &quot;Window&quot; menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in the detached window, but in Mudlet&apos;s main window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 (메인 창)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="1823"/>
       <source>%1 (Detached)</source>
       <extracomment>This is an item in list of profiles in the &quot;Window&quot; menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in Mudlet&apos;s main window, but in the detached window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 (분리됨)</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="2812"/>
