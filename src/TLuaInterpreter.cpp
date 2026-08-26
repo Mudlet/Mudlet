@@ -7959,6 +7959,20 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
     }
 
+    if (key == qsl("mapperButton")) {
+        const QString value = getVerifiedString(L, __func__, 2, "value");
+        if (value == qsl("default")) {
+            host.mMapperButtonMode = Host::MapperButtonMode::Default;
+        } else if (value == qsl("scripted")) {
+            host.mMapperButtonMode = Host::MapperButtonMode::Scripted;
+        } else if (value == qsl("disabled")) {
+            host.mMapperButtonMode = Host::MapperButtonMode::Disabled;
+        } else {
+            return warnArgumentValue(L, __func__, qsl("mapperButton must be \"default\", \"scripted\" or \"disabled\", got \"%1\"").arg(value));
+        }
+        mudlet::self()->updateMapActionAvailability();
+        return success();
+    }
     if (key == qsl("enableGMCP")) {
         host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -8417,6 +8431,20 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapRoundRooms"),
              [&]() {
                  lua_pushboolean(L, host.mBubbleMode);
+             }},
+            {qsl("mapperButton"),
+             [&]() {
+                 switch (host.mMapperButtonMode) {
+                 case Host::MapperButtonMode::Scripted:
+                     lua_pushstring(L, "scripted");
+                     break;
+                 case Host::MapperButtonMode::Disabled:
+                     lua_pushstring(L, "disabled");
+                     break;
+                 case Host::MapperButtonMode::Default:
+                     lua_pushstring(L, "default");
+                     break;
+                 }
              }},
             {qsl("showRoomIdsOnMap"),
              [&]() {

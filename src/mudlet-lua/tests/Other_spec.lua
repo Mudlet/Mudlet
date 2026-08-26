@@ -980,6 +980,7 @@ describe("Tests Other.lua functions", function()
         blankLinesBehaviour = {"show", "hide", "replacewithspace"},
         controlCharacterHandling = {"asis", "oem", "picture"},
         ambiguousEAsianWidthCharacters = {"narrow", "wide", "auto"},
+        mapperButton = {"scripted", "disabled", "default"},
       }
       local exercised = 0
       for key, values in pairs(enums) do
@@ -1008,6 +1009,20 @@ describe("Tests Other.lua functions", function()
       assert.is_nil(ok)
       assert.is_string(err)
       restore("caretShortcut")
+    end)
+
+    it("starts mapperButton on default each session and keeps the last good mode on a bad value", function()
+      -- mapperButton is deliberately session-only (an uninstalled UI package
+      -- must not leave the map button dead for good), so a fresh self-test
+      -- profile has to read "default"
+      snapshot("mapperButton")
+      assert.equals("default", getConfig("mapperButton"))
+      assert.is_true(setConfig("mapperButton", "scripted"))
+      local ok, err = setConfig("mapperButton", "sideways")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.equals("scripted", getConfig("mapperButton"))
+      restore("mapperButton")
     end)
 
     it("round-trips commandLineHistorySaveSize (numeric option)", function()

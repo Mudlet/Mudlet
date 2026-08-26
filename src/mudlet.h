@@ -220,6 +220,7 @@ public:
     void doAutoLogin(const QString&, bool offline);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
+    void updateMapActionAvailability();
     void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
@@ -784,6 +785,11 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+
+    // The map actions' enabled state before the active profile's
+    // "mapperButton" setConfig mode is applied on top - the last baseline the
+    // toolbar management functions computed
+    bool mMapActionBaselineEnabled = false;
 
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;

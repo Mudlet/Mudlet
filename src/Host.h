@@ -481,6 +481,7 @@ public:
     bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
     bool resetBackgroundImage(const QString& name, bool fullWindow = false);
     void showHideOrCreateMapper(const bool loadDefaultMap);
+    bool interceptMapperButton();
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
     void setupIreDriverBugfix();
@@ -842,6 +843,13 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // What the built-in map buttons (main toolbar, Show Map menu entry and its
+    // shortcut, detached window toolbar) do for this profile; scripts set it
+    // through setConfig("mapperButton", ...). Deliberately not saved with the
+    // profile: an uninstalled UI package must not leave the buttons dead for
+    // good, so a script has to re-apply its choice each session.
+    enum class MapperButtonMode { Default, Scripted, Disabled };
+    MapperButtonMode mMapperButtonMode = MapperButtonMode::Default;
     // Center the map on an area as a whole when it fits entirely in the
     // viewport, instead of following the player room. Off by default;
     // configurable via the mapCenterSmallAreas key in Mudlet.ini.
