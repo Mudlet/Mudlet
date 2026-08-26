@@ -608,22 +608,32 @@ QHash<int, int> TRoom::getExits() const
     return exitList;
 }
 
-void TRoom::setExitLock(int exit, bool state)
+bool TRoom::setExitLock(int exit, bool state)
 {
+    bool changed = false;
     if (state) {
         if ((!exitLocks.contains(exit)) && (exit >= DIR_NORTH && exit <= DIR_OUT)) {
             exitLocks.push_back(exit);
+            changed = true;
         }
     } else {
-        exitLocks.removeAll(exit);
+        changed = exitLocks.removeAll(exit) > 0;
     }
-    mpRoomDB->mpMap->setUnsaved(__func__);
+
+    if (changed) {
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
+    return changed;
 }
 
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
 {
     if (!mSpecialExits.contains(cmd)) {
         return false;
+    }
+
+    if (mSpecialExitLocks.contains(cmd) == doLock) {
+        return true;
     }
 
     if (doLock) {
