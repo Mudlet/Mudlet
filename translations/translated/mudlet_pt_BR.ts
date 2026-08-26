@@ -17423,17 +17423,17 @@ Tente novamente quando terminar.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="742"/>
       <source>This option controls spell-checking on the command line in the main console for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Essa opção controla a verificação ortográfica na linha de comando no console principal para esse perfil.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="778"/>
       <source>A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>Um dicionário do usuário específico para este perfil estará disponível. Isso estará na linha de comando (as palavras que estão nela aparecerão com um sublinhado ciano tracejado) e no subsistema lua.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="791"/>
       <source>A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.</source>
-      <translation type="unfinished"/>
+      <translation>Um dicionário do usuário compartilhado entre todos os perfis (que têm essa opção selecionada) estará disponível. Isso estará na linha de comando (as palavras que estão nela aparecerão com um sublinhado ciano tracejado) e no subsistema lua.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="913"/>
@@ -17451,7 +17451,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
       <source>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>Espaço extra para ter antes do texto na parte superior - pode ser definido como negativo para mover o texto para além da tela.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
@@ -17606,7 +17606,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1768"/>
       <source>When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.</source>
-      <translation type="unfinished"/>
+      <translation>Ao exibir o conteúdo Lua na área principal do editor de texto do Editor, mostre guias e espaços com marcas visíveis em vez de espaços em branco.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1781"/>
@@ -17646,7 +17646,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
       <source>The foreground color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>A cor de primeiro plano usada por padrão para o console principal (a menos que seja alterada por um comando lua ou pelo servidor do jogo).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1885"/>
@@ -17656,7 +17656,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1888"/>
       <source>The background color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>A cor de fundo usada por padrão para o console principal (a menos que seja alterada por um comando lua ou pelo servidor do jogo).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1911"/>
@@ -17666,7 +17666,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1914"/>
       <source>The foreground color used for the main input area.</source>
-      <translation type="unfinished"/>
+      <translation>A cor do primeiro plano usada para a área de entrada principal.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1934"/>
@@ -17676,7 +17676,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1937"/>
       <source>The background color used for the main input area.</source>
-      <translation type="unfinished"/>
+      <translation>A cor de fundo usada para a área de entrada principal.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1957"/>
@@ -17686,7 +17686,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1960"/>
       <source>The foreground color used for text sent to the game server.</source>
-      <translation type="unfinished"/>
+      <translation>A cor de primeiro plano usada para o texto enviado ao servidor do jogo.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1983"/>
@@ -17696,7 +17696,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1986"/>
       <source>The background color used for text sent to the game server.</source>
-      <translation type="unfinished"/>
+      <translation>A cor de fundo usada para o texto enviado ao servidor do jogo.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2012"/>
@@ -17990,23 +17990,23 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2553"/>
       <source>Select profiles that you want to copy map to, then press the Copy button to the right.</source>
-      <translation type="unfinished"/>
+      <translation>Selecione os perfis para os quais deseja copiar o mapa e pressione o botão Copiar à direita.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2569"/>
       <source>Copy map into the selected profiles on the left.</source>
-      <translation type="unfinished"/>
+      <translation>Copie o mapa para os perfis selecionados à esquerda.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2604"/>
       <source>Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.</source>
-      <translation type="unfinished"/>
+      <translation>Altere para uma versão inferior se precisar salvar seu mapa em um formato que possa ser lido por versões mais antigas do Mudlet. Isso perderá os dados extras disponíveis no formato de mapa atual.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2646"/>
       <location filename="../src/ui/profile_preferences.ui" line="2662"/>
       <source>On games that provide maps for download, you can press this button to get the latest map. Note that this will overwrite any changes you&apos;ve done to your map, and will use the new map only.</source>
-      <translation type="unfinished"/>
+      <translation>Em jogos que fornecem mapas para download, você pode pressionar este botão para obter o mapa mais recente. Observe que isso irá sobrescrever quaisquer alterações que você&apos;Já fiz no seu mapa e usará apenas o novo mapa.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2697"/>
@@ -18026,12 +18026,12 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2755"/>
       <source>The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.</source>
-      <translation type="unfinished"/>
+      <translation>A área padrão (id de área -1) é usada por alguns scripts de mapeador como um &apos;Área de espera&apos; para quartos antes de&apos;re colocado na área correta.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2729"/>
       <source>This enables borders around room. Color can be set in Mapper colors tab.</source>
-      <translation type="unfinished"/>
+      <translation>Isso permite bordas ao redor da sala. A cor pode ser definida na guia Cores do mapeador.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2684"/>
@@ -18081,7 +18081,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3590"/>
       <source>Percentage ratio (the default is 120%) of the marker symbol to the space available for the room.</source>
-      <translation type="unfinished"/>
+      <translation>Razão percentual (o padrão é 120%) do símbolo do marcador ao espaço disponível para a sala.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3596"/>
@@ -18102,7 +18102,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3621"/>
       <source>Percentage ratio of the inner diameter of the marker symbol to the outer one (the default is 70%).</source>
-      <translation type="unfinished"/>
+      <translation>Relação percentual entre o diâmetro interno do símbolo do marcador e o diâmetro externo (o padrão é 70%).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3630"/>
@@ -18343,7 +18343,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3748"/>
       <source>Large icon:</source>
-      <translation type="unfinished"/>
+      <translation>Ícone grande:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3765"/>
@@ -18376,7 +18376,7 @@ Você pode usá-lo, mas pode haver problemas com o alinhamento de colunas de tex
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3807"/>
       <source>Small icon:</source>
-      <translation type="unfinished"/>
+      <translation>Ícone pequeno:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3842"/>
