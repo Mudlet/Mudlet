@@ -1307,6 +1307,52 @@ private slots:
         QCOMPARE(pArea->lodExitIndexRebuildCount(), rebuildsAfterFirstFrame);
     }
 
+    // The room that changed is not always the room that has to be re-filed.
+    // An exit one room long draws nothing in this tier and so keeps its source
+    // out of the index entirely - until the room it leads to leaves the area,
+    // at which point that same exit becomes an area exit and owes a marker
+    // whatever the zoom. Nothing about the source room changed, so only the
+    // pass over the rooms with exits leading to the departed one can catch it.
+    void test_aShortExitBecomesVisibleWhenItsDestinationLeavesTheArea()
+    {
+        TMap* pMap = map();
+        const int areaId = freshArea(qsl("Losing A Room"));
+        QVERIFY(areaId > 0);
+        const int otherAreaId = pMap->mpRoomDB->addArea(qsl("Gaining A Room"));
+        QVERIFY(otherAreaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        QVERIFY(addRoomAt(2, areaId, 1, 0, kEnvRoom));
+        QVERIFY(pMap->setExit(1, 2, DIR_EAST));
+        for (int i = 0; i < 6; ++i) {
+            QVERIFY(addRoomAt(10 + i, areaId, i * 2 - 6, 4, kEnvRoom));
+        }
+
+        // The same geometry and fat pen as the area exit marker test above,
+        // for the same reasons.
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomNearlyFourPixelRooms, 1.0, 10.0, 1.0);
+        QVERIFY(p2dMap);
+        p2dMap->mLargeAreaExitArrows = true;
+        const QImage before = renderFrame(p2dMap);
+        QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
+        QCOMPARE(countPixels(before, areaExitColour()), 0);
+
+        // The colour only tells the marker apart from the rooms once the room
+        // it points at is somewhere else, so it is given late:
+        TRoom* pDestination = pMap->mpRoomDB->getRoom(2);
+        QVERIFY(pDestination);
+        pDestination->environment = kEnvAreaExitDestination;
+        QVERIFY(pMap->setRoomArea(2, otherAreaId));
+
+        const QImage after = renderFrame(p2dMap);
+        QVERIFY2(indexPathTaken(p2dMap), "the reduced tier fell back to the loop over every room, so this test never consulted the exit index");
+        const int markerPixels = countPixels(after, areaExitColour());
+        if (markerPixels < 3) {
+            QFAIL(qPrintable(qsl("the exit became an area exit when its destination left, but its marker was not drawn - only %1 pixels of the destination area's colour are in the frame, saved at %2")
+                                     .arg(QString::number(markerPixels), saveFrame(after, qsl("newly-area-exit")))));
+        }
+    }
+
     // The index is only ever allowed to hand over too many rooms, never too
     // few: a room it leaves out loses whatever that room would have drawn,
     // and nothing downstream can put it back. The tests above each name one
