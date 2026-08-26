@@ -296,6 +296,17 @@ describe("Tests MSDP subnegotiation handling", function()
       assert.is_false(fired, "a variable with an unbalanced close raised its arrival event")
       assert.equals("ok", msdp.MSDPNEXT, "the malformed variable took the rest of the message with it")
     end)
+
+    it("drops an unbalanced close even when it is the message's last variable", function()
+      -- the mid-loop flush catches an unbalanced close when another variable
+      -- follows it - this is the other path, where the message ends on it
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPSOLE", function() fired = true end)
+      feedMsdp(VAR .. "MSDPSOLE" .. VAL .. TABLE_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.is_nil(msdp.MSDPSOLE)
+      assert.is_false(fired, "a variable with an unbalanced close raised its arrival event")
+    end)
 end)
 
 describe("Tests addSupportedTelnetOption", function()

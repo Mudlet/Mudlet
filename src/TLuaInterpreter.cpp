@@ -4202,11 +4202,16 @@ void TLuaInterpreter::msdp2Lua(const char* src)
         token = token.remove(QLatin1Char('\"'));
         script = script.replace(0, topLevelPrefixLength, QByteArray());
         if (nest || malformed) {
-            // the game ended the subnegotiation with a structure still open (or
-            // closed one it never opened), so this JSON is cut short - what yajl
-            // makes of that varies by version, from a silent nothing to a stored
-            // null sentinel, so it does not get to decide
-            std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game ended the message with a table or array still open";
+            // unbalanced structure markers make truncated JSON and what yajl does with that varies by version, so drop the variable ourselves and name which way the imbalance went
+            std::string reason;
+            if (nest && malformed) {
+                reason = "closed a table or array it never opened and ended the message with another still open";
+            } else if (nest) {
+                reason = "ended the message with a table or array still open";
+            } else {
+                reason = "closed a table or array it never opened";
+            }
+            std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game " + reason;
             logError(e, qsl("MSDP"), qsl("msdp2Lua"));
             return;
         }
