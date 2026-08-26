@@ -1992,20 +1992,32 @@ std::tuple<bool, QString, int, int> TConsole::getSelection()
     return {true, text, start, length};
 }
 
+// The four callers below rewrite the text of an existing selection rather than
+// appending to the buffer, so the lines they touched are all that has to be
+// redrawn. They used to force a whole-screen repaint of both panes, which cost a
+// full relayout per coloured echo - see markLinesDirty().
+void TConsole::markSelectionDirty()
+{
+    const int firstLine = std::min(P_begin.y(), P_end.y());
+    const int lastLine = std::max(P_begin.y(), P_end.y());
+    mUpperPane->markLinesDirty(firstLine, lastLine);
+    mLowerPane->markLinesDirty(firstLine, lastLine);
+}
+
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
 {
-    buffer.applyLink(P_begin, P_end, linkFunction, linkHint, linkReference);
-    mUpperPane->forceUpdate();
-    mLowerPane->forceUpdate();
+    if (buffer.applyLink(P_begin, P_end, linkFunction, linkHint, linkReference)) {
+        markSelectionDirty();
+    }
 }
 
 // Set or Reset ALL the specified (but not others)
 void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)
 {
     mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (b ? attributes : TChar::None));
-    buffer.applyAttribute(P_begin, P_end, attributes, b);
-    mUpperPane->forceUpdate();
-    mLowerPane->forceUpdate();
+    if (buffer.applyAttribute(P_begin, P_end, attributes, b)) {
+        markSelectionDirty();
+    }
 }
 
 void TConsole::setFgColor(int r, int g, int b)
@@ -2021,17 +2033,17 @@ void TConsole::setBgColor(int r, int g, int b, int a)
 void TConsole::setBgColor(const QColor& newColor)
 {
     mFormatCurrent.setBackground(newColor);
-    buffer.applyBgColor(P_begin, P_end, newColor);
-    mUpperPane->forceUpdate();
-    mLowerPane->forceUpdate();
+    if (buffer.applyBgColor(P_begin, P_end, newColor)) {
+        markSelectionDirty();
+    }
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
-    buffer.applyFgColor(P_begin, P_end, newColor);
-    mUpperPane->forceUpdate();
-    mLowerPane->forceUpdate();
+    if (buffer.applyFgColor(P_begin, P_end, newColor)) {
+        markSelectionDirty();
+    }
 }
 
 void TConsole::setCommandBgColor(int r, int g, int b, int a)
