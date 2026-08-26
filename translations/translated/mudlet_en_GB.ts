@@ -13573,17 +13573,17 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="496"/>
       <source>Record replay</source>
-      <translation type="unfinished"/>
+      <translation>Record replay</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="504"/>
       <source>Record log</source>
-      <translation type="unfinished"/>
+      <translation>Record log</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="512"/>
       <source>Emergency stop</source>
-      <translation type="unfinished"/>
+      <translation>Emergency stop</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="515"/>
@@ -17462,7 +17462,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
       <source>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</source>
-      <translation type="unfinished"/>
+      <translation>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
@@ -17522,7 +17522,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1484"/>
       <source>lines</source>
-      <translation type="unfinished"/>
+      <translation>lines</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1497"/>
@@ -17657,7 +17657,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
       <source>The foreground color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>The foreground colour used by default for the main console (unless changed by a lua command or the game server).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1885"/>
@@ -17667,7 +17667,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1888"/>
       <source>The background color used by default for the main console (unless changed by a lua command or the game server).</source>
-      <translation type="unfinished"/>
+      <translation>The background colour used by default for the main console (unless changed by a lua command or the game server).</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1911"/>
@@ -18001,28 +18001,28 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2553"/>
       <source>Select profiles that you want to copy map to, then press the Copy button to the right.</source>
-      <translation type="unfinished"/>
+      <translation>Select profiles that you want to copy map to, then press the Copy button to the right.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2569"/>
       <source>Copy map into the selected profiles on the left.</source>
-      <translation type="unfinished"/>
+      <translation>Copy map into the selected profiles on the left.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2604"/>
       <source>Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.</source>
-      <translation type="unfinished"/>
+      <translation>Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2646"/>
       <location filename="../src/ui/profile_preferences.ui" line="2662"/>
       <source>On games that provide maps for download, you can press this button to get the latest map. Note that this will overwrite any changes you&apos;ve done to your map, and will use the new map only.</source>
-      <translation type="unfinished"/>
+      <translation>On games that provide maps for download, you can press this button to get the latest map. Note that this will overwrite any changes you&apos;ve done to your map, and will use the new map only.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2697"/>
       <source>When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context.</source>
-      <translation type="unfinished"/>
+      <translation>When enabled, rooms on floors above and below the current level will be drawn with a lighter colour to show the map layout context.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2700"/>
@@ -18037,12 +18037,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2755"/>
       <source>The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.</source>
-      <translation type="unfinished"/>
+      <translation>The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2729"/>
       <source>This enables borders around room. Color can be set in Mapper colors tab.</source>
-      <translation type="unfinished"/>
+      <translation>This enables borders around room. Colour can be set in Mapper colours tab.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2684"/>
@@ -18354,7 +18354,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3748"/>
       <source>Large icon:</source>
-      <translation type="unfinished"/>
+      <translation>Large icon:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3765"/>
@@ -18387,7 +18387,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3807"/>
       <source>Small icon:</source>
-      <translation type="unfinished"/>
+      <translation>Small icon:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3842"/>
