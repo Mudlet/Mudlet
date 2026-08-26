@@ -1341,18 +1341,19 @@ QString Host::mediaLocationMSP() const
 }
 
 // Completely specifies the font for use in the main console and elsewhere:
-std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFontChange change)
 {
     const QFontMetrics metrics(font);
     if (metrics.averageCharWidth() == 0) {
         return {false, qsl("specified font is invalid (its letters have 0 width)")};
     }
 
-    // A different family means a new choice of font - from the preferences, from
-    // setFont() or from setConfig() - and retires the stand-in. The same family is
-    // what the preferences dialog re-sends when only the size or the antialiasing
-    // changed, and must not quietly make the stand-in the saved choice.
-    if (!mMissingDisplayFontFamily.isEmpty() && getDisplayFont().family().compare(font.family(), Qt::CaseInsensitive) != 0) {
+    // Only an explicit new choice - the preferences dialog or Lua's setFont() -
+    // retires the stand-in. The family cannot decide that for itself: while the
+    // stand-in is up the family on show IS the stand-in, so a user picking that
+    // very family and the preferences re-sending it because only the size or the
+    // antialiasing changed look exactly alike.
+    if (change == DisplayFontChange::UserChoice) {
         mMissingDisplayFontFamily.clear();
     }
 
@@ -1505,9 +1506,8 @@ bool Host::substituteMissingDisplayFont()
 
     font.setFamily(scmDefaultFontFamily);
     setDisplayFont(font);
-    // Set after setDisplayFont(), which clears it for a family it considers a new
-    // choice. Only this branch remembers anything: a "Family Style" name resolves
-    // to a base family that IS installed, so saving that name is no loss.
+    // Only this branch remembers anything: a "Family Style" name resolves to a
+    // base family that IS installed, so saving that name is no loss.
     mMissingDisplayFontFamily = requestedFamily;
 
     qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily

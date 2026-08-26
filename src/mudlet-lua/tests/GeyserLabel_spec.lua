@@ -1235,22 +1235,21 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.is_truthy(getLabelText("glfFont"):find('<font face ="Ubuntu Mono">', 1, true))
     end)
 
-    it("says so rather than raising when the font is not installed", function()
+    it("warns but still takes a family the font database does not list", function()
       label:setFont("Ubuntu Mono")
       local debugMessage = spy.on(_G, "debugc")
       finally(function() debugMessage:revert() end)
       local ok, err
       assert.has_no.errors(function() ok, err = label:setFont("No Such Font At All") end)
-      assert.is_nil(ok)
-      assert.is_truthy(tostring(err):find("not available", 1, true))
+      assert.is_true(ok)
+      assert.is_nil(err)
       assert.spy(debugMessage).was.called()
       assert.is_truthy(debugMessage.calls[#debugMessage.calls].vals[1]:find("No Such Font At All", 1, true))
-      -- a family Qt can only substitute for must not be remembered: it would go
-      -- into the <font face> that every echo() wraps the text in
-      assert.are.equal("Ubuntu Mono", label.font)
-      local text = getLabelText("glfFont")
-      assert.is_nil(text:find("No Such Font At All", 1, true))
-      assert.is_truthy(text:find('<font face ="Ubuntu Mono">', 1, true))
+      -- the database leaves out names the platform still resolves, so the name
+      -- goes into the <font face> that every echo() wraps the text in and Qt
+      -- gets to pick what it draws it with
+      assert.are.equal("No Such Font At All", label.font)
+      assert.is_truthy(getLabelText("glfFont"):find('<font face ="No Such Font At All">', 1, true))
     end)
 
     it("does not raise when the constructor is handed a font that is not a string", function()

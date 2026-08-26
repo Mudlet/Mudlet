@@ -5181,7 +5181,7 @@ void dlgProfilePreferences::slot_changeInvertMapZoom(const bool state)
     mudlet::self()->setInvertMapZoom(state);
 }
 
-bool dlgProfilePreferences::updateDisplayFont()
+bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
     if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
         return false;
@@ -5222,7 +5222,7 @@ bool dlgProfilePreferences::updateDisplayFont()
 
     // update the display properly when font or size or antiAliasing selections
     // change.
-    mpHost->setDisplayFont(displayFont);
+    mpHost->setDisplayFont(displayFont, change);
 
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
@@ -5250,21 +5250,23 @@ void dlgProfilePreferences::cancelShortcutCaptures()
 
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    if (!mpHost.isNull() && updateDisplayFont()) {
+    // Only fires from QFontComboBox::currentFontChanged, so the family really is
+    // one the user just picked out of the list
+    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
 }
 
 void dlgProfilePreferences::slot_displayFontSizeChanged()
 {
-    if (!mpHost.isNull() && updateDisplayFont()) {
+    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::Adjustment)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
     }
 }
 
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
-    updateDisplayFont();
+    updateDisplayFont(Host::DisplayFontChange::Adjustment);
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)

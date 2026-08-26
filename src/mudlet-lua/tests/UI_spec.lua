@@ -4236,6 +4236,19 @@ describe("Window and label state", function()
       assert.are.equal("Ubuntu Mono", getFont(fontLabel))
     end)
 
+    -- nothing stops a label being called "main", so the console has to win the
+    -- name or setFont("main", ...) would silently miss the main console
+    it("setFont targets the main console even when a label is also named main", function()
+      local original = getFont("main")
+      assert.is_true(setFont("main", "Bitstream Vera Sans Mono"))
+      assert.is_true(createLabel("main", 0, 0, 50, 20, 1))
+      assert.is_true(setFont("main", "Ubuntu Mono"))
+      assert.are.equal("Ubuntu Mono", getFont("main"))
+      assert.is_true(deleteLabel("main"))
+      assert.are.equal("Ubuntu Mono", getFont("main"))
+      assert.is_true(setFont("main", original))
+    end)
+
     it("getAvailableFonts returns a table keyed by font name", function()
       local fonts = getAvailableFonts()
       assert.is_table(fonts)

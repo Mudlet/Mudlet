@@ -750,14 +750,17 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    const auto resolved = host.resolveFontFamily(fontName);
-    if (!resolved.available) {
-        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
-    }
-
     QFont font = pT->font();
-    font.setFamily(resolved.family);
-    font.setWeight(resolved.weight);
+    const auto resolved = host.resolveFontFamily(fontName);
+    if (resolved.available) {
+        font.setFamily(resolved.family);
+        font.setWeight(resolved.weight);
+    } else {
+        // The font database leaves out families the platform still resolves -
+        // fontconfig aliases such as "Helvetica" - and this function always
+        // handed the name straight to Qt, so an unknown one keeps doing that
+        font.setFamily(fontName);
+    }
     pT->setFont(font);
     lua_pushboolean(L, true);
     return 1;
@@ -1363,16 +1366,19 @@ int TLuaInterpreter::getFont(lua_State* L)
         return QFontInfo(font).family();
     };
 
-    // Labels are not consoles, so they are not in the map CONSOLE() searches -
-    // and that macro returns "window not found" rather than falling through:
-    if (!windowName.isEmpty() && host.mpConsole) {
-        if (TLabel* pLabel = host.mpConsole->mLabelMap.value(windowName)) {
-            lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
-            return 1;
+    // A console wins a name a label also carries, the way it does for every other
+    // window function. Labels are not in the map CONSOLE() searches, so a name no
+    // console answers to is tried as a label before that macro gets to refuse it:
+    auto console = CONSOLE_NIL(L, windowName);
+    if (!console) {
+        if (host.mpConsole) {
+            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(windowName)) {
+                lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
+                return 1;
+            }
         }
+        console = CONSOLE(L, windowName);
     }
-
-    auto console = CONSOLE(L, windowName);
 
     QString fontName;
 
@@ -3117,23 +3123,26 @@ int TLuaInterpreter::setFont(lua_State* L)
     // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
 
-    // Labels live in their own map rather than in the console one CONSOLE()
-    // searches, and that macro returns "window not found" rather than falling
-    // through - so they have to be looked up before it:
+    // A console wins a name a label also carries - nothing stops a label being
+    // called "main". Labels are not in the map CONSOLE() searches, so a name no
+    // console answers to is tried as a label before that macro gets to refuse it:
     const QString targetName{windowName};
-    if (!targetName.isEmpty() && host.mpConsole) {
-        if (TLabel* pLabel = host.mpConsole->mLabelMap.value(targetName)) {
-            QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
-            if (fontWeight != QFont::Normal) {
-                labelFont.setWeight(fontWeight);
+    auto console = CONSOLE_NIL(L, targetName);
+    if (!console) {
+        if (host.mpConsole) {
+            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(targetName)) {
+                QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
+                if (fontWeight != QFont::Normal) {
+                    labelFont.setWeight(fontWeight);
+                }
+                pLabel->setFont(labelFont);
+                lua_pushboolean(L, true);
+                return 1;
             }
-            pLabel->setFont(labelFont);
-            lua_pushboolean(L, true);
-            return 1;
         }
+        console = CONSOLE(L, targetName);
     }
 
-    auto console = CONSOLE(L, targetName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
         QFont newFont = host.createFontWithSettings(effectiveFontName, host.getDisplayFont().pointSize());
@@ -3142,7 +3151,7 @@ int TLuaInterpreter::setFont(lua_State* L)
             newFont.setWeight(fontWeight);
         }
 
-        auto result = host.setDisplayFont(newFont);
+        auto result = host.setDisplayFont(newFont, Host::DisplayFontChange::UserChoice);
 
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);

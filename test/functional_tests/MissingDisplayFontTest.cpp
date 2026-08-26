@@ -255,7 +255,13 @@ private slots:
         }
     }
 
-    void cleanup() { unregisterBundledFonts(); }
+    void cleanup()
+    {
+        // Cases share one Host: a stand-in left behind by one case must not
+        // leak into the next, and only a user-choice change retires it now
+        mpHost->setDisplayFont(mpHost->getDisplayFont(), Host::DisplayFontChange::UserChoice);
+        unregisterBundledFonts();
+    }
 
     void cleanupTestCase()
     {
@@ -325,7 +331,9 @@ private slots:
     // remembered as missing.
     void test_theBundledDefaultItselfIsNeverSubstituted()
     {
-        QVERIFY2(!mudlet::self()->getAvailableFonts().contains(Host::scmDefaultFontFamily, Qt::CaseInsensitive), "the bundled default is registered, so this cannot stand for a broken installation");
+        if (mudlet::self()->getAvailableFonts().contains(Host::scmDefaultFontFamily, Qt::CaseInsensitive)) {
+            QSKIP("the bundled default is installed on this machine, so a broken installation cannot be staged");
+        }
         QVERIFY(mpHost->setDisplayFont(QFont(Host::scmDefaultFontFamily, 14, QFont::Normal)).first);
 
         QVERIFY(!mpHost->substituteMissingDisplayFont());
@@ -352,8 +360,21 @@ private slots:
         QCOMPARE(mpHost->getDisplayFontForSaving().pointSize(), 11);
 
         // ...while another family really is a new choice
-        QVERIFY(mpHost->setDisplayFont(QFont(mOtherBundledFamily, 11, QFont::Normal)).first);
+        QVERIFY(mpHost->setDisplayFont(QFont(mOtherBundledFamily, 11, QFont::Normal), Host::DisplayFontChange::UserChoice).first);
         QCOMPARE(mpHost->getDisplayFontForSaving().family(), mOtherBundledFamily);
+    }
+
+    // The family the stand-in is drawn in is a choice like any other: picking it
+    // has to retire the stand-in, or the profile would go on asking for the font
+    // this machine lacks even after the player settled for what they can see.
+    void test_choosingTheVeryFamilyTheStandInUsesRetiresIt()
+    {
+        QVERIFY(mpHost->setDisplayFont(QFont(mMissingFamily, 14, QFont::Normal)).first);
+        QVERIFY(mpHost->substituteMissingDisplayFont());
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        QVERIFY(mpHost->setDisplayFont(QFont(Host::scmDefaultFontFamily, 14, QFont::Normal), Host::DisplayFontChange::UserChoice).first);
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), Host::scmDefaultFontFamily);
     }
 
     // The whole point of the check, over the production load path: the console
@@ -401,8 +422,9 @@ private slots:
         QVERIFY2(!fontBytes.isEmpty(), "the bundled font could not be read out of the Qt resources");
         const QList<std::pair<QString, QByteArray>> entries{{qsl("UbuntuMono-R.ttf"), fontBytes}, {qsl("%1.xml").arg(moduleName), minimalPackageXml(moduleName)}};
         QVERIFY2(writeArchive(modulePath, entries), "could not write the test module archive");
-        QVERIFY2(!mudlet::self()->getAvailableFonts().contains(mOtherBundledFamily, Qt::CaseInsensitive),
-                 "the family the module supplies is installed anyway, so this cannot tell whether the module was waited for");
+        if (mudlet::self()->getAvailableFonts().contains(mOtherBundledFamily, Qt::CaseInsensitive)) {
+            QSKIP("the family the module supplies is already installed on this machine, so this cannot tell whether the module was waited for");
+        }
 
         const QString profileName = qsl("MissingDisplayFont-Module-Test");
         QVERIFY2(writeProfileSave(profileName, mOtherBundledFamily, moduleName, modulePath), "could not write the test profile save");

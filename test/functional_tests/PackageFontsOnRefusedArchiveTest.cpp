@@ -177,7 +177,9 @@ private slots:
         QVERIFY2(!bundledFontBytes().isEmpty(), "the bundled font could not be read out of the Qt resources");
         // Without this the tests below could pass on a font that was already
         // there rather than on one a package brought:
-        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "the font this test installs is registered before any package was installed");
+        if (QFontDatabase::families().contains(mFontFamily)) {
+            QSKIP("the font this test installs is already registered on this machine, so a package bringing it cannot be told apart");
+        }
     }
 
     void cleanupTestCase()

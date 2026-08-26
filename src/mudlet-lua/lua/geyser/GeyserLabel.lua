@@ -254,8 +254,11 @@ function Geyser.Label:processFormatString(format)
 end
 
 --- Sets the font face for the label, use empty string to clear the font and use css/default.
--- Returns true when the label took the font, nil+error when it did not - a name that
--- is not a string, or a family that is not installed, leaves the current font alone.
+-- Returns true whenever it was given a string: an installed family, or a "Family Style"
+-- name, is applied to the label's widget font and remembered as the font database spells
+-- it, while a name the database does not list is passed on to the markup for Qt to
+-- substitute for, with a warning through debugc(). Only a font that is not a string is
+-- refused, with nil+error, and leaves the current font alone.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
   if type(font) ~= "string" then
@@ -266,17 +269,15 @@ function Geyser.Label:setFont(font)
   if font ~= "" then
     -- setFont() resolves the name the way it does for every other window (an
     -- installed family, or a "Family Style" name split into base family and
-    -- weight), applies it to the label's own widget font, and refuses a family
-    -- Qt would only substitute for - which must never reach the <font face>
-    -- that every echo() wraps the text in
+    -- weight) and applies it to the label's own widget font
     local ok, err = setFont(self.name, font)
-    if not ok then
-      debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options; the label keeps its current font")
-      return nil, err
+    if ok then
+      -- the family as the font database spells it, so what is remembered here and
+      -- what the widget was given cannot drift apart
+      font = getFont(self.name)
+    else
+      debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options. Letting Qt pick the closest match it has")
     end
-    -- the family as the font database spells it, so what is remembered here and
-    -- what the widget was given cannot drift apart
-    font = getFont(self.name)
   end
   self.font = font
   self:echo()
@@ -451,11 +452,6 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
-  -- Apply the profile's antialiasing settings to the label when font size changes
-  -- Use existing setFont() function - it will preserve the font family and apply antialiasing
-  if self.font and self.font ~= "" then
-    setFont(self.name, self.font)
-  end
   self:echo()
 end
 
@@ -1016,14 +1012,13 @@ function Geyser.Label:new (cons, container)
   -- Set any defined colors
   Geyser.Color.applyColors(me)
   -- the constraints table is copied wholesale, so a font entry lands in me.font
-  -- without ever reaching the label or being checked; clear it first so an
-  -- unavailable family is not left behind for echo() to emit
-  if me.font then
-    local requestedFont = me.font
-    me.font = nil
-    me:setFont(requestedFont)
+  -- without ever reaching the label; clear it first and put it back through
+  -- setFont(), which echoes for itself when it takes the font. The `not` covers
+  -- a font that is not a string, which setFont() refuses without echoing.
+  me.font = ""
+  if not (cons.font and me:setFont(cons.font)) then
+    me:echo()
   end
-  me:echo()
 
   -- Set up mouse hover as the callback if we have one
   if cons.nestflyout then
