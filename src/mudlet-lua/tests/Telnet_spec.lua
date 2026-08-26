@@ -307,6 +307,33 @@ describe("Tests MSDP subnegotiation handling", function()
       assert.is_nil(msdp.MSDPSOLE)
       assert.is_false(fired, "a variable with an unbalanced close raised its arrival event")
     end)
+
+    it("keeps the old value and stays silent when a decode fails", function()
+      -- balanced markers can still make undecodable JSON (two roots), which slips
+      -- past the structural checks and fails at the decoder - the arrival event
+      -- used to fire anyway, handing every handler the stale value
+      feedMsdp(VAR .. "MSDPSTALE" .. VAL .. "old")
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPSTALE", function() fired = true end)
+      feedMsdp(VAR .. "MSDPSTALE" .. VAL .. TABLE_OPEN .. TABLE_CLOSE .. TABLE_OPEN .. TABLE_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.equals("old", msdp.MSDPSTALE, "the failed decode overwrote the value it could not replace")
+      assert.is_false(fired, "a decode failure raised the arrival event anyway")
+    end)
+end)
+
+describe("Tests GMCP decode failures", function()
+  it("raises no events for a GMCP message whose JSON cannot be decoded", function()
+    -- the decode-failure path is shared with MSDP: no arrival events for a
+    -- message that changed nothing
+    local fired = false
+    local id = registerAnonymousEventHandler("gmcp.Spec.BadJson", function() fired = true end)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>Spec.BadJson {broken<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    killAnonymousEventHandler(id)
+    assert.is_nil(gmcp.Spec and gmcp.Spec.BadJson)
+    assert.is_false(fired, "a GMCP decode failure raised the arrival event anyway")
+  end)
 end)
 
 describe("Tests addSupportedTelnetOption", function()
