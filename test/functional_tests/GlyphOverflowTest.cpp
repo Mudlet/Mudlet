@@ -18,10 +18,13 @@
  ***************************************************************************/
 
 #include <QClipboard>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QPainter>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -33,12 +36,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // TTextEdit lays text out in cells of QFontMetrics::height(), which is a
 // typographic measure rather than the glyph ink box. At a good number of font
@@ -51,6 +49,8 @@ class GlyphOverflowTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-GlyphOverflow";
     QString mPort;
@@ -102,14 +102,28 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResources();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
 #ifndef INCLUDE_FONTS
         QSKIP("Built with WITH_FONTS=NO, so the fonts whose metrics this measures are not available");
 #else
         // src/main.cpp extracts the bundled fonts into the config directory and
-        // FontManager picks them up from there, but QTEST_MAIN never runs
-        // main(), so on a machine that has not run Mudlet before there is
-        // nothing on disk to pick up and Qt quietly substitutes another family.
+        // FontManager picks them up from there, but no test binary runs it, so
+        // on a machine that has not run Mudlet before there is nothing on disk
+        // to pick up and Qt quietly substitutes another family.
         for (const QString& file : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"),
                                     qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf"),
                                     qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf"),
@@ -132,6 +146,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -192,6 +207,7 @@ private slots:
         QVERIFY2(host, "Could not start an offline profile");
         TTextEdit* pane = host->mpConsole->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
+        waitForQuietConsole(host);
 
         int checkedSizes = 0;
         for (int size = kFirstSize; size <= kLastSize; ++size) {
@@ -207,16 +223,31 @@ private slots:
             if (pane->height() % cellHeight == 0) {
                 continue;
             }
-            ++checkedSizes;
 
             const int screenHeight = pane->getScreenHeight();
+            const QString underscores(kUnderscoreCount, QLatin1Char('_'));
             runLua(host, qsl("clearWindow()"));
-            runLua(host, qsl("cecho('<white>' .. string.rep('filler\\n', %1) .. '%2\\n')").arg(screenHeight - 1).arg(QString(kUnderscoreCount, QLatin1Char('_'))));
+            runLua(host, qsl("cecho('<white>' .. string.rep('filler\\n', %1) .. '%2\\n')").arg(screenHeight - 1).arg(underscores));
             pane->forceUpdate();
             QApplication::processEvents();
 
+            // Where the line ended up, rather than where the echo above should have
+            // put it: anything else printing to the console scrolls the view, which
+            // otherwise silently moves a different row under the measurement.
+            const int underscoreLine = findLine(host, underscores);
+            QVERIFY2(underscoreLine >= 0, qPrintable(qsl("%1pt: the underscore line never reached the buffer").arg(size)));
+            const int screenRow = underscoreLine - pane->imageTopLine();
+            if (screenRow != screenHeight - 1) {
+                QWARN(qPrintable(qsl("%1pt: the underscore line sits on row %2 rather than the bottom row %3, so the pixmap edge went unexercised at this size")
+                                         .arg(size)
+                                         .arg(screenRow)
+                                         .arg(screenHeight - 1)));
+                continue;
+            }
+            ++checkedSizes;
+
             const QImage rendered = renderPane(host);
-            const int cellTop = (screenHeight - 1) * cellHeight;
+            const int cellTop = screenRow * cellHeight;
             const QPair<int, int> actual = inkExtent(collectInk(rendered, cellTop, cellHeight, cellWidth));
             QVERIFY2(actual == expected,
                      qPrintable(qsl("%1pt: the bottom line's underscore ink occupies %2 of its cell, expected %3").arg(QString::number(size), describeExtent(actual), describeExtent(expected))));
@@ -490,6 +521,8 @@ private slots:
         deleteDirectory(profilePath);
     }
 
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+
 private:
     // The pane paints its cells onto whatever the parent widget is showing, so
     // start from the console background rather than letting render() lay down
@@ -618,6 +651,26 @@ private:
             }
         }
         return ink;
+    }
+
+    // A profile keeps printing after signal_profileLoaded - the package manager
+    // announces itself, for one - and anything arriving while a case is running
+    // scrolls the view out from under the row being measured. Wait for the buffer
+    // to stop growing before relying on where a line sits.
+    static void waitForQuietConsole(Host* host)
+    {
+        int previousLastLine = -1;
+        int pollsUnchanged = 0;
+        while (pollsUnchanged < 3) {
+            const int lastLine = host->mpConsole->buffer.getLastLineNumber();
+            if (lastLine == previousLastLine) {
+                ++pollsUnchanged;
+            } else {
+                pollsUnchanged = 0;
+                previousLastLine = lastLine;
+            }
+            QTest::qWait(50);
+        }
     }
 
     static int findLine(Host* host, const QString& text)
@@ -755,20 +808,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "GlyphOverflowTest.moc"
-QTEST_MAIN(GlyphOverflowTest)
+MUDLET_GROUPED_TEST_MAIN(GlyphOverflowTest)

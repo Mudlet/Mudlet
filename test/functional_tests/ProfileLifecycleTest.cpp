@@ -36,6 +36,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -60,14 +61,9 @@ extern "C" {
 #endif
 }
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileLifecycleTest();
+using namespace std::chrono_literals;
 
 class ProfileLifecycleTest : public QObject
 {
@@ -106,13 +102,6 @@ private:
     const QString mOnlineProfile = qsl("ProfileLifecycle-Online");
     const QString mUnloadedProfile = qsl("ProfileLifecycle-Unloaded");
     const QString mAbsentProfile = qsl("ProfileLifecycle-Absent");
-
-    // setupConfig() consults portable.txt ahead of the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest)
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
 
@@ -290,7 +279,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForProfileLifecycleTest();
 
         QVERIFY(mConfigDir.isValid());
         // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in that makes setupConfig()
@@ -649,20 +637,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileLifecycleTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileLifecycleTest.moc"
-QTEST_MAIN(ProfileLifecycleTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileLifecycleTest)

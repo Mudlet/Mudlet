@@ -131,6 +131,7 @@ set(mudlet_SRCS
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
+    TConsoleModel.cpp
     TDebug.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
@@ -365,6 +366,7 @@ set(mudlet_HDRS
     TBuffer.h
     TCommandLine.h
     TConsole.h
+    TConsoleModel.h
     TDebug.h
     TDetachedWindow.h
     TDockWidget.h
@@ -540,7 +542,9 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(PCRE2 REQUIRED)
+# 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
+# fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
+find_package(PCRE2 10.36 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)
@@ -683,6 +687,23 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
     target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
+endif()
+
+if(DEFINED ENV{QT_NO_SSL})
+  message(STATUS "Not including OpenSSL 3.x licence details as that library has been explicitly excluded from the build")
+else()
+  if (DEFINED ENV{CI} AND "$ENV{CI}" STREQUAL "true" )
+    # This is ONLY used to include the Licence details for the OpenSSL 3
+    # library - as such it only needs to/should be present for builds that
+    # "package" Mudlet i.e. installer builds (for MacOS and Windows) and
+    # AppImages (for Linux) in our CI procees all other builds will use a
+    # "system-provided" libssl.so.3 library and we do not then NEED to mention
+    # them in the "Third-party" libraries.
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OPENSSL3)
+    message(STATUS "Including OpenSSL 3.x licence details for a package build")
+  else()
+    message(STATUS "Not including OpenSSL 3.x licence details as this seem to be a local build")
+  endif()
 endif()
 
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
@@ -929,7 +950,11 @@ if(UNIX AND NOT APPLE)
     PATTERN "*.mpackage" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the map fixture the pathfinding specs need. It stays zipped rather than
+    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
+    # and every package built from this tree would carry the difference
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"

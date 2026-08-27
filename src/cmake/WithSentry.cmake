@@ -209,8 +209,11 @@ if(SENTRY_SEND_DEBUG)
             "Fix: try exporting SENTRY_AUTH_TOKEN=\"...\""
         )
     else()
+        # Qt6_DIR points at <prefix>/lib/cmake/Qt6; the script needs the prefix
+        # itself to reach Qt's libraries and its runtime-loaded plugins.
+        get_filename_component(QT_INSTALL_PREFIX "${Qt6_DIR}/../../.." ABSOLUTE)
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-        COMMAND bash "${CMAKE_SOURCE_DIR}/CI/send_debug_files_to_sentry.sh" "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+        COMMAND bash "${CMAKE_SOURCE_DIR}/CI/send_debug_files_to_sentry.sh" "$<TARGET_FILE:${EXE_MUDLET_TARGET}>" "${QT_INSTALL_PREFIX}"
         VERBATIM
     )
     endif()

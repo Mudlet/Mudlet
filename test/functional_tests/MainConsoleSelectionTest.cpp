@@ -17,9 +17,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -43,6 +46,8 @@ class MainConsoleSelectionTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-Selection";
     QString mpPort; // assigned the stub's actual ephemeral port in init()
@@ -78,6 +83,26 @@ private:
     }
 
 private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
@@ -85,6 +110,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -177,8 +203,39 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, startPos);
 
         const QRect collapsedSelection = pane->mSelectedRegion.boundingRect();
-        QVERIFY2(collapsedSelection.width() < expandedSelection.width(),
-                 "Dragging back to the press cell left the earlier selection extent frozen");
+        QVERIFY2(collapsedSelection.width() < expandedSelection.width(), "Dragging back to the press cell left the earlier selection extent frozen");
+    }
+
+    // The mouse selection is a flag on each TChar, so whatever the line's
+    // characters are held in has to keep them where they are once a selection
+    // has been made over them. Text arriving on the line that is already under
+    // selection - a prompt, an echo - is how that gets tested in practice.
+    void test_appendingToASelectedLineKeepsItHighlighted()
+    {
+        mpServer->setWelcomeMessage(fillerText());
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(qsl("\nselected"));
+        const int y = console->buffer.getLastLineNumber();
+        QCOMPARE(console->buffer.line(y), qsl("selected"));
+
+        pane->slot_selectAll();
+        QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "selecting all did not mark the last line, so a dropped flag below could not be told from one that was never set");
+
+        // enough for the line to outgrow whatever it is held in, but short
+        // enough that it cannot wrap and move to a line of its own
+        console->print(QString(20, QLatin1Char('z')));
+        QCOMPARE(console->buffer.getLastLineNumber(), y);
+
+        QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
     }
 
     void cleanup()

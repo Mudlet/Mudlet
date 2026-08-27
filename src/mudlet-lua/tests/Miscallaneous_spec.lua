@@ -607,6 +607,58 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals("disabled by profile global preference", setterMessage)
         end)
       end)
+
+      -- The command lines only hear that the session is ending through
+      -- Host::signal_saveCommandLinesHistory, which Host::saveProfile() emits
+      -- only when given neither a folder nor a name, and nothing else writes
+      -- these files. Taking the file away and asking for that save back is
+      -- therefore a yes/no answer on whether the signal still reaches
+      -- TCommandLine::slot_saveHistory: cut the wire and every command line's
+      -- history is silently never written again, which the user only discovers
+      -- on the next launch.
+      describe("Tests that an end of session save writes the command line histories", function()
+        it("writes the main command line's history file out again", function()
+          -- slot_saveHistory() returns without writing anything unless both of
+          -- these are on, so they are what makes a missing file mean the signal
+          -- and not the settings. Putting the per-command-line one back first:
+          -- it is refused outright while the profile-wide size is zero.
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          local savedSaving = getSaveCommandHistory("main")
+          finally(function()
+            setSaveCommandHistory("main", savedSaving)
+            setConfig("commandLineHistorySaveSize", savedLines)
+          end)
+
+          setConfig("commandLineHistorySaveSize", 10)
+          assert.is_true(setSaveCommandHistory("main", true))
+
+          local historyFile = getMudletHomeDir() .. "/command_history_main"
+          os.remove(historyFile)
+          assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
+
+          -- A save another spec started can still be running, and saveProfile()
+          -- answers nil - without emitting anything - until it finishes. Of the
+          -- refusals it can answer with that is the only one waiting clears,
+          -- and only test mode can pump the event loop to let it.
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            if saved or not testMode then
+              break
+            end
+            pumpEvents(50)
+          end
+          if not saved and not testMode then
+            pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
+            return
+          end
+          assert.is_true(saved, tostring(message))
+
+          -- slot_saveHistory() writes from inside the emit, so the file is
+          -- there by the time saveProfile() has returned
+          assert.is_true(fileExists(historyFile), "the end of session save never wrote the command line history out")
+        end)
+      end)
     end)
 
     describe("Tests the logging functions", function()
@@ -708,6 +760,42 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local contents = readFile(logPath)
           assert.is_string(contents, "the log file that was closed is not readable")
           assert.is_false(contains(contents, "mudlet-spec-never-logged"), "the text was appended to a log that was closed")
+        end)
+      end)
+
+      -- The HTML log is a whole second document format: its own file
+      -- extension, a CSS header naming the console's own font, a title, and a
+      -- closing tag pair only the stop path writes.
+      describe("Tests the functionality of logging in HTML", function()
+        it("wraps the session in a document naming the console font", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          logPath = select(3, startLogging(true))
+          assert.is_string(logPath)
+          assert.is_truthy(logPath:match("%.html$"), "an HTML log did not get an .html file name: " .. tostring(logPath))
+
+          echo("mudlet-spec-html-logged-line\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+          assert.is_true(contains(contents, "<html>"), "the HTML log has no opening document tag")
+          assert.is_true(contains(contents, "</div></body>"), "the HTML log was never closed off when logging stopped")
+          -- getFont() reports the same resolved family the log header is built
+          -- from, so this holds whatever font the profile ended up with
+          assert.is_true(contains(contents, "font-family: '" .. getFont() .. "'"),
+            "the HTML log header does not name the console font")
+          assert.is_true(contains(contents, getProfileName()), "the HTML log title does not name the profile")
+          assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
         end)
       end)
 

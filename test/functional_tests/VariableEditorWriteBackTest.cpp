@@ -29,8 +29,11 @@
  * Run with: ctest -R VariableEditorWriteBackTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
@@ -60,18 +63,15 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForVariableEditorWriteBackTest();
+#include "GroupedTest.h"
 
 class VariableEditorWriteBackTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgTriggerEditor* mpEditor = nullptr;
@@ -82,7 +82,20 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForVariableEditorWriteBackTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         // port 0 asks the OS for an ephemeral port, so parallel test runs
@@ -91,6 +104,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -111,8 +125,13 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // Selecting a member whose key the tree can only name approximately and
@@ -228,9 +247,9 @@ private slots:
         execLua(qsl("nulKeyTable = nil nulKeyDecoy = nil"));
     }
 
-    // A global whose name is not an identifier is not reached by that name
-    // either: the write paths put a root into Lua source bare, so a dot in it
-    // reads as an index into whatever global comes before the dot.
+    // A global whose own name holds a dot is not the editor's to write either:
+    // the saved and hidden bookkeeping keys a member by its dotted path, so this
+    // global and the member that path names are one entry to it.
     void test_editingAGlobalWithADotInItsNameLeavesOtherTablesAlone()
     {
         execLua(qsl("dotted = {} _G['dotted.global'] = 'dotted global value' dottedDecoy = 'decoy value'"));
@@ -297,6 +316,48 @@ private slots:
         QVERIFY2(luaHolds(qsl("stringKeyGlobal"), qsl("edited global value")), "editing the global did not reach Lua");
 
         execLua(qsl("stringKeyGlobal = nil stringKeyDecoy = nil"));
+    }
+
+    // A key reaches Lua as bytes, so a quote in one is nothing the view has to
+    // work around (#10114).
+    void test_aMemberWhoseKeyHoldsAQuoteIsEditable()
+    {
+        execLua(qsl("quoteKeyTable = {} quoteKeyTable['say \"hi\"'] = 'quoted member value' quoteKeyDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pMember = findVariableItem({qsl("quoteKeyTable"), qsl("say \"hi\"")});
+        QVERIFY2(pMember, "the Variables view did not show the member under the name Lua gives its key");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("quoteKeyDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pMember);
+        QVERIFY2(!bannerShowing(), "a variable the editor can write must not be reported as one it cannot");
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("edited member value"));
+        selectVariable(pDecoy);
+        QCOMPARE(luaMemberCount(qsl("quoteKeyTable")), 1);
+        QVERIFY2(luaHolds(qsl("quoteKeyTable['say \"hi\"']"), qsl("edited member value")), "editing the member did not reach Lua");
+
+        execLua(qsl("quoteKeyTable = nil quoteKeyDecoy = nil"));
+    }
+
+    // ...and a global's name is no different, identifier or not.
+    void test_aGlobalWhoseNameIsNotAnIdentifierIsEditable()
+    {
+        execLua(qsl("_G['a global with spaces'] = 'spaced global value' spacedDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pGlobal = findVariableItem({qsl("a global with spaces")});
+        QVERIFY2(pGlobal, "the Variables view did not show the global");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("spacedDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pGlobal);
+        QVERIFY2(!bannerShowing(), "a variable the editor can write must not be reported as one it cannot");
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("edited global value"));
+        selectVariable(pDecoy);
+        QVERIFY2(luaHolds(qsl("_G['a global with spaces']"), qsl("edited global value")), "editing the global did not reach Lua");
+
+        execLua(qsl("_G['a global with spaces'] = nil spacedDecoy = nil"));
     }
 
     // Dropping an item somewhere else in the Variables view rearranges the view
@@ -559,20 +620,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForVariableEditorWriteBackTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "VariableEditorWriteBackTest.moc"
-QTEST_MAIN(VariableEditorWriteBackTest)
+MUDLET_GROUPED_TEST_MAIN(VariableEditorWriteBackTest)

@@ -663,7 +663,6 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     // inherit it and vanish from the Variables view.
     void testRenameTakesTheUserHiddenMarkToTheNewName()
     {
-        defineGlobalsTable(); // renaming a global is written as _G["new"] = old
         execLua("hiddenRenamed = 1");
         interface->getVars(false);
         VarUnit* vu = interface->getVarUnit();
@@ -690,7 +689,6 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     // mark left on the old name saves whatever turns up there instead.
     void testRenameTakesTheSavedMarkToTheNewName()
     {
-        defineGlobalsTable();
         execLua("savedRenamed = 'value'");
         interface->getVars(false);
         VarUnit* vu = interface->getVarUnit();
@@ -711,7 +709,6 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     // the table can no longer be un-hidden at all.
     void testRenameTakesAHiddenTablesIdentityToTheNewName()
     {
-        defineGlobalsTable();
         execLua("hiddenTableRenamed = {member = 'value'}");
         interface->getVars(true); // the hiding walk Mudlet runs at profile load
         VarUnit* vu = interface->getVarUnit();
@@ -732,7 +729,6 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     // saved mark was left pointing at a path with no variable at the end of it.
     void testRenamingATableTakesItsMembersSavedMarksWithIt()
     {
-        defineGlobalsTable();
         execLua("renHolder = {a = 'aval'} renHolderOther = 'unrelated'");
         interface->getVars(false);
         VarUnit* vu = interface->getVarUnit();
@@ -875,6 +871,222 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY(interface->setValue(memberA));
         QCOMPARE(memberAsString(qsl("landmineHolder"), qsl("a")), qsl("written"));
         QVERIFY2(memberAsString(qsl("landmineHolder"), qsl("b")) == qsl("bval"), "the write went to the sibling the rename was refused over");
+    }
+
+    // A rename was generated Lua source with every key along the path spliced
+    // into it inside a quoted literal, and a key holding a quote closes that
+    // literal: neither line parsed, so the rename was dropped.
+    void testRenameMovesAMemberWhoseKeyHoldsAQuote()
+    {
+        execLua(qsl("quoteKeyHolder = {} quoteKeyHolder['a\"b'] = 'keepme'"));
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("quoteKeyHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        TVar* member = members.constFirst();
+        QCOMPARE(member->getName(), qsl("a\"b"));
+
+        member->setNewName(qsl("plain"), LUA_TSTRING);
+        pushSentinels();
+        const int stackBefore = lua_gettop(L);
+        QVERIFY(interface->renameVar(member));
+        QCOMPARE(lua_gettop(L), stackBefore);
+        QVERIFY2(sentinelsIntact(), "the rename unwound past the top it was handed");
+
+        QCOMPARE(memberAsString(qsl("quoteKeyHolder"), qsl("plain")), qsl("keepme"));
+        QCOMPARE(luaMemberCount(qsl("quoteKeyHolder")), 1);
+    }
+
+    // ...and the same for a key part way along the path, which the rename only
+    // passes through on its way to the member being renamed.
+    void testRenameReachesAMemberUnderATableWhoseKeyHoldsAQuote()
+    {
+        execLua(qsl("quotePathHolder = {} quotePathHolder['a\"b'] = {inner = 'keepme'}"));
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("quotePathHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        const QList<TVar*> inners = members.constFirst()->getChildren(false);
+        QCOMPARE(inners.size(), 1);
+        TVar* inner = inners.constFirst();
+        QCOMPARE(inner->getName(), qsl("inner"));
+
+        inner->setNewName(qsl("renamed"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(inner));
+
+        lua_getglobal(L, "quotePathHolder");
+        lua_pushstring(L, "a\"b");
+        lua_gettable(L, -2);
+        lua_pushstring(L, "renamed");
+        lua_gettable(L, -2);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), qsl("keepme"));
+        lua_pop(L, 1);
+        lua_pushstring(L, "inner");
+        lua_gettable(L, -2);
+        QVERIFY2(lua_isnil(L, -1), "the name the member was renamed off has to be free");
+        lua_pop(L, 3);
+    }
+
+    // The other half of splicing a key into source: a key that closes the
+    // subscript it is written into leaves the rest of itself parsed as
+    // statements, so a key a script stored - a line captured from the game, say
+    // - ran as Lua when the member holding it was renamed.
+    void testRenameDoesNotRunAKeyAsCode()
+    {
+        execLua(qsl("codeKeyHolder = {} codeKeyHolder['a\"]; evilRan = \"yes\" --'] = 'keepme'"));
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("codeKeyHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+
+        members.constFirst()->setNewName(qsl("plain"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(members.constFirst()));
+
+        lua_getglobal(L, "evilRan");
+        const bool keyRan = !lua_isnil(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(!keyRan, "a key is data, and renaming the member it belongs to must not run it");
+        QCOMPARE(memberAsString(qsl("codeKeyHolder"), qsl("plain")), qsl("keepme"));
+        QCOMPARE(luaMemberCount(qsl("codeKeyHolder")), 1);
+    }
+
+    // ...and a key holding a backslash became an escape in that literal, so the
+    // rename read one key and nil'ed another - the member it was asked about
+    // stayed where it was, under a name the Variables view had stopped showing.
+    void testRenameMovesAMemberWhoseKeyHoldsABackslash()
+    {
+        execLua(qsl("escapeKeyHolder = {} escapeKeyHolder['a\\\\b'] = 'keepme'"));
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("escapeKeyHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QCOMPARE(members.constFirst()->getName(), qsl("a\\b"));
+
+        members.constFirst()->setNewName(qsl("plain"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(members.constFirst()));
+
+        QCOMPARE(memberAsString(qsl("escapeKeyHolder"), qsl("plain")), qsl("keepme"));
+        QCOMPARE(luaMemberCount(qsl("escapeKeyHolder")), 1);
+    }
+
+    // Renaming a global was written as _G["new"] = old, so it went through
+    // whatever the name _G held at the time rather than through the globals
+    // table itself - and a script is free to have pointed _G somewhere else.
+    void testRenameOfAGlobalDoesNotGoThroughTheNameG()
+    {
+        execLua(qsl("_G = {} strayGlobal = 'keepme'"));
+        interface->getVars(false);
+        TVar* var = findGlobal(qsl("strayGlobal"));
+        QVERIFY(var);
+
+        var->setNewName(qsl("strayGlobalNew"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(var));
+
+        QCOMPARE(globalAsString(qsl("strayGlobalNew")), qsl("keepme"));
+        lua_getglobal(L, "strayGlobal");
+        QVERIFY2(lua_isnil(L, -1), "the name the variable was renamed off has to be free");
+        lua_pop(L, 1);
+        QCOMPARE(luaMemberCount(qsl("_G")), 0);
+    }
+
+    // A table used as a key is only nameable through the registry reference the
+    // tree holds it by, which is why renaming a member underneath one was the
+    // one path that already went through the C API. It goes through the same
+    // walk as every other path now.
+    void testRenameReachesAMemberUnderATableKeyedIntermediate()
+    {
+        execLua("refRenameHolder = {} do local key = {} refRenameHolder[key] = {inner = 'keepme'} end");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("refRenameHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QVERIFY(members.constFirst()->isReference());
+        const QList<TVar*> inners = members.constFirst()->getChildren(false);
+        QCOMPARE(inners.size(), 1);
+        TVar* inner = inners.constFirst();
+        QCOMPARE(inner->getName(), qsl("inner"));
+
+        inner->setNewName(qsl("renamed"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(inner));
+
+        QCOMPARE(luaMemberCount(qsl("refRenameHolder")), 1);
+        QCOMPARE(onlyMembersMemberAsString(qsl("refRenameHolder"), qsl("renamed")), qsl("keepme"));
+        QCOMPARE(onlyMembersMemberAsString(qsl("refRenameHolder"), qsl("inner")), QString());
+    }
+
+    // The editor decides the key type from what the user typed, so the new key
+    // is not always of the type the old one was. Written as the old type, a
+    // name of "five" would be pushed as the number it does not parse to and
+    // land the value on t[0].
+    void testRenameChangesAMembersKeyType()
+    {
+        execLua("keyTypeHolder = {} keyTypeHolder[5] = 'keepme'");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("keyTypeHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QCOMPARE(members.constFirst()->getKeyType(), LUA_TNUMBER);
+
+        members.constFirst()->setNewName(qsl("five"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(members.constFirst()));
+
+        QCOMPARE(memberAsString(qsl("keyTypeHolder"), qsl("five")), qsl("keepme"));
+        QCOMPARE(numberKeyedMemberAsString(qsl("keyTypeHolder"), 5), QString());
+        QCOMPARE(luaMemberCount(qsl("keyTypeHolder")), 1);
+    }
+
+    // A boolean key is named "true" or "false" in the tree, so pushing it as
+    // the text of that name reaches a string key of its own instead - the
+    // rename would report success having moved nothing.
+    void testRenameMovesABooleanKeyedMember()
+    {
+        execLua("boolKeyHolder = {} boolKeyHolder[true] = 'keepme'");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("boolKeyHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> members = holder->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        QCOMPARE(members.constFirst()->getKeyType(), LUA_TBOOLEAN);
+
+        members.constFirst()->setNewName(qsl("plain"), LUA_TSTRING);
+        QVERIFY(interface->renameVar(members.constFirst()));
+
+        QCOMPARE(memberAsString(qsl("boolKeyHolder"), qsl("plain")), qsl("keepme"));
+        QCOMPARE(luaMemberCount(qsl("boolKeyHolder")), 1);
+    }
+
+    // A refused rename is where the generated source left its parse error
+    // behind: the chunk never ran, nothing popped it, and the profile's live
+    // interpreter carried the slot for the rest of the session (#9885).
+    void testARenameThatCannotReachTheVariableLeavesTheStackAsItFoundIt()
+    {
+        execLua("goneHolder = {inner = {member = 'keepme'}}");
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("goneHolder"));
+        QVERIFY(holder);
+        const QList<TVar*> inners = holder->getChildren(false);
+        QCOMPARE(inners.size(), 1);
+        const QList<TVar*> members = inners.constFirst()->getChildren(false);
+        QCOMPARE(members.size(), 1);
+        TVar* member = members.constFirst();
+        // a script replaced the table the tree walked, so the path no longer
+        // reaches the member the rename was asked about
+        execLua("goneHolder.inner = 5");
+
+        member->setNewName(qsl("renamed"), LUA_TSTRING);
+        pushSentinels();
+        const int stackBefore = lua_gettop(L);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not reach")));
+        QVERIFY(!interface->renameVar(member));
+        QCOMPARE(lua_gettop(L), stackBefore);
+        QVERIFY2(sentinelsIntact(), "the refused rename unwound past the top it was handed");
+        QCOMPARE(member->getName(), qsl("member"));
     }
 
     // The three names below are the cycle a real table of mixed names produced:
@@ -1126,7 +1338,8 @@ private:
     }
 
     // The base library, which these tests do without, is what usually puts the
-    // globals table in _G - and a rename of a global is written as _G["new"].
+    // globals table in _G, and a global of a name only a subscript can write is
+    // made through it.
     void defineGlobalsTable()
     {
         lua_pushvalue(L, LUA_GLOBALSINDEX);

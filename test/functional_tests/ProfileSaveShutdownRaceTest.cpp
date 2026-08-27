@@ -44,6 +44,7 @@
 #include <QTemporaryDir>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -52,14 +53,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileSaveShutdownRaceTest();
+using namespace std::chrono_literals;
 
 // Counts the warning waitForProfileSave() logs when it stops waiting for a save it has
 // not been told the end of. Nothing here may provoke it.
@@ -131,7 +127,9 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForProfileSaveShutdownRaceTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: point the config dir resolution at a temporary
         // directory instead of the user's real profiles.
@@ -164,8 +162,12 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
@@ -225,20 +227,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileSaveShutdownRaceTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileSaveShutdownRaceTest.moc"
-QTEST_MAIN(ProfileSaveShutdownRaceTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileSaveShutdownRaceTest)

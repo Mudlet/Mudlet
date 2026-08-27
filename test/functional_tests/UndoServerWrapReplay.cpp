@@ -27,13 +27,16 @@
 //   REPLAY_OUT     - path to write buffer dump to (required)
 //   REPLAY_UNWRAP  - "1" to enable mUndoServerWrap (default off)
 //   REPLAY_WIDTH   - wrap column to undo (default 80)
-//   REPLAY_PORT    - local stub port (default 4010)
+//   REPLAY_PORT    - local stub port (default: an ephemeral OS-assigned one)
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -54,22 +57,47 @@ class UndoServerWrapReplay : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     QString mProfileName;
     QString mPort;
     const QString mpLocalhost = "localhost";
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        initializeQRCResources();
+
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
-        mPort = qEnvironmentVariable("REPLAY_PORT", qsl("4010"));
-        mProfileName = qsl("Replay-%1").arg(mPort);
+        // An unset or unparseable REPLAY_PORT gives 0, which the stub takes as
+        // "any free port", so concurrent replays share neither socket nor profile.
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mPort.toUShort());
+        mpServer->start(mpLocalhost, qEnvironmentVariable("REPLAY_PORT").toUShort());
+        mPort = QString::number(mpServer->serverPort());
+        mProfileName = qsl("Replay-%1").arg(mPort);
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

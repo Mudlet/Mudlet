@@ -6,74 +6,6 @@ endif()
 cmake_language(DEFER CALL restore_windows_test_output)
 
 set(FUNCTIONAL_TEST_SOURCES
-    ConfigDirOverrideTest.cpp
-    TelnetTlsPromptTest.cpp
-    TelnetBenchmark.cpp
-    cTelnetBufferTest.cpp
-    DefaultGameDeleteTest.cpp
-    ResetProfileTest.cpp
-    TOscTest.cpp
-    SubCommandLineLifetimeTest.cpp
-    TriggerEditorTest.cpp
-    TFeedTriggersRecursionTest.cpp
-    MultilineTriggerReentrancyTest.cpp
-    dlgTriggerEditorUndoRedoTest.cpp
-    EditorBannerViewSwitchTest.cpp
-    TDiscordModeTest.cpp
-    WindowLayoutSaveTest.cpp
-    TelnetCharsetNegotiationTest.cpp
-    MapAreaReassignmentTest.cpp
-    TelnetStringSequenceRecoveryTest.cpp
-    UnitDeferredDeleteTest.cpp
-    ProfileLifecycleTest.cpp
-    MxpFramePlacementTest.cpp
-    MxpWatchdogBufferLifetimeTest.cpp
-    TelnetConnectFailureTest.cpp
-    TelnetReconnectStateTest.cpp
-    SavedVariableFenceTest.cpp
-    CorruptTriggerPatternsTest.cpp
-    TutorialInvitationLayoutTest.cpp
-    CsiCursorForwardTest.cpp
-    CopyAsImageTest.cpp
-    FeatureCalloutTest.cpp
-    WrapLineRewrapTest.cpp
-    GlyphOverflowTest.cpp
-    GMCPCharLoginTest.cpp
-    VariableEditorWriteBackTest.cpp
-    ScriptEventHandlerLifetimeTest.cpp
-    SetScriptCallbackTest.cpp
-    ProfileSaveShutdownRaceTest.cpp
-    XMLexportVariablesTest.cpp
-    ProfileRoundTripTest.cpp
-    ProfileLoadTempFileTest.cpp
-    PackageSelfRemovalTest.cpp
-    UnitProcessingDepthTest.cpp
-    ProfileSwitchMiniconsoleTest.cpp
-    PackageRemovalSaveTeardownTest.cpp
-    TutorialInvitationGateTest.cpp
-    ModuleSaveTeardownTest.cpp
-    MapRoundTripTest.cpp
-    MapProgressDialogSeamTest.cpp
-    MapCloseDuringImportTest.cpp
-    LabelMovieRefusalTest.cpp
-    StarterUiSectionsTest.cpp
-    TtsInterruptingSpeakTest.cpp
-    TelnetConnectLookupRaceTest.cpp
-    HostWidgetDecouplingTest.cpp
-    ActionSelfRemovalTest.cpp
-    ProfileFolderNameTest.cpp
-    ProfileDeletionSafetyTest.cpp
-    DialogTeardownTest.cpp
-    HostChildTeardownTest.cpp
-    ConnectionDialogCrashTest.cpp
-    EdbeeReinitTest.cpp
-    TMediaLoopTest.cpp
-    DefaultPackagesTest.cpp
-    StarterUiTriggerCostTest.cpp
-    StarterUiGaugePanelTest.cpp
-    ProfileSwitchShortcutTest.cpp
-    ExperiencedPlayerGateTest.cpp
-    EmbeddedMapperCreationTest.cpp
 )
 
 # The updater sources are only built with USE_UPDATER, and on macOS the
@@ -92,16 +24,149 @@ endif()
 # link step, and none of that is per-test - so tests of one subsystem are built
 # together and told on the command line which class to run. See GroupedTest.h.
 #
-# A new window or console test belongs here rather than in
-# FUNCTIONAL_TEST_SOURCES, and writes MUDLET_GROUPED_TEST_MAIN() rather than
-# QTEST_MAIN(). Its class name has to match its filename, since that is the name
-# ctest passes on the command line and the group binary looks up.
+# A new test belongs in its subsystem's list below if there is one, and then
+# writes MUDLET_GROUPED_TEST_MAIN() rather than QTEST_MAIN(); a subsystem with
+# no list yet still belongs in FUNCTIONAL_TEST_SOURCES. A grouped test's class
+# name has to match its filename, since that is the name ctest passes on the
+# command line and the group binary looks up.
+
+# Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    ConsoleModelExtractionTest.cpp
+    CopyAsImageTest.cpp
+    FrontendRefreshSeamTest.cpp
+    DetachedWindowMenuShortcutsTest.cpp
+    GlyphOverflowTest.cpp
+    HyperlinkModelSplitTest.cpp
+    LabelAnchorInteractionTest.cpp
+    LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
+    TabDetachThresholdTest.cpp
+    DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
+    CommandLineScrollRangeTest.cpp
+    DetachedWindowOwnershipTest.cpp
+    MxpFramePlacementTest.cpp
+    LabelBackgroundPaintTest.cpp
+    MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    DetachedWindowToolBarIconSizeTest.cpp
+    PastedLinkStateTest.cpp
+    ProfileSwitchMiniconsoleTest.cpp
+    RecolouredLineCacheTest.cpp
+    TrackedLinkTrimTest.cpp
+    ProfileSwitchShortcutTest.cpp
+    SubCommandLineLifetimeTest.cpp
     WindowBackgroundTest.cpp
+    WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WrapLineRewrapTest.cpp
+)
+
+# Profiles: their config dir, their folders, and loading, saving and deleting them
+set(PROFILE_GROUP_TEST_SOURCES
+    ConfigDirOverrideTest.cpp
+    ConnectionDialogCrashTest.cpp
+    DefaultGameDeleteTest.cpp
+    ProfileDeletionSafetyTest.cpp
+    ProfileFolderNameTest.cpp
+    ProfileLifecycleTest.cpp
+    ProfileLoadTempFileTest.cpp
+    ProfileRoundTripTest.cpp
+    ProfileSaveShutdownRaceTest.cpp
+    ResetProfileTest.cpp
+    SavedVariableFenceTest.cpp
+    XMLexportVariablesTest.cpp
+)
+
+# Telnet, and the protocols and escape sequences carried over it
+set(TELNET_GROUP_TEST_SOURCES
+    CsiCursorForwardTest.cpp
+    cTelnetBufferTest.cpp
+    GMCPCharLoginTest.cpp
+    TelnetAtcpMspTest.cpp
+    TelnetLatencyMeasurementTest.cpp
+    TelnetBenchmark.cpp
+    TelnetCharsetNegotiationTest.cpp
+    CrashTestHookTest.cpp
+    TelnetConnectFailureTest.cpp
+    TelnetConnectLookupRaceTest.cpp
+    TelnetNewEnvironTest.cpp
+    TelnetOptionsReportTest.cpp
+    TelnetReconnectStateTest.cpp
+    TelnetStringSequenceRecoveryTest.cpp
+    TelnetTlsPromptTest.cpp
+    TOscTest.cpp
+)
+
+# Triggers and the other scriptable units, and what a running script does to them
+set(TRIGGER_GROUP_TEST_SOURCES
+    CorruptTriggerPatternsTest.cpp
+    MultilineTriggerReentrancyTest.cpp
+    SetScriptCallbackTest.cpp
+    TFeedTriggersRecursionTest.cpp
+    UnitDeferredDeleteTest.cpp
+    UnitProcessingDepthTest.cpp
+)
+
+# The script editor, and the trigger, variable and script forms it hosts
+set(EDITOR_GROUP_TEST_SOURCES
+    dlgTriggerEditorUndoRedoTest.cpp
+    EdbeeReinitTest.cpp
+    EditorBannerViewSwitchTest.cpp
+    ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorTest.cpp
+    VariableEditorWriteBackTest.cpp
+)
+
+# The map: its rooms and areas, its file format, and the mapper widget
+set(MAP_GROUP_TEST_SOURCES
+    EmbeddedMapperCreationTest.cpp
+    MapAreaReassignmentTest.cpp
+    MapAreaSelectionTest.cpp
+    MapCloseDuringImportTest.cpp
+    MapDownloadTest.cpp
+    MapFileStatsTest.cpp
+    MapProgressDialogSeamTest.cpp
+    MapRoomGeometryTest.cpp
+    MapRoundTripTest.cpp
+    MapSymbolFontTest.cpp
+)
+
+# Packages and modules: installing them, saving them and removing them
+set(PACKAGE_GROUP_TEST_SOURCES
+    ActionSelfRemovalTest.cpp
+    DefaultPackagesTest.cpp
+    ModuleSaveTeardownTest.cpp
+    PackageRemovalSaveTeardownTest.cpp
+    PackageSelfRemovalTest.cpp
+)
+
+# Onboarding and in-app guidance: the starter UI, the tutorial invitation,
+# the feature callouts and the experienced-player gate
+set(STARTERUI_GROUP_TEST_SOURCES
+    ExperiencedPlayerGateTest.cpp
+    FeatureCalloutTest.cpp
+    StarterUiGaugePanelTest.cpp
+    StarterUiSectionsTest.cpp
+    StarterUiTriggerCostTest.cpp
+    TutorialInvitationGateTest.cpp
+    TutorialInvitationLayoutTest.cpp
+)
+
+# Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
+set(TEARDOWN_GROUP_TEST_SOURCES
+    DialogTeardownTest.cpp
+    HostChildTeardownTest.cpp
+    HostWidgetDecouplingTest.cpp
+)
+
+# Sound, music and video, text-to-speech, and the rich presence published to Discord
+set(MEDIA_GROUP_TEST_SOURCES
+    TDiscordModeTest.cpp
+    VideoOutputHideTest.cpp
+    TMediaLoopTest.cpp
+    TtsInterruptingSpeakTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -133,7 +198,7 @@ if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
     set_tests_properties(PipelineBenchmark PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;ASAN_OPTIONS=detect_leaks=0"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;ASAN_OPTIONS=detect_leaks=0"
         LABELS "functional"
         TIMEOUT 600)
 endif()
@@ -143,9 +208,19 @@ endif()
 #   dlgTriggerEditor and leaving ~3.4MB of tree-item QIcon/QPixmap behind
 # - NewReleaseDialogTeardownTest still leaks, on Qt's one-time system
 #   CA-certificate store load on first TLS use, cached for the process lifetime
+# - VideoOutputHideTest has to attach a real QVideoWidget to a label, which is the
+#   only way to reach the seam it covers. Under the offscreen platform the
+#   QVideoWindow inside it leaves its backing store and raster paint engine behind
+#   (measured: 22528 bytes over 36 allocations for two widgets, rooted in
+#   QVideoWindowPrivate::init and QOffscreenIntegration::createPlatformBackingStore),
+#   and deleting the label first does not release them. Suppressing it by name is
+#   worse than excluding the case: a suppression matches if ANY frame does, so a
+#   leak:QOffscreenIntegration::createPlatformBackingStore line would silence
+#   backing-store leaks in every widget test in the tree
 set(leakCheckExcludedTests
     dlgTriggerEditorUndoRedoTest
     NewReleaseDialogTeardownTest
+    VideoOutputHideTest
 )
 
 # Apple's ASan runtime has no LeakSanitizer, so detect_leaks is only meaningful
@@ -165,14 +240,29 @@ foreach(test_file ${FUNCTIONAL_TEST_SOURCES})
     list(APPEND allFunctionalTestNames ${test_name})
 endforeach()
 
-add_functional_test_binary(functional_window_tests GroupedTestMain.cpp ${WINDOW_GROUP_TEST_SOURCES})
-foreach(test_file ${WINDOW_GROUP_TEST_SOURCES})
-    get_filename_component(test_name ${test_file} NAME_WE)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:functional_window_tests> ${test_name})
-    list(APPEND allFunctionalTestNames ${test_name})
-endforeach()
+# One executable for the group, but a ctest case each: every test keeps its own
+# add_test entry, which names the class for the group binary to run.
+macro(add_grouped_test_binary target)
+    add_functional_test_binary(${target} GroupedTestMain.cpp ${ARGN})
+    foreach(grouped_test_file ${ARGN})
+        get_filename_component(grouped_test_name ${grouped_test_file} NAME_WE)
+        add_test(NAME ${grouped_test_name} COMMAND $<TARGET_FILE:${target}> ${grouped_test_name})
+        list(APPEND allFunctionalTestNames ${grouped_test_name})
+    endforeach()
+endmacro()
 
-# Both lists' cases, so a grouped test's properties are the solo ones verbatim
+add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
+
+# Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
         # intercept_tls_get_addr=0 is what stops the tracer crash of #9809, at
@@ -202,15 +292,24 @@ foreach(test_name ${allFunctionalTestNames})
         set(leakCheck "detect_leaks=0")
         set(leakLog "")
     endif()
+    # MUDLET_TEST_MODE is the variable the code already keys "don't touch the real
+    # machine" off - the keychain, the update check and the real speech engine all
+    # consult it. What it changes for a functional test specifically is smaller: mpkg
+    # stays out of the profiles they build (see setupPreInstallPackages() in
+    # src/mudlet.cpp), and waitForEvent()/pumpEvents() become callable from Lua.
+    # Set here rather than in the workflows, which only ever set it for the Lua steps,
+    # so ctest behaves the same locally and in CI. A test that needs it unset has to
+    # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
+    # asserts the variable arrives at all.
     set_tests_properties(${test_name} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
 endforeach()
 
-# ResetProfileTest creates a full profile per test method (30 tests),
-# so it needs a longer timeout than the default 60s
+# ResetProfileTest creates a full profile per test method, so it needs a longer
+# timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
@@ -225,6 +324,11 @@ set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
+
+# TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
+# real time by design - every round trip it times, and every stall it places, has
+# to be waited out - so it needs a longer timeout
+set_tests_properties(TelnetLatencyMeasurementTest PROPERTIES TIMEOUT 300)
 
 # TelnetConnectFailureTest creates a fresh profile per test method and waits out a connection
 # attempt that is refused and then retried, so it needs a longer timeout
@@ -242,15 +346,35 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
+# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
+# full profile, which is nearly all of their runtime and the part a sanitizer and
+# a loaded runner stretch, so they get the same headroom as their neighbours
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
+
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 
+# FeedChecksumRaceTest passes in about 5 seconds, so this timeout is only ever
+# reached by a run that is already failing - and that run has to be allowed to
+# finish, because the assertion message is the whole point of the file. Its
+# nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
+# what it is told: once to poll, then twice more to build the "would have passed
+# after N ms" debug message. Measured with every wire it covers cut, the file
+# takes 263s, so anything below that turns a readable failure into a silent
+# ctest kill. Guarded, because without the updater the test does not exist and
+# naming a test that does not exist is a hard CMake error
+if(USE_UPDATER)
+    set_tests_properties(FeedChecksumRaceTest PROPERTIES TIMEOUT 600)
+endif()
+
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
 # and each clip has to be waited out in real time, so it needs a longer timeout.
-# QTEST_MAIN does not run src/main.cpp, so pin QT_MEDIA_BACKEND to what main.cpp picks for
-# the shipped application - otherwise the tests silently exercise Qt's default backend for
-# the platform rather than the one users actually get.
+# VideoOutputHideTest boots one profile for the whole class and waits two of its three endings
+# out in real time, and takes the same headroom.
+# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both to what main.cpp picks
+# for the shipped application - otherwise the tests silently exercise Qt's default backend for
+# the platform rather than the one users actually get. It is empty, and so a no-op, on Linux.
 if(APPLE)
     set(mediaLoopTestBackend "darwin")
 elseif(WIN32)
@@ -258,10 +382,10 @@ elseif(WIN32)
 else()
     set(mediaLoopTestBackend "")
 endif()
-set_tests_properties(TMediaLoopTest PROPERTIES TIMEOUT 300)
+set_tests_properties(TMediaLoopTest VideoOutputHideTest PROPERTIES TIMEOUT 300)
 if(mediaLoopTestBackend)
     # APPEND, so the environment set by the loop above stays in force rather than being replaced
-    set_property(TEST TMediaLoopTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
+    set_property(TEST TMediaLoopTest VideoOutputHideTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
 
 # StarterUiSectionsTest creates a fresh profile per test method and one of them
@@ -280,10 +404,21 @@ set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
+# ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 300)
+
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
 # a loaded machine even though the file runs in ~2s
 set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
+
+# FrontendRefreshSeamTest creates a fresh profile per test method, and one of them waits out the
+# post-load tab indicator refresh before it can prove anything, so it needs a longer timeout
+set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
+
+# HyperlinkModelSplitTest creates a fresh profile per test method, and one of
+# them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
+set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
