@@ -1039,6 +1039,28 @@ describe("Tests installing one name as both a package and a module", function()
     assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed module lost its alias to the refusal")
   end)
 
+  it("refuses a module whose config.lua renames it onto an installed module", function()
+    local path = copyOfRenamerInTheProfile()
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module")
+    assert.equals("1.0", getModuleInfo(renamedTo, "version"), "the fixture did not install with the version its config.lua gives")
+
+    -- a module already using the name is taken apart by name so that a sync can
+    -- put it back, so the refusal has to come first: afterwards there is nothing
+    -- left to refuse on behalf of, and the module is rebuilt from its own folder
+    -- while answering to the details of the archive that was turned away
+    local reason = installUntilRefused(installModule, otherRenamerArchive)
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_true(moduleInstalled(renamedTo), "the module that refused the install was removed by the refusal")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed module lost its alias to the refusal")
+    assert.equals(0, exists("mudlet-spec-renamer2 alias", "alias"), "the refused archive's own contents were installed anyway")
+    assert.equals("1.0", getModuleInfo(renamedTo, "version"),
+                  "the refused install left the installed module describing the one it turned away")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer2"),
+                    "the refused install stranded the folder it unpacked in the profile")
+  end)
+
   it("takes the folder a refused install unpacked away with it", function()
     installRenamerAsPackage()
     -- the archive unpacks under its own file name and is only renamed to the
@@ -1205,6 +1227,33 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     -- module whose XML will not load stays listed: what changes is that it is said
     assert.is_true(ok)
     assert.is_true(packageInstalled(name))
+  end)
+end)
+
+describe("Tests installing an archive whose config.lua will not run", function()
+  it("says the manifest was lost and installs under the archive's own name", function()
+    local name = "mudlet-spec-badconfig"
+    defer(function() removeFixturePackage(name) end)
+    defer(function() removeFixturePackage("mudlet-spec-badconfig-renamed") end)
+
+    -- marked before the first attempt so that the announcement is caught whichever
+    -- attempt goes through: an install asked for while the profile is being saved
+    -- is put off, answers true and says nothing
+    local mark = getLastLineNumber("main")
+    -- the manifest names the package, and it is read by running it: one line
+    -- that raises throws away the name, author, version and description above
+    -- it together, and the install carries on under the name of the file
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture with the config.lua that raises")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.is_false(packageInstalled("mudlet-spec-badconfig-renamed"),
+                    "the package installed under the name of a manifest that never ran")
+    -- what the silence costs: a name-based uninstall, a repository update and
+    -- anything depending on it all stop matching, with nothing to go on
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
   end)
 end)
 
