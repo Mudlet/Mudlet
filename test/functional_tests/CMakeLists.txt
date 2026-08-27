@@ -44,6 +44,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
+    CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -52,6 +53,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
+    RecolouredLineCacheTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
@@ -130,6 +132,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
+    MapSymbolFontTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
@@ -195,13 +198,19 @@ option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with 
 add_functional_test_binary(PipelineBenchmark PipelineBenchmark.cpp)
 # The 2D mapper's companion. Never registered with ctest at all: it needs a map
 # file too big to commit, handed to it in MUDLET_BENCH_MAP, and skips without one.
-# Both benchmarks stay standalone binaries rather than joining a group, at the
+# The benchmarks stay standalone binaries rather than joining a group, at the
 # cost of a link step and ~250MB each, for two reasons. add_grouped_test_binary()
 # registers an add_test() per source, so joining one would put an always-skipped
 # case into every CI run; and a group binary's layout and static initialisers
 # change whenever any unrelated sibling test file does, which is a few percent of
 # wall clock landing in numbers whose whole job is to be compared across builds.
 add_functional_test_binary(MapRenderBenchmark MapRenderBenchmark.cpp)
+# Report-only baseline for the A* speedwalk search and the graph rebuild that
+# feeds it, run as
+#   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./PathfindBenchmark
+# Never registered with ctest at all, because the map it needs is far too big to
+# commit and it skips without one.
+add_functional_test_binary(PathfindBenchmark PathfindBenchmark.cpp)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout

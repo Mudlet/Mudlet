@@ -1941,6 +1941,17 @@ TConsoleModel& Host::mainConsoleModel()
     return *mpMainConsoleModel;
 }
 
+// A colour trigger matching "the default colour" compares against the model's
+// pair, so it has to carry the profile's colours whether or not a console was
+// ever built to copy them over. Seeding them in the model's constructor would
+// not do - this Host still holds the built-in defaults at that point.
+void Host::refreshMainConsoleColors()
+{
+    mpMainConsoleModel->mFgColor = mFgColor;
+    mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->buffer.updateColors();
+}
+
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
     emit signal_loggingAnnouncement(isLogging, logFileName);
@@ -3505,7 +3516,7 @@ bool Host::getMMCPShowSnoopInMainConsole()
     return mMMCPShowSnoopInMainConsole;
 }
 
-QString Host::getSpellDic()
+QString Host::getSpellDic() const
 {
     if (!mSpellDic.isEmpty()) {
         return mSpellDic;
@@ -3521,12 +3532,11 @@ QString Host::getSpellDic()
 
 void Host::setSpellDic(const QString& newDict)
 {
-    bool isChanged = false;
-    if (!newDict.isEmpty() && mSpellDic != newDict) {
-        mSpellDic = newDict;
-        isChanged = true;
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
     }
-    if (isChanged && mpConsole) {
+    mSpellDic = newDict;
+    if (mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
     }
 }

@@ -61,6 +61,8 @@ HARNESSES = {
             "corpus_version",
             "display_rows_per_paint",
             "display_cols_per_paint",
+            "display_tail_small_cells",
+            "display_tail_large_cells",
         ),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
