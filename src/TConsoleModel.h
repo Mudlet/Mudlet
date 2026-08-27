@@ -77,7 +77,11 @@ struct TConsoleModel
     // closing one profile deletes its console first. The view co-owns the
     // model, so it can be left holding one whose Host has gone.
     QPointer<Host> mpHost;
-    // Only a cache today - the view fills these in through TConsole::changeColors(); refreshing them from the Host after the profile loads moves core-side with the colour sub-PR.
+    // On the main console model, the profile's colours, kept there by
+    // Host::refreshMainConsoleColors(); colour triggers set to "default" match
+    // against these. A sub-console model's hold that one window's own colours
+    // instead, written by TConsole::setConsoleBgColor() and read back only by
+    // that console.
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QString mCurrentLine;

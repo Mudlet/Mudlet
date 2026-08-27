@@ -68,6 +68,11 @@ public:
     void drawForeground(QPainter&, const QRect&);
     void showNewLines();
     void forceUpdate();
+    // Records that the text of these buffer lines changed where it stands,
+    // rather than the whole screen being untrustworthy. Unlike forceUpdate()
+    // this keeps the scroll shortcut: the rows the lines land on simply join
+    // the band that gets redrawn.
+    void markLinesDirty(const int firstLine, const int lastLine);
     void needUpdate(int, int);
     void scrollTo(int);
     void scrollH(int);
@@ -270,6 +275,15 @@ private:
     int mScreenHeight;
     // currently viewed screen area
     QPixmap mScreenMap;
+    // What each paint draws into, swapped with mScreenMap once the frame is
+    // finished. Two buffers rather than one because a QPixmap shared with
+    // mScreenMap would deep-copy itself the moment a QPainter opened on it,
+    // which is exactly the full-surface copy this reuse exists to avoid.
+    QPixmap mRenderBuffer;
+    // Buffer lines whose text changed where it stands, so the cached screen
+    // cannot be trusted for the rows they land on. -1 for "none pending".
+    int mDirtyFirstLine = -1;
+    int mDirtyLastLine = -1;
     int mScreenWidth = 100;
     int mScreenOffset = 0;
     int mMaxHRange = 0;

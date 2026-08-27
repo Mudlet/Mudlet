@@ -203,8 +203,39 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, startPos);
 
         const QRect collapsedSelection = pane->mSelectedRegion.boundingRect();
-        QVERIFY2(collapsedSelection.width() < expandedSelection.width(),
-                 "Dragging back to the press cell left the earlier selection extent frozen");
+        QVERIFY2(collapsedSelection.width() < expandedSelection.width(), "Dragging back to the press cell left the earlier selection extent frozen");
+    }
+
+    // The mouse selection is a flag on each TChar, so whatever the line's
+    // characters are held in has to keep them where they are once a selection
+    // has been made over them. Text arriving on the line that is already under
+    // selection - a prompt, an echo - is how that gets tested in practice.
+    void test_appendingToASelectedLineKeepsItHighlighted()
+    {
+        mpServer->setWelcomeMessage(fillerText());
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(qsl("\nselected"));
+        const int y = console->buffer.getLastLineNumber();
+        QCOMPARE(console->buffer.line(y), qsl("selected"));
+
+        pane->slot_selectAll();
+        QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "selecting all did not mark the last line, so a dropped flag below could not be told from one that was never set");
+
+        // enough for the line to outgrow whatever it is held in, but short
+        // enough that it cannot wrap and move to a line of its own
+        console->print(QString(20, QLatin1Char('z')));
+        QCOMPARE(console->buffer.getLastLineNumber(), y);
+
+        QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
     }
 
     void cleanup()

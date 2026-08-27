@@ -80,12 +80,14 @@ public:
     inline int x() const { return mX; }
     inline int y() const { return mY; }
     inline int z() const { return mZ; }
-    inline void setCoordinates(const int x, const int y, const int z) {
+    inline void setCoordinates(const int x, const int y, const int z)
+    {
         mX = x;
         mY = y;
         mZ = z;
     }
-    inline void offset(const int deltaX, const int deltaY, const int deltaZ) {
+    inline void offset(const int deltaX, const int deltaY, const int deltaZ)
+    {
         mX += deltaX;
         mY += deltaY;
         mZ += deltaZ;
@@ -225,6 +227,10 @@ private:
     QSet<QString> mSpecialExitLocks;
 
     TRoomDB* mpRoomDB = nullptr;
+    // The room DB owns every TRoom, so it has to be able to unhook one it is
+    // about to delete - ~TRoom() otherwise reaches back into it with an id that
+    // may belong to a different room by then. See TRoomDB::restoreSingleRoom().
+    friend class TRoomDB;
     friend class XMLimport;
     friend class XMLexport;
 };
@@ -297,8 +303,8 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     if (!customLines.isEmpty()) {
         debug.nospace() << ", customlines=(";
         for (auto it = customLines.constBegin(); it != customLines.constEnd(); ++it) {
-            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower()
-                            << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no") << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
+            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower() << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no")
+                            << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
         }
         debug.nospace() << ")";
     }

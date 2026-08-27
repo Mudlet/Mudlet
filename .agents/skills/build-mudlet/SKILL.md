@@ -12,6 +12,33 @@ license: GPL-2.0-or-later
 Read this **before** typing a build command, not after one fails. The correct invocation differs
 per platform, and the wrong one is not merely slower — see Pitfalls.
 
+## First: does this need a build at all?
+
+On Linux, a change confined to `src/mudlet-lua/lua/` or `src/mudlet-lua/tests/` needs none. Those
+are read from disk at startup, so a Mudlet binary built anywhere on the machine can run *this*
+worktree's Lua and specs:
+
+```bash
+.claude/scripts/run-lua-tests.sh ../otherworktree/build-linux-debug-nosan/src/mudlet
+```
+
+The script detects a binary from another build tree, shims around it with a `note:` line, and
+fails loudly if this worktree's Lua is not what ended up loading.
+
+These look Lua-only but still need a build:
+
+- `src/packages/` and `src/mudlet-lua/lua/utf8_filenames.lua` are compiled into the binary as Qt
+  resources (`src/mudlet.qrc`), so editing them cannot affect a borrowed binary.
+- On macOS the build copies mudlet-lua into the `.app` bundle and that copy is preferred over
+  `src/`, so a Lua change does need a rebuild there. The script is Linux-only regardless - it
+  drives Mudlet under `xvfb-run`.
+- Anything under `src/*.cpp` or `src/*.h`.
+
+Choose a donor whose branch already contains the C++ the specs rely on - one missing it fails
+specs in a way that reads exactly like a regression in the change under test. Prefer a `-nosan`
+tree: the plain `build/` preset is an AddressSanitizer build, and this script does not pass it
+the `ASAN_OPTIONS` CI uses, so a leak surfaces as a bare non-zero exit with every spec green.
+
 ## Use a preset — every platform, one command
 
 `CMakePresets.json` in the repository root encodes the generator, build type and sanitizer
