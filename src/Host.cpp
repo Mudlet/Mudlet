@@ -2595,8 +2595,20 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     // The guard at the top cannot see a save that a handler of the events just
     // raised has started, and from here the package's items are destroyed: a dual
     // install's restore would then be deferred, report success and do nothing,
-    // leaving the surviving half listed but empty with nothing said.
+    // leaving the surviving half listed but empty with nothing said. Refusing is
+    // not the answer either - the events above have already told every handler
+    // this uninstall is happening and packages dismantle themselves when they hear
+    // it, generic_mapper by killing every one of its event handlers - so wait the
+    // save out rather than abandon what has been announced.
     if (currentlySavingProfile()) {
+        waitForProfileSave();
+    }
+
+    // waitForProfileSave() pumps the event loop, so whatever was queued there has
+    // had its turn and this package may be gone already; and a save still running
+    // after all of that is not one to destroy items alongside.
+    const bool stillInstalled = isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName);
+    if (currentlySavingProfile() || !stillInstalled) {
         return false;
     }
 
@@ -2638,9 +2650,11 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
             //report a failure as the restore not happening, not as an install the user never asked for
-            // the folder belongs to the package that survives however the module was installed, and if nothing ever unpacked one there is nothing for removeDir() to take
-            restoredInPlace = true;
-            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); !restored) {
+            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); restored) {
+                // the folder belongs to the package just put back, however the module was
+                // installed, and if nothing ever unpacked one there is nothing to take
+                restoredInPlace = true;
+            } else {
                 //: %1 is the module name, %2 is the reason the package sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed module \"%1\", but its package copy could not be restored: %2").arg(packageName, reason));
             }
@@ -2655,12 +2669,14 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             mModulesLoadedOk.remove(packageName);
             if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true); restored) {
                 restoredInPlace = packageUnpacksAFolder(entry[0]);
+                //restore the module edit flag
+                mInstalledModules[packageName] = entry;
             } else {
                 //: %1 is the package name, %2 is the reason the module sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed package \"%1\", but its module copy could not be restored: %2").arg(packageName, reason));
+                // leaving it listed would offer the user a module whose items the by-name
+                // uninstall destroyed and whose restore never happened
             }
-            //restore the module edit flag
-            mInstalledModules[packageName] = entry;
         }
     }
     if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
@@ -2669,9 +2685,11 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     getActionUnit()->updateAllToolbars();
 
-    // A dual install's restore unpacks the surviving half into this same folder,
-    // so taking it away now would delete what was just put back. A restore from a
-    // bare .xml unpacks nothing, and the folder is still ours to remove.
+    // Whatever is left of a dual install owns this folder: a surviving package keeps
+    // the one its own archive unpacked however the module was installed, while a
+    // surviving module keeps only what its own restore put back - a restore from a
+    // bare .xml unpacks nothing, so that folder is still ours to remove. A restore
+    // that failed leaves no half behind to own it either way.
     if (!restoredInPlace) {
         const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
         removeDir(dest, dest);

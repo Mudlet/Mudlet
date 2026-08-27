@@ -963,6 +963,7 @@ describe("Tests uninstalling one half of a dual package/module install", functio
 
   it("leaves the package installed and working when the module is uninstalled", function()
     withDualInstall()
+    local packageDirectory = getMudletHomeDir() .. "/" .. moduleName
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
     assert.is_true(uninstallModule(moduleName))
@@ -971,6 +972,7 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     assert.is_false(moduleInstalled(moduleName))
     assert.is_true(packageInstalled(moduleName), "the package the user did not ask to remove has to survive")
     assert.equals(1, exists(moduleName .. " alias", "alias"), "the package's alias was not put back")
+    assert.is_true(fileExists(packageDirectory), "the surviving package's folder was deleted from under it")
     local text = textFrom(mark)
     assert.is_false(containsWrapped(text, "could not be restored"), text)
   end)
@@ -990,6 +992,9 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     local text = textFrom(mark)
     assert.is_true(containsWrapped(text, 'Removed package "' .. moduleName .. '", but its module copy could not be restored'), text)
     assert.is_true(containsWrapped(text, "could not unzip package"), text)
+    -- the by-name uninstall destroyed the module's items and nothing put them
+    -- back, so listing it offers the user a module that is no longer there
+    assert.is_false(moduleInstalled(moduleName), "a module that could not be restored was left listed and empty")
   end)
 
   it("says why the package could not be put back", function()
@@ -1007,6 +1012,9 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     local text = textFrom(mark)
     assert.is_true(containsWrapped(text, 'Removed module "' .. moduleName .. '", but its package copy could not be restored'), text)
     assert.is_true(containsWrapped(text, "could not unzip package"), text)
+    -- neither half is left to own the unpacked folder, so keeping it would strand
+    -- it in the profile with nothing that can ever reach or remove it again
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. moduleName), "the folder of a dual install neither half survived was left behind")
   end)
 
   it("does not write the emptied module back over its own file when the restore fails", function()
@@ -1072,6 +1080,7 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     pumpEvents(200)
 
     assert.is_true(moduleInstalled(moduleName), "the module the user did not ask to remove has to survive")
+    assert.equals(1, exists(moduleName .. " alias", "alias"), "the module's alias was not put back")
     -- the restore reinstalled the module from a bare .xml, which unpacks nothing,
     -- so this folder was still the uninstall's to take away and nothing else will
     assert.is_false(fileExists(packageDirectory), "the package's folder was left behind for good")
@@ -1090,6 +1099,35 @@ describe("Tests uninstalling one half of a dual package/module install", functio
 
     assert.is_true(packageInstalled(moduleName), "the package the user did not ask to remove has to survive")
     assert.is_true(fileExists(packageDirectory), "the surviving package's folder was deleted from under it")
+  end)
+end)
+
+describe("Tests uninstalling a package while the profile is being saved", function()
+  it("finishes an uninstall whose own event handler started a profile save", function()
+    withFixturePackage(minimalPackage)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.equals(1, exists(minimalPackage .. " alias", "alias"), "the package's alias should be installed to begin with")
+
+    -- by the time a handler hears this the uninstall has been announced to every
+    -- package in the profile, and packages take themselves apart when they hear it
+    -- - generic_mapper kills all of its event handlers - so a save started here
+    -- cannot be answered by abandoning the uninstall
+    local saves = 0
+    local handler = registerAnonymousEventHandler("sysUninstall", function(_, which)
+      if which == minimalPackage then
+        saves = saves + 1
+        saveProfile()
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+
+    local removed = uninstallPackage(minimalPackage)
+    pumpEvents(200)
+
+    assert.equals(1, saves, "the handler that starts the save never ran")
+    assert.is_true(removed, "the uninstall was abandoned after its own events had already gone out")
+    assert.is_false(packageInstalled(minimalPackage), "the package stayed listed after being told it was uninstalled")
+    assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
   end)
 end)
 
