@@ -24,8 +24,8 @@
  * last line and leave it scrolling.
  *
  * A fresh install is the only state that shows the invitation, so this runs in
- * its own binary - mudlet::experiencedMudletPlayer() memoises for the life of
- * the process, and TutorialInvitationGateTest owns the opposite case.
+ * a process of its own - mudlet::experiencedMudletPlayer() memoises for the
+ * life of the process, and TutorialInvitationGateTest owns the opposite case.
  *
  * Run with: ctest -R TutorialInvitationLayoutTest -V
  */
@@ -35,16 +35,12 @@
 #include <QPushButton>
 #include <QScrollBar>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForTutorialInvitationLayoutTest();
+#include "GroupedTest.h"
 
 class TutorialInvitationLayoutTest : public QObject
 {
@@ -57,7 +53,9 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForTutorialInvitationLayoutTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         QVERIFY(mConfigDir.isValid());
         // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in marker, without which
@@ -123,20 +121,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForTutorialInvitationLayoutTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TutorialInvitationLayoutTest.moc"
-QTEST_MAIN(TutorialInvitationLayoutTest)
+MUDLET_GROUPED_TEST_MAIN(TutorialInvitationLayoutTest)

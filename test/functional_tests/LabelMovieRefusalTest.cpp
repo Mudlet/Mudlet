@@ -31,6 +31,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLabel.h"
@@ -40,14 +41,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForLabelMovieRefusalTest();
+using namespace std::chrono_literals;
 
 class LabelMovieRefusalTest : public QObject
 {
@@ -67,8 +63,6 @@ private:
     QByteArray mSavedXdgConfigHome;
     QString mGifPath;
     QString mNotAGifPath;
-
-    static bool portableMarkerPresent() { return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())); }
 
     // three frames so the count is a distinctive thing to compare, and a 60
     // second frame delay so the animation never advances between two reads
@@ -95,8 +89,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForLabelMovieRefusalTest();
-
         QVERIFY(mConfigDir.isValid());
         // setupConfig() only adopts $XDG_CONFIG_HOME once the profiles
         // directory under it is there to be adopted
@@ -160,9 +152,13 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-        QDir(path).removeRecursively();
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            QDir(path).removeRecursively();
+            delete mudlet::self();
+        }
         if (mSavedXdgConfigHome.isEmpty()) {
             qunsetenv("XDG_CONFIG_HOME");
         } else {
@@ -204,20 +200,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForLabelMovieRefusalTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "LabelMovieRefusalTest.moc"
-QTEST_MAIN(LabelMovieRefusalTest)
+MUDLET_GROUPED_TEST_MAIN(LabelMovieRefusalTest)

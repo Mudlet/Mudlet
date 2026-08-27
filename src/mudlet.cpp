@@ -1493,6 +1493,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("한국어");
             } else if (!languageCode.compare(QLatin1String("he_IL"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("עִברִית");
+            } else if (!languageCode.compare(QLatin1String("cs_CZ"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("Čeština");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -4583,6 +4585,14 @@ void mudlet::slot_mudletDiscord()
 
 void mudlet::updateDiscordNamedIcon()
 {
+    // Each detached window owns its own copy of these actions and shows its own
+    // profile's game, so refreshing the main window's pair is not enough
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->updateDiscordNamedIcon();
+        }
+    }
+
     Host* pHost = getActiveHost();
 
     if (!pHost) {
@@ -7525,9 +7535,25 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
             // clang-format on
     };
 
+    // mpkg fetches the package listing as it loads and, when the repository carries a
+    // newer mpkg than the bundled one, uninstalls itself at once and reinstalls two
+    // seconds plus a download later. Each of those calls doCleanReset() if an editor is
+    // open, which queues a clear of its tree widgets onto the next event loop turn and
+    // frees every item a test is holding, and each announces itself in the main console.
+    // Whether it lands mid-test is down to how fast the download is.
+    //
+    // generic_mapper below can self-update the same way, but its upstream is this repo's
+    // own development branch, so bundled and remote move together; mpkg is published from
+    // a separate repository on its own schedule, which is what leaves a released Mudlet
+    // upgrading itself mid-test for days at a time.
+    const bool skipSelfUpgradingPackage = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+
     QHashIterator<QString, QStringList> i(defaultScripts);
     while (i.hasNext()) {
         i.next();
+        if (skipSelfUpgradingPackage && i.key() == qsl(":/packages/mpkg/mpkg.mpackage")) {
+            continue;
+        }
         if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
             mudlet::self()->mPackagesToInstallList.append(i.key());
         }
@@ -7972,7 +7998,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Create detached window with toolbar state inherited from main window
     bool toolbarVisible = (mpMainToolBar && mpMainToolBar->isVisible());
-    auto detachedWindow = new TDetachedWindow(profileName, console, this, toolbarVisible);
+    auto detachedWindow = new TDetachedWindow(profileName, console, toolbarVisible);
     mDetachedWindows.insert(profileName, detachedWindow);
 
     // Transfer any dock widgets from the main window to the detached window
@@ -7995,6 +8021,17 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     detachedWindow->show();
     detachedWindow->raise();
     detachedWindow->activateWindow();
+
+    // When a tab is left selected above, its slot_tabChanged() leaves
+    // Host::setFocusOnHostActiveCommandLine()'s zero-timer queued, and that
+    // activates the main window - undoing the activateWindow() just above the
+    // moment control returns to the event loop. Ours is queued later so it runs
+    // later; the 10ms and 50ms retries behind it only setFocus(), which cannot
+    // activate an inactive window.
+    QTimer::singleShot(0ms, detachedWindow, [detachedWindow]() {
+        detachedWindow->raise();
+        detachedWindow->activateWindow();
+    });
 
     // Update multi-view controls
     updateMultiViewControls();

@@ -423,6 +423,29 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.are.same({x = 0, y = 0, width = 400, height = height}, geometry("glsHint"))
     end)
 
+    -- autoAdjustSize is what every echo calls; called by hand it has to be a
+    -- no-op unless one of the two flags is set, or a label that never asked to
+    -- be auto sized would shrink to its text the first time anything ran it
+    it("autoAdjustSize does nothing while neither dimension is auto sized", function()
+      assert.is_nil(label.autoWidth)
+      assert.is_nil(label.autoHeight)
+      label:autoAdjustSize()
+      assert.are.same({x = 0, y = 0, width = 400, height = 200}, geometry("glsHint"))
+    end)
+
+    it("autoAdjustSize fits the dimensions that are auto sized", function()
+      label.autoHeight = true
+      local _, height = label:getSizeHint()
+      label:autoAdjustSize()
+      assert.are.same({x = 0, y = 0, width = 400, height = height}, geometry("glsHint"))
+      -- the hint is re-read, because the height it just took can move the width
+      -- Qt suggests for the same text
+      label.autoWidth = true
+      local width, secondHeight = label:getSizeHint()
+      label:autoAdjustSize()
+      assert.are.same({x = 0, y = 0, width = width, height = secondHeight}, geometry("glsHint"))
+    end)
+
     it("disableAutoAdjustSize leaves the size alone again", function()
       label:enableAutoAdjustSize()
       label:echo("tiny")
@@ -1128,6 +1151,553 @@ describe("Tests Geyser.Label movies, callbacks and nesting", function()
 
       assert.are.equal(2, backward.scroll)
       assert.are.equal(5, forward.scroll)
+    end)
+  end)
+end)
+
+-- The label's font, hyperlink styling and tooltip. Only the tooltip has a
+-- getter, so the other two are read back from the object's own bookkeeping and
+-- from what the wrapper handed the global - which is where Geyser's own
+-- default of an underline unless one is refused lives.
+describe("Tests Geyser.Label font, link style and tooltip", function()
+  local created
+
+  local function track(object)
+    created[#created + 1] = object
+    return object
+  end
+
+  local function alive(object)
+    if not object or not object.container or not object.container.windowList then
+      return false
+    end
+    return object.container.windowList[object.name] == object
+  end
+
+  before_each(function()
+    created = {}
+  end)
+
+  after_each(function()
+    for _, object in ipairs(created) do
+      if alive(object) then
+        object:delete()
+      end
+    end
+    created = {}
+  end)
+
+  describe("Geyser.Label:setFont", function()
+    local label
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glfFont", x = 0, y = 0, width = 200, height = 50}))
+      label:echo("some text")
+    end)
+
+    it("puts the family into the markup and remembers it", function()
+      -- Ubuntu Mono ships with Mudlet, so it is available on every platform
+      label:setFont("Ubuntu Mono")
+      assert.are.equal("Ubuntu Mono", label.font)
+      assert.is_truthy(getLabelText("glfFont"):find('<font face ="Ubuntu Mono">', 1, true))
+    end)
+
+    it("takes the family back out again when it is given an empty string", function()
+      label:setFont("Ubuntu Mono")
+      label:setFont("")
+      assert.are.equal("", label.font)
+      assert.is_nil(getLabelText("glfFont"):find("<font face", 1, true))
+    end)
+
+    it("says so rather than raising when the font is not installed", function()
+      local debugMessage = spy.on(_G, "debugc")
+      finally(function() debugMessage:revert() end)
+      assert.has_no.errors(function() label:setFont("No Such Font At All") end)
+      assert.spy(debugMessage).was.called()
+      assert.is_truthy(debugMessage.calls[#debugMessage.calls].vals[1]:find("No Such Font At All", 1, true))
+      -- it still records what it was asked for, so the markup shows the ask
+      assert.are.equal("No Such Font At All", label.font)
+    end)
+  end)
+
+  describe("Geyser.Label:setLinkStyle/resetLinkStyle/clearVisitedLinks", function()
+    local label
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glfLink", x = 0, y = 0, width = 200, height = 50}))
+    end)
+
+    -- there is no getter for a label's link styling, so what the wrapper hands
+    -- the global is the observable part; spy.on keeps the real call
+    it("underlines links unless it is told not to", function()
+      local linkStyle = spy.on(_G, "setLinkStyle")
+      finally(function() linkStyle:revert() end)
+
+      label:setLinkStyle("cyan", "purple")
+      assert.spy(linkStyle).was.called_with("glfLink", "cyan", "purple", true)
+
+      label:setLinkStyle("cyan", "purple", false)
+      assert.spy(linkStyle).was.called_with("glfLink", "cyan", "purple", false)
+    end)
+
+    it("reaches the label without raising", function()
+      assert.has_no.errors(function()
+        label:setLinkStyle("#00ffff", "#ff00ff")
+        label:clearVisitedLinks()
+        label:resetLinkStyle()
+      end)
+    end)
+
+    it("stays quiet about a label that is no longer there", function()
+      -- the globals underneath answer nil and a message for a label they cannot
+      -- find, and a wrapper that raised on it would take a script down for a
+      -- widget it had already deleted
+      local gone = track(Geyser.Label:new({name = "glfLinkGone", x = 0, y = 0, width = 40, height = 20}))
+      gone:delete()
+      assert.has_no.errors(function()
+        gone:setLinkStyle("cyan", "purple")
+        gone:resetLinkStyle()
+        gone:clearVisitedLinks()
+      end)
+    end)
+
+    -- getLabelText() answers with the text after the styling pass has rewritten
+    -- it, which is the only readable trace the injected colour leaves
+    it("colours an anchor whichever whitespace follows its tag name", function()
+      label:setLinkStyle("#00ffff", "#ff00ff")
+
+      label:echo([[<a href='https://example.com'>go</a>]])
+      assert.is_truthy(getLabelText("glfLink"):find("#00ffff", 1, true))
+
+      label:echo("<a\nhref='https://example.com'>go</a>")
+      assert.is_truthy(getLabelText("glfLink"):find("#00ffff", 1, true))
+    end)
+
+    pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the three wrappers discard the nil and error message their global answers with, and Mudlet has no link style getter")
+  end)
+
+  describe("Geyser.Label:setToolTip/resetToolTip", function()
+    local label
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glfToolTip", x = 0, y = 0, width = 200, height = 50}))
+    end)
+
+    it("puts the text on the widget and remembers it", function()
+      assert.are.equal("", getLabelToolTip("glfToolTip"))
+      label:setToolTip("what this does")
+      assert.are.equal("what this does", getLabelToolTip("glfToolTip"))
+      assert.are.equal("what this does", label.toolTip)
+      label:setToolTip("and now this")
+      assert.are.equal("and now this", getLabelToolTip("glfToolTip"))
+    end)
+
+    it("defaults the duration to ten seconds", function()
+      -- the duration is not part of what getLabelToolTip reports, so the
+      -- default Geyser fills in is watched on the way to the global
+      local toolTip = spy.on(_G, "setLabelToolTip")
+      finally(function() toolTip:revert() end)
+
+      label:setToolTip("what this does")
+      assert.are.equal(10, label.toolTipDuration)
+      assert.spy(toolTip).was.called_with("glfToolTip", "what this does", 10)
+
+      label:setToolTip("and now this", 3)
+      assert.are.equal(3, label.toolTipDuration)
+      assert.spy(toolTip).was.called_with("glfToolTip", "and now this", 3)
+    end)
+
+    it("takes the tooltip off the widget again on reset", function()
+      label:setToolTip("temporary", 1)
+      assert.are.equal("temporary", getLabelToolTip("glfToolTip"))
+
+      label:resetToolTip()
+
+      assert.are.equal("", getLabelToolTip("glfToolTip"))
+      assert.is_nil(label.toolTip)
+      assert.is_nil(label.toolTipDuration)
+    end)
+
+    it("takes the tooltip the constructor was given", function()
+      local built = track(Geyser.Label:new({
+        name = "glfToolTipCons", x = 0, y = 0, width = 40, height = 20,
+        toolTip = "from the constructor", toolTipDuration = 7,
+      }))
+      -- the constraint copy alone would leave toolTip looking right, so the
+      -- widget is what says the constructor applied it
+      assert.are.equal("from the constructor", getLabelToolTip("glfToolTipCons"))
+      assert.are.equal("from the constructor", built.toolTip)
+      assert.are.equal(7, built.toolTipDuration)
+    end)
+  end)
+end)
+
+-- The right click menu. Its items are nested labels registered at the top of
+-- Geyser rather than under the label that owns the menu, so the block sweeps
+-- everything it added rather than relying on the host label's delete.
+describe("Tests Geyser.Label right click menus", function()
+  local label
+  local topLevelBefore
+
+  local function newTopLevelObjects()
+    local new = {}
+    for name in pairs(Geyser.windowList) do
+      if not topLevelBefore[name] then
+        new[#new + 1] = name
+      end
+    end
+    return new
+  end
+
+  local function menuItem(name)
+    local item = label:findMenuElement(name)
+    assert.is_not_nil(item, "there is no menu item called " .. name)
+    return item
+  end
+
+  local function menuOrder()
+    local names = {}
+    for index, item in ipairs(label.rightClickMenu.nestedLabels) do
+      names[index] = item.menuName
+    end
+    return names
+  end
+
+  before_each(function()
+    topLevelBefore = {}
+    for name in pairs(Geyser.windowList) do
+      topLevelBefore[name] = true
+    end
+    label = Geyser.Label:new({name = "glmHost", x = 10, y = 10, width = 100, height = 30})
+    label:createRightClickMenu({MenuItems = {"First", "Second", "Third"}})
+  end)
+
+  after_each(function()
+    -- doNestShow arms a timer that closes the nest seconds later, long after
+    -- the labels it closes have been deleted
+    if Geyser.Label.closeAllTimer then
+      killTimer(Geyser.Label.closeAllTimer)
+      Geyser.Label.closeAllTimer = nil
+    end
+    if label and Geyser.windowList.glmHost == label then
+      label:delete()
+    end
+    label = nil
+    for _, name in ipairs(newTopLevelObjects()) do
+      local object = Geyser.windowList[name]
+      if object then
+        Geyser.Label.scrollV[object] = nil
+        Geyser.Label.scrollH[object] = nil
+        object:delete()
+      end
+    end
+  end)
+
+  describe("Geyser.Label:createRightClickMenu/createMenuItems", function()
+    it("makes a nestable menu label and hangs it off a right click", function()
+      local menu = label.rightClickMenu
+      assert.are.equal("glmHostrightClickMenu", menu.name)
+      assert.are.equal(label, menu.container)
+      assert.are.equal(Geyser.Label.onRightClick, label.clickCallback)
+      -- the menu itself is a nestable label of no size, so only its items show
+      assert.are.equal(0, menu:get_width())
+      assert.are.equal(0, menu:get_height())
+    end)
+
+    it("makes one hidden item per entry, in order", function()
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      for _, name in ipairs({"First", "Second", "Third"}) do
+        local item = menuItem(name)
+        assert.are.equal("glmHostrightClickMenu" .. name, item.name)
+        assert.is_true(item.hidden)
+        assert.is_truthy(getLabelText(item.name):find(name, 1, true))
+      end
+    end)
+
+    it("takes the default width, height and format from the menu", function()
+      local item = menuItem("First")
+      assert.are.equal(140, item:get_width())
+      assert.are.equal(25, item:get_height())
+      assert.is_truthy(getLabelText(item.name):find('align="center"', 1, true))
+      assert.is_truthy(getLabelText(item.name):find("font%-size: 10pt"))
+    end)
+
+    it("takes the width, height and format it is given instead", function()
+      local other = Geyser.Label:new({name = "glmSized", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Only"}, MenuWidth = 80, MenuHeight = 40, MenuFormat = "l16"})
+      local item = other:findMenuElement("Only")
+      assert.are.equal(80, item:get_width())
+      assert.are.equal(40, item:get_height())
+      assert.is_truthy(getLabelText(item.name):find("font%-size: 16pt"))
+    end)
+
+    it("nests a submenu under the item before it", function()
+      local other = Geyser.Label:new({name = "glmNested", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Parent", {"Child"}, "Sibling"}})
+      local parent = other:findMenuElement("Parent")
+      local child = other:findMenuElement("Parent.Child")
+      assert.is_not_nil(child)
+      assert.is_true(parent.isParent)
+      assert.are.equal(parent, child.nestParent)
+      -- the child is not one of the top level menu's own entries
+      assert.is_nil(other:findMenuElement("Child"))
+    end)
+  end)
+
+  describe("Geyser.Label:findMenuElement", function()
+    it("says what it could not find", function()
+      local item, message = label:findMenuElement("Nowhere")
+      assert.is_nil(item)
+      assert.is_truthy(message:find("Couldn't find menu element Nowhere", 1, true))
+    end)
+
+    it("hands back nothing at all when it is given no name", function()
+      assert.is_nil(label:findMenuElement())
+    end)
+
+    it("hands back a nested item's own submenu when it is asked for a parent", function()
+      local other = Geyser.Label:new({name = "glmFindParent", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B", {"C"}}}})
+
+      local element, submenu = other:findMenuElement("A.B", other.rightClickMenu, true)
+
+      -- the submenu hanging off B, not the submenu B is itself listed in
+      assert.are.same({"C"}, submenu)
+      assert.are.equal(other:findMenuElement("A.B"), element)
+    end)
+
+    it("names an item for the parent it sits in, not for its whole path", function()
+      -- this is what makes an item added under "A.B" answer to "B.D", and it is
+      -- why a name with more than one dot in it never resolves
+      local other = Geyser.Label:new({name = "glmDeepName", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B", {"C"}}}})
+
+      assert.is_not_nil(other:findMenuElement("B.C"))
+      assert.is_nil(other:findMenuElement("A.B.C"))
+    end)
+  end)
+
+  describe("Geyser.Label:setMenuAction", function()
+    it("puts a click callback on the item it names", function()
+      local handler = function() end
+      label:setMenuAction("First", handler, "an argument")
+      local item = menuItem("First")
+      assert.are.equal(handler, item.clickCallback)
+      assert.are.same({"an argument"}, item.clickArgs)
+      -- and leaves the other items on the callback the nest gave them
+      assert.are.equal("doNestShow", menuItem("Second").clickCallback)
+    end)
+
+    it("raises for an item that is not in the menu", function()
+      local ok, message = pcall(function() label:setMenuAction("Nowhere", function() end) end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("setMenuAction: Couldn't find menu element Nowhere", 1, true))
+    end)
+  end)
+
+  describe("Geyser.Label:hideMenuLabel/showMenuLabel", function()
+    it("takes an item out of the menu and puts it back where it was", function()
+      label:hideMenuLabel("Second")
+      assert.is_true(menuItem("Second").ignore)
+      assert.are.same({"First", "Third"}, menuOrder())
+
+      label:showMenuLabel("Second")
+      assert.is_false(menuItem("Second").ignore)
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
+    it("does nothing when the item is already in the state asked for", function()
+      label:hideMenuLabel("Second")
+      assert.has_no.errors(function() label:hideMenuLabel("Second") end)
+      assert.are.same({"First", "Third"}, menuOrder())
+      label:showMenuLabel("Second")
+      assert.has_no.errors(function() label:showMenuLabel("Second") end)
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
+    it("keeps a hidden item off the screen when the menu is opened", function()
+      label:hideMenuLabel("Second")
+      label.rightClickMenu:displayNest()
+      assert.is_true(windowVisible(menuItem("First").name))
+      assert.is_false(windowVisible(menuItem("Second").name))
+    end)
+
+    it("raises for an item that is not in the menu", function()
+      assert.has_error(function() label:hideMenuLabel("Nowhere") end)
+      assert.has_error(function() label:showMenuLabel("Nowhere") end)
+    end)
+  end)
+
+  describe("Geyser.Label:addMenuLabel", function()
+    it("adds an item at the end of the menu", function()
+      assert.is_true(label:addMenuLabel("Fourth"))
+      assert.are.same({"First", "Second", "Third", "Fourth"}, menuOrder())
+      assert.is_not_nil(label:findMenuElement("Fourth"))
+    end)
+
+    it("adds an item at the index it is given", function()
+      assert.is_true(label:addMenuLabel("Fourth", nil, 2))
+      assert.are.same({"First", "Fourth", "Second", "Third"}, menuOrder())
+    end)
+
+    it("adds an item under a parent that was declared with a submenu", function()
+      -- a parent is declared by following its name with a table of its
+      -- children, and an empty one is how a submenu that is filled in later is
+      -- reserved: this is how Adjustable.Container's lockstyle menu is built
+      local other = Geyser.Label:new({name = "glmParented", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Parent", {}}})
+
+      other:addMenuLabel("Child", "Parent")
+
+      local child = other:findMenuElement("Parent.Child")
+      assert.is_not_nil(child)
+      assert.are.equal(other:findMenuElement("Parent"), child.nestParent)
+    end)
+
+    it("brings a hidden item back rather than adding a second one", function()
+      label:hideMenuLabel("Second")
+      label:addMenuLabel("Second")
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      assert.is_false(menuItem("Second").ignore)
+    end)
+
+    it("adds an item under a nested parent named by its full path", function()
+      local other = Geyser.Label:new({name = "glmDeep", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B", {"C"}}}})
+
+      local added = other:addMenuLabel("D", "A.B")
+
+      -- an item is named for the parent it sits in, so D under B is "B.D"
+      local child = other:findMenuElement("B.D")
+      assert.is_not_nil(child, "D was not put inside B")
+      assert.are.equal(other:findMenuElement("A.B"), child.nestParent)
+      -- and it is not a second entry beside B, in A's own submenu
+      assert.is_nil(other:findMenuElement("A.D"), "D was put beside B instead of inside it")
+      assert.is_true(added)
+    end)
+
+    it("reports a name it cannot make an item out of", function()
+      -- without this the menu takes the value as an entry and answers true, so
+      -- the caller is told an item was added that createMenuItems then skips
+      local added, message = label:addMenuLabel(5)
+
+      assert.is_false(added)
+      assert.is_truthy(message:find("addMenuLabel: needs the name of the item to add", 1, true))
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
+    it("reports a parent it cannot find rather than raising", function()
+      local added, message = label:addMenuLabel("Child", "Nowhere")
+
+      assert.is_false(added)
+      assert.is_truthy(message:find("addMenuLabel: Couldn't find menu parent Nowhere", 1, true))
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
+    it("reports a parent that was declared without a submenu", function()
+      -- addMenuLabel appends to a submenu, it does not make one, so "Second" -
+      -- a plain entry rather than one followed by a table of its children - is
+      -- refused
+      local added, message = label:addMenuLabel("Child", "Second")
+
+      assert.is_false(added)
+      assert.is_truthy(message:find("addMenuLabel: Couldn't find menu parent Second", 1, true))
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      assert.is_nil(label:findMenuElement("Second.Child"))
+    end)
+
+    it("reports a nested parent that was declared without a submenu", function()
+      local other = Geyser.Label:new({name = "glmDeepLeaf", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"A", {"B"}}})
+
+      local added, message = other:addMenuLabel("D", "A.B")
+
+      assert.is_false(added)
+      assert.is_truthy(message:find("addMenuLabel: Couldn't find menu parent A.B", 1, true))
+      assert.is_nil(other:findMenuElement("B.D"))
+      assert.is_nil(other:findMenuElement("A.D"))
+    end)
+  end)
+
+  describe("Geyser.Label:changeMenuIndex", function()
+    it("moves an item to the index it is given", function()
+      label:changeMenuIndex("Third", 1)
+      assert.are.same({"Third", "First", "Second"}, menuOrder())
+      assert.are.equal(1, menuItem("Third").index)
+    end)
+
+    it("moves an item down the menu as well as up it", function()
+      label:changeMenuIndex("First", 3)
+      assert.are.same({"Second", "Third", "First"}, menuOrder())
+    end)
+
+    it("raises for an item that is not in the menu", function()
+      assert.has_error(function() label:changeMenuIndex("Nowhere", 1) end)
+    end)
+  end)
+
+  describe("Geyser.Label:styleMenuItems", function()
+    it("restyles the items into the mode it is given", function()
+      local light = getLabelStyleSheet(menuItem("First").name)
+      label:styleMenuItems("dark")
+      local dark = getLabelStyleSheet(menuItem("First").name)
+      assert.are_not.equal(light, dark)
+      assert.are.equal("dark", label.rightClickMenu.Style)
+      -- every item follows, not only the first
+      assert.are.equal(dark, getLabelStyleSheet(menuItem("Third").name))
+      label:styleMenuItems("light")
+      assert.are.equal(light, getLabelStyleSheet(menuItem("First").name))
+    end)
+
+    it("takes a stylesheet of its own, which wins over the mode", function()
+      label:styleMenuItems("dark", "QLabel{ background-color: red; }")
+      assert.are.equal("QLabel{ background-color: red; }", getLabelStyleSheet(menuItem("First").name))
+    end)
+  end)
+
+  describe("Geyser.Label:onRightClick", function()
+    -- a real right click is what normally calls this, with the event table
+    -- Mudlet builds for a label callback, so the specs hand it that table
+    local function mouseEvent(button, x, y)
+      x, y = x or 5, y or 5
+      return {button = button, buttons = {button}, x = x, y = y, globalX = x, globalY = y}
+    end
+
+    it("opens the menu where the click landed", function()
+      label:onRightClick(mouseEvent("RightButton", 7, 9))
+      assert.is_true(windowVisible(menuItem("First").name))
+      -- the click coordinates are local to the label, and the menu is a child
+      -- of it, so the menu lands that far into the label
+      assert.are.equal(label:get_x() + 7, label.rightClickMenu:get_x())
+      assert.are.equal(label:get_y() + 9, label.rightClickMenu:get_y())
+    end)
+
+    it("leaves the menu closed for any other button", function()
+      label:onRightClick(mouseEvent("LeftButton"))
+      assert.is_false(windowVisible(menuItem("First").name))
+    end)
+
+    it("flies the menu out to the left when there is no room on the right", function()
+      local mainWidth = getMainWindowSize()
+      label:move(mainWidth - 20, 10)
+      label:onRightClick(mouseEvent("RightButton", 1, 1))
+      assert.are.equal("L", menuItem("First").flyDir)
+      -- and back out to the right once there is room again
+      label:move(10, 10)
+      label:onRightClick(mouseEvent("RightButton", 1, 1))
+      assert.are.equal("R", menuItem("First").flyDir)
+    end)
+
+    -- unlike clicking a nestable label, which puts its nest away again, a
+    -- second right click moves the menu to where the second click was: it
+    -- closes every level before opening, so the nest it then opens was shut
+    it("reopens the menu at the second click rather than putting it away", function()
+      label:onRightClick(mouseEvent("RightButton", 3, 4))
+      assert.is_true(windowVisible(menuItem("First").name))
+      label:onRightClick(mouseEvent("RightButton", 8, 12))
+      assert.is_true(windowVisible(menuItem("First").name))
+      assert.are.equal(label:get_x() + 8, label.rightClickMenu:get_x())
+      assert.are.equal(label:get_y() + 12, label.rightClickMenu:get_y())
     end)
   end)
 end)

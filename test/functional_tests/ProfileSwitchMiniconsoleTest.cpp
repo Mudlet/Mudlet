@@ -47,6 +47,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -71,14 +72,9 @@ extern "C" {
 #endif
 }
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileSwitchMiniconsoleTest();
+using namespace std::chrono_literals;
 
 class ProfileSwitchMiniconsoleTest : public QObject
 {
@@ -97,11 +93,6 @@ private:
     const QString mMiniconsoleName = qsl("switchSpecMiniconsole");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
-
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
 
@@ -202,8 +193,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForProfileSwitchMiniconsoleTest();
-
         QVERIFY(mConfigDir.isValid());
         // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in that makes setupConfig()
         // adopt it, so this never opens a profile beside the developer's own
@@ -311,20 +300,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileSwitchMiniconsoleTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileSwitchMiniconsoleTest.moc"
-QTEST_MAIN(ProfileSwitchMiniconsoleTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileSwitchMiniconsoleTest)

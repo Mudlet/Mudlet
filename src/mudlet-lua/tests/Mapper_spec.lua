@@ -946,6 +946,31 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.has_error(function() setExit(rA1, rA2, "sideways") end)
     end)
 
+    it("setExit takes the short alias of every direction, whatever its case", function()
+      -- dirToNumber() accepts a one or two letter alias as well as the full
+      -- name, and nothing reached that half of it: every spec here writes a
+      -- full name, and the lockExit/hasExitLock wrappers in Other.lua translate
+      -- their direction to a number before the C++ call ever sees it.
+      local aliases = {
+        {"n", "north"}, {"e", "east"}, {"s", "south"}, {"w", "west"},
+        {"u", "up"}, {"d", "down"}, {"ne", "northeast"}, {"nw", "northwest"},
+        {"se", "southeast"}, {"sw", "southwest"}, {"i", "in"}, {"o", "out"},
+      }
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      local b = createRoomID(); addRoom(b); setRoomArea(b, areaAlpha)
+      for _, pair in ipairs(aliases) do
+        local short, long = pair[1], pair[2]
+        assert.is_true(setExit(a, b, short), short)
+        assert.are.equal(b, getRoomExits(a)[long], short)
+      end
+      -- the direction is lowercased before it is matched, so the aliases are
+      -- as case-insensitive as the full names are
+      local c = createRoomID(); addRoom(c); setRoomArea(c, areaAlpha)
+      assert.is_true(setExit(a, c, "SW"))
+      assert.are.equal(c, getRoomExits(a)["southwest"])
+      deleteRoom(a); deleteRoom(b); deleteRoom(c)
+    end)
+
     it("getAllRoomEntrances lists the rooms that exit into a room", function()
       local entrances = getAllRoomEntrances(rA2)
       assert.is_table(entrances)
@@ -1725,6 +1750,99 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+  describe("Tests the map background and room exit colours", function()
+    local originalBackground, originalRoomExits
+
+    setup(function()
+      originalBackground = {getMapBackgroundColor()}
+      originalRoomExits = {getMapRoomExitsColor()}
+    end)
+
+    teardown(function()
+      setMapBackgroundColor(unpack(originalBackground))
+      setMapRoomExitsColor(unpack(originalRoomExits))
+    end)
+
+    it("setMapBackgroundColor is read back by getMapBackgroundColor", function()
+      assert.is_true(setMapBackgroundColor(12, 34, 56, 78))
+      assert.are.same({12, 34, 56, 78}, {getMapBackgroundColor()})
+    end)
+
+    it("a background set without an alpha is opaque", function()
+      assert.is_true(setMapBackgroundColor(12, 34, 56, 78))
+      assert.is_true(setMapBackgroundColor(9, 8, 7))
+      assert.are.same({9, 8, 7, 255}, {getMapBackgroundColor()})
+    end)
+
+    it("setMapRoomExitsColor is read back by getMapRoomExitsColor", function()
+      -- three components, not four: the exit colour carries no alpha either way
+      assert.is_true(setMapRoomExitsColor(21, 43, 65))
+      assert.are.same({21, 43, 65}, {getMapRoomExitsColor()})
+    end)
+
+    it("a component outside 0-255 is refused and changes nothing", function()
+      assert.is_true(setMapBackgroundColor(10, 20, 30, 40))
+      local rejected = {{-1, 20, 30}, {10, 256, 30}, {10, 20, -5}, {10, 20, 30, 300}}
+      for _, components in ipairs(rejected) do
+        local ok, err = setMapBackgroundColor(unpack(components))
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_truthy(err:find("needs to be between 0-255", 1, true), err)
+      end
+      assert.are.same({10, 20, 30, 40}, {getMapBackgroundColor()})
+
+      assert.is_true(setMapRoomExitsColor(11, 22, 33))
+      local exitsOk, exitsErr = setMapRoomExitsColor(11, 22, 999)
+      assert.is_nil(exitsOk)
+      assert.is_string(exitsErr)
+      assert.are.same({11, 22, 33}, {getMapRoomExitsColor()})
+    end)
+
+    it("a component that is not a number hard-errors", function()
+      assert.has_error(function() setMapBackgroundColor("red", 0, 0) end)
+      assert.has_error(function() setMapRoomExitsColor(0, "green", 0) end)
+    end)
+
+    it("a component too large for an int hard-errors rather than wrapping", function()
+      -- getVerifiedInt() reads a Lua number as a 64 bit integer and refuses one
+      -- that will not fit an int, which is a separate refusal from the type
+      -- check above and from the 0-255 range check: without it the value would
+      -- be truncated into range and silently accepted.
+      local ok, err = pcall(function() setMapBackgroundColor(2 ^ 40, 0, 0) end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
+    end)
+  end)
+
+  describe("Tests setDefaultAreaVisible", function()
+    -- Opened here as well as in the outer setup: the success branch needs the
+    -- mapper widget, and busted can be asked to shuffle these blocks.
+    setup(function()
+      assert.is_true(openMapWidget())
+    end)
+
+    -- The flag itself has no Lua readback: TMap::mShowDefaultArea is read by
+    -- the mapper's area list, the map view's painting and the preferences
+    -- checkbox, and by no Lua function other than this setter's own fixup.
+    -- What a spec can hold onto is therefore the call's own contract.
+    teardown(function()
+      setDefaultAreaVisible(true)
+    end)
+
+    it("reports success while the mapper widget is up", function()
+      assert.is_true(setDefaultAreaVisible(false))
+      -- and again the other way, which must also report success. This does not
+      -- reach the combo box fixup inside: that needs the 2D map parked on the
+      -- default area, and the fixture's rooms are all in named ones.
+      assert.is_true(setDefaultAreaVisible(true))
+    end)
+
+    it("hard-errors when its argument is not a boolean", function()
+      assert.has_error(function() setDefaultAreaVisible("yes") end)
+      assert.has_error(function() setDefaultAreaVisible() end)
+    end)
+  end)
+
   describe("Tests createMapper argument contract", function()
     it("hard-errors when the required coordinate arguments are missing", function()
       assert.has_error(function() createMapper() end)
@@ -1946,6 +2064,8 @@ describe("Tests saveMap and loadMap", function()
   local backupPath = mapDirectory .. "/mapper_spec_backup.dat"
   local savePath = mapDirectory .. "/mapper_spec_roundtrip.dat"
   local brokenXmlPath = getMudletHomeDir() .. "/mapper_spec_broken.xml"
+  local notAMapXmlPath = getMudletHomeDir() .. "/mapper_spec_notamap.xml"
+  local notXmlPath = getMudletHomeDir() .. "/mapper_spec_notxml.xml"
 
   -- saveMap() with no arguments writes a timestamped file of its own choosing,
   -- so the only way to clear up after it is to spot what appeared
@@ -2023,6 +2143,8 @@ describe("Tests saveMap and loadMap", function()
     os.remove(backupPath)
     os.remove(savePath)
     os.remove(brokenXmlPath)
+    os.remove(notAMapXmlPath)
+    os.remove(notXmlPath)
     -- snapshot whatever map the rest of the suite left behind, so that the
     -- teardown can hand it back untouched
     assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
@@ -2037,6 +2159,8 @@ describe("Tests saveMap and loadMap", function()
     os.remove(backupPath)
     os.remove(savePath)
     os.remove(brokenXmlPath)
+    os.remove(notAMapXmlPath)
+    os.remove(notXmlPath)
   end)
 
   describe("Tests the saveMap argument contract", function()
@@ -2111,10 +2235,12 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
-  -- Careful with the order of anything added here: a load that fails still
-  -- empties the map first, both for a missing binary file (TMainConsole::loadMap
-  -- clears before it restores) and for an XML one (TMap::readXmlMapFile clears
-  -- before it parses), so none of these leave a map behind for the next spec.
+  -- Careful with the order of anything added here: a load that fails can still
+  -- have emptied the map first, both for a missing binary file
+  -- (TMainConsole::loadMap clears before it restores) and for a map document
+  -- that will not parse (TMap::readXmlMapFile clears before it parses), so most
+  -- of these leave no map behind for the next spec. A file that is not a map
+  -- document at all is the exception: it is refused before the clear.
   describe("Tests the loadMap argument contract", function()
     it("hard-errors on a path that is not a string", function()
       assert.has_error(function() loadMap({}) end)
@@ -2141,6 +2267,48 @@ describe("Tests saveMap and loadMap", function()
       assert.is_nil(ok)
       assert.is_string(message)
       assert.is_truthy(message:find("failure to import XML map file", 1, true))
+    end)
+
+    it("refuses an XML file that holds no map, keeping the one that is loaded", function()
+      -- what a game with no map to offer answers a map download with: a page
+      -- saying so, which is well-formed XML full of elements the map reader
+      -- does not know. Every one of them parses, so the reader used to count
+      -- that as a successful import - of nothing, over the loaded map.
+      local file = assert(io.open(notAMapXmlPath, "w"))
+      file:write("<html><body>Not found</body></html>")
+      file:close()
+
+      deleteMap()
+      local keeper = createRoomID()
+      addRoom(keeper)
+      assert.is_true(roomExists(keeper))
+
+      local ok, message = loadMap(notAMapXmlPath)
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find("does not contain a map", 1, true))
+      assert.is_true(roomExists(keeper), "the loaded map was thrown away for a file that holds no map")
+    end)
+
+    -- a damaged map file, as against somebody else's document: both are refused before
+    -- the map is cleared, but a player whose own map will not parse needs to be told
+    -- that rather than that the file was never a map
+    it("refuses a file that is not XML at all, keeping the one that is loaded", function()
+      local file = assert(io.open(notXmlPath, "w"))
+      file:write("garbage")
+      file:close()
+
+      deleteMap()
+      local keeper = createRoomID()
+      addRoom(keeper)
+      assert.is_true(roomExists(keeper))
+
+      local ok, message = loadMap(notXmlPath)
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find("damaged or unreadable", 1, true))
+      assert.is_falsy(message:find("does not contain a map", 1, true))
+      assert.is_true(roomExists(keeper), "the loaded map was thrown away for a file that is not XML")
     end)
   end)
 
@@ -2282,6 +2450,218 @@ describe("Tests saveMap and loadMap", function()
       assert.is_true(loadMap(fixtureMap))
       assert.is_false(roomExists(stray))
     end)
+  end)
+
+  -- A real IRE map at full size - 22,854 rooms over 379 areas. Routing is the
+  -- one part of the mapper whose behaviour a small map cannot describe: the
+  -- distance heuristic gives up and returns 1 the moment a route leaves the
+  -- target's area, a one-way exit only matters when there is a second way
+  -- round, and an exit weight only reroutes when there is something to reroute
+  -- onto. See fixtures/maps/README.md for the map's provenance and shape.
+  describe("Tests pathfinding over a full-sized IRE map", function()
+    local archivePath = specDirectory .. "/fixtures/maps/achaea-map.zip"
+    local extractedPath = getMudletHomeDir() .. "/achaea-map.xml"
+    local mapRooms, mapAreas = 22854, 379
+
+    -- Every id below is load-bearing for the reason its name gives, so none of
+    -- them can be swapped for another room that merely also exists.
+    local ashtanWorkshop, cyreneBellTower = 107, 1192   -- 96 steps, 7 areas apart
+    local riparium, blackrock = 6595, 18690             -- the map's long diagonal
+    local mhaldorRoom, eleusisRoom = 4417, 2377         -- no route: different components
+    local cliffTop, cliffFoot = 1201, 9326              -- "down" is one-way
+    local hillside, nimick = 1432, 20646                -- joined by a hidden exit
+    local nimickDetour = 43                             -- steps round it when it is shut
+
+    -- speedWalkDir spells a direction short and getRoomExits spells it long,
+    -- so walking one against the other needs the two put side by side
+    local exitDirectionFor = {n = "north", ne = "northeast", e = "east", se = "southeast",
+                              s = "south", sw = "southwest", w = "west", nw = "northwest",
+                              up = "up", down = "down", ["in"] = "in", out = "out"}
+
+    -- A route of the right length is still wrong if its steps do not join up,
+    -- which comparing lengths alone would not notice.
+    local function routeIsWalkable(from)
+      local current = from
+      for step, direction in ipairs(speedWalkDir) do
+        local expected = tonumber(speedWalkPath[step])
+        local exits = getRoomExits(current)
+        if exits[exitDirectionFor[direction] or direction] ~= expected then
+          return false, ("step %d: %s does not lead from room %d to room %s"):format(step, direction, current, tostring(expected))
+        end
+        current = expected
+      end
+      return true
+    end
+
+    -- Two different libraries answer to the global `zip`: Mudlet asks for
+    -- lua-zip (brimworks) first and falls back to luazip (Kepler), and only
+    -- the latter's entry:read() takes io.read's "*a". brimworks wants a byte
+    -- count and raises "number expected, got string" for anything else, so
+    -- read in fixed chunks, which both understand, until one comes back empty.
+    local function readEntry(entry)
+      local chunks = {}
+      while true do
+        local chunk = entry:read(1024 * 1024)
+        if not chunk or chunk == "" then
+          break
+        end
+        chunks[#chunks + 1] = chunk
+      end
+      return table.concat(chunks)
+    end
+
+    local function areasVisited()
+      local seen, count = {}, 0
+      for _, id in ipairs(speedWalkPath) do
+        local area = getRoomArea(tonumber(id))
+        if not seen[area] then
+          seen[area] = true
+          count = count + 1
+        end
+      end
+      return count
+    end
+
+    setup(function()
+      -- zip is only defined when Mudlet preloaded the module, and lua-zip is a
+      -- required rock on every platform, so a nil here is a broken environment
+      -- rather than a reason to skip the block
+      assert.is_table(zip, "the lua-zip module is missing, so the map fixture cannot be unpacked")
+      local archive, openError = zip.open(archivePath)
+      assert(archive, ("could not open %s: %s"):format(archivePath, tostring(openError)))
+      local entry = assert(archive:open("achaea-map.xml"), "achaea-map.zip does not hold achaea-map.xml")
+      local document = readEntry(entry)
+      entry:close()
+      archive:close()
+      local out = assert(io.open(extractedPath, "wb"))
+      out:write(document)
+      out:close()
+
+      deleteMap()
+      assert.is_true(loadMap(extractedPath))
+      -- an import that quietly did nothing would leave every route below
+      -- failing for a reason that has nothing to do with routing
+      local rooms = 0
+      for _ in pairs(getRooms()) do rooms = rooms + 1 end
+      assert.are.equal(mapRooms, rooms)
+      local areas = 0
+      for _ in pairs(getAreaTable()) do areas = areas + 1 end
+      assert.are.equal(mapAreas, areas)
+    end)
+
+    teardown(function()
+      os.remove(extractedPath)
+    end)
+
+    after_each(function()
+      -- leave the graph as the setup built it even if an assertion above
+      -- stopped a spec before its own clean-up
+      setExitWeight(hillside, "east", 0)
+      setRoomWeight(nimick, 1)
+      lockExit(hillside, "east", false)
+    end)
+
+    it("walks a ninety-six step route across seven areas", function()
+      local ok, weight = getPath(ashtanWorkshop, cyreneBellTower)
+      assert.is_true(ok)
+      assert.are.equal(96, weight)
+      assert.are.equal(96, #speedWalkDir)
+      assert.are.equal(96, #speedWalkPath)
+      assert.are.equal(tostring(cyreneBellTower), speedWalkPath[#speedWalkPath])
+      assert.is_true(routeIsWalkable(ashtanWorkshop))
+      -- how many areas, and which rooms, depend on Qt's per-process hash seed
+      -- ordering the graph's vertices (issue #10181), so only the crossing
+      -- itself is pinned
+      assert.is_true(areasVisited() > 1)
+      assert.are_not.equal(getRoomArea(ashtanWorkshop), getRoomArea(cyreneBellTower))
+    end)
+
+    it("walks the map's long diagonal", function()
+      local ok, weight = getPath(riparium, blackrock)
+      assert.is_true(ok)
+      assert.are.equal(186, weight)
+      assert.are.equal(186, #speedWalkDir)
+      assert.is_true(routeIsWalkable(riparium))
+    end)
+
+    it("reports no route between two rooms the game only joins by ship", function()
+      -- both are ordinary city rooms; MMP has no way to spell the sailing that
+      -- connects them, so the imported graph really is in separate pieces
+      local ok, weight, message = getPath(mhaldorRoom, eleusisRoom)
+      assert.is_false(ok)
+      assert.are.equal(-1, weight)
+      assert.is_string(message)
+    end)
+
+    it("uses a one-way exit in its own direction only", function()
+      assert.are.equal(cliffFoot, getRoomExits(cliffTop)["down"])
+      assert.is_nil(getRoomExits(cliffFoot)["up"])
+
+      assert.is_true(getPath(cliffTop, cliffFoot))
+      assert.are.same({"down"}, speedWalkDir)
+
+      -- the way back exists but has to go the long way round
+      assert.is_true(getPath(cliffFoot, cliffTop))
+      assert.are.equal(6, #speedWalkDir)
+      assert.is_true(routeIsWalkable(cliffFoot))
+    end)
+
+    it("routes through a hidden exit, which imports as a locked door", function()
+      -- a door is a description of the exit, not a block on it: only lockExit
+      -- keeps a route out, which is worth pinning because door type 3 reads
+      -- like it would do the same
+      assert.are.equal(3, getDoors(hillside)["e"])
+      assert.is_true(getPath(hillside, nimick))
+      assert.are.same({"e"}, speedWalkDir)
+    end)
+
+    it("takes the long way round once that exit is locked", function()
+      lockExit(hillside, "east", true)
+      local ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      assert.are.equal(nimickDetour, weight)
+      assert.are.equal(nimickDetour, #speedWalkDir)
+      assert.is_true(routeIsWalkable(hillside))
+    end)
+
+    it("takes an exit weight over the detour only once it costs more than one", function()
+      -- MMP carries no weights, so both routes cost their step count until a
+      -- weight is set here, which is the only way to reach the comparison
+      setExitWeight(hillside, "east", nimickDetour - 23)
+      local ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      assert.are.equal(nimickDetour - 23, weight)
+      assert.are.same({"e"}, speedWalkDir)
+
+      setExitWeight(hillside, "east", nimickDetour + 57)
+      ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      assert.are.equal(nimickDetour, weight)
+      assert.are.equal(nimickDetour, #speedWalkDir)
+      assert.is_true(routeIsWalkable(hillside))
+    end)
+
+    it("charges a room weight for arriving in the room", function()
+      setRoomWeight(nimick, 100)
+      local ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      -- one step still, but it costs what the room asks rather than 1
+      assert.are.same({"e"}, speedWalkDir)
+      assert.are.equal(100, weight)
+    end)
+
+    -- distance_heuristic (src/TAstar.h) returns the euclidean distance between
+    -- two rooms' coordinates, but a diagonal exit costs 1 while moving a room
+    -- north-east moves sqrt(2) in coordinate space. The heuristic therefore
+    -- overestimates, which is what A* is not allowed to do, and the search can
+    -- settle for a route a step longer than the shortest one: room 747 to room
+    -- 42 comes back 93 steps where 92 exist. Flattening the target area's
+    -- coordinates - which makes the heuristic 0 wherever it is consulted -
+    -- returns 92, which is how the cause was pinned down. Left unpinned here
+    -- because it is a defect to fix rather than behaviour to hold still - every
+    -- route this block does pin is the true optimum, checked against a
+    -- breadth-first search, so a fix leaves them green.
+    pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
 
   -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D

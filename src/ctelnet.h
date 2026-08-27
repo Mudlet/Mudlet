@@ -281,6 +281,10 @@ public:
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed = true;
+    // The last round trip that could be measured - a reading taken while Mudlet
+    // was too busy to notice the reply arriving is dropped rather than
+    // published, so this can be older than the last command sent. See
+    // NETWORK_LATENCY_BEAT in ctelnet.cpp:
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
     bool mGA_Driver = false;
@@ -409,8 +413,16 @@ private:
     void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void beginNetworkLatencyMeasurement();
+    void finishNetworkLatencyMeasurement();
+    void abandonNetworkLatencyMeasurement();
     void setKeepAlive(int socketHandle);
     void processChunks();
+
+private slots:
+    void slot_networkLatencyBeat();
+
+private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
@@ -520,13 +532,20 @@ private:
 
     QNetworkReply* mpPackageDownloadReply = nullptr;
 
-    int mCommands = 0;
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
 
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
+    // ctelnet.cpp:
+    QTimer* mpNetworkLatencyBeatTimer = nullptr;
+    qint64 mNetworkLatencyLastBeatNs = 0;
+    // The worst single gap between beats in the measurement running now, not
+    // the stall time accumulated across it:
+    qint64 mNetworkLatencyWorstStallNs = 0;
+
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
     QTimer* mTimerPasswordModeTimeout = nullptr;

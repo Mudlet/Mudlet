@@ -33,6 +33,7 @@
  * Run with: ctest -R MapAreaReassignmentTest -V
  */
 
+#include <QFileInfo>
 #include <QtTest/QtTest>
 
 #include <QElapsedTimer>
@@ -40,6 +41,7 @@
 #include <QSaveFile>
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -49,12 +51,7 @@
 #include "TRoomDB.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForMapAreaReassignmentTest();
+#include "GroupedTest.h"
 
 namespace {
 // Sizes for the reported cost curve: a per-room cost that climbs with them is
@@ -91,6 +88,8 @@ class MapAreaReassignmentTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("MapAreaReassignment-Test");
     QTemporaryDir mSaveDir;
@@ -337,10 +336,24 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForMapAreaReassignmentTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -355,7 +368,15 @@ private slots:
         QVERIFY(map());
     }
 
-    void cleanupTestCase() { deleteProfileDirectory(mProfileName); }
+    void cleanupTestCase()
+    {
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
 
     // The room, its coordinates and its exits all end up where they should.
     void roomChangesArea()
@@ -683,20 +704,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForMapAreaReassignmentTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "MapAreaReassignmentTest.moc"
-QTEST_MAIN(MapAreaReassignmentTest)
+MUDLET_GROUPED_TEST_MAIN(MapAreaReassignmentTest)

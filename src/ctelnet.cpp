@@ -85,6 +85,27 @@ constexpr auto CHARACTER_MODE_DETECT = 3s;
 constexpr auto FAILED_CONNECTION_RETRY_DELAY = 5s;
 constexpr auto FAILED_CONNECTION_RETRY_MAX_DELAY = 60s;
 
+// A latency reading is the wall time between writing a command and reading the
+// game's reply, which measures the network only for as long as Mudlet is there
+// to notice the reply arriving: a client busy right across that arrival reads
+// the reply late and reports its own stall as the ping (#10106). This beat
+// tells the two apart while a reply is outstanding - it is delivered by the
+// event loop, so a beat that comes late says the loop was not running.
+constexpr auto NETWORK_LATENCY_BEAT = 100ms;
+// How large a gap between beats a wait may contain before it counts as having
+// been spent working rather than waiting. It is the whole gap, so it can never
+// be smaller than NETWORK_LATENCY_BEAT: what a beat arriving on time is allowed
+// on top of that is 150ms, longer than scheduling jitter and shorter than a
+// freeze anyone would notice.
+constexpr auto NETWORK_LATENCY_MAX_STALL = 250ms;
+static_assert(NETWORK_LATENCY_MAX_STALL > NETWORK_LATENCY_BEAT, "a reading has to survive beats that arrive on time");
+// A command the game never answers would otherwise leave the next unrelated
+// line it sends - minutes later - being timed as that command's reply, so a
+// measurement unanswered this long is abandoned and nothing is published for
+// it. Set well past any wait still worth calling a ping rather than tight, so
+// that a game which is merely lagging badly still has its lag reported.
+constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
+
 constexpr size_t BUFFER_SIZE = 100000L;
 
 // Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
@@ -186,6 +207,9 @@ void cTelnet::reset()
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
+    // An outstanding measurement belongs to the connection being reset, so the
+    // next connection's first packet must not be taken for its reply
+    abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
 
@@ -942,6 +966,9 @@ void cTelnet::slot_socketDisconnected()
 #endif
     mLookingUpHost = false;
     mPendingConnectionAttempts = 0;
+    // Ahead of the shutdown check below, since the reset() that would otherwise
+    // do it is past that return and a beat has no connection left to time
+    abandonNetworkLatencyMeasurement();
     TEvent event{};
 #if !defined(QT_NO_SSL)
     bool sslerr = false;
@@ -1640,15 +1667,66 @@ bool cTelnet::socketOutRaw(std::string& data)
         written += static_cast<std::size_t>(chunkWritten);
     } while (written < dataLength);
 
-    if (mGA_Driver) {
-        ++mCommands;
-        if (mCommands == 1) {
-            mWaitingForResponse = true;
-            networkLatencyTimer.restart();
-        }
+    // A write made while a measurement is already running does not start
+    // another: the reading belongs to the first write still waiting on a reply
+    if (mGA_Driver && !mWaitingForResponse) {
+        beginNetworkLatencyMeasurement();
     }
 
     return true;
+}
+
+// Starts timing the reply to the write just made - which is not necessarily a
+// command the player typed, since everything Mudlet sends the game leaves
+// through socketOutRaw().
+void cTelnet::beginNetworkLatencyMeasurement()
+{
+    mWaitingForResponse = true;
+    mNetworkLatencyLastBeatNs = 0;
+    mNetworkLatencyWorstStallNs = 0;
+    networkLatencyTimer.restart();
+
+    if (!mpNetworkLatencyBeatTimer) {
+        mpNetworkLatencyBeatTimer = new QTimer(this);
+        mpNetworkLatencyBeatTimer->setInterval(NETWORK_LATENCY_BEAT);
+        connect(mpNetworkLatencyBeatTimer, &QTimer::timeout, this, &cTelnet::slot_networkLatencyBeat);
+    }
+    mpNetworkLatencyBeatTimer->start();
+}
+
+void cTelnet::slot_networkLatencyBeat()
+{
+    const qint64 nowNs = networkLatencyTimer.nsecsElapsed();
+    mNetworkLatencyWorstStallNs = std::max(mNetworkLatencyWorstStallNs, nowNs - mNetworkLatencyLastBeatNs);
+    mNetworkLatencyLastBeatNs = nowNs;
+
+    if (std::chrono::nanoseconds(nowNs) >= NETWORK_LATENCY_TIMEOUT) {
+        abandonNetworkLatencyMeasurement();
+    }
+}
+
+// The reply to the timed write has been read: publish how long it took, but
+// only if Mudlet kept up with its event loop for the whole wait. A reading
+// taken across a stall cannot say what share of the wait was the network's, and
+// the previous - measured - reading is a better answer than one that is mostly
+// the stall (#10106).
+void cTelnet::finishNetworkLatencyMeasurement()
+{
+    const qint64 nowNs = networkLatencyTimer.nsecsElapsed();
+    const qint64 stallNs = std::max(mNetworkLatencyWorstStallNs, nowNs - mNetworkLatencyLastBeatNs);
+    abandonNetworkLatencyMeasurement();
+
+    if (std::chrono::nanoseconds(stallNs) <= NETWORK_LATENCY_MAX_STALL) {
+        networkLatencyTime = nowNs / 1'000'000'000.0;
+    }
+}
+
+void cTelnet::abandonNetworkLatencyMeasurement()
+{
+    mWaitingForResponse = false;
+    if (mpNetworkLatencyBeatTimer) {
+        mpNetworkLatencyBeatTimer->stop();
+    }
 }
 
 void cTelnet::checkNAWS()
@@ -2692,9 +2770,9 @@ void cTelnet::sendMNESValue(const QString& var, const QMap<QString, QPair<bool, 
         }
     } else {
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
-        // USERVAR, or IAC SE) then that variable is undefined.
+        // USERVAR, or IAC SE) then that variable is undefined. A VAL with nothing
+        // after it would instead say the variable is defined and merely empty.
         output += prepareNewEnvironData(var).toStdString();
-        output += NEW_ENVIRON_VAL;
 
         qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
     }
@@ -3739,8 +3817,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
         option = telnetCommand[2];
 
-        // NEW_ENVIRON
-        if (option == OPT_NEW_ENVIRON && enableNewEnviron) {
+        // NEW_ENVIRON. The negotiated flag alone is not enough: turning the
+        // preference off mid-session leaves the option negotiated, and answering
+        // a SEND then hands the game the variables the player just withheld. The
+        // INFO path gates on the same pair, so both halves stop together.
+        if (option == OPT_NEW_ENVIRON && enableNewEnviron && mpHost->mEnableNEWENVIRON) {
             QByteArray payload = QByteArray::fromRawData(telnetCommand.c_str(), telnetCommand.size());
 
             if (telnetCommand.size() < 6) {
@@ -3861,10 +3942,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (telnetCommand.size() < 6) {
                 return;
             }
-
-            rawData = rawData.replace(TN_BELL, QByteArray("\\\\007"));
-
-            rawData = rawData.replace("\x1b", QByteArray("\\\\027"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
@@ -5314,13 +5391,6 @@ void cTelnet::slot_processReplayChunk()
 
         if (recvdGA) {
             mGA_Driver = true;
-            if (mCommands > 0) {
-                mCommands--;
-                if (networkLatencyTimer.elapsed() > 2000) {
-                    mCommands = 0;
-                }
-            }
-
             cleandata.push_back('\n');
             recvdGA = false;
             gotPrompt(cleandata);
@@ -5353,8 +5423,7 @@ void cTelnet::slot_socketReadyToBeRead()
     }
 
     if (mWaitingForResponse) {
-        networkLatencyTime = networkLatencyTimer.elapsed() / 1000.0;
-        mWaitingForResponse = false;
+        finishNetworkLatencyMeasurement();
     }
 
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
@@ -5636,14 +5705,6 @@ Some data loss is likely - please mention this problem to the game admins.)",
         if (recvdGA) {
             if (!mFORCE_GA_OFF) {
                 mGA_Driver = true;
-
-                if (mCommands > 0) {
-                    mCommands--;
-
-                    if (networkLatencyTimer.elapsed() > 2000) {
-                        mCommands = 0;
-                    }
-                }
 
                 cleandata.push_back('\xff');
                 recvdGA = false;

@@ -2036,8 +2036,8 @@ end)
 
 describe("getNetworkLatency", function()
   it("reports zero on a profile whose game socket has never been timed", function()
-    -- The latency is measured between a command going out and the prompt that
-    -- answers it, and nothing in the suite connects the game socket - so the
+    -- The latency is measured between a command going out and the game's reply
+    -- being read, and nothing in the suite connects the game socket - so the
     -- untouched value is what this reads, which is also what pins it to the
     -- right member. A meaningful reading needs a game server.
     local latency = getNetworkLatency()

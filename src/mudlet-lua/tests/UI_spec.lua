@@ -3998,6 +3998,82 @@ describe("Window and label state", function()
     end
   end)
 
+  -- setLabelStyleSheet() replaces the label's whole stylesheet, so the colour
+  -- setBackgroundColor() asked for has to be held somewhere that survives it
+  describe("label background colour against the stylesheet", function()
+    local created = {}
+
+    local function label(base, fillBg)
+      local labelName = name(base)
+      createLabel(labelName, 10, 10, 60, 30, fillBg)
+      created[#created + 1] = labelName
+      return labelName
+    end
+
+    after_each(function()
+      for _, labelName in ipairs(created) do
+        deleteLabel(labelName)
+      end
+      created = {}
+    end)
+
+    it("survives a stylesheet that carries no background of its own", function()
+      local target = label("wlsBgKeep", 1)
+      setBackgroundColor(target, 10, 20, 30, 255)
+      setLabelStyleSheet(target, "qproperty-alignment: 'AlignHCenter';")
+      assert.are.same({10, 20, 30, 255}, {getBackgroundColor(target)})
+    end)
+
+    it("keeps a fully transparent background transparent across a stylesheet", function()
+      local target = label("wlsBgTransparent", 1)
+      setBackgroundColor(target, 0, 0, 0, 0)
+      setLabelStyleSheet(target, "padding: 2px;")
+      assert.are.same({0, 0, 0, 0}, {getBackgroundColor(target)})
+    end)
+
+    it("lets a background in the stylesheet be overridden afterwards", function()
+      local target = label("wlsBgOverride", 1)
+      setLabelStyleSheet(target, "background-color: rgb(1, 2, 3);")
+      setBackgroundColor(target, 40, 50, 60, 255)
+      assert.are.same({40, 50, 60, 255}, {getBackgroundColor(target)})
+      assert.are.equal("background-color: rgba(40, 50, 60, 255);", getLabelStyleSheet(target))
+    end)
+
+    it("keeps reporting the colour that was set, not one a stylesheet brought", function()
+      local target = label("wlsBgFromStyleSheet", 1)
+      setBackgroundColor(target, 40, 50, 60, 255)
+      setLabelStyleSheet(target, "background-color: rgb(11, 22, 33);")
+      assert.are.same({40, 50, 60, 255}, {getBackgroundColor(target)})
+    end)
+
+    it("survives resetLinkStyle", function()
+      local target = label("wlsBgLinkStyle", 1)
+      setBackgroundColor(target, 10, 20, 30, 255)
+      setLinkStyle(target, "red", "blue", true)
+      resetLinkStyle(target)
+      assert.are.same({10, 20, 30, 255}, {getBackgroundColor(target)})
+    end)
+
+    it("leaves selection-background-color alone", function()
+      local target = label("wlsBgSelection", 1)
+      setLabelStyleSheet(target, "selection-background-color: rgb(1, 2, 3);")
+      setBackgroundColor(target, 70, 80, 90, 255)
+      assert.are.equal("selection-background-color: rgb(1, 2, 3);\nbackground-color: rgba(70, 80, 90, 255);", getLabelStyleSheet(target))
+    end)
+
+    -- fillBg = 0 reads like "start transparent" and does not do that: honouring it
+    -- would turn every such label in an installed script transparent
+    it("starts a label asked not to fill its background on the same grey", function()
+      local target = label("wlsBgNoFill", 0)
+      assert.are.same({32, 32, 32, 255}, {getBackgroundColor(target)})
+    end)
+
+    it("starts a label that fills its background on the default grey", function()
+      local target = label("wlsBgFill", 1)
+      assert.are.same({32, 32, 32, 255}, {getBackgroundColor(target)})
+    end)
+  end)
+
   describe("label callback setters", function()
     local label = name("wlsCallbackLabel")
 
@@ -5667,6 +5743,70 @@ describe("Console buffer size", function()
     local lineCount = getLineCount(console)
     assert.is_true(lineCount >= 290, "line count was " .. lineCount)
     assert.is_true(lineCount <= 310, "line count was " .. lineCount)
+  end)
+
+  -- The trim is what tells scripts their saved line indexes have moved, and
+  -- sysBufferShrinkEvent is the only way they can hear about it: it names the
+  -- console the lines went from and says how many went.
+  it("raises sysBufferShrinkEvent naming the window the lines went from", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 10))
+    local seen = {}
+    local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
+      seen[#seen + 1] = {window = windowName, removed = removedLines}
+    end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
+    for lineNumber = 1, 200 do
+      echo(console, ("shrink line %d\n"):format(lineNumber))
+    end
+    killAnonymousEventHandler(handlerId)
+    local named = 0
+    for _, event in ipairs(seen) do
+      if event.window == console then
+        named = named + 1
+        -- the count arrives as a number, not as the text it is built from
+        assert.are.equal("number", type(event.removed))
+        assert.are.equal(10, event.removed)
+      end
+    end
+    assert.is_true(named > 0, ("%d trims were announced, none of them naming %s"):format(#seen, console))
+  end)
+
+  -- The count the event carries is the amount every surviving index moved by.
+  -- The cursor moveCursor() sets is not moved with them: it keeps the index it
+  -- was given rather than following the line it was parked on. The engine's own
+  -- cursor is left behind too, but no Lua call reads that one back. That is the
+  -- known limitation the event exists to work around, so a script that ignores
+  -- it is left pointing at whatever text has since moved under its index.
+  it("shifts the lines under a saved index down by the count the event reports", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 10))
+    for lineNumber = 1, 90 do
+      echo(console, ("kept line %d\n"):format(lineNumber))
+    end
+    local savedIndex = getLastLineNumber(console) - 20
+    local savedText = getLines(console, savedIndex, savedIndex + 1)[1]
+    assert.is_truthy(savedText and savedText:find("kept line", 1, true), tostring(savedText))
+    moveCursor(console, 0, savedIndex)
+    local trimmed = 0
+    local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
+      if windowName == console then
+        trimmed = trimmed + removedLines
+      end
+    end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
+    for lineNumber = 1, 35 do
+      echo(console, ("filler line %d\n"):format(lineNumber))
+    end
+    killAnonymousEventHandler(handlerId)
+    assert.is_true(trimmed > 0, "the buffer never trimmed, so nothing moved")
+    assert.are_not.equal(savedText, getLines(console, savedIndex, savedIndex + 1)[1])
+    assert.are.equal(savedText, getLines(console, savedIndex - trimmed, savedIndex - trimmed + 1)[1])
+    -- the cursor stayed on the index it was given, not on the line it was on
+    assert.are.equal(savedIndex, getLineNumber(console))
+    moveCursor(console, 0, savedIndex - trimmed)
+    selectCurrentLine(console)
+    assert.are.equal(savedText, getSelection(console))
   end)
 
   it("useMaximum raises the main console to the buffer maximum", function()
