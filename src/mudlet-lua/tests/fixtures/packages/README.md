@@ -30,5 +30,8 @@ deliberately.
 | `mudlet-spec-noconfig` | archive with a package XML but no `config.lua`, so the name comes from the file name |
 | `mudlet-spec-emptyarchive` | archive with neither `config.lua` nor a package XML |
 | `mudlet-spec-notazip.mpackage` | not a zip archive at all, for the unpacking error path |
+| `mudlet-spec-badxml` | archive whose package XML is truncated, so the import fails after the package is registered |
+| `mudlet-spec-renamer` | archive whose `config.lua` installs it under a different name (`mudlet-spec-renamed`) than the file it came in |
+| `mudlet-spec-renamer2` | the same installed name as `mudlet-spec-renamer` but different details, so a refused install's effect on them is observable |
 | `sources/mudlet-spec-xmlonly` | bare package XML, installed without any archive around it |
 | `sources/mudlet-spec-colorfilter` | bare package XML with colour-pattern and perl children under filter parents; the colour children are the part no Lua API can build |

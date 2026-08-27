@@ -204,7 +204,7 @@ local function installUntilRefused(install, path)
     end
     pumpEvents(400 * attempt)
   end
-  assert.is_true(false, "the install was postponed instead of being answered")
+  assert.is_true(false, "the install was never refused - it was carried out, or postponed three times over")
 end
 
 -- reloadModule() is postponed the same way and then quietly dropped, so ask
@@ -318,16 +318,42 @@ describe("Tests the functionality of installPackage", function()
   it("returns nil+msg for a file that is not there", function()
     local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-there-is-no-such-package.mpackage")
     assert.is_true(contains(err, "could not open file"), tostring(err))
+    -- the quoting has to close, or the reason runs into whatever follows it
+    assert.is_true(contains(err, "mudlet-spec-there-is-no-such-package.mpackage'"),
+                   "the reason did not name the file it could not open, in closed quotes: " .. tostring(err))
   end)
 
   it("returns nil+msg for a file that is not a zip archive", function()
-    -- the failed unpacking still creates the destination folder; drop it so the
-    -- profile is left exactly as it was found
-    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
-
     local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
     assert.is_true(contains(err, "could not unzip package"), tostring(err))
     assert.is_false(packageInstalled("mudlet-spec-notazip"))
+    -- the destination folder is made before the unpacking discovers the file is
+    -- not an archive, so a failure that walks away from it strands a folder in
+    -- the profile under the archive's name (#9654)
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-notazip"),
+                    "the failed unpacking stranded the folder it had made in the profile")
+  end)
+
+  it("leaves a folder that was already in the profile alone when the unpacking fails", function()
+    -- the archive's own file name decides where it unpacks, so an archive named
+    -- after a folder the profile already has - "map", "log", or anything else
+    -- the user put there - unpacks straight into it. A failure that then cleans
+    -- up after itself must only take away a folder it made itself.
+    local standIn = getMudletHomeDir() .. "/mudlet-spec-notazip"
+    local occupant = standIn .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(standIn)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write("the install did not make this folder, so it may not remove it")
+    file:close()
+    defer(function()
+      os.remove(occupant)
+      lfs.rmdir(standIn)
+    end)
+
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+    assert.is_true(contains(err, "could not unzip package"), tostring(err))
+    assert.is_true(fileExists(occupant), "the failed install deleted a folder that was in the profile before it ran")
   end)
 
   it("hands a script the reason instead of announcing it on the main console", function()
@@ -335,8 +361,6 @@ describe("Tests the functionality of installPackage", function()
     -- through the interface, because most of those callers drop it. A script's
     -- install passes quiet and is handed the reason back instead, so nothing must
     -- appear in the message area for it to talk over.
-    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
-
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
@@ -964,6 +988,78 @@ describe("Tests installing one name as both a package and a module", function()
     assert.is_false(packageInstalled(moduleName))
     assert.is_true(moduleInstalled(moduleName), "the module that refused the package was removed by the refusal")
     assert.equals(1, exists(moduleName .. " alias", "alias"), "the installed module lost its alias to the refusal")
+  end)
+
+  -- The two refusals above run on the name the archive's file has. An archive
+  -- carrying a config.lua is renamed to whatever that file says straight after,
+  -- so an archive under any other name reached the registration with a name the
+  -- refusals never saw - and installed the combination they exist to prevent.
+  local renamerArchive = fixtureDirectory .. "/mudlet-spec-renamer.mpackage"
+  local otherRenamerArchive = fixtureDirectory .. "/mudlet-spec-renamer2.mpackage"
+  local renamedTo = "mudlet-spec-renamed"
+
+  local function installRenamerAsPackage()
+    defer(function() removeFixturePackage(renamedTo) end)
+    installUntilConfirmed(installPackage, renamerArchive, function() return packageInstalled(renamedTo) end,
+                          "the renaming fixture as a package")
+  end
+
+  local function copyOfRenamerInTheProfile()
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(renamerArchive, path)
+    return path
+  end
+
+  it("refuses a module whose config.lua renames it onto an installed package", function()
+    installRenamerAsPackage()
+
+    local reason = installUntilRefused(installModule, copyOfRenamerInTheProfile())
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_true(contains(reason, renamedTo), "the refusal named the file rather than the name it would have taken: " .. tostring(reason))
+    assert.is_false(moduleInstalled(renamedTo), "the module was registered under the name its config.lua asked for")
+    assert.is_true(packageInstalled(renamedTo), "the package that refused the module was removed by the refusal")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed package lost its alias to the refusal")
+  end)
+
+  it("refuses a package whose config.lua renames it onto an installed module", function()
+    local path = copyOfRenamerInTheProfile()
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module")
+
+    local reason = installUntilRefused(installPackage, otherRenamerArchive)
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(renamedTo), "the package was registered under the name its config.lua asked for")
+    assert.is_true(moduleInstalled(renamedTo), "the module that refused the package was removed by the refusal")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed module lost its alias to the refusal")
+  end)
+
+  it("takes the folder a refused install unpacked away with it", function()
+    installRenamerAsPackage()
+    -- the archive unpacks under its own file name and is only renamed to the
+    -- name in its config.lua once the checks have passed, so a refusal leaves a
+    -- folder behind under the file's name unless it is cleaned up (#9654)
+    installUntilRefused(installModule, copyOfRenamerInTheProfile())
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the refused install stranded the folder it unpacked in the profile")
+  end)
+
+  it("leaves the details of the package that refused an install alone", function()
+    installRenamerAsPackage()
+    assert.equals("1.0", getPackageInfo(renamedTo, "version"), "the fixture did not install with the version its config.lua gives")
+
+    -- reading the details is what tells the install its new name, so by the time
+    -- it is refused the refused archive's details have already been filed under
+    -- the name it was asking for
+    local reason = installUntilRefused(installPackage, otherRenamerArchive)
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.equals("1.0", getPackageInfo(renamedTo, "version"),
+                  "the refused install left the installed package describing the one it turned away")
   end)
 end)
 

@@ -2306,7 +2306,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 
     QFile file(actualFileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        return fail(qsl("could not open file '%1").arg(actualFileName));
+        return fail(qsl("could not open file '%1'").arg(actualFileName));
     }
 
     QString packageName = sanitizePackageName(fileName);
@@ -2372,6 +2372,20 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return fail(qsl("could not create destination folder"));
         }
         QString folderThisInstallMade = destinationAlreadyExisted ? QString() : QDir(_dest).absolutePath();
+        // Only ever remove the folder this install made: the name comes from the
+        // archive's own file name, so one named after a folder the profile
+        // already has ("map", "log") unpacks straight into it, and removeDir()
+        // takes everything below what it is given. The path check is a backstop
+        // for a name that ever escapes the profile - sanitizePackageName() keeps
+        // it to one path section today, so nothing reaches it yet.
+        auto discardTheFolderThisInstallMade = [this, &folderThisInstallMade, &_home]() {
+            const QString profileHome = QDir(_home).absolutePath();
+            if (folderThisInstallMade.isEmpty() || !folderThisInstallMade.startsWith(profileHome + QLatin1Char('/'))) {
+                return false;
+            }
+            removeDir(folderThisInstallMade, folderThisInstallMade);
+            return true;
+        };
 
         // Skip the unpacking dialog for modules created from UI, and for
         // script-initiated installs (passed via quiet) to avoid stealing
@@ -2390,6 +2404,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             emit signal_hideUnpackingProgress();
         }
         if (!unzipSuccessful) {
+            discardTheFolderThisInstallMade();
             return fail(qsl("could not unzip package"));
         }
 
@@ -2403,18 +2418,41 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // before we start importing xmls in, see if the config.lua manifest file exists
         // - if it does, update the packageName from it
         if (_dir.exists(qsl("config.lua"))) {
+            // readPackageConfig() files the archive's own details under the name it
+            // reads out of it, and the refusals below then turn that archive away -
+            // so what it overwrote has to go back, or a refused install leaves the
+            // package that refused it describing the one it turned down.
+            const QMap<QString, QMap<QString, QString>> packageInfoBeforeConfig = mPackageInfo;
+            const QMap<QString, QMap<QString, QString>> moduleInfoBeforeConfig = mModuleInfo;
+            auto refuseTheRenamedInstall = [&, this](const QString& reason) {
+                mPackageInfo = packageInfoBeforeConfig;
+                mModuleInfo = moduleInfoBeforeConfig;
+                discardTheFolderThisInstallMade();
+                return fail(reason);
+            };
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
             readPackageConfig(_dir.absoluteFilePath(qsl("config.lua")), packageName, thing != enums::PackageModuleType::Package);
-            // now that the packageName changed, redo relevant checks to make sure it's still valid
+            // now that the packageName changed, redo relevant checks to make sure it's still valid.
+            // The refusal further up only ever saw the archive's own file name, and
+            // config.lua has just renamed this to anything it likes - so ask again
+            // about the half it did not check, or any archive at all installs over
+            // the other half's name and an uninstall then takes both halves' items.
             if (thing != enums::PackageModuleType::Package) {
                 if (mActiveModules.contains(packageName)) {
                     uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
                 }
+                if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
+                    //: %1 is the name of the package that is already installed
+                    return refuseTheRenamedInstall(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+                }
             } else {
                 if (mInstalledPackages.contains(packageName)) {
                     // cleanup and quit if already installed
-                    removeDir(_dir.absolutePath(), _dir.absolutePath());
-                    return fail(qsl("package %1 is already installed").arg(packageName));
+                    return refuseTheRenamedInstall(qsl("package %1 is already installed").arg(packageName));
+                }
+                if (!mIsProfileLoadingSequence && mInstalledModules.contains(packageName)) {
+                    //: %1 is the name of the module that is already installed
+                    return refuseTheRenamedInstall(tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
                 }
             }
             // continuing, so update the folder name on disk
@@ -2478,16 +2516,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // for a module whose name is already in mInstalledModules on the way in
         // (profile loading, and installModule() over a stale entry, both do that).
         if (!registeredFromArchive) {
-            // Only ever remove the folder this install made, and only if it is
-            // inside the profile: the package name can come out empty (a file
-            // called ".mpackage"), name a folder of the user's ("map"), or be
-            // whatever an untrusted archive's config.lua says (".." - the folder
-            // holding every profile), and removeDir() takes everything below what
-            // it is given.
-            const QString profileHome = QDir(mudlet::getMudletPath(enums::profileHomePath, getName())).absolutePath();
-            if (!folderThisInstallMade.isEmpty() && folderThisInstallMade.startsWith(profileHome + QLatin1Char('/'))) {
-                removeDir(folderThisInstallMade, folderThisInstallMade);
-            } else {
+            if (!discardTheFolderThisInstallMade()) {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
             }
             return fail(qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName));
@@ -2760,14 +2789,13 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mInstalledModules.remove(packageName);
         mModulesLoadedOk.remove(packageName);
         mActiveModules.removeAll(packageName);
-        //if ModuleSync, this is a temporary uninstall for reloading so we exit here
-        if (thing == enums::PackageModuleType::ModuleSync) {
-            return true;
-        }
     } else {
         mInstalledPackages.removeAll(packageName);
     }
 
+    // Before the ModuleSync exit, not after: a sync destroys both halves' items
+    // just the same, so leaving the other half listed for the reload to step
+    // over would hand the user a package with nothing in it and no word of why.
     if (installedBothWays) {
         // take the half that was not named away as well: leaving it listed would
         // offer the user something the uninstall above has already emptied
@@ -2778,6 +2806,11 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         removePackageInfo(packageName, !isModule);
         //: %1 is the name that was installed as both a package and a module
         postMessage(tr("[ ALERT ] - \"%1\" was installed as both a package and a module, so removing it has removed both.").arg(packageName));
+    }
+
+    //if ModuleSync, this is a temporary uninstall for reloading so we exit here
+    if (isModule && thing == enums::PackageModuleType::ModuleSync) {
+        return true;
     }
 
     if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
