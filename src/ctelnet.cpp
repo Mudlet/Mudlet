@@ -3937,9 +3937,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                     // Uninstall the old version, and leave the installed one alone if that is
                     // refused: installing over it fails as "already installed", so the upgrade
-                    // would go missing while the version recorded below claimed otherwise
+                    // would go missing while the version recorded below claimed otherwise. A
+                    // name that is not installed has nothing to refuse and nothing to remove,
+                    // and must not hold the upgrade up.
                     const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-                    if (mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package)) {
+                    const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+                    if (clearedTheWay) {
                         // Download and install the new version
                         mpHost->mServerGUI_Package_version = version;
                         downloadAndInstallGUIPackage(packageName, fileName, url);
@@ -4342,9 +4345,12 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
 
         // Uninstall the old version, and leave the installed one alone if that is
         // refused: installing over it fails as "already installed", so the upgrade
-        // would go missing while the version recorded below claimed otherwise
+        // would go missing while the version recorded below claimed otherwise. A
+        // name that is not installed has nothing to refuse and nothing to remove,
+        // and must not hold the upgrade up.
         const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-        if (mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package)) {
+        const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+        if (clearedTheWay) {
             // Download and install the new version
             mpHost->mServerGUI_Package_version = version;
             downloadAndInstallGUIPackage(packageName, fileName, url);

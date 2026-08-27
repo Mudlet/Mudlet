@@ -2228,9 +2228,21 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
             return fail(qsl("module %1 is already installed").arg(packageName)); //we're already installed
         }
+        // An uninstall takes items away by name alone, so one name installed both
+        // ways loses both halves' items whichever half is removed. A profile saved
+        // before this was refused can still hold the combination and has to go on
+        // loading, so only a fresh install is turned away.
+        if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
+            //: %1 is the name of the package that is already installed
+            return fail(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+        }
     } else {
         if (mInstalledPackages.contains(packageName)) {
             return fail(qsl("package %1 is already installed").arg(packageName));
+        }
+        if (!mIsProfileLoadingSequence && mInstalledModules.contains(packageName)) {
+            //: %1 is the name of the module that is already installed
+            return fail(tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
@@ -2593,22 +2605,26 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     raiseEvent(detailedUninstallEvent);
 
     // The guard at the top cannot see a save that a handler of the events just
-    // raised has started, and from here the package's items are destroyed: a dual
-    // install's restore would then be deferred, report success and do nothing,
-    // leaving the surviving half listed but empty with nothing said. Refusing is
-    // not the answer either - the events above have already told every handler
-    // this uninstall is happening and packages dismantle themselves when they hear
-    // it, generic_mapper by killing every one of its event handlers - so wait the
-    // save out rather than abandon what has been announced.
+    // raised has started, and from here the package's items are destroyed under
+    // whatever that save is reading. Refusing is not the answer either - the
+    // events above have already told every handler this uninstall is happening,
+    // and packages dismantle themselves when they hear it, generic_mapper by
+    // killing every one of its event handlers - so wait the save out rather than
+    // abandon what has been announced.
     if (currentlySavingProfile()) {
         waitForProfileSave();
     }
 
-    // waitForProfileSave() pumps the event loop, so whatever was queued there has
-    // had its turn and this package may be gone already; and a save still running
-    // after all of that is not one to destroy items alongside.
-    const bool stillInstalled = isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName);
-    if (currentlySavingProfile() || !stillInstalled) {
+    // waitForProfileSave() pumps the event loop, so a handler may have taken this
+    // away itself in the meantime. That is the outcome that was asked for, and
+    // reporting it as a refusal would have callers replacing a package skip the
+    // replacement they removed it for.
+    if (!(isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName))) {
+        return true;
+    }
+
+    // a save still running after all of that is not one to destroy items alongside
+    if (currentlySavingProfile()) {
         return false;
     }
 
@@ -2616,11 +2632,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         removePackageInfo(packageName, isModule);
     }
 
-    bool restoredInPlace = false;
-    int dualInstallations = 0;
-    if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName)) {
-        dualInstallations = 1;
-    }
+    // installPackage() no longer lets one name be installed as both a package and
+    // a module, but a profile saved before it refused that can still hold the
+    // combination - and the units below take items away by name alone, so both
+    // halves lose their items whichever one was named.
+    const bool installedBothWays = mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName);
+
     //we check for ModuleFromScript because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
     if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
@@ -2635,65 +2652,37 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mKeyUnit.uninstall(packageName);
     mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
     if (isModule) {
-        //if ModuleSync, this is a temporary uninstall for reloading so we exit here
-        QStringList entry = mInstalledModules[packageName];
         mInstalledModules.remove(packageName);
         mModulesLoadedOk.remove(packageName);
         mActiveModules.removeAll(packageName);
+        //if ModuleSync, this is a temporary uninstall for reloading so we exit here
         if (thing == enums::PackageModuleType::ModuleSync) {
             return true;
         }
-        //if ModuleFromUI/ModuleFromScript, we actually uninstall it.
-        //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
-        if (dualInstallations) {
-            //we're a dual install, reinstalling package
-            mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
-            //get the pre package list so we don't get duplicates
-            //report a failure as the restore not happening, not as an install the user never asked for
-            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); restored) {
-                // the folder belongs to the package just put back, however the module was
-                // installed, and if nothing ever unpacked one there is nothing to take
-                restoredInPlace = true;
-            } else {
-                //: %1 is the module name, %2 is the reason the package sharing that name could not be put back
-                postMessage(tr("[ ERROR ] - Removed module \"%1\", but its package copy could not be restored: %2").arg(packageName, reason));
-            }
-        }
     } else {
         mInstalledPackages.removeAll(packageName);
-        if (dualInstallations) {
-            QStringList entry = mInstalledModules[packageName];
-            //so we don't get denied from installPackage, as the module branch above does for the package
-            mInstalledModules.remove(packageName);
-            mActiveModules.removeAll(packageName);
-            mModulesLoadedOk.remove(packageName);
-            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true); restored) {
-                restoredInPlace = packageUnpacksAFolder(entry[0]);
-                //restore the module edit flag
-                mInstalledModules[packageName] = entry;
-            } else {
-                //: %1 is the package name, %2 is the reason the module sharing that name could not be put back
-                postMessage(tr("[ ERROR ] - Removed package \"%1\", but its module copy could not be restored: %2").arg(packageName, reason));
-                // leaving it listed would offer the user a module whose items the by-name
-                // uninstall destroyed and whose restore never happened
-            }
-        }
     }
+
+    if (installedBothWays) {
+        // take the half that was not named away as well: leaving it listed would
+        // offer the user something the uninstall above has already emptied
+        mInstalledPackages.removeAll(packageName);
+        mInstalledModules.remove(packageName);
+        mModulesLoadedOk.remove(packageName);
+        mActiveModules.removeAll(packageName);
+        removePackageInfo(packageName, !isModule);
+        //: %1 is the name that was installed as both a package and a module
+        postMessage(tr("[ ALERT ] - \"%1\" was installed as both a package and a module, so removing it has removed both.").arg(packageName));
+    }
+
     if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
         mpEditorDialog->doCleanReset();
     }
 
     getActionUnit()->updateAllToolbars();
 
-    // Whatever is left of a dual install owns this folder: a surviving package keeps
-    // the one its own archive unpacked however the module was installed, while a
-    // surviving module keeps only what its own restore put back - a restore from a
-    // bare .xml unpacks nothing, so that folder is still ours to remove. A restore
-    // that failed leaves no half behind to own it either way.
-    if (!restoredInPlace) {
-        const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
-        removeDir(dest, dest);
-    }
+    const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    removeDir(dest, dest);
 
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
     // not to try to write to disk a package/module that just got uninstalled and removed from memory
