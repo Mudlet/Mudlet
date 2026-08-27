@@ -37,6 +37,7 @@
 #include <QScopeGuard>
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "AliasUnit.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -46,12 +47,7 @@
 #include "TLuaInterpreter.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForUnitProcessingDepthTest();
+#include "GroupedTest.h"
 
 class UnitProcessingDepthTest : public QObject
 {
@@ -71,7 +67,9 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForUnitProcessingDepthTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: resolve the config dir to a temporary
         // directory rather than the user's real profiles.
@@ -234,20 +232,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForUnitProcessingDepthTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "UnitProcessingDepthTest.moc"
-QTEST_MAIN(UnitProcessingDepthTest)
+MUDLET_GROUPED_TEST_MAIN(UnitProcessingDepthTest)

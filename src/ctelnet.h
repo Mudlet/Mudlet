@@ -202,6 +202,7 @@ public:
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
+    void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
@@ -280,6 +281,10 @@ public:
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed = true;
+    // The last round trip that could be measured - a reading taken while Mudlet
+    // was too busy to notice the reply arriving is dropped rather than
+    // published, so this can be older than the last command sent. See
+    // NETWORK_LATENCY_BEAT in ctelnet.cpp:
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
     bool mGA_Driver = false;
@@ -302,7 +307,7 @@ public slots:
     void slot_socketConnected();
     void slot_socketDisconnected();
     void slot_socketReadyToBeRead();
-// Not used    void slot_socketError();
+    void slot_socketError();
 #if !defined(QT_NO_SSL)
     void slot_socketSslError(const QList<QSslError>&);
 #endif
@@ -358,6 +363,7 @@ private:
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
+    void handleFailedConnection();
     void forgetGameSuppliedHostState();
     void sendLoginAndPass();
 
@@ -407,8 +413,16 @@ private:
     void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void beginNetworkLatencyMeasurement();
+    void finishNetworkLatencyMeasurement();
+    void abandonNetworkLatencyMeasurement();
     void setKeepAlive(int socketHandle);
     void processChunks();
+
+private slots:
+    void slot_networkLatencyBeat();
+
+private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
@@ -463,6 +477,12 @@ private:
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
     bool mLookingUpHost = false;
+    // How many of the connection attempts started for the current connect - one per address
+    // family the lookup turned up - have yet to succeed or fail.
+    int mPendingConnectionAttempts = 0;
+    // Connects that failed in a row, which is how long the wait before the next automatic retry
+    // is. Reset by a connection being made and by the user connecting or disconnecting.
+    int mFailedConnectionCount = 0;
     // The lookup connectIt() is waiting on, or -1. mHostUrl and mHostPort move
     // on with every connectIt(), so a callback from a lookup a later call
     // superseded would pair its own host name with the newer port.
@@ -512,16 +532,24 @@ private:
 
     QNetworkReply* mpPackageDownloadReply = nullptr;
 
-    int mCommands = 0;
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
 
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
+    // ctelnet.cpp:
+    QTimer* mpNetworkLatencyBeatTimer = nullptr;
+    qint64 mNetworkLatencyLastBeatNs = 0;
+    // The worst single gap between beats in the measurement running now, not
+    // the stall time accumulated across it:
+    qint64 mNetworkLatencyWorstStallNs = 0;
+
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
     QTimer* mTimerPasswordModeTimeout = nullptr;
+    QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;

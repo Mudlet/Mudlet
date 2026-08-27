@@ -1189,6 +1189,34 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(otherLongSoundFile, music[1].name)
   end)
 
+  it("stopMusic stops only the track its table form names", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- stopMusic's table parser had only ever been reached with an argument it
+    -- refuses, so the filter it builds - and the stop it then performs - had
+    -- nothing holding them.
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-table-stopped"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-table-spared"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #getPlayingMusic())
+
+    -- a key that matches nothing stops nothing
+    assert.is_true(stopMusic({key = "busted-music-table-absent"}))
+    assert.equals(2, #getPlayingMusic())
+
+    assert.is_true(stopMusic({key = "busted-music-table-stopped"}))
+    local music = getPlayingMusic()
+    assert.equals(1, #music)
+    assert.equals(otherLongSoundFile, music[1].name)
+    assert.equals("busted-music-table-spared", music[1].key)
+  end)
+
   it("pauseMusic and getPausedMusic take the same key filter", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1274,6 +1302,184 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingVideos())
   end)
 
+  it("the video pause and stop table forms act only on the key they name", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- pauseVideos and stopVideos take a table and nothing else, and every spec
+    -- so far reached their parsers either with an argument they refuse or with
+    -- no argument at all - which is a different branch of the public call that
+    -- never enters the parser. Neither filter had a covering assertion.
+    withVideoLabel()
+    writeSoundFiles()
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.equals(1, #getPlayingVideos())
+
+    -- a filter naming another key leaves the video playing
+    assert.is_true(pauseVideos({key = "busted-video-table-absent"}))
+    assert.equals(1, #getPlayingVideos())
+    assert.equals(0, #getPausedVideos())
+
+    assert.is_true(pauseVideos({key = videoLabel}))
+    assert.equals(0, #getPlayingVideos())
+    assert.equals(1, #getPausedVideos())
+
+    -- resumed by playing the same file again, so the stop below has something
+    -- left to stop
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals(1, #getPlayingVideos())
+
+    assert.is_true(stopVideos({key = "busted-video-table-absent"}))
+    assert.equals(1, #getPlayingVideos())
+
+    assert.is_true(stopVideos({key = videoLabel}))
+    assert.equals(0, #getPlayingVideos())
+  end)
+
+  it("a video asked to close takes its label off screen when it ends", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- close = true asks for the label the video is drawn into to be taken back
+    -- when the track ends, and no other spec passes it - so without this one
+    -- TMedia never reaches the emit behind it. What TMainConsole does with that
+    -- is hide the label, not the video widget on it, which is why windowVisible
+    -- can see the far end of the wire at all: cut the emit or the connect and
+    -- the assertion below stays true.
+    withVideoLabel()
+    writeSoundFiles()
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel, tag = "busted-video-close", close = true}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.equals(1, #getPlayingVideos())
+    assert.is_true(windowVisible(videoLabel), "the label was off screen while the video played, so hiding it again could not be observed")
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    -- Waited on by tag, not by count: nothing says the only ending this handler
+    -- hears is this spec's, and a wait for one event would return on someone
+    -- else's and then look for a tag that has not arrived yet.
+    local ended
+    for _ = 1, 5 do
+      for _, event in ipairs(finished) do
+        if event.tag == "busted-video-close" then
+          ended = event
+        end
+      end
+      if ended then
+        break
+      end
+      waitForEvent("sysMediaFinished", 1000)
+    end
+    assert.is_not_nil(ended, "the video that asked to close raised no sysMediaFinished of its own")
+    assert.equals(longSoundFile, ended.file)
+    assert.equals("video", ended.mediaType)
+    assert.equals(videoLabel, ended.key)
+
+    -- The ending is announced from inside the stop, but the hide is not: it runs
+    -- a turn later from the deferred release, so it needs a wait of its own.
+    local hidden = false
+    for _ = 1, 10 do
+      if not windowVisible(videoLabel) then
+        hidden = true
+        break
+      end
+      pumpEvents(100)
+    end
+    assert.is_true(hidden, "a stopped video left its label on screen: TMedia::signal_hideVideoOutput no longer reaches TMainConsole::hideVideoOutput")
+  end)
+
+  it("a video that never asked to close leaves its label on screen", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- The other side of the same gate. Without it, a hide that fired for every
+    -- ending would satisfy the spec above just as well.
+    withVideoLabel()
+    writeSoundFiles()
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(windowVisible(videoLabel))
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    -- Long enough to outlast a deferred turn that ran and did nothing - it is a
+    -- singleShot(0), so a second of event loop is many turns. VideoOutputHideTest
+    -- pins the same case against the release actually having happened, which is
+    -- not observable from here.
+    pumpEvents(1000)
+    assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
+  end)
+
+  it("the closing caption of a stop is printed a turn after the call, not inside it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- TMedia::releaseMediaSourceAfterEvents() ends a playback one event-loop
+    -- turn late, so that a looping track's EndOfMedia can still restart it
+    -- (#9566). No event can see that deferral - on a backend that reports the
+    -- stop synchronously sysMediaFinished is raised from inside the call, and
+    -- on one that does not it merely arrives later - but the closing caption is
+    -- the other half of the same ending, and the deferred turn is what prints
+    -- it. Closed captions are off by default, so turning them on is what makes
+    -- it reachable at all.
+    local captionKey = "busted-caption-deferred"
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+
+    -- Counted by key, not by line delta: the window between mark and the last
+    -- line does receive captions from other specs, because a playback stopped
+    -- in an earlier one prints its own caption a turn later, by which time
+    -- captions are on. The key filter is what keeps those out, so do not
+    -- simplify this into a line count. Counted from the buffer's last line
+    -- rather than from the one after it, too: that line is still open, so the
+    -- first caption completes it instead of starting a line of its own.
+    local mark = getLastLineNumber("main")
+    local function captionCount()
+      local last = getLastLineNumber("main")
+      if last < mark then
+        return 0
+      end
+      local seen = 0
+      for _, line in ipairs(getLines("main", mark, last + 1)) do
+        if line:find(captionKey, 1, true) then
+          seen = seen + 1
+        end
+      end
+      return seen
+    end
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = captionKey}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    -- the opening caption is printed by the same handler that raised the event
+    -- waited for above, so let that turn run out before counting
+    pumpEvents(250)
+    local opened = captionCount()
+    assert.equals(1, opened, "the opening caption did not reach the console")
+
+    assert.is_true(stopSounds())
+    -- checked before anything is waited on: nothing may have printed yet
+    assert.equals(opened, captionCount(), "the closing caption was printed inside the stop instead of a turn later")
+
+    if #finished == 0 then
+      waitForEvent("sysMediaFinished", 5000)
+    end
+    pumpEvents(250)
+    assert.equals(opened + 1, captionCount(), "the deferred turn printed no closing caption")
+  end)
+
   it("playVideoFile starts nothing when its key names no widget to draw into", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1285,6 +1491,178 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(playVideoFile({name = longSoundFile, key = "busted-media-no-such-widget"}))
     assert.equals(0, #getPlayingVideos())
     assert.equals(0, #getPausedVideos())
+  end)
+
+  -- The server's half of the media API. A Client.Media.* GMCP message reaches
+  -- TMedia through a different door from the play*File() calls above: the
+  -- telnet parser hands the subnegotiation to TMedia::parseGMCP(), which picks
+  -- one of the parseJSONForMedia*() readers. Those readers had nothing holding
+  -- them, and they are what decides the media type, the file and the key a
+  -- server-driven playback runs under.
+  --
+  -- Two things shape every spec below. The subnegotiation handler dispatches on
+  -- the option byte alone, so no GMCP negotiation is needed to reach it - which
+  -- is just as well, because these run offline. And GMCP media is tracked in
+  -- player lists of its own, apart from the API's: getPlayingSounds() cannot
+  -- see it and stopSounds() cannot stop it, so each spec has to send its own
+  -- Client.Media.Stop to clean up after itself.
+  local function feedGmcp(message)
+    local ok, err = feedTelnet("<T_IAC><T_SB><O_GMCP>" .. message .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
+  end
+
+  -- Deliberately not feedGmcp(): after_each drains the cleanup list without a
+  -- pcall, so an undo that raised would skip every cleanup registered before it
+  -- and the stops that follow the drain. A refused injection is the spec body's
+  -- problem, not the undo's.
+  local function stopGmcpMediaAfterwards()
+    onCleanup(function() feedTelnet("<T_IAC><T_SB><O_GMCP>Client.Media.Stop {}<T_IAC><T_SE>") end)
+  end
+
+  -- The profile's "accept media from the game" preference gates parseGMCP() and
+  -- has no getConfig key to read it back with, so a profile that has it turned
+  -- off would fail the specs below with nothing but a bare timeout to go on.
+  local gmcpRefused = "no sysMediaStarted for a Client.Media message - is the profile set to accept media from the game?"
+
+  it("a Client.Media.Play message plays the file it names and reports it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-play", "tag": "busted-gmcp-tag"}')
+
+    local event, file, _, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
+    assert.equals(longSoundFile, file)
+    -- a message that names no type is played as a sound
+    assert.equals("sound", mediaType)
+    assert.equals("busted-gmcp-play", key)
+    assert.equals("busted-gmcp-tag", tag)
+
+    -- Pinning today's behaviour, not asserting it is right: the API queries
+    -- filter on the API protocol, so a script cannot see server-driven media at
+    -- all. Unifying the lists one day would fail this deliberately.
+    assert.equals(0, #getPlayingSounds())
+    assert.equals(0, #getPlayingMusic())
+  end)
+
+  it("a Client.Media.Play message that names a type is played as that type", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "music", "key": "busted-gmcp-music"}')
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    local event, _, _, mediaType, key = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
+    assert.equals("music", mediaType)
+    assert.equals("busted-gmcp-music", key)
+
+    -- The event's type is stamped on the request before the list to track it in
+    -- is chosen, so it alone cannot tell a mislabelled track from a misfiled
+    -- one. A typed stop can: it only reaches the list of the type it names.
+    feedGmcp('Client.Media.Stop {"type": "sound"}')
+    pumpEvents(250)
+    assert.equals(0, #finished, "a sound-typed stop reached the music list")
+
+    feedGmcp('Client.Media.Stop {"type": "music"}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-gmcp-music", finished[1].key)
+  end)
+
+  it("a Client.Media.Stop message ends what a Client.Media.Play started", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-stopped"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+    assert.equals(0, #finished)
+
+    feedGmcp("Client.Media.Stop {}")
+    waitForCount("sysMediaFinished", finished, 1)
+    -- the file runs for ten seconds, so a finish this soon is the stop taking
+    -- effect rather than the file running out
+    assert.equals(1, #finished)
+    assert.equals("busted-gmcp-stopped", finished[1].key)
+  end)
+
+  it("a Client.Media.Pause message parks the playback the server started", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-paused"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+
+    -- a key that matches nothing leaves it playing
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-pause-absent"}')
+    pumpEvents(250)
+    assert.equals(0, #paused)
+
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-paused"}')
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #paused)
+    assert.equals("busted-gmcp-paused", paused[1].key)
+  end)
+
+  it("a Client.Media.Pause message with no fields pauses everything the server started", function()
+    -- #10043. Every field parseJSONForMediaPause() reads is optional, and a
+    -- request with none of them set pauses all of the server's media - which is
+    -- what Client.Media.Stop with no fields does for stopping. It never gets
+    -- there: parseGMCP() answers "client.media.stop" above its empty-object
+    -- guard and everything else below it, so an empty Client.Media.Pause is
+    -- dropped without being read at all.
+    pending("#10043: Client.Media.Pause {} is discarded by the empty-object guard in TMedia::parseGMCP()")
+  end)
+
+  it("a Client.Media.Load message fetches the file without playing it", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- the load reader stamps the preload volume, which is what keeps the
+    -- download from being played the moment it lands
+    local downloadName = "busted-gmcp-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    stopGmcpMediaAfterwards()
+
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Load {"name": "' .. downloadName .. '", "url": "' .. fixtureUrl() .. '/media"}')
+    waitForCount("sysDownloadDone", done, 1)
+    assert.equals(1, #done)
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the load did not keep the file it downloaded")
+
+    -- a playback would begin after the download event, and a preload raises no
+    -- sysMediaStarted to wait for, so give the player the turns it would need
+    pumpEvents(1000)
+    assert.equals(0, #started, "a Client.Media.Load played the file it had just fetched")
   end)
 end)
 

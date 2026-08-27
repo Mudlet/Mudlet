@@ -32,6 +32,8 @@
 #include <QRegularExpression>
 #include <QTemporaryFile>
 
+#include <utility>
+
 namespace dblsqd {
 
 Feed::Feed(QObject* parent)
@@ -82,6 +84,16 @@ QString Feed::detectArch()
 QUrl Feed::getUrl() const
 {
     return mUrl;
+}
+
+QString Feed::getOwner() const
+{
+    return mOwner;
+}
+
+QString Feed::getRepo() const
+{
+    return mRepo;
 }
 
 QList<Release> Feed::getReleases() const
@@ -154,7 +166,13 @@ bool Feed::isReady() const
 
 bool Feed::isDownloading() const
 {
-    return mDownloadReply != nullptr && !mDownloadReply->isFinished();
+    // The checksums are fetched before the download request is made, so a
+    // download that has only got that far has no mDownloadReply yet. Counting
+    // that window as downloading is what stops a second downloadRelease() -
+    // the update dialog's automatic download and the twice-daily check both
+    // answer the same ready() - from starting a parallel run of the same
+    // download (#9938)
+    return mChecksumsReply != nullptr || (mDownloadReply != nullptr && !mDownloadReply->isFinished());
 }
 
 void Feed::load()
@@ -258,7 +276,9 @@ void Feed::fetchChecksums(const QUrl& checksumsUrl)
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(30000);
     auto* reply = mNam.get(request);
+    mChecksumsReply = reply;
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        mChecksumsReply = nullptr;
         if (reply->error() != QNetworkReply::NoError) {
             if (mRequireChecksums) {
                 qWarning() << "Failed to fetch checksums:" << reply->errorString() << "- refusing to install an unverifiable download";
@@ -302,19 +322,23 @@ void Feed::makeDownloadRequest(const QUrl& url)
 {
     mDownloadFilePath.clear();
 
-    if (mDownloadReply != nullptr) {
-        if (!mDownloadReply->isFinished()) {
-            disconnect(mDownloadReply);
-            mDownloadReply->abort();
+    // Take the previous reply out of the member before touching it. abort()
+    // delivers finished() synchronously, so handleDownloadFinished() runs
+    // inside the call below and its cleanupDownloadReply() deletes the reply
+    // and clears the member - after which reading mDownloadReply again would
+    // call deleteLater() on a null pointer (#9938). Disconnecting the reply
+    // from this Feed first also keeps that handler, and the download error it
+    // emits, out of an abort this function asked for. The old
+    // disconnect(mDownloadReply) resolved to QObject::disconnect(receiver),
+    // which unhooks signals sent *to* the reply - of which there are none.
+    if (auto* previousReply = std::exchange(mDownloadReply, nullptr)) {
+        previousReply->disconnect(this);
+        if (!previousReply->isFinished()) {
+            previousReply->abort();
         }
-        mDownloadReply->deleteLater();
-        mDownloadReply = nullptr;
+        previousReply->deleteLater();
     }
-    if (mDownloadFile != nullptr) {
-        mDownloadFile->close();
-        mDownloadFile->deleteLater();
-        mDownloadFile = nullptr;
-    }
+    cleanupDownloadFile();
 
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "Mudlet-Updater");
@@ -408,7 +432,10 @@ void Feed::handleDownloadReadyRead()
         if (extensionPos > -1) {
             fileName.insert(extensionPos, qsl("-XXXXXX"));
         }
-        mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/") + fileName);
+        // The prefix is what lets Updater::cleanupStaleUpdateFiles() recognise
+        // these later: the download outlives this object (setAutoRemove(false)
+        // below) and the name comes from the redirect, which is a bare GUID.
+        mDownloadFile = new QTemporaryFile(QDir::tempPath() + qsl("/mudlet-update-") + fileName);
         if (!mDownloadFile->open()) {
             qWarning() << "Failed to create temporary file for download:" << mDownloadFile->errorString();
             //: Error shown when a temporary file cannot be created for the update download. %1 is the system error message.

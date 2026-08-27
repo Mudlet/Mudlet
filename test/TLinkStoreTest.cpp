@@ -39,8 +39,11 @@ private slots:
 
         QStringList links;
 
+        QVERIFY(store.pristine());
+
         store.addLinks(links, links);
         QCOMPARE(store.getCurrentLinkID(), 1);
+        QVERIFY(!store.pristine());
 
         store.addLinks(links, links);
         QCOMPARE(store.getCurrentLinkID(), 2);
@@ -53,6 +56,7 @@ private slots:
 
         store.addLinks(links, links);
         QCOMPARE(store.getCurrentLinkID(), 2);
+        QVERIFY(!store.pristine());
     }
 
     void testMaxId()

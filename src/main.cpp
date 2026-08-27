@@ -64,6 +64,12 @@
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 #include "SentryWrapper.h"
+#ifdef WITH_SENTRY
+// sentry.h and qScopeGuard are used by the shutdown guard below; SentryWrapper.h needs neither, and
+// only this target has sentry's include path, so no other file can take them from it.
+#include <QtCore/qscopeguard.h>
+#include "sentry.h"
+#endif
 #include "utils.h"
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -405,6 +411,10 @@ int main(int argc, char* argv[])
             QStringList() << qsl("o") << qsl("only"), qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
+    // long-only, as -o is taken by --only just above
+    const QCommandLineOption openOffline(qsl("offline"), qsl("Open the profiles loaded at startup without connecting to their game server"));
+    parser.addOption(openOffline);
+
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
     parser.addOption(steamMode);
 
@@ -446,6 +456,10 @@ int main(int argc, char* argv[])
                                                           "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                           "                                    predefined game, may be repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --offline                    open the profiles loaded at startup\n"
+                                                          "                                    without connecting to their game\n"
+                                                          "                                    server."));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --steammode                  adjusts Mudlet settings to match\n"
                                                           "                                    Steam's requirements."));
@@ -522,7 +536,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)", "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
         texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2026  Mudlet developers"));
-        texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv3: GNU GPL version 3 - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "This is free software: you are free to change and redistribute it.\n"
                                                           "There is NO WARRANTY, to the extent permitted by law."));
@@ -623,6 +637,7 @@ int main(int argc, char* argv[])
     }
 
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
+    const bool offlineProfiles = parser.isSet(openOffline);
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
@@ -1084,7 +1099,7 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri, offlineProfiles]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
@@ -1100,7 +1115,7 @@ int main(int argc, char* argv[])
         }
 
         // Always load auto-login profiles first
-        mudlet::self()->startAutoLogin(cliProfiles);
+        mudlet::self()->startAutoLogin(cliProfiles, offlineProfiles);
 
         // Then handle telnet URI if provided
         if (!telnetUri.isEmpty()) {

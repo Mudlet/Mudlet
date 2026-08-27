@@ -143,6 +143,32 @@ void TTextEdit::forceUpdate()
     update();
 }
 
+void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
+{
+    if (firstLine < 0 || lastLine < firstLine) {
+        return;
+    }
+    mDirtyFirstLine = (mDirtyFirstLine < 0) ? firstLine : std::min(mDirtyFirstLine, firstLine);
+    mDirtyLastLine = (mDirtyLastLine < 0) ? lastLine : std::max(mDirtyLastLine, lastLine);
+
+    if (mFontHeight <= 0 || mScreenHeight <= 0) {
+        // Too early to work out where the lines sit, so fall back to the whole
+        // pane rather than leave the change unpainted.
+        update();
+        return;
+    }
+
+    const int lineOffset = imageTopLine();
+    const int top = std::max(0, firstLine - lineOffset);
+    const int bottom = std::min(mScreenHeight - 1, lastLine - lineOffset);
+    if (bottom < top) {
+        // Off-screen for this pane. The range stays recorded because the pane
+        // may scroll onto it before the next paint.
+        return;
+    }
+    update(QRect(0, top * mFontHeight, width(), (bottom - top + 1) * mFontHeight));
+}
+
 void TTextEdit::needUpdate(int y1, int y2)
 {
     if (!mIsTailMode) {
@@ -958,7 +984,9 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
-    painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space || useQtUnderline || useQtOverline || useQtStrikeOut) {
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
     drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
@@ -967,7 +995,6 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
 {
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    QFontMetrics fm(painter.font());
 
     // Calculate decoration positions
     int underlineY = textRect.bottom() - 1;
@@ -1178,14 +1205,26 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // the bottom cell - descenders and underscores do at many font sizes - has
     // somewhere to go instead of being cut off by the edge of the pixmap.
     const int pixmapHeight = (mScreenHeight + 1) * mFontHeight;
-    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, pixmapHeight * dpr);
-    pixmap.setDevicePixelRatio(dpr);
-    pixmap.fill(Qt::transparent);
+    const QSize surfaceSize(static_cast<int>(mScreenWidth * mFontWidth * dpr), static_cast<int>(pixmapHeight * dpr));
+    // Building a pane-sized pixmap costs the same whether one line changed or
+    // all of them did, so it is only done when there is no buffer to reuse -
+    // the pane changed size or resolution, or nothing has been painted yet.
+    bool bufferWasJustCleared = false;
+    if (mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
+        mRenderBuffer = QPixmap(surfaceSize);
+        mRenderBuffer.setDevicePixelRatio(dpr);
+        mRenderBuffer.fill(Qt::transparent);
+        bufferWasJustCleared = true;
+    }
+    QPixmap& pixmap = mRenderBuffer;
 
     QPainter p(&pixmap);
     // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
     p.setFont(painter.font());
-    p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    // Source rather than SourceOver for the cache blits below: they have to
+    // overwrite whatever a reused buffer still holds from an earlier frame, and
+    // over a freshly cleared buffer the two modes produce identical pixels.
+    p.setCompositionMode(QPainter::CompositionMode_Source);
 
     int y_top = r.top() / mFontHeight;
     int y_bottom = r.bottom() / mFontHeight;
@@ -1214,11 +1253,15 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         reusedCachedScreenContent = true;
         from = y_top;
         noScroll = true;
-        if (!mForceUpdate && !mMouseTracking) {
-            noCopy = true;
-        } else {
+        if (mForceUpdate || mMouseTracking) {
             y_bottom = mScreenHeight;
             mScrollVector = 0;
+        } else if (mDirtyFirstLine < 0) {
+            // A purely cosmetic repaint - hover, selection - which must not
+            // overwrite the cached screen with its transient state. A pending
+            // in-place change is the opposite: it HAS to reach the cache, or
+            // the next paint would seed from stale ink and lose it.
+            noCopy = true;
         }
     }
     const int scrolledRows = qAbs(mScrollVector);
@@ -1237,12 +1280,31 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
 
     const int lastRow = mScreenHeight - 1;
-    const int drawFrom = qMax(0, from);
+    int drawFrom = qMax(0, from);
     // One row past the dirty region: the last dirty row's ink can spill into the
     // row below, which would otherwise be left showing the ink of whatever used
     // to be on that last row.
-    const int drawTo = qMin(y_bottom + 1, lastRow);
+    int drawTo = qMin(y_bottom + 1, lastRow);
+    // Rows carrying text that changed where it stands. The cache still holds
+    // their old ink, so they join the band whatever the scroll shortcut decided
+    // - which is what makes recolouring a line cost a line instead of a screen.
+    if (mDirtyFirstLine >= 0) {
+        const int dirtyTop = std::max(0, mDirtyFirstLine - lineOffset);
+        const int dirtyBottom = std::min(lastRow, mDirtyLastLine - lineOffset);
+        if (dirtyBottom >= dirtyTop) {
+            drawFrom = std::min(drawFrom, dirtyTop);
+            drawTo = std::max(drawTo, dirtyBottom);
+        }
+    }
     const bool bottomRowIsRepainted = drawTo == lastRow;
+
+    // Neither cache blit ran, so everything outside the band about to be redrawn
+    // is still the previous frame's ink rather than the transparency a newly
+    // allocated pixmap would have started with.
+    if (!reusedCachedScreenContent && !bufferWasJustCleared) {
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+        p.fillRect(QRect(0, 0, mScreenWidth * mFontWidth, pixmapHeight), Qt::transparent);
+    }
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
@@ -1319,11 +1381,20 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawPixmap(0, 0, pixmap);
     if (!noCopy) {
-        mScreenMap = pixmap;
+        // Swapped rather than assigned: leaving the two sharing one buffer would
+        // make the next paint's QPainter deep-copy the whole surface before it
+        // could draw a single glyph, which is the cost being avoided here.
+        mScreenMap.swap(mRenderBuffer);
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
+    if (!noCopy) {
+        // noCopy left the cache untouched, so the change has not been preserved
+        // anywhere yet and the range has to stay pending for the next paint.
+        mDirtyFirstLine = -1;
+        mDirtyLastLine = -1;
+    }
 
     const bool shouldBeRegistered = shouldRegisterBlinkClient(mEnableBlinkText, mHasBlinkingContent, mIsBlinkClientRegistered, reusedCachedScreenContent);
     if (auto* pMudlet = mudlet::self()) {

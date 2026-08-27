@@ -78,6 +78,34 @@ constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 // cTelnet::checkCharacterModePattern():
 constexpr auto CHARACTER_MODE_DETECT = 3s;
 
+// How long to leave a game alone after a connection attempt to it failed, before
+// trying again for a profile that reconnects automatically. A refused connection
+// comes back at once, so without a wait here the retries are a tight loop. The
+// wait doubles with each failure in a row up to the maximum:
+constexpr auto FAILED_CONNECTION_RETRY_DELAY = 5s;
+constexpr auto FAILED_CONNECTION_RETRY_MAX_DELAY = 60s;
+
+// A latency reading is the wall time between writing a command and reading the
+// game's reply, which measures the network only for as long as Mudlet is there
+// to notice the reply arriving: a client busy right across that arrival reads
+// the reply late and reports its own stall as the ping (#10106). This beat
+// tells the two apart while a reply is outstanding - it is delivered by the
+// event loop, so a beat that comes late says the loop was not running.
+constexpr auto NETWORK_LATENCY_BEAT = 100ms;
+// How large a gap between beats a wait may contain before it counts as having
+// been spent working rather than waiting. It is the whole gap, so it can never
+// be smaller than NETWORK_LATENCY_BEAT: what a beat arriving on time is allowed
+// on top of that is 150ms, longer than scheduling jitter and shorter than a
+// freeze anyone would notice.
+constexpr auto NETWORK_LATENCY_MAX_STALL = 250ms;
+static_assert(NETWORK_LATENCY_MAX_STALL > NETWORK_LATENCY_BEAT, "a reading has to survive beats that arrive on time");
+// A command the game never answers would otherwise leave the next unrelated
+// line it sends - minutes later - being timed as that command's reply, so a
+// measurement unanswered this long is abandoned and nothing is published for
+// it. Set well past any wait still worth calling a ping rather than tight, so
+// that a game which is merely lagging badly still has its lag reported.
+constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
+
 constexpr size_t BUFFER_SIZE = 100000L;
 
 // Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
@@ -142,6 +170,15 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     mTimerPass->setSingleShot(true);
     connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
+    mTimerFailedConnectionRetry = new QTimer(this);
+    mTimerFailedConnectionRetry->setSingleShot(true);
+    connect(mTimerFailedConnectionRetry, &QTimer::timeout, this, &cTelnet::reconnect);
+
+    // Wired here rather than alongside the per-address-family connections in
+    // slot_socketHostFound() because a failure is not particular to either of them:
+    connect(&mSocket_ipV4, &QAbstractSocket::errorOccurred, this, &cTelnet::slot_socketError);
+    connect(&mSocket_ipV6, &QAbstractSocket::errorOccurred, this, &cTelnet::slot_socketError);
+
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
 }
@@ -170,6 +207,9 @@ void cTelnet::reset()
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
+    // An outstanding measurement belongs to the connection being reset, so the
+    // next connection's first packet must not be taken for its reply
+    abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
 
@@ -241,6 +281,9 @@ cTelnet::~cTelnet()
     }
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
+    }
+    if (mTimerFailedConnectionRetry) {
+        mTimerFailedConnectionRetry->stop();
     }
     if (mpPostingTimer) {
         mpPostingTimer->stop();
@@ -533,6 +576,20 @@ void cTelnet::abandonHostLookup()
     }
 }
 
+// cTelnet keeps its own copies of these two Host flags. connectIt() refreshes
+// them per connection, so a profile opened offline - which never gets there -
+// has to take them when it loads, or it parses telnet on the defaults rather
+// than on what the profile saved.
+void cTelnet::cacheHostSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+    mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+}
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     // Set early - before the recursion-on-busy-socket block below - so the
@@ -540,13 +597,16 @@ void cTelnet::connectIt(const QString& address, int port)
     // briefly showing Disconnected during a reconnect.
     mLookingUpHost = true;
 
+    mTimerFailedConnectionRetry->stop();
+    // Cleared before the aborts below so that a socket erroring as it is torn
+    // down cannot be counted against the attempt being started here:
+    mPendingConnectionAttempts = 0;
     // Done before the processEvents() below so that call cannot deliver a
     // result for a server this one has already replaced.
     abandonHostLookup();
 
     if (mpHost) {
-        mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+        cacheHostSettings();
         mCycleCountMTTS = 0;
         newEnvironVariablesSent.clear();
 #if !defined(QT_NO_SSL)
@@ -619,6 +679,12 @@ void cTelnet::connectIt(const QString& address, int port)
 
 void cTelnet::reconnect()
 {
+    // Guarded because this is also what the retry timer calls, and a Host on its way out has no
+    // URL to be asked for:
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+
     // if we've opened the profile offline and wish to connect, the last
     // connection parameters aren't yet set
     if (mHostUrl.isEmpty() || mHostPort == 0) {
@@ -632,6 +698,8 @@ void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
     mLookingUpHost = false;
+    mTimerFailedConnectionRetry->stop();
+    mFailedConnectionCount = 0;
     // There is no socket yet while the name lookup is outstanding, so without
     // this a Disconnect during the lookup is followed by the connection being
     // made anyway when the result arrives.
@@ -650,6 +718,8 @@ void cTelnet::abortConnection()
     // lingering until the (asynchronous) disconnect signal arrives.
     mLookingUpHost = false;
     mDontReconnect = true;
+    mTimerFailedConnectionRetry->stop();
+    mFailedConnectionCount = 0;
     abandonHostLookup();
     if (mpSocket) {
         // One socket is probably active - and has signals connected - but will
@@ -674,13 +744,100 @@ void cTelnet::terminateConnection()
 #endif
 }
 
-// Not used:
-// void cTelnet::slot_socketError()
-// {
-//    auto pSocket = sender();
-//    postMessage(tr("[ ERROR ] - TCP/IP socket ERROR: %1.")
-//                        .arg(pSocket->errorString());
-// }
+// A connection attempt that never reaches the game - refused, unreachable, or timed out - leaves
+// the socket in the unconnected state it started from, and QAbstractSocket::disconnected is only
+// emitted for a socket that had connected. So this is the only notice such a failure ever gets.
+void cTelnet::slot_socketError()
+{
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+
+    auto* pSocket = qobject_cast<QAbstractSocket*>(sender());
+    if (!pSocket || mpSocket) {
+        // A connection that was made and then lost: slot_socketDisconnected() reports that one
+        return;
+    }
+
+    if (pSocket->state() != QAbstractSocket::UnconnectedState) {
+        // The socket did reach the game and is only now on its way down - a secure connection
+        // whose handshake failed, say - so the disconnection is still to be signalled and
+        // reported. Every error that means the game was never reached arrives in the unconnected
+        // state instead, which is what makes this a safe way to tell the two apart.
+        return;
+    }
+
+    if (mPendingConnectionAttempts <= 0 || --mPendingConnectionAttempts > 0) {
+        // Nothing outstanding to report on, or the other address family is still trying: with
+        // both an IPv4 and an IPv6 address to hand only the last one to fail ends the attempt
+        return;
+    }
+
+    if (mDontReconnect) {
+        // The user called this attempt off. Qt gives no way to stop a connection already being
+        // made, so it runs to its end regardless, but its failure is not news to anybody.
+        handleFailedConnection();
+        return;
+    }
+
+    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
+    if (mConnectViaProxy) {
+        /*: %1 is the URL or the IP address (suitably wrapped if it is an IPv6 one) of the Game
+ Server, %2 is the port number and %3 is the reason the connection could not be made,
+ as reported by the operating system, e.g. "Connection refused". The connection that
+ failed was the one to the proxy rather than to the game itself.*/
+        postMessage(tr("[ ERROR ] - Unable to connect to %1:%2 via proxy - %3.\n"
+                       "Check the proxy details entered in the profile preferences.")
+                            .arg(displayAddress, QString::number(mHostPort), pSocket->errorString()));
+    } else {
+        /*: %1 is the URL or the IP address (suitably wrapped if it is an IPv6 one) of the Game
+ Server, %2 is the port number and %3 is the reason the connection could not be made,
+ as reported by the operating system, e.g. "Connection refused".*/
+        postMessage(tr("[ ERROR ] - Unable to connect to %1:%2 - %3.\n"
+                       "Check your internet connection and the details entered for the game server.")
+                            .arg(displayAddress, QString::number(mHostPort), pSocket->errorString()));
+    }
+
+    handleFailedConnection();
+}
+
+// Shared by every way a connection attempt can end without a connection, the player having
+// already been told what went wrong. Nothing was negotiated and no socket was ever adopted, so
+// all that is left of what slot_socketDisconnected() does is telling the rest of Mudlet and any
+// scripts, and trying again for a profile that asked to reconnect automatically.
+void cTelnet::handleFailedConnection()
+{
+    mPendingConnectionAttempts = 0;
+    ++mFailedConnectionCount;
+
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+
+    emit signal_disconnected(mpHost);
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysDisconnectionEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+
+    const bool retry = mAutoReconnect && !mDontReconnect;
+    mDontReconnect = false;
+    if (!retry) {
+        return;
+    }
+
+    // Doubling for each failure in a row, because a game that is down tends to stay down for a
+    // while and a fixed wait would spend the evening announcing that in the middle of whatever
+    // else the player is reading:
+    const auto delay = std::min(FAILED_CONNECTION_RETRY_DELAY * (1 << std::min(mFailedConnectionCount - 1, 5)), FAILED_CONNECTION_RETRY_MAX_DELAY);
+    //: %n is the number of seconds before Mudlet tries the connection again.
+    postMessage(tr("[ INFO ]  - Trying again in %n second(s)...",
+                   // Intentional comment to separate arguments
+                   "",
+                   static_cast<int>(delay.count())));
+    mTimerFailedConnectionRetry->start(delay);
+}
 
 void cTelnet::slot_send_login()
 {
@@ -738,6 +895,13 @@ void cTelnet::slot_socketConnected()
         qDebug() << "cTelnet::slot_socketConnected() - Aborting due to Host shutdown in progress or null Host";
         return;
     }
+
+    mPendingConnectionAttempts = 0;
+    mFailedConnectionCount = 0;
+    // A connection has been made, so whatever ended the last one is spent. Left standing from a
+    // Disconnect pressed while there was nothing to disconnect, it would inhibit the automatic
+    // reconnect after this connection ends and blame that ending on the user.
+    mDontReconnect = false;
 
     // Which socket is this? Once we know, set mpSocket to point at it and
     // disable the other one from doing anything more
@@ -803,6 +967,10 @@ void cTelnet::slot_socketDisconnected()
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
 #endif
     mLookingUpHost = false;
+    mPendingConnectionAttempts = 0;
+    // Ahead of the shutdown check below, since the reset() that would otherwise
+    // do it is past that return and a beat has no connection left to time
+    abandonNetworkLatencyMeasurement();
     TEvent event{};
 #if !defined(QT_NO_SSL)
     bool sslerr = false;
@@ -1103,8 +1271,13 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
         postMessage(tr("[ ERROR ] - Unable to connect to \"%1\".\n"
                        "Check your internet connection and the details entered for the game server.")
                             .arg(mHostUrl));
+        handleFailedConnection();
         return;
     }
+
+    // One connection attempt is started below per address family found, and only the failure of
+    // the last of them to fail is a failure to connect - see slot_socketError():
+    mPendingConnectionAttempts = (hasIPv4_address ? 1 : 0) + (hasIPv6_address ? 1 : 0);
 
     // Report found IP addresses:
     QStringList addressesToReport;
@@ -1498,15 +1671,66 @@ bool cTelnet::socketOutRaw(std::string& data)
         written += static_cast<std::size_t>(chunkWritten);
     } while (written < dataLength);
 
-    if (mGA_Driver) {
-        ++mCommands;
-        if (mCommands == 1) {
-            mWaitingForResponse = true;
-            networkLatencyTimer.restart();
-        }
+    // A write made while a measurement is already running does not start
+    // another: the reading belongs to the first write still waiting on a reply
+    if (mGA_Driver && !mWaitingForResponse) {
+        beginNetworkLatencyMeasurement();
     }
 
     return true;
+}
+
+// Starts timing the reply to the write just made - which is not necessarily a
+// command the player typed, since everything Mudlet sends the game leaves
+// through socketOutRaw().
+void cTelnet::beginNetworkLatencyMeasurement()
+{
+    mWaitingForResponse = true;
+    mNetworkLatencyLastBeatNs = 0;
+    mNetworkLatencyWorstStallNs = 0;
+    networkLatencyTimer.restart();
+
+    if (!mpNetworkLatencyBeatTimer) {
+        mpNetworkLatencyBeatTimer = new QTimer(this);
+        mpNetworkLatencyBeatTimer->setInterval(NETWORK_LATENCY_BEAT);
+        connect(mpNetworkLatencyBeatTimer, &QTimer::timeout, this, &cTelnet::slot_networkLatencyBeat);
+    }
+    mpNetworkLatencyBeatTimer->start();
+}
+
+void cTelnet::slot_networkLatencyBeat()
+{
+    const qint64 nowNs = networkLatencyTimer.nsecsElapsed();
+    mNetworkLatencyWorstStallNs = std::max(mNetworkLatencyWorstStallNs, nowNs - mNetworkLatencyLastBeatNs);
+    mNetworkLatencyLastBeatNs = nowNs;
+
+    if (std::chrono::nanoseconds(nowNs) >= NETWORK_LATENCY_TIMEOUT) {
+        abandonNetworkLatencyMeasurement();
+    }
+}
+
+// The reply to the timed write has been read: publish how long it took, but
+// only if Mudlet kept up with its event loop for the whole wait. A reading
+// taken across a stall cannot say what share of the wait was the network's, and
+// the previous - measured - reading is a better answer than one that is mostly
+// the stall (#10106).
+void cTelnet::finishNetworkLatencyMeasurement()
+{
+    const qint64 nowNs = networkLatencyTimer.nsecsElapsed();
+    const qint64 stallNs = std::max(mNetworkLatencyWorstStallNs, nowNs - mNetworkLatencyLastBeatNs);
+    abandonNetworkLatencyMeasurement();
+
+    if (std::chrono::nanoseconds(stallNs) <= NETWORK_LATENCY_MAX_STALL) {
+        networkLatencyTime = nowNs / 1'000'000'000.0;
+    }
+}
+
+void cTelnet::abandonNetworkLatencyMeasurement()
+{
+    mWaitingForResponse = false;
+    if (mpNetworkLatencyBeatTimer) {
+        mpNetworkLatencyBeatTimer->stop();
+    }
 }
 
 void cTelnet::checkNAWS()
@@ -2552,9 +2776,9 @@ void cTelnet::sendMNESValue(const QString& var, const QMap<QString, QPair<bool, 
         }
     } else {
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
-        // USERVAR, or IAC SE) then that variable is undefined.
+        // USERVAR, or IAC SE) then that variable is undefined. A VAL with nothing
+        // after it would instead say the variable is defined and merely empty.
         output += prepareNewEnvironData(var).toStdString();
-        output += NEW_ENVIRON_VAL;
 
         qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
     }
@@ -3599,8 +3823,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
         option = telnetCommand[2];
 
-        // NEW_ENVIRON
-        if (option == OPT_NEW_ENVIRON && enableNewEnviron) {
+        // NEW_ENVIRON. The negotiated flag alone is not enough: turning the
+        // preference off mid-session leaves the option negotiated, and answering
+        // a SEND then hands the game the variables the player just withheld. The
+        // INFO path gates on the same pair, so both halves stop together.
+        if (option == OPT_NEW_ENVIRON && enableNewEnviron && mpHost->mEnableNEWENVIRON) {
             QByteArray payload = QByteArray::fromRawData(telnetCommand.c_str(), telnetCommand.size());
 
             if (telnetCommand.size() < 6) {
@@ -3721,10 +3948,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             if (telnetCommand.size() < 6) {
                 return;
             }
-
-            rawData = rawData.replace(TN_BELL, QByteArray("\\\\007"));
-
-            rawData = rawData.replace("\x1b", QByteArray("\\\\027"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
@@ -5156,13 +5379,6 @@ void cTelnet::slot_processReplayChunk()
 
         if (recvdGA) {
             mGA_Driver = true;
-            if (mCommands > 0) {
-                mCommands--;
-                if (networkLatencyTimer.elapsed() > 2000) {
-                    mCommands = 0;
-                }
-            }
-
             cleandata.push_back('\n');
             recvdGA = false;
             gotPrompt(cleandata);
@@ -5195,8 +5411,7 @@ void cTelnet::slot_socketReadyToBeRead()
     }
 
     if (mWaitingForResponse) {
-        networkLatencyTime = networkLatencyTimer.elapsed() / 1000.0;
-        mWaitingForResponse = false;
+        finishNetworkLatencyMeasurement();
     }
 
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
@@ -5476,16 +5691,8 @@ Some data loss is likely - please mention this problem to the game admins.)",
         }
     MAIN_LOOP_END:;
         if (recvdGA) {
-            if (!mFORCE_GA_OFF) { //FIXME: isn't initialized correctly
+            if (!mFORCE_GA_OFF) {
                 mGA_Driver = true;
-
-                if (mCommands > 0) {
-                    mCommands--;
-
-                    if (networkLatencyTimer.elapsed() > 2000) {
-                        mCommands = 0;
-                    }
-                }
 
                 cleandata.push_back('\xff');
                 recvdGA = false;

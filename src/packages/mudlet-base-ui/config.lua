@@ -17,17 +17,23 @@ health bars out by its header row and it will sit wherever you drop it
 over the game's text. The sections left behind share out the space it
 had, and where you leave each one is remembered.
 
+It comes in three looks - Midnight, Ember and Hardlight. Click the ◐ in
+the dock's title bar to try each in turn; a look colors the dock and,
+if you have not chosen a background color of your own, the background
+the game's text sits on as well.
+
 Commands:
 
 ```
-> baseui        -- show status and options
-> baseui hide   -- remove the interface (remembered between sessions)
-> baseui show   -- bring it back
-> baseui dock   -- put every section back in the dock
+> baseui           -- show status and options
+> baseui hide      -- remove the interface (remembered between sessions)
+> baseui show      -- bring it back
+> baseui dock      -- put every section back in the dock
+> baseui ember     -- change the look (midnight, ember or hardlight)
 ```
 
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.5.0]]
+version = [[1.6.1]]
 created = "2026-07-25T12:00:00+00:00"

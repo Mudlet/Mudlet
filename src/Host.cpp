@@ -34,11 +34,13 @@
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "mapInfoContributorManager.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -447,6 +449,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     startMapAutosave(interval);
 
     mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
+
+    // Built here, at the end of the constructor, rather than on first use: the
+    // model's buffer snapshots this Host's colours, so every one of them has to
+    // be initialised first. The view binds the buffer's back-pointer when it
+    // attaches (TConsole::TConsole) and unbinds it when it goes away, and
+    // TConsole::changeColors() refreshes the snapshot as it does so.
+    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
 }
 
 Host::~Host()
@@ -968,6 +977,13 @@ void Host::resetProfile_phase2()
     // freshly-issued registry indices in the new state, which surfaces as
     // "attempt to call a number value" when label callbacks fire.
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    // Lua map info contributors cannot cross that swap either: each holds a
+    // reference in the state initLuaGlobals() closes below, and a callback that
+    // captures it. Left registered, the registering script's own re-run in
+    // compileAll() further down unrefs against the closed state, and one that
+    // nothing re-registers is called on it by every later map redraw. The
+    // scripts that registered them put them back against the new state.
+    mpMap->mMapInfoContributorManager->removeLuaContributors();
     mEventHandlerMap.clear();
     mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
@@ -1909,6 +1925,97 @@ QList<int> Host::getStopWatchIds() const
         ids.append(it->first);
     }
     return ids;
+}
+
+std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
+{
+    return mpMainConsoleModel;
+}
+
+// Hot: the trigger engine reads the model for every character of a colour
+// pattern, so this hands back a reference rather than a shared_ptr copy - the
+// latter costs an atomic increment and decrement per call.
+TConsoleModel& Host::mainConsoleModel()
+{
+    return *mpMainConsoleModel;
+}
+
+// A colour trigger matching "the default colour" compares against the model's
+// pair, so it has to carry the profile's colours whether or not a console was
+// ever built to copy them over. Seeding them in the model's constructor would
+// not do - this Host still holds the built-in defaults at that point.
+void Host::refreshMainConsoleColors()
+{
+    mpMainConsoleModel->mFgColor = mFgColor;
+    mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->buffer.updateColors();
+}
+
+void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
+{
+    emit signal_loggingAnnouncement(isLogging, logFileName);
+}
+
+void Host::raiseLoggingStateChanged(const bool isLogging)
+{
+    emit signal_loggingStateChanged(isLogging);
+}
+
+// The per-line trigger orchestration used to live on the main-console widget
+// (TMainConsole::runTriggers). It drives model state only, so it runs here
+// against the core model and needs no view (#8681).
+void Host::runTriggers(int line)
+{
+    TConsoleModel& consoleModel = mainConsoleModel();
+    // Relocating this made it a public API anyone can hand any index to, and QT_NO_DEBUG is set in every build we produce, so QList::at() would read out of bounds silently:
+    if (line < 0 || line >= consoleModel.buffer.promptBuffer.size()) {
+        return;
+    }
+
+    // A trigger script can feed text back through the pipeline, re-entering this
+    // function; the rest of this pass would otherwise inherit whatever the nested
+    // one left behind and act on the fed line instead of its own.
+    const bool nested = getTriggerUnit()->processingDepth() > 0;
+    const QPoint previousUserCursor = consoleModel.mUserCursor;
+    const int previousEngineCursor = consoleModel.mEngineCursor;
+    const bool previousIsPromptLine = consoleModel.mIsPromptLine;
+    const QString previousLine = consoleModel.mCurrentLine;
+
+    consoleModel.mUserCursor.setY(line);
+    consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
+    consoleModel.mEngineCursor = line;
+    consoleModel.mUserCursor.setX(0);
+    consoleModel.mCurrentLine = consoleModel.buffer.line(line);
+    getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
+    // The matchers take the haystack by reference all the way down, so it must be
+    // a local: a nested pass reassigns mCurrentLine under them.
+    QString haystack = consoleModel.mCurrentLine;
+    haystack.append('\n');
+
+    if (TDebug::wants(TDebug::Category::GameLine)) {
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
+        // haystack already ends in a newline - adding another leaves a
+        // blank row under every single game line:
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << haystack >> this;
+    }
+    incomingStreamProcessor(haystack, line);
+
+    if (nested) {
+        // Only a nested pass restores: at the top level a script's moveCursor()
+        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
+        // a saved index can by now point past the end.
+        const int lastLine = consoleModel.buffer.getLastLineNumber();
+        consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
+        consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
+        consoleModel.mIsPromptLine = previousIsPromptLine;
+        consoleModel.mCurrentLine = previousLine;
+        getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, previousLine);
+    } else {
+        consoleModel.mIsPromptLine = false;
+    }
+
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)
@@ -3410,7 +3517,7 @@ bool Host::getMMCPShowSnoopInMainConsole()
     return mMMCPShowSnoopInMainConsole;
 }
 
-QString Host::getSpellDic()
+QString Host::getSpellDic() const
 {
     if (!mSpellDic.isEmpty()) {
         return mSpellDic;
@@ -3426,12 +3533,11 @@ QString Host::getSpellDic()
 
 void Host::setSpellDic(const QString& newDict)
 {
-    bool isChanged = false;
-    if (!newDict.isEmpty() && mSpellDic != newDict) {
-        mSpellDic = newDict;
-        isChanged = true;
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
     }
-    if (isChanged && mpConsole) {
+    mSpellDic = newDict;
+    if (mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
     }
 }
@@ -3922,6 +4028,14 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
 {
     if (!mpConsole) {
         return {false, QString()};
+    }
+
+    // the parent window has to be one: TMainConsole::createLabel puts a label
+    // whose parent it cannot find into the main window instead, which is not
+    // anywhere the caller asked for
+    const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
+    if (!wantsMainWindow && !mpConsole->mDockWidgetMap.contains(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     auto pL = mpConsole->mLabelMap.value(name);
@@ -4646,6 +4760,13 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
+    // The file is read through a throwaway QMovie: the label's own must not take
+    // the path, and the gif tracker must not be given a movie to count, before
+    // the file is known to be one
+    if (const QMovie candidate(moviePath); !candidate.isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+
     auto myMovie = pL->mpMovie;
     if (!myMovie) {
         myMovie = new QMovie();
@@ -4656,11 +4777,6 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     }
 
     myMovie->setFileName(moviePath);
-
-    if (!myMovie->isValid()) {
-        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
-    }
-
     myMovie->stop();
     pL->setMovie(myMovie);
     myMovie->start();
@@ -4735,19 +4851,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     }
 
     if (pL) {
-        QString styleSheet = pL->styleSheet();
-        QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
-        if (styleSheet.contains(qsl("background-color"))) {
-            QRegularExpression re("background-color:[^;]*;");
-            styleSheet.replace(re, newColor);
-        } else {
-            if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
-                styleSheet.append('\n');
-            }
-            styleSheet.append(newColor);
-        }
-
-        pL->setStyleSheet(styleSheet);
+        pL->setBackgroundColor(QColor(r, g, b, alpha));
         return true;
     }
 

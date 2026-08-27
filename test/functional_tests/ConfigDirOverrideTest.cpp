@@ -38,8 +38,11 @@
 
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "mudlet.h"
 #include "utils.h"
+
+#include "GroupedTest.h"
 
 class ConfigDirOverrideTest : public QObject
 {
@@ -56,14 +59,6 @@ private:
     {
         QFile ini(qsl("%1/Mudlet.ini").arg(configDir));
         return ini.open(QIODevice::WriteOnly);
-    }
-
-    // setupConfig() consults portable.txt beside the executable and in the home
-    // config dir before the XDG/default logic; the setupConfig() integration
-    // cases skip if one is present rather than report a baffling failure.
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
 private slots:
@@ -431,4 +426,4 @@ private slots:
 };
 
 #include "ConfigDirOverrideTest.moc"
-QTEST_MAIN(ConfigDirOverrideTest)
+MUDLET_GROUPED_TEST_MAIN(ConfigDirOverrideTest)

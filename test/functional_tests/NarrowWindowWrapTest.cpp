@@ -17,12 +17,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <atomic>
 #include <functional>
 #include <thread>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -32,12 +36,7 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
 
 // A wrap width that cannot hold a single glyph - because it is zero, because
 // the glyph is wider than the width, or because the indentation uses the width
@@ -51,6 +50,8 @@ class NarrowWindowWrapTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-NarrowWrap";
     QString mPort; // assigned the stub's actual loopback port in init()
@@ -60,7 +61,25 @@ private:
     const QString mWideText = QString(QChar(0x6F22)) + QChar(0x5B57);
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -72,6 +91,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -178,6 +198,7 @@ private slots:
         mpServer->setWelcomeMessage(qsl("HELLO\r\n"));
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         QVERIFY2(waitForMainConsoleText(qsl("HELLO")), "Welcome text never reached the buffer");
 
         // leave a single column free of the screen width the insert wraps at -
@@ -245,6 +266,7 @@ private slots:
     {
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         runLua(qsl("setWindowWrap(80)"));
         QCOMPARE(host->mWrapAt, 80);
 
@@ -292,6 +314,7 @@ private:
     void runLua(const QString& script)
     {
         auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->getLuaInterpreter()->compileAndExecuteScript(script);
     }
 
@@ -305,29 +328,7 @@ private:
 
     void startProfile()
     {
-        QTimer::singleShot(0, qApp, [this]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -400,20 +401,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "NarrowWindowWrapTest.moc"
-QTEST_MAIN(NarrowWindowWrapTest)
+MUDLET_GROUPED_TEST_MAIN(NarrowWindowWrapTest)
