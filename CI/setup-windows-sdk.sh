@@ -1,7 +1,7 @@
 #!/bin/bash
 ###########################################################################
 #   Copyright (C) 2024-2026  by John McKisson - john.mckisson@gmail.com   #
-#   Copyright (C) 2023-2025  by Stephen Lyons - slysven@virginmedia.com   #
+#   Copyright (C) 2023-2026  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
 #   it under the terms of the GNU General Public License as published by  #
@@ -19,7 +19,15 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.3.0    Switch from MINGW64 to CLANG64 
+# Version: 2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
+#                   extracted files with O_BINARY, so bsdunzip no longer
+#                   mangles line endings
+#          2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
+#                   hardlinks bsdunzip over "unzip" and it mangles line
+#                   endings when it unpacks a rock
+#          2.4.0    Add Python, needed by the fixture HTTP server the Lua
+#                   tests run against
+#          2.3.0    Switch from MINGW64 to CLANG64
 #          2.2.0    Add CMake package for CMake-based builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
@@ -120,6 +128,7 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-zlib" \
     "${MINGW_PACKAGE_PREFIX}-boost" \
     "${MINGW_PACKAGE_PREFIX}-yajl" \
+    "${MINGW_PACKAGE_PREFIX}-oniguruma" \
     "${MINGW_PACKAGE_PREFIX}-lua-luarocks" \
     "${MINGW_PACKAGE_PREFIX}-ffmpeg" \
     "${MINGW_PACKAGE_PREFIX}-cmake" \
@@ -127,6 +136,7 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-ninja" \
     "${MINGW_PACKAGE_PREFIX}-assimp" \
     "${MINGW_PACKAGE_PREFIX}-curl" \
+    "${MINGW_PACKAGE_PREFIX}-python" \
     "${MINGW_PACKAGE_PREFIX}-uasm" \
     "${MINGW_PACKAGE_PREFIX}-cmake" \
     "${MINGW_PACKAGE_PREFIX}-jq"; then

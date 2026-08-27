@@ -36,7 +36,11 @@
 
 #include <list>
 
+class TMediaPlayer;
 class TTextBox;
+class QDialog;
+class QDockWidget;
+class QProgressDialog;
 
 class TMainConsole : public TConsole
 {
@@ -66,14 +70,19 @@ public:
     QString getCurrentLine(const std::string&);
     TConsole* createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
+    std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
+    std::pair<bool, QString> getUserWindowTitle(const QString& name) const;
     bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
-    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
-    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
-    std::pair<bool, QString> createTextBox(const QString &windowname, const QString &name, int, int, int, int);
+    std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
+    void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
+    void deregisterSubCommandLine(TCommandLine* pCommandLine);
+    std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
+    std::optional<QString> getCmdLineStyleSheet(const QString& name) const;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
     std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
@@ -83,6 +92,7 @@ public:
     std::pair<bool, QString> deleteTextBox(const QString&);
     std::pair<bool, QString> deleteScrollBox(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
+    std::optional<QString> getLabelToolTip(const QString& name) const;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
     bool setBackgroundImage(const QString& name, const QString& path);
@@ -90,7 +100,22 @@ public:
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
     void showStatistics();
-    const QString& getSystemSpellDictionary() const { return mSpellDic; }
+    void showPackageDownloadProgress(const QString& title, const QString& cancelText);
+    void updatePackageDownloadProgress(qint64 got, qint64 total);
+    void closePackageDownloadProgress();
+    void showMapTransferProgress(const QString& title, const QString& label, const QString& cancelButtonText);
+    void showMapJsonProgress(const QString& title, const QString& label, const QString& cancelButtonText, int maximum);
+    void setMapProgressDialogLabel(const QString& text);
+    void setMapProgressDialogRange(int minimum, int maximum);
+    void setMapProgressDialogValue(int value);
+    void disableMapProgressDialogCancel();
+    void closeMapProgressDialog();
+    void createMapperDock(const QString& title, const QString& objectName);
+    void showMapperScriptReminder();
+    void showUnpackingProgress(const QString& message, const QString& title);
+    void closeUnpackingProgress();
+    void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
+    void hideVideoOutput(TMediaPlayer* player);
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
     // Either returns the handle of the per profile or the shared Mudlet one or
@@ -103,7 +128,6 @@ public:
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
     void toggleLogging(bool);
     void printOnDisplay(std::string&, bool isFromServer = false);
-    void runTriggers(int);
     void finalize();
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
@@ -119,10 +143,23 @@ public:
     QMap<QString, TScrollBox*> mScrollBoxMap;
     mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
-    QFile mLogFile;
-    QString mLogFileName;
-    QTextStream mLogStream;
-    bool mLogToLogFile = false;
+    // The log lifecycle lives in the core console model so a profile with no
+    // view can run one; these four are references aliasing the model's fields,
+    // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
+    // are what keep TLuaInterpreter::startLogging() compiling unchanged; the
+    // other two are kept so the set does not have to be reasoned about in
+    // halves.
+    QFile& mLogFile;
+    QString& mLogFileName;
+    QTextStream& mLogStream;
+    bool& mLogToLogFile;
+    QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
+    QPointer<QProgressDialog> mpMapProgressDialog;
+    // Outlives Host::closeMapWidget(), which only hides it, so this being
+    // non-null says the profile has made a map widget at some point, not that it
+    // has one on screen - see Host::mapWidget() for the latter.
+    QPointer<QDockWidget> mpDockableMapWidget;
+    QPointer<QDialog> mpUnpackingDialog;
 
 
 public slots:
@@ -130,6 +167,13 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+
+
+private slots:
+    // The two halves of a logging change that need this view: the core model
+    // owns everything else about it.
+    void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
+    void slot_loggingStateChanged(const bool isLogging);
 
 
 signals:
@@ -140,10 +184,13 @@ signals:
 
 
 private:
-    // Was public in Host class but made private there and cloned to here
-    // (for main TConsole) to prevent it being changed without going through the
-    // process to load in the changed dictionary:
-    QString mSpellDic;
+    void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+
+    // Names the dictionary mpHunspell_system was last built for. Assigned before
+    // the load is attempted and never rolled back, so a dictionary whose files
+    // are missing is remembered as loaded and never retried. Host's mSpellDic is
+    // the profile's setting; this is only ever what has been loaded from it.
+    QString mLoadedSystemDictionary;
 
     // Cloned from Host
     bool mEnableUserDictionary = true;

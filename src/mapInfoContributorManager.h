@@ -29,12 +29,20 @@
 
 #include "Host.h"
 
+struct lua_State;
+
 struct MapInfoProperties
 {
     bool isBold;
     bool isItalic;
     QString text;
     QColor color;
+};
+
+struct LuaCallbackRef
+{
+    lua_State* L;
+    int ref;
 };
 
 using MapInfoCallback = std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)>;
@@ -45,13 +53,19 @@ class MapInfoContributorManager : public QObject
 
 public:
     MapInfoContributorManager(QObject* parent, Host* ph);
+    ~MapInfoContributorManager();
 
     void registerContributor(const QString& name, MapInfoCallback callback);
+    void registerContributor(const QString& name, MapInfoCallback callback, lua_State* L, int callbackRef);
     bool removeContributor(const QString& name);
+    // A Lua contributor cannot outlive the lua_State it was registered on: it
+    // holds a registry reference in that state and a callback that captures it,
+    // so call this before the state is closed.
+    void removeLuaContributors();
     bool enableContributor(const QString& name);
     bool disableContributor(const QString& name);
     MapInfoCallback getContributor(const QString& name);
-    QList<QString> &getContributorKeys();
+    QList<QString>& getContributorKeys();
     MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
     MapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
 
@@ -59,8 +73,12 @@ signals:
     void signal_contributorsUpdated();
 
 private:
+    void registerBuiltInContributors();
+    void releaseLuaCallbackRef(const QString& name);
+
     QList<QString> ordering;
     QMap<QString, MapInfoCallback> contributors;
+    QMap<QString, LuaCallbackRef> mLuaCallbackRefs;
     Host* mpHost;
 };
 #endif

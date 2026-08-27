@@ -20,16 +20,11 @@
 #ifndef SENTRY_WRAPPER_H
 #define SENTRY_WRAPPER_H
 
-#ifdef WITH_SENTRY
-#include <QtCore/qscopeguard.h>
-#include "sentry.h"
-#endif
-
 #include <string>
 
-void        initSentry();
+void initSentry();
 std::string makeExecutablePath(const std::string& dir, const std::string& name);
 std::string getExeDir();
-void        crashIfRequested();
+void crashIfRequested();
 
 #endif // SENTRY_WRAPPER_H

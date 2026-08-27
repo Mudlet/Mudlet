@@ -28,6 +28,7 @@
 
 #include "ui_profile_preferences.h"
 #include <QDialog>
+#include <QList>
 #include <QMap>
 
 class Host;
@@ -36,6 +37,7 @@ class QDoubleSpinBox;
 class TAction;
 class TAlias;
 class TKey;
+class TKeySequenceEdit;
 class TScript;
 class TTimer;
 class TTrigger;
@@ -48,6 +50,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
     explicit dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
+    ~dlgProfilePreferences();
     void setTab(QString tab);
 
 public slots:
@@ -137,6 +140,7 @@ public slots:
     void slot_guiLanguageChanged(const QString&);
 
 private slots:
+    void slot_forgetSavedSignIn();
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
@@ -144,6 +148,7 @@ private slots:
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
+    void slot_mapSymbolFontChanged();
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
@@ -154,6 +159,9 @@ private slots:
     void slot_setTreeWidgetIconSize(const int);
     void slot_changeMenuBarVisibility(const enums::controlsVisibility);
     void slot_changeToolBarVisibility(const enums::controlsVisibility);
+    // Greys out the "Never" entry in the other toolbar-visibility comboBox so
+    // both bars cannot be hidden simultaneously (issue #7079).
+    void slot_syncMenuToolBarNeverItem();
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
     void slot_passwordStorageLocationChanged(int);
@@ -164,8 +172,8 @@ private slots:
     void slot_setPlayerRoomInnerDiameter(const int);
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
-    void slot_enableDarkEditor(const QString&);
     void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_toggleEnableOSC8Hyperlinks(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
     void slot_deleteMap();
@@ -209,6 +217,9 @@ private:
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
     void initWithHost(Host*);
+    QString certificateWarningCheckBoxStyle() const;
+    QString certificateWarningLabelStyle() const;
+    void restyleCertificateWarnings();
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();
@@ -221,6 +232,10 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
+    void setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits);
+    void updateShortcutConflictWarning();
+    void switchEditorTheme(const QString& themeName);
+    static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
 
     QPointer<Host> mpHost;
@@ -228,9 +243,12 @@ private:
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
+    // The map symbol font the glyph usage table was last built from, so that
+    // the other symbol settings changing does not cost a rebuild:
+    QFont mGlyphDisplayFont;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
-    QMap<QString, QKeySequence*> currentShortcuts;
+    QMap<QString, QKeySequence> currentShortcuts;
     QPointer<QMenu> protocolMenu;
     QPointer<QAction> mEnableGMCP;
     QPointer<QAction> mEnableMSDP;

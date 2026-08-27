@@ -11,8 +11,8 @@ Geyser.MiniConsole = Geyser.Window:new({
   wrapAt = 300, })
 
 --- Override reposition to reset autowrap
-function Geyser.MiniConsole:reposition()
-  self.parent.reposition(self)
+function Geyser.MiniConsole:reposition(skipChildren)
+  self.parent.reposition(self, skipChildren)
   if self.autoWrap then
     self:resetAutoWrap()
   end
@@ -73,14 +73,20 @@ function Geyser.MiniConsole:getFont()
 end
 
 --- Sets the point at which text is wrapped in this miniconsole unless autoWrap is on
--- @param wrapAt The number of characters to start wrapping.
+-- @param wrapAt The number of characters to start wrapping. Must be 1 or more.
+-- @return true, or nil and an error message if the wrap was not applied.
 function Geyser.MiniConsole:setWrap (wrapAt)
   if self.autoWrap then return nil, "autoWrap is enabled in this MiniConsole and that overrides manual wrapping" end
 
-  if wrapAt then
-    self.wrapAt = wrapAt
+  -- only record the new wrap once Mudlet has accepted it, or a refused width
+  -- would be re-sent (and refused again) by every later call
+  local newWrap = wrapAt or self.wrapAt
+  local ok, err = setWindowWrap(self.name, newWrap)
+  if not ok then
+    return nil, err
   end
-  setWindowWrap(self.name, self.wrapAt)
+  self.wrapAt = newWrap
+  return true
 end
 
 function Geyser.MiniConsole:resetFormat()
@@ -356,24 +362,6 @@ function Geyser.MiniConsole:hinsertLink(...)
   hinsertLink(self.name, ...)
 end
 
---- inserts color name formatted clickable text into the miniconsole at the end of the current line.
--- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cechoLink
-function Geyser.MiniConsole:cechoLink(...)
-  cechoLink(self.name, ...)
-end
-
---- inserts decimal color formatted clickable text into the miniconsole at the end of the current line.
--- see: https://wiki.mudlet.org/w/Manual:UI_Functions#dechoLink
-function Geyser.MiniConsole:dechoLink(...)
-  dechoLink(self.name, ...)
-end
-
---- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current line.
--- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
-function Geyser.MiniConsole:hechoLink(...)
-  hechoLink(self.name, ...)
-end
-
 --- inserts color name formatted clickable text with right-click menu into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cechoPopup
 function Geyser.MiniConsole:cechoPopup(...)
@@ -449,7 +437,9 @@ function Geyser.MiniConsole:resetAutoWrap()
   if self.scrollBar then
     consoleWidth = consoleWidth - 15
   end
-  local charactersWidth = math.floor(consoleWidth / fontWidth)
+  -- a console narrower than one character (or one the scroll bar leaves no
+  -- room in) works out as zero columns, which is not a width to wrap at
+  local charactersWidth = math.max(1, math.floor(consoleWidth / fontWidth))
 
   self.wrapAt = charactersWidth
   setWindowWrap(self.name, self.wrapAt)
@@ -619,7 +609,7 @@ function Geyser.MiniConsole:new (cons, container)
     createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
 
--- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+-- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
     if me.hidden or me.auto_hidden then
       hideWindow(me.name)
     end

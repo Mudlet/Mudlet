@@ -38,7 +38,6 @@
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
-#include <QtConcurrent>
 
 #include <QList>
 #include <memory>
@@ -65,6 +64,7 @@ class QComboBox;
 class QElapsedTimer;
 class QListWidgetItem;
 class QPushButton;
+class QTimer;
 class QTreeWidgetItem;
 class QMouseEvent;
 class QMenu;
@@ -101,7 +101,8 @@ public:
     friend class PanInteractionHandler;
     friend class MiddleMousePanHandler;
 
-    struct MapInteractionContext {
+    struct MapInteractionContext
+    {
         QMouseEvent* event = nullptr;
         Qt::MouseButtons buttons = Qt::NoButton;
         Qt::MouseButton button = Qt::NoButton;
@@ -169,9 +170,13 @@ public:
     void setBorderSize(double);
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
-    void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
+    void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
+    // How many symbols that cache is holding - the only way from outside to
+    // tell that a flush reached this particular 2D map, of which there is one
+    // per secondary map view as well as the mapper's own:
+    qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
-    void flushTextLabelPixmapCache() {mTextLabelPixmapCache.clear();}
+    void flushTextLabelPixmapCache() { mTextLabelPixmapCache.clear(); }
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
@@ -179,6 +184,13 @@ public:
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+
+    // Schedules a repaint through a single-shot timer, coalescing multiple
+    // rapid requests (e.g. during mouse wheel zoom or pan drag) into at most
+    // one repaint per csmRenderThrottleMs.  Use this instead of update() for
+    // continuously-firing input events; call update() directly for discrete
+    // user actions where an immediate repaint is expected.
+    void scheduleRender();
 
     // Secondary view support (for multiple map views feature)
     void setSecondaryView(bool isSecondary) { mIsSecondaryView = isSecondary; }
@@ -195,11 +207,10 @@ public:
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 
-
     // default 2D zoom level
-    inline static const qreal csmDefaultXYZoom = 20.0;
+    static inline const qreal csmDefaultXYZoom = 20.0;
     // minimum 2D zoom level
-    inline static const qreal csmMinXYZoom = 3.0;
+    static inline const qreal csmMinXYZoom = 3.0;
 
 
     TMap* mpMap = nullptr;
@@ -212,13 +223,6 @@ public:
     bool mPick = false;
     int mTargetRoomId = 0;
     bool mStartSpeedWalk = false;
-
-
-    // string list: 0 is event name, 1 is menu it is under if it is
-    QMap<QString, QStringList> mUserActions;
-
-    // unique name, List:parent name ("" if null), display name
-    QMap<QString, QStringList> mUserMenus;
 
     bool mRoomBeingMoved = false;
     QPointF mRoomMoveLastMapPoint;
@@ -290,6 +294,9 @@ public:
     bool mBubbleMode = false;
     bool mMapperUseAntiAlias = true;
 
+    // Toggled by dlgMapper so its overlays don't stack on the painted empty-state text.
+    bool mSuppressEmptyStateMessage = false;
+
     // Controls if the mapper is in view-only mode
     bool mMapViewOnly = true;
 
@@ -318,6 +325,7 @@ public slots:
     void slot_editLabel();
     void slot_setPlayerLocation();
     void slot_toggleMapViewOnly();
+    void slot_configureAreas();
     void slot_createLabel();
     void slot_customLineColor();
     void slot_shiftZup();
@@ -327,17 +335,25 @@ public slots:
     void slot_shiftLeft();
     void slot_shiftRight();
     void slot_showPropertiesDialog();
-    void slot_setRoomProperties(
-        bool changeName, QString newName,
-        bool changeRoomColor, int newRoomColor,
-        bool changeSymbol, QString newSymbol,
-        bool changeSymbolColor, QColor newSymbolColor,
-        bool changeWeight, int newWeight,
-        bool changeLockStatus, std::optional<bool> newLockStatus,
-        bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
-        bool changeBorderColor, QColor newBorderColor,
-        bool changeBorderThickness, int newBorderThickness,
-        QSet<TRoom*> rooms);
+    void slot_setRoomProperties(bool changeName,
+                                QString newName,
+                                bool changeRoomColor,
+                                int newRoomColor,
+                                bool changeSymbol,
+                                QString newSymbol,
+                                bool changeSymbolColor,
+                                QColor newSymbolColor,
+                                bool changeWeight,
+                                int newWeight,
+                                bool changeLockStatus,
+                                std::optional<bool> newLockStatus,
+                                bool changeHiddenStatus,
+                                std::optional<bool> newHiddenStatus,
+                                bool changeBorderColor,
+                                QColor newBorderColor,
+                                bool changeBorderThickness,
+                                int newBorderThickness,
+                                QSet<TRoom*> rooms);
     void slot_previewBorderProperties(QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
@@ -374,7 +390,8 @@ private:
         bool dispatch(MapInteractionContext& context) const;
 
     private:
-        struct HandlerEntry {
+        struct HandlerEntry
+        {
             int priority = 0;
             IInteractionHandler* handler = nullptr;
         };
@@ -400,23 +417,61 @@ private:
 
     void updateSelectionWidget();
     void resizeMultiSelectionWidget();
+    void hideSelectionWidget();
+    void pruneRoomSelectionToArea(int areaId);
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
     QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    inline void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&, const bool showRoomCollision);
+    inline void drawRoom(QPainter&,
+                         QFont&,
+                         QFont&,
+                         QPen&,
+                         TRoom*,
+                         const bool isGridMode,
+                         const bool areRoomIdsLegible,
+                         const bool showRoomNames,
+                         const int,
+                         const float,
+                         const float,
+                         const QMap<int, QPointF>&,
+                         const bool showRoomCollision);
+    // Batch rendering for large grid mode areas - draws rooms grouped by color
+    void drawGridModeRooms(QPainter&,
+                           const TArea* pDrawnArea,
+                           const int zLevel,
+                           const int playerRoomId,
+                           const float mRX,
+                           const float mRY,
+                           const float mRoomWidth,
+                           const float mRoomHeight,
+                           const float widgetWidth,
+                           const float widgetHeight,
+                           QFont& roomVNumFont,
+                           bool& isPlayerRoomVisible,
+                           QPointF& playerRoomOnWidgetCoordinates,
+                           bool areRoomIdsLegible,
+                           QString* profileOutput = nullptr);
     void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
+    static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
 
     bool mDialogLock = false;
-    struct ClickPosition {
+    struct ClickPosition
+    {
         int x;
         int y;
     } mContextMenuClickPosition;
+
+    // Throttle repaint requests from continuous mouse events (pan drag, scroll
+    // wheel zoom) to avoid saturating the main thread at high event rates.
+    // Maximum of one repaint per csmRenderThrottleMs is allowed via scheduleRender().
+    static constexpr int csmRenderThrottleMs = 16; // ~60 fps cap
+    QTimer* mpRenderThrottleTimer = nullptr;
 
     // This holds the ID of the room highlighted in yellow when multiple
     // rooms are selected. It is either the first selected room, or the

@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020, 2022, 2024-2025 by Stephen Lyons       #
+#    Copyright (C) 2015-2018, 2020, 2022, 2024-2026 by Stephen Lyons       #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -37,10 +37,59 @@ cmake_minimum_required(VERSION 3.25.1)
 
 if(APPLE)
   # minimum supported version by Qt6
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
 endif()
 
 project(mudlet)
+
+# All the other files that we want to see in the editor but which CMake doesn't
+# do anything with.
+# Gather non-compiled files for IDE visibility using glob patterns
+# Note: New files are picked up automatically on CMake reconfigure
+file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
+  .clang-tidy
+  .crowdin.yml
+  .cursorrules
+  .gitignore
+  .gitmodules
+  .imgbotconfig
+  .DirIcon
+  *.md
+  COMMITMENT
+  COMPILE
+  COPYING
+  CPPLINT.cfg
+  dangerfile.js
+  asan-suppressions.txt
+  mudlet.desktop
+  mudlet.png
+  mudlet.svg
+  icon_*.png
+)
+
+file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
+  .github/**
+  .devcontainer/**
+  .vscode/**
+  .claude/**
+  3rdparty/discord/rpc/lib/*
+  CI/**
+  docker/**
+  docs/**
+  .clang-format
+  src/.gitignore
+  src/mudlet-lua/**
+)
+
+# It is not clear that the "COMMENT" actually shows up anywhere - so include
+# a status message:
+message(STATUS "Refreshing OTHER_FILES list...")
+add_custom_target(OTHER_FILES
+  COMMENT "Refreshing OTHER_FILES list for passive file display in IDE"
+  SOURCES
+    ${ROOT_FILES_LIST}
+    ${OTHER_FILES_LIST}
+)
 
 if(CMAKE_CONFIGURATION_TYPES)
   add_custom_target(
@@ -87,11 +136,20 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.20.1)
+set(APP_VERSION 4.22.0)
 
-# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
-if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-    set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
+# empty value must be distinguished from an unset one so release builds (CI exports
+# MUDLET_VERSION_BUILD="") get a clean version with no "-dev-<sha>" suffix:
+#   unset (local dev build)         -> "-dev-<sha>"
+#   defined but empty (release)     -> "" (no suffix)
+#   defined with a value (ptb/test) -> "<value>-<sha>"
+if(DEFINED ENV{MUDLET_VERSION_BUILD})
+    if("$ENV{MUDLET_VERSION_BUILD}" STREQUAL "")
+        set(BUILD_VALUE "")
+    else()
+        set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+    endif()
 else()
     set(BUILD_VALUE "-dev-${GIT_SHA1}")
 endif()
@@ -102,11 +160,6 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
-
-# For release builds, comment out the above and uncomment below:
-# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-# message(STATUS "Value written to app-build.txt file: {nothing}")
-# set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
@@ -133,6 +186,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
                         DEFAULT OFF)
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
+                        OPTION_VARIABLE USE_MEMORY_TRACKING
+                        READABLE_NAME "memory tracking"
+                        DEFAULT OFF)
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
@@ -144,7 +201,7 @@ find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
 
 find_package(Lua 5.1 EXACT)
 
-# Set Qt version for edbee-lib and dblsqd
+# Set Qt version for edbee-lib
 option(BUILD_WITH_QT5 "" OFF)
 option(BUILD_WITH_QT6 "" ON)
 
@@ -168,7 +225,15 @@ if(APPLE)
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
+  # Building qtkeychain's translations runs lupdate, which rewrites the .ts
+  # files inside the submodule whenever a source is newer than them, so the
+  # submodule shows as modified after every checkout. Mudlet neither bundles
+  # nor loads those catalogues, so skip them. The normal variable overrides the
+  # option() in the subdirectory (CMP0077) and is unset afterwards so the
+  # generic name cannot leak into other 3rdparty projects.
+  set(BUILD_TRANSLATIONS OFF)
   add_subdirectory(3rdparty/qtkeychain)
+  unset(BUILD_TRANSLATIONS)
 endif()
 
 git_submodule_init(
@@ -184,10 +249,6 @@ git_submodule_init(
 #     GIT_SHALLOW TRUE)
 # FetchContent_MakeAvailable(nanobench)
 
-if(USE_UPDATER)
-  git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
-                     "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
-endif()
 
 if(APPLE)
   if(USE_UPDATER)
@@ -212,17 +273,34 @@ if(CCACHE_FOUND)
   set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif(CCACHE_FOUND)
 
+# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
+macro(set_alternate_linker linker)
+  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
+  if(LINKER_EXECUTABLE)
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
+      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
+      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
+      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
+      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
+    else()
+      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
+    endif()
+  else()
+    message(WARNING "USE_ALTERNATE_LINKER=${USE_ALTERNATE_LINKER} was asked for but no such linker is installed - using the system one")
+    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
+  endif()
+endmacro()
+
+# add_link_options() only reaches directories added after it, and most of the
+# link time is in test/, so this has to come before those subdirectories
+set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
+if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
+  set_alternate_linker(${USE_ALTERNATE_LINKER})
+endif()
+
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 add_subdirectory(test)
-
-if(USE_UPDATER)
-  add_subdirectory(3rdparty/dblsqd)
-endif()
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)

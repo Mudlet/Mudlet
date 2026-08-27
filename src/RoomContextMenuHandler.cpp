@@ -75,18 +75,30 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
     popup->setAttribute(Qt::WA_DeleteOnClose);
     mMapWidget.registerContextMenu(popup);
 
-    auto* roomDatabase = mMapWidget.mpMap->mpRoomDB;
+    auto* roomDatabase = mMapWidget.mpMap->mpRoomDB.get();
     if (!roomDatabase || roomDatabase->isEmpty()) {
         // No map loaded
+        if (!mMapWidget.mpMap->getMmpMapLocation().isEmpty()) {
+            //: 2D Mapper context menu (no map found) item. Downloads the shared map offered by the game server via MMP.
+            auto downloadMap = new QAction(T2DMap::tr("Download from game"), &mMapWidget);
+            TMap* pMap = mMapWidget.mpMap;
+            QObject::connect(downloadMap, &QAction::triggered, &mMapWidget, [pMap]() {
+                if (pMap) {
+                    pMap->downloadMap();
+                }
+            });
+            popup->addAction(downloadMap);
+        }
+
         //: 2D Mapper context menu (no map found) item
         auto createMap = new QAction(T2DMap::tr("Create new map"), &mMapWidget);
         QObject::connect(createMap, &QAction::triggered, &mMapWidget, &T2DMap::slot_newMap);
         //: 2D Mapper context menu (no map found) item
-        auto loadMap = new QAction(T2DMap::tr("Load map"), &mMapWidget);
+        auto loadMap = new QAction(T2DMap::tr("Load map..."), &mMapWidget);
         QObject::connect(loadMap, &QAction::triggered, &mMapWidget, &T2DMap::slot_loadMap);
 
-        popup->addAction(createMap);
         popup->addAction(loadMap);
+        popup->addAction(createMap);
 
         mMapWidget.mPopupMenu = true;
         popup->popup(mMapWidget.mapToGlobal(context.widgetPosition));
@@ -118,12 +130,11 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
             mMapWidget.mMultiSelectionHighlightRoomId = context.clickedRoomId;
             selectionChanged = true;
         }
-    } else if (previousSelectionSize <= 1 && previousSelectionSize > 0) {
-        mMapWidget.clearSelection();
-        mMapWidget.mMultiSelectionSet.clear();
-        mMapWidget.mMultiSelectionHighlightRoomId = 0;
-        selectionChanged = true;
     }
+    // Deliberately no else branch: a right-click that hits no room leaves the
+    // selection alone, whatever its size. Mappers select a room (or box-select
+    // one from a stack) and then right-click on empty space to edit it, because
+    // hitting the room itself is hard when zoomed out (#9915).
 
     context.multiSelectionSet = &mMapWidget.mMultiSelectionSet;
     context.hasMultiSelection = !mMapWidget.mMultiSelectionSet.isEmpty();
@@ -255,6 +266,13 @@ void RoomContextMenuHandler::populateEditModeActions(QMenu* menu, int selectionS
         QObject::connect(roomArea, &QAction::triggered, &mMapWidget, &T2DMap::slot_setArea);
         menu->addAction(roomArea);
     }
+
+    //: 2D Mapper context menu (room) item
+    auto configureAreas = new QAction(T2DMap::tr("Configure areas..."), &mMapWidget);
+    //: 2D Mapper context menu (room) item tooltip
+    configureAreas->setToolTip(utils::richText(T2DMap::tr("Modify and create new areas.")));
+    QObject::connect(configureAreas, &QAction::triggered, &mMapWidget, &T2DMap::slot_configureAreas);
+    menu->addAction(configureAreas);
 
     //: 2D Mapper context menu (room) item
     auto createLabel = new QAction(T2DMap::tr("Create label..."), &mMapWidget);

@@ -20,27 +20,30 @@
 
 set -e
 
+SENTRY_CLI_VERSION="3.6.0"
+
 download_sentry_cli() {
     local os="$1"
     local arch="$2"
     local file="$3"
     local url=""
+    local base="https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}"
 
     if [[ "$os" == "Darwin" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Darwin-x86_64"
+            url="${base}/sentry-cli-Darwin-x86_64"
         elif [[ "$arch" == "arm64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Darwin-arm64"
+            url="${base}/sentry-cli-Darwin-arm64"
         fi
     elif [[ "$os" == "Linux" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Linux-x86_64"
+            url="${base}/sentry-cli-Linux-x86_64"
         fi
     elif [[ "$os" == "MINGW"* || "$os" == "MSYS"* || "$os" == "CYGWIN"* ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Windows-x86_64.exe"
+            url="${base}/sentry-cli-Windows-x86_64.exe"
         elif [[ "$arch" == "i686" || "$arch" == "i386" ]]; then
-            url="https://github.com/getsentry/sentry-cli/releases/download/2.58.2/sentry-cli-Windows-i686.exe"
+            url="${base}/sentry-cli-Windows-i686.exe"
         fi
     fi
 
@@ -90,9 +93,19 @@ if [[ "$OS" == "Linux" ]]; then
 elif [[ "$OS" == "Darwin" ]]; then
     DEBUG_FILE="${MUDLET_EXEC}.dSYM"
     [[ -d "$DEBUG_FILE" ]] && FILES_TO_UPLOAD+=("$DEBUG_FILE")
-elif [[ "$OS" == "MINGW"* || "$OS" == "MSYS"* ]]; then
+elif [[ "$OS" == "MINGW"* ]]; then
+    # The PDB shares its debug-id with the shipped mudlet.exe, so uploading both
+    # lets Sentry match crash minidumps and symbolicate them (see WithSentry.cmake).
+    # The PDB is expected on every Windows sentry build, so fail loudly if it is
+    # missing rather than silently uploading only the exe (which would revert to
+    # unsymbolicated crash reports if the --pdb link flag is ever lost).
     PDB_FILE="${MUDLET_EXEC%.exe}.pdb"
-    [[ -f "$PDB_FILE" ]] && FILES_TO_UPLOAD+=("$PDB_FILE")
+    if [[ -f "$PDB_FILE" ]]; then
+        FILES_TO_UPLOAD+=("$PDB_FILE")
+    else
+        echo "error: expected PDB at $PDB_FILE not found - Windows crash reports would be unsymbolicated"
+        exit 1
+    fi
 fi
 
 for f in "${FILES_TO_UPLOAD[@]}"; do
@@ -100,120 +113,169 @@ for f in "${FILES_TO_UPLOAD[@]}"; do
     ./sentry-cli debug-files upload "$f" --project "mudlet"
 done
 
-# Use MSYSTEM variable for MSYS2 detection (consistent with other CI scripts)
-# and MSYSTEM_PREFIX for the path (supports MINGW64, CLANG64, UCRT64, etc.)
-if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
-    MINGW_BIN="${MSYSTEM_PREFIX}/bin"
+# Qt is bundled into the AppImage and the .app, so its frames land in crash
+# reports next to Mudlet's own. Sentry can only name them if it holds the
+# libraries: the shipped, stripped ones still carry .dynsym and unwind tables,
+# which is enough for function names. The DWARF/dSYM companions add file:line
+# on top, and are picked up here whenever Qt's debug information component
+# happens to be installed - CI does not install it, because qtbase alone is a
+# 946MB download. Windows does the equivalent further down, from its MSYS2
+# -debug packages.
+QT_FILES=()
 
-    echo ""
-    echo "=== Converting Qt DWARF debug files to PDB for Sentry ==="
+add_qt_file() {
+    if [[ -e "$1" ]]; then
+        QT_FILES+=("$1")
+    fi
+}
 
-    # Download cv2pdb (converts MinGW DWARF to PDB format)
-    # Use 64-bit version to handle large debug files like Qt6Core (198MB)
-    CV2PDB_URL="https://github.com/rainers/cv2pdb/releases/download/v0.54/cv2pdb-0.54.zip"
-    echo "Downloading cv2pdb..."
-    curl -sL "$CV2PDB_URL" -o cv2pdb.zip
-    unzip -q cv2pdb.zip
-    CV2PDB="./cv2pdb64.exe"
+# Qt names its Linux companion "Qt6Core.debug" beside "libQt6Core.so.6", while
+# objcopy's own convention is "<file>.debug" - accept either.
+add_qt_companions() {
+    local lib="$1" dir base stem
+    dir="$(dirname "$lib")"
+    base="$(basename "$lib")"
+    stem="${base#lib}"
+    stem="${stem%%.so*}"
+    add_qt_file "${dir}/${stem}.debug"
+    add_qt_file "${lib}.debug"
+    add_qt_file "${lib}.dSYM"
+}
 
-    if [[ -d "$MINGW_BIN" && -x "$CV2PDB" ]]; then
-        # Use absolute Windows path for PDB files (cv2pdb is native Windows app)
-        PDB_DIR="$(pwd)/qt_pdbs"
-        mkdir -p "$PDB_DIR"
-        WIN_PDB_DIR="$(cygpath -w "$PDB_DIR")"
-        PDB_FILES=()
+if [[ "$OS" == "Linux" || "$OS" == "Darwin" ]]; then
+    QT_PREFIX="${2:-}"
 
-        # Function to convert a DLL to PDB format
-        convert_dll_to_pdb() {
-            local dll="$1"
-            local source_dir="$2"
-
-            if [[ -f "$dll" ]]; then
-                local dll_name=$(basename "$dll")
-                local base_name="${dll_name%.dll}"
-                local debug_file="${source_dir}/${base_name}.debug"
-                local pdb_file="${PDB_DIR}/${base_name}.pdb"
-
-                # Check if companion .debug file exists (contains DWARF debug info)
-                if [[ -f "$debug_file" ]]; then
-                    echo "Converting $dll_name to PDB..."
-                    echo "  Debug file: ${base_name}.debug ($(stat -c%s "$debug_file") bytes)"
-
-                    # cv2pdb converts DWARF to PDB format
-                    # Usage: cv2pdb -l<debug-file> <dll> [<output-dll>] [<pdb>]
-                    # Convert paths to Windows format for native Windows cv2pdb.exe
-                    local win_debug_file=$(cygpath -w "$debug_file")
-                    local win_dll=$(cygpath -w "$dll")
-                    local win_pdb_file="${WIN_PDB_DIR}\\${base_name}.pdb"
-                    if "$CV2PDB" "-l${win_debug_file}" "$win_dll" "$win_dll" "$win_pdb_file" 2>"${pdb_file}.err"; then
-                        if [[ -f "$pdb_file" ]]; then
-                            local pdb_size=$(stat -c%s "$pdb_file")
-                            echo "  Generated PDB: ${base_name}.pdb ($pdb_size bytes)"
-                            PDB_FILES+=("$pdb_file")
-                        else
-                            echo "  Warning: PDB file not created"
-                        fi
-                    else
-                        echo "  cv2pdb failed: $(cat "${pdb_file}.err" 2>/dev/null || echo 'unknown error')"
-                    fi
-                    rm -f "${pdb_file}.err"
-                else
-                    echo "Skipping $dll_name (no .debug file)"
-                fi
+    if [[ "$OS" == "Linux" ]]; then
+        # ldd resolves the whole transitive closure, so Qt modules pulled in by
+        # other Qt modules are covered without walking the graph by hand.
+        while read -r lib; do
+            add_qt_file "$lib"
+            add_qt_companions "$lib"
+            if [[ -z "$QT_PREFIX" ]]; then
+                QT_PREFIX="$(dirname "$(dirname "$lib")")"
             fi
-        }
-
-        # Process main Qt6 DLLs from bin directory
-        for dll in "$MINGW_BIN"/Qt6*.dll; do
-            convert_dll_to_pdb "$dll" "$MINGW_BIN"
-        done
-
-        # Process Qt plugin DLLs from share/qt6/plugins subdirectories
-        # These plugins can appear in crash stack traces and need debug symbols
-        QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
-        if [[ -d "$QT_PLUGINS_DIR" ]]; then
-            echo ""
-            echo "=== Converting Qt plugin debug files ==="
-
-            # Plugin directories and their DLLs (based on what Mudlet uses)
-            declare -A PLUGIN_DLLS=(
-                ["generic"]="qtuiotouchplugin"
-                ["iconengines"]="qsvgicon"
-                ["imageformats"]="qgif qicns qico qjp2 qjpeg qmng qsvg qtga qtiff qwbmp qwebp"
-                ["multimedia"]="ffmpegmediaplugin windowsmediaplugin"
-                ["networkinformation"]="qglib qnetworklistmanager"
-                ["platforms"]="qwindows"
-                ["styles"]="qmodernwindowsstyle"
-                ["texttospeech"]="qtexttospeech_mock qtexttospeech_sapi"
-                ["tls"]="qcertonlybackend qopensslbackend qschannelbackend"
-            )
-
-            for plugin_dir in "${!PLUGIN_DLLS[@]}"; do
-                plugin_path="${QT_PLUGINS_DIR}/${plugin_dir}"
-                if [[ -d "$plugin_path" ]]; then
-                    for plugin_name in ${PLUGIN_DLLS[$plugin_dir]}; do
-                        dll="${plugin_path}/${plugin_name}.dll"
-                        convert_dll_to_pdb "$dll" "$plugin_path"
-                    done
-                fi
+        done < <(ldd "$MUDLET_EXEC" 2>/dev/null | awk '/libQt6/ && $3 ~ /^\// {print $3}')
+    else
+        # otool reports @rpath-relative install names, so resolve each framework
+        # against the Qt prefix and walk their dependencies breadth-first.
+        if [[ -z "$QT_PREFIX" ]] && command -v qmake >/dev/null 2>&1; then
+            QT_PREFIX="$(qmake -query QT_INSTALL_PREFIX 2>/dev/null || true)"
+        fi
+        if [[ -n "$QT_PREFIX" ]]; then
+            # macOS ships bash 3.2, which has no associative arrays, so the
+            # already-walked frameworks are tracked in a delimited string. Safe
+            # because the sed below only ever yields bare "QtFoo" names.
+            seen_fw=" "
+            pending=("$MUDLET_EXEC")
+            while [[ ${#pending[@]} -gt 0 ]]; do
+                current="${pending[0]}"
+                pending=("${pending[@]:1}")
+                while read -r name; do
+                    [[ -z "$name" || "$seen_fw" == *" ${name} "* ]] && continue
+                    seen_fw="${seen_fw}${name} "
+                    fw="${QT_PREFIX}/lib/${name}.framework/Versions/A/${name}"
+                    [[ -f "$fw" ]] || continue
+                    add_qt_file "$fw"
+                    add_qt_companions "$fw"
+                    add_qt_file "${QT_PREFIX}/lib/${name}.framework.dSYM"
+                    pending+=("$fw")
+                done < <(otool -L "$current" 2>/dev/null | sed -n 's|.*/\(Qt[A-Za-z0-9]*\)\.framework/.*|\1|p')
             done
         fi
-
-        if [[ ${#PDB_FILES[@]} -gt 0 ]]; then
-            echo ""
-            echo "Uploading ${#PDB_FILES[@]} PDB files to Sentry..."
-            ./sentry-cli debug-files upload "${PDB_FILES[@]}" --project "mudlet"
-            echo "Qt PDB symbols uploaded successfully"
-        else
-            echo "No Qt PDB files were generated"
-        fi
-
-        rm -rf "$PDB_DIR"
-    elif [[ ! -x "$CV2PDB" ]]; then
-        echo "Warning: cv2pdb not found at $CV2PDB, skipping Qt debug symbols"
     fi
 
-    strip --strip-debug "$MUDLET_EXEC"
+    # Plugins are loaded at runtime rather than linked, so the walk above never
+    # reaches them, yet platform, imageformat and TLS plugins all show up in
+    # stack traces. They are small enough to take wholesale.
+    if [[ -n "$QT_PREFIX" && -d "${QT_PREFIX}/plugins" ]]; then
+        while IFS= read -r -d '' plugin; do
+            add_qt_file "$plugin"
+            add_qt_companions "$plugin"
+        done < <(find "${QT_PREFIX}/plugins" -type f \( -name '*.so' -o -name '*.dylib' \) -print0)
+    fi
+
+    if [[ ${#QT_FILES[@]} -gt 0 ]]; then
+        echo "Uploading ${#QT_FILES[@]} Qt debug information files to Sentry..."
+        ./sentry-cli debug-files upload "${QT_FILES[@]}" --project "mudlet"
+    else
+        # Not fatal - Mudlet's own frames still symbolicate - but every Qt frame
+        # in every Linux and macOS crash report goes unnamed, so say so loudly.
+        echo "::warning::no Qt libraries found to upload (QT_PREFIX='${QT_PREFIX}') - Qt frames in crash reports will be unsymbolicated"
+    fi
+fi
+
+# Qt ships its debug info as separate DWARF ".debug" companions; sentry-cli 3.5.0+
+# parses these, so upload them alongside the DLLs they belong to.
+# See https://github.com/getsentry/sentry/issues/104738
+if [[ -n "$MSYSTEM" && -n "$MSYSTEM_PREFIX" ]]; then
+    MINGW_BIN="${MSYSTEM_PREFIX}/bin"
+    QT_PLUGINS_DIR="${MSYSTEM_PREFIX}/share/qt6/plugins"
+
+    echo ""
+    echo "=== Collecting Qt debug files for Sentry ==="
+
+    DEBUG_FILES=()
+
+    # Upload files only for the Qt6 modules mudlet.exe actually depends on (walk its
+    # import table), not every Qt6 DLL in the bin.
+    if command -v objdump >/dev/null 2>&1; then
+        declare -A seen_dll=()
+        pending=("$MUDLET_EXEC")
+        # Runtime-loaded Qt plugins can pull in Qt modules that mudlet.exe does not
+        # link directly (e.g. the svg imageformat/iconengine plugins pull in Qt6Svg,
+        # which is not in our components list). Seed the walk with the plugin DLLs too
+        # so their imports get their .debug companions collected as well.
+        if [[ -d "$QT_PLUGINS_DIR" ]]; then
+            while IFS= read -r -d '' plugin_dll; do
+                pending+=("$plugin_dll")
+            done < <(find "$QT_PLUGINS_DIR" -type f -name '*.dll' -print0)
+        fi
+        while [[ ${#pending[@]} -gt 0 ]]; do
+            current="${pending[0]}"
+            pending=("${pending[@]:1}")
+            while IFS= read -r dll; do
+                [[ -z "$dll" || -n "${seen_dll[$dll]:-}" ]] && continue
+                seen_dll[$dll]=1
+                dll_path="$MINGW_BIN/$dll"
+                [[ -f "$dll_path" ]] || continue
+                pending+=("$dll_path")
+                if [[ "$dll" == Qt6*.dll ]]; then
+                    # The DLL itself is what ties a crash back to these symbols. crashpad
+                    # throws away the CodeView record lld writes - at 25 bytes it is three
+                    # short of the struct size crashpad insists on - so minidumps carry no
+                    # debug id for any Qt module, only a code id (link timestamp plus image
+                    # size). Sentry can turn that code id into the debug id the companion
+                    # was uploaded under, but only if it also holds the shipped DLL.
+                    DEBUG_FILES+=("$dll_path")
+                    # companion may be "<name>.dll.debug" or "<name>.debug"; add once
+                    for debug_file in "$MINGW_BIN/${dll}.debug" "$MINGW_BIN/${dll%.dll}.debug"; do
+                        [[ -f "$debug_file" && -z "${seen_dll[$debug_file]:-}" ]] && { seen_dll[$debug_file]=1; DEBUG_FILES+=("$debug_file"); }
+                    done
+                fi
+            done < <(objdump -p "$current" 2>/dev/null | sed -n 's/^[[:space:]]*DLL Name:[[:space:]]*//p')
+        done
+    else
+        echo "objdump not found - falling back to uploading all Qt6 debug files"
+        for debug_file in "$MINGW_BIN"/Qt6*.debug "$MINGW_BIN"/Qt6*.dll; do
+            [[ -f "$debug_file" ]] && DEBUG_FILES+=("$debug_file")
+        done
+    fi
+
+    # Qt plugins (image formats, platforms, tls, ...) can appear in crash stack
+    # traces too, so upload every plugin and companion we can find
+    if [[ -d "$QT_PLUGINS_DIR" ]]; then
+        while IFS= read -r -d '' debug_file; do
+            DEBUG_FILES+=("$debug_file")
+        done < <(find "$QT_PLUGINS_DIR" -type f \( -name '*.debug' -o -name '*.dll' \) -print0)
+    fi
+
+    if [[ ${#DEBUG_FILES[@]} -gt 0 ]]; then
+        echo "Uploading ${#DEBUG_FILES[@]} Qt debug files to Sentry..."
+        ./sentry-cli debug-files upload "${DEBUG_FILES[@]}" --project "mudlet"
+        echo "Qt debug symbols uploaded successfully"
+    else
+        echo "No Qt debug files found - are the qt6-*-debug packages installed?"
+    fi
 fi
 
 rm -f sentry-cli

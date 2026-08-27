@@ -27,7 +27,7 @@
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
-#include "TConsole.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
@@ -35,8 +35,12 @@
 #include "mudlet.h"
 
 #include <QBuffer>
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QtMath>
 #include <QVersionNumber>
+
+#include <memory>
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
@@ -157,12 +161,19 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 
                 readPackage();
             } else if (name() == qsl("map")) {
-                readMap();
-                mpHost->mpMap->audit();
-                mpHost->mpMap->mpMapper->mp2dMap->init();
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
-                mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                mpHost->mpMap->mpMapper->show();
+                if (!packName.isEmpty()) {
+                    qWarning() << "XMLimport::importPackage(...) WARNING: ignoring unexpected <map> element"
+                                  " - map data should not be present in package XML files";
+                } else {
+                    readMap();
+                    mpHost->mpMap->audit();
+                    if (mpHost->mpMap->mpMapper) {
+                        mpHost->mpMap->mpMapper->mp2dMap->init();
+                        mpHost->mpMap->mpMapper->updateAreaComboBox();
+                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                        mpHost->mpMap->mpMapper->show();
+                    }
+                }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
                                       "unrecognised element with name: "
@@ -193,7 +204,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         }
 
         if (gotAction) {
-            mpHost->getActionUnit()->updateToolbar();
+            mpHost->getActionUnit()->updateAllToolbars();
         } else {
             mpHost->getActionUnit()->unregisterAction(mpAction);
             delete mpAction;
@@ -217,7 +228,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 std::pair<EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
-    QClipboard* clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QGuiApplication::clipboard();
     std::pair<EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
@@ -267,20 +278,20 @@ void XMLimport::readVariable(TVar* pParent)
             if (name() == qsl("name")) {
                 keyName = readElementText();
                 continue;
-            } else if (name() == qsl("value")) {
+            } else if (name() == qsl("value")) { // NOLINT(readability-else-after-return)
                 value = readElementText();
                 continue;
-            } else if (name() == qsl("keyType")) {
+            } else if (name() == qsl("keyType")) { // NOLINT(readability-else-after-return)
                 keyType = readElementText().toInt();
                 continue;
-            } else if (name() == qsl("valueType")) {
+            } else if (name() == qsl("valueType")) { // NOLINT(readability-else-after-return)
                 valueType = readElementText().toInt();
                 var->setName(keyName, keyType);
                 var->setValue(value, valueType);
                 vu->addSavedVar(var);
                 lI->setValue(var);
                 continue;
-            } else if (name() == qsl("VariableGroup") || name() == qsl("Variable")) {
+            } else if (name() == qsl("VariableGroup") || name() == qsl("Variable")) { // NOLINT(readability-else-after-return)
                 readVariable(var);
             } else {
                 readUnknownElement(what);
@@ -406,7 +417,8 @@ void XMLimport::readAreas()
 
         if (name() == qsl("areas")) {
             break;
-        } else if (name() == qsl("area")) {
+        }
+        if (name() == qsl("area")) {
             readArea();
         }
     }
@@ -449,7 +461,8 @@ void XMLimport::readRoomFeatures(TRoom* pR)
         if (Q_LIKELY(isStartElement())) {
             if (name() == qsl("features")) {
                 continue;
-            } else if (Q_LIKELY(name() == qsl("feature"))) {
+            }
+            if (Q_LIKELY(name() == qsl("feature"))) {
                 readRoomFeature(pR);
             }
         } else if (isEndElement() && name() == qsl("features")) {
@@ -469,7 +482,7 @@ void XMLimport::readRoomFeature(TRoom* pR)
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
 {
-    auto pT = new TRoom(mpHost->mpMap->mpRoomDB);
+    auto pT = new TRoom(mpHost->mpMap->mpRoomDB.get());
 
     pT->id = attributes().value(qsl("id")).toString().toInt();
     pT->area = attributes().value(qsl("area")).toString().toInt();
@@ -483,7 +496,8 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             continue; // Skip further tests on exits as we'd have to throw away
                       // this invalid room and it would mess up the
                       // entranceMultiHash
-        } else if (Q_LIKELY(name() == qsl("exit"))) {
+        }
+        if (Q_LIKELY(name() == qsl("exit"))) {
             QString dir = attributes().value(qsl("direction")).toString();
             const int e = attributes().value(qsl("target")).toString().toInt();
             // If there is a "hidden" exit mark it as a locked door, otherwise
@@ -581,7 +595,8 @@ void XMLimport::readUnknownMapElement()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             readUnknownMapElement();
         }
     }
@@ -597,7 +612,8 @@ std::pair<EditorViewType, int> XMLimport::readPackage()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("HostPackage")) {
                 readHostPackage();
             } else if (name() == qsl("TriggerPackage")) {
@@ -638,7 +654,8 @@ void XMLimport::readHelpPackage()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("helpURL")) {
                 const QString contents = readElementText();
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
@@ -684,7 +701,8 @@ void XMLimport::readHostPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("Host")) {
                 readHost(mpHost);
             } else {
@@ -719,11 +737,13 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
     setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNAWS"), pHost->mEnableNAWS, true);
+    setBoolAttributeWithDefault(qsl("mUndoServerWrap"), pHost->mUndoServerWrap, false);
     setBoolAttributeWithDefault(qsl("mEnableCHARSET"), pHost->mEnableCHARSET, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 
@@ -839,6 +859,8 @@ void XMLimport::readHost(Host* pHost)
         pHost->mEditorTheme = qsl("Mudlet");
         pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
     }
+    pHost->mEditorThemeDark = attributes().value(QLatin1String("mEditorThemeDark")).toString();
+    pHost->mEditorThemeFileDark = attributes().value(QLatin1String("mEditorThemeFileDark")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -919,16 +941,17 @@ void XMLimport::readHost(Host* pHost)
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value(qsl("mDiscordAccessFlags")).toString().toInt());
     }
 
+    if (attributes().hasAttribute(QLatin1String("mDiscordMode"))) {
+        const int modeInt = attributes().value(qsl("mDiscordMode")).toString().toInt();
+        if (modeInt >= Host::DiscordDisabled && modeInt <= Host::DiscordShowGameDetails) {
+            pHost->mDiscordMode = static_cast<Host::DiscordMode>(modeInt);
+        }
+    }
+
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
         pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
     } else {
         pHost->mRequiredDiscordUserName.clear();
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
-    } else {
-        pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
@@ -1115,11 +1138,15 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("commandLineMinimumHeight")) {
                 pHost->commandLineMinimumHeight = readElementText().toInt();
             } else if (name() == qsl("wrapAt")) {
-                pHost->mWrapAt = readElementText().toInt();
+                // toInt() yields 0 for anything unparseable, and a profile that
+                // wraps at zero columns can show no text at all
+                pHost->mWrapAt = qMax(1, readElementText().toInt());
             } else if (name() == qsl("wrapIndentCount")) {
                 pHost->mWrapIndentCount = readElementText().toInt();
             } else if (name() == qsl("wrapHangingIndentCount")) {
                 pHost->mWrapHangingIndentCount = readElementText().toInt();
+            } else if (name() == qsl("undoServerWrapWidth")) {
+                pHost->mUndoServerWrapWidth = qBound(20, readElementText().toInt(), 500);
             } else if (name() == qsl("consoleBufferSize")) {
                 pHost->mConsoleBufferSize = readElementText().toInt();
             } else if (name() == qsl("useMaxConsoleBufferSize")) {
@@ -1186,6 +1213,13 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
+    // A package import comes through here too, into a profile that does have a
+    // console - and that one needs the whole restyle, not just the model:
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
+    } else {
+        pHost->refreshMainConsoleColors();
+    }
 }
 
 bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
@@ -1340,7 +1374,8 @@ int XMLimport::readTrigger(TTrigger* pParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("script")) {
@@ -1385,14 +1420,9 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 // commented out in the XMLexporter class.
                 readStringList(pT->mPatterns, what);
             } else if (name() == qsl("regexCodePropertyList")) {
+                // A save whose two lists disagree is reported and repaired by
+                // TTrigger::setRegexCodeList(), which every reader funnels through
                 readIntegerList(pT->mPatternKinds, pT->getName(), what);
-                if (Q_UNLIKELY(pT->mPatterns.count() != pT->mPatternKinds.count())) {
-                    qWarning().nospace() << "XMLimport::readTrigger(...) ERROR: "
-                                            "mismatch in regexCode details for Trigger: "
-                                         << pT->getName() << " there were " << pT->mPatterns.count() << " 'regexCodeList' sub-elements and " << pT->mPatternKinds.count()
-                                         << " 'regexCodePropertyList' sub-elements so "
-                                            "something is broken!";
-                }
                 // Fixup the first 16 incorrect ANSI colour numbers from old
                 // code if there are any
                 if (!pT->mPatterns.isEmpty()) {
@@ -1423,7 +1453,8 @@ int XMLimport::readTimerPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("TimerGroup") || name() == qsl("Timer")) {
                 gotTimer = true;
                 lastImportedTimerID = readTimer(mPackageName.isEmpty() ? nullptr : mpTimer);
@@ -1460,7 +1491,8 @@ int XMLimport::readTimer(TTimer* pParent)
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
@@ -1498,7 +1530,8 @@ int XMLimport::readAliasPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("AliasGroup") || name() == qsl("Alias")) {
                 gotAlias = true;
                 lastImportedAliasID = readAlias(mPackageName.isEmpty() ? nullptr : mpAlias);
@@ -1528,7 +1561,8 @@ int XMLimport::readAlias(TAlias* pParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
@@ -1561,7 +1595,8 @@ int XMLimport::readActionPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("ActionGroup") || name() == qsl("Action")) {
                 gotAction = true;
                 lastImportedActionID = readAction(mPackageName.isEmpty() ? nullptr : mpAction);
@@ -1579,8 +1614,8 @@ int XMLimport::readAction(TAction* pParent)
     auto pT = new TAction(pParent, mpHost);
 
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
-    pT->mIsPushDownButton = attributes().value(qsl("isPushButton")) == YES;
-    pT->mButtonFlat = attributes().value(qsl("isFlatButton")) == YES;
+    pT->setIsPushDownButton(attributes().value(qsl("isPushButton")) == YES);
+    pT->setButtonFlat(attributes().value(qsl("isFlatButton")) == YES);
     pT->mUseCustomLayout = attributes().value(qsl("useCustomLayout")) == YES;
     mpHost->getActionUnit()->registerAction(pT);
     pT->setIsActive(attributes().value(qsl("isActive")) == YES);
@@ -1594,9 +1629,10 @@ int XMLimport::readAction(TAction* pParent)
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
-                pT->mName = readElementText();
+                pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
@@ -1607,21 +1643,21 @@ int XMLimport::readAction(TAction* pParent)
             } else if (name() == qsl("css")) {
                 pT->css = readElementText();
             } else if (name() == qsl("commandButtonUp")) {
-                pT->mCommandButtonUp = readElementText();
+                pT->setCommandButtonUp(readElementText());
             } else if (name() == qsl("commandButtonDown")) {
-                pT->mCommandButtonDown = readElementText();
+                pT->setCommandButtonDown(readElementText());
             } else if (name() == qsl("icon")) {
-                pT->mIcon = readElementText();
+                pT->setIcon(readElementText());
             } else if (name() == qsl("orientation")) {
                 pT->mOrientation = readElementText().toInt();
             } else if (name() == qsl("location")) {
                 pT->mLocation = readElementText().toInt();
             } else if (name() == qsl("buttonRotation")) {
-                pT->mButtonRotation = readElementText().toInt();
+                pT->setButtonRotation(readElementText().toInt());
             } else if (name() == qsl("sizeX")) {
-                pT->mSizeX = readElementText().toInt();
+                pT->setSizeX(readElementText().toInt());
             } else if (name() == qsl("sizeY")) {
-                pT->mSizeY = readElementText().toInt();
+                pT->setSizeY(readElementText().toInt());
             } else if (name() == qsl("mButtonState")) {
                 // We now use a boolean but file must use original "1" (false)
                 // or "2" (true) for backward compatibility
@@ -1630,7 +1666,10 @@ int XMLimport::readAction(TAction* pParent)
                 // Not longer present/used, skip over it if it is still in file:
                 skipCurrentElement();
             } else if (name() == qsl("buttonColumn")) {
-                pT->mButtonColumns = readElementText().toInt();
+                // The above ought to have been plural!
+                pT->setButtonColumns(readElementText().toInt());
+            } else if (name() == qsl("buttonFillerOffset")) {
+                pT->setButtonFillerOffset(readElementText().toInt());
             } else if (name() == qsl("posX")) {
                 pT->mPosX = readElementText().toInt();
             } else if (name() == qsl("posY")) {
@@ -1654,7 +1693,8 @@ int XMLimport::readScriptPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("ScriptGroup") || name() == qsl("Script")) {
                 gotScript = true;
                 lastImportedScriptID = readScript(mPackageName.isEmpty() ? nullptr : mpScript);
@@ -1684,7 +1724,8 @@ int XMLimport::readScript(TScript* pParent)
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 script->mName = readElementText();
             } else if (name() == qsl("packageName")) {
@@ -1716,7 +1757,8 @@ int XMLimport::readKeyPackage()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("KeyGroup") || name() == qsl("Key")) {
                 gotKey = true;
                 lastImportedKeyID = readKey(mPackageName.isEmpty() ? nullptr : mpKey);
@@ -1746,7 +1788,8 @@ int XMLimport::readKey(TKey* pParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("packageName")) {
@@ -1783,7 +1826,8 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("key")) {
                 key = readElementText();
             } else if (name() == qsl("filepath")) {
@@ -1816,7 +1860,8 @@ void XMLimport::readStringList(QStringList& list, const QString& whatIsParent)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("string")) {
                 list << readElementText();
             } else {
@@ -1833,7 +1878,8 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("integer")) {
                 const QString numberText = readElementText();
                 bool ok = false;
@@ -2036,10 +2082,11 @@ void XMLimport::readStopWatchMap()
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == qsl("stopwatch")) {
                 const int watchId = attributes().value(qsl("id")).toInt();
-                auto pStopWatch = new stopWatch();
+                auto pStopWatch = std::make_unique<stopWatch>();
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
                 pStopWatch->mIsInitialised = true;
@@ -2053,7 +2100,7 @@ void XMLimport::readStopWatchMap()
                     pStopWatch->mIsRunning = false;
                     pStopWatch->mElapsedTime = attributes().value(qsl("elapsedDateTimeMSecs")).toLongLong();
                 }
-                mpHost->mStopWatchMap.insert(watchId, pStopWatch);
+                mpHost->mStopWatchMap[watchId] = std::move(pStopWatch);
                 // A dummy read as there should not be any text for this element:
                 readElementText();
             } else {
@@ -2103,9 +2150,8 @@ void XMLimport::readProfileShortcut()
 {
     auto key = attributes().value(qsl("key"));
     auto sequenceString = readElementText();
-    if (mpHost->profileShortcuts.value(key.toString())) {
-        QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
-        mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
-        delete sequence;
+    if (auto it = mpHost->profileShortcuts.find(key.toString()); it != mpHost->profileShortcuts.end()) {
+        QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
+        it->second->swap(sequence);
     }
 }

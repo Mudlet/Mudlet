@@ -10,16 +10,18 @@ Geyser.ScrollBox = Geyser.Window:new({
 })
 
 -- Overridden reposition for special coordination handling
-function Geyser.ScrollBox:reposition()
+function Geyser.ScrollBox:reposition(skipChildren)
     Geyser.calc_constraints(self, self, self.container)
     moveWindow(self.name, self:get_x(), self:get_y())
     resizeWindow(self.name, self:get_width(), self:get_height())
     self.get_x = function() return 0 end
     self.get_y = function() return 0 end
       -- deal with all children of this container
-    for k, v in pairs(self.windowList) do
-        if k ~= self and not v.nestLabels then
-        v:reposition()
+    if not skipChildren then
+        for k, v in pairs(self.windowList) do
+            if k ~= self and not v.nestLabels then
+            v:reposition()
+            end
         end
     end
 end
@@ -50,6 +52,11 @@ function Geyser.ScrollBox:new (cons, container)
     self.__index = self
     
     createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+
+    -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
+    if me.hidden or me.auto_hidden then
+        hideWindow(me.name)
+    end
 
     --ScrollBox needs a special windowname handling as it by itself is a "window"
     --the given windowname will be saved to the parentWindowName variable

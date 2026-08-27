@@ -42,4 +42,9 @@ void EAction::slot_execute(bool checked)
 {
     mpHost->getActionUnit()->getAction(mID)->mButtonState = checked;
     mpHost->getActionUnit()->getAction(mID)->execute();
+    // Deliberately no doCleanup() here: a menu item runs nested inside a bar's
+    // slot_pressed() (TEasyButtonBar::showMenu() spins a modal event loop), which
+    // dereferences its own button after this returns - flushing here could free
+    // an action that ancestor frame still holds. The deferred deletes are cleared
+    // by that ancestor bar dispatcher and by Host's catch-all doCleanup() calls.
 }

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018, 2020, 2022-2023 by Stephen Lyons       *
+ *   Copyright (C) 2015, 2017-2018, 2020, 2022-2023, 2026 by Stephen Lyons *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -44,8 +44,14 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <type_traits>
+#include <vector>
 
 class Host;
+class QJsonArray;
+class QJsonObject;
+class QRegularExpression;
+class QTimer;
 class TConsole;
 
 class WrapInfo
@@ -146,6 +152,14 @@ public:
     // we should also have a destructor and an assignment operator but they can,
     // in this case, be default ones:
     TChar& operator=(const TChar&) = default;
+    // Moving is not copying: a std::vector of TChars relocates its elements
+    // when it outgrows its allocation, and the characters of a line the user
+    // has selected have to stay selected when that happens. Declaring the
+    // copy-constructor above suppressed the implicit move, so without these
+    // the vector would relocate through the copy-constructor and quietly
+    // deselect every line that text was appended to.
+    TChar(TChar&&) = default;
+    TChar& operator=(TChar&&) = default;
     ~TChar() = default;
 
     bool operator==(const TChar&);
@@ -154,9 +168,7 @@ public:
         mFgColor = newForeGroundColor;
         mBgColor = newBackGroundColor;
     }
-    // Only considers the following flags: AltFont#, Bold, Conceal,
-    // FastBlink/Blink, Italic, Overline, Reverse, Strikeout, Underline,
-    // - does not consider Echo or Found:
+    // Only considers the flags within TestMask - so not Echo or Found:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }
@@ -280,33 +292,62 @@ private:
     // for memory efficiency - they are looked up via linkIndex() at render time.
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
+// std::vector only relocates by moving if the move cannot throw; otherwise it
+// falls back to the copy-constructor, which deselects.
+static_assert(std::is_nothrow_move_constructible_v<TChar>);
 
 
 class TBuffer
 {
-    inline static const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
+    // Reads the deferred-logging state directly, to pin that
+    // logRemainingOutput() clears it even when there is no view to log through:
+    friend class ConsoleModelExtractionTest;
 
-    inline static const int TCHAR_IN_BYTES = sizeof(TChar);
+    static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
-    // limit on how many characters a single echo can accept for performance reasons
-    inline static const int MAX_CHARACTERS_PER_ECHO = 1000000;
+    static inline const int TCHAR_IN_BYTES = sizeof(TChar);
 
 public:
+    // limit on how many characters a single echo can accept for performance reasons
+    static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
+
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     ~TBuffer();
     TBuffer(const TBuffer& other);
     TBuffer& operator=(const TBuffer& other);
+    // The main console's model can outlive the view built on it, so this
+    // back-pointer is bound when a view attaches and unbound when it goes away.
+    // A second live view attaching to the same model would silently steal it
+    // from the first, so trip on that rather than leave detachConsole() to
+    // guess which one owns the binding:
+    void setConsole(TConsole* pConsole)
+    {
+        Q_ASSERT(mpConsole.isNull() || mpConsole.data() == pConsole);
+        mpConsole = pConsole;
+    }
+    // Ignores views other than the bound one, so a departing view cannot orphan
+    // a successor that has already attached.
+    void detachConsole(const TConsole* pConsole)
+    {
+        if (mpConsole.data() == pConsole) {
+            mpConsole = nullptr;
+        }
+    }
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
-    int skipSpacesAtBeginOfLine(const int row, const int column);
-    void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
+    QString assembleLog(int fromLine, int toLine);
+    inline int skipSpacesAtBeginOfLine(const int row, const int column);
+    void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
+    // Colors of the current trigger-pass line as committed, before any
+    // trigger ran; nullptr when lineNumber is not the line being processed:
+    const std::vector<TChar>* preTriggerPassLine(int lineNumber) const;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -322,17 +363,26 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
-    void clearLinkState();
+    void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
     QSet<int> collectActiveLinkIds() const;
     void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
+    // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
+    // - public so that the connection teardown can flush it:
+    void flushPendingServerWrapJoin();
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
+    // Drops any half-received ANSI sequence or multi-byte character, on both
+    // the Game Server and the local channel. Only a connection boundary (or a
+    // test fixture) should use this: a sequence split across Game Server
+    // packets relies on that state surviving between calls to
+    // translateToPlainText():
+    void resetSequenceParserState();
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
-    void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
-    void appendFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    void append(const QString& chunk, const int sub_start, const int sub_end, const TChar& format, const int linkID = 0);
+    void appendFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     void appendEmptyLine();
     void setWrapAt(int i) { mWrapAt = i; }
@@ -362,9 +412,9 @@ public:
     static int lengthInGraphemes(const QString& text);
 
 
-    std::deque<TChar> bufferLine;
+    std::vector<TChar> bufferLine;
     // stores the text attributes (TChars) that make up each line of text in the buffer
-    std::deque<std::deque<TChar>> buffer;
+    std::deque<std::vector<TChar>> buffer;
     // stores the actual content of lines
     QStringList lineBuffer;
     // stores timestamps associated with lines
@@ -383,8 +433,12 @@ public:
 private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
+    void syncPreTriggerPassLine(int y);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
+    void translateToPlainTextInner(std::string& incoming, bool isFromServer);
+    void swapParserSequenceState();
+    void warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd);
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -394,7 +448,16 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-    bool commitLine(char ch, size_t& localBufferPosition);
+    bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
+    void commitLineData(QString line, std::vector<TChar> chars, char ch);
+    bool endsAtServerWrapColumn() const;
+    bool looksLikeWrappedProse(const QString& line) const;
+    static bool segmentEndsSettledSentence(const QString& line);
+    static bool startsWithListMarker(const QString& line);
+    bool pendingLineHadRoomForNextWord() const;
+    bool continuationRepeatsSegmentOpening() const;
+    void joinPendingServerWrapOntoCurrent();
+    void startServerWrapFlushTimer();
     void processMxpWatchdogCallback();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
@@ -428,12 +491,23 @@ private:
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
     bool mGotESC = false;
+    // Set between the ESC '(', ')', '*' or '+' of an ISO 2022 character set
+    // designation and the byte that names the set:
+    bool mGotEscCharset = false;
     // Second stage in decoding SGR sequences - set true when we see the ASCII
     // ESC character followed by the '[' one:
     bool mGotCSI = false;
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
     bool mGotOSC = false;
+    // Set alongside mGotOSC when the payload must be consumed up to the
+    // terminator but not decoded: the other ANSI string sequences (DCS, SOS,
+    // PM and APC, i.e. ESC followed by 'P', 'X', '^' or '_' respectively), and
+    // an OSC that grew past MAX_OSC_SEQUENCE_LENGTH so that only part of its
+    // payload is still to hand:
+    bool mGotString = false;
+    // Keeps warnAboutDiscardedStringSequence() to one report per connection:
+    bool mWarnedAboutStringSequence = false;
     bool mIsDefaultColor = true;
 
 
@@ -482,7 +556,24 @@ private:
     quint8 mAltFont = 0;
 
     QString mMudLine;
-    std::deque<TChar> mMudBuffer;
+    std::vector<TChar> mMudBuffer;
+    std::vector<TChar> mPreTriggerPassLine;
+    int mPreTriggerPassLineNumber = -1;
+    // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
+    // is held here instead of being committed, so its continuation can be
+    // joined back on and triggers run once over the whole logical line:
+    QString mServerWrapPendingLine;
+    std::vector<TChar> mServerWrapPendingBuffer;
+    // Length of the last game line joined into the above. Once a paragraph
+    // has been joined even once the held text is longer than the wrap column,
+    // so the column the game actually broke at is only recoverable from this:
+    qsizetype mServerWrapPendingSegmentLength = 0;
+    // Opening of that same game line, kept so that a continuation repeating it
+    // can be told from one that carries on where it left off:
+    QString mServerWrapPendingSegmentStart;
+    // Commits a held line if the game goes quiet without completing it - a
+    // full-width line that really was the end of the output:
+    QPointer<QTimer> mpServerWrapFlushTimer;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
     // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
@@ -490,11 +581,32 @@ private:
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
+    // The parser sequence state (the mGot... latches and
+    // mIncompleteSequenceBytes) for whichever of the two data channels - Game
+    // Server stream or locally generated text - is not currently being
+    // processed; translateToPlainText() swaps it in around a local feed so
+    // that such text cannot consume or clear a latch belonging to a sequence
+    // split across Game Server packets (and vice versa):
+    bool mLocalGotESC = false;
+    bool mLocalGotEscCharset = false;
+    bool mLocalGotCSI = false;
+    bool mLocalGotOSC = false;
+    bool mLocalGotString = false;
+    std::string mLocalIncompleteSequenceBytes;
+    // Set whilst a locally generated feed is being processed, so a nested feed
+    // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
+    bool mProcessingLocalFeed = false;
+
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // indices of lines being committed while their triggers run - a stack,
+    // because a trigger calling feedTriggers() re-enters commitLine();
+    // deleteLines() adjusts the entries so commitLine() can tell whether its
+    // line survived trigger processing
+    QList<int> mCommitLineIndices;
 
     QByteArray mEncoding;
 
@@ -533,6 +645,39 @@ private:
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
 
+    // Server wrap undoing: a line no shorter than this many characters below
+    // the configured wrap column is a candidate wrapped segment (the game
+    // breaks at the last space, so segments fall a partial word short);
+    // whether it really was one is settled once the continuation arrives,
+    // see csmServerWrapFitTolerance:
+    static constexpr int csmServerWrapSlack = 15;
+    // How many columns clear of the wrap column the continuation's first word
+    // would have had to end before its fitting proves the game ended the line
+    // itself. Text laid out by hand does not sit exactly on the column, so a
+    // few columns to spare mean nothing: in captures of MorgenGrauen and
+    // Discworld no genuine wrap left more than 7 free. Held lines start no
+    // more than csmServerWrapSlack short of the column, so this can only ever
+    // reject a continuation opening with a word of csmServerWrapSlack less
+    // this many characters or fewer:
+    static constexpr int csmServerWrapFitTolerance = 8;
+    // How much of a held game line's opening is kept for comparing a
+    // continuation against. Only the first csmServerWrapRepeatedWords shared
+    // words and the spaces after them have to fall inside it, and this leaves
+    // room for that even where a long name is one of them:
+    static constexpr qsizetype csmServerWrapSegmentStartChars = 48;
+    // How many opening words a continuation has to share with the held segment
+    // before it is a message the game re-prefixed rather than a wrap. One is
+    // far too common in prose to mean anything:
+    static constexpr int csmServerWrapRepeatedWords = 2;
+    // Stop joining once a logical line has grown this long - a runaway guard:
+    static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
+    // How long to hold a full-width line for its continuation before deciding
+    // it really was complete:
+    static constexpr int csmServerWrapFlushDelayMs = 300;
+    // A longer number opening a line is likelier a year or a price ending a
+    // wrapped sentence than a list number; only "[...]" is trusted past it:
+    static constexpr qsizetype csmMaxListNumberDigits = 3;
+
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;
 
@@ -559,7 +704,15 @@ public:
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
-    int getLinkIndexAt(int line, int column) const;                                     // Get link index at specific position
+    int getLinkIndexAt(int line, int column) const; // Get link index at specific position
+
+    // Accessibility: find next/previous link from a given position for Tab navigation
+    // Returns true if found, and sets outLine/outColumn to the start of the link
+    // If wrapped is non-null, it is set to true when the search wrapped around the buffer
+    bool findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped = nullptr) const;
+    bool findPreviousLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped = nullptr) const;
+    // Get the tooltip text for a link (from hints or styling)
+    QString getLinkTooltip(int linkIndex) const;
     void clearLinkIndices(int lineNumber, int startColumn, int count);                  // Clear link indices in a range
     void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 

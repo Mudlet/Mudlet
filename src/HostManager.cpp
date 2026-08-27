@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018, 2020, 2024, 2025 by Stephen Lyons           *
+ *   Copyright (C) 2016, 2018, 2020, 2024-2026 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -134,7 +134,7 @@ void HostManager::changeAllHostColour(const Host* pHost)
         return;
     }
     //change all main and subconsoles color
-    for (QSharedPointer<Host> host : mHostPool.values()) {
+    for (const QSharedPointer<Host> &host : mHostPool.values()) {
         host->mpConsole->changeColors();
         // Mapper also needs a refresh of its colours
         auto mapper = host->mpMap->mpMapper;

@@ -4,21 +4,12 @@
 
 Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
 
-## Core technologies
+## Skills
 
-- **C++20** with Qt6 (minimum 6.8.2)
-- **CMake** build system (minimum 3.25.1)
-- **Lua 5.1** scripting engine
-- **Cross-platform**: Windows, macOS, Linux
+Task-specific instructions live in `.agents/skills/<name>/SKILL.md`, in the [Agent Skills](https://agentskills.io) format. Claude Code, GitHub Copilot and Cursor all read this directory (Claude Code via the `.claude/skills` symlink). Read the relevant one before starting that kind of task rather than working from memory:
 
-## Project structure
-
-- `src/` - main application source code
-- `test/` - Unit tests for C++ core, written in Qt Test
-- `src/mudlet-lua/tests/` - Unit tests covering the Lua API, written in Busted
-- `3rdparty/` - External dependencies and libraries
-- `translations/` - Internationalization files
-- `.github/workflows/` - Github Actions workflows
+- `build-mudlet` - building, rebuilding or running Mudlet on any platform
+- `open-pr` - publishing a branch and opening a pull request upstream
 
 ## Coding standards
 All files should end with a newline character at the end of the file.
@@ -28,18 +19,36 @@ In general: write modern C++20 code, but avoid C++ exceptions, templates, and co
 
 Use range-based for loops instead of iterator-based or index-based loops where appropriate.
 
-See `.github/CONTRIBUTING.md` for the coding standards as well as the information below:
+See `docs/CONTRIBUTING.md` for the coding standards as well as the information below:
 
 ```cpp
 // Class names: PascalCase with 'T' prefix for main classes
 class TConsole : public QWidget
 
 // Member variables: camelCase with 'm' prefix
+// avoid starting with the `is` prefix
 QString mProfileName;
+
+// avoid starting function names with the `is` prefix as well
+bool ready();
 
 // Qt signals/slots: camelCase
 signals:
     void profileChanged(const QString& name);
+```
+
+### QFlags and enums
+
+When working with Qt `Q_DECLARE_FLAGS` types, always use the proper enum/flags type - never pass them as raw `int`:
+
+```cpp
+// Good - uses the typed enum
+void setServerOrigin(Host*, const Host::DiscordOptionFlag);
+QMap<Host*, Host::DiscordOptionFlags> mServerOriginFlags;
+
+// Bad - loses type safety
+void setServerOrigin(Host*, int flag);
+QMap<Host*, int> mServerOriginFlags;
 ```
 
 ### String handling
@@ -84,22 +93,6 @@ Minimize `#include` directives to reduce build times:
 - When adding new code, verify you need each include you add
 - Don't copy includes from similar files without checking if they're needed
 
-**Forward declaration examples:**
-```cpp
-// In header: use forward declaration when only pointer/reference is needed
-class Host;  // Forward declare instead of #include "Host.h"
-class QCloseEvent;
-
-class MyClass {
-    Host* mpHost;  // Pointer - forward declaration sufficient
-    void closeEvent(QCloseEvent* event);  // Pointer param - forward declaration sufficient
-};
-
-// In cpp: include the full header where the type is actually used
-#include "Host.h"
-#include <QCloseEvent>
-```
-
 ## Key architecture points
 Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
 
@@ -133,27 +126,31 @@ int TLuaInterpreter::functionName(lua_State* L)
 
 Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
 
-### Error handling
-
-```cpp
-// Qt-style error handling
-if (!file.open(QIODevice::ReadOnly)) {
-    qWarning() << "Failed to open file:" << file.errorString();
-    return false;
-}
-```
-
 ### UI components
 
 - Dialog classes use `dlg*.h/cpp` naming
 - Follow Qt's Model-View pattern
 - Use Qt's signal/slot mechanism for communication
 
+## Tests
+
+Two harnesses: Lua specs in `src/mudlet-lua/tests/*_spec.lua` (busted, run in the self-test profile), and C++ functional tests in `test/functional_tests/` (ctest).
+
+Prefer a spec. A functional test statically links `mudlet_core`, so it costs ~250MB and a link step in every build tree unless it joins a grouped per-subsystem binary, where it costs a compile instead; either way each ctest case runs in its own process. Some subsystems have such a group today - the `*_GROUP_TEST_SOURCES` lists in `test/functional_tests/CMakeLists.txt`, which document how to join one. A spec is ~30KB and needs no rebuild at all because `mudlet-lua` loads from disk. Specs are also shared with Mudlet Web, so writing one grows that platform's coverage for free, which a functional test never does. Write a functional test when a spec genuinely cannot reach the behaviour: private C++ state, a path with no Lua entry point, or something that happens before Lua exists. Sanitiser coverage is not one of those reasons, as the spec run exercises the same instrumented binary.
+
+Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it.
+
+## Demo videos
+
+To demonstrate a bug fix or UI change with a screen recording, follow the before & after video workflow in `docs/demo-videos.md` (Linux/Xvfb; records headlessly, then trims and labels the result for attaching to a PR).
+
 ## Build system notes
 
+- **Before running any `cmake`, `ninja` or `make` command, read the `build-mudlet` skill in `.agents/skills/build-mudlet/SKILL.md`.** It carries the per-platform invocation and the parallelism pitfalls; an unbounded build command can saturate the machine's memory.
 - **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
+- Platform specifics and compile-time debugging defines: see `docs/platform-builds.md`
 
 ### Code formatting
 
@@ -168,65 +165,43 @@ On macOS, use the Homebrew-installed LLVM version to ensure compatibility:
 $(brew --prefix llvm)/bin/clang-format -i path/to/edited/file.cpp path/to/edited/file.h
 ```
 
-The project uses the `.clang-format` configuration in `src/`. This ensures consistent code style across the codebase.
+The project uses the `.clang-format` configuration in the repo root. This ensures consistent code style across the codebase.
 
 ### Static analysis
 
-For complete setup instructions on how to run static analysis during a build see, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
-
-### Debugging options
-
-`src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
-
-- `DEBUG_TELNET` - Telnet protocol debugging
-- `DEBUG_UTF8_PROCESSING` - UTF-8 decoding messages
-- `DEBUG_SGR_PROCESSING` - ANSI color sequence debugging
-- `DEBUG_WINDOW_HANDLING` - UI window operations
-- And others for encoding, MXP, map autosave, etc.
-
-**Usage**: Uncomment relevant `target_compile_definitions(mudlet PRIVATE DEBUG_XXX)` lines when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
 
 ### Git
 
 Do not force-push to remote branches.
 
-### Building on macOS
+#### Commit trailers for AI-assisted work
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
+When you (an AI assistant) help produce a commit, the commit message MUST include:
 
-**Essential build commands:**
+- `Assisted-by: AGENT_NAME:MODEL_VERSION` - identifies the AI tool and model. Use the actual model ID you are running as (e.g. `Assisted-by: Claude:claude-4.6-opus`).
+- `Signed-off-by: Full Name <email>` - the human submitter's DCO sign-off. Do NOT fabricate or auto-add this on the human's behalf, and do NOT add a `Signed-off-by` for the AI itself.
 
-```bash
-# Build
-cd /path/to/Mudlet/build
-# wait up to 10mins for a build
-cmake ../../Mudlet -DCMAKE_PREFIX_PATH=`brew --prefix qt6`
-make -j `sysctl -n hw.ncpu`
+Before the human signs off, they must have built and manually tested the change to confirm it works. Mudlet developers should not be the first to test AI-generated code. Ask the human to confirm they've tested the PR, and to provide the name and email to use for sign-off; only then add the `Signed-off-by` trailer.
 
-# Run Mudlet - use absolute path to avoid directory confusion
-/path/to/Mudlet/build/src/mudlet.app/Contents/MacOS/mudlet
-```
+Both trailers go at the end of the commit message. Apply this to every AI-assisted commit, not just the first. See the "AI Coding Assistants" section in `docs/CONTRIBUTING.md` for the full policy.
 
-### Building on Linux
+### Building
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet
 
+Build through a preset from `CMakePresets.json`. Run `cmake --list-presets` to see the ones offered
+on the current machine — the listing is filtered by host system, so only that platform's presets
+appear. Read the `build-mudlet` skill for the per-platform detail:
+
 ```bash
-# cd to the right build directory
-cd /path/to/Mudlet/build
-
-# configure (only needed the first time)
-cmake ../ -G Ninja
-
-# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default, no need to specify number of jobs:
-cmake --build .
+# from the repository root; wait up to 10mins for a full build
+cmake --preset linux-debug
+cmake --build --preset linux-debug
 
 # Run Mudlet - it's a visual, desktop application
-cd /path/to/Mudlet/build
-./src/mudlet
+./build/src/mudlet          # macOS: ./build/src/mudlet.app/Contents/MacOS/mudlet
 ```
 
-### Building on Windows
-
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
-
+Variant presets such as `linux-debug-nosan` build into `build-<preset-name>/`, so the binary is
+under that directory rather than `build/`.

@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,6 +28,7 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
+#include "TMapView.h"
 #include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
@@ -36,19 +38,41 @@
 #include "mudlet.h"
 
 #include <QBuffer>
+#include <QDataStream>
 #include <QElapsedTimer>
-#include <QFileDialog>
+#include <QFontMetrics>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QJsonParseError>
-#include <QMessageBox>
+#include <QJsonValue>
+#include <QMetaMethod>
 #include <QPainter>
 #include <QPixmap>
-#include <QProgressDialog>
+#include <QSaveFile>
 #include <QSizeF>
+#include <QXmlStreamReader>
+#include <chrono>
 
+using namespace std::chrono_literals;
 
 namespace {
+// A map file can carry a room symbol scaling factor that TMap's own setter
+// would refuse - hand-edited, from a third-party tool, or written by a Mudlet
+// whose JSON reader truncated it (issue #10176). Loading cannot go through the
+// setter, which would mark the freshly loaded map as unsaved, so it comes
+// through here instead: 0 and below blanks every room symbol, which is worse
+// than a factor that is merely not what the file said.
+qreal usableSymbolFontFudgeFactor(const qreal fromFile)
+{
+    if (!qIsFinite(fromFile)) {
+        // NaN compares false against both bounds, so qBound() cannot be relied
+        // on to sort it out
+        return 1.0;
+    }
+    return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
+}
+
 // Restores font information from userData that was stored during binary serialization.
 // Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
 void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
@@ -77,12 +101,51 @@ void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QS
         }
     }
 }
+
+enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
+
+struct MapFileCheck
+{
+    MapFileCheckResult result;
+    QString errorString;
+};
+
+// A file holds map data only if its root element is <map>. XMLimport reads a
+// <MudletPackage> document as a package, and anything else - a game's HTML "no
+// map here" page answered with a 200, say - as a well-formed document full of
+// elements it does not recognise: either way it reports success having put no
+// rooms on the map it was asked to fill. A file that is not XML at all is told
+// apart from those, so that a damaged map is not reported as somebody else's
+// web page.
+MapFileCheck fileHoldsMapData(QFile& file)
+{
+    const qint64 startPosition = file.pos();
+    MapFileCheck check{MapFileCheckResult::NotAMap, QString()};
+    QXmlStreamReader reader(&file);
+    while (!reader.atEnd()) {
+        if (reader.readNext() == QXmlStreamReader::StartElement) {
+            // XML allows only one root element, so the first start element is it
+            check.result = (reader.name() == qsl("map")) ? MapFileCheckResult::ValidMap : MapFileCheckResult::NotAMap;
+            break;
+        }
+    }
+
+    if (reader.hasError()) {
+        check.result = MapFileCheckResult::ParseError;
+        check.errorString = reader.errorString();
+    }
+
+    // The reader buffers ahead, so the parse proper has to be given the file
+    // back where it was rather than where the scan above left it
+    file.seek(startPosition);
+    return check;
+}
 } // anonymous namespace
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
-, mpRoomDB(new TRoomDB(this))
+, mpRoomDB(std::make_unique<TRoomDB>(this))
 , mpViewManager(new TMapViewManager(pH, this))
 , mpHost(pH)
 , mProfileName(profileName)
@@ -103,12 +166,11 @@ TMap::TMap(Host* pH, const QString& profileName)
 
 TMap::~TMap()
 {
-    delete mpRoomDB;
     if (!mStoredMessages.isEmpty()) {
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"
                    << "------------";
-        for (const auto& message : mStoredMessages) {
+        for (const auto& message : std::as_const(mStoredMessages)) {
             qWarning() << message << "\n------------";
         }
     }
@@ -150,10 +212,13 @@ void TMap::mapClear()
     }
 }
 
-void TMap::logError(QString& msg)
+// The supplied message should contain a localised message and no "WARNING:" or other prefixes:
+void TMap::logError(const QString& msg)
 {
     if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("%1\n").arg(tr("[MAP ERROR:]%1").arg(msg)), QColor(255, 128, 0), QColor(Qt::black));
+        /*: Used to print a map error in the Errors console in the Editor, %1 is the
+ message text and a line-feed is also appended.*/
+        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
     }
 }
 
@@ -172,12 +237,11 @@ void TMap::logError(QString& msg)
 //    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 //}
 
-bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
+bool TMap::setRoomArea(int id, int area)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
-        QString msg = tr("RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!").arg(id).arg(area);
-        logError(msg);
+        logError(tr("Can not set room with RoomID %1 to AreaID %2. Room does not exist!").arg(QString::number(id), QString::number(area)));
         return false;
     }
 
@@ -187,8 +251,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
-            QString msg = tr("AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!").arg(id).arg(area);
-            logError(msg);
+            logError(tr("Can not set room with RoomID %1 to AreaID %2. Area does not exist!").arg(QString::number(id), QString::number(area)));
             return false;
         }
         // If got to this point then there is NOT a TArea instance for the given
@@ -198,7 +261,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to retain the API for the lua subsystem...
     }
 
-    const bool result = pR->setArea(area, deferAreaRecalculations);
+    const bool result = pR->setArea(area);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
@@ -221,6 +284,18 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
         return false;
+    }
+
+    const int oldX = pR->x();
+    const int oldY = pR->y();
+    const int oldZ = pR->z();
+
+    if (oldX != x || oldY != y || oldZ != z) {
+        TArea* pA = mpRoomDB->getArea(pR->getArea());
+        if (pA) {
+            // Atomically update both indices for any coordinate change.
+            pA->moveRoom(id, oldZ, oldX, oldY, z, x, y);
+        }
     }
 
     pR->setCoordinates(x, y, z);
@@ -992,7 +1067,7 @@ bool TMap::findPath(int from, int to)
     std::vector<cost> d(vertexCount);
     try {
         astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
-    } catch (found_goal) {
+    } catch (const found_goal&) {
         qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
         t.restart();
         if (!roomidToIndex.contains(to)) {
@@ -1095,14 +1170,19 @@ bool TMap::findPath(int from, int to)
 
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
-    // clamp version values
-    if (saveVersion < 0) {
-        saveVersion = 0;
-    } else if (saveVersion > mMaxVersion) {
-        saveVersion = mMaxVersion;
+    if (saveVersion > mMaxVersion) {
         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                                   "for this version of Mudlet. Supported are only formats up to version %2.")
                                        .arg(QString::number(saveVersion), QString::number(mMaxVersion));
+        appendErrorMsgWithNoLf(errMsg, false);
+        postMessage(errMsg);
+        return false;
+    }
+    if (saveVersion != 0 && saveVersion < mMinVersion) {
+        //: Shown when a map save asks for a format version older than this Mudlet can write. %1 is the version asked for, %2 the oldest one supported.
+        const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too old\n"
+                                  "for this version of Mudlet. Supported are only formats from version %2.")
+                                       .arg(QString::number(saveVersion), QString::number(mMinVersion));
         appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1140,13 +1220,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mCustomEnvColors;
     ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion < 19) {
-        // Save the data in the map user data for older versions
-        mUserData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
-        mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
-        mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
-    }
-    ofs << mUserData;
-    if (mSaveVersion >= 19) {
+        // Save the data in the map user data for older versions - use a local
+        // copy so that saving does not modify the live map's user data:
+        QMap<QString, QString> userData{mUserData};
+        userData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
+        userData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
+        userData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
+        ofs << userData;
+    } else {
+        ofs << mUserData;
         // Save the data directly in supported format versions (19 and above)
         ofs << mMapSymbolFont;
         ofs << mMapSymbolFontFudgeFactor;
@@ -1298,11 +1380,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
 
         ofs << pR->getId();
-        if (mSaveVersion <= 19) {
-            if (!pR->mSymbol.isEmpty()) {
-                pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
-            }
-        }
         ofs << pR->getArea();
         ofs << pR->x();
         ofs << pR->y();
@@ -1323,10 +1400,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
-        if (mSaveVersion >= 22) {
-            ofs << pR->hidden;
-        }
         if (mSaveVersion >= 21) {
+            ofs << pR->hidden;
             ofs << pR->getSpecialExits();
         } else {
             QMultiMap<int, QString> oldSpecialExits;
@@ -1341,7 +1416,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->mSymbol;
         } else {
             qint8 oldCharacterCode = 0;
-            if (pR->mSymbol.length()) {
+            if (!pR->mSymbol.isEmpty()) {
                 // There is something for a symbol
                 const QChar firstChar = pR->mSymbol.at(0);
                 if (pR->mSymbol.length() == 1 && firstChar.row() == 0 && firstChar.cell() > 32) {
@@ -1359,10 +1434,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
         if (mSaveVersion >= 21) {
             ofs << pR->mSymbolColor;
-        } else {
-            if (pR->mSymbolColor.isValid()) {
-                pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
-            }
         }
 
         // Border properties are stored in userData (not binary stream) to avoid map bloat
@@ -1377,7 +1448,25 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
 
-        ofs << pR->userData;
+        // Formats before 21 carry the hidden flag and symbol color - and
+        // formats before 19 the symbol - as user data fallbacks; use a local
+        // copy so that saving does not modify the live room's user data.
+        // TRoom::restore() strips each key again when loading a format that
+        // carries it, so none may appear in formats which store the value
+        // directly in the stream:
+        QMap<QString, QString> userData{pR->userData};
+        if (mSaveVersion < 21) {
+            if (pR->hidden) {
+                userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));
+            }
+            if (pR->mSymbolColor.isValid()) {
+                userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
+            }
+        }
+        if (mSaveVersion < 19 && !pR->mSymbol.isEmpty()) {
+            userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+        }
+        ofs << userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
             // as a QList<int> for the RGB components and used UPPER case for
@@ -1568,8 +1657,9 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     return true;
 }
 
-bool TMap::restore(QString location, bool downloadIfNotFound)
+bool TMap::restore(QString location)
 {
+    const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
     QElapsedTimer _time;
@@ -1675,6 +1765,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 }
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
+                // Clean up stale fallback keys that past versions could leave
+                // behind in the live map's user data (and thus in files saved
+                // from it) after saving in a format before 19:
+                mUserData.remove(qsl("system.fallback_mapSymbolFont"));
+                mUserData.remove(qsl("system.fallback_mapSymbolFontFudgeFactor"));
+                mUserData.remove(qsl("system.fallback_onlyUseMapSymbolFont"));
             } else {
                 // Fallback to reading the data from the map user data - and
                 // remove it from the data the user will see:
@@ -1708,12 +1804,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias
                                                                           | QFont::PreferQuality | QFont::PreferNoShaping));
+        mMapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(mMapSymbolFontFudgeFactor);
         if (mVersion >= 14) {
             int areaSize = 0;
             ifs >> areaSize;
             // restore area table
             for (int i = 0; i < areaSize; i++) {
-                auto pA = new TArea(this, mpRoomDB);
+                auto pA = new TArea(this, mpRoomDB.get());
                 int areaID = 0;
                 ifs >> areaID;
                 if (mVersion >= 18) {
@@ -1788,7 +1885,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
 
         if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
-            auto pDefaultA = new TArea(this, mpRoomDB);
+            auto pDefaultA = new TArea(this, mpRoomDB.get());
             mpRoomDB->restoreSingleArea(-1, pDefaultA);
             const QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                        "area) not found, adding reserved -1 id.");
@@ -1864,7 +1961,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         while (!ifs.atEnd()) {
             int i = 0;
             ifs >> i;
-            auto pT = new TRoom(mpRoomDB);
+            auto pT = new TRoom(mpRoomDB.get());
             pT->restore(ifs, i, mVersion);
             mpRoomDB->restoreSingleRoom(i, pT);
         }
@@ -1888,23 +1985,14 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
         if (canRestore) {
+            // The symbol settings were assigned to the members directly above,
+            // rather than through the setters, so that loading a map does not
+            // mark it unsaved. Everything mirroring them still has to be told -
+            // the rendered symbol caches and any open preferences dialog - and
+            // only now, with the rooms in place for the glyph usage table:
+            flushSymbolCaches();
+            emit signal_mapSymbolFontChanged();
             return true;
-        }
-    }
-
-    if ((!canRestore || entries.empty()) && downloadIfNotFound) {
-        QMessageBox msgBox;
-
-        if (!getMmpMapLocation().isEmpty()) {
-            msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
-            QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
-            QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
-            msgBox.exec();
-            if (msgBox.clickedButton() == yesButton) {
-                downloadMap();
-            } else if (msgBox.clickedButton() == noButton) {
-                ; //No-op to avoid unused "noButton"
-            }
         }
     }
 
@@ -1970,21 +2058,20 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             }
             file.close();
             return true;
-        } else {
-            // Is a development version so check against mMaxVersion
-            if (otherProfileVersion > mMaxVersion) {
-                // Oh dear, can't handle THIS
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
-                file.close();
-                return true;
-            } else {
-                if (fileVersion) {
-                    *fileVersion = otherProfileVersion;
-                }
-            }
         }
+        // Is a development version so check against mMaxVersion
+        if (otherProfileVersion > mMaxVersion) {
+            // Oh dear, can't handle THIS
+            if (fileVersion) {
+                *fileVersion = otherProfileVersion;
+            }
+            file.close();
+            return true;
+        }
+        if (fileVersion) {
+            *fileVersion = otherProfileVersion;
+        }
+
     } else {
         if (fileVersion) {
             *fileVersion = otherProfileVersion;
@@ -2483,6 +2570,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
 
 void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     if (!pHost) {
         return;
@@ -2493,6 +2581,15 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
         const QString warnMsg = tr("[ WARN ]  - Attempt made to download an XML map when one has already been\n"
                                    "requested or is being imported from a local file - wait for that\n"
                                    "operation to complete (if it cannot be canceled) before retrying!");
+        postMessage(warnMsg);
+        return;
+    }
+
+    if (mMapProgressStandalone) {
+        //: Shown in the main console when a map download is refused
+        const QString warnMsg = tr("[ WARN ]  - Attempt made to download an XML map while a map import or\n"
+                                   "export is already in progress - wait for that operation to complete\n"
+                                   "before retrying!");
         postMessage(warnMsg);
         return;
     }
@@ -2536,7 +2633,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (localFileName.isEmpty()) {
-        if (url.toString().endsWith(QLatin1String("xml"))) {
+        if (url.path().endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
             mLocalMapFileName = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         } else {
             mLocalMapFileName = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
@@ -2557,23 +2654,13 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     // Attempts to ensure INFO message gets shown before download is initiated!
 
     mpNetworkReply = mpNetworkAccessManager->get(request);
-    // Using zero for both min and max values should cause the bar to oscillate
-    // until the first update
     //: %1 is the name of the current Mudlet profile
-    mpProgressDialog = new QProgressDialog(tr("Downloading map file for use in %1...").arg(mProfileName), tr("Abort"), 0, 0);
+    const QString label = tr("Downloading map file for use in %1...").arg(mProfileName);
     //: This is a title of a progress window.
-    mpProgressDialog->setWindowTitle(tr("Map download"));
-    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
-    mpProgressDialog->setMinimumWidth(300);
-    mpProgressDialog->setAutoClose(false);
-    mpProgressDialog->setAutoReset(false);
-    mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
+    createTransferProgress(tr("Map download"), label, true);
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     connect(mpNetworkReply, &QNetworkReply::errorOccurred, this, &TMap::slot_downloadError);
-    connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
-
-    mpProgressDialog->show();
 }
 
 // Called from TLuaInterpreter::loadFile() or dlgProfilePreferences's "loadMap"
@@ -2597,6 +2684,23 @@ bool TMap::importMap(QFile& file, QString* errMsg)
         }
         return false;
     }
+
+    if (mMapProgressStandalone) {
+        // readXmlMapFile() would see the JSON operation's progress dialog as its
+        // own, skip creating one, and then mapClear() the map out from under it:
+        if (errMsg) {
+            //: Error returned by the loadMap() Lua function
+            *errMsg = tr("loadMap: unable to perform request, a map import or export is\n"
+                         "already in progress.");
+        } else {
+            //: Shown in the main console when a map import is refused
+            const QString warnMsg = tr("[ WARN ]  - Attempt made to import an XML map while a map import or\n"
+                                       "export is already in progress - wait for that operation to complete\n"
+                                       "before retrying!");
+            postMessage(warnMsg);
+        }
+        return false;
+    }
     mImportRunning = true;
     // MUST clear this flag when done under ALL circumstances
 
@@ -2608,26 +2712,60 @@ bool TMap::importMap(QFile& file, QString* errMsg)
 
 bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     bool isLocalImport = false;
     if (!pHost) {
         return false;
     }
 
-    if (!mpProgressDialog) {
-        // This is the local import case - which has not got a progress dialog
-        // until now:
+    const MapFileCheck check = fileHoldsMapData(file);
+    if (check.result != MapFileCheckResult::ValidMap) {
+        // Both wordings are built before either is used: which one is wanted turns on what
+        // was wrong with the file, and where it goes turns on who asked, and keeping those
+        // two questions apart is what stops this being four near-identical branches
+        QString luaMessage;
+        QString consoleMessage;
+
+        if (check.result == MapFileCheckResult::ParseError) {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "is damaged or unreadable (%2), so the current map has been left as it was.")
+                                 .arg(file.fileName(), check.errorString);
+            //: Shown in the main console. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "is damaged or unreadable (%2) - so the current map has been\n"
+                                "left as it was.")
+                                     .arg(file.fileName(), check.errorString);
+        } else {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "does not contain a map, so the current map has been left as it was.")
+                                 .arg(file.fileName());
+            //: Shown in the main console. %1 is the path and name of the file that was read
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "does not contain a map - a game with no map to offer can answer a\n"
+                                "download with an error page instead of one - so the current map has\n"
+                                "been left as it was.")
+                                     .arg(file.fileName());
+        }
+
+        if (errMsg) {
+            *errMsg = luaMessage;
+        } else {
+            postMessage(consoleMessage);
+        }
+        return false;
+    }
+
+    if (!hasActiveTransferProgress()) {
         isLocalImport = true;
-        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
         //: This is a title of a progress window.
-        mpProgressDialog->setWindowTitle(tr("Map import"));
-        mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
-        mpProgressDialog->setMinimumWidth(300);
-        mpProgressDialog->setAutoClose(false);
-        mpProgressDialog->setAutoReset(false);
-        mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
-    } else {
-        ; // This is the download file case which is a no-op
+        createTransferProgress(tr("Map import"), tr("Importing XML map file for use in %1...").arg(mProfileName), false);
     }
 
     // It is NOW safe to delete the map as we are in a position to load one
@@ -2660,9 +2798,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     }
 
     if (isLocalImport) {
-        // clean-up
-        mpProgressDialog->deleteLater();
-        mpProgressDialog = nullptr;
+        clearTransferProgress();
     }
 
     if (!mpMapper.isNull()) {
@@ -2674,30 +2810,27 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
 
 void TMap::slot_setDownloadProgress(qint64 got, qint64 total)
 {
-    if (!mpProgressDialog) {
+    if (!hasActiveTransferProgress()) {
         return;
     }
 
-    if (!mpProgressDialog->maximum()) {
+    if (!transferProgressMaximum()) {
         // First call, range has not been set;
-        mpProgressDialog->setRange(0, mExpectedFileSize);
-    } else if (total != -1 && mpProgressDialog->maximum() != static_cast<int>(total)) {
+        updateTransferProgressRange(0, mExpectedFileSize);
+    } else if (total != -1 && transferProgressMaximum() != static_cast<int>(total)) {
         // total will stick at -1 when we do not know how big the download is
         // which seems to be the case for the IRE MUDS - *sigh* - Slysven
-        mpProgressDialog->setRange(0, static_cast<int>(total));
+        updateTransferProgressRange(0, static_cast<int>(total));
     }
 
-    mpProgressDialog->setValue(static_cast<int>(got));
+    updateTransferProgressValue(static_cast<int>(got));
 }
 
 void TMap::slot_downloadCancel()
 {
     const QString alertMsg = tr("[ ALERT ] - Map download was canceled, on user's request.");
     postMessage(alertMsg);
-    if (mpProgressDialog) {
-        mpProgressDialog->deleteLater();
-        mpProgressDialog = nullptr; // Must reset this so it can be reused
-    }
+    clearTransferProgress();
     if (mpNetworkReply) {
         mpNetworkReply->abort(); // Will indirectly cause error() AND replyFinished signals to be sent
     }
@@ -2722,13 +2855,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpNetworkReply = nullptr;
 
-        // We don't delete the progress dialog until here as we now use it to inform
-        // about post-download operations
-
-        if (mpProgressDialog) {
-            mpProgressDialog->deleteLater();
-            mpProgressDialog = nullptr; // Must reset this so it can be reused
-        }
+        // We don't dismiss the progress display until here as we now use it to
+        // inform about post-download operations
+        clearTransferProgress();
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2741,12 +2870,13 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
-        // Don't report on any errors here as we've already done so in slot_downloadError(...) previously.
+    if (reply->error() != QNetworkReply::NoError) {
+        // Nothing to report here: slot_downloadError(...) has already done so
+        // for a failure, and slot_downloadCancel() for a cancel. Either way the
+        // reply has nothing to give, and writing that over the destination file
+        // and handing it to the map reader would cost the loaded map.
         cleanup();
         return;
-        // else was QNetworkReply::OperationCanceledError and we already handle
-        // THAT in slot_downloadCancel()
     }
     // Separate the two kinds of files to gain QSaveFile's atomic write behavior
     QSaveFile writeFile(mLocalMapFileName);
@@ -2784,9 +2914,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     // Since the download is complete but we do not offer to
     // cancel the required post-processing we should now hide
     // the cancel/abort button:
-    if (mpProgressDialog) {
-        mpProgressDialog->setCancelButton(nullptr);
-    }
+    disableTransferProgressCancel();
 
     bool parsingWasSuccessful;
     QString parsingFileName;
@@ -2819,13 +2947,16 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
         postMessage(alertMsg);
     }
+    if (mpMapper) {
+        mpMapper->updateEmptyStateOverlay();
+    }
     cleanup();
 }
 
 void TMap::reportStringToProgressDialog(const QString text)
 {
-    if (mpProgressDialog) {
-        mpProgressDialog->setLabelText(text);
+    if (hasActiveTransferProgress()) {
+        updateTransferProgressLabel(text);
         // Needed to make the changed text show, it does increase the overall
         // time a little but as the main usage is when parsing XML room data
         // and that can take MORE THAN A MINUTE the activity is essential to
@@ -2836,12 +2967,136 @@ void TMap::reportStringToProgressDialog(const QString text)
 
 void TMap::reportProgressToProgressDialog(const int current, const int maximum)
 {
-    if (mpProgressDialog) {
-        if (mpProgressDialog->maximum() != maximum) {
-            mpProgressDialog->setMaximum(maximum);
+    if (hasActiveTransferProgress()) {
+        if (transferProgressMaximum() != maximum) {
+            updateTransferProgressRange(0, maximum);
         }
-        mpProgressDialog->setValue(current);
+        updateTransferProgressValue(current);
     }
+}
+
+void TMap::createTransferProgress(const QString& title, const QString& label, bool cancelable)
+{
+    if (mpMapper && mpMapper->isVisible()) {
+        mpMapper->showMapProgress(label, cancelable);
+        connect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+        return;
+    }
+
+    mMapProgressStandalone = true;
+    mMapProgressIsTransfer = true;
+    mMapProgressCancelRequested = false;
+    mMapProgressStandaloneMaximum = 0;
+    warnIfMapProgressUnwired(__func__, true);
+    emit signal_mapTransferProgressStart(title, label, cancelable ? tr("Abort") : QString());
+}
+
+void TMap::updateTransferProgressLabel(const QString& text)
+{
+    if (mMapProgressStandalone) {
+        emit signal_mapProgressSetLabel(text);
+    } else if (mpMapper) {
+        mpMapper->setMapProgressLabel(text);
+    }
+}
+
+void TMap::updateTransferProgressRange(int minimum, int maximum)
+{
+    if (mMapProgressStandalone) {
+        mMapProgressStandaloneMaximum = maximum;
+        emit signal_mapProgressSetRange(minimum, maximum);
+    } else if (mpMapper) {
+        mpMapper->setMapProgressRange(minimum, maximum);
+    }
+}
+
+void TMap::updateTransferProgressValue(int value)
+{
+    if (mMapProgressStandalone) {
+        emit signal_mapProgressSetValue(value);
+    } else if (mpMapper) {
+        mpMapper->setMapProgressValue(value);
+    }
+}
+
+int TMap::transferProgressMaximum() const
+{
+    if (mMapProgressStandalone) {
+        return mMapProgressStandaloneMaximum;
+    }
+    if (mpMapper) {
+        return mpMapper->mapProgressMaximum();
+    }
+    return 0;
+}
+
+bool TMap::hasActiveTransferProgress() const
+{
+    return mMapProgressStandalone || (mpMapper && mpMapper->isMapProgressVisible());
+}
+
+void TMap::disableTransferProgressCancel()
+{
+    if (mMapProgressStandalone) {
+        emit signal_mapProgressDisableCancel();
+    } else if (mpMapper) {
+        mpMapper->setMapProgressCancelable(false);
+    }
+}
+
+void TMap::clearTransferProgress()
+{
+    // Only close a transfer-owned standalone dialog: a concurrent JSON
+    // import/export owns the standalone progress state and must keep it.
+    if (mMapProgressStandalone && mMapProgressIsTransfer) {
+        mMapProgressStandalone = false;
+        mMapProgressIsTransfer = false;
+        emit signal_mapProgressClose();
+        return;
+    }
+    if (mpMapper) {
+        disconnect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel);
+        mpMapper->hideMapProgress();
+    }
+}
+
+void TMap::requestMapOperationAbort()
+{
+    if (!mMapOperationDepth || mMapOperationAbortRequested) {
+        return;
+    }
+    mMapOperationAbortRequested = true;
+    // Deliberately not slot_mapProgressDialogCancelled(): that is the user
+    // pressing Abort and says so in the console, whereas this is the profile
+    // going away and has no console left to say it to. What it does share is
+    // the flag the JSON import and export poll at their next progress step, and
+    // dropping a download that would otherwise hold the close up on the network.
+    mMapProgressCancelRequested = true;
+    if (mMapProgressIsTransfer && mpNetworkReply) {
+        mpNetworkReply->abort();
+    }
+}
+
+void TMap::slot_mapProgressDialogCancelled()
+{
+    // The JSON path polls mMapProgressCancelRequested in its increment loop; the
+    // transfer path needs its network reply aborted here.
+    mMapProgressCancelRequested = true;
+    if (mMapProgressIsTransfer) {
+        slot_downloadCancel();
+    }
+}
+
+void TMap::warnIfMapProgressUnwired(const char* context, const bool transferPath)
+{
+    static const QMetaMethod transferStart = QMetaMethod::fromSignal(&TMap::signal_mapTransferProgressStart);
+    static const QMetaMethod jsonStart = QMetaMethod::fromSignal(&TMap::signal_mapJsonProgressStart);
+    static const QMetaMethod progressClose = QMetaMethod::fromSignal(&TMap::signal_mapProgressClose);
+    if (isSignalConnected(transferPath ? transferStart : jsonStart) && isSignalConnected(progressClose)) {
+        return;
+    }
+    qWarning().nospace() << "TMap::" << context
+                         << "() WARNING - no frontend is connected to show the map progress dialog; the operation will run without a visible progress dialog and cannot be canceled from one.";
 }
 
 QHash<QString, QSet<int>> TMap::roomSymbolsHash()
@@ -2865,9 +3120,13 @@ QHash<QString, QSet<int>> TMap::roomSymbolsHash()
 
 void TMap::setMmpMapLocation(const QString& location)
 {
+    if (mMmpMapLocation == location) {
+        return;
+    }
     mMmpMapLocation = location;
 
     qDebug() << "MMP map registered at" << mMmpMapLocation;
+    emit signal_mmpMapLocationChanged();
 }
 
 QString TMap::getMmpMapLocation() const
@@ -2890,6 +3149,111 @@ void TMap::setRoomNamesShown(bool shown)
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
 }
 
+// The style strategy carries the rendering flags applied when the map was
+// loaded, along with the NoFontMerging bit that mIsOnlyMapSymbolFontToBeUsed
+// owns. A font picked from a font combo-box or named from Lua has neither, so
+// carry the existing strategy (and size) over instead of taking the incoming
+// font wholesale.
+bool TMap::setSymbolFont(const QFont& font)
+{
+    QFont wantedFont = font;
+    wantedFont.setPointSize(mMapSymbolFont.pointSize());
+    wantedFont.setStyleStrategy(mMapSymbolFont.styleStrategy());
+    if (mMapSymbolFont == wantedFont) {
+        return false;
+    }
+
+    mMapSymbolFont = wantedFont;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+bool TMap::setOnlySymbolFontUsed(const bool onlyUseSelectedFont)
+{
+    if (mIsOnlyMapSymbolFontToBeUsed == onlyUseSelectedFont) {
+        return false;
+    }
+
+    mIsOnlyMapSymbolFontToBeUsed = onlyUseSelectedFont;
+    if (onlyUseSelectedFont) {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+    } else {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+    }
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The bounds belong here rather than at each caller: a factor of zero or less
+// blanks every room symbol, so nothing may store one whatever route it came in
+// by. NaN needs saying separately because it compares false against both
+// bounds, so a plain range test would pass it through.
+bool TMap::setSymbolFontFudgeFactor(const qreal fudgeFactor)
+{
+    if (!qIsFinite(fudgeFactor) || fudgeFactor < scmMinimumSymbolFontFudgeFactor || fudgeFactor > scmMaximumSymbolFontFudgeFactor) {
+        return false;
+    }
+    if (qFuzzyCompare(mMapSymbolFontFudgeFactor, fudgeFactor)) {
+        return false;
+    }
+
+    mMapSymbolFontFudgeFactor = fudgeFactor;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The same check T2DMap::addSymbolToPixmapCache() makes before it gives up and
+// draws the replacement character instead, asked of the whole map at once. The
+// font is taken as it would be used, so whether font merging is on decides
+// whether the fallbacks count.
+QStringList TMap::symbolsNotInFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    QStringList missingSymbols;
+    const QHash<QString, QSet<int>> symbolsInUse = roomSymbolsHash();
+    for (auto it = symbolsInUse.cbegin(), end = symbolsInUse.cend(); it != end; ++it) {
+        for (const quint32 codePoint : it.key().toUcs4()) {
+            if (!metrics.inFontUcs4(codePoint)) {
+                missingSymbols << it.key();
+                break;
+            }
+        }
+    }
+
+    // roomSymbolsHash() is a QHash, so without this the same map gives a
+    // different order from one call to the next:
+    missingSymbols.sort();
+    return missingSymbols;
+}
+
+// Every 2D map keeps its own cache of rendered symbol pixmaps, so all of them
+// have to be dropped - the main mapper and any secondary map views.
+void TMap::flushSymbolCaches()
+{
+    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
+        mpMapper->mp2dMap->flushSymbolPixmapCache();
+        mpMapper->mp2dMap->update();
+        mpMapper->update();
+    }
+
+    if (!mpViewManager) {
+        return;
+    }
+    for (const int viewId : mpViewManager->getViewIds()) {
+        auto* pView = mpViewManager->getView(viewId);
+        if (pView && pView->get2DMap()) {
+            pView->get2DMap()->flushSymbolPixmapCache();
+            pView->get2DMap()->update();
+        }
+    }
+}
+
 /*
  * Notes on the format version numbers in JSON files - we use this to track any
  * changes in a major.minor number format, the minor number is to be three
@@ -2908,6 +3272,7 @@ void TMap::setRoomNamesShown(bool shown)
  */
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
+    const MapOperationScope operationScope(this);
     QString destination{dest};
 
     if (destination.isEmpty()) {
@@ -2923,7 +3288,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         destination.append(QLatin1String(".json"));
     }
 
-    if (mpProgressDialog) {
+    if (mMapProgressStandalone) {
         return {false, qsl("import or export already in progress")};
     }
 
@@ -2936,35 +3301,31 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         }
     }
 
-    mpProgressDialog = new QProgressDialog(tr("Exporting JSON map data from %1\n"
-                                              "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
-                                                   .arg(mProfileName,
-                                                        QLatin1String("0"),
-                                                        QString::number(mProgressDialogAreasTotal),
-                                                        QLatin1String("0"),
-                                                        QString::number(mProgressDialogRoomsTotal),
-                                                        QLatin1String("0"),
-                                                        QString::number(mProgressDialogLabelsTotal)),
-                                           tr("Abort"),
-                                           0,
-                                           mProgressDialogRoomsTotal,
-                                           mpHost->mpConsole);
-    mpProgressDialog->setValue(0);
-    mpProgressDialog->setWindowModality(Qt::NonModal);
+    mMapProgressStandalone = true;
+    mMapProgressIsTransfer = false;
+    mMapProgressCancelRequested = false;
+    mMapProgressStandaloneMaximum = static_cast<int>(mProgressDialogRoomsTotal);
+    warnIfMapProgressUnwired(__func__, false);
     //: This is a title of a progress window.
-    mpProgressDialog->setWindowTitle(tr("Map JSON export"));
-    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
-    mpProgressDialog->setMinimumWidth(500);
-    mpProgressDialog->setAutoClose(false);
-    mpProgressDialog->setAutoReset(false);
-    mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
+    emit signal_mapJsonProgressStart(tr("Map JSON export"),
+                                     tr("Exporting JSON map data from %1\n"
+                                        "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                             .arg(mProfileName,
+                                                  QLatin1String("0"),
+                                                  QString::number(mProgressDialogAreasTotal),
+                                                  QLatin1String("0"),
+                                                  QString::number(mProgressDialogRoomsTotal),
+                                                  QLatin1String("0"),
+                                                  QString::number(mProgressDialogLabelsTotal)),
+                                     tr("Abort"),
+                                     static_cast<int>(mProgressDialogRoomsTotal));
+    emit signal_mapProgressSetValue(0);
     qApp->processEvents();
     QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text | QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
-        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
-        mpProgressDialog->close();
-        mpProgressDialog = nullptr;
+        emit signal_mapProgressClose();
+        mMapProgressStandalone = false;
         return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination.toHtmlEscaped(), file.errorString())};
     }
 
@@ -3000,9 +3361,8 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
     if (abort) {
         file.cancelWriting();
-        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
-        mpProgressDialog->close();
-        mpProgressDialog = nullptr;
+        emit signal_mapProgressClose();
+        mMapProgressStandalone = false;
         return {false, qsl("aborted by user")};
     }
 
@@ -3081,20 +3441,19 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mapObj.insert(QLatin1String("playerRoomOuterDiameterPercentage"), static_cast<double>(mPlayerRoomOuterDiameterPercentage));
     mapObj.insert(QLatin1String("playerRoomInnerDiameterPercentage"), static_cast<double>(mPlayerRoomInnerDiameterPercentage));
 
-    mpProgressDialog->setLabelText(tr("Exporting JSON map file from %1 - writing data to file:\n"
-                                      "%2 ...")
-                                           .arg(mProfileName, destination));
-    mpProgressDialog->setValue(0);
+    emit signal_mapProgressSetLabel(tr("Exporting JSON map file from %1 - writing data to file:\n"
+                                       "%2 ...")
+                                            .arg(mProfileName, destination));
+    emit signal_mapProgressSetValue(0);
     // Hide the cancel button as we can't stop now:
-    mpProgressDialog->setCancelButton(nullptr);
+    emit signal_mapProgressDisableCancel();
     file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
     if (!file.commit()) {
         qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
     }
 
-    mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
-    mpProgressDialog->close();
-    mpProgressDialog = nullptr;
+    emit signal_mapProgressClose();
+    mMapProgressStandalone = false;
 
     return {file.error() == QFileDevice::NoError, ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
 }
@@ -3102,12 +3461,13 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 // The translatable messages are used within this file and do not need to
 // mention the file concerned whereas the untranslated messages are used by the
 // Lua sub-system and do need to report the file:
-std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts, const bool allowUserCancellation)
+std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts)
 {
+    const MapOperationScope operationScope(this);
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
 
-    if (mpProgressDialog) {
+    if (mMapProgressStandalone) {
         return {false, (translatableTexts ? tr("import or export already in progress") : qsl("import or export already in progress"))};
     }
 
@@ -3161,28 +3521,25 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
-    mpProgressDialog = new QProgressDialog(tr("Importing JSON map data to %1\n"
-                                              "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
-                                                   .arg(mProfileName,
-                                                        QLatin1String("0"),
-                                                        QString::number(mProgressDialogAreasTotal),
-                                                        QLatin1String("0"),
-                                                        QString::number(mProgressDialogRoomsTotal),
-                                                        QLatin1String("0"),
-                                                        QString::number(mProgressDialogLabelsTotal)),
-                                           (allowUserCancellation ? tr("Abort") : QString()),
-                                           0,
-                                           mProgressDialogRoomsTotal,
-                                           mpHost->mpConsole);
-    mpProgressDialog->setValue(0);
-    mpProgressDialog->setWindowModality(Qt::NonModal);
+    mMapProgressStandalone = true;
+    mMapProgressIsTransfer = false;
+    mMapProgressCancelRequested = false;
+    mMapProgressStandaloneMaximum = static_cast<int>(mProgressDialogRoomsTotal);
+    warnIfMapProgressUnwired(__func__, false);
     //: This is a title of a progress window.
-    mpProgressDialog->setWindowTitle(tr("Map JSON import"));
-    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
-    mpProgressDialog->setMinimumWidth(500);
-    mpProgressDialog->setAutoClose(false);
-    mpProgressDialog->setAutoReset(false);
-    mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
+    emit signal_mapJsonProgressStart(tr("Map JSON import"),
+                                     tr("Importing JSON map data to %1\n"
+                                        "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                             .arg(mProfileName,
+                                                  QLatin1String("0"),
+                                                  QString::number(mProgressDialogAreasTotal),
+                                                  QLatin1String("0"),
+                                                  QString::number(mProgressDialogRoomsTotal),
+                                                  QLatin1String("0"),
+                                                  QString::number(mProgressDialogLabelsTotal)),
+                                     tr("Abort"),
+                                     static_cast<int>(mProgressDialogRoomsTotal));
+    emit signal_mapProgressSetValue(0);
     qApp->processEvents();
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
@@ -3191,7 +3548,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
-    const float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
+    // qRound() returns an int, so dividing by an int literal here used to be
+    // integer division and every load rounded the factor to a whole number -
+    // issue #10176, which turned anything below 1.0 into a 0 that stops room
+    // symbols being drawn at all. The 1000 is to keep the value to the three
+    // decimals the preferences offer:
+    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
     const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
     quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
@@ -3252,28 +3614,24 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         }
     }
 
-    TRoomDB* pNewRoomDB = new TRoomDB(this);
+    auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
-        std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB);
+        std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB.get());
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
-            if (allowUserCancellation) {
-                abort = true;
-            }
+            abort = true;
             break;
         }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
         pNewRoomDB->addArea(pArea.release(), id, name);
     }
     if (abort) {
-        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
-        mpProgressDialog->close();
-        mpProgressDialog = nullptr;
+        emit signal_mapProgressClose();
+        mMapProgressStandalone = false;
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
-        delete pNewRoomDB;
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
     }
 
@@ -3296,18 +3654,20 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
-    TRoomDB* pOldRoomDB = mpRoomDB;
-    mpRoomDB = pNewRoomDB;
+    mpRoomDB = std::move(pNewRoomDB);
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:
     if (mpMapper && mpMapper->mp2dMap) {
         mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
     }
-    delete pOldRoomDB;
-    mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
-    mpProgressDialog->close();
-    mpProgressDialog = nullptr;
+    // As in restore(): the symbol settings above went straight into the members
+    // so that loading does not mark the map unsaved, which leaves the rendered
+    // symbol caches and any open preferences dialog to be told separately:
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    emit signal_mapProgressClose();
+    mMapProgressStandalone = false;
     return {true, QString()};
 }
 
@@ -3406,30 +3766,30 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
         mProgressDialogLabelsCount += increment;
     }
 
-    mpProgressDialog->setValue(mProgressDialogRoomsCount);
+    emit signal_mapProgressSetValue(static_cast<int>(mProgressDialogRoomsCount));
     if (isExportNotImport) {
-        mpProgressDialog->setLabelText(tr("Exporting JSON map data from %1\n"
-                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
-                                               .arg(mProfileName,
-                                                    QString::number(mProgressDialogAreasCount),
-                                                    QString::number(mProgressDialogAreasTotal),
-                                                    QString::number(mProgressDialogRoomsCount),
-                                                    QString::number(mProgressDialogRoomsTotal),
-                                                    QString::number(mProgressDialogLabelsCount),
-                                                    QString::number(mProgressDialogLabelsTotal)));
+        emit signal_mapProgressSetLabel(tr("Exporting JSON map data from %1\n"
+                                           "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                                .arg(mProfileName,
+                                                     QString::number(mProgressDialogAreasCount),
+                                                     QString::number(mProgressDialogAreasTotal),
+                                                     QString::number(mProgressDialogRoomsCount),
+                                                     QString::number(mProgressDialogRoomsTotal),
+                                                     QString::number(mProgressDialogLabelsCount),
+                                                     QString::number(mProgressDialogLabelsTotal)));
     } else {
-        mpProgressDialog->setLabelText(tr("Importing JSON map data to %1\n"
-                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
-                                               .arg(mProfileName,
-                                                    QString::number(mProgressDialogAreasCount),
-                                                    QString::number(mProgressDialogAreasTotal),
-                                                    QString::number(mProgressDialogRoomsCount),
-                                                    QString::number(mProgressDialogRoomsTotal),
-                                                    QString::number(mProgressDialogLabelsCount),
-                                                    QString::number(mProgressDialogLabelsTotal)));
+        emit signal_mapProgressSetLabel(tr("Importing JSON map data to %1\n"
+                                           "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                                .arg(mProfileName,
+                                                     QString::number(mProgressDialogAreasCount),
+                                                     QString::number(mProgressDialogAreasTotal),
+                                                     QString::number(mProgressDialogRoomsCount),
+                                                     QString::number(mProgressDialogRoomsTotal),
+                                                     QString::number(mProgressDialogLabelsCount),
+                                                     QString::number(mProgressDialogLabelsTotal)));
     }
     qApp->processEvents();
-    return mpProgressDialog->wasCanceled();
+    return mMapProgressCancelRequested;
 }
 
 void TMap::updateArea(int areaId)
@@ -3437,7 +3797,7 @@ void TMap::updateArea(int areaId)
     static bool debounce;
     if (!debounce) {
         debounce = true;
-        QTimer::singleShot(0, this, [this, areaId]() {
+        QTimer::singleShot(0ms, this, [this, areaId]() {
             debounce = false;
 
 #if defined(INCLUDE_3DMAPPER)

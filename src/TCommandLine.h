@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019, 2022-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2019, 2022-2023, 2026 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -76,7 +76,7 @@ public:
     void removeBlacklist(const QString&);
     void clearBlacklist();
     void adjustHeight();
-    TConsole* console() const { return mpConsole; }
+    TConsole* console() const;
     void setEchoSuppression(bool suppress);
 
     int mActionFunction = 0;
@@ -116,11 +116,13 @@ private:
     void enterCommand(QKeyEvent*);
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
+    bool keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent*) const;
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    int heightForRows(const int) const;
     void updatePasswordToggleButton();
     void positionPasswordToggleButton();
 

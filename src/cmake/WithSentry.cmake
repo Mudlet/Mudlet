@@ -40,9 +40,19 @@ if(APPLE)
         set(ARCH_LIST "arm64;x86_64")
     endif()
 
+    # ExternalProject does not inherit the parent build's cache, so without this
+    # the sentry-native/crashpad sub-build gets no -mmacosx-version-min at all
+    # and clang silently targets the *build machine's* macOS version. That makes
+    # __builtin_available(macOS 14.4, *) inside sentry_sync.h fold to a constant
+    # true and turns os_sync_wait_on_address_with_timeout() into a strong import,
+    # so the batcher thread called a symbol that does not exist on the macOS 12
+    # we still ship for and dyld aborted with "missing symbol called".
+    # Passing our deployment target down restores the weak import plus the real
+    # runtime check, so older releases take sentry's poll-wait fallback instead.
     list(APPEND SENTRY_COMMON_ARGS
         "-DCMAKE_OSX_ARCHITECTURES=${ARCH_LIST}"
         "-DCMAKE_OSX_SYSROOT=${MACOSX_SYSROOT}"
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
     )
 endif()
 
@@ -74,7 +84,25 @@ add_dependencies(${LIB_MUDLET_TARGET} sentry_without_transport)
 target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
 
 if(WIN32)
-    target_link_options(${EXE_MUDLET_TARGET} PRIVATE -g -gcodeview)
+    # On Windows the debug information must be emitted as CodeView (not DWARF) so
+    # that lld can write a *separate* PDB. The shipped mudlet.exe then keeps only
+    # the small RSDS debug-directory entry (which carries the module's debug-id),
+    # while the bulk of the symbols live in mudlet.pdb. This is essential for
+    # Sentry: crash minidumps identify each module by the debug-id recorded in the
+    # shipped binary, so that id must be present in the exe we ship AND must match
+    # the debug companion (the PDB) we upload. Previously we embedded DWARF in the
+    # exe, uploaded the unstripped exe, then stripped the shipped exe - which
+    # removed the RSDS record (empty debug-id) and changed size_of_image (different
+    # code_id), so nothing ever matched and Windows crashes stayed unsymbolicated.
+    target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -gcodeview)
+    target_compile_options(${EXE_MUDLET_TARGET} PRIVATE -g -gcodeview)
+    # Derive the PDB name from the executable's base name so it always matches the
+    # shipped exe (and the script's "${MUDLET_EXEC%.exe}.pdb" lookup) even if the
+    # target's output name ever changes.
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE
+        -g -gcodeview
+        "-Wl,--pdb=$<TARGET_FILE_DIR:${EXE_MUDLET_TARGET}>/$<TARGET_FILE_BASE_NAME:${EXE_MUDLET_TARGET}>.pdb"
+    )
     string(REPLACE "-Wl,-s" "" CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
     string(REPLACE "-Wl,-s" "" CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
 endif()
@@ -118,9 +146,10 @@ elseif(WIN32)
     target_link_libraries(${LIB_MUDLET_TARGET}
         dbghelp
         version
+        synchronization
     )
 else()
-    target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat)
+    target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat unwind)
 endif()
 
 set(SENTRY_BINARIES "${SENTRY_PATH}/install_without_transport/bin")
@@ -165,9 +194,11 @@ elseif(UNIX)
         )
     endif()
 else()
-    add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_BINARY_DIR}/mudlet.pdb"
-    )
+    # On Windows, lld writes mudlet.pdb at link time (see -Wl,--pdb above), so the
+    # separate debug companion already exists and no post-build step is required.
+    # The shipped mudlet.exe must NOT be stripped of its RSDS debug-directory
+    # entry, otherwise its debug-id is lost and crash minidumps can no longer be
+    # matched to the uploaded PDB.
 endif()
 
 if(SENTRY_SEND_DEBUG)
@@ -178,15 +209,12 @@ if(SENTRY_SEND_DEBUG)
             "Fix: try exporting SENTRY_AUTH_TOKEN=\"...\""
         )
     else()
+        # Qt6_DIR points at <prefix>/lib/cmake/Qt6; the script needs the prefix
+        # itself to reach Qt's libraries and its runtime-loaded plugins.
+        get_filename_component(QT_INSTALL_PREFIX "${Qt6_DIR}/../../.." ABSOLUTE)
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-        COMMAND bash "${CMAKE_SOURCE_DIR}/CI/send_debug_files_to_sentry.sh" "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+        COMMAND bash "${CMAKE_SOURCE_DIR}/CI/send_debug_files_to_sentry.sh" "$<TARGET_FILE:${EXE_MUDLET_TARGET}>" "${QT_INSTALL_PREFIX}"
         VERBATIM
     )
-    endif()
-else()
-    if(WIN32)
-        add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-            COMMAND strip --strip-debug $<TARGET_FILE:${EXE_MUDLET_TARGET}>
-        )
     endif()
 endif()

@@ -34,7 +34,6 @@
 
 class QFile;
 class Host;
-class LuaInterface;
 class TAction;
 class TAlias;
 class TKey;
@@ -65,13 +64,15 @@ public:
     void writeAction(TAction*, pugi::xml_node xmlParent);
     void writeScript(TScript*, pugi::xml_node xmlParent);
     void writeKey(TKey*, pugi::xml_node xmlParent);
-    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
-    void writeModuleXML(const QString& moduleName, const QString& fileName, bool async = false);
+    void writeVariable(TVar*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false, bool rideAlongAllowed = true);
+    void writeModuleXML(const QString& moduleName);
+    std::shared_ptr<pugi::xml_document> takeExportDocument();
+    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
 
     bool exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true, bool ignoreVariables = false);
     bool exportProfile(const QString& exportFileName);
-    bool exportPackage(const QString &exportFileName, bool ignoreModuleMember = true, bool ignoreVariables = false);
+    bool exportPackage(const QString& exportFileName, bool ignoreModuleMember = true, bool ignoreVariables = false);
     bool exportTrigger(const QString& fileName);
     bool exportTimer(const QString& fileName);
     bool exportAlias(const QString& fileName);
@@ -107,10 +108,9 @@ private:
     void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
-    static void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
+    static inline void replaceAll(std::string& source, const std::string& from, const std::string& to);
     bool saveXmlFile(QSaveFile& file);
     bool saveXml(const QString&);
-    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
     pugi::xml_node writeXmlHeader();
     static void sanitizeForQxml(std::string& output);
     void runAsyncSave(const QString& fileName, const QString& xmlSavedKey);

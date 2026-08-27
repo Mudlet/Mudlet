@@ -47,17 +47,23 @@
 #include <QList>
 #include <QMargins>
 #include <QPointer>
+#include <QRect>
 #include <QStack>
 #include <QTextStream>
+
+#include <memory>
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
 #include "TMxpFrameManager.h"
 
-class QDialog;
+namespace pugi {
+class xml_document;
+}
+
 class QDockWidget;
-class QPushButton;
-class QListWidget;
+class QJsonObject;
+class QKeyEvent;
 
 class TEvent;
 class TArea;
@@ -68,6 +74,7 @@ class GMCPAuthenticator;
 class TRoom;
 class TConsole;
 class TMainConsole;
+struct TConsoleModel;
 class dlgNotepad;
 class TMap;
 class MMCPServer;
@@ -149,6 +156,8 @@ class Host : public QObject
     friend class XMLexport;
     friend class XMLimport;
     friend class dlgProfilePreferences;
+    // Allows the functional test to set the Discord username restriction:
+    friend class TDiscordModeTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -165,9 +174,12 @@ public:
         DiscordSetPartyInfo = 0x80,
         DiscordSetTimeInfo = 0x100,
         DiscordSetSubMask = 0x3ff,
+        // Kept for backward compatibility with saved profiles but no longer checked:
         DiscordLuaAccessEnabled = 0x800
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
+
+    enum DiscordMode { DiscordDisabled = 0, DiscordShowMudletOnly = 1, DiscordShowGameDetails = 2 };
 
 
     QString getName() { return mHostName; }
@@ -185,6 +197,14 @@ public:
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    // True once the user has sent any command to the game on the current connection. It gates whether
+    // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
+    // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
+    // input, whereas one at an untouched connection is not and must not silently launch a browser.
+    // GMCPAuthenticator clears it again when it auto-opens, so one player action can launch at most
+    // one browser hand-off however many sign-in addresses the game pushes.
+    bool userSentInputThisConnection() const { return mUserSentInputThisConnection; }
+    void setUserSentInputThisConnection(const bool b) { mUserSentInputThisConnection = b; }
     int getRetries() { return mRetries; }
     void setRetries(const int retries) { mRetries = retries; }
     int getTimeout() { return mTimeout; }
@@ -207,7 +227,7 @@ public:
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
     void setSpellDic(const QString&);
-    QString getSpellDic();
+    QString getSpellDic() const;
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
     {
@@ -228,6 +248,7 @@ public:
     QStringList getValidExperiments() const;
 
     void forceClose();
+    bool profileResetInProgress() const { return mResetProfile; }
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
@@ -254,6 +275,23 @@ public:
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
+    // The main console's data model lives in core, co-owned by Host so the
+    // per-line trigger pipeline (runTriggers) can drive it without a view. The
+    // view reaches the same instance via TConsole::model().
+    TConsoleModel& mainConsoleModel();
+    // Null until the very end of this Host's constructor: the model owns a
+    // TBuffer, and a TBuffer clears itself while being built - so core buffer
+    // code that can run that early has to be able to see "not there yet"
+    // rather than dereference the shared_ptr.
+    TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
+    std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    void refreshMainConsoleColors();
+    void runTriggers(int line);
+    // The log lifecycle lives in the core console model, which is a plain
+    // struct and cannot emit, so it raises the two view-only halves of a
+    // logging change through here.
+    void raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName);
+    void raiseLoggingStateChanged(const bool isLogging);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
@@ -277,7 +315,11 @@ public:
     QPair<bool, QString> startStopWatch(const QString&);
     QPair<bool, QString> stopStopWatch(const int);
     QPair<bool, QString> stopStopWatch(const QString&);
-    stopWatch* getStopWatch(const int id) const { return mStopWatchMap.value(id); }
+    stopWatch* getStopWatch(const int id) const
+    {
+        auto it = mStopWatchMap.find(id);
+        return (it != mStopWatchMap.end()) ? it->second.get() : nullptr;
+    }
     int findStopWatchId(const QString&) const;
     QPair<bool, QString> setStopWatchName(const int, const QString&);
     QPair<bool, QString> setStopWatchName(const QString&, const QString&);
@@ -301,7 +343,7 @@ public:
     // produce this action will be purged from the Lua system as part of the
     // reset - which causes nasty existential issues (and crashes) from deleting
     // a script as it is being interpreted!
-    void resetProfile_phase1();
+    bool resetProfile_phase1();
     // This actually does the bulk of the reset but must wait until the profile
     // is quiescent:
     void resetProfile_phase2();
@@ -321,7 +363,7 @@ public:
 
     void updateDisplayDimensions();
 
-    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing);
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
@@ -334,11 +376,15 @@ public:
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether a package install or uninstall still owes the profile a save - see
+    // mDeferredSaveTimer.
+    bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
     void waitForProfileSave();
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
-    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    void setDiscordMode(DiscordMode mode);
+    bool discordUserIdMatch(const QString& userName) const;
     const QString& getMMCPChatName() const;
     quint16 getMMCPPort();
     const QString& getMMCPChatPrefix() const;
@@ -354,7 +400,7 @@ public:
     QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
     QString mediaLocationMSP() const;
-    // Use this rather than accessng the TMainConsole::font() as the latter
+    // Use this rather than accessing the TMainConsole::font() as the latter
     // isn't always around during profile start-up:
     QFont getDisplayFont();
     QFont getAndClearTempDisplayFont();
@@ -377,6 +423,8 @@ public:
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    std::optional<QString> getMapperTitle() const;
+    QDockWidget* mapWidget() const;
 
     // Multiple map views support
     std::pair<int, QString> createMapView(int areaId = 0);
@@ -411,6 +459,7 @@ public:
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget();
+    std::optional<QRect> mapWidgetGeometry() const;
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
@@ -429,8 +478,8 @@ public:
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
-    bool setBackgroundImage(const QString& name, QString& path, int mode);
-    bool resetBackgroundImage(const QString& name);
+    bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
+    bool resetBackgroundImage(const QString& name, bool fullWindow = false);
     bool setSvgTint(const QString& name, const QColor& color);
     bool resetSvgTint(const QString& name);
     bool setSvgRotation(const QString& name, double angle);
@@ -452,10 +501,13 @@ public:
         mScreenHeight = height;
     }
     std::optional<QString> windowType(const QString& name) const;
+    std::optional<QRect> windowGeometry(const QString& name) const;
+    std::optional<bool> windowVisible(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
+    bool caretShortcutMatches(const QKeyEvent*) const;
     void setFocusOnHostActiveCommandLine();
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
@@ -504,19 +556,24 @@ private:
     // for things looking to the main console font before it gets instantiated:
     std::optional<TFontAttributes> mTempDisplayFontAttributes;
     std::optional<QFont> mTempDisplayFont;
+    // Co-owned with the main-console view rather than owned outright: mudlet
+    // destroys the Host before the lingering console widget, so a Host-owned
+    // model would leave the view's aliasing references dangling. Reached
+    // through mainConsoleModel()/sharedMainConsoleModel().
+    std::shared_ptr<TConsoleModel> mpMainConsoleModel;
 
 public:
     // Make this the first public member instantiated so we can use ITS font
     // as the "reference" or "master" font for whole profile - and so we don't
     // have to maintain a separate one here in this class which does not, as
-    // something derived from a QOject, have one:
+    // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
     QPointer<dlgPackageManager> mpPackageManager;
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
-    bool mDisablePasswordMasking;
+    bool mDisablePasswordMasking = false;
     int commandLineMinimumHeight = 30;
     bool mAlertOnNewData = true;
     bool mAllowToSendCommand = true;
@@ -663,16 +720,26 @@ public:
     int mWrapAt = 100;
     int mWrapIndentCount = 0;
     int mWrapHangingIndentCount = 0;
+    // Rejoin lines that the game hard-wrapped itself so that triggers see the
+    // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
+    bool mUndoServerWrap = false;
+    int mUndoServerWrapWidth = 80;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
 
     bool mEditorAutoComplete = true;
 
-    // code editor theme (human-friendly name)
+    // code editor theme for light mode (human-friendly name)
     QString mEditorTheme = QLatin1String("Mudlet");
-    // code editor theme file on disk for edbee to load
+    // code editor theme file for light mode on disk for edbee to load
     QString mEditorThemeFile = QLatin1String("Mudlet.tmTheme");
+    // code editor theme for dark mode (human-friendly name), auto-populated on first dark mode switch
+    QString mEditorThemeDark;
+    // code editor theme file for dark mode on disk for edbee to load
+    QString mEditorThemeFileDark;
+    QString getEditorTheme() const;
+    QString getEditorThemeFile() const;
     void editorThemeChanged();
 
     // search engine URL prefix to search query
@@ -753,12 +820,15 @@ public:
     // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
-    // Privacy option to allow the game to set Discord Rich Presence information
-    bool mDiscordDisableServerSide = true;
+    // Controls how Discord Rich Presence behaves:
+    // DiscordDisabled - RPC shut down, server unaware
+    // DiscordShowMudletOnly - shows "Playing Mudlet", server unaware, Lua can still set fields
+    // DiscordShowGameDetails - full integration with server GMCP/MSDP
+    DiscordMode mDiscordMode = DiscordShowGameDetails;
 
     // Discord privacy options to give the user control over what data a Server
-    // can set over OOB protocols (MSDP & GMCP) and the user via Lua API:
-    DiscordOptionFlags mDiscordAccessFlags{DiscordLuaAccessEnabled | DiscordSetSubMask};
+    // can set over OOB protocols (MSDP & GMCP):
+    DiscordOptionFlags mDiscordAccessFlags{DiscordSetSubMask};
 
     double mLineSize = 10.0;
     double mRoomBorderSize = 10.0;
@@ -779,9 +849,12 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // Center the map on an area as a whole when it fits entirely in the
+    // viewport, instead of following the player room. Off by default;
+    // configurable via the mapCenterSmallAreas key in Mudlet.ini.
+    bool mMapperCenterSmallAreas = false;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
-    QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
     // Set from profile preferences, if the timer interval is less
@@ -804,13 +877,19 @@ public:
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
 
-    QMap<QString, QKeySequence*> profileShortcuts;
+    std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
+
+    // Turning this off both ignores incoming OSC 8 sequences and advertises 0
+    // for them, so a server can fall back to MXP or plain text rather than
+    // sending links Mudlet will not render. It is checked as sequences are
+    // decoded, so links already drawn in the buffer stay clickable.
+    bool mEnableOSC8Hyperlinks = true;
 
     enum class BlankLineBehaviour { Show, Hide, ReplaceWithSpace };
     Q_ENUM(BlankLineBehaviour)
@@ -846,9 +925,22 @@ signals:
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
     void signal_forceMXPProcessorOnChanged(bool enabled);
+    // The frontend (TMainConsole) owns the dialogs these drive; the strings are
+    // built here so they stay in Host's translation context.
+    void signal_showMapperScriptReminder();
+    void signal_showUnpackingProgress(const QString& message, const QString& title);
+    void signal_hideUnpackingProgress();
+    // Raised while logging is still off when a log starts, and already off when
+    // one stops, so that the frontend's print lands on screen but outside the
+    // log file. That only holds while the connection is direct - a queued one
+    // would deliver it after the flag has moved and log the announcement.
+    void signal_loggingAnnouncement(const bool isLogging, const QString& logFileName);
+    // Raised once a logging change has settled, for the frontend's log button.
+    void signal_loggingStateChanged(const bool isLogging);
 
 private slots:
     void slot_purgeTemps();
+    void slot_saveProfileAfterPackageChange();
 
 private:
     void setBorders(const QMargins);
@@ -863,10 +955,37 @@ private:
     void createMapper(const bool);
     void removePackageInfo(const QString& packageName, const bool);
     static void createModuleBackup(const QString& filename, const QString& saveName);
-    void writeModule(const QString& moduleName, const QString& filename);
+    // A single module queued to be written out during a profile save. Its XML document
+    // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
+    // is deferred to a background task. The job is a complete, self-contained order:
+    // its own copy of the document plus every path the write needs, so it holds nothing
+    // whose lifetime the Host controls. It has to: a close that answers "No" to "Save
+    // profile?", and one that finds the main console already gone, wait for nothing, so
+    // the Host can be destroyed while the write is still queued.
+    struct ModuleWriteJob
+    {
+        std::shared_ptr<pugi::xml_document> document;
+        QString moduleName;
+        QString filename;
+        QString xmlFilename;
+        // Empty when this save is not to be backed up first.
+        QString backupName;
+    };
+    // Main thread only: builds every to-be-synced module's XML document, registers its
+    // writer in `writers`, resolves every path and creates the directories the write
+    // needs, returning the jobs a background task should serialize.
+    QList<ModuleWriteJob> prepareModuleSaves(bool backup);
+    // Writes the prepared module documents (and updates their zips) to disk. Static on
+    // purpose: it must keep working after the Host that ordered it has been destroyed,
+    // so it may not reach for any member. Usually a thread pool task, but a waiter in
+    // waitForProfileSave() can steal it onto the main thread, so it must suit either.
+    static void writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    static void updateModuleZip(const ModuleWriteJob& job);
+    // Main thread only: snapshot of the still-pending profile-save futures, so a
+    // background task never reads `writers`/`saveFutures` while the main thread mutates
+    // them (that concurrent access is a heap-corrupting data race).
+    QList<QFuture<bool>> pendingXmlSaveFutures() const;
     void waitForAsyncXmlSave();
-    void saveModules(bool backup = true);
-    void updateModuleZips(const QString& zipName, const QString& moduleName);
     void reloadModules();
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
@@ -892,8 +1011,15 @@ private:
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
     GifTracker mGifTracker;
-    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
-    std::optional<bool> mSaveTimer;
+    // The profile save that a package/module install or uninstall owes is put off
+    // to the next event loop pass, so that the asynchronous save mechanism is not
+    // asked to write out something that was just taken out of memory. Restarting
+    // this timer also folds a batch of installs/uninstalls into a single save.
+    // It has to be a member timer rather than a QTimer::singleShot(): a call
+    // queued on the Host is still delivered after the Host has been destroyed,
+    // and the save then reads freed members - closeChildren() and ~Host() stop
+    // this one instead (#9653).
+    QTimer mDeferredSaveTimer;
 
     QFile mErrorLogFile;
 
@@ -910,6 +1036,10 @@ private:
 
     int mPort;
 
+    // Reset to false whenever a connection is (re)established; set true by Host::send() on the first
+    // user/script command. See userSentInputThisConnection().
+    bool mUserSentInputThisConnection = false;
+
     int mRetries = 5;
     bool mSaveProfileOnExit = false;
 
@@ -918,7 +1048,7 @@ private:
     // createStopWatch() to return 0 during script loading so that we do not get
     // superious stopwatches from being created then (when
     // mIsProfileLoadingSequence is true):
-    QMap<int, stopWatch*> mStopWatchMap;
+    std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
@@ -950,13 +1080,9 @@ private:
     // Will be null/empty if they have not set their own invite
     QString mDiscordInviteURL;
 
-    // Will be null/empty if we are not concerned to check the use of Discord
-    // Rich Presence against the local user currently logged into Discord -
-    // these two will be checked against the values from the Discord instance
-    // with which we are linked to by the RPC library - and if they do not match
-    // we won't use Discord functions.
+    // If non-empty, Rich Presence will only be shown when logged into this
+    // Discord username - useful if multiple people share a machine.
     QString mRequiredDiscordUserName;
-    QString mRequiredDiscordUserDiscriminator;
 
     QString mMMCPChatName;
     QString mMMCPChatPrefix;
@@ -977,8 +1103,10 @@ private:
     // 16 basic colors (and OSC "R\" to reset them).
     bool mServerMayRedefineColors = false;
 
-    // Was public but hidden to prevent it being changed without going through
-    // the process to signal to users that they need to change dictionaries:
+    // Empty until a dictionary is chosen: getSpellDic() substitutes the
+    // platform's starting one, so reading this member directly under-reports
+    // what the profile is using. Private so that setSpellDic() can push the
+    // change into a live console:
     QString mSpellDic;
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be

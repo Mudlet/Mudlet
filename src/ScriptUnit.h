@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,20 +41,12 @@ class ScriptUnit
     friend class XMLimport;
 
 public:
-    explicit ScriptUnit(Host* pHost)
-    : mpHost(pHost)
-    {}
+    explicit ScriptUnit(Host*);
     ~ScriptUnit();
 
-    std::list<TScript*> getScriptRootNodeList()
-    {
-        return mScriptRootNodeList;
-    }
+    std::list<TScript*> getScriptRootNodeList() { return mScriptRootNodeList; }
 
-    QMap<int, TScript*> getScriptList()
-    {
-        return mScriptMap;
-    }
+    QMap<int, TScript*> getScriptList() { return mScriptMap; }
 
     TScript* getScript(int id);
     void compileAll(bool saveLoadingError = false);
@@ -64,6 +57,17 @@ public:
     void stopAllTriggers();
     void uninstall(const QString&);
     void _uninstall(TScript* pChild, const QString& packageName);
+    // Tracks Host::raiseEvent() dispatch nesting so that uninstall() can defer
+    // deleting a package's scripts while one of their event handlers is still on
+    // the call stack (e.g. a handler calling uninstallPackage() on its own
+    // package) - deferred items are flushed by doCleanup() at depth 0:
+    void beginProcessing() { ++mProcessingDepth; }
+    void endProcessing()
+    {
+        --mProcessingDepth;
+        Q_ASSERT(mProcessingDepth >= 0);
+    }
+    void doCleanup();
     int getNewID();
     std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
     void resetStats();
@@ -85,6 +89,9 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TScript*> mScriptMap;
     std::list<TScript*> mScriptRootNodeList;
+    // > 0 whilst Host::raiseEvent() is dispatching to event handlers; uninstall()
+    // and doCleanup() must not delete scripts then:
+    int mProcessingDepth = 0;
     int mMaxID = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;

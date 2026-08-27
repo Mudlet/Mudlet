@@ -59,6 +59,16 @@ function Geyser.Mapper:show_impl()
     createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
   else
     openMapWidget()
+    -- A title only reaches a map window that is on screen, so one this mapper
+    -- set while it was hidden has to be applied now instead. Only one that did
+    -- not land: an unconditional apply here would overwrite a title set through
+    -- setMapWindowTitle() directly every time any mapper is shown. An empty
+    -- titleText is a reset rather than "no title", which is why this tracks
+    -- whether the call failed instead of whether the text is empty.
+    if self.titlePending then
+      self.titlePending = false
+      setMapWindowTitle(self.titleText)
+    end
   end
 end
 
@@ -79,12 +89,18 @@ end
 
 function Geyser.Mapper:setTitle(text)
   self.titleText = text
-  return setMapWindowTitle(text)
+  local applied, message = setMapWindowTitle(text)
+  self.titlePending = not applied
+  return applied, message
 end
 
 function Geyser.Mapper:resetTitle()
   self.titleText = ""
-  return resetMapWindowTitle()
+  -- resetMapWindowTitle() is setMapWindowTitle(""), so show_impl applying
+  -- titleText covers a reset as well
+  local applied, message = resetMapWindowTitle()
+  self.titlePending = not applied
+  return applied, message
 end
 
 -- Overridden constructor
@@ -129,7 +145,7 @@ function Geyser.Mapper:new (cons, container)
       me:resetTitle()
     end
   end
--- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+-- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     me:hide_impl()
   end

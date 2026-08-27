@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,6 +22,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "utils.h" // For NameGroupMatches
+
+#include <list>
+#include <string>
+
+#include <QString>
+#include <QPair>
+#include <QVector>
+
+
 class TMatchState
 {
 public:
@@ -31,7 +41,8 @@ public:
     {
     }
 
-    // Copy constructor:
+    // Copy constructor - deliberately does not carry over the capture
+    // containers, so a copied state starts with empty captures:
     TMatchState(const TMatchState& ms)
     : mNumberOfConditions(ms.mNumberOfConditions)
     , mNextCondition(ms.mNextCondition)
@@ -40,6 +51,13 @@ public:
     , mSpacer(ms.mSpacer)
     {
     }
+
+    // Pair the user-defined copy constructor with an explicit copy assignment
+    // (Rule of Two). Note the two are deliberately asymmetric: unlike the
+    // constructor above, this defaulted assignment copies every member,
+    // capture containers included. That reproduces the previously implicit
+    // assignment exactly, so behaviour is unchanged:
+    TMatchState& operator=(const TMatchState& ms) = default;
 
     int nextCondition() { return mNextCondition; }
     void conditionMatched() { mNextCondition++; }

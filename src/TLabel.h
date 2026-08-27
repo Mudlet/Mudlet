@@ -64,7 +64,9 @@ public:
     void leaveEvent(QEvent*) override;
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void setClickThrough(bool clickthrough);
+    void setBackgroundColor(const QColor& color);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
@@ -101,6 +103,9 @@ public:
 private:
     QPixmap renderSvgPixmap(const QSize& size) const;
     void releaseFunc(const int existingFunction, const int newFunction);
+    void applyBackgroundColor();
+
+    QColor mBackgroundColor;
 
 private slots:
     void slot_linkActivated(const QString& link);

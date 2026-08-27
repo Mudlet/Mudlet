@@ -35,7 +35,32 @@
 #include <QTimer>
 #include <QUrl>
 #include <QtEvents>
+#include <chrono>
 
+using namespace std::chrono_literals;
+
+// A case-insensitive text.contains("<a ") answers the same, but it case-folds every
+// character it walks, and Lua UIs echo into labels on every prompt. Any whitespace
+// counts as the separator because HTML allows any; the styling pass in setText()
+// recognises only the ASCII ones, so an anchor split by a non-breaking space comes
+// out clickable but unstyled.
+static bool containsAnchorTag(const QString& text)
+{
+    qsizetype from = 0;
+    while (true) {
+        const qsizetype at = text.indexOf(QLatin1Char('<'), from);
+        // Too near the end for a tag name and a separator, and every later '<' is
+        // nearer still, so there is nothing left to find
+        if (at < 0 || at + 2 >= text.size()) {
+            return false;
+        }
+        const char16_t tagName = text.at(at + 1).unicode();
+        if ((tagName == u'a' || tagName == u'A') && text.at(at + 2).isSpace()) {
+            return true;
+        }
+        from = at + 1;
+    }
+}
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
@@ -54,6 +79,15 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 
 TLabel::~TLabel()
 {
+    if (mpHost) {
+        auto* interpreter = mpHost->getLuaInterpreter();
+        for (const int funcRef : {mClickFunction, mDoubleClickFunction, mReleaseFunction, mMoveFunction, mWheelFunction, mEnterFunction, mLeaveFunction}) {
+            if (funcRef) {
+                interpreter->freeLuaRegistryIndex(funcRef);
+            }
+        }
+    }
+
     if (mpMovie) {
         mpMovie->deleteLater();
         mpMovie = nullptr;
@@ -66,9 +100,11 @@ TLabel::~TLabel()
 
 void TLabel::setText(const QString& text)
 {
+    const bool hasAnchor = containsAnchorTag(text);
+
     // Enable TextBrowserInteraction only when the label contains hyperlinks
     // This prevents Qt's default context menu from appearing on labels without links
-    if (text.contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (hasAnchor) {
         setTextInteractionFlags(Qt::TextBrowserInteraction);
     } else {
         setTextInteractionFlags(Qt::NoTextInteraction);
@@ -77,7 +113,7 @@ void TLabel::setText(const QString& text)
     // If we have link styling configured and the text contains HTML links,
     // we need to inject inline styles because QTextDocument doesn't use
     // widget stylesheets or QPalette for link colors when a stylesheet exists
-    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && text.contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && hasAnchor) {
         QString styledText = text;
 
         // Replace all <a href="..."> tags with <a href="..." style="...">
@@ -85,7 +121,7 @@ void TLabel::setText(const QString& text)
         // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
         // uses this format. User-provided HTML outside this pattern will still render as
         // clickable links (Qt handles that), but won't receive custom styling.
-        QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
+        static const QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
         QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
 
         // Process matches in reverse order to avoid offset issues
@@ -189,7 +225,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 {
     // If the label has rich text with potential hyperlinks, let QLabel handle the event first
     // QLabel will emit linkActivated if a link was clicked
-    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
         QLabel::mousePressEvent(event);
         // If QLabel didn't accept the event, then it wasn't a link click
         if (event->isAccepted()) {
@@ -221,7 +257,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     // If the label has rich text with potential hyperlinks, let QLabel handle the event first
-    if (!text().isEmpty() && textFormat() == Qt::RichText && text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
         QLabel::mouseReleaseEvent(event);
         // If QLabel accepted the event, it was handling a link click
         if (event->isAccepted()) {
@@ -413,12 +449,61 @@ void TLabel::setClickThrough(bool clickthrough)
         setTextInteractionFlags(Qt::NoTextInteraction);
     } else {
         // Re-enable text interaction only if the current text has hyperlinks
-        if (text().contains(qsl("<a "), Qt::CaseInsensitive)) {
+        if (containsAnchorTag(text())) {
             setTextInteractionFlags(Qt::TextBrowserInteraction);
         } else {
             setTextInteractionFlags(Qt::NoTextInteraction);
         }
     }
+}
+
+// the lookbehind keeps selection-background-color and friends out of it
+static const QRegularExpression& backgroundColorDeclaration()
+{
+    static const QRegularExpression declaration(qsl("(?<![-\\w])background-color\\s*:[^;]*;"));
+    return declaration;
+}
+
+void TLabel::setBackgroundColor(const QColor& color)
+{
+    mBackgroundColor = color;
+
+    const QString newColor = qsl("background-color: rgba(%1, %2, %3, %4);").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
+    QString sheet = styleSheet();
+    if (sheet.contains(backgroundColorDeclaration())) {
+        sheet.replace(backgroundColorDeclaration(), newColor);
+    } else {
+        if (!sheet.isEmpty() && !sheet.endsWith(QChar::LineFeed)) {
+            sheet.append(QChar::LineFeed);
+        }
+        sheet.append(newColor);
+    }
+    setStyleSheet(sheet);
+}
+
+// Qt hands a widget back the palette it saved when it first styled it, so every
+// restyle - this label's own, an ancestor's, or the application's - drops the colour
+// and leaves a label that fills its background on Qt's near-white default
+void TLabel::changeEvent(QEvent* event)
+{
+    QLabel::changeEvent(event);
+
+    if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) {
+        applyBackgroundColor();
+    }
+}
+
+void TLabel::applyBackgroundColor()
+{
+    // the equality test is also what stops setPalette() below recursing back in
+    // through changeEvent()
+    if (!mBackgroundColor.isValid() || palette().color(QPalette::Window) == mBackgroundColor) {
+        return;
+    }
+
+    QPalette palette = this->palette();
+    palette.setColor(QPalette::Window, mBackgroundColor);
+    setPalette(palette);
 }
 
 void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline)
@@ -453,7 +538,12 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
 
 void TLabel::resetLinkStyle()
 {
-    setPalette(QPalette());
+    // starting from a fresh palette would take the background colour with the link colours
+    QPalette palette;
+    if (mBackgroundColor.isValid()) {
+        palette.setColor(QPalette::Window, mBackgroundColor);
+    }
+    setPalette(palette);
 
     mLinkColor.clear();
     mLinkVisitedColor.clear();
@@ -468,7 +558,7 @@ void TLabel::clearVisitedLinks()
     mVisitedLinks.clear();
 
     QString currentText = text();
-    if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
+    if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
         setText(currentText);
     }
 }
@@ -485,7 +575,7 @@ void TLabel::slot_linkActivated(const QString& link)
         // Refresh the label to update link colors
         // We need to re-apply the current text to trigger the styling update
         QString currentText = text();
-        if (!currentText.isEmpty() && currentText.contains(qsl("<a "), Qt::CaseInsensitive)) {
+        if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
             setText(currentText);
         }
     }
@@ -514,7 +604,7 @@ void TLabel::slot_linkActivated(const QString& link)
                 commandLine->setTextCursor(cursor);
                 // Defer the focus operation to avoid issues with QPointer manipulation
                 // during the signal handler execution
-                QTimer::singleShot(0, commandLine.data(), [commandLine]() {
+                QTimer::singleShot(0ms, commandLine.data(), [commandLine]() {
                     if (commandLine) {
                         commandLine->setFocus();
                     }

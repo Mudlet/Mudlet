@@ -29,6 +29,7 @@ class FileOpenHandler : public QObject
 
 public:
     explicit FileOpenHandler(QObject* parent = nullptr);
+    ~FileOpenHandler() override;
 
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;

@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,6 +40,11 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
     if (!oldExpireName.isEmpty()) {
         mExpireToLinks.remove(oldExpireName, mLinkID);
     }
+    mExpireStore.remove(mLinkID);
+
+    // Remove old styling and its selection-group index entry too, so a
+    // recycled id does not inherit the previous link's styling
+    clearStyling(mLinkID);
 
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
@@ -99,7 +105,7 @@ void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 
     QList<int> linkIds = mExpireToLinks.values(expireName);
 
-    for (int linkId : linkIds) {
+    for (const int linkId : std::as_const(linkIds)) {
         removeLinkById(linkId, pH);
     }
 }
@@ -119,16 +125,24 @@ void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* p
     }
 }
 
+void TLinkStore::clearStyling(int id)
+{
+    if (!mStylingStore.contains(id)) {
+        return;
+    }
+
+    const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[id];
+    if (oldStyling.selection.hasSelectionSettings) {
+        const QPair<QString, QString> key = qMakePair(oldStyling.selection.group, oldStyling.selection.value);
+        mSelectionGroupIndex.remove(key, id);
+    }
+
+    mStylingStore.remove(id);
+}
+
 void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
 {
-    // Remove old selection group index entry if it exists
-    if (mStylingStore.contains(id)) {
-        const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[id];
-        if (oldStyling.selection.hasSelectionSettings) {
-            QPair<QString, QString> oldKey = qMakePair(oldStyling.selection.group, oldStyling.selection.value);
-            mSelectionGroupIndex.remove(oldKey, id);
-        }
-    }
+    clearStyling(id);
 
     mStylingStore[id] = styling;
 
