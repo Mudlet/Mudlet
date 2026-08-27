@@ -1049,6 +1049,32 @@ describe("Tests installing one name as both a package and a module", function()
                     "the refused install stranded the folder it unpacked in the profile")
   end)
 
+  it("leaves a folder already using the name in a config.lua alone", function()
+    -- the archive unpacks under its own file name and is then renamed to the
+    -- name its config.lua gives. A folder already sitting at that name makes the
+    -- rename fail, and the install carries on reading the folder that was there
+    -- - so the folder it may still delete has to be the one it unpacked, not the
+    -- one it found
+    local occupied = getMudletHomeDir() .. "/" .. renamedTo
+    local occupant = occupied .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(occupied)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write("this folder was in the profile before the install ran")
+    file:close()
+    defer(function()
+      os.remove(occupant)
+      lfs.rmdir(occupied)
+    end)
+
+    local reason = installUntilRefused(installPackage, renamerArchive)
+    assert.is_true(contains(reason, "no package found"), tostring(reason))
+    assert.is_true(fileExists(occupant), "the install deleted a folder it found rather than the one it unpacked")
+    assert.is_false(packageInstalled(renamedTo), "the install registered the contents of a folder it did not unpack")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the install whose rename failed stranded the folder it unpacked")
+  end)
+
   it("leaves the details of the package that refused an install alone", function()
     installRenamerAsPackage()
     assert.equals("1.0", getPackageInfo(renamedTo, "version"), "the fixture did not install with the version its config.lua gives")
