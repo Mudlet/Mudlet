@@ -466,21 +466,13 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
                     if (mpHost) {
                         // Uninstall existing package first if this is an update
-                        bool readyToInstall = true;
                         if (mpHost->mInstalledPackages.contains(packageName)) {
-                            readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
-                            if (!readyToInstall) {
-                                // installing over a package still listed as installed
-                                // fails as "already installed", so the update would go
-                                // missing without ever being named as a failure
-                                failedPackages << packageName;
-                                qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
-                            }
+                            mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                         }
-                        if (readyToInstall && mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
+                        if (mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
                             // the next install would be postponed behind this save, and the loop deletes the file it needs
                             mpHost->waitForProfileSave();
-                        } else if (readyToInstall) {
+                        } else {
                             failedPackages << packageName;
                             qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
                         }
@@ -660,16 +652,8 @@ void dlgPackageManager::slot_removePackages()
         removePackages << item->text();
     }
 
-    QStringList refusedPackages;
     for (const QString& package : std::as_const(removePackages)) {
-        if (!mpHost->uninstallPackage(package, enums::PackageModuleType::Package)) {
-            refusedPackages << package;
-        }
-    }
-    if (!refusedPackages.isEmpty()) {
-        //: %1 is a comma separated list of the packages that are still installed
-        const QString msg = tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedPackages.join(qsl(", ")));
-        QMessageBox::warning(this, tr("Removal failed"), msg);
+        mpHost->uninstallPackage(package, enums::PackageModuleType::Package);
     }
 
     populatePackagesWithUpdates();

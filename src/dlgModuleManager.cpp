@@ -177,13 +177,8 @@ void dlgModuleManager::slot_uninstallModule()
 
     const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
-    if (pI && !mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::ModuleFromUI)) {
-        // refused while a profile save is running, so nothing was removed and
-        // rebuilding the table below would show it gone anyway
-        //: %1 is the name of the module the user asked to remove
-        const QString msg = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(pI->text());
-        QMessageBox::warning(this, tr("Removal failed"), msg);
-        return;
+    if (pI) {
+        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::ModuleFromUI);
     }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
