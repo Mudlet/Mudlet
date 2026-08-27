@@ -3,23 +3,33 @@
 -- Two attack surfaces are driven from Lua:
 --   * the telnet parser, through feedTelnet(...) which under --offline runs the
 --     real cTelnet::processSocketData() state machine (IAC negotiation,
---     subnegotiation for GMCP/MSDP/MSSP/MXP/CHARSET/MCCP, ANSI/CSI/OSC decoding
---     and the UTF-8/multibyte decoders), and
+--     subnegotiation for GMCP/MSDP/MSSP/MXP/CHARSET/NEW_ENVIRON/NAWS/TTYPE/MCCP,
+--     ANSI/CSI/OSC decoding and the UTF-8/multibyte decoders), and
 --   * the trigger engine, through the temp*Trigger() creators plus feedTriggers()
 --     which runs TriggerUnit::processDataStream -> TTrigger::match (PCRE2 with
 --     JIT, substring, begin-of-line, exact and colour match types, capture
 --     extraction, /g multimatch, multiline and filter chains).
 --
--- The suite binary is built with AddressSanitizer, so a memory error surfaces as
--- an abort with a diagnostic rather than as a silent corruption.
+-- The suite binary is built with a sanitizer (AddressSanitizer, or the
+-- UndefinedBehaviorSanitizer build), so a memory error or UB surfaces as an
+-- abort / "runtime error:" diagnostic rather than as a silent corruption.
+--
+-- Coverage beyond single-shot feeds:
+--   * streaming - one logical byte stream fed across many feedTelnet() calls at
+--     random boundaries, so IAC sequences, subnegotiations and multibyte code
+--     points are split across reads. This is where the parser's carry-over state
+--     (partial IAC, incomplete SB, half a UTF-8 code point) is exercised.
+--   * long lines - multi-kilobyte runs to stress TBuffer growth and wrapping.
+--   * chained triggers - scripts that feed the engine again, to exercise the
+--     re-entrancy / self-feed guards.
+--   * /g multibyte - match-all captures over non-ASCII subjects.
 --
 -- Reproducibility: every random choice comes from a self-contained MINSTD PRNG
 -- seeded from MUDLET_FUZZ_SEED, so a given seed replays byte-for-byte on any
--- Lua 5.1 build (Lua's own math.random is not used - its algorithm and seeding
--- are not portable). Generation is a pure function of (seed, iteration), so any
--- iteration can be reproduced directly. When MUDLET_FUZZ_DUMP names a file, the
--- exact bytes of each feed are written there (hex) just before the feed, so
--- after an ASan abort the file's tail is the crashing input.
+-- Lua 5.1 build (Lua's own math.random is not portable). Generation is a pure
+-- function of (seed, iteration). When MUDLET_FUZZ_DUMP names a file, the exact
+-- bytes of each feed are written there (hex) just before the feed, so after an
+-- abort the file's tail is the crashing input.
 --
 -- This is a diagnostic spec, run on demand rather than as part of the always-on
 -- CI suite: it deliberately drives persistent cTelnet state (encoding,
@@ -27,12 +37,15 @@
 -- shared self-test run unless you have isolated TESTS_DIRECTORY to it.
 --
 -- Tunables (all optional, via environment):
---   MUDLET_FUZZ_SEED    integer seed                       (default 1)
---   MUDLET_FUZZ_TRIG    trigger-engine rounds              (default 400)
---   MUDLET_FUZZ_TELNET  telnet-parser iterations           (default 2000)
---   MUDLET_FUZZ_DUMP    path to write the last fed input   (default none)
+--   MUDLET_FUZZ_SEED     integer seed                          (default 1)
+--   MUDLET_FUZZ_TRIG     trigger-engine rounds                 (default 400)
+--   MUDLET_FUZZ_TELNET   single-shot telnet iterations         (default 2000)
+--   MUDLET_FUZZ_STREAM   streaming (split-packet) iterations   (default 400)
+--   MUDLET_FUZZ_LONG     long-line iterations                  (default 40)
+--   MUDLET_FUZZ_DUMP     path to write the last fed input      (default none)
 
 local floor = math.floor
+local min = math.min
 local char = string.char
 local concat = table.concat
 local insert = table.insert
@@ -45,6 +58,8 @@ end
 local SEED = envnum("MUDLET_FUZZ_SEED", 1)
 local TRIG_ROUNDS = envnum("MUDLET_FUZZ_TRIG", 400)
 local TELNET_ITERS = envnum("MUDLET_FUZZ_TELNET", 2000)
+local STREAM_ITERS = envnum("MUDLET_FUZZ_STREAM", 400)
+local LONG_ITERS = envnum("MUDLET_FUZZ_LONG", 40)
 local DUMP_PATH = os.getenv("MUDLET_FUZZ_DUMP")
 
 -- MINSTD (Park-Miller): state = 16807 * state mod 2^31-1. The product stays
@@ -76,6 +91,13 @@ local function chance(pct)
     return rng() % 100 < pct
 end
 
+-- Per-phase wall-clock timing to stderr, so the run log shows which attack
+-- surface dominates cost. Handy when tuning campaign counts against the
+-- harness's run timeout.
+local function markPhase(label, t0)
+    io.stderr:write(string.format("[fuzz-timing] seed=%d %-26s %.2fs\n", SEED, label, os.clock() - t0))
+end
+
 -- Record the exact bytes of a feed before performing it, so a hard crash leaves
 -- the offending input on disk. Written fresh each call: the file always holds
 -- just the most recent feed.
@@ -99,7 +121,7 @@ end
 local IAC, DONT, DO, WONT, WILL, SB, GA, SE = 255, 254, 253, 252, 251, 250, 249, 240
 local ESC, BEL, CR, LF = 27, 7, 13, 10
 local OPT = {
-    BINARY = 0, ECHO = 1, SGA = 3, TTYPE = 24, EOR = 25, NAWS = 31,
+    BINARY = 0, ECHO = 1, SGA = 3, STATUS = 5, TTYPE = 24, EOR = 25, NAWS = 31,
     NEW_ENVIRON = 39, CHARSET = 42, MSDP = 69, MSSP = 70, MCCP1 = 85,
     MCCP2 = 86, MSP = 90, MXP = 91, AARD102 = 102, ATCP = 200, GMCP = 201,
 }
@@ -110,6 +132,9 @@ end
 -- MSDP framing bytes.
 local MSDP_VAR, MSDP_VAL = 1, 2
 local MSDP_TABLE_OPEN, MSDP_TABLE_CLOSE, MSDP_ARRAY_OPEN, MSDP_ARRAY_CLOSE = 3, 4, 5, 6
+-- NEW_ENVIRON framing.
+local NENV_IS, NENV_SEND, NENV_INFO = 0, 1, 2
+local NENV_VAR, NENV_VALUE, NENV_ESC, NENV_USERVAR = 0, 1, 2, 3
 
 -- Turn a list of byte values (0-255) into a string suitable for feedTelnet.
 -- feedTelnet takes the argument as a C string (a raw NUL would truncate it) and
@@ -134,9 +159,9 @@ local function bytesToTelnet(bytes)
     return concat(out)
 end
 
-local function appendBytes(dst, src)
-    for i = 1, #src do
-        insert(dst, src[i])
+local function appendStr(dst, s)
+    for i = 1, #s do
+        insert(dst, s:byte(i))
     end
 end
 
@@ -186,10 +211,10 @@ local telnetChunks = {
     function(b)                                              -- IAC WILL/WONT/DO/DONT <option>
         insert(b, IAC); insert(b, pick({WILL, WONT, DO, DONT})); insert(b, pick(OPTION_VALUES))
     end,
-    function(b)                                              -- IAC GA / IAC EOR / IAC NOP
-        insert(b, IAC); insert(b, pick({GA, 239, 241}))
+    function(b)                                              -- IAC GA / IAC EOR / IAC NOP / bare IAC + byte
+        insert(b, IAC); insert(b, pick({GA, 239, 241, rrange(240, 254)}))
     end,
-    function(b)                                              -- well-formed subnegotiation
+    function(b)                                              -- well-formed subnegotiation, random option
         insert(b, IAC); insert(b, SB); insert(b, pick(OPTION_VALUES))
         for _ = 1, rrange(0, 40) do
             local v = rrange(1, 255)
@@ -202,16 +227,16 @@ local telnetChunks = {
         insert(b, IAC); insert(b, SB); insert(b, pick(OPTION_VALUES))
         fillBytes(b, rrange(0, 60), true)
     end,
-    function(b)                                              -- GMCP with random/broken JSON
+    function(b)                                              -- GMCP with random/nested/broken JSON
         insert(b, IAC); insert(b, SB); insert(b, OPT.GMCP)
-        local msg = pick({"Char.Vitals", "Room.Info", "Comm.Channel", "External.Discord.Status", "A.B.C.D"})
-        for i = 1, #msg do insert(b, msg:byte(i)) end
+        appendStr(b, pick({"Char.Vitals", "Room.Info", "Comm.Channel", "External.Discord.Status", "A.B.C.D"}))
         insert(b, 0x20)
-        local json = pick({"{}", "{\"hp\":", "[1,2,", "{\"x\":{\"y\":", "not json", "{\"a\":1e999}", "\"\xff\xfe\""})
-        for i = 1, #json do insert(b, json:byte(i)) end
+        appendStr(b, pick({"{}", "{\"hp\":", "[1,2,", "{\"x\":{\"y\":{\"z\":[", "not json",
+                           "{\"a\":1e999}", "\"\xff\xfe\"", "{\"k\xe4\xb8\xad\":true}",
+                           "[" .. string.rep("[", 40), "{" .. string.rep("\"a\":{", 30)}))
         insert(b, IAC); insert(b, SE)
     end,
-    function(b)                                              -- MSDP with framing bytes
+    function(b)                                              -- MSDP with framing bytes and nesting
         insert(b, IAC); insert(b, SB); insert(b, OPT.MSDP)
         for _ = 1, rrange(1, 4) do
             insert(b, MSDP_VAR)
@@ -223,13 +248,47 @@ local telnetChunks = {
         end
         insert(b, IAC); insert(b, SE)
     end,
-    function(b)                                              -- CHARSET request that switches the decoder
-        insert(b, IAC); insert(b, SB); insert(b, OPT.CHARSET); insert(b, 1)   -- REQUEST
+    function(b)                                              -- MSSP name/value pairs
+        insert(b, IAC); insert(b, SB); insert(b, OPT.MSSP)
+        for _ = 1, rrange(1, 5) do
+            insert(b, 1); fillBytes(b, rrange(0, 6), true)   -- MSSP_VAR
+            insert(b, 2); fillBytes(b, rrange(0, 6), true)   -- MSSP_VAL
+        end
+        insert(b, IAC); insert(b, SE)
+    end,
+    function(b)                                              -- CHARSET request/accepted/rejected, switches the decoder
+        insert(b, IAC); insert(b, SB); insert(b, OPT.CHARSET)
+        insert(b, pick({1, 2, 3, 4, 5, 6, 7}))              -- REQUEST/ACCEPTED/REJECTED/TTABLE_*
         local sep = pick({0x20, 0x3B, 0x2C})
-        local enc = pick({"UTF-8", "ISO-8859-1", "GBK", "Big5", "BOGUS-charset", ""})
         insert(b, sep)
-        for i = 1, #enc do insert(b, enc:byte(i)) end
+        appendStr(b, pick({"UTF-8", "ISO-8859-1", "GBK", "Big5", "BOGUS-charset", "", "US-ASCII", "cp1252"}))
         insert(b, sep)
+        insert(b, IAC); insert(b, SE)
+    end,
+    function(b)                                              -- NEW_ENVIRON with VAR/VALUE/USERVAR/ESC framing
+        insert(b, IAC); insert(b, SB); insert(b, OPT.NEW_ENVIRON)
+        insert(b, pick({NENV_IS, NENV_SEND, NENV_INFO}))
+        for _ = 1, rrange(0, 4) do
+            insert(b, pick({NENV_VAR, NENV_USERVAR}))
+            fillBytes(b, rrange(0, 6), true)
+            if chance(50) then insert(b, NENV_VALUE); fillBytes(b, rrange(0, 6), true) end
+            if chance(20) then insert(b, NENV_ESC); insert(b, rrange(1, 255)) end
+        end
+        insert(b, IAC); insert(b, SE)
+    end,
+    function(b)                                              -- NAWS window size (2 bytes each way, with escapable IAC)
+        insert(b, IAC); insert(b, SB); insert(b, OPT.NAWS)
+        for _ = 1, 4 do
+            local v = rrange(0, 255)
+            if v == IAC then insert(b, IAC) end
+            insert(b, v)
+        end
+        insert(b, IAC); insert(b, SE)
+    end,
+    function(b)                                              -- TTYPE IS/SEND cycling
+        insert(b, IAC); insert(b, SB); insert(b, OPT.TTYPE)
+        insert(b, pick({0, 1}))                             -- IS / SEND
+        appendStr(b, pick({"XTERM", "MTTS 2815", "ANSI", "", "\xff\xff"}))
         insert(b, IAC); insert(b, SE)
     end,
     function(b)                                              -- MCCP2: negotiate then feed non-zlib garbage (inflate error path, self-recovers)
@@ -237,52 +296,61 @@ local telnetChunks = {
         insert(b, IAC); insert(b, SB); insert(b, OPT.MCCP2); insert(b, IAC); insert(b, SE)
         fillBytes(b, rrange(1, 30), false)
     end,
-    function(b)                                              -- ANSI SGR with extreme / malformed parameters
+    function(b)                                              -- ANSI SGR: 16/256/truecolor and malformed parameters
         insert(b, ESC); insert(b, 0x5B)                     -- ESC [
-        local forms = {"0", "1;31", "38;5;255", "38;2;10;20;30", "48;5;999999", "38;2;", ";;;", "999999999", "1;2;3;4;5;6;7"}
-        local p = pick(forms)
-        for i = 1, #p do insert(b, p:byte(i)) end
+        appendStr(b, pick({"0", "1;31", "38;5;255", "48;5;16", "38;2;10;20;30", "48;2;1;2;3",
+                           "38;5;999999", "38;2;", ";;;", "999999999", "1;2;3;4;5;6;7;8;9;10",
+                           "4:3", "58;5;9", string.rep("1;", 60)}))
         insert(b, 0x6D)                                     -- m
     end,
-    function(b)                                              -- arbitrary CSI final byte
+    function(b)                                              -- DEC private mode set/reset and other CSI finals
         insert(b, ESC); insert(b, 0x5B)
+        if chance(50) then insert(b, 0x3F) end              -- '?'
         for _ = 1, rrange(0, 8) do insert(b, pick({0x30, 0x31, 0x39, 0x3B, 0x3A})) end
-        insert(b, rrange(0x40, 0x7E))                       -- final byte
+        insert(b, rrange(0x40, 0x7E))                       -- final byte (h/l/m/H/J/K/...)
     end,
-    function(b)                                              -- OSC 8 hyperlink and other OSC strings
+    function(b)                                              -- OSC strings incl. OSC 8 hyperlinks
         insert(b, ESC); insert(b, 0x5D)                     -- ESC ]
-        local code = pick({"8", "0", "52", "1337"})
-        for i = 1, #code do insert(b, code:byte(i)) end
+        appendStr(b, pick({"8", "0", "1", "2", "4", "52", "1337", "133"}))
         insert(b, 0x3B)
-        fillBytes(b, rrange(0, 20), true)
+        fillBytes(b, rrange(0, 30), true)
         insert(b, 0x3B)
-        local uri = pick({"http://x", "mxp://foo", "javascript:x", "", "\xff\xfe"})
-        for i = 1, #uri do insert(b, uri:byte(i)) end
+        appendStr(b, pick({"http://x", "mxp://foo", "javascript:x", "", "\xff\xfe", "file:///" .. string.rep("a", 50)}))
         if chance(50) then insert(b, ESC); insert(b, 0x5C) else insert(b, BEL) end  -- ST or BEL
     end,
-    function(b)                                              -- MXP negotiation + mode line + inline tags
+    function(b)                                              -- MXP negotiation + mode line + inline tags/entities
         if chance(50) then insert(b, IAC); insert(b, pick({WILL, DO})); insert(b, OPT.MXP) end
         insert(b, ESC); insert(b, 0x5B)
-        local mode = pick({"0", "1", "6", "7", "99"})
-        for i = 1, #mode do insert(b, mode:byte(i)) end
+        appendStr(b, pick({"0", "1", "6", "7", "99"}))
         insert(b, 0x7A)                                     -- z
-        local tag = pick({"<b>hi</b>", "<color red>x</color>", "<send 'go'>", "<a href=", "<<broken", "<font", "</unbalanced>"})
-        for i = 1, #tag do insert(b, tag:byte(i)) end
+        appendStr(b, pick({"<b>hi</b>", "<color red>x</color>", "<send 'go'>", "<a href=", "<<broken",
+                           "<font", "</unbalanced>", "&lt;&gt;&amp;", "&#65;&#x41;&bogus;",
+                           "<!ELEMENT foo>", "<v Name>", "<send href='x' hint='y'>"}))
     end,
     function(b)                                              -- scattered NULs and high control bytes
-        for _ = 1, rrange(1, 6) do insert(b, pick({0, 0, ESC, 0x7F, 0x9B, IAC})) end
+        for _ = 1, rrange(1, 6) do insert(b, pick({0, 0, ESC, 0x7F, 0x9B, IAC, 0x08, 0x1B})) end
     end,
 }
 
--- PCRE pattern generator, bounded so the classic catastrophic-backtracking
--- shapes ((X+)+ and friends) are never emitted here: at most one quantifier per
--- atom and no quantifier is ever applied to an already-quantified group. The
--- ReDoS surface is exercised separately and safely in its own block below.
+local function genTelnetChunkList(minChunks, maxChunks)
+    local b = {}
+    for _ = 1, rrange(minChunks, maxChunks) do
+        pick(telnetChunks)(b)
+    end
+    return b
+end
+
+-- PCRE pattern generator. Bounded to keep each feed fast for volume (no nested
+-- unbounded quantifier over an alternation): at most one quantifier per atom and
+-- no quantifier applied to an already-quantified group. Richer constructs
+-- (groups, alternation, lookaround, backrefs, unicode scripts) are still mixed
+-- in.
 local ATOMS = {
     "a", "b", "z", "\\d", "\\w", "\\s", ".", "[a-z]", "[0-9]", "[^x]",
-    "\\.", "\\*", "foo", "\\p{L}", "\\x41", "(?:ab)", "\\bword\\b", "τ", "日",
+    "\\.", "\\*", "foo", "\\p{L}", "\\p{Han}", "\\x41", "\\bword\\b", "τ", "日",
+    "(?=a)", "(?!a)", "(?<=x)", "\\1", "[[:alpha:]]", "\\Q.*\\E",
 }
-local QUANTS = { "*", "+", "?", "{2}", "{1,3}", "{0,5}", "*?", "+?" }
+local QUANTS = { "*", "+", "?", "{2}", "{1,3}", "{0,5}", "*?", "+?", "*+", "++" }
 
 local function genAtom()
     local atom = pick(ATOMS)
@@ -294,10 +362,11 @@ end
 
 local function genPattern()
     local parts = {}
-    local n = rrange(1, 6)
-    for _ = 1, n do
+    for _ = 1, rrange(1, 6) do
         if chance(25) then
             insert(parts, "(" .. genAtom() .. "|" .. genAtom() .. ")")   -- capture group with alternation
+        elseif chance(15) then
+            insert(parts, "(?:" .. genAtom() .. genAtom() .. ")")        -- non-capturing group
         else
             insert(parts, genAtom())
         end
@@ -313,25 +382,23 @@ end
 -- as a C string); high bytes and control characters are used directly.
 local function genSubject()
     local bytes = {}
-    local n = rrange(0, 40)
-    for _ = 1, n do
+    for _ = 1, rrange(0, 40) do
         local k = rnd(5)
         if k == 0 then
             insert(bytes, rrange(0x20, 0x7E))
         elseif k == 1 then
             appendUtf8(bytes)
         elseif k == 2 then
-            insert(bytes, pick({0x61, 0x62, 0x20, 0x2E, 0x2A, 0x5B, 0x5D}))  -- regex-ish metacharacters
+            insert(bytes, pick({0x61, 0x62, 0x20, 0x2E, 0x2A, 0x5B, 0x5D, 0x28, 0x29, 0x7C}))  -- regex metacharacters
         elseif k == 3 then
-            insert(bytes, ESC); insert(bytes, 0x5B); insert(bytes, 0x33); insert(bytes, 0x31); insert(bytes, 0x6D)  -- an ANSI colour run
+            appendStr(bytes, "\x1b[31m")                     -- an ANSI colour run
         else
             insert(bytes, rrange(1, 255))
         end
     end
     local out = {}
     for i = 1, #bytes do
-        local b = bytes[i]
-        if b ~= 0 then out[#out + 1] = char(b) end
+        if bytes[i] ~= 0 then out[#out + 1] = char(bytes[i]) end
     end
     return concat(out)
 end
@@ -364,8 +431,7 @@ local function makeTrigger(name, pattern)
         ok, id = pcall(tempComplexRegexTrigger, name, pattern, script,
                        multiline, 0, 0, filter, matchAll, 0, 0, 0, 0, 0)
     else
-        -- colour trigger over ANSI colour numbers, mixed with a regex condition
-        ok, id = pcall(tempColorTrigger, rrange(0, 16), rrange(0, 16), script)
+        ok, id = pcall(tempColorTrigger, rrange(0, 16), rrange(0, 16), script)  -- colour trigger
     end
     if ok and type(id) == "number" and id > 0 then
         return id
@@ -379,57 +445,142 @@ local function killAll(ids)
     end
 end
 
+local function resetTelnetState()
+    deselect()
+    pcall(feedTelnet, "\r\n")
+    -- Reset the negotiated MCCP state the fuzz may have set, so it does not leak
+    -- past this spec if the suite is ever run un-isolated.
+    pcall(feedTelnet, "<T_IAC><T_WONT><O_MCCP2><T_IAC><T_WONT><O_MCCP>")
+    pcall(setConfig, "specialForceGAOff", false)
+end
+
 describe("fuzz: trigger engine", function()
     it("survives random patterns matched against random subjects", function()
+        local __t0 = os.clock()
         local created = 0
         for round = 1, TRIG_ROUNDS do
             local ids = {}
-            local setSize = rrange(1, 8)
-            for k = 1, setSize do
+            for k = 1, rrange(1, 8) do
                 local id = makeTrigger(string.format("fuzzTrig_%d_%d", round, k), genPattern())
                 if id then insert(ids, id); created = created + 1 end
             end
             for _ = 1, rrange(1, 20) do
-                local subject = genSubject()
-                local fed = "\n" .. subject .. "\n"
+                local fed = "\n" .. genSubject() .. "\n"
                 dumpInput("trigger", round, fed)
                 pcall(feedTriggers, fed)
             end
             killAll(ids)
         end
         deselect()
+        markPhase("trigger-engine", __t0)
         assert.is_true(created > 0, "no triggers were created across the run - check the temp*Trigger APIs")
     end)
 end)
 
-describe("fuzz: telnet parser", function()
-    after_each(function()
+describe("fuzz: trigger engine /g multibyte captures", function()
+    it("survives match-all captures over non-ASCII subjects", function()
+        local __t0 = os.clock()
+        local patterns = { "(\\w+)", "(\\S+)", "(.)(.)", "(\\p{L}+)", "([a-z]+)(\\d*)", "(\\X)" }
+        for round = 1, floor(TRIG_ROUNDS / 4) + 1 do
+            local id = makeTrigger("fuzzG_" .. round, pick(patterns))
+            -- force match-all form explicitly for half of them
+            local gid = pcall(tempComplexRegexTrigger, "fuzzGm_" .. round, pick(patterns),
+                              CAPTURE_SCRIPT, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0) and nil
+            for _ = 1, rrange(2, 12) do
+                local parts = {}
+                for _ = 1, rrange(1, 8) do
+                    if chance(50) then appendStr(parts, pick({"τ", "日本", "α", "\xc3\xa9", "🜲"})) end
+                    appendStr(parts, pick({"abc", "123", " ", "x", "9y8"}))
+                end
+                local fed = "\n" .. concat(parts) .. "\n"
+                dumpInput("gmulti", round, fed)
+                pcall(feedTriggers, fed)
+            end
+            if id then pcall(killTrigger, id) end
+        end
         deselect()
-        pcall(feedTelnet, "\r\n")
-        -- Reset the negotiated MCCP state the fuzz may have set, so it does not
-        -- leak past this spec if the suite is ever run un-isolated.
-        pcall(feedTelnet, "<T_IAC><T_WONT><O_MCCP2><T_IAC><T_WONT><O_MCCP>")
+        markPhase("g-multibyte", __t0)
     end)
+end)
+
+describe("fuzz: telnet parser (single-shot)", function()
+    after_each(resetTelnetState)
 
     it("survives random IAC / subnegotiation / ANSI / UTF-8 byte streams", function()
+        local __t0 = os.clock()
         local fedOk = 0
         for iter = 1, TELNET_ITERS do
-            local bytes = {}
-            for _ = 1, rrange(1, 6) do
-                pick(telnetChunks)(bytes)
-            end
-            -- Periodically resync so an unterminated subnegotiation from a prior
-            -- iteration cannot swallow this one whole.
+            local bytes = genTelnetChunkList(1, 6)
             if iter % 25 == 0 then
                 insert(bytes, IAC); insert(bytes, SE); insert(bytes, CR); insert(bytes, LF)
             end
             local raw = bytesToTelnet(bytes)
             dumpInput("telnet", iter, raw)
-            local ok = pcall(feedTelnet, raw)
-            if ok then fedOk = fedOk + 1 end
+            if pcall(feedTelnet, raw) then fedOk = fedOk + 1 end
         end
         deselect()
+        markPhase("telnet-single-shot", __t0)
         assert.is_true(fedOk > 0, "no telnet data was accepted - is the suite running with --offline?")
+    end)
+end)
+
+describe("fuzz: telnet parser (split-packet streaming)", function()
+    after_each(resetTelnetState)
+
+    it("survives one stream fed across many reads at random boundaries", function()
+        local __t0 = os.clock()
+        local fedOk = 0
+        for iter = 1, STREAM_ITERS do
+            -- one large logical stream, then fed in small slices at the byte
+            -- level so IAC/SB/multibyte sequences straddle feedTelnet() calls.
+            local stream = genTelnetChunkList(20, 80)
+            local i = 1
+            while i <= #stream do
+                local sliceEnd = min(i + rrange(1, 7) - 1, #stream)
+                local slice = {}
+                for j = i, sliceEnd do slice[#slice + 1] = stream[j] end
+                i = sliceEnd + 1
+                local raw = bytesToTelnet(slice)
+                dumpInput("stream", iter, raw)
+                if pcall(feedTelnet, raw) then fedOk = fedOk + 1 end
+            end
+            -- resync so an unterminated SB from this stream cannot swallow the next
+            pcall(feedTelnet, "<T_IAC><T_SE>\r\n")
+        end
+        deselect()
+        markPhase("telnet-streaming", __t0)
+        assert.is_true(fedOk > 0, "no streamed telnet data was accepted")
+    end)
+end)
+
+describe("fuzz: telnet parser (long lines)", function()
+    after_each(resetTelnetState)
+
+    it("survives multi-kilobyte lines with embedded ANSI and multibyte", function()
+        local __t0 = os.clock()
+        for iter = 1, LONG_ITERS do
+            local bytes = {}
+            local target = rrange(1500, 9000)
+            while #bytes < target do
+                local r = rnd(10)
+                if r < 6 then
+                    insert(bytes, rrange(0x20, 0x7E))
+                elseif r < 8 then
+                    appendUtf8(bytes)
+                elseif r == 8 then
+                    appendStr(bytes, "\x1b[38;5;" .. rrange(0, 255) .. "m")
+                else
+                    if chance(50) then insert(bytes, CR) end
+                    insert(bytes, LF)
+                end
+            end
+            insert(bytes, CR); insert(bytes, LF)
+            local raw = bytesToTelnet(bytes)
+            dumpInput("long", iter, raw)
+            pcall(feedTelnet, raw)
+        end
+        deselect()
+        markPhase("long-lines", __t0)
     end)
 end)
 
@@ -444,19 +595,19 @@ end)
 -- that each feed returned (no crash) and writes the timing growth to the dump
 -- file for the run report to pick up.
 describe("fuzz: PCRE backtracking probe", function()
-    local EVIL = { "(a+)+$", "(x|x)*y", "(.*a){1,20}$" }
+    local EVIL = { "(a+)+$", "(x|x)*y", "(.*a){1,20}$", "(a|ab)*c" }
 
     it("measures match time growth on known-pathological patterns", function()
+        local __t0 = os.clock()
         for _, pat in ipairs(EVIL) do
             local id = tempRegexTrigger(pat, "")
             assert.is_number(id)
-            local lastCost, worstN, worstCost = 0, 0, 0
+            local lastCost = 0
             for n = 4, 34, 2 do
                 local subject = "\n" .. string.rep("a", n) .. "b\n"
                 local t0 = os.clock()
                 pcall(feedTriggers, subject)
                 local cost = os.clock() - t0
-                worstN, worstCost = n, cost
                 if DUMP_PATH then
                     local f = io.open(DUMP_PATH .. ".redos", "a")
                     if f then
@@ -469,9 +620,46 @@ describe("fuzz: PCRE backtracking probe", function()
             end
             pcall(killTrigger, id)
             assert.is_true(lastCost >= 0, string.format("pattern %q feed did not return", pat))
-            -- worstCost/worstN retained for readability of a failing run's log
-            assert.is_number(worstCost)
         end
         deselect()
+        markPhase("pcre-probe", __t0)
+    end)
+end)
+
+-- Re-entrancy: a trigger whose own script feeds the engine again. Mudlet guards
+-- self-feeding loops (feedTriggers/feedTelnet cap nested processing depth); this
+-- exercises that guard. Kept last so that if an unguarded path ever does abort,
+-- every other block above has already run. All feeds are wrapped so the guard's
+-- error is caught rather than failing the spec.
+describe("fuzz: chained / self-feeding triggers", function()
+    after_each(function()
+        deselect()
+        pcall(feedTriggers, "\n\n")
+    end)
+
+    it("survives triggers that feed the engine from their own scripts", function()
+        local __t0 = os.clock()
+        local ids = {}
+        -- mutual pair: A's script feeds B's marker and vice versa
+        insert(ids, tempRegexTrigger("FZCHAINA", "pcall(feedTriggers, '\\nFZCHAINB\\n')"))
+        insert(ids, tempRegexTrigger("FZCHAINB", "pcall(feedTriggers, '\\nFZCHAINA\\n')"))
+        -- self-feeding: matches its own re-fed line, must hit the depth guard
+        insert(ids, tempRegexTrigger("FZSELF", "pcall(feedTriggers, '\\nFZSELF\\n')"))
+        -- feeds telnet from a trigger script (loopback re-entry guard)
+        insert(ids, tempRegexTrigger("FZTELNET", "pcall(feedTelnet, 'FZTELNET more<T_IAC><T_GA>')"))
+
+        for _ = 1, 60 do
+            local marker = pick({"FZCHAINA", "FZCHAINB", "FZSELF", "FZTELNET", "FZNONE"})
+            local extra = genSubject()
+            dumpInput("chain", 0, marker)
+            pcall(feedTriggers, "\n" .. marker .. " " .. extra .. "\n")
+        end
+
+        for i = 1, #ids do
+            if type(ids[i]) == "number" then pcall(disableTrigger, ids[i]); pcall(killTrigger, ids[i]) end
+        end
+        deselect()
+        resetTelnetState()
+        markPhase("chained-triggers", __t0)
     end)
 end)
