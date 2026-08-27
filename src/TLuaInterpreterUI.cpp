@@ -3283,7 +3283,9 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgTint
 int TLuaInterpreter::setSvgTint(lua_State* L)
 {
-    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
 
     QColor color;
     if (lua_type(L, 2) == LUA_TSTRING) {
@@ -3313,6 +3315,8 @@ int TLuaInterpreter::setSvgTint(lua_State* L)
         color = QColor(r, g, b);
     }
 
+    const QString labelName{lua_tostring(L, 1)};
+
     Host& host = getHostFromLua(L);
     if (!host.setSvgTint(labelName, color)) {
         return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
@@ -3339,8 +3343,11 @@ int TLuaInterpreter::resetSvgTint(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgRotation
 int TLuaInterpreter::setSvgRotation(lua_State* L)
 {
-    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
     const double angle = getVerifiedDouble(L, __func__, 2, "angle");
+    const QString labelName{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
 
     if (!host.setSvgRotation(labelName, angle)) {
@@ -3368,9 +3375,12 @@ int TLuaInterpreter::resetSvgRotation(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgShear
 int TLuaInterpreter::setSvgShear(lua_State* L)
 {
-    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
     const double shearX = getVerifiedDouble(L, __func__, 2, "shearX");
     const double shearY = getVerifiedDouble(L, __func__, 3, "shearY");
+    const QString labelName{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
 
     if (!host.setSvgShear(labelName, shearX, shearY)) {
