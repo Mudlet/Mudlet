@@ -37,13 +37,18 @@
  * Run with: ctest -R DialogTeardownTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAction>
 #include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QScopeGuard>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -56,20 +61,17 @@
 #include "updater.h"
 #endif
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForDialogTeardownTest();
+using namespace std::chrono_literals;
 
 class DialogTeardownTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("DialogTeardown-Test");
@@ -87,30 +89,7 @@ private:
 
     void startProfile(const QString& profileName, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(profileName, address, port);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
@@ -132,13 +111,27 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForDialogTeardownTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -153,8 +146,13 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // Everything below rests on Qt still emitting the focus-out signals while a
@@ -250,6 +248,40 @@ private slots:
         QCOMPARE(mpHost->getMMCPChatName(), chatNameBefore);
     }
 
+    // The other half of that field. The profile's chat name can change from
+    // outside the dialog - a script calling mmcp.chatName() - while the
+    // preferences are open, and the dialog only hears about it through
+    // Host::mmcpChatNameChanged. Cut that connect and the open dialog goes on
+    // showing (and, on Save, writing back) a name the profile no longer has.
+    void test_openPreferencesFollowTheProfilesChatName()
+    {
+        mudlet::self()->showOptionsDialog(qsl("tab_chat"), mpHost);
+        QTest::qWait(100ms);
+        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "Preferences dialog was not created");
+
+        // A failed assertion returns from here, and every other case in this
+        // class runs in the same process afterwards - so the dialog and the
+        // profile's name go back whichever way this ends. Leaving the dialog up
+        // makes the next showOptionsDialog() hand back this one.
+        const QString chatNameBefore = mpHost->getMMCPChatName();
+        auto restoreState = qScopeGuard([this, preferences, chatNameBefore]() {
+            delete preferences;
+            mpHost->setMMCPChatName(chatNameBefore);
+        });
+        QCOMPARE(preferences->lineEdit_mmcpChatName->text(), chatNameBefore);
+
+        const QString setElsewhere = qsl("DialogTeardownRenamedElsewhere");
+        QVERIFY2(setElsewhere != chatNameBefore, "Test needs to set a chat name that is not the current one");
+
+        // tells "the profile never said it" apart from "the dialog never heard it"
+        QSignalSpy chatNameSpy(mpHost, &Host::mmcpChatNameChanged);
+        QVERIFY2(mpHost->setMMCPChatName(setElsewhere), "The profile refused the chat name this test set");
+        QCOMPARE(chatNameSpy.count(), 1);
+
+        QCOMPARE(preferences->lineEdit_mmcpChatName->text(), setElsewhere);
+    }
+
     // Opening the preferences at all used to be enough to end the run: the
     // dialog asks the updater whether it downloads updates by itself, which on
     // macOS reaches into Sparkle - and Sparkle is only created by
@@ -322,22 +354,42 @@ private slots:
         QVERIFY2(!mpHost->getTriggerUnit()->findTrigger(typedName), "Being destroyed made the editor rename the trigger");
         QVERIFY2(mpHost->getTriggerUnit()->findTrigger(nameBefore), "The trigger lost its name while the editor was destroyed");
     }
+
+    void test_protocolActionsFireAfterPreferencesReopen()
+    {
+        mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
+        QTest::qWait(100ms);
+        auto* first = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(first, "Preferences dialog was not created");
+        delete first;
+        QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
+
+        mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
+        QTest::qWait(100ms);
+        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "Preferences dialog was not recreated");
+
+        QAction* gmcpAction = nullptr;
+        for (auto* action : preferences->findChildren<QAction*>()) {
+            if (action->text().startsWith(qsl("GMCP"))) {
+                gmcpAction = action;
+                break;
+            }
+        }
+        QVERIFY2(gmcpAction, "GMCP protocol action not found under the reopened dialog - parenting to the menu broke discovery or population");
+
+        // initWithHost() wires GMCP's toggled() to this button's setEnabled(),
+        // so the button flipping proves the fresh action is connected
+        const bool enabledBefore = preferences->pushButton_forgetSavedSignIn->isEnabled();
+        QCOMPARE(enabledBefore, gmcpAction->isChecked());
+        gmcpAction->toggle();
+        QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), !enabledBefore);
+        gmcpAction->toggle();
+        QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), enabledBefore);
+
+        delete preferences;
+    }
 };
 
-void initializeQRCResourcesForDialogTeardownTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "DialogTeardownTest.moc"
-QTEST_MAIN(DialogTeardownTest)
+MUDLET_GROUPED_TEST_MAIN(DialogTeardownTest)

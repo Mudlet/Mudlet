@@ -27,7 +27,7 @@
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
-#include "TConsole.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
@@ -737,13 +737,13 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
     setBoolAttributeWithDefault(qsl("mEnableMXP"), pHost->mEnableMXP, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_MXP_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNAWS"), pHost->mEnableNAWS, true);
     setBoolAttributeWithDefault(qsl("mUndoServerWrap"), pHost->mUndoServerWrap, false);
-    setBoolAttributeWithDefault(qsl("mServerWrapHintShown"), pHost->mServerWrapHintShown, false);
     setBoolAttributeWithDefault(qsl("mEnableCHARSET"), pHost->mEnableCHARSET, getBoolValueFromLegacyAttributeOrDefault(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), true, true));
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 
@@ -1213,6 +1213,13 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
+    // A package import comes through here too, into a profile that does have a
+    // console - and that one needs the whole restyle, not just the model:
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
+    } else {
+        pHost->refreshMainConsoleColors();
+    }
 }
 
 bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
@@ -1413,14 +1420,9 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 // commented out in the XMLexporter class.
                 readStringList(pT->mPatterns, what);
             } else if (name() == qsl("regexCodePropertyList")) {
+                // A save whose two lists disagree is reported and repaired by
+                // TTrigger::setRegexCodeList(), which every reader funnels through
                 readIntegerList(pT->mPatternKinds, pT->getName(), what);
-                if (Q_UNLIKELY(pT->mPatterns.count() != pT->mPatternKinds.count())) {
-                    qWarning().nospace() << "XMLimport::readTrigger(...) ERROR: "
-                                            "mismatch in regexCode details for Trigger: "
-                                         << pT->getName() << " there were " << pT->mPatterns.count() << " 'regexCodeList' sub-elements and " << pT->mPatternKinds.count()
-                                         << " 'regexCodePropertyList' sub-elements so "
-                                            "something is broken!";
-                }
                 // Fixup the first 16 incorrect ANSI colour numbers from old
                 // code if there are any
                 if (!pT->mPatterns.isEmpty()) {

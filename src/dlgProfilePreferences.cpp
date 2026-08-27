@@ -31,7 +31,6 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
-#include "TFeatureCallout.h"
 #include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -73,12 +72,26 @@
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QToolBar>
+#include <QtMath>
 #include <QUiLoader>
 #include <QLineEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 using namespace std::chrono_literals;
+
+// A QDoubleSpinBox rounds whatever it is given to the number of decimals it
+// displays, so it holds no more precision than that - but TMap and the Lua API
+// both keep the room symbol scaling factor to the full qreal. Both directions
+// of the exchange between the two ask whether the box is already showing a
+// value rather than comparing the two numbers outright: the refresh must not
+// rewrite the box between two keystrokes of a factor being typed into it, and
+// Save must not write a rounded copy back over the factor a script set.
+static bool spinBoxShows(const QDoubleSpinBox* pSpinBox, const qreal value)
+{
+    const qreal scale = qPow(10.0, pSpinBox->decimals());
+    return qFuzzyCompare(pSpinBox->value(), qRound64(value * scale) / scale);
+}
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost)
 : QDialog(pParentWidget)
@@ -206,9 +219,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         disableHostDetails();
         clearHostDetails();
     }
-
-    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_showNewFeatureCallouts);
-    slot_showNewFeatureCallouts();
 
 #if defined(INCLUDE_UPDATER)
     if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
@@ -817,6 +827,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
+    checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
+    connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks);
 
     checkBox_enableClosedCaption->setChecked(pHost->mEnableClosedCaption);
     connect(checkBox_enableClosedCaption, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableClosedCaption);
@@ -840,6 +852,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     undo_server_wrap_width_spinBox->setValue(pHost->mUndoServerWrapWidth);
     undo_server_wrap_width_spinBox->setEnabled(pHost->mUndoServerWrap);
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, undo_server_wrap_width_spinBox, &QWidget::setEnabled);
+    // The note is only worth its space to someone actually running the option:
+    label_undo_server_wrap_experimental->setVisible(pHost->mUndoServerWrap);
+    connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
@@ -1002,17 +1017,17 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
     protocolMenu->clear();
 
-    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), nullptr);
+    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), protocolMenu);
     mEnableCHARSET->setCheckable(true);
     mEnableCHARSET->setChecked(pHost->mEnableCHARSET);
     protocolMenu->addAction(mEnableCHARSET);
 
-    mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), nullptr);
+    mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), protocolMenu);
     mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     protocolMenu->addAction(mEnableGMCP);
 
-    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), nullptr);
+    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), protocolMenu);
     mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
     //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
@@ -1020,37 +1035,37 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                                "including OSC link support."));
     protocolMenu->addAction(mEnableMNES);
 
-    mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), nullptr);
+    mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), protocolMenu);
     mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
     protocolMenu->addAction(mEnableMSDP);
 
-    mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), nullptr);
+    mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), protocolMenu);
     mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
     protocolMenu->addAction(mEnableMSP);
 
-    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), nullptr);
+    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), protocolMenu);
     mEnableMSSP->setCheckable(true);
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
     protocolMenu->addAction(mEnableMSSP);
 
-    mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), nullptr);
+    mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), protocolMenu);
     mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
     protocolMenu->addAction(mEnableMTTS);
 
-    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), nullptr);
+    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), protocolMenu);
     mEnableMXP->setCheckable(true);
     mEnableMXP->setChecked(pHost->mEnableMXP);
     protocolMenu->addAction(mEnableMXP);
 
-    mEnableNAWS = new QAction(tr("NAWS: Negotiate About Window Size"), nullptr);
+    mEnableNAWS = new QAction(tr("NAWS: Negotiate About Window Size"), protocolMenu);
     mEnableNAWS->setCheckable(true);
     mEnableNAWS->setChecked(pHost->mEnableNAWS);
     protocolMenu->addAction(mEnableNAWS);
 
-    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), nullptr);
+    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), protocolMenu);
     mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
     //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
@@ -1069,7 +1084,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
     if (!mpMenu) {
-        mpMenu = new QMenu(tr("Other profiles to Map to:"));
+        mpMenu = new QMenu(tr("Other profiles to Map to:"), this);
     }
 
     mpMenu->clear();
@@ -1082,7 +1097,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             continue;
         }
 
-        auto pItem = new QAction(s, nullptr);
+        auto pItem = new QAction(s, mpMenu);
         pItem->setCheckable(true);
         pItem->setChecked(false);
         mpMenu->addAction(pItem);
@@ -1135,10 +1150,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapSymbols);
         mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapSymbols);
-        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(qsl("×"));
-        mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
+        mpDoubleSpinBox_mapSymbolFontFudge->setRange(TMap::scmMinimumSymbolFontFudgeFactor, TMap::scmMaximumSymbolFontFudgeFactor);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
+        // Qt's default of two decimals would show a factor set from Lua as
+        // something it is not - the API takes any value in the range. Both this
+        // and the range have to be in place before the value, which a spin-box
+        // rounds and clamps as it is given:
+        mpDoubleSpinBox_mapSymbolFontFudge->setDecimals(3);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->getSymbolFontFudgeFactor());
         auto* pSymbolsLayout = qobject_cast<QGridLayout*>(groupBox_mapSymbols->layout());
         if (pSymbolsLayout) {
             const int existingRows = pSymbolsLayout->rowCount();
@@ -1153,11 +1173,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (!pHost || !pHost->mpMap) {
                 return;
             }
-            pHost->mpMap->mMapSymbolFontFudgeFactor = value;
-            if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-                pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-                pHost->mpMap->mpMapper->mp2dMap->update();
-            }
+            pHost->mpMap->setSymbolFontFudgeFactor(value);
         });
 
         label_mapSymbolsFont->setEnabled(true);
@@ -1174,6 +1190,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
+        connect(pHost->mpMap.data(), &TMap::signal_mapSymbolFontChanged, this, &dlgProfilePreferences::slot_mapSymbolFontChanged, Qt::UniqueConnection);
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
@@ -1561,6 +1578,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //Shortcuts tab
     auto shortcutKeys = mudlet::self()->mpShortcutsManager->iterator();
     int shortcutsRow = 0;
+    QList<TKeySequenceEdit*> sequenceEdits;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
         auto shortcutIt = pHost->profileShortcuts.find(key);
@@ -1580,6 +1598,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         gridLayout_groupBox_shortcuts->addWidget(label, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
+        sequenceEdits.append(sequenceEdit);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
             QKeySequence newSequence;
@@ -1596,7 +1615,44 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             currentShortcuts[key] = defaultSequence;
         });
     }
+    setShortcutsTabOrder(sequenceEdits);
     updateShortcutConflictWarning();
+}
+
+// The shortcut editors do not exist until a profile is loaded, so they cannot
+// be listed among the .ui file's tab stops; Qt appends every widget created
+// after setupUi() to the end of the dialog's focus chain instead. That left the
+// page's only static control - the 'reset to defaults' button, which the .ui
+// file chains right after the proxy fields of the security page - ahead of the
+// editors it resets, so tabbing through this page reached the button first and
+// only then jumped to the editors, in an order a screen reader dutifully
+// announced as it found it. Splice the editors into the chain so the focus
+// order follows the visible one. Only the widgets of the page on show take part
+// in the traversal, so the position this gives them among the other pages'
+// widgets is immaterial, and no layout is touched.
+void dlgProfilePreferences::setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits)
+{
+    if (sequenceEdits.isEmpty()) {
+        return;
+    }
+
+    // Anchoring to the save button rather than to the tab widget keeps this
+    // page in step with every other one (where the .ui file also puts the save
+    // button directly behind the tab bar) and keeps the result predictable:
+    // for a widget that has focusable children - which the tab widget, as the
+    // ancestor of these very editors, does - setTabOrder() inserts behind the
+    // last of those children rather than behind the widget itself.
+    //
+    // setTabOrder(first, second) moves second to directly behind first, so
+    // walking forwards over the list leaves the editors in reading order:
+    QWidget* previous = closeButton;
+    for (auto* sequenceEdit : sequenceEdits) {
+        setTabOrder(previous, sequenceEdit);
+        previous = sequenceEdit;
+    }
+    // ...and the button that acts on all of them comes last, matching its
+    // position at the bottom of the group box:
+    setTabOrder(previous, toolButton_resetMainWindowShortcuts);
 }
 
 // Recomputes the duplicate state of the whole shortcut map, not just the last
@@ -2100,9 +2156,11 @@ void dlgProfilePreferences::slot_purgeMediaCache()
         return;
     }
 
-    if (!pHost->mpMedia->purgeMediaCache()) {
-        //: Shown after the "Clear stored media" button in preferences fails to empty the profile's media directory.
-        pHost->postMessage(tr("[ WARN ]  - Could not clear all of the stored media; some files may still be in use."));
+    const auto [purged, message] = pHost->mpMedia->purgeMediaCache();
+
+    if (!purged) {
+        //: Shown after the "Clear stored media" button in preferences fails to empty the profile's media directory. %1 is the reason, which is not translated.
+        pHost->postMessage(tr("[ WARN ]  - Could not clear the stored media: %1.").arg(message));
         return;
     }
 
@@ -3352,8 +3410,11 @@ void dlgProfilePreferences::slot_saveAndClose()
                 }
             }
 
-            if (mpDoubleSpinBox_mapSymbolFontFudge) {
-                pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+            // Only when the spin-box is what holds the newer value. It carries
+            // no more precision than it displays, so writing it back whenever
+            // Save is clicked would round off a factor a script had set:
+            if (mpDoubleSpinBox_mapSymbolFontFudge && !spinBoxShows(mpDoubleSpinBox_mapSymbolFontFudge, pHost->mpMap->getSymbolFontFudgeFactor())) {
+                pHost->mpMap->setSymbolFontFudgeFactor(mpDoubleSpinBox_mapSymbolFontFudge->value());
             }
 
             if (pHost->mpMap->mpMapper) {
@@ -3510,6 +3571,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
+        pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
         pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
@@ -4154,6 +4216,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     if (!pTableWidget) {
         return;
     }
+    mGlyphDisplayFont = mpHost->mpMap->getSymbolFont();
 
     // Must turn off sorting at least while inserting items...
     pTableWidget->setSortingEnabled(false);
@@ -4427,24 +4490,7 @@ void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUse
         return;
     }
 
-    if (pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed != isToOnlyUseSelectedFont) {
-        pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed = isToOnlyUseSelectedFont;
-        if (isToOnlyUseSelectedFont) {
-            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
-        } else {
-            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
-        }
-        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-            pHost->mpMap->mpMapper->mp2dMap->repaint();
-            pHost->mpMap->mpMapper->update();
-        }
-
-        if (mpDialogMapGlyphUsage) {
-            generateMapGlyphDisplay();
-        }
-    }
+    pHost->mpMap->setOnlySymbolFontUsed(isToOnlyUseSelectedFont);
 }
 
 void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
@@ -4454,20 +4500,48 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
         return;
     }
 
-    const int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
-    if (pHost->mpMap->mMapSymbolFont != font) {
-        pHost->mpMap->mMapSymbolFont = font;
-        pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
-        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-            pHost->mpMap->mpMapper->mp2dMap->repaint();
-            pHost->mpMap->mpMapper->update();
-        }
+    pHost->mpMap->setSymbolFont(font);
+}
 
-        if (mpDialogMapGlyphUsage) {
-            generateMapGlyphDisplay();
-        }
+// Keeps the controls (and the glyph usage dialog, when open) in step with the
+// map's symbol settings however they were changed - including from Lua:
+void dlgProfilePreferences::slot_mapSymbolFontChanged()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    // Only a control that is actually out of step gets written. Blocking the
+    // signals stops the recursion but not the side effects of setting a control
+    // to what it already holds: a spin-box also rewrites its line edit, which
+    // between two keystrokes of a factor being typed in costs the second one.
+    const QFont symbolFont = pHost->mpMap->getSymbolFont();
+    if (fontComboBox_mapSymbols->currentFont().family() != symbolFont.family()) {
+        const QSignalBlocker blocker(fontComboBox_mapSymbols);
+        fontComboBox_mapSymbols->setCurrentFont(symbolFont);
+    }
+
+    const bool onlyUseSelectedFont = pHost->mpMap->getOnlySymbolFontUsed();
+    if (checkBox_isOnlyMapSymbolFontToBeUsed->isChecked() != onlyUseSelectedFont) {
+        const QSignalBlocker blocker(checkBox_isOnlyMapSymbolFontToBeUsed);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(onlyUseSelectedFont);
+    }
+
+    const qreal fudgeFactor = pHost->mpMap->getSymbolFontFudgeFactor();
+    if (mpDoubleSpinBox_mapSymbolFontFudge && !spinBoxShows(mpDoubleSpinBox_mapSymbolFontFudge, fudgeFactor)) {
+        const QSignalBlocker blocker(mpDoubleSpinBox_mapSymbolFontFudge);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(fudgeFactor);
+    }
+
+    // Rebuilding the glyph usage table walks every room in the map, so it is
+    // only done when what it shows has actually changed. That is the font
+    // alone - which of its glyphs the symbols need, and (through the style
+    // strategy) whether other fonts may fill in - and never the scaling
+    // factor, whose spin-box would otherwise mean one whole-map scan per
+    // auto-repeat tick of its arrows.
+    if (mpDialogMapGlyphUsage && symbolFont != mGlyphDisplayFont) {
+        generateMapGlyphDisplay();
     }
 }
 
@@ -5038,26 +5112,25 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     }
 }
 
+void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
+{
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    if (pHost->mEnableOSC8Hyperlinks != state) {
+        pHost->mEnableOSC8Hyperlinks = state;
+        pHost->mTelnet.sendInfoNewEnvironOSCHyperlinks();
+    }
+}
+
 void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
 {
     if (mpHost && mpHost->mEnableClosedCaption != state) {
         mpHost->mEnableClosedCaption = state;
     }
-}
-
-
-void dlgProfilePreferences::slot_showNewFeatureCallouts()
-{
-    // The balloon only makes sense while its anchor can be seen:
-    if (tabWidget->currentWidget() != tab_display) {
-        return;
-    }
-    TFeatureCallout::maybeShow(qsl("undo-server-wrap"),
-                               checkBox_undoServerWrap,
-                               //: Title of a balloon pointing out a newly added feature
-                               tr("New: undo the game's own wrapping"),
-                               //: Body of the balloon, anchored to the option that rejoins lines the game server wrapped itself so that triggers match whole lines
-                               tr("Games that wrap their own lines make triggers fiddly. Mudlet can now undo that wrapping, so triggers always see whole lines."));
 }
 
 void dlgProfilePreferences::slot_changeWrapAt()

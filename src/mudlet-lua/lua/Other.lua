@@ -612,8 +612,14 @@ function phpTable(...)
   end
   setmetatable(newTable, {
     __newindex = function(self, key, value)
-      if not self[key] then
-        table.insert(keys, key)
+      -- Only a nil read means the key is absent: `not self[key]` also matched a
+      -- stored false, which appended a second copy of the key to the order list
+      -- and left it undeletable. Assigning nil to an absent key must not
+      -- register one either.
+      if self[key] == nil then
+        if value ~= nil then
+          table.insert(keys, key)
+        end
       elseif value == nil then
         -- Handle item delete
         local count = 1
@@ -1113,7 +1119,11 @@ local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
 function verbosePackageInstall(fileName)
   local ok, err = installPackage(fileName)
-  local packageName = string.gsub(fileName, getMudletHomeDir() .. "/", "")
+  -- this has to stay a literal prefix strip: as a Lua pattern the profile path's
+  -- magic characters bite, and a "-" (as in "Mudlet self-test") stops it
+  -- matching at all
+  local profileFolder = getMudletHomeDir() .. "/"
+  local packageName = fileName:starts(profileFolder) and fileName:sub(#profileFolder + 1) or fileName
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok then
@@ -1289,6 +1299,9 @@ function getConfig(...)
       "mapRoundRooms",
       "mapShowGrid",
       "mapShowRoomBorders",
+      "mapSymbolFont",
+      "mapSymbolFontOnlyUseSelected",
+      "mapSymbolFontScaling",
       "muteMediaAPI",
       "muteMediaGame",
       "promptForMXPProcessorOn",

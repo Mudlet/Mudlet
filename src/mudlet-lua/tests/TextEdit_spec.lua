@@ -1,3 +1,4 @@
+-- The Geyser.TextEdit wrapper around these is covered in GeyserTextEdit_spec.lua.
 describe("Tests TextEdit widget functions", function()
 
   describe("Tests createTextEdit and deleteTextEdit", function()
@@ -186,46 +187,6 @@ describe("Tests TextEdit widget functions", function()
 
     it("Should resize", function()
       assert.has_no.errors(function() resizeWindow(name, 300, 200) end)
-    end)
-  end)
-
-  describe("Tests Geyser.TextEdit wrapper", function()
-    local editor
-
-    it("Should create a Geyser.TextEdit", function()
-      editor = Geyser.TextEdit:new({
-        name = "testGeyserTE",
-        x = 0, y = 0,
-        width = 200, height = 100,
-      })
-      assert.is_table(editor)
-      assert.are.equal("textedit", windowType("testGeyserTE"))
-    end)
-
-    it("Should set and get text via Geyser wrapper", function()
-      editor:setText("Geyser text")
-      assert.are.equal("Geyser text", editor:getText())
-    end)
-
-    it("Should clear via Geyser wrapper", function()
-      editor:setText("some text")
-      editor:clear()
-      assert.are.equal("", editor:getText())
-    end)
-
-    it("Should set properties via Geyser wrapper", function()
-      assert.has_no.errors(function() editor:setReadOnly(true) end)
-      assert.has_no.errors(function() editor:setReadOnly(false) end)
-      assert.has_no.errors(function() editor:setPlaceholder("placeholder") end)
-      assert.has_no.errors(function() editor:setFontSize(14) end)
-      assert.has_no.errors(function() editor:setFont("monospace") end)
-      assert.has_no.errors(function() editor:setTabMovesFocus(true) end)
-      assert.has_no.errors(function() editor:setStyleSheet("QPlainTextEdit { color: #eee; }") end)
-    end)
-
-    it("Should delete via Geyser wrapper", function()
-      editor:delete()
-      assert.is_nil(windowType("testGeyserTE"))
     end)
   end)
 end)

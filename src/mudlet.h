@@ -217,7 +217,7 @@ public:
     void restoreFloatingDockGeometries();
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
-    void doAutoLogin(const QString&);
+    void doAutoLogin(const QString&, bool offline);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
     void updateMainWindowTitle();
@@ -241,6 +241,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
@@ -310,7 +311,7 @@ public:
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:
     void showOptionsDialog(const QString&, Host* = nullptr);
-    void startAutoLogin(const QStringList&);
+    void startAutoLogin(const QStringList&, bool offline = false);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
     void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
@@ -368,6 +369,9 @@ public:
     QStringList mOnlyShownPredefinedProfiles;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
+    // Test-only: PipelineBenchmark sets this so its profile measures the
+    // pipeline rather than the shipped default packages.
+    bool mSkipDefaultPackageInstall = false;
     QPointer<dlgConnectionProfiles> mpConnectionDialog;
     QPointer<Host> mpCurrentActiveHost;
     // Options dialog when there's no active host
@@ -787,6 +791,7 @@ private:
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
+    void closeHostOfClosedDetachedWindow(const QString& profileName);
     void detachTab(int tabIndex, const QPoint& position);
     void reattachTab(const QString& profileName, int insertIndex = -1);
     TMainConsole* removeConsoleFromSplitter(const QString& profileName);

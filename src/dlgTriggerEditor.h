@@ -96,6 +96,7 @@ class QFrame;
 class QToolButton;
 class TAction;
 class TKey;
+class TVar;
 class TConsole;
 class dlgVarsMainArea;
 class QShortcut;
@@ -105,9 +106,11 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow QTest-based test class to access private members
+    // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorBannerViewSwitchTest;
+    friend class ScriptEventHandlerLifetimeTest;
+    friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -203,10 +206,8 @@ public:
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void showVariableRenameRefused(TVar*);
     void repopulateVars();
-    // true while the Variables view is the one shown on screen, so a profile
-    // save can avoid rebuilding the tree out from under the live widget
-    bool variablesViewActive() const;
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
@@ -648,6 +649,8 @@ private:
     dlgSystemMessageArea* mpSystemMessageArea = nullptr;
 
     bool mIsScriptsMainAreaEditHandler = false;
+    // Not owned, and does not outlive a
+    // listWidget_script_registered_event_handlers->clear()
     QListWidgetItem* mpScriptsMainAreaEditHandlerItem = nullptr;
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;

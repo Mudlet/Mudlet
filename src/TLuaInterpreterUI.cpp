@@ -162,6 +162,21 @@ static bool isMain(const QString& name)
         label_;                                                                                                                                                                                        \
     })
 
+// Parsing a command or a commands table anchors each function it holds in the
+// Lua registry, so a call that goes on to fail has to let those references go
+// again. CONSOLE() returns straight out of its caller, which is why every one of
+// these functions resolves its window before it parses.
+static void releaseLuaReferences(lua_State* L, const QVector<int>& luaReferences)
+{
+    for (const int luaReference : luaReferences) {
+        // a string command takes no reference and is recorded as a zero, which
+        // luaL_unref() would mistake for a registry slot of its own
+        if (luaReference > 0) {
+            luaL_unref(L, LUA_REGISTRYINDEX, luaReference);
+        }
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
 int TLuaInterpreter::addCommandLineMenuEvent(lua_State* L)
 {
@@ -926,6 +941,10 @@ int TLuaInterpreter::echoLink(lua_State* L)
         return lua_error(L);
     }
 
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    auto console = CONSOLE(L, windowName);
+
     QString command;
     int luaReference = 0;
     parseCommandOrFunction(L, __func__, commandPos, command, luaReference);
@@ -937,10 +956,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     luaReferences << luaReference;
     hintList << QString{lua_tostring(L, hintPos)};
 
-    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-    auto console = CONSOLE(L, windowName);
     console->echoLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
@@ -982,6 +998,10 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return lua_error(L);
     }
 
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    auto console = CONSOLE(L, windowName);
+
     QStringList commandList;
     QStringList hintList;
     QVector<int> luaReferences;
@@ -989,6 +1009,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     parseHintsTable(L, __func__, hintPos, hintList);
 
     if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        releaseLuaReferences(L, luaReferences);
         lua_pushnil(L);
         lua_pushfstring(L,
                         "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
@@ -997,10 +1018,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return 2;
     }
 
-    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-    auto console = CONSOLE(L, windowName);
     console->echoLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
@@ -1257,7 +1275,7 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
 int TLuaInterpreter::getBorderColor(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    const QColor color = host.mpConsole->mpMainFrame->palette().color(QPalette::Window);
+    const QColor color = host.mpConsole->borderColor();
     lua_pushnumber(L, color.red());
     lua_pushnumber(L, color.green());
     lua_pushnumber(L, color.blue());
@@ -1672,6 +1690,25 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_pushboolean(L, result.second.isUnderlined());
     lua_settable(L, -3);
 
+    lua_pushstring(L, "underlineStyle");
+    // This says what is drawn, not what the cell remembers - a hyperlink's own
+    // styling can OR a second style flag onto a cell that SGR already styled,
+    // and setUnderline(false) leaves a style flag behind. So resolve in the
+    // order the screen does: TTextEdit::drawCustomDecorations tries wavy, then
+    // dotted, then dashed, and Qt draws the plain underline when none is set.
+    if (!result.second.isUnderlined()) {
+        lua_pushstring(L, "none");
+    } else if (result.second.isUnderlineWavy()) {
+        lua_pushstring(L, "wavy");
+    } else if (result.second.isUnderlineDotted()) {
+        lua_pushstring(L, "dotted");
+    } else if (result.second.isUnderlineDashed()) {
+        lua_pushstring(L, "dashed");
+    } else {
+        lua_pushstring(L, "solid");
+    }
+    lua_settable(L, -3);
+
     lua_pushstring(L, "blinking");
     if (Q_UNLIKELY(result.second.isFastBlinking())) {
         lua_pushstring(L, "fast");
@@ -1819,8 +1856,11 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-    host.getActionUnit()->hideToolBar(windowName);
-    return 0;
+    if (auto [moved, message] = host.getActionUnit()->hideToolBar(windowName); !moved) {
+        return warnArgumentValue(L, __func__, message);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow
@@ -1865,6 +1905,10 @@ int TLuaInterpreter::insertLink(lua_State* L)
         return lua_error(L);
     }
 
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    auto console = CONSOLE(L, windowName);
+
     QString command;
     int luaReference = 0;
     parseCommandOrFunction(L, __func__, commandPos, command, luaReference);
@@ -1876,10 +1920,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     luaReferences << luaReference;
     hintList << QString{lua_tostring(L, hintPos)};
 
-    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-    auto console = CONSOLE(L, windowName);
     console->insertLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
@@ -1911,6 +1952,10 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return lua_error(L);
     }
 
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
+    auto console = CONSOLE(L, windowName);
+
     QStringList commandList;
     QStringList hintList;
     QVector<int> luaReferences;
@@ -1918,6 +1963,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     parseHintsTable(L, __func__, hintPos, hintList);
 
     if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        releaseLuaReferences(L, luaReferences);
         lua_pushnil(L);
         lua_pushfstring(L,
                         "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
@@ -1926,10 +1972,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return 2;
     }
 
-    const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-
-    auto console = CONSOLE(L, windowName);
     console->insertLink(QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
@@ -2392,8 +2435,15 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
-    mudlet::self()->mHasSavedLayout = false;
-    lua_pushboolean(L, mudlet::self()->saveWindowLayout());
+    mudlet* pMudlet = mudlet::self();
+    // the flag is what makes the save on the way out a no-op, and a save asked
+    // for from a script is no substitute for that one, so it goes back up only
+    // if this call really saved
+    const bool hadSavedLayout = pMudlet->mHasSavedLayout;
+    pMudlet->mHasSavedLayout = false;
+    const bool saved = pMudlet->saveWindowLayout();
+    pMudlet->mHasSavedLayout = hadSavedLayout && saved;
+    lua_pushboolean(L, saved);
     return 1;
 }
 
@@ -2702,6 +2752,10 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
 
     Host* host = &getHostFromLua(L);
     if (!host->setBackgroundImage(windowName, imgPath, mode, fullWindow)) {
+        if (fullWindow) {
+            // the console name is already validated above, so this is about the image
+            return warnArgumentValue(L, __func__, qsl("could not use '%1' as a full window background image").arg(imgPath));
+        }
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
     }
 
@@ -2800,11 +2854,7 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     const int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     const int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     const Host& host = getHostFromLua(L);
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(luaRed, luaGreen, luaBlue, 255));
-    host.mpConsole->mpMainFrame->setPalette(framePalette);
+    host.mpConsole->setBorderColor(QColor(luaRed, luaGreen, luaBlue));
     return 0;
 }
 
@@ -3299,11 +3349,14 @@ int TLuaInterpreter::setLink(lua_State* L)
         return lua_error(L);
     }
 
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
+    const Host& host = getHostFromLua(L);
+    auto console = CONSOLE(L, QString{windowName});
+
     QString command;
     int luaReference = 0;
     parseCommandOrFunction(L, __func__, commandPos, command, luaReference);
 
-    const Host& host = getHostFromLua(L);
     QStringList commandList;
     QStringList hintList;
     QVector<int> luaReferences;
@@ -3311,7 +3364,6 @@ int TLuaInterpreter::setLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
     luaReferences << luaReference;
 
-    auto console = CONSOLE(L, QString{windowName});
     console->setLink(commandList, hintList, luaReferences);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
@@ -3426,6 +3478,10 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return lua_error(L);
     }
 
+    // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
+    const Host& host = getHostFromLua(L);
+    auto console = CONSOLE(L, QString{windowName});
+
     QStringList commandList;
     QVector<int> luaReferences;
     parseCommandsOrFunctionsTable(L, __func__, commandPos, commandList, luaReferences);
@@ -3434,6 +3490,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     parseHintsTable(L, __func__, hintPos, hintList);
 
     if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        releaseLuaReferences(L, luaReferences);
         lua_pushnil(L);
         lua_pushfstring(L,
                         "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup",
@@ -3442,8 +3499,6 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 2;
     }
 
-    const Host& host = getHostFromLua(L);
-    auto console = CONSOLE(L, QString{windowName});
     console->setLink(commandList, hintList, luaReferences);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
@@ -3823,8 +3878,11 @@ int TLuaInterpreter::showToolBar(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-    host.getActionUnit()->showToolBar(windowName);
-    return 0;
+    if (auto [moved, message] = host.getActionUnit()->showToolBar(windowName); !moved) {
+        return warnArgumentValue(L, __func__, message);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandBackgroundColor

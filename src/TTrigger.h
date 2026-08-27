@@ -107,7 +107,7 @@ public:
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(char*, const QString&, int line, int posOffset = 0);
+    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0);
     bool checkIfNew();
     void unmarkAsNew();
 
@@ -123,7 +123,7 @@ public:
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber);
-    bool match_perl(char*, const QString&, int, int posOffset, int lineNumber);
+    bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
@@ -172,6 +172,20 @@ public:
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
 
+    // Set when the trigger is registered as a root node while a line is being
+    // processed, and cleared when that line is done with - see TriggerUnit's
+    // same-line creation chains. The id names the lineage this trigger belongs
+    // to, the generation is how many creations deep in it this trigger sits;
+    // everything its script creates during that line joins the same lineage one
+    // generation further down.
+    int sameLineChainId() const { return mSameLineChainId; }
+    int sameLineGeneration() const { return mSameLineGeneration; }
+    void setSameLineChain(const int chainId, const int generation)
+    {
+        mSameLineChainId = chainId;
+        mSameLineGeneration = generation;
+    }
+
 
 private:
     TTrigger() = default;
@@ -196,6 +210,7 @@ private:
 
     QList<int> mPatternKinds;
     QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
+    QMap<int, QSharedPointer<pcre2_match_data>> mMatchDataMap;
 
     // Lua code as a string to run
     QString mScript;
@@ -225,6 +240,8 @@ private:
     bool mModuleMember = false;
     // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
     int mExpiryCount = -1;
+    int mSameLineChainId = 0;
+    int mSameLineGeneration = 0;
 };
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -244,7 +261,7 @@ inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
     debug.nospace() << ", isMultiline=" << trigger->isMultiline();
     debug.nospace() << ", patterns=" << trigger->getPatternsList();
     debug.nospace() << ", regexCodes=" << trigger->getRegexCodePropertyList();
-    debug.nospace() << ", script is in: " << (trigger->mRegisteredAnonymousLuaFunction ? "string": "Lua function");
+    debug.nospace() << ", script is in: " << (trigger->mRegisteredAnonymousLuaFunction ? "string" : "Lua function");
     debug.nospace() << ", script=" << trigger->getScript();
     debug.nospace() << ')';
     return debug;

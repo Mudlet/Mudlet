@@ -63,11 +63,17 @@ AUTORUN_BUSTED_TESTS=true \
 MUDLET_TEST_MODE=1 \
 QUIT_MUDLET_AFTER_TESTS=true \
 TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
-xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ```
 
 A failure writes a marker file (`/tmp/busted-tests-failed` on Linux/macOS) so the
 caller can detect it.
+
+`--offline` opens the profile without connecting to its game server, which is
+what lets a spec use `feedTelnet()` - that function only injects while the telnet
+socket is unconnected. Specs that rely on it fail without the flag, so keep it on
+every invocation; when opening the profile through the GUI instead, use the
+connection dialog's **Offline** button.
 
 By default Mudlet reads and writes `~/.config/mudlet`, so two runs started at the
 same time (for example from different checkouts) share one `Mudlet self-test`
@@ -76,22 +82,24 @@ run is not cleaned up. To give a run its own pristine, isolated config root:
 
 - `XDG_CONFIG_HOME` - Mudlet uses `$XDG_CONFIG_HOME/mudlet` as its config root
   (profiles, sqlite databases, settings, and password storage). Because an
-  existing `~/.config/mudlet` otherwise wins (so a system-wide `XDG_CONFIG_HOME`
-  export never strands real profiles), a test harness must **pre-create**
-  `$XDG_CONFIG_HOME/mudlet` to opt in.
+  existing `~/.config/mudlet` holding profiles otherwise wins (so a system-wide
+  `XDG_CONFIG_HOME` export never strands real profiles), a test harness must
+  **pre-create** `$XDG_CONFIG_HOME/mudlet/profiles` to opt in. The `mudlet`
+  directory on its own is not enough - other tooling creates that by accident,
+  and treating it as an opt-in would hide the user's real profiles.
 - `MUDLET_TEST_FAILURE_MARKER` - absolute path for the failure marker, so it is
   not shared either.
 
 ```sh
 CONFIG_DIR=$(mktemp -d)
-mkdir -p "$CONFIG_DIR/mudlet"   # pre-create to opt into the isolated config root
+mkdir -p "$CONFIG_DIR/mudlet/profiles"   # pre-create to opt into the isolated config root
 AUTORUN_BUSTED_TESTS=true \
 MUDLET_TEST_MODE=1 \
 QUIT_MUDLET_AFTER_TESTS=true \
 TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
 XDG_CONFIG_HOME="$CONFIG_DIR" \
 MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
-xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ```
 
 ## Creating tests

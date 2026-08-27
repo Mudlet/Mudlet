@@ -32,20 +32,28 @@
 
 #include <QtTest/QtTest>
 
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QXmlStreamReader>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForDefaultPackagesTest();
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
+
+#include "GroupedTest.h"
 
 class DefaultPackagesTest : public QObject
 {
@@ -73,7 +81,17 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForDefaultPackagesTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // The half of the mpkg gate that lives outside the code under test: ctest hands
+        // this to every functional test, and test_testModeLeavesOutTheSelfUpdatingPackage
+        // below sets it by hand, so nothing else here would notice it going missing. It
+        // would go unnoticed for a long time too - the skip only changes an outcome while
+        // the repository is ahead of the bundled mpkg, so CI would stay green until the
+        // next upstream release and then break somewhere else entirely.
+        QVERIFY2(qEnvironmentVariableIsSet("MUDLET_TEST_MODE"), "MUDLET_TEST_MODE is not set - run through ctest, which sets it for every functional test (test/functional_tests/CMakeLists.txt)");
 
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
@@ -84,6 +102,8 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -141,6 +161,36 @@ private slots:
         QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
+    }
+
+    // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in
+    // src/mudlet.cpp. Both directions are asserted, so removing the skip and leaving it
+    // permanently on both fail, and the players' half pins the resource path the skip
+    // matches on - rename it in the table alone and the first check goes red.
+    void test_testModeLeavesOutTheSelfUpdatingPackage()
+    {
+        const QString mpkg = qsl(":/packages/mpkg/mpkg.mpackage");
+        const QByteArray savedTestMode = qgetenv("MUDLET_TEST_MODE");
+        const auto restoreTestMode = qScopeGuard([&savedTestMode]() {
+            savedTestMode.isNull() ? qunsetenv("MUDLET_TEST_MODE") : qputenv("MUDLET_TEST_MODE", savedTestMode);
+        });
+
+        qunsetenv("MUDLET_TEST_MODE");
+        const QStringList forPlayers = preinstallsFor(qsl("example.com"));
+        QVERIFY2(forPlayers.contains(mpkg), "players are meant to get mpkg - only tests go without it");
+        QVERIFY2(QFile::exists(mpkg), "mpkg is queued for every profile but is not compiled in");
+
+        qputenv("MUDLET_TEST_MODE", "1");
+        const QStringList forTests = preinstallsFor(qsl("example.com"));
+
+        // The whole difference, not just mpkg's absence: a skip that caught more than it
+        // meant to would otherwise pass, and the packages it silently dropped are the
+        // ones the other tests in this file build their profiles from.
+        QStringList dropped = forPlayers;
+        for (const QString& package : forTests) {
+            dropped.removeOne(package);
+        }
+        QCOMPARE(dropped, QStringList{mpkg});
     }
 
     // The generic mapper is for games that have no mapper script of their own.
@@ -212,22 +262,73 @@ private slots:
             QCOMPARE(declaredName, scmInstallsAs.value(package, package));
         }
     }
+
+    // A package's Lua lives inside its XML, entity-escaped, and is only compiled
+    // when a profile installs the package - so a typo in it reaches users rather
+    // than CI. Compile every script body here instead.
+    void test_everyPackageScriptCompiles()
+    {
+        const QStringList packages = QDir(qsl(":/packages")).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        QVERIFY2(!packages.isEmpty(), "no packages found in the resource tree");
+
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+
+        int compiled = 0;
+        for (const QString& package : packages) {
+            const QString archive = qsl(":/packages/%1/%1.mpackage").arg(package);
+            QTemporaryFile onDisk;
+            QVERIFY(onDisk.open());
+            QFile resource(archive);
+            QVERIFY(resource.open(QIODevice::ReadOnly));
+            QVERIFY(onDisk.write(resource.readAll()) != -1);
+            onDisk.close();
+
+            QTemporaryDir unpacked;
+            QVERIFY(unpacked.isValid());
+            const QString destination = qsl("%1/").arg(unpacked.path());
+            QVERIFY(mudlet::unzip(onDisk.fileName(), destination, QDir(unpacked.path())));
+
+            // the installer imports every *.xml and *.trigger it finds in an
+            // archive, so compile the scripts in all of them rather than assuming
+            // a package carries one document
+            const QDir contents(unpacked.path());
+            const QStringList documents = contents.entryList(QStringList{qsl("*.xml"), qsl("*.trigger")}, QDir::Files);
+            QVERIFY2(!documents.isEmpty(), qPrintable(qsl("%1 carries nothing the installer would import").arg(package)));
+
+            for (const QString& document : documents) {
+                QFile xml(contents.absoluteFilePath(document));
+                QVERIFY(xml.open(QIODevice::ReadOnly));
+                QXmlStreamReader reader(&xml);
+                while (!reader.atEnd()) {
+                    if (reader.readNext() != QXmlStreamReader::StartElement || reader.name() != QLatin1String("script")) {
+                        continue;
+                    }
+                    // a folder's own script element is empty, which compiles to nothing
+                    const QString code = reader.readElementText();
+                    if (code.trimmed().isEmpty()) {
+                        continue;
+                    }
+                    // load only: running these would register handlers and start
+                    // downloads, and a package script is not written to survive
+                    // being executed outside the profile that installed it
+                    const QByteArray chunk = code.toUtf8();
+                    const QByteArray name = qsl("@%1/%2").arg(package, document).toUtf8();
+                    const int loaded = luaL_loadbuffer(L, chunk.constData(), chunk.size(), name.constData());
+                    const QString error = loaded ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+                    lua_settop(L, 0);
+                    QVERIFY2(loaded == 0, qPrintable(qsl("%1 carries a script that does not compile: %2").arg(document, error)));
+                    ++compiled;
+                }
+                QVERIFY2(!reader.hasError(), qPrintable(qsl("%1 is not well-formed XML: %2").arg(document, reader.errorString())));
+            }
+        }
+        QVERIFY2(compiled > 0, "no package scripts were found to compile, so this test proved nothing");
+    }
 };
 
-void initializeQRCResourcesForDefaultPackagesTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "DefaultPackagesTest.moc"
-QTEST_MAIN(DefaultPackagesTest)
+MUDLET_GROUPED_TEST_MAIN(DefaultPackagesTest)

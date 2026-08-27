@@ -29,6 +29,11 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
+static void pcre2_match_data_deleter(pcre2_match_data* pointer)
+{
+    pcre2_match_data_free(pointer);
+}
+
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>(parent)
 , mpHost(pHost)
@@ -124,7 +129,10 @@ bool TAlias::match(const QString& haystack)
         goto MUD_ERROR;
     }
 
-    match_data = pcre2_match_data_create_from_pattern(re.data(), nullptr);
+    if (!mpMatchData) {
+        mpMatchData.reset(pcre2_match_data_create_from_pattern(re.data(), nullptr), pcre2_match_data_deleter);
+    }
+    match_data = mpMatchData.data();
     if (!match_data) {
         goto MUD_ERROR;
     }
@@ -132,7 +140,6 @@ bool TAlias::match(const QString& haystack)
     rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
     if (rc < 0) {
-        pcre2_match_data_free(match_data);
         goto MUD_ERROR;
     }
 
@@ -237,10 +244,6 @@ END: {
     pL->clearCaptureGroups();
 }
 
-    if (match_data) {
-        pcre2_match_data_free(match_data);
-    }
-
 MUD_ERROR:
     for (auto childAlias : *mpMyChildrenList) {
         if (childAlias->match(haystack)) {
@@ -269,9 +272,13 @@ void TAlias::compileRegex()
     PCRE2_SIZE erroffset;
 
     // PCRE2_UTF needed to run compile in UTF-8 mode
-    // PCRE2_UCP needed for \d, \w etc. to use Unicode properties:
-    QSharedPointer<pcre2_code> re(pcre2_compile(reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP, &errorcode, &erroffset, nullptr),
-                                  pcre2_code_deleter);
+    // PCRE2_UCP needed for \d, \w etc. to use Unicode properties
+    // PCRE2_MATCH_INVALID_UTF stops pcre2 rejecting an off-boundary start offset,
+    // which the match-all loop below makes when it steps a byte after an empty
+    // match on a command holding multi-byte characters
+    QSharedPointer<pcre2_code> re(
+            pcre2_compile(reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP | PCRE2_MATCH_INVALID_UTF, &errorcode, &erroffset, nullptr),
+            pcre2_code_deleter);
 
     if (re == nullptr) {
         mOK_init = false;
@@ -289,6 +296,7 @@ void TAlias::compileRegex()
     }
 
     mpRegex = re;
+    mpMatchData.reset();
 }
 
 bool TAlias::registerAlias()

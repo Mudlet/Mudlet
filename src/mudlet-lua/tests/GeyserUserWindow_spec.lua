@@ -147,15 +147,16 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal(math.floor(usableWidth / charWidth), getWindowWrap("guwAutoWrap"))
     end)
 
-    -- Mudlet cannot report whether the scroll bar is on screen, but
-    -- Geyser.MiniConsole:resetAutoWrap keeps 15 pixels clear for one when it
-    -- is, so an auto wrapping console wraps that much earlier - which is
-    -- readable, and is what proves the constraint reached the widget.
+    -- Geyser.MiniConsole:resetAutoWrap keeps 15 pixels clear for a scroll bar,
+    -- so an auto wrapping console wraps that much earlier. That much is
+    -- Geyser's own arithmetic off its own flag, so the bar reaching the widget
+    -- is read back separately, from getScrollBarVisible.
     it("keeps room for the scroll bar it was asked for when wrapping", function()
       track(Geyser.UserWindow:new({name = "guwScrollBar", x = 10, y = 10, width = 300, height = 200, wrapAt = "auto", scrollBar = true}))
       local usableWidth = getUserWindowSize("guwScrollBar")
       local charWidth = calcFontSize("guwScrollBar")
       assert.are.equal(math.floor((usableWidth - 15) / charWidth), getWindowWrap("guwScrollBar"))
+      assert.is_true(getScrollBarVisible("guwScrollBar"))
     end)
 
     it("ignores the geometry it was given when it is asked to start docked", function()
@@ -203,6 +204,15 @@ describe("Tests functionality of Geyser.UserWindow", function()
       local userWindow = track(Geyser.UserWindow:new2({name = "guwNew2", x = 10, y = 10, width = 200, height = 150}))
       assert.is_true(userWindow.useAdd2)
       assert.are.equal("userwindow", windowType("guwNew2"))
+    end)
+
+    it("starts out hidden when the constraints ask for it, and shows again", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwHiddenNew", x = 10, y = 10, width = 200, height = 150, hidden = true}))
+      assert.is_true(userWindow.hidden)
+      assert.is_false(windowVisible("guwHiddenNew"))
+      userWindow:show()
+      assert.is_false(userWindow.hidden)
+      assert.is_true(windowVisible("guwHiddenNew"))
     end)
 
     it("reopens a user window that was opened under the same name before", function()
@@ -406,7 +416,171 @@ describe("Tests functionality of Geyser.UserWindow", function()
     end)
   end)
 
-  pending("Geyser.UserWindow:setDockPosition - which edge a user window ended up docked to, and whether it docks by itself when dragged, are not readable from Lua")
+  describe("Geyser.UserWindow:setDockPosition", function()
+    -- Docking takes the dock's size off the main window, so every spec here
+    -- floats the window again before it finishes rather than leaving the main
+    -- window short for whatever runs next. finally() only holds one function,
+    -- and these specs have both that and a spy to undo, so the undos go into a
+    -- list drained here instead.
+    local undo
+
+    before_each(function()
+      undo = {}
+    end)
+
+    after_each(function()
+      for index = #undo, 1, -1 do
+        undo[index]()
+      end
+      undo = {}
+    end)
+
+    local function floatAgain(userWindow)
+      undo[#undo + 1] = function() userWindow:setDockPosition("floating") end
+    end
+
+    local function watchOpenUserWindow()
+      local openWindow = spy.on(_G, "openUserWindow")
+      undo[#undo + 1] = function() openWindow:revert() end
+      return openWindow
+    end
+
+    it("records the position and reopens the window at it", function()
+      local openWindow = watchOpenUserWindow()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockPos", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+
+      assert.is_true(userWindow:setDockPosition("top"))
+
+      assert.are.equal("top", userWindow.dockPosition)
+      assert.spy(openWindow).was.called_with("guwDockPos", false, true, "top")
+      assert.is_true(windowVisible("guwDockPos"))
+    end)
+
+    it("docks a window whose automatic docking is turned off", function()
+      local openWindow = watchOpenUserWindow()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockNoAuto", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:disableAutoDock()
+
+      userWindow:setDockPosition("left")
+
+      -- autoDock is about being docked by dragging, so asking for a dock
+      -- position outright still has to work, and has to carry the flag
+      assert.spy(openWindow).was.called_with("guwDockNoAuto", false, false, "left")
+      assert.are.equal("left", userWindow.dockPosition)
+    end)
+
+    it("floats a docked window again", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwFloatBack", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:setDockPosition("bottom")
+
+      assert.is_true(userWindow:setDockPosition("floating"))
+
+      assert.are.equal("floating", userWindow.dockPosition)
+      assert.is_true(windowVisible("guwFloatBack"))
+      -- floating again, the dock takes the geometry its constraints ask for
+      userWindow:move(30, 40)
+      userWindow:resize(220, 160)
+      assert.are.same({x = 30, y = 40, width = 220, height = 160}, geometry("guwFloatBack"))
+    end)
+
+    -- Opening the dock is what puts a window at a position, and it brings the
+    -- window back on screen with it. The other way to settle that would have
+    -- been to hide the window again afterwards; showing it is what these specs
+    -- pin, because a dock reopening visible is long standing behaviour.
+    it("brings a hidden window back with it rather than leaving it half hidden", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockHidden", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:hide()
+      assert.is_false(windowVisible("guwDockHidden"))
+
+      userWindow:setDockPosition("right")
+
+      assert.are.equal("right", userWindow.dockPosition)
+      assert.is_true(windowVisible("guwDockHidden"))
+      assert.is_false(userWindow.hidden)
+    end)
+
+    it("leaves a window it brought back hideable again", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockRehide", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:hide()
+      userWindow:setDockPosition("right")
+
+      -- Geyser.Container:hide() skips the widget for anything that already
+      -- believes itself hidden, so a stale flag here makes this a no-op
+      userWindow:hide()
+
+      assert.is_true(userWindow.hidden)
+      assert.is_false(windowVisible("guwDockRehide"))
+    end)
+
+    it("brings the children of a hidden window back with it", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockChild", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      local label = track(Geyser.Label:new({name = "guwDockChildLabel", x = 0, y = 0, width = "100%", height = "100%"}, userWindow))
+      userWindow:hide()
+      assert.is_false(windowVisible("guwDockChildLabel"))
+
+      userWindow:setDockPosition("right")
+
+      assert.is_true(windowVisible("guwDockChildLabel"))
+      assert.is_false(label.auto_hidden)
+    end)
+
+    it("leaves a window that was never hidden alone", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockVisible", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      local shown = spy.on(userWindow, "show")
+      undo[#undo + 1] = function() shown:revert() end
+
+      userWindow:setDockPosition("right")
+
+      -- there is no stale flag to repair here, so the window and everything in
+      -- it is left untouched rather than walked over on every dock change
+      assert.spy(shown).was_not.called()
+      assert.is_false(userWindow.hidden)
+      assert.is_true(windowVisible("guwDockVisible"))
+    end)
+
+    it("leaves a child that was put away by hand where it is", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockVisibleChild", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      local label = track(Geyser.Label:new({name = "guwDockHandHidden", x = 0, y = 0, width = "50%", height = "50%"}, userWindow))
+      label:hide()
+      userWindow:hide()
+
+      userWindow:setDockPosition("right")
+
+      -- bringing the window back shows its children automatically, and an
+      -- automatic show clears only auto_hidden, so a child hidden by hand keeps
+      -- its own flag and stays away
+      assert.is_true(label.hidden)
+      assert.is_false(windowVisible("guwDockHandHidden"))
+      assert.is_true(windowVisible("guwDockVisibleChild"))
+    end)
+
+    it("clears the flag the window put on itself, not the one its container put there", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwDockAutoHidden", x = 10, y = 20, width = 200, height = 150}))
+      floatAgain(userWindow)
+      userWindow:hide()
+      userWindow.container:hide()
+
+      userWindow:setDockPosition("right")
+
+      assert.is_false(userWindow.hidden)
+      -- auto_hidden is the container's to clear, so the window is still the
+      -- container's to bring back
+      assert.is_true(userWindow.auto_hidden)
+      userWindow.container:show()
+      assert.is_false(userWindow.auto_hidden)
+      assert.is_true(windowVisible("guwDockAutoHidden"))
+    end)
+  end)
+
+  pending("Geyser.UserWindow:setDockPosition docking the window against the edge it names - which edge a user window ended up docked to, and whether it docks by itself when dragged, are not readable from Lua")
 
   -- restoreLayout = true makes the constructor reopen the window from the
   -- layout saved in the profile and skip the move/resize it was given. Running
@@ -422,6 +596,33 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.is_nil(windowType("guwDelete"))
       assert.is_nil(getWindowGeometry("guwDelete"))
       assert.is_nil(Geyser.parentWindows.guwDelete)
+    end)
+
+    -- Deleting a user window has to take its dock widget with it, not only the
+    -- console inside it. That the name can be used again is covered by
+    -- "reopens a user window that was opened under the same name before"; what
+    -- is read here is the dock itself. getUserWindowSize answers from the dock
+    -- registry, falling back to the main window size when the name is not in
+    -- it, so a dock left behind gives itself away by answering with its own
+    -- size instead.
+    it("takes its dock widget with it, so nothing stale answers for the name", function()
+      local mainWidth, mainHeight = getMainWindowSize()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "a user window that reports the main window's size has no dock of its own")
+
+      userWindow:delete()
+      assert.is_nil(windowType("guwReopen"))
+      -- a dock left behind is still holding a live widget here, so it would
+      -- answer with its own size rather than the fallback
+      assert.are.same({mainWidth, mainHeight}, {getUserWindowSize("guwReopen")})
+      -- and once the console's deferred deletion has run that widget is freed,
+      -- which is the moment the query used to dereference it
+      pumpEvents(50)
+      assert.are.same({mainWidth, mainHeight}, {getUserWindowSize("guwReopen")})
+
+      track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
+      assert.are.equal("userwindow", windowType("guwReopen"))
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "the reopened window has no dock of its own")
     end)
   end)
 
@@ -487,5 +688,98 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.is_nil(windowType("guwRootKept"))
       assert.is_nil(windowType("guwRootKeptLabel"))
     end)
+  end)
+end)
+
+-- set_uwconstr is what move() and resize() call before they touch the dock: it
+-- re-reads the window's own x/y/width/height against the main window rather
+-- than against the user window's insides, which is what every other Geyser
+-- object's set_constraints does. resetWindow() puts the usual behaviour back,
+-- so the two are specced against each other here.
+describe("Tests Geyser.UserWindow:set_uwconstr", function()
+  local created
+
+  local function track(object)
+    created[#created + 1] = object
+    return object
+  end
+
+  local function alive(object)
+    if not object or not object.container or not object.container.windowList then
+      return false
+    end
+    return object.container.windowList[object.name] == object
+  end
+
+  before_each(function()
+    created = {}
+  end)
+
+  after_each(function()
+    for _, object in ipairs(created) do
+      if alive(object) then
+        object:delete()
+      end
+    end
+    created = {}
+  end)
+
+  it("resolves percentages against the main window", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstr", x = 10, y = 20, width = 200, height = 150}))
+    local mainWidth, mainHeight = getMainWindowSize()
+
+    userWindow.x, userWindow.y = "50%", "25%"
+    userWindow.width, userWindow.height = "20%", "10%"
+    userWindow:set_uwconstr()
+
+    assert.are.equal(mainWidth * 0.5, userWindow:get_x())
+    assert.are.equal(mainHeight * 0.25, userWindow:get_y())
+    assert.are.equal(mainWidth * 0.2, userWindow:get_width())
+    assert.are.equal(mainHeight * 0.1, userWindow:get_height())
+  end)
+
+  it("resolves pixels as pixels", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstrPixels", x = 10, y = 20, width = 200, height = 150}))
+
+    userWindow.x, userWindow.y = 120, 130
+    userWindow.width, userWindow.height = 240, 260
+    userWindow:set_uwconstr()
+
+    assert.are.equal(120, userWindow:get_x())
+    assert.are.equal(130, userWindow:get_y())
+    assert.are.equal(240, userWindow:get_width())
+    assert.are.equal(260, userWindow:get_height())
+  end)
+
+  it("is undone by resetWindow, which sizes the window against itself again", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstrReset", x = 10, y = 20, width = 200, height = 150}))
+    local mainWidth = getMainWindowSize()
+
+    userWindow.width = "100%"
+    userWindow:set_uwconstr()
+    assert.are.equal(mainWidth, userWindow:get_width())
+
+    userWindow:resetWindow()
+    -- back to filling itself: "100%" now means the usable area inside the dock,
+    -- which is nothing like the main window's width
+    local usableWidth = getUserWindowSize("guwConstrReset")
+    assert.are.equal(usableWidth, userWindow:get_width())
+    assert.is_true(usableWidth < mainWidth)
+  end)
+
+  it("is what move and resize position the dock with", function()
+    local userWindow = track(Geyser.UserWindow:new({name = "guwConstrMove", x = 10, y = 20, width = 200, height = 150}))
+
+    -- move()/resize() hand their arguments to set_uwconstr and then move the
+    -- real dock to what it worked out, so a percentage has to land on the same
+    -- pixel that set_uwconstr resolves it to
+    userWindow.x, userWindow.y = "10%", "10%"
+    userWindow:set_uwconstr()
+    local expectedX, expectedY = userWindow:get_x(), userWindow:get_y()
+
+    userWindow:move("10%", "10%")
+    local x, y = getWindowGeometry("guwConstrMove")
+    assert.are.equal(math.floor(expectedX), x)
+    assert.are.equal(math.floor(expectedY), y)
   end)
 end)

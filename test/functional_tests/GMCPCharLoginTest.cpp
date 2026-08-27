@@ -23,15 +23,23 @@
 // Reconnect) and on the messages it prints, so future changes cannot silently break
 // authentication.
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
+#include <QtNetwork/QSslCertificate>
+#include <QtNetwork/QSslKey>
+#include <QtNetwork/QSslSocket>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrlQuery>
 #include <functional>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "CredentialManager.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -39,14 +47,95 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+#include "GroupedTest.h"
+
 using namespace std::chrono_literals;
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
+// Self-signed loopback certificate, valid until 2126; the client accepts it via Host::mSslIgnoreAll.
+static const char* csmTestCertificatePem = R"PEM(-----BEGIN CERTIFICATE-----
+MIIDJzCCAg+gAwIBAgIULa4vwGAVOB+r6qtcLMPqwzBlEJgwDQYJKoZIhvcNAQEL
+BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MCAXDTI2MDgwNjE0MTM0OFoYDzIxMjYw
+NzEzMTQxMzQ4WjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDEg1HE09f69FW/OLD0jrWEQRbKkSkIkexLfV5OtzbI
+ZVDWcH3Y3NKrbZ60j8WEY8DqVzO2kMnOppc5LBEKGP1TTs6C9R+e5hlI6McoKown
+ha4aU9nqM7dsjY71xGZNN9DCVxhRpqadlZon7M4wzVvUO5VIRhFeA2AO6LRVQhyi
+9Whe/uJVlncb2tbiGgTavixWSQ5kH0ocE8Cp4SbuHuXPwgiZ9hYEIX2xAFSR48OB
+bjWgqVISptu/s+UkK2XckI42qdxqzwglLIIqjFYJ1HvGqhqV69DeqB0XNw6qp8W2
+qwTpv3gPGzI60vNL6aaHTivLxnsEClPbcrTfG1y8DnnLAgMBAAGjbzBtMB0GA1Ud
+DgQWBBSyDWWzo202vFbYncaD2crvY5V2pDAfBgNVHSMEGDAWgBSyDWWzo202vFbY
+ncaD2crvY5V2pDAPBgNVHRMBAf8EBTADAQH/MBoGA1UdEQQTMBGCCWxvY2FsaG9z
+dIcEfwAAATANBgkqhkiG9w0BAQsFAAOCAQEAs5nw4GBPPHc9Nc08uLUYTDLkA2XM
+WPugjSO7OxUe8NptVh/v4GbeKzQ4FRIF6rca8De15+OOZgIDppRUoy+fd+ncoDan
+flw38rIj13XfV/3WF33Uag2xtZG0Hrpu4PFZQyIzr0MwGJJ/v2uRjMiV0CX+rc0L
+BJg2JS4oCbNdQpwH81qOktoH8aHirAyLjtm732GQgAGLe0fIBBsb4Dg2ZdvN+TF5
+xfKoFfri3H1rwju43zHXmUyCE/RPdIBR8flO6gzdgWAVY0jaixZi1fzQEQuReh2j
+d2iZYOFSrVDea41ltrUvRC6q6gxe/REVjj1nCSYU1x44J9DQ6n6ljvJCVw==
+-----END CERTIFICATE-----)PEM";
+
+static const char* csmTestPrivateKeyPem = R"PEM(-----BEGIN PRIVATE KEY-----
+MIIEwAIBADANBgkqhkiG9w0BAQEFAASCBKowggSmAgEAAoIBAQDEg1HE09f69FW/
+OLD0jrWEQRbKkSkIkexLfV5OtzbIZVDWcH3Y3NKrbZ60j8WEY8DqVzO2kMnOppc5
+LBEKGP1TTs6C9R+e5hlI6McoKownha4aU9nqM7dsjY71xGZNN9DCVxhRpqadlZon
+7M4wzVvUO5VIRhFeA2AO6LRVQhyi9Whe/uJVlncb2tbiGgTavixWSQ5kH0ocE8Cp
+4SbuHuXPwgiZ9hYEIX2xAFSR48OBbjWgqVISptu/s+UkK2XckI42qdxqzwglLIIq
+jFYJ1HvGqhqV69DeqB0XNw6qp8W2qwTpv3gPGzI60vNL6aaHTivLxnsEClPbcrTf
+G1y8DnnLAgMBAAECggEBALRPHebwzfrI2CilttAeZXTdWDEzsifX5K17cd3eBBkp
+xVuNShuCupZq9bUNOhl4ghlDPALmpRTFDHp78YKHXWFkLN5CVeoxjL+2Po6fQ4w7
+/3zOtWNMYp/q32Kn+4ocjaLT0U+SDs0G6LR7dtGWjAyXQylWiTbu9+OWJ2kXSTlH
+QbdtamymoJrrjRTV1HUEq/a3qSHlqTA5/EKIcGeiETq2NR0fZ3NFbe+PLiOSpiNg
+uIiVEdsItuZTdINSEzOtMFvRd2od0ITDpMtLG404aGsI4Zisiuhr5naf4DWqK2aL
+n9Z/55LSuAdBqvrtJ9XVdtNsFdCRjbIj2R1qqDTFm/kCgYEA6W/+ufDXrhPi8XWS
+8+7tlOoUd0jYZL9N+N1hfho21SN3eH5TtNO0b/os/PN/M+5dKeWPtnyzwg49EksF
+Es9Z4+lLt/Z+71RDmYqSCwaLhXNKtUZluZmrGHcRogd4hJDYv9icgmpwMK5Hg634
+PYCgVYb9C1Wug/mZhgLg7Aw3hn8CgYEA14GxAPViaSszVNRps+a9WVEJklPbPR8U
+kAxWTP6n1SdT3Z9HRcHH9inIdTLyC/3ti4+4dc1pDkMrq+MUTjvF8BqN35uzJa7l
+6dnsXBmWvB1cIcwQb4SLnDb7jzmiK2uIjMrO54x3+atB83GdvESLOQ/9NAJL/+NX
+ILq5kAs2nrUCgYEAqq7/8pceLKNPybttMr0drEenpTx3NNsIORItydWDCD8BiPHd
+ZJdzFHk5Uc780EzWg97dQNJXYWmlz+1YjVNdZ57ahW1PjNDxCKBgfn1PoMkW9ArA
+MIAisSXGl9GcllmOkl/guB75Xy7fDXIz00xsb3zfIt2IV+k2Dt2l9hJMuyMCgYEA
+lv45ZHCJeSJZntANF41NkazjxfCXJaYHJD5goSWztfcOHbOhnlB9qA3yc5s0WA6c
+RzJ1jaRUPTf2+0HpUj8zGl2gldFjnb2DPWwA3S7YnAj+Knft9BSsNNGZQ+qfo0h+
+rhbTDQ0wanABj25FlEl6OornX29UjH9e5oGtziztIhkCgYEAppTHqOgLiKmeV15d
+i850uRyh7X6whywY8gm0VLO+xzCVsCR6CvgZY1MwwFuDwu2d/d5jdJXLpHueQwNU
+3HipTI77OuIRv4ykXwPOIemT9VmL/N21CgrckJGA6dYywTnc/JNpOKxdTM9srOyr
+Rcsgla9jttJevaHI71x2jLNBaKk=
+-----END PRIVATE KEY-----)PEM";
+
+// Hands out QSslSocket connections when asked to, so the stub can offer an encrypted transport.
+class GmcpTcpServer : public QTcpServer
+{
+    Q_OBJECT
+
+public:
+    explicit GmcpTcpServer(QObject* parent = nullptr)
+    : QTcpServer(parent)
+    {
+    }
+
+    void setTls(bool tls) { mTls = tls; }
+
+protected:
+    void incomingConnection(qintptr socketDescriptor) override
+    {
+        if (!mTls) {
+            QTcpServer::incomingConnection(socketDescriptor);
+            return;
+        }
+        auto* socket = new QSslSocket(this);
+        if (!socket->setSocketDescriptor(socketDescriptor)) {
+            delete socket;
+            return;
+        }
+        socket->setLocalCertificate(QSslCertificate(QByteArray(csmTestCertificatePem)));
+        socket->setPrivateKey(QSslKey(QByteArray(csmTestPrivateKeyPem), QSsl::Rsa));
+        socket->startServerEncryption();
+        // QSslSocket buffers writes queued before the handshake, so this behaves like a plain socket.
+        addPendingConnection(socket);
+    }
+
+private:
+    bool mTls = false;
+};
 
 // A tiny GMCP-capable server: offers GMCP on connect, parses the telnet stream to
 // collect the client's GMCP messages, and can push Char.Login frames on demand.
@@ -65,8 +154,15 @@ public:
     // reads the actual port back via serverPort().
     bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
     quint16 serverPort() const { return mServer.serverPort(); }
+    void setTls(bool tls) { mServer.setTls(tls); }
 
     bool gmcpEnabled() const { return mGmcpEnabled; }
+    // So a test asserting on encrypted-transport behaviour cannot silently pass over a plain socket.
+    bool clientEncrypted() const
+    {
+        auto* sslClient = qobject_cast<QSslSocket*>(mClient.data());
+        return sslClient && sslClient->isEncrypted();
+    }
     QStringList receivedGmcp() const { return mReceivedGmcp; }
     void clearReceived() { mReceivedGmcp.clear(); }
 
@@ -200,7 +296,7 @@ private:
         mBuffer = mBuffer.mid(i);
     }
 
-    QTcpServer mServer;
+    GmcpTcpServer mServer;
     QPointer<QTcpSocket> mClient;
     QByteArray mBuffer;
     QStringList mReceivedGmcp;
@@ -208,32 +304,91 @@ private:
     int mConnectionCount = 0;
 };
 
+// Serves a static OpenID Connect discovery document over loopback http, which
+// OAuthClientFlow::acceptableEndpointUrl() permits, so no second certificate is needed.
+class DiscoveryServerStub : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit DiscoveryServerStub(QObject* parent = nullptr)
+    : QObject(parent)
+    {
+        connect(&mServer, &QTcpServer::newConnection, this, [this]() {
+            while (mServer.hasPendingConnections()) {
+                QTcpSocket* socket = mServer.nextPendingConnection();
+                connect(socket, &QTcpSocket::readyRead, socket, [this, socket]() {
+                    mRequests[socket] += socket->readAll();
+                    if (!mRequests.value(socket).contains("\r\n\r\n")) {
+                        return;
+                    }
+                    mRequests.remove(socket);
+                    const QByteArray body = QJsonDocument(QJsonObject{{qsl("authorization_endpoint"), authorizationEndpoint()}}).toJson(QJsonDocument::Compact);
+                    socket->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n" + body);
+                    socket->disconnectFromHost();
+                });
+                connect(socket, &QObject::destroyed, this, [this, socket]() {
+                    mRequests.remove(socket);
+                });
+                connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+            }
+        });
+    }
+
+    bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
+    QString discoveryUrl() const { return qsl("http://127.0.0.1:%1/.well-known/openid-configuration").arg(mServer.serverPort()); }
+    QString authorizationEndpoint() const { return qsl("http://127.0.0.1:%1/authorize").arg(mServer.serverPort()); }
+
+private:
+    QTcpServer mServer;
+    QHash<QTcpSocket*, QByteArray> mRequests;
+};
+
 class GMCPCharLoginTest : public QObject
 {
     Q_OBJECT
 
 public slots:
-    // Registered as the http/https URL handler so a Char.Login.URL the client auto-opens routes here
+    // Registered as the http/https URL handler so a sign-in address the client auto-opens routes here
     // instead of launching a real browser during the test.
-    void captureOpenedUrl(const QUrl& url) { mOpenedUrl = url; }
+    void captureOpenedUrl(const QUrl& url) { mOpenedUrls.append(url); }
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     GmcpServerStub* mpServer = nullptr;
+    DiscoveryServerStub* mpDiscovery = nullptr;
     const QString mHostname = qsl("Test-CharLogin");
     quint16 mPort = 0; // assigned the stub's actual loopback port in init()
-    QUrl mOpenedUrl;
+    QList<QUrl> mOpenedUrls;
 
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
         // Intercept browser opens so an auto-opened Char.Login.URL does not launch a real browser.
         QDesktopServices::setUrlHandler(qsl("http"), this, "captureOpenedUrl");
         QDesktopServices::setUrlHandler(qsl("https"), this, "captureOpenedUrl");
         // Force CredentialManager to use its deterministic encrypted-file backend rather than the
         // system keychain, so reconnect-token storage/retrieval is synchronous and observable in tests.
         qputenv("MUDLET_TEST_MODE", "1");
-        initializeQRCResources();
     }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -242,10 +397,11 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        mOpenedUrl.clear();
+        mOpenedUrls.clear();
         // Start each test from a clean credential state so a reconnect token saved by an earlier test
         // cannot leak into one that expects none (which would make the client replay it instead).
         CredentialManager::removeCredential(mHostname, qsl("reconnect"));
@@ -256,6 +412,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
+        delete mpDiscovery;
+        mpDiscovery = nullptr;
         deleteProfileDirectory(mHostname);
         delete mudlet::self();
     }
@@ -384,7 +542,7 @@ private slots:
 
     void testSavedTokenIsReplayedOnReconnect()
     {
-        Host* host = connectAndNegotiate();
+        Host* host = connectAndNegotiate(true);
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
@@ -402,9 +560,55 @@ private slots:
         QCOMPARE(sent.value(qsl("version")).toInt(), 2);
     }
 
-    void testRejectedReconnectTokenIsDiscarded()
+    void testSavedTokenIsNotReplayedOverCleartext()
     {
         Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the sign-in should fall back to the interactive hand-off");
+        QVERIFY2(sent.isEmpty(), "the fall-back must be the empty {} hand-off");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+        QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why their saved sign-in was not used");
+        QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "refusing to send the token must not destroy it");
+
+        // Nothing awaits a reconnect result, so an ordinary failed sign-in must not be mistaken for a
+        // rejected token - that would rewrite or delete the stored entry the player still needs.
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Invalid credentials\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("Could not log in to the game")), "a failed interactive sign-in should be reported as one");
+        QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the stored sign-in must survive an unrelated login failure");
+    }
+
+    void testCleartextTokenFallsBackToProviderResume()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"saved-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
+        QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
+        QVERIFY2(!sent.contains(qsl("token")), "the resume form must not carry the token");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    void testRejectedReconnectTokenIsDiscarded()
+    {
+        Host* host = connectAndNegotiate(true);
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
@@ -426,7 +630,7 @@ private slots:
 
     void testRejectedReconnectKeepsResumeHint()
     {
-        Host* host = connectAndNegotiate();
+        Host* host = connectAndNegotiate(true);
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
@@ -491,7 +695,7 @@ private slots:
 
     void testRotatedTokenIsReplayedNotDiscarded()
     {
-        Host* host = connectAndNegotiate();
+        Host* host = connectAndNegotiate(true);
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
@@ -532,7 +736,7 @@ private slots:
 
     void testRotationReplayClearsTheRejectionLatch()
     {
-        Host* host = connectAndNegotiate();
+        Host* host = connectAndNegotiate(true);
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
@@ -622,7 +826,7 @@ private slots:
 
     void testStoredCredentialsOutrankSavedToken()
     {
-        Host* host = connectAndNegotiate();
+        Host* host = connectAndNegotiate(true);
         QVERIFY(host);
         // Both a saved reconnect token AND stored character name/password are present. The player's
         // typed credentials name the exact character, so they must win: the client sends
@@ -652,17 +856,40 @@ private slots:
         // Simulate the player having acted on the game's sign-in screen this connection; an unsolicited
         // Char.Login.URL is then a consequence of their input and must be auto-opened in the browser.
         host->setUserSentInputThisConnection(true);
-        mOpenedUrl.clear();
+        mOpenedUrls.clear();
         mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"discord\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("Opening your browser to sign in with Discord")), "a prompted URL should be auto-opened with a provider-labelled handoff");
-        QCOMPARE(mOpenedUrl, QUrl(qsl("https://example.com/signin")));
+        QCOMPARE(mOpenedUrls, QList<QUrl>{QUrl(qsl("https://example.com/signin"))});
+    }
+
+    void testRepeatedAuthUrlsOpenOneBrowserPerUserAction()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setUserSentInputThisConnection(true);
+        mOpenedUrls.clear();
+
+        for (int i = 1; i <= 5; ++i) {
+            mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin%1\"}").arg(i));
+        }
+        // GMCP frames are handled in order, so a reply to this one proves all five were processed.
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not work through the pushed sign-in addresses");
+        QCOMPARE(mOpenedUrls, QList<QUrl>{QUrl(qsl("https://example.com/signin1"))});
+
+        // A further player action re-arms it: a rate limit, not a one-per-connection cap.
+        host->setUserSentInputThisConnection(true);
+        mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin6\"}"));
+        QTRY_COMPARE(mOpenedUrls.size(), 2);
+        QCOMPARE(mOpenedUrls.at(1), QUrl(qsl("https://example.com/signin6")));
     }
 
     // ---- Post-rejection loop guard (allowToken == false) -------------------
 
     void testReconnectAfterRejectionDoesNotReplayToken()
     {
-        Host* host = connectAndNegotiate();
+        Host* host = connectAndNegotiate(true);
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
@@ -708,6 +935,112 @@ private slots:
     // mReconnectRejected. Getting either wrong loses a player's freshly saved token or lets a rejected one
     // be replayed, and neither failure is reachable by hand.
 
+    // ---- Client-driven OAuth (Char.Login.AuthCode) -------------------------
+
+    void testClientDrivenOAuthOpensOneBrowserPerConnection()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY2(!host->userSentInputThisConnection(), "precondition: no user input yet");
+        startDiscoveryServer();
+        mOpenedUrls.clear();
+
+        // Connecting is itself the request, so the first offer opens the browser with nothing typed.
+        mpServer->sendGmcp(clientDrivenDefault());
+        QTRY_COMPARE(mOpenedUrls.size(), 1);
+
+        for (int i = 0; i < 4; ++i) {
+            mpServer->sendGmcp(clientDrivenDefault());
+        }
+        QVERIFY2(waitForConsoleContains(host, qsl("To sign in, open this link")), "a re-offered client-driven sign-in should be offered as a link");
+        QCOMPARE(mOpenedUrls.size(), 1);
+    }
+
+    void testAuthCodeCarriesTheNonceTheServerAskedFor()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        startDiscoveryServer();
+        mOpenedUrls.clear();
+        mpServer->clearReceived();
+
+        mpServer->sendGmcp(clientDrivenDefault());
+        QTRY_VERIFY(!mOpenedUrls.isEmpty());
+        const QUrlQuery authorizationQuery(mOpenedUrls.first());
+        const QString nonce = authorizationQuery.queryItemValue(qsl("nonce"));
+        QVERIFY2(!nonce.isEmpty(), "the authorization request should carry a nonce when the server asked for one");
+
+        // Play the identity provider: send the browser's redirect back to the loopback listener.
+        const QUrl redirectUri(authorizationQuery.queryItemValue(qsl("redirect_uri"), QUrl::FullyDecoded));
+        QTcpSocket browser;
+        browser.connectToHost(redirectUri.host(), static_cast<quint16>(redirectUri.port()));
+        QVERIFY(browser.waitForConnected(3000));
+        browser.write("GET /?code=test-auth-code&state=" + authorizationQuery.queryItemValue(qsl("state")).toLatin1() + " HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.AuthCode"), sent), "client did not complete the client-driven sign-in");
+        QCOMPARE(sent.value(qsl("code")).toString(), qsl("test-auth-code"));
+        QVERIFY(!sent.value(qsl("code_verifier")).toString().isEmpty());
+        QCOMPARE(sent.value(qsl("redirect_uri")).toString(), redirectUri.toString());
+        QCOMPARE(sent.value(qsl("nonce")).toString(), nonce);
+    }
+
+    void testAuthCodeOmitsTheNonceWhenTheServerDidNotAskForIt()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        startDiscoveryServer();
+        mOpenedUrls.clear();
+        mpServer->clearReceived();
+
+        mpServer->sendGmcp(clientDrivenDefault(false));
+        QTRY_VERIFY(!mOpenedUrls.isEmpty());
+        const QUrlQuery authorizationQuery(mOpenedUrls.first());
+        QVERIFY2(!authorizationQuery.hasQueryItem(qsl("nonce")), "no nonce should be requested from the provider either");
+
+        const QUrl redirectUri(authorizationQuery.queryItemValue(qsl("redirect_uri"), QUrl::FullyDecoded));
+        QTcpSocket browser;
+        browser.connectToHost(redirectUri.host(), static_cast<quint16>(redirectUri.port()));
+        QVERIFY(browser.waitForConnected(3000));
+        browser.write("GET /?code=test-auth-code&state=" + authorizationQuery.queryItemValue(qsl("state")).toLatin1() + " HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.AuthCode"), sent), "client did not complete the client-driven sign-in");
+        QVERIFY2(!sent.contains(qsl("nonce")), "an empty nonce must be left out rather than sent as an empty string");
+    }
+
+    // ---- Char.Login.Default flood ------------------------------------------
+
+    void testDefaultFloodIsThrottled()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        mpServer->clearReceived();
+        for (int i = 0; i < 200; ++i) {
+            mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        }
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the first frame should still be answered straight away");
+
+        // Cost is bounded by wall clock, not by how much the server sent: one immediate attempt plus
+        // one when the window closes, not 200. A range, so a loaded runner slipping into the next
+        // window does not flake, and a lower bound because a re-offer must still be answered.
+        QTest::qWait(2500ms);
+        const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
+        QVERIFY2(attempts >= 2, qPrintable(qsl("a throttled burst must still be answered, saw %1 attempts").arg(attempts)));
+        QVERIFY2(attempts <= 4, qPrintable(qsl("200 frames should not buy 200 sign-in attempts, saw %1").arg(attempts)));
+    }
+
     // ---- Char.Login.Result --------------------------------------------------
 
     void testFailedResultReportsError()
@@ -727,54 +1060,67 @@ private slots:
     }
 
 private:
-    // Drive the GUI to create/connect a profile, then wait for GMCP to negotiate.
-    Host* connectAndNegotiate()
+    void startDiscoveryServer()
     {
-        const QString port = QString::number(mPort);
-        QTimer::singleShot(0ms, qApp, [this, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), qsl("localhost"));
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
+        mpDiscovery = new DiscoveryServerStub();
+        QVERIFY(mpDiscovery->start());
+    }
 
-        QSignalSpy loaded(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!loaded.wait(5000)) {
-            qWarning("Profile took too long to load");
+    // Advertises the client-driven OAuth capability, which the client only honours over TLS.
+    QString clientDrivenDefault(bool requestNonce = true) const
+    {
+        return qsl(R"(Char.Login.Default {"version": 2, "type": ["oauth"], "location": "%1", "client_id": "test-client", "nonce": %2})")
+                .arg(mpDiscovery->discoveryUrl(), requestNonce ? qsl("true") : qsl("false"));
+    }
+
+    // Drive the GUI to create/connect a profile, then wait for GMCP to negotiate. Reaching TLS by
+    // reconnecting rather than creating the profile encrypted is what makes this deterministic:
+    // mSslTsl and mSslIgnoreAll are set on a live Host, before the attempt that reads them starts.
+    Host* connectAndNegotiate(bool secure = false)
+    {
+        Host* host = createProfileAndConnect();
+        if (!host || !secure) {
+            return host;
+        }
+        host->mSslTsl = true;
+        host->mSslIgnoreAll = true; // the stub's certificate is self-signed
+        mpServer->setTls(true);
+        const int plainConnection = mpServer->connectionCount();
+        host->mTelnet.reconnect();
+        if (!waitForNegotiatedConnection(plainConnection)) {
             return nullptr;
         }
-        Host* host = mudlet::self()->getActiveHost();
+        if (!mpServer->clientEncrypted()) {
+            qWarning("The connection did not complete a TLS handshake");
+            return nullptr;
+        }
+        return host;
+    }
+
+    Host* createProfileAndConnect()
+    {
+        const QString port = QString::number(mPort);
+        // A fresh mudlet and profile per test on an instrumented, loaded runner is slow.
+        Host* host = TestProfile::create(mHostname, qsl("localhost"), port, 20s);
         if (!host) {
             qWarning("No active host");
             return nullptr;
         }
-        QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
-            qWarning("Could not connect to the stub");
-            return nullptr;
-        }
-        // Wait until the client has answered our GMCP offer (IAC DO GMCP) so that
-        // Char.Login frames we push afterwards are processed.
-        const bool negotiated = QTest::qWaitFor(
-                [this]() {
-                    return mpServer->gmcpEnabled();
+        return waitForNegotiatedConnection(0) ? host : nullptr;
+    }
+
+    // Also waits for the client to answer our GMCP offer, so frames pushed afterwards are processed.
+    bool waitForNegotiatedConnection(int afterConnectionCount)
+    {
+        const bool connected = QTest::qWaitFor(
+                [this, afterConnectionCount]() {
+                    return mpServer->connectionCount() > afterConnectionCount && mpServer->gmcpEnabled();
                 },
-                3000);
-        if (!negotiated) {
-            qWarning("GMCP was not negotiated");
+                15000);
+        if (!connected) {
+            qWarning("Could not connect to the stub, or GMCP was not negotiated");
         }
-        return host;
+        return connected;
     }
 
     // Wait until the client sends a GMCP message whose package matches, returning its JSON body.
@@ -864,20 +1210,5 @@ private:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "GMCPCharLoginTest.moc"
-QTEST_MAIN(GMCPCharLoginTest)
+MUDLET_GROUPED_TEST_MAIN(GMCPCharLoginTest)

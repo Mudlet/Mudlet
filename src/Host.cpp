@@ -34,11 +34,13 @@
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "mapInfoContributorManager.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -64,6 +66,8 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDirIterator>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -77,6 +81,7 @@
 #include <QSettings>
 #include <QTemporaryFile>
 #include <QTextStream>
+#include <QThread>
 #include <zip.h>
 #include <memory>
 
@@ -444,6 +449,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     startMapAutosave(interval);
 
     mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
+
+    // Built here, at the end of the constructor, rather than on first use: the
+    // model's buffer snapshots this Host's colours, so every one of them has to
+    // be initialised first. The view binds the buffer's back-pointer when it
+    // attaches (TConsole::TConsole) and unbinds it when it goes away, and
+    // TConsole::changeColors() refreshes the snapshot as it does so.
+    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
 }
 
 Host::~Host()
@@ -455,6 +467,33 @@ Host::~Host()
     // gone never gets there - and a package save left to fire from a Host that
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
+
+    // The editor is a parentless top-level window, so delete it here while the
+    // units it references are still alive. Null the QPointer first: it only
+    // clears itself once ~QObject is reached, so anything looking at
+    // mpEditorDialog mid-teardown would find a half-destroyed widget:
+    if (auto* pEditor = mpEditorDialog.data()) {
+        mpEditorDialog = nullptr;
+        delete pEditor;
+    }
+
+    if (auto* pNotePad = mpNotePad.data()) {
+        if (mudlet::self()) {
+            pNotePad->save();
+            pNotePad->close();
+        }
+        mpNotePad = nullptr;
+        delete pNotePad;
+    }
+
+    if (auto* pDlgIRC = mpDlgIRC.data()) {
+        mpDlgIRC = nullptr;
+        delete pDlgIRC;
+    }
+
+    for (const auto& pToolBar : mActionUnit.getToolBarList()) {
+        delete pToolBar.data();
+    }
 
     // This needs to be cleared here while the Host object is still valid,
     // otherwise it'll be cleared when the Host object is being destroyed,
@@ -701,10 +740,9 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
         writer->writeModuleXML(moduleName);
         // The writer stays in `writers` purely as the save-in-progress token that
         // xmlSaved() retires on the main thread, so the XMLexport - a QObject with
-        // main-thread affinity - is only ever destroyed there. What gets written out
-        // is the job's own copy of the document, which outlives both of them.
+        // main-thread affinity - is only ever destroyed there.
         writers.insert(xmlFilename, writer);
-        jobs.append({writer->cloneExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
+        jobs.append({writer->takeExportDocument(), moduleName, filename, xmlFilename, backup ? backupPath + moduleName : QString()});
 
         if (entry.at(1).toInt()) {
             mModulesToSync << moduleName;
@@ -900,12 +938,10 @@ bool Host::resetProfile_phase1()
         return false;
     }
 
-    // A test-mode waitForEvent() is blocked in a nested event loop on this
-    // profile's lua_State; phase2 would lua_close() that state underneath it (a
-    // use-after-free). Refuse until the wait finishes. Always empty (so a no-op)
-    // outside MUDLET_TEST_MODE, where waitForEvent() is inert.
-    if (mLuaInterpreter.hasPendingEventWaits()) {
-        qWarning() << "Host::resetProfile_phase1() called while a waitForEvent() is blocked, ignoring";
+    // Phase 2 lua_close()s the very state the pump is running Lua code on, so
+    // refuse rather than reset into a use-after-free.
+    if (mLuaInterpreter.pumpingEvents()) {
+        qWarning() << "Host::resetProfile_phase1() called while the test-mode event pump is running, ignoring";
         return false;
     }
 
@@ -942,6 +978,13 @@ void Host::resetProfile_phase2()
     // freshly-issued registry indices in the new state, which surfaces as
     // "attempt to call a number value" when label callbacks fire.
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    // Lua map info contributors cannot cross that swap either: each holds a
+    // reference in the state initLuaGlobals() closes below, and a callback that
+    // captures it. Left registered, the registering script's own re-run in
+    // compileAll() further down unrefs against the closed state, and one that
+    // nothing re-registers is called on it by every later map redraw. The
+    // scripts that registered them put them back against the new state.
+    mpMap->mMapInfoContributorManager->removeLuaContributors();
     mEventHandlerMap.clear();
     mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
@@ -1059,18 +1102,17 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     const bool backupModules = saveName != qsl("autosave");
     const QList<ModuleWriteJob> moduleJobs = prepareModuleSaves(backupModules);
 
+    // Nothing between here and watcher->setFuture() below may pump the event loop: the
+    // save is marked as started, but the watcher that retires that mark does not exist
+    // yet, so a waitForProfileSave() reached from a pump waits for an end it can never
+    // be told about, then lets its caller carry on - into a teardown that destroys the
+    // profile the rest of this function goes on to use (#9807).
     mWritingHostAndModules = true;
 
     // emit signal to notify the UI that the save button should get disabled momentarily
     // this needs to run after `writers` and `mWritingHostAndModules` have been set
     // so that the currentlySavingProfile() check can run properly
     emit profileSaveStarted();
-
-    // Only process events if we're not in the middle of closing down
-    // This prevents recursive closure scenarios that can lead to heap-use-after-free
-    if (!mIsClosingDown) {
-        qApp->processEvents();
-    }
 
     // Snapshot the pending profile-save futures on the main thread - see
     // pendingXmlSaveFutures(): the background task must not read `writers`/`saveFutures`
@@ -1122,15 +1164,16 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 // exports without the host settings for some reason
 std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 {
-    emit profileSaveStarted();
-    qApp->processEvents();
-
     if (currentlySavingProfile()) {
         return {false, QString(), qsl("a save is already in progress")};
     }
 
     auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
+    // Registered before the signal so currentlySavingProfile() answers correctly for
+    // whatever that reaches, and only emitted for a save this call really makes: the
+    // matching profileSaveFinished() only ever comes from xmlSaved().
+    emit profileSaveStarted();
     writer->exportProfile(file);
     return {true, file, QString()};
 }
@@ -1153,18 +1196,44 @@ bool Host::currentlySavingProfile()
 
 void Host::waitForProfileSave()
 {
-    waitForAsyncXmlSave();
-    if (mModuleFuture.isRunning()) {
-        mModuleFuture.waitForFinished();
+    if (!currentlySavingProfile()) {
+        return;
     }
-    int iterations = 0;
+
+    // Only the notification below is on a clock - in wall-clock time, because a cap on
+    // event loop passes is no wait at all on a fast machine (#9807) - and only because
+    // a save that has written everything and still says it is running cannot be waited
+    // out. Long enough that reaching it means something is wrong, not that a disk is
+    // busy.
+    constexpr auto notificationTimeout = 30s;
+    QElapsedTimer waitedForNotification;
+    // A QEventLoop's processEvents() rather than qApp's only for its "did anything
+    // happen" answer - nothing is exec()ed here. No user input either: this runs on the
+    // way out of a profile, and all it is here to deliver is that notification.
+    QEventLoop pump;
     while (currentlySavingProfile()) {
-        if (++iterations > 1000) {
-            qWarning().nospace() << "Host::waitForProfileSave() WARNING - save did not complete after 1000 event loop iterations. " << "State: mWritingHostAndModules=" << mWritingHostAndModules
-                                 << ", writers pending=" << writers.size() << ". Continuing without waiting.";
+        // Every pass rather than once up front: a save that starts while this is
+        // waiting brings background work of its own that nothing has waited for yet.
+        // Unbounded, deliberately - how long a write takes is the disk's business.
+        waitForAsyncXmlSave();
+        if (mModuleFuture.isRunning()) {
+            mModuleFuture.waitForFinished();
+        }
+        if (!currentlySavingProfile()) {
             break;
         }
-        qApp->processEvents();
+        if (!waitedForNotification.isValid()) {
+            waitedForNotification.start();
+        }
+        if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
+            QThread::msleep(1);
+        }
+        if (waitedForNotification.hasExpired(duration_cast<milliseconds>(notificationTimeout).count())) {
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << notificationTimeout.count()
+                                 << " seconds of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
+                                 << ", module write still running=" << mModuleFuture.isRunning() << ".";
+            break;
+        }
     }
 }
 
@@ -1857,6 +1926,95 @@ QList<int> Host::getStopWatchIds() const
         ids.append(it->first);
     }
     return ids;
+}
+
+std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
+{
+    return mpMainConsoleModel;
+}
+
+// Hot: the trigger engine reads the model for every character of a colour
+// pattern, so this hands back a reference rather than a shared_ptr copy - the
+// latter costs an atomic increment and decrement per call.
+TConsoleModel& Host::mainConsoleModel()
+{
+    return *mpMainConsoleModel;
+}
+
+// A colour trigger matching "the default colour" compares against the model's
+// pair, so it has to carry the profile's colours whether or not a console was
+// ever built to copy them over. Seeding them in the model's constructor would
+// not do - this Host still holds the built-in defaults at that point.
+void Host::refreshMainConsoleColors()
+{
+    mpMainConsoleModel->mFgColor = mFgColor;
+    mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->buffer.updateColors();
+}
+
+void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
+{
+    emit signal_loggingAnnouncement(isLogging, logFileName);
+}
+
+void Host::raiseLoggingStateChanged(const bool isLogging)
+{
+    emit signal_loggingStateChanged(isLogging);
+}
+
+// The per-line trigger orchestration used to live on the main-console widget
+// (TMainConsole::runTriggers). It drives model state only, so it runs here
+// against the core model and needs no view (#8681).
+void Host::runTriggers(int line)
+{
+    TConsoleModel& consoleModel = mainConsoleModel();
+    // Relocating this made it a public API anyone can hand any index to, and QT_NO_DEBUG is set in every build we produce, so QList::at() would read out of bounds silently:
+    if (line < 0 || line >= consoleModel.buffer.promptBuffer.size()) {
+        return;
+    }
+
+    // A trigger script can feed text back through the pipeline, re-entering this
+    // function; the rest of this pass would otherwise inherit whatever the nested
+    // one left behind and act on the fed line instead of its own.
+    const bool nested = getTriggerUnit()->processingDepth() > 0;
+    const QPoint previousUserCursor = consoleModel.mUserCursor;
+    const int previousEngineCursor = consoleModel.mEngineCursor;
+    const bool previousIsPromptLine = consoleModel.mIsPromptLine;
+    const QString previousLine = consoleModel.mCurrentLine;
+
+    consoleModel.mUserCursor.setY(line);
+    consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
+    consoleModel.mEngineCursor = line;
+    consoleModel.mUserCursor.setX(0);
+    consoleModel.mCurrentLine = consoleModel.buffer.line(line);
+    getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
+    // The matchers take the haystack by reference all the way down, so it must be
+    // a local: a nested pass reassigns mCurrentLine under them.
+    QString haystack = consoleModel.mCurrentLine;
+    haystack.append('\n');
+
+    if (mudlet::smDebugMode) {
+        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> this;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> this;
+    }
+    incomingStreamProcessor(haystack, line);
+
+    if (nested) {
+        // Only a nested pass restores: at the top level a script's moveCursor()
+        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
+        // a saved index can by now point past the end.
+        const int lastLine = consoleModel.buffer.getLastLineNumber();
+        consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
+        consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
+        consoleModel.mIsPromptLine = previousIsPromptLine;
+        consoleModel.mCurrentLine = previousLine;
+        getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, previousLine);
+    } else {
+        consoleModel.mIsPromptLine = false;
+    }
+
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)
@@ -3358,7 +3516,7 @@ bool Host::getMMCPShowSnoopInMainConsole()
     return mMMCPShowSnoopInMainConsole;
 }
 
-QString Host::getSpellDic()
+QString Host::getSpellDic() const
 {
     if (!mSpellDic.isEmpty()) {
         return mSpellDic;
@@ -3374,12 +3532,11 @@ QString Host::getSpellDic()
 
 void Host::setSpellDic(const QString& newDict)
 {
-    bool isChanged = false;
-    if (!newDict.isEmpty() && mSpellDic != newDict) {
-        mSpellDic = newDict;
-        isChanged = true;
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
     }
-    if (isChanged && mpConsole) {
+    mSpellDic = newDict;
+    if (mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
     }
 }
@@ -3870,6 +4027,14 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
 {
     if (!mpConsole) {
         return {false, QString()};
+    }
+
+    // the parent window has to be one: TMainConsole::createLabel puts a label
+    // whose parent it cannot find into the main window instead, which is not
+    // anywhere the caller asked for
+    const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
+    if (!wantsMainWindow && !mpConsole->mDockWidgetMap.contains(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     auto pL = mpConsole->mLabelMap.value(name);
@@ -4594,6 +4759,13 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
+    // The file is read through a throwaway QMovie: the label's own must not take
+    // the path, and the gif tracker must not be given a movie to count, before
+    // the file is known to be one
+    if (const QMovie candidate(moviePath); !candidate.isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+
     auto myMovie = pL->mpMovie;
     if (!myMovie) {
         myMovie = new QMovie();
@@ -4604,11 +4776,6 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     }
 
     myMovie->setFileName(moviePath);
-
-    if (!myMovie->isValid()) {
-        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
-    }
-
     myMovie->stop();
     pL->setMovie(myMovie);
     myMovie->start();
@@ -4683,19 +4850,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     }
 
     if (pL) {
-        QString styleSheet = pL->styleSheet();
-        QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
-        if (styleSheet.contains(qsl("background-color"))) {
-            QRegularExpression re("background-color:[^;]*;");
-            styleSheet.replace(re, newColor);
-        } else {
-            if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
-                styleSheet.append('\n');
-            }
-            styleSheet.append(newColor);
-        }
-
-        pL->setStyleSheet(styleSheet);
+        pL->setBackgroundColor(QColor(r, g, b, alpha));
         return true;
     }
 
@@ -5048,19 +5203,23 @@ std::optional<QString> Host::windowType(const QString& name) const
     return {};
 }
 
-// Returns the position and size of a named window element, matching what
-// moveWindow()/resizeWindow() set. pos()/size() (rather than geometry()) are
-// used deliberately: they are the exact inverse of the move()/resize() calls
-// those setters make, including for a floating user-window dock where move()
-// targets the frame origin while geometry() would report the client area.
-// Mirrors the widget dispatch of moveWindow()/resizeWindow(); user windows are
-// moved/resized through their dock widget, so read the dock, not the console.
+// Returns the position and size of a window element, matching what
+// moveWindow()/resizeWindow() set and mirroring their widget dispatch, so user
+// windows are read from their dock widget rather than their console.
+// pos()/size() rather than geometry(): for a floating dock move() targets the
+// frame origin while geometry() would report the client area.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
 {
     if (!mpConsole) {
         return {};
     }
 
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        // 0,0 rather than the console's pos(), which under multi-view is an
+        // offset within the split; the size is getMainWindowSize()'s so the two
+        // functions cannot disagree.
+        return {QRect(QPoint(0, 0), mpConsole->getMainWindowSize())};
+    }
     if (auto pL = mpConsole->mLabelMap.value(name)) {
         return {QRect(pL->pos(), pL->size())};
     }
@@ -5083,32 +5242,39 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
     return {};
 }
 
-// Returns whether a named window element is currently visible. Mirrors the
-// widget dispatch of hideWindow()/showWindow(); user windows report the
-// visibility of their dock widget, which is what those functions toggle.
+// Returns whether a window element is currently visible, mirroring the widget
+// dispatch of hideWindow()/showWindow() - user windows report their dock's
+// visibility, which is what those toggle. Answered relative to the profile's
+// own console: a child of a hidden user window still reads hidden, but a
+// profile that is merely not the front tab does not.
 std::optional<bool> Host::windowVisible(const QString& name) const
 {
     if (!mpConsole) {
         return {};
     }
 
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        // only the tab machinery hides the main console, and that is the hiding
+        // this function looks past
+        return {true};
+    }
     if (auto pL = mpConsole->mLabelMap.value(name)) {
-        return {pL->isVisible()};
+        return {pL->isVisibleTo(mpConsole)};
     }
     if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
         if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
-            return {pD->isVisible()};
+            return {pD->isVisibleTo(mpConsole)};
         }
-        return {pC->isVisible()};
+        return {pC->isVisibleTo(mpConsole)};
     }
     if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
-        return {pS->isVisible()};
+        return {pS->isVisibleTo(mpConsole)};
     }
     if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
-        return {pN->isVisible()};
+        return {pN->isVisibleTo(mpConsole)};
     }
     if (auto pT = mpConsole->mTextBoxMap.value(name)) {
-        return {pT->isVisible()};
+        return {pT->isVisibleTo(mpConsole)};
     }
 
     return {};

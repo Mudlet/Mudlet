@@ -124,6 +124,11 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     qDebug() << "TMxpFrameManager::createFrame:" << name << "TITLE attr:" << attributes.value(qsl("TITLE")) << "title:" << frame->title << "floating:" << frame->floating;
 #endif
 
+    // relayoutFrames() works off mFrameOrder, so nothing may lay a frame out
+    // before it is in there
+    mFrames[name] = frame;
+    mFrameOrder.append(frame);
+
     // Create the appropriate UI layout
     if (frame->isInternal) {
         if (!frame->dockFrame.isEmpty() && frame->align == qsl("client")) {
@@ -134,9 +139,6 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     } else {
         layoutExternalFrame(frame);
     }
-
-    // Store the frame
-    mFrames[name] = frame;
 
     return true;
 }
@@ -176,6 +178,7 @@ bool TMxpFrameManager::closeFrame(const QString& name)
 
             // Remove from frames map and delete
             mFrames.remove(name);
+            mFrameOrder.removeOne(frame);
             delete frame;
 
             // No need to recalculate borders for tab frames since they don't affect main window borders
@@ -200,10 +203,11 @@ bool TMxpFrameManager::closeFrame(const QString& name)
     removeFrameFromHierarchy(frame);
 
     mFrames.remove(name);
+    mFrameOrder.removeOne(frame);
     delete frame;
 
-    // Recalculate borders after frame removal to reclaim space
-    recalculateBorders();
+    // Reposition what is left so it reclaims the space the frame gave up
+    relayoutFrames();
 
     return true;
 }
@@ -257,6 +261,7 @@ void TMxpFrameManager::resetAllFrames()
         closeFrame(name);
     }
 
+    mFrameOrder.clear();
     mMxpBorders = QMargins();
 
     if (mpHost) {
@@ -350,29 +355,38 @@ QStringList TMxpFrameManager::getFrameNames() const
     return mFrames.keys();
 }
 
-void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
+QRect TMxpFrameManager::availableFrameArea() const
 {
-    if (!mpHost || !mpHost->mpConsole) {
-        qWarning() << "TMxpFrameManager::layoutInternalFrame: No console available";
-        return;
+    if (!mpHost || mpHost->mpConsole.isNull()) {
+        return {};
     }
 
-    TMainConsole* mainConsole = mpHost->mpConsole.data();
-
-    // Note: DOCK tabbing is handled in createFrame() when ALIGN=CLIENT is set.
-    // Per CMUD, ALIGN=CLIENT + DOCK creates tabbed frames.
-    // This is a CMUD extension, not part of the official MXP 1.0 specification.
-
-    // Check if we're inside a DEST - if so, nest this frame inside the destination
-    TMxpFrame* parentFrame = nullptr;
-    if (!mCurrentDestination.isEmpty()) {
-        parentFrame = getFrame(mCurrentDestination);
+    // getMainWindowSize() rather than mpMainFrame's own geometry, which
+    // TConsole::resizeEvent() sets to the full console size until the layout
+    // corrects it. It is also the size Lua scripts lay themselves out against,
+    // so taking the user borders off it keeps frames out of the space a package
+    // such as the base UI has reserved with setBorderRight() and friends.
+    QRect area = QRect(QPoint(0, 0), mpHost->mpConsole->getMainWindowSize()).marginsRemoved(mpHost->userBorders());
+    if (area.width() < 0) {
+        area.setWidth(0);
     }
+    if (area.height() < 0) {
+        area.setHeight(0);
+    }
+    return area;
+}
 
+// Works out where a frame goes. An edge aligned top level frame consumes the
+// space it takes from mMxpBorders and a nested one advances its parent's
+// usedHeight; an absolutely positioned frame consumes neither. Callers are
+// responsible for pushing the updated borders to the Host.
+QRect TMxpFrameManager::calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* parentFrame)
+{
     // Determine the container for this frame
     QSize containerSize;
     int containerX = 0;
     int containerY = 0;
+    QRect area;
 
     if (parentFrame && parentFrame->widget) {
         // Nested frame - position relative to parent
@@ -384,12 +398,17 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         containerY += parentFrame->usedHeight;
         containerSize.setHeight(containerSize.height() - parentFrame->usedHeight);
     } else {
-        // Top-level frame - use MXP-specific borders (not Host borders which are for Lua)
-        containerSize = mainConsole->size();
-        containerX = mMxpBorders.left();
-        containerY = mMxpBorders.top();
-        containerSize.setWidth(containerSize.width() - mMxpBorders.left() - mMxpBorders.right());
-        containerSize.setHeight(containerSize.height() - mMxpBorders.top() - mMxpBorders.bottom());
+        // A parent with no widget of its own gives nothing to place against, so
+        // such a frame is placed as a top level one for the rest of this
+        // calculation - frame->parentFrame still records the hierarchy
+        parentFrame = nullptr;
+        // MXP borders stack inwards from the area the user borders leave.
+        // userBorders() and not borders(), which already carries the MXP borders
+        // this function is in the middle of recomputing.
+        area = availableFrameArea();
+        containerX = area.x() + mMxpBorders.left();
+        containerY = area.y() + mMxpBorders.top();
+        containerSize = QSize(area.width() - mMxpBorders.left() - mMxpBorders.right(), area.height() - mMxpBorders.top() - mMxpBorders.bottom());
     }
 
     // Calculate frame dimensions relative to container
@@ -404,13 +423,14 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     }
 
     // Ensure minimum size for visibility
-    if (frameWidth < 50)
+    if (frameWidth < 50) {
         frameWidth = 100;
+    }
 
     // For character-based height specs, handle minimum size more carefully
-    bool isCharacterHeight = frame->height.trimmed().endsWith('c', Qt::CaseInsensitive);
-    bool isCharacterWidth = frame->width.trimmed().endsWith('c', Qt::CaseInsensitive);
-    bool willHaveTitle = !frame->floating && frame->hasExplicitTitle;
+    const bool isCharacterHeight = frame->height.trimmed().endsWith('c', Qt::CaseInsensitive);
+    const bool isCharacterWidth = frame->width.trimmed().endsWith('c', Qt::CaseInsensitive);
+    const bool willHaveTitle = !frame->floating && frame->hasExplicitTitle;
 
     // Apply minimum size for visibility to non-character-based frames
     if (frameHeight < 20 && !isCharacterHeight) {
@@ -444,10 +464,10 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     // Add small padding compensation for character-based frames to ensure full character visibility
     // This accounts for any internal widget padding or text rendering margins
     if (isCharacterHeight || isCharacterWidth) {
-        if (isCharacterWidth && frameWidth > 0) {
+        if (isCharacterWidth) {
             frameWidth += 4; // Add 4px horizontal padding for character visibility
         }
-        if (isCharacterHeight && frameHeight > 0) {
+        if (isCharacterHeight) {
             frameHeight += 4; // Add 4px vertical padding for character visibility
         }
     }
@@ -455,7 +475,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     // Calculate position based on alignment
     int x = containerX;
     int y = containerY;
-    QString align = frame->align.toLower();
+    const QString align = frame->align.toLower();
 
     if (parentFrame) {
         // Nested frame - position within parent's bounds using VBox/HBox logic
@@ -473,61 +493,91 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
             y = containerY + containerSize.height() - frameHeight;
             frameWidth = containerSize.width();
         }
-    } else {
-        // Top-level frame - position at window edges and update MXP borders
-        QSize windowSize = mainConsole->size();
 
-        // Check for LEFT/TOP absolute positioning first - these take precedence over alignment
-        bool hasAbsolutePosition = !frame->left.isEmpty() || !frame->top.isEmpty();
-
-        if (hasAbsolutePosition) {
-            // Absolute positioning via LEFT/TOP attributes
-            if (!frame->left.isEmpty()) {
-                QSize leftSize = calculateFrameSize(frame->left, windowSize, false);
-                if (leftSize.width() > 0) {
-                    x = leftSize.width();
-                }
-            }
-            if (!frame->top.isEmpty()) {
-                QSize topSize = calculateFrameSize(frame->top, windowSize, true);
-                if (topSize.height() > 0) {
-                    y = topSize.height();
-                }
-            }
-            // Absolute positioned frames don't modify MXP borders
-        } else if (align == qsl("left")) {
-            // Left-aligned: position at actual left edge (after existing left MXP frames)
-            x = mMxpBorders.left();
-            y = 0;
-            frameHeight = windowSize.height();
-            // Update MXP left border
-            mMxpBorders.setLeft(mMxpBorders.left() + frameWidth);
-        } else if (align == qsl("right")) {
-            // Right-aligned: position at right edge
-            x = windowSize.width() - mMxpBorders.right() - frameWidth;
-            y = 0;
-            frameHeight = windowSize.height();
-            mMxpBorders.setRight(mMxpBorders.right() + frameWidth);
-        } else if (align == qsl("top")) {
-            // Top-aligned: position at top edge
-            x = mMxpBorders.left();
-            y = mMxpBorders.top();
-            frameWidth = windowSize.width() - mMxpBorders.left() - mMxpBorders.right();
-            mMxpBorders.setTop(mMxpBorders.top() + frameHeight);
-        } else if (align == qsl("bottom")) {
-            // Bottom-aligned: position at bottom edge
-            x = mMxpBorders.left();
-            y = windowSize.height() - mMxpBorders.bottom() - frameHeight;
-            frameWidth = windowSize.width() - mMxpBorders.left() - mMxpBorders.right();
-            mMxpBorders.setBottom(mMxpBorders.bottom() + frameHeight);
-        } else {
-            // No alignment and no absolute positioning - use container defaults
-            x = containerX;
-            y = containerY;
-        }
-
-        mpHost->setMxpBorders(mMxpBorders);
+        return {x, y, frameWidth, frameHeight};
     }
+
+    // Top-level frame - position at the edges of the available area and update MXP borders
+
+    // Check for LEFT/TOP absolute positioning first - these take precedence over alignment
+    const bool hasAbsolutePosition = !frame->left.isEmpty() || !frame->top.isEmpty();
+
+    if (hasAbsolutePosition) {
+        // Absolute positioning via LEFT/TOP attributes
+        if (!frame->left.isEmpty()) {
+            QSize leftSize = calculateFrameSize(frame->left, area.size(), false);
+            if (leftSize.width() > 0) {
+                x = area.x() + leftSize.width();
+            }
+        }
+        if (!frame->top.isEmpty()) {
+            QSize topSize = calculateFrameSize(frame->top, area.size(), true);
+            if (topSize.height() > 0) {
+                y = area.y() + topSize.height();
+            }
+        }
+        // Absolute positioned frames don't modify MXP borders
+    } else if (align == qsl("left")) {
+        // Left-aligned: position at actual left edge (after existing left MXP frames)
+        x = area.x() + mMxpBorders.left();
+        y = area.y();
+        frameHeight = area.height();
+        // Update MXP left border
+        mMxpBorders.setLeft(mMxpBorders.left() + frameWidth);
+    } else if (align == qsl("right")) {
+        // Right-aligned: position at right edge
+        x = area.x() + area.width() - mMxpBorders.right() - frameWidth;
+        y = area.y();
+        frameHeight = area.height();
+        mMxpBorders.setRight(mMxpBorders.right() + frameWidth);
+    } else if (align == qsl("top")) {
+        // Top-aligned: position at top edge
+        x = area.x() + mMxpBorders.left();
+        y = area.y() + mMxpBorders.top();
+        frameWidth = area.width() - mMxpBorders.left() - mMxpBorders.right();
+        mMxpBorders.setTop(mMxpBorders.top() + frameHeight);
+    } else if (align == qsl("bottom")) {
+        // Bottom-aligned: position at bottom edge
+        x = area.x() + mMxpBorders.left();
+        y = area.y() + area.height() - mMxpBorders.bottom() - frameHeight;
+        frameWidth = area.width() - mMxpBorders.left() - mMxpBorders.right();
+        mMxpBorders.setBottom(mMxpBorders.bottom() + frameHeight);
+    }
+
+    return {x, y, frameWidth, frameHeight};
+}
+
+void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
+{
+    if (!mpHost || !mpHost->mpConsole) {
+        qWarning() << "TMxpFrameManager::layoutInternalFrame: No console available";
+        return;
+    }
+
+    TMainConsole* mainConsole = mpHost->mpConsole.data();
+
+    // Note: DOCK tabbing is handled in createFrame() when ALIGN=CLIENT is set.
+    // Per CMUD, ALIGN=CLIENT + DOCK creates tabbed frames.
+    // This is a CMUD extension, not part of the official MXP 1.0 specification.
+
+    // Check if we're inside a DEST - if so, nest this frame inside the destination
+    TMxpFrame* parentFrame = nullptr;
+    if (!mCurrentDestination.isEmpty()) {
+        parentFrame = getFrame(mCurrentDestination);
+    }
+
+    const QRect geometry = calculateFrameGeometry(frame, parentFrame);
+    const int x = geometry.x();
+    const int y = geometry.y();
+    const int frameWidth = geometry.width();
+    const int frameHeight = geometry.height();
+
+    // A nested frame never touches mMxpBorders, so this hands Host the margins
+    // it already has and setBorders() drops it
+    mpHost->setMxpBorders(mMxpBorders);
+
+    const bool isCharacterHeight = frame->height.trimmed().endsWith('c', Qt::CaseInsensitive);
+    const bool willHaveTitle = !frame->floating && frame->hasExplicitTitle;
 
     // FLOATING attribute, no explicit title, or very small height = borderless frame without header
     // Exception: character-based frames with explicit titles always show headers
@@ -1002,51 +1052,58 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     console->show();
 }
 
-void TMxpFrameManager::recalculateBorders()
+void TMxpFrameManager::scheduleRelayout()
+{
+    if (mRelayoutPending || mFrames.isEmpty()) {
+        return;
+    }
+
+    // Deferred so that the layout of the widgets frames are placed against has
+    // settled, and so that pushing new borders from here cannot re-enter the
+    // resize handling that asked for the relayout. The push at the end of a
+    // relayout does schedule one more pass, which then finds the same borders
+    // and stops there because Host::setBorders() ignores an unchanged value.
+    mRelayoutPending = true;
+    QTimer::singleShot(0, mpHost, [this]() {
+        mRelayoutPending = false;
+        relayoutFrames();
+    });
+}
+
+void TMxpFrameManager::relayoutFrames()
 {
     if (!mpHost) {
         return;
     }
 
-    // Reset borders and recalculate based on remaining frames
+    // calculateFrameGeometry() accumulates into these, so they have to start
+    // empty or every pass would count the same frames again
     mMxpBorders = QMargins();
 
-    if (!mpHost->mpConsole) {
+    if (mpHost->mpConsole.isNull() || !mpHost->mpConsole->mpMainFrame) {
         mpHost->setMxpBorders(mMxpBorders);
         return;
     }
 
-    QSize windowSize = mpHost->mpConsole->size();
+    const QWidget* mainFrame = mpHost->mpConsole->mpMainFrame;
 
-    // Recalculate borders by examining all remaining top-level frames
-    // (frames without parents that affect the main window borders)
-    for (auto* frame : mFrames.values()) {
-        if (!frame || frame->parentFrame) {
-            continue; // Skip child frames, only process top-level frames
-        }
+    // calculateFrameGeometry() also accumulates into a parent's usedHeight, so
+    // without this nested frames would march further down on every pass
+    for (auto* frame : std::as_const(mFrameOrder)) {
+        frame->usedHeight = 0;
+    }
 
-        // Only frames that were positioned using alignment (not absolute positioning)
-        // contribute to MXP borders
-        bool hasAbsolutePosition = !frame->left.isEmpty() || !frame->top.isEmpty();
-        if (hasAbsolutePosition) {
+    for (auto* frame : std::as_const(mFrameOrder)) {
+        // Skip a frame whose layout never produced a widget, one docked as a tab
+        // (the QTabWidget places it), and one in a window of its own. An external
+        // frame keeps mpMainFrame as its parent even after Qt::Window is set on
+        // it, so isWindow() rather than the parent is what tells them apart.
+        if (!frame->widget || frame->widget->isWindow() || frame->widget->parentWidget() != mainFrame) {
             continue;
         }
 
-        QString align = frame->align.toLower();
-        QSize widthSize = calculateFrameSize(frame->width, windowSize, false);
-        QSize heightSize = calculateFrameSize(frame->height, windowSize, true);
-
-        if (align == qsl("left")) {
-            mMxpBorders.setLeft(mMxpBorders.left() + widthSize.width());
-        } else if (align == qsl("right")) {
-            mMxpBorders.setRight(mMxpBorders.right() + widthSize.width());
-        } else if (align == qsl("top")) {
-            mMxpBorders.setTop(mMxpBorders.top() + heightSize.height());
-        } else if (align == qsl("bottom")) {
-            mMxpBorders.setBottom(mMxpBorders.bottom() + heightSize.height());
-        }
+        frame->widget->setGeometry(calculateFrameGeometry(frame, frame->parentFrame));
     }
 
-    // Apply the recalculated borders
     mpHost->setMxpBorders(mMxpBorders);
 }

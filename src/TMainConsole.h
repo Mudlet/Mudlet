@@ -116,7 +116,6 @@ public:
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
-    const QString& getSystemSpellDictionary() const { return mSpellDic; }
     const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
     // Either returns the handle of the per profile or the shared Mudlet one or
@@ -129,7 +128,6 @@ public:
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
     void toggleLogging(bool);
     void printOnDisplay(std::string&, bool isFromServer = false);
-    void runTriggers(int);
     void finalize();
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
@@ -145,10 +143,16 @@ public:
     QMap<QString, TScrollBox*> mScrollBoxMap;
     mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
-    QFile mLogFile;
-    QString mLogFileName;
-    QTextStream mLogStream;
-    bool mLogToLogFile = false;
+    // The log lifecycle lives in the core console model so a profile with no
+    // view can run one; these four are references aliasing the model's fields,
+    // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
+    // are what keep TLuaInterpreter::startLogging() compiling unchanged; the
+    // other two are kept so the set does not have to be reasoned about in
+    // halves.
+    QFile& mLogFile;
+    QString& mLogFileName;
+    QTextStream& mLogStream;
+    bool& mLogToLogFile;
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
@@ -165,6 +169,13 @@ public slots:
     void slot_reloadMap(QList<QString>);
 
 
+private slots:
+    // The two halves of a logging change that need this view: the core model
+    // owns everything else about it.
+    void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
+    void slot_loggingStateChanged(const bool isLogging);
+
+
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet
     // class, second argument is true for a lower priority indication when
@@ -175,10 +186,11 @@ signals:
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
 
-    // Was public in Host class but made private there and cloned to here
-    // (for main TConsole) to prevent it being changed without going through the
-    // process to load in the changed dictionary:
-    QString mSpellDic;
+    // Names the dictionary mpHunspell_system was last built for. Assigned before
+    // the load is attempted and never rolled back, so a dictionary whose files
+    // are missing is remembered as loaded and never retried. Host's mSpellDic is
+    // the profile's setting; this is only ever what has been loaded from it.
+    QString mLoadedSystemDictionary;
 
     // Cloned from Host
     bool mEnableUserDictionary = true;

@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
+#include "TMapView.h"
 #include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
@@ -39,6 +40,7 @@
 #include <QBuffer>
 #include <QDataStream>
 #include <QElapsedTimer>
+#include <QFontMetrics>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -49,11 +51,28 @@
 #include <QPixmap>
 #include <QSaveFile>
 #include <QSizeF>
+#include <QXmlStreamReader>
 #include <chrono>
 
 using namespace std::chrono_literals;
 
 namespace {
+// A map file can carry a room symbol scaling factor that TMap's own setter
+// would refuse - hand-edited, from a third-party tool, or written by a Mudlet
+// whose JSON reader truncated it (issue #10176). Loading cannot go through the
+// setter, which would mark the freshly loaded map as unsaved, so it comes
+// through here instead: 0 and below blanks every room symbol, which is worse
+// than a factor that is merely not what the file said.
+qreal usableSymbolFontFudgeFactor(const qreal fromFile)
+{
+    if (!qIsFinite(fromFile)) {
+        // NaN compares false against both bounds, so qBound() cannot be relied
+        // on to sort it out
+        return 1.0;
+    }
+    return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
+}
+
 // Restores font information from userData that was stored during binary serialization.
 // Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
 void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
@@ -81,6 +100,45 @@ void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QS
             qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
         }
     }
+}
+
+enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
+
+struct MapFileCheck
+{
+    MapFileCheckResult result;
+    QString errorString;
+};
+
+// A file holds map data only if its root element is <map>. XMLimport reads a
+// <MudletPackage> document as a package, and anything else - a game's HTML "no
+// map here" page answered with a 200, say - as a well-formed document full of
+// elements it does not recognise: either way it reports success having put no
+// rooms on the map it was asked to fill. A file that is not XML at all is told
+// apart from those, so that a damaged map is not reported as somebody else's
+// web page.
+MapFileCheck fileHoldsMapData(QFile& file)
+{
+    const qint64 startPosition = file.pos();
+    MapFileCheck check{MapFileCheckResult::NotAMap, QString()};
+    QXmlStreamReader reader(&file);
+    while (!reader.atEnd()) {
+        if (reader.readNext() == QXmlStreamReader::StartElement) {
+            // XML allows only one root element, so the first start element is it
+            check.result = (reader.name() == qsl("map")) ? MapFileCheckResult::ValidMap : MapFileCheckResult::NotAMap;
+            break;
+        }
+    }
+
+    if (reader.hasError()) {
+        check.result = MapFileCheckResult::ParseError;
+        check.errorString = reader.errorString();
+    }
+
+    // The reader buffers ahead, so the parse proper has to be given the file
+    // back where it was rather than where the scan above left it
+    file.seek(startPosition);
+    return check;
 }
 } // anonymous namespace
 
@@ -179,7 +237,7 @@ void TMap::logError(const QString& msg)
 //    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 //}
 
-bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
+bool TMap::setRoomArea(int id, int area)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
@@ -203,7 +261,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to retain the API for the lua subsystem...
     }
 
-    const bool result = pR->setArea(area, deferAreaRecalculations);
+    const bool result = pR->setArea(area);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
@@ -1112,14 +1170,19 @@ bool TMap::findPath(int from, int to)
 
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
-    // clamp version values
-    if (saveVersion < 0) {
-        saveVersion = 0;
-    } else if (saveVersion > mMaxVersion) {
-        saveVersion = mMaxVersion;
+    if (saveVersion > mMaxVersion) {
         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                                   "for this version of Mudlet. Supported are only formats up to version %2.")
                                        .arg(QString::number(saveVersion), QString::number(mMaxVersion));
+        appendErrorMsgWithNoLf(errMsg, false);
+        postMessage(errMsg);
+        return false;
+    }
+    if (saveVersion != 0 && saveVersion < mMinVersion) {
+        //: Shown when a map save asks for a format version older than this Mudlet can write. %1 is the version asked for, %2 the oldest one supported.
+        const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too old\n"
+                                  "for this version of Mudlet. Supported are only formats from version %2.")
+                                       .arg(QString::number(saveVersion), QString::number(mMinVersion));
         appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1596,6 +1659,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
 
 bool TMap::restore(QString location)
 {
+    const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
     QElapsedTimer _time;
@@ -1740,6 +1804,7 @@ bool TMap::restore(QString location)
 
         mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias
                                                                           | QFont::PreferQuality | QFont::PreferNoShaping));
+        mMapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(mMapSymbolFontFudgeFactor);
         if (mVersion >= 14) {
             int areaSize = 0;
             ifs >> areaSize;
@@ -1920,6 +1985,13 @@ bool TMap::restore(QString location)
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
         if (canRestore) {
+            // The symbol settings were assigned to the members directly above,
+            // rather than through the setters, so that loading a map does not
+            // mark it unsaved. Everything mirroring them still has to be told -
+            // the rendered symbol caches and any open preferences dialog - and
+            // only now, with the rooms in place for the glyph usage table:
+            flushSymbolCaches();
+            emit signal_mapSymbolFontChanged();
             return true;
         }
     }
@@ -2498,6 +2570,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
 
 void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     if (!pHost) {
         return;
@@ -2560,7 +2633,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (localFileName.isEmpty()) {
-        if (url.toString().endsWith(QLatin1String("xml"))) {
+        if (url.path().endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
             mLocalMapFileName = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         } else {
             mLocalMapFileName = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
@@ -2639,9 +2712,53 @@ bool TMap::importMap(QFile& file, QString* errMsg)
 
 bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     bool isLocalImport = false;
     if (!pHost) {
+        return false;
+    }
+
+    const MapFileCheck check = fileHoldsMapData(file);
+    if (check.result != MapFileCheckResult::ValidMap) {
+        // Both wordings are built before either is used: which one is wanted turns on what
+        // was wrong with the file, and where it goes turns on who asked, and keeping those
+        // two questions apart is what stops this being four near-identical branches
+        QString luaMessage;
+        QString consoleMessage;
+
+        if (check.result == MapFileCheckResult::ParseError) {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "is damaged or unreadable (%2), so the current map has been left as it was.")
+                                 .arg(file.fileName(), check.errorString);
+            //: Shown in the main console. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "is damaged or unreadable (%2) - so the current map has been\n"
+                                "left as it was.")
+                                     .arg(file.fileName(), check.errorString);
+        } else {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "does not contain a map, so the current map has been left as it was.")
+                                 .arg(file.fileName());
+            //: Shown in the main console. %1 is the path and name of the file that was read
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "does not contain a map - a game with no map to offer can answer a\n"
+                                "download with an error page instead of one - so the current map has\n"
+                                "been left as it was.")
+                                     .arg(file.fileName());
+        }
+
+        if (errMsg) {
+            *errMsg = luaMessage;
+        } else {
+            postMessage(consoleMessage);
+        }
         return false;
     }
 
@@ -2753,12 +2870,13 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
-        // Don't report on any errors here as we've already done so in slot_downloadError(...) previously.
+    if (reply->error() != QNetworkReply::NoError) {
+        // Nothing to report here: slot_downloadError(...) has already done so
+        // for a failure, and slot_downloadCancel() for a cancel. Either way the
+        // reply has nothing to give, and writing that over the destination file
+        // and handing it to the map reader would cost the loaded map.
         cleanup();
         return;
-        // else was QNetworkReply::OperationCanceledError and we already handle
-        // THAT in slot_downloadCancel()
     }
     // Separate the two kinds of files to gain QSaveFile's atomic write behavior
     QSaveFile writeFile(mLocalMapFileName);
@@ -2942,6 +3060,23 @@ void TMap::clearTransferProgress()
     }
 }
 
+void TMap::requestMapOperationAbort()
+{
+    if (!mMapOperationDepth || mMapOperationAbortRequested) {
+        return;
+    }
+    mMapOperationAbortRequested = true;
+    // Deliberately not slot_mapProgressDialogCancelled(): that is the user
+    // pressing Abort and says so in the console, whereas this is the profile
+    // going away and has no console left to say it to. What it does share is
+    // the flag the JSON import and export poll at their next progress step, and
+    // dropping a download that would otherwise hold the close up on the network.
+    mMapProgressCancelRequested = true;
+    if (mMapProgressIsTransfer && mpNetworkReply) {
+        mpNetworkReply->abort();
+    }
+}
+
 void TMap::slot_mapProgressDialogCancelled()
 {
     // The JSON path polls mMapProgressCancelRequested in its increment loop; the
@@ -3014,6 +3149,111 @@ void TMap::setRoomNamesShown(bool shown)
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
 }
 
+// The style strategy carries the rendering flags applied when the map was
+// loaded, along with the NoFontMerging bit that mIsOnlyMapSymbolFontToBeUsed
+// owns. A font picked from a font combo-box or named from Lua has neither, so
+// carry the existing strategy (and size) over instead of taking the incoming
+// font wholesale.
+bool TMap::setSymbolFont(const QFont& font)
+{
+    QFont wantedFont = font;
+    wantedFont.setPointSize(mMapSymbolFont.pointSize());
+    wantedFont.setStyleStrategy(mMapSymbolFont.styleStrategy());
+    if (mMapSymbolFont == wantedFont) {
+        return false;
+    }
+
+    mMapSymbolFont = wantedFont;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+bool TMap::setOnlySymbolFontUsed(const bool onlyUseSelectedFont)
+{
+    if (mIsOnlyMapSymbolFontToBeUsed == onlyUseSelectedFont) {
+        return false;
+    }
+
+    mIsOnlyMapSymbolFontToBeUsed = onlyUseSelectedFont;
+    if (onlyUseSelectedFont) {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+    } else {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+    }
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The bounds belong here rather than at each caller: a factor of zero or less
+// blanks every room symbol, so nothing may store one whatever route it came in
+// by. NaN needs saying separately because it compares false against both
+// bounds, so a plain range test would pass it through.
+bool TMap::setSymbolFontFudgeFactor(const qreal fudgeFactor)
+{
+    if (!qIsFinite(fudgeFactor) || fudgeFactor < scmMinimumSymbolFontFudgeFactor || fudgeFactor > scmMaximumSymbolFontFudgeFactor) {
+        return false;
+    }
+    if (qFuzzyCompare(mMapSymbolFontFudgeFactor, fudgeFactor)) {
+        return false;
+    }
+
+    mMapSymbolFontFudgeFactor = fudgeFactor;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The same check T2DMap::addSymbolToPixmapCache() makes before it gives up and
+// draws the replacement character instead, asked of the whole map at once. The
+// font is taken as it would be used, so whether font merging is on decides
+// whether the fallbacks count.
+QStringList TMap::symbolsNotInFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    QStringList missingSymbols;
+    const QHash<QString, QSet<int>> symbolsInUse = roomSymbolsHash();
+    for (auto it = symbolsInUse.cbegin(), end = symbolsInUse.cend(); it != end; ++it) {
+        for (const quint32 codePoint : it.key().toUcs4()) {
+            if (!metrics.inFontUcs4(codePoint)) {
+                missingSymbols << it.key();
+                break;
+            }
+        }
+    }
+
+    // roomSymbolsHash() is a QHash, so without this the same map gives a
+    // different order from one call to the next:
+    missingSymbols.sort();
+    return missingSymbols;
+}
+
+// Every 2D map keeps its own cache of rendered symbol pixmaps, so all of them
+// have to be dropped - the main mapper and any secondary map views.
+void TMap::flushSymbolCaches()
+{
+    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
+        mpMapper->mp2dMap->flushSymbolPixmapCache();
+        mpMapper->mp2dMap->update();
+        mpMapper->update();
+    }
+
+    if (!mpViewManager) {
+        return;
+    }
+    for (const int viewId : mpViewManager->getViewIds()) {
+        auto* pView = mpViewManager->getView(viewId);
+        if (pView && pView->get2DMap()) {
+            pView->get2DMap()->flushSymbolPixmapCache();
+            pView->get2DMap()->update();
+        }
+    }
+}
+
 /*
  * Notes on the format version numbers in JSON files - we use this to track any
  * changes in a major.minor number format, the minor number is to be three
@@ -3032,6 +3272,7 @@ void TMap::setRoomNamesShown(bool shown)
  */
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
+    const MapOperationScope operationScope(this);
     QString destination{dest};
 
     if (destination.isEmpty()) {
@@ -3222,6 +3463,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 // Lua sub-system and do need to report the file:
 std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts)
 {
+    const MapOperationScope operationScope(this);
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
 
@@ -3306,7 +3548,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
-    const float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
+    // qRound() returns an int, so dividing by an int literal here used to be
+    // integer division and every load rounded the factor to a whole number -
+    // issue #10176, which turned anything below 1.0 into a 0 that stops room
+    // symbols being drawn at all. The 1000 is to keep the value to the three
+    // decimals the preferences offer:
+    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
     const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
     quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
@@ -3414,6 +3661,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mpMapper && mpMapper->mp2dMap) {
         mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
     }
+    // As in restore(): the symbol settings above went straight into the members
+    // so that loading does not mark the map unsaved, which leaves the rendered
+    // symbol caches and any open preferences dialog to be told separately:
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
     emit signal_mapProgressClose();
     mMapProgressStandalone = false;
     return {true, QString()};

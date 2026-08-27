@@ -129,7 +129,10 @@ void crashIfRequested()
     const char* environmentVariable = std::getenv("MUDLET_CRASH_TEST");
 
     if (environmentVariable && *environmentVariable == '1') {
-        int* p = nullptr;
+        // volatile is important: a null write is undefined behaviour and
+        // clang -O2 deletes the branch without it, so the hook would do nothing
+        // on every Windows and macOS release.
+        volatile int* p = nullptr;
         *p = 42;
     }
 }

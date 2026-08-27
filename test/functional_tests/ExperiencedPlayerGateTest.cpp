@@ -34,17 +34,11 @@
 #include <QtTest/QtTest>
 #include <QTimeZone>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
 
-// init() reads compiled-in resources, which are not registered automatically in
-// a test binary that links mudlet_core statically
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForExperiencedPlayerGateTest();
+#include "GroupedTest.h"
 
 class ExperiencedPlayerGateTest : public QObject
 {
@@ -69,12 +63,6 @@ private:
     }
 
     void setFirstLaunch(QSettings& settings, const QDateTime& when) const { settings.setValue(mKey, when.toUTC().toString(Qt::ISODate)); }
-
-    // setupConfig() consults portable.txt before the XDG logic
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
 private slots:
     void initTestCase() { mSavedXdg = qgetenv("XDG_CONFIG_HOME"); }
@@ -296,17 +284,17 @@ private slots:
             QSKIP("portable.txt present - setupConfig() takes the portable branch");
         }
         QVERIFY(mLiveConfig.isValid());
-        // An empty $XDG_CONFIG_HOME/mudlet is the opt-in marker, without which
+        // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in marker, without which
         // setupConfig() keeps using a legacy ~/.config/mudlet
         const QString configDir = qsl("%1/mudlet").arg(mLiveConfig.path());
-        QVERIFY(QDir().mkpath(configDir));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(configDir)));
         qputenv("XDG_CONFIG_HOME", mLiveConfig.path().toUtf8());
 
-        initializeQRCResourcesForExperiencedPlayerGateTest();
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(mudlet::getMudletPath(enums::mainPath), configDir);
-        QVERIFY(!QDir(mudlet::getMudletPath(enums::profilesPath)).exists());
+        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
+        QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(), "the opt-in profiles/ dir has to be empty, or this is not a fresh install");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
 
         mudlet::self()->init();
@@ -333,20 +321,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForExperiencedPlayerGateTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ExperiencedPlayerGateTest.moc"
-QTEST_MAIN(ExperiencedPlayerGateTest)
+MUDLET_GROUPED_TEST_MAIN(ExperiencedPlayerGateTest)

@@ -171,6 +171,10 @@ public:
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
+    // How many symbols that cache is holding - the only way from outside to
+    // tell that a flush reached this particular 2D map, of which there is one
+    // per secondary map view as well as the mapper's own:
+    qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
     void flushTextLabelPixmapCache() { mTextLabelPixmapCache.clear(); }
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
@@ -413,6 +417,8 @@ private:
 
     void updateSelectionWidget();
     void resizeMultiSelectionWidget();
+    void hideSelectionWidget();
+    void pruneRoomSelectionToArea(int areaId);
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;

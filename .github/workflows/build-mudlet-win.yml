@@ -1,5 +1,7 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win-pr.yml
-# Changes here likely need to be mirrored there as well.
+# Changes here likely need to be mirrored there as well, apart from the ccache
+# deletion below: pull request caches are scoped to their own ref and keyed per
+# commit, so nothing there ever holds a key it needs to reuse.
 name: 🔨 Build Mudlet (windows)
 on:
   push:
@@ -14,7 +16,9 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
-# Permissions required for SignPath trusted build verification
+# id-token and contents are what SignPath's trusted build verification needs;
+# actions: write is for deleting the branch's previous ccache entry before
+# saving the new one.
 permissions:
   id-token: write
   contents: read
@@ -109,17 +113,17 @@ jobs:
     - name: (Windows) Run QTest
       shell: msys2 {0}
       run: |
-        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
-        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
-      env:
-        QT_FORCE_STDERR_LOGGING: 1
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 2
+      # ~94s measured here, and a slow runner can take half again as long - kept in
+      # step with the other platforms
+      timeout-minutes: 6
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -129,9 +133,9 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
-        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
-        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
         # Linux and macOS start the fixture HTTP server in a step of their own,
@@ -170,7 +174,7 @@ jobs:
         fi
         echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
 
-        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
+        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test" --offline
 
     - name: Passed Lua tests
       shell: msys2 {0}
@@ -181,8 +185,42 @@ jobs:
           exit 1
         fi
 
+    # Cache keys are immutable, so the save below is refused while the branch's
+    # previous entry still holds the key, and the branch cache only ever
+    # refreshes when GitHub's eviction happens to drop it first. Deleting by key
+    # rather than by id covers a key held by several entries at once, which is
+    # what cache version drift leaves behind. Two pushes overlapping here is
+    # fine - the loser's save is refused and the next push heals it - but the
+    # branch has no cache at all between this step and the save, so a run
+    # cancelled in between leaves the next build cold.
+
+    # A PTB is a scheduled run of this workflow on development, so its key is
+    # the development key rather than one of its own. It restores at ~98.5% and
+    # then contributes 6-9 of ~550 objects back, none of which the next PTB can
+    # reuse - the differing ones are the app-build.txt resource. Not worth
+    # reopening the delete-to-save hole above on the branch key once a night.
+    # Git bash rather than the msys2 shell the build steps use: gh ships with
+    # the runner image and is on the native PATH.
+    - name: Delete the previous ccache entry
+      if: >-
+        always() && steps.restore-ccache.outputs.cache-primary-key != ''
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CACHE_KEY: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+      run: |
+        key="$(jq -rn --arg key "${CACHE_KEY}" '$key|@uri')"
+        if response="$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${key}" 2>&1)"; then
+          echo "deleted the previous ${CACHE_KEY} entry"
+        elif [[ "${response}" == *"HTTP 404"* ]]; then
+          echo "no ${CACHE_KEY} entry to delete yet"
+        else
+          echo "::warning::could not delete ${CACHE_KEY}, so the save below will be refused and this branch's ccache will go stale: ${response}"
+        fi
+
     - name: Save ccache
-      if: always()
+      if: always() && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
@@ -415,7 +453,9 @@ jobs:
     - name: Upload artifact to make.mudlet.org
       shell: msys2 {0}
       if: env.ARTIFACT_NAME != '' && !startsWith(github.ref, 'refs/tags/')
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
+      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Upload release asset for GitHub Release
       uses: actions/upload-artifact@v7

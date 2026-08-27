@@ -77,6 +77,7 @@ signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
+    void signal_mapSymbolFontChanged();
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
@@ -116,7 +117,7 @@ public:
                        QColor outline = Qt::black);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
-    bool setRoomArea(int id, int area, bool deferAreaRecalculations = false);
+    bool setRoomArea(int id, int area);
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
     void logError(const QString&);
@@ -184,6 +185,20 @@ public:
     void disableTransferProgressCancel();
     void clearTransferProgress();
 
+    // True while a map import, export or download is on the stack. Those pump
+    // qApp->processEvents() to keep their progress display alive, so anything
+    // delivered from an event loop can find itself running nested inside one -
+    // and destroying this map's Host from there would free the operation's own
+    // "this" (#9520). Whoever would do that has to wait for this to go false.
+    bool mapOperationInProgress() const { return mMapOperationDepth > 0; }
+    // Ask an operation that is in progress to stop at its next opportunity, so
+    // that a caller waiting on the above does not wait for a whole map. Only the
+    // JSON import and export poll this; an XML import or a download runs to its
+    // own end. Asking twice does nothing, which mapOperationAbortRequested()
+    // also lets a caller polling in a loop see.
+    void requestMapOperationAbort();
+    bool mapOperationAbortRequested() const { return mMapOperationAbortRequested; }
+
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
@@ -195,6 +210,22 @@ public:
     // show room labels on the map?
     bool getRoomNamesShown();
     void setRoomNamesShown(bool shown);
+
+    // The 2D map room symbol settings, shared by the preferences dialog and
+    // the Lua API. Each returns whether the setting actually changed:
+    QFont getSymbolFont() const { return mMapSymbolFont; }
+    bool setSymbolFont(const QFont&);
+    bool getOnlySymbolFontUsed() const { return mIsOnlyMapSymbolFontToBeUsed; }
+    bool setOnlySymbolFontUsed(bool);
+    qreal getSymbolFontFudgeFactor() const { return mMapSymbolFontFudgeFactor; }
+    bool setSymbolFontFudgeFactor(qreal);
+    // The range setSymbolFontFudgeFactor() accepts; also what the preferences
+    // spin-box offers. Zero and below blanks every symbol (issue #10176):
+    static constexpr qreal scmMinimumSymbolFontFudgeFactor = 0.50;
+    static constexpr qreal scmMaximumSymbolFontFudgeFactor = 2.00;
+    // Which of the symbols in use would be drawn as the replacement character
+    // if the given font were the symbol font:
+    QStringList symbolsNotInFont(const QFont&);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
@@ -381,6 +412,34 @@ public slots:
 
 
 private:
+    // Held for the whole of a map operation that pumps the event loop, so that
+    // mapOperationInProgress() can tell anything re-entered from that pump that
+    // this map is on the stack. Nested operations are counted, not flagged: an
+    // XML import can start from inside a download's pump.
+    class MapOperationScope
+    {
+    public:
+        explicit MapOperationScope(TMap* pMap)
+        : mpMap(pMap)
+        {
+            if (!mpMap->mMapOperationDepth) {
+                mpMap->mMapOperationAbortRequested = false;
+            }
+            ++mpMap->mMapOperationDepth;
+        }
+        ~MapOperationScope() { --mpMap->mMapOperationDepth; }
+        MapOperationScope(const MapOperationScope&) = delete;
+        MapOperationScope& operator=(const MapOperationScope&) = delete;
+
+    private:
+        TMap* mpMap = nullptr;
+    };
+
+    int mMapOperationDepth = 0;
+    // requestMapOperationAbort() is asked again on every retry of a deferred
+    // profile close, and asking twice would abort a network reply twice over.
+    bool mMapOperationAbortRequested = false;
+
     void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
                              unsigned int source,
@@ -394,6 +453,7 @@ private:
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
+    void flushSymbolCaches();
 
     QStringList mStoredMessages;
 

@@ -23,6 +23,7 @@
  ***************************************************************************/
 
 #include <QApplication>
+#include <QCryptographicHash>
 #include <QEnterEvent>
 #include <QDir>
 #include <QRegularExpression>
@@ -69,6 +70,30 @@ public:
             return 0;
         }
         const size_t copyLen = (srcLen < destSize) ? srcLen : destSize - 1;
+        std::memcpy(dest, src, copyLen);
+        dest[copyLen] = '\0';
+        return copyLen;
+    }
+
+    // As copyString(), but for UTF-8 data that has to stay valid UTF-8: the copy
+    // stops at the last character that fits whole rather than at the last byte,
+    // so no trailing half-character is left behind. Use it wherever a truncated
+    // copy is handed on to something that decodes it - Discord discards an
+    // entire presence frame whose JSON payload carries an incomplete sequence.
+    // Returns the number of bytes copied (excluding the null terminator).
+    static size_t copyUtf8String(char* dest, size_t destSize, const char* src, size_t srcLen)
+    {
+        if (destSize == 0) {
+            return 0;
+        }
+        size_t copyLen = (srcLen < destSize) ? srcLen : destSize - 1;
+        // Every byte after the first of a multi-byte character has the form
+        // 10xxxxxx, so a cut in front of one is a cut inside a character: walk
+        // back to where that character starts. A cut that took everything (or
+        // that landed on a character start) needs no adjustment.
+        while (copyLen > 0 && copyLen < srcLen && (static_cast<unsigned char>(src[copyLen]) & 0xC0u) == 0x80u) {
+            --copyLen;
+        }
         std::memcpy(dest, src, copyLen);
         dest[copyLen] = '\0';
         return copyLen;
@@ -147,56 +172,117 @@ public:
     struct ConfigDirResolution
     {
         QString path;
-        // True only in the migration-guard case: XDG_CONFIG_HOME is set but
-        // $XDG_CONFIG_HOME/mudlet is not (yet) Mudlet's, so an existing legacy
-        // dir is used instead. The caller can then hint the user how to migrate.
+        // XDG_CONFIG_HOME is set, but an existing legacy dir was used anyway, so
+        // the caller can hint at the migration
         bool migrationPending = false;
+        // legacyDefault, when it holds profiles that the chosen dir now hides. The
+        // caller has to name it, or those profiles read as gone.
+        QString shadowedProfilesPath;
     };
 
-    // Resolve Mudlet's config root honoring XDG_CONFIG_HOME, with a migration
-    // guard. The caller handles portable.txt first (it still wins); this covers
-    // the rest:
-    //  - XDG_CONFIG_HOME unset/empty/relative   -> legacyDefault (~/.config/mudlet)
-    //  - $XDG_CONFIG_HOME/mudlet is Mudlet's      -> it (already migrated / opt-in)
-    //  - not Mudlet's but legacyDefault exists    -> legacyDefault, so exporting
-    //    XDG_CONFIG_HOME never strands existing profiles
-    //  - neither is usable                        -> $XDG_CONFIG_HOME/mudlet (fresh)
-    // "Mudlet's" means the dir holds a Mudlet.ini or profiles/, or is an empty
-    // opt-in dir a test harness pre-created. This deliberately ignores the stale
-    // $XDG_CONFIG_HOME/mudlet/Mudlet.conf that pre-4.19 Mudlet wrote there (its
-    // NativeFormat settings) while profiles stayed in ~/.config/mudlet - treating
-    // that leftover as the config root would hide such a user's profiles.
+    // How strongly a directory claims to be Mudlet's config root; the stronger
+    // claim wins in xdgConfigDir(), so the order is the contract.
+    enum class ConfigDirClaim {
+        absent = 0,
+        // Exists, but holds nothing Mudlet put there - including the stale
+        // Mudlet.conf pre-4.19 Mudlet left in $XDG_CONFIG_HOME/mudlet while its
+        // profiles stayed in ~/.config/mudlet
+        unclaimed = 1,
+        settings = 2,
+        profiles = 3,
+    };
+
+    // A directory that cannot be listed must never read as "nothing here": that
+    // inference is what hides profiles, so assume the strongest content instead.
+    static bool configDirHoldsProfiles(const QString& dir)
+    {
+        if (!QDir(dir).exists()) {
+            return false;
+        }
+        if (!QFileInfo(dir).isReadable()) {
+            return true;
+        }
+        const QDir profiles(qsl("%1/profiles").arg(dir));
+        if (!profiles.exists()) {
+            return false;
+        }
+        // Counted as mudlet.cpp's anyProfilesExist() does, so the two cannot disagree
+        return !QFileInfo(profiles.path()).isReadable() || !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+    }
+
+    static ConfigDirClaim configDirClaim(const QString& dir)
+    {
+        if (!QDir(dir).exists()) {
+            return ConfigDirClaim::absent;
+        }
+        if (configDirHoldsProfiles(dir)) {
+            return ConfigDirClaim::profiles;
+        }
+        if (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(dir))) {
+            return ConfigDirClaim::settings;
+        }
+        return ConfigDirClaim::unclaimed;
+    }
+
+    // $XDG_CONFIG_HOME/mudlet claims more than it holds, because creating
+    // profiles/ there is the deliberate opt-in into an isolated config root. The
+    // legacy dir gets no such credit: an empty profiles/ left behind by deleting
+    // the last profile would otherwise outrank a config root in active use.
+    static ConfigDirClaim xdgConfigDirClaim(const QString& dir)
+    {
+        if (QDir(qsl("%1/profiles").arg(dir)).exists()) {
+            return ConfigDirClaim::profiles;
+        }
+        return configDirClaim(dir);
+    }
+
+    // cleanPath() is not enough: a symlinked ~/.config gives one directory two
+    // spellings, and dotfile managers produce exactly that
+    static QString configDirIdentity(const QString& dir)
+    {
+        const QString canonical = QFileInfo(dir).canonicalFilePath();
+        return canonical.isEmpty() ? QDir::cleanPath(dir) : canonical;
+    }
+
+    // Resolve Mudlet's config root honoring XDG_CONFIG_HOME; the caller handles
+    // portable.txt first, which still wins. $XDG_CONFIG_HOME/mudlet takes a tie so
+    // that a fresh install lands there.
     static ConfigDirResolution xdgConfigDir(const QString& legacyDefault)
     {
         const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
         // The XDG base-dir spec requires an absolute path; a relative (or empty)
         // value must be ignored, which also avoids a surprising CWD-relative root.
         if (xdgConfigHome.isEmpty() || !QDir::isAbsolutePath(xdgConfigHome)) {
-            return {legacyDefault, false};
+            return {legacyDefault, false, QString()};
         }
         const QString xdgTarget = QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
-        const QDir xdgDir(xdgTarget);
-        const bool xdgIsMudlets = xdgDir.exists() && (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(xdgTarget)) || QDir(qsl("%1/profiles").arg(xdgTarget)).exists() || xdgDir.isEmpty());
-        if (xdgIsMudlets) {
-            return {xdgTarget, false};
+        if (xdgConfigDirClaim(xdgTarget) < configDirClaim(legacyDefault)) {
+            return {legacyDefault, true, QString()};
         }
-        if (QDir(legacyDefault).exists()) {
-            return {legacyDefault, true};
-        }
-        return {xdgTarget, false};
+        // XDG_CONFIG_HOME=$HOME/.config makes both candidates one directory
+        const bool shadowing = configDirIdentity(legacyDefault) != configDirIdentity(xdgTarget) && configDirHoldsProfiles(legacyDefault);
+        return {xdgTarget, false, shadowing ? legacyDefault : QString()};
     }
 
     inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
+    static constexpr int scmMaxPathComponentLength = 50;
+    static constexpr int scmPathComponentDigestLength = 16;
+
     // Sanitize a string for safe use as filename/path component
-    // Replaces filesystem-unsafe characters with underscores and limits length
+    // Replaces filesystem-unsafe characters with underscores and limits length.
+    // Callers file data under the result, so shortening has to keep distinct
+    // inputs distinct: a shortened name carries a digest of the whole input,
+    // since plain truncation made two long profile names share - and overwrite -
+    // one stored password.
     static QString sanitizeForPath(const QString& input)
     {
         QString sanitized = input;
         // Replace filesystem-unsafe characters with underscores
         sanitized.replace(scmfileSystemUnsafeChars, qsl("_"));
         // Limit length to prevent filesystem issues
-        if (sanitized.length() > 50) {
-            sanitized = sanitized.left(50);
+        if (sanitized.length() > scmMaxPathComponentLength) {
+            const QString digest = QString::fromLatin1(QCryptographicHash::hash(input.toUtf8(), QCryptographicHash::Sha256).toHex()).left(scmPathComponentDigestLength);
+            sanitized = qsl("%1-%2").arg(sanitized.left(scmMaxPathComponentLength - scmPathComponentDigestLength - 1), digest);
         }
         return sanitized;
     }

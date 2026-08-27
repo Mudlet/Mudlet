@@ -2844,7 +2844,7 @@ int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
     const char* name = "main";
-    if (n == 1) {
+    if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
     auto pN = COMMANDLINE(L, QString{name});
@@ -4018,6 +4018,28 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
     lua_settop(L, callerStackTop);
 }
 
+// MSDP values may hold any byte except NUL, IAC and its own six markers, so a
+// control code in one is legal payload. JSON cannot carry a raw control character
+// inside a string (RFC 8259) and yajl rejects the whole document rather than the
+// one value, so an unescaped one takes every variable in its table with it.
+static QByteArray jsonEscapedControlByte(const char byte)
+{
+    switch (byte) {
+    case '\b':
+        return QByteArrayLiteral("\\b");
+    case '\t':
+        return QByteArrayLiteral("\\t");
+    case '\n':
+        return QByteArrayLiteral("\\n");
+    case '\f':
+        return QByteArrayLiteral("\\f");
+    case '\r':
+        return QByteArrayLiteral("\\r");
+    default:
+        return QByteArrayLiteral("\\u00") + QByteArray::number(static_cast<unsigned char>(byte), 16).rightJustified(2, '0');
+    }
+}
+
 // No documentation available in wiki - internal function
 // src is in Mud Server encoding and may need transcoding
 // Includes MSDP code originally from recv_sb_msdp(...) in TinTin++'s telopt.c,
@@ -4034,6 +4056,10 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 
     QByteArray script;
     bool no_array_marker_bug = false;
+    // Measured as the name is written rather than recomputed from varList at the
+    // strip: a name holding a byte JSON has to escape is longer in script than
+    // the raw name is, and the strip then leaves part of the prefix behind.
+    int topLevelPrefixLength = 0;
     for (int i = 0; i < textLength; ++i) {
         switch (transcodedSrc.at(i)) {
         case MSDP_TABLE_OPEN:
@@ -4081,11 +4107,15 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 if (!varList.empty()) {
                     QString token = varList.front();
                     token = token.remove(QLatin1Char('\"'));
-                    script = script.replace(0, varList.front().toUtf8().size() + 3, QByteArray());
+                    script = script.replace(0, topLevelPrefixLength, QByteArray());
                     mpHost->processDiscordMSDP(token, script);
                     setMSDPTable(token, script);
                     varList.clear();
                     script.clear();
+                    // the quote above closed the value just flushed - this one
+                    // opens the name starting now, which the first variable of a
+                    // subnegotiation gets from that same append
+                    script.append('\"');
                 }
             }
             last = MSDP_VAR;
@@ -4095,6 +4125,9 @@ void TLuaInterpreter::msdp2Lua(const char* src)
         case MSDP_VAL:
             if (last == MSDP_VAR) {
                 script.append("\":");
+                if (!nest && varList.empty()) {
+                    topLevelPrefixLength = script.size();
+                }
             }
             if (last == MSDP_VAL) {
                 no_array_marker_bug = true;
@@ -4110,14 +4143,24 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             last = MSDP_VAL;
             break;
         case '\\':
+            // both, or the decoder reads whatever follows as an escape sequence:
+            // "a\\b" used to arrive as a backspace
             script.append('\\');
+            script.append('\\');
+            lastVar.append(transcodedSrc.at(i));
             break;
         case '\"':
             script.append('\\');
             script.append('\"');
+            lastVar.append(transcodedSrc.at(i));
             break;
         default:
-            script.append(transcodedSrc.at(i));
+            if (static_cast<unsigned char>(transcodedSrc.at(i)) < 0x20) {
+                script.append(jsonEscapedControlByte(transcodedSrc.at(i)));
+            } else {
+                script.append(transcodedSrc.at(i));
+            }
+            // a Lua table key rather than JSON, so it takes the byte as sent
             lastVar.append(transcodedSrc.at(i));
             break;
         }
@@ -4131,7 +4174,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
     if (!varList.empty()) {
         QString token = varList.front();
         token = token.remove(QLatin1Char('\"'));
-        script = script.replace(0, token.toUtf8().size() + 3, QByteArray());
+        script = script.replace(0, topLevelPrefixLength, QByteArray());
         if (no_array_marker_bug) {
             if (!script.startsWith('[')) {
                 script.prepend('[');
@@ -4977,8 +5020,6 @@ int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
 }
 
 // No documentation available in wiki - internal, test-only helper for waitForEvent()
-// If a waitForEvent() call is blocked waiting for this event, capture its
-// arguments and quit that call's nested event loop. Called from Host::raiseEvent().
 void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
 {
     if (mPendingEventWaits.isEmpty() || pE.mArgumentList.isEmpty()) {
@@ -4991,9 +5032,6 @@ void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
         }
         pWait->mArgsRef = createEventArgsTableRef(pE);
         pWait->mCaptured = true;
-        if (pWait->mpLoop) {
-            pWait->mpLoop->quit();
-        }
     }
 }
 
@@ -5409,6 +5447,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger);
     lua_register(pGlobalLua, "raiseEvent", TLuaInterpreter::raiseEvent);
     lua_register(pGlobalLua, "waitForEvent", TLuaInterpreter::waitForEvent);
+    lua_register(pGlobalLua, "pumpEvents", TLuaInterpreter::pumpEvents);
     lua_register(pGlobalLua, "deleteLine", TLuaInterpreter::deleteLine);
     lua_register(pGlobalLua, "copy", TLuaInterpreter::copy);
     lua_register(pGlobalLua, "cut", TLuaInterpreter::cut);
@@ -7264,6 +7303,22 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
     return 1;
 }
 
+// No documentation available in wiki - internal function
+// The folder a profile name resolves to, or an empty string if there is no such
+// profile. For writers, and so stricter than mudlet::getCanonicalProfileName(),
+// which also resolves a game Mudlet ships with that has never been opened:
+// writeProfileData() creates whatever folder it is handed, so writing under such
+// a name would turn that game into a profile of its own. Readers want the looser
+// call.
+static QString canonicalProfileFolder(const QString& profileName)
+{
+    const QString folder = mudlet::self()->getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, folder)).exists()) {
+        return QString();
+    }
+    return folder;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#setProfileInformation
 int TLuaInterpreter::setProfileInformation(lua_State* L)
 {
@@ -7282,18 +7337,20 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
     if (params == 1) {
         text = lua_tostring(L, 1);
     } else {
-        profileName = lua_tostring(L, 1);
+        const QString requestedName = lua_tostring(L, 1);
+        profileName = canonicalProfileFolder(requestedName);
+        if (profileName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
+        }
         text = lua_tostring(L, 2);
     }
 
-    QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
-    int returnCode = 1;
-    lua_pushboolean(L, result.first);
-    if (!result.second.isEmpty()) {
-        lua_pushfstring(L, "setProfileInformation: %s does not exist", profileName.toUtf8().constData());
-        returnCode = 2;
+    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
     }
-    return returnCode;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#clearProfileInformation
@@ -7304,7 +7361,14 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         return lua_error(L);
     }
 
-    QString profileName = (params > 0) ? QString{lua_tostring(L, 1)} : getHostFromLua(L).getName();
+    QString profileName = getHostFromLua(L).getName();
+    if (params > 0) {
+        const QString requestedName = lua_tostring(L, 1);
+        profileName = canonicalProfileFolder(requestedName);
+        if (profileName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("profile '%1' does not exist").arg(requestedName));
+        }
+    }
     QString desc = "";
 
     // if this is a default game, return to the orginal text
@@ -7315,14 +7379,12 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
-    int returnCode = 1;
-    lua_pushboolean(L, result.first);
-    if (!result.second.isEmpty()) {
-        lua_pushstring(L, "Profile not found");
-        returnCode = 2;
+    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
     }
-    return returnCode;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Internal function - helper for updateColorTable().
@@ -7768,6 +7830,19 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 1;
     };
 
+    // The setting was made - but with a consequence a script has no other way
+    // of learning about, so it comes back as a second return value rather than
+    // only reaching a user who happens to have the debug console open:
+    auto successWithWarning = [&](const QString& warning) {
+        if (mudlet::smDebugMode) {
+            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(QString::fromUtf8(lua_tostring(L, 1))) >> &host;
+            TDebug(Qt::white, QColorConstants::Svg::orange) << qsl("setConfig: %1\n").arg(warning) >> &host;
+        }
+        lua_pushboolean(L, true);
+        lua_pushstring(L, warning.toUtf8().constData());
+        return 2;
+    };
+
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
             host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
@@ -7995,6 +8070,12 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("specialForceGAOff")) {
         host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
+        if (host.mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState) {
+            // a live session has to keep parsing with the value it connected
+            // with, so only a profile that is not connected - one opened
+            // offline, say - takes the change before the next connect does
+            host.mTelnet.cacheHostSettings();
+        }
         return success();
     }
     if (key == qsl("specialForceCharsetNegotiationOff")) {
@@ -8017,6 +8098,66 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    // The 2D map room symbol settings live on the map rather than the profile,
+    // so unlike the map keys above they do not need an open mapper - a script
+    // can pick the font before the mapper is ever shown:
+    if (key == qsl("mapSymbolFont")) {
+        const QString fontName = getVerifiedString(L, __func__, 2, "value");
+        if (fontName.trimmed().isEmpty()) {
+            return warnArgumentValue(L, __func__, "mapSymbolFont must not be empty");
+        }
+        // Match case-insensitively but store the family as the font database
+        // spells it, so that getConfig() reads back a canonical name:
+        QString matchedFontName;
+        for (const QString& availableFont : mudlet::self()->getAvailableFonts()) {
+            if (!availableFont.compare(fontName, Qt::CaseInsensitive)) {
+                matchedFontName = availableFont;
+                break;
+            }
+        }
+        if (matchedFontName.isEmpty()) {
+            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+        }
+        QFont font(host.mpMap->getSymbolFont());
+        font.setFamily(matchedFontName);
+        host.mpMap->setSymbolFont(font);
+        // The font is taken either way, but any symbol it has no glyph for is
+        // drawn as the replacement character instead. The preferences have a
+        // dialog that shows which ones those are; a script has only what it is
+        // handed back, and this is not a corner case - the default symbol font
+        // is missing the glyphs for symbols as ordinary as ☠ and ★:
+        const QStringList missingSymbols = host.mpMap->symbolsNotInFont(host.mpMap->getSymbolFont());
+        if (!missingSymbols.isEmpty()) {
+            constexpr qsizetype maximumSymbolsListed = 10;
+            QStringList listedSymbols = missingSymbols.mid(0, maximumSymbolsListed);
+            if (missingSymbols.size() > maximumSymbolsListed) {
+                listedSymbols << qsl("(and %1 more)").arg(missingSymbols.size() - maximumSymbolsListed);
+            }
+            return successWithWarning(qsl("font '%1' has no glyph for these room symbols, which will show as the replacement character: %2").arg(matchedFontName, listedSymbols.join(QChar::Space)));
+        }
+        return success();
+    }
+    if (key == qsl("mapSymbolFontOnlyUseSelected")) {
+        host.mpMap->setOnlySymbolFontUsed(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("mapSymbolFontScaling")) {
+        const double scaling = getVerifiedDouble(L, __func__, 2, "value");
+        // TMap enforces this too, so that a map file cannot carry a factor no
+        // script may set; the check is repeated here only to say which value
+        // was refused and why. NaN needs the separate test: it compares false
+        // against both bounds, so a plain range check would let it through.
+        if (!qIsFinite(scaling) || scaling < TMap::scmMinimumSymbolFontFudgeFactor || scaling > TMap::scmMaximumSymbolFontFudgeFactor) {
+            return warnArgumentValue(
+                    L,
+                    __func__,
+                    qsl("mapSymbolFontScaling %1 is out of range, it must be between %2 and %3")
+                            .arg(QString::number(scaling), QString::number(TMap::scmMinimumSymbolFontFudgeFactor, 'f', 2), QString::number(TMap::scmMaximumSymbolFontFudgeFactor, 'f', 2)));
+        }
+        host.mpMap->setSymbolFontFudgeFactor(scaling);
+        return success();
+    }
+
     if (key == qsl("compactInputLine")) {
         const bool value = getVerifiedBool(L, __func__, 2, "value");
         host.setCompactInputLine(value);
@@ -8260,6 +8401,18 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapExitSize"),
              [&]() {
                  lua_pushnumber(L, host.mLineSize);
+             }},
+            {qsl("mapSymbolFont"),
+             [&]() {
+                 lua_pushstring(L, host.mpMap->getSymbolFont().family().toUtf8().constData());
+             }},
+            {qsl("mapSymbolFontOnlyUseSelected"),
+             [&]() {
+                 lua_pushboolean(L, host.mpMap->getOnlySymbolFontUsed());
+             }},
+            {qsl("mapSymbolFontScaling"),
+             [&]() {
+                 lua_pushnumber(L, host.mpMap->getSymbolFontFudgeFactor());
              }},
             {qsl("mapRoundRooms"),
              [&]() {
@@ -8652,13 +8805,12 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
         // profile:
         return warnArgumentValue(L, __func__, "disabled by profile global preference");
     }
+    // both defaults have to stand outside the argument handling below:
+    // setSaveCommandHistory() and setSaveCommandHistory(name) each turn saving
+    // on, so neither belongs inside a branch on the argument count:
     const char* name = "main";
     bool saveCommands = true;
-    // if there is no arguments we will set the "save command history" on the
-    // main  command line:
-    if (n == 1) {
-        saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
-    } else {
+    if (n > 0) {
         if (lua_type(L, 1) == LUA_TSTRING) {
             // First argument is a string so is presumably a command line name
             name = CMDLINE_NAME(L, 1);
