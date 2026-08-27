@@ -2638,9 +2638,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
             //report a failure as the restore not happening, not as an install the user never asked for
-            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); restored) {
-                restoredInPlace = packageUnpacksAFolder(entry[0]);
-            } else {
+            // the folder belongs to the package that survives however the module was installed, and if nothing ever unpacked one there is nothing for removeDir() to take
+            restoredInPlace = true;
+            if (auto [restored, reason] = installPackage(entry[0], enums::PackageModuleType::Package, true); !restored) {
                 //: %1 is the module name, %2 is the reason the package sharing that name could not be put back
                 postMessage(tr("[ ERROR ] - Removed module \"%1\", but its package copy could not be restored: %2").arg(packageName, reason));
             }

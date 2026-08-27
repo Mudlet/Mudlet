@@ -181,7 +181,8 @@ void dlgModuleManager::slot_uninstallModule()
         // refused while a profile save is running, so nothing was removed and
         // rebuilding the table below would show it gone anyway
         //: %1 is the name of the module the user asked to remove
-        QMessageBox::warning(this, tr("Removal failed"), tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(pI->text()));
+        const QString msg = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(pI->text());
+        QMessageBox::warning(this, tr("Removal failed"), msg);
         return;
     }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {

@@ -1076,6 +1076,21 @@ describe("Tests uninstalling one half of a dual package/module install", functio
     -- so this folder was still the uninstall's to take away and nothing else will
     assert.is_false(fileExists(packageDirectory), "the package's folder was left behind for good")
   end)
+
+  it("keeps the package's folder when the module half is uninstalled", function()
+    -- the mirror direction: the folder belongs to the surviving package however the module was installed, so taking the module away must not remove it
+    withFixturePackage(moduleName)
+    local packageDirectory = getMudletHomeDir() .. "/" .. moduleName
+    assert.is_true(fileExists(packageDirectory), "the package's own archive should have unpacked a folder to begin with")
+    withXmlModule()
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(uninstallModule(moduleName))
+    pumpEvents(200)
+
+    assert.is_true(packageInstalled(moduleName), "the package the user did not ask to remove has to survive")
+    assert.is_true(fileExists(packageDirectory), "the surviving package's folder was deleted from under it")
+  end)
 end)
 
 describe("Tests installing a package while the profile is being saved", function()

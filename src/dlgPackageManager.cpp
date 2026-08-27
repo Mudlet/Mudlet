@@ -668,7 +668,8 @@ void dlgPackageManager::slot_removePackages()
     }
     if (!refusedPackages.isEmpty()) {
         //: %1 is a comma separated list of the packages that are still installed
-        QMessageBox::warning(this, tr("Removal failed"), tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedPackages.join(qsl(", "))));
+        const QString msg = tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedPackages.join(qsl(", ")));
+        QMessageBox::warning(this, tr("Removal failed"), msg);
     }
 
     populatePackagesWithUpdates();
