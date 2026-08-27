@@ -112,10 +112,11 @@ private:
     }
 
     QString moduleHalfPath() const { return qsl("%1/as-module/%2.xml").arg(mudlet::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
+    QString packageHalfPath() const { return qsl("%1/as-package/%2.xml").arg(mudlet::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
 
-    // Half the legacy state: a profile up and running with the package half of
-    // the name installed, and the module half written out ready to be asked for.
-    Host* startWithThePackageHalf()
+    // A profile up and running with both halves written out and neither of them
+    // installed, so that a test can ask for either one first.
+    Host* startWithBothHalvesWritten()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
@@ -123,15 +124,43 @@ private:
             return nullptr;
         }
 
-        const QString packageHalf = writeHalf(qsl("as-package"), qsl("dual-spec package alias"));
-        if (packageHalf.isEmpty() || writeHalf(qsl("as-module"), qsl("dual-spec module alias")).isEmpty()) {
+        if (writeHalf(qsl("as-package"), qsl("dual-spec package alias")).isEmpty() || writeHalf(qsl("as-module"), qsl("dual-spec module alias")).isEmpty()) {
             return nullptr;
         }
 
         settleSaves(host);
-        auto [packageInstalled, packageReason] = host->installPackage(packageHalf, enums::PackageModuleType::Package);
+        return host;
+    }
+
+    // Half the legacy state: the package half of the name installed, and the
+    // module half written out ready to be asked for.
+    Host* startWithThePackageHalf()
+    {
+        auto* host = startWithBothHalvesWritten();
+        if (!host) {
+            return nullptr;
+        }
+
+        auto [packageInstalled, packageReason] = host->installPackage(packageHalfPath(), enums::PackageModuleType::Package);
         if (!packageInstalled || !host->mInstalledPackages.contains(mDualName)) {
             qWarning() << "DualPackageModuleTest could not install the package half:" << packageReason;
+            return nullptr;
+        }
+        settleSaves(host);
+        return host;
+    }
+
+    // The other half of it, for the refusal that runs the other way round.
+    Host* startWithTheModuleHalf()
+    {
+        auto* host = startWithBothHalvesWritten();
+        if (!host) {
+            return nullptr;
+        }
+
+        auto [moduleInstalled, moduleReason] = host->installPackage(moduleHalfPath(), enums::PackageModuleType::ModuleFromUI);
+        if (!moduleInstalled || !host->mInstalledModules.contains(mDualName)) {
+            qWarning() << "DualPackageModuleTest could not install the module half:" << moduleReason;
             return nullptr;
         }
         settleSaves(host);
@@ -228,6 +257,47 @@ private slots:
         QVERIFY2(loadingInstalled, qPrintable(qsl("The loading sequence must be allowed to install the module half of a legacy profile, but: \"%1\"").arg(loadingReason)));
         QVERIFY2(host->mInstalledModules.contains(mDualName), "The loading sequence must be allowed to install the module half of a legacy profile");
         QVERIFY2(host->mInstalledPackages.contains(mDualName), "The package half did not survive the module half being installed over it");
+    }
+
+    // The same refusal the other way round. Neither half carries a config.lua,
+    // so this is the only test that reaches the check running on the archive's
+    // own file name - an archive that renames itself is turned away by the
+    // second copy of the check further down instead.
+    void test_theCombinationIsRefusedWhicheverHalfIsAskedForSecond()
+    {
+        auto* host = startWithTheModuleHalf();
+        QVERIFY2(host, "Could not install the module half");
+
+        auto [installed, reason] = host->installPackage(packageHalfPath(), enums::PackageModuleType::Package);
+        QVERIFY2(!installed, "A package must not be installed over a module of the same name once the profile has loaded");
+        QVERIFY2(reason.contains(qsl("A module called")), qPrintable(qsl("The refusal must name the module in the way, but said: \"%1\"").arg(reason)));
+        QVERIFY2(!host->mInstalledPackages.contains(mDualName), "The refused package was listed anyway");
+
+        settleSaves(host);
+        host->mIsProfileLoadingSequence = true;
+        auto [loadingInstalled, loadingReason] = host->installPackage(packageHalfPath(), enums::PackageModuleType::Package);
+        host->mIsProfileLoadingSequence = false;
+        QVERIFY2(loadingInstalled, qPrintable(qsl("The loading sequence must be allowed to install the package half of a legacy profile, but: \"%1\"").arg(loadingReason)));
+        QVERIFY2(host->mInstalledPackages.contains(mDualName), "The loading sequence must be allowed to install the package half of a legacy profile");
+        QVERIFY2(host->mInstalledModules.contains(mDualName), "The module half did not survive the package half being installed over it");
+    }
+
+    // A module can be left listed with nothing behind it - installModulesList()
+    // files one even when its install failed - and the refusal above must not
+    // hold the name for that: nothing is loaded under it and there are no files,
+    // so there is nothing for the package to collide with. Only reachable from
+    // here, because Lua has no way to put a listing in without a module.
+    void test_aModuleListedWithNothingBehindItDoesNotHoldTheName()
+    {
+        auto* host = startWithBothHalvesWritten();
+        QVERIFY2(host, "Could not start the profile");
+
+        // listed, never loaded, and pointing at a file that is not there
+        host->mInstalledModules[mDualName] = QStringList{qsl("%1/gone/%2.mpackage").arg(mudlet::getMudletPath(enums::profileHomePath, mpHostname), mDualName), qsl("0")};
+        auto [installed, reason] = host->installPackage(packageHalfPath(), enums::PackageModuleType::Package);
+        QVERIFY2(installed, qPrintable(qsl("A listing with no module behind it must not hold the name, but: \"%1\"").arg(reason)));
+        QVERIFY2(host->mInstalledPackages.contains(mDualName), "The package was answered yes but not listed");
+        QVERIFY2(!host->mInstalledModules.contains(mDualName), "The leftover listing was left in place for the next install to trip over");
     }
 
     // Removing either half takes both halves' items with it whatever is asked

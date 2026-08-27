@@ -2309,29 +2309,49 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return fail(qsl("could not open file '%1'").arg(actualFileName));
     }
 
+    // A listing can outlive the module: installModulesList() files the entry back
+    // whether the load worked or not, so a profile whose module file has gone
+    // keeps the name with nothing behind it. That holds no items for anything to
+    // collide with, so it is cleared rather than held against whoever asks for
+    // the name next - a package included, which is why this does not live inside
+    // the module-only refusal below.
+    auto aModuleIsUsingTheName = [this](const QString& packageName) -> bool {
+        if (!mInstalledModules.contains(packageName) && !mActiveModules.contains(packageName)) {
+            return false;
+        }
+        const QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+        const QString moduleFile = mInstalledModules.value(packageName).value(0);
+        if (QDir(modulePath).exists() || QFile::exists(moduleFile)) {
+            return true;
+        }
+        mInstalledModules.remove(packageName);
+        mActiveModules.removeAll(packageName);
+        mModulesLoadedOk.remove(packageName);
+        return false;
+    };
+
+    // The name an install lands under is not settled until config.lua has been
+    // read, so this question gets asked twice - once of the archive's own file
+    // name, then again of whatever the manifest renamed it to. An empty answer
+    // means carry on.
+    auto refusalFromAModuleUsingTheName = [this, thing, &aModuleIsUsingTheName](const QString& packageName) -> QString {
+        // during profile loading the modules are expected to be listed already
+        if ((thing == enums::PackageModuleType::ModuleFromUI) && !mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
+            //: %1 is the name of the module that is already installed
+            return tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName);
+        }
+        if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
+            return qsl("module %1 is already installed").arg(packageName); //we're already installed
+        }
+        return QString();
+    };
+
     QString packageName = sanitizePackageName(fileName);
     if (thing != enums::PackageModuleType::Package) {
         if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
-        } else if ((thing == enums::PackageModuleType::ModuleFromUI) && !mIsProfileLoadingSequence && (mInstalledModules.contains(packageName) || mActiveModules.contains(packageName))) {
-            // Check if this is just a stale reference by verifying if module files actually exist
-            // Skip this check during profile loading - modules are expected to be in mInstalledModules already
-            QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
-            QString moduleFile = mInstalledModules.value(packageName).value(0); // Get the actual file path from stored reference
-
-            bool moduleExists = QDir(modulePath).exists() || QFile::exists(moduleFile);
-            if (!moduleExists) {
-                // Module files don't exist, clean up stale references
-                mInstalledModules.remove(packageName);
-                mActiveModules.removeAll(packageName);
-                mModulesLoadedOk.remove(packageName);
-            } else {
-                // Module actually exists, show duplicate error
-                //: %1 is the name of the module that is already installed
-                return fail(tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
-            }
-        } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
-            return fail(qsl("module %1 is already installed").arg(packageName)); //we're already installed
+        } else if (const QString refusal = refusalFromAModuleUsingTheName(packageName); !refusal.isEmpty()) {
+            return fail(refusal);
         }
         // An uninstall takes items away by name alone, so one name installed both
         // ways loses both halves' items whichever half is removed. A profile saved
@@ -2345,7 +2365,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (mInstalledPackages.contains(packageName)) {
             return fail(qsl("package %1 is already installed").arg(packageName));
         }
-        if (!mIsProfileLoadingSequence && mInstalledModules.contains(packageName)) {
+        if (!mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
             //: %1 is the name of the module that is already installed
             return fail(tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
         }
@@ -2431,13 +2451,34 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 return fail(reason);
             };
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
-            readPackageConfig(_dir.absoluteFilePath(qsl("config.lua")), packageName, thing != enums::PackageModuleType::Package);
+            QString whyTheManifestWasNotRead;
+            readPackageConfig(_dir.absoluteFilePath(qsl("config.lua")), packageName, thing != enums::PackageModuleType::Package, &whyTheManifestWasNotRead);
+            if (!whyTheManifestWasNotRead.isEmpty()) {
+                // Carrying on is right - what is in the archive still works - but
+                // it lands under the name of the file it came in with no author,
+                // version or description, so a name-based uninstall, an update
+                // from the repository and anything depending on it all stop
+                // matching it. Nothing else says a word about that.
+                qWarning() << "Host::installPackage() could not read the manifest of" << fileName << ":" << whyTheManifestWasNotRead;
+                // said even to a quiet caller, for the same reason the deferred
+                // install above says its failure: the install goes on to succeed,
+                // so there is no return value left to carry this
+                //: %1 is the name the package is being installed under, %2 is the error its config.lua gave
+                postMessage(tr("[ WARN ]  - The config.lua of \"%1\" could not be read, so it is being installed under that name with no details: %2").arg(packageName, whyTheManifestWasNotRead));
+            }
             // now that the packageName changed, redo relevant checks to make sure it's still valid.
             // The refusal further up only ever saw the archive's own file name, and
             // config.lua has just renamed this to anything it likes - so ask again
             // about the half it did not check, or any archive at all installs over
             // the other half's name and an uninstall then takes both halves' items.
             if (thing != enums::PackageModuleType::Package) {
+                // Asked before the sync below, not after: that takes the module
+                // already using the name apart by name alone, so refusing
+                // afterwards would hand back the module that did the refusing
+                // with nothing left in it.
+                if (const QString refusal = refusalFromAModuleUsingTheName(packageName); !refusal.isEmpty()) {
+                    return refuseTheRenamedInstall(refusal);
+                }
                 if (mActiveModules.contains(packageName)) {
                     uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
                 }
@@ -2450,7 +2491,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     // cleanup and quit if already installed
                     return refuseTheRenamedInstall(qsl("package %1 is already installed").arg(packageName));
                 }
-                if (!mIsProfileLoadingSequence && mInstalledModules.contains(packageName)) {
+                if (!mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
                     //: %1 is the name of the module that is already installed
                     return refuseTheRenamedInstall(tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
                 }
@@ -2836,9 +2877,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     return true;
 }
 
-void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule)
+void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule, QString* whyNotRead)
 {
-    const QString newName = getPackageConfig(luaConfig, isModule);
+    const QString newName = getPackageConfig(luaConfig, isModule, whyNotRead);
     if (!newName.isEmpty()) {
         packageName = sanitizePackageName(newName);
     }
@@ -2893,21 +2934,31 @@ void Host::setupSandboxedLuaState(lua_State* L)
     lua_pop(L, 1); // pop _G
 }
 
-QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
+QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString* whyNotRead)
 {
+    auto noManifest = [whyNotRead](const QString& reason) {
+        if (whyNotRead) {
+            *whyNotRead = reason;
+        }
+        return QString();
+    };
+
     QString packageName;
     // We don't use luaL_loadfile here because that breaks on Windows as it won't work if there are accented characters in the path or file name -
     // QFile which can work with whatever local8Bit encoding is used for file names - the luaL_loadfile(...) uses std::iostream which doesn't...
     QFile configFile(luaConfig);
     QStringList strings;
-    if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&configFile);
-
-        while (!in.atEnd()) {
-            strings += in.readLine();
-        }
-        configFile.close();
+    if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // an empty script runs perfectly well and names no package, so without
+        // this the name silently falls back to the one the file came in
+        return noManifest(configFile.errorString());
     }
+    QTextStream in(&configFile);
+
+    while (!in.atEnd()) {
+        strings += in.readLine();
+    }
+    configFile.close();
 
     lua_State* L = luaL_newstate();
     setupSandboxedLuaState(L);
@@ -2978,7 +3029,9 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 
     lua_pop(L, -1);
     lua_close(L);
-    return QString();
+    // the whole manifest goes with the error - name, author, version and all -
+    // so this cannot be left to the debug console alone
+    return noManifest(qsl("%1: %2").arg(QString::fromStdString(reason), QString::fromStdString(e)));
 }
 
 // writeProfileIniData(...) and readProfileIniData(...) might eventually
