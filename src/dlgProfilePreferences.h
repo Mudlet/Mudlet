@@ -28,12 +28,20 @@
 
 #include "ui_profile_preferences.h"
 #include <QDialog>
+#include <QHash>
 #include <QList>
 #include <QMap>
+#include <QVariant>
 
 class Host;
 class QCloseEvent;
 class QDoubleSpinBox;
+class QFrame;
+class QListWidget;
+class QListWidgetItem;
+class QScrollArea;
+class QStackedWidget;
+class QVBoxLayout;
 class TAction;
 class TAlias;
 class TKey;
@@ -139,12 +147,17 @@ public slots:
 
     void slot_guiLanguageChanged(const QString&);
 
+    void reject() override;
+
 private slots:
     void slot_forgetSavedSignIn();
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
-    void slot_tabChanged(int tabIndex);
+    void slot_categorySelected(const int row);
+    void slot_sidebarItemClicked(QListWidgetItem*);
+    void slot_scheduleApply();
+    void slot_lineEditFinished();
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
@@ -200,6 +213,7 @@ signals:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    bool eventFilter(QObject* pObject, QEvent* pEvent) override;
 
 private:
     void setColors();
@@ -232,11 +246,53 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont();
     void cancelShortcutCaptures();
-    void setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits);
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
+    // The sidebar-and-cards shell that replaces the .ui file's tab widget at
+    // runtime:
+    void buildShell();
+    QWidget* buildSidebar();
+    void addCategory(const QString& key, const QString& iconFile);
+    void addSidebarSeparator();
+    void buildCategoryPage(const QString& key, const QList<QWidget*>& cards);
+    QGroupBox* createCard(const QString& objectName);
+    // Every string the shell shows that setupUi() did not make, and that
+    // retranslateUi() therefore cannot put back on a language change. Called
+    // once as the shell is built and again from slot_guiLanguageChanged(), so
+    // each of those strings is written in exactly one place.
+    void retranslateShell();
+    void moveIntoCard(QGroupBox* pCard, const QList<QWidget*>& controls);
+    void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
+    void retitleCards();
+    void reflowWideCards();
+    // The column caps have to be taken again once a profile has filled the
+    // controls, because that is what decides how wide the widest card is
+    void updateColumnWidthCaps();
+    void rebuildTabOrder();
+    void guardScrollWheel();
+    void buildMigrationBanner();
+    void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
+    void spotlight(QWidget* pTarget);
+    void applyShellStyle();
+    // "Find in settings" - an index over the real widget tree, and a results
+    // page the matching cards are lent to for as long as the query stands:
+    void buildSearchResultsPage();
+    void buildSearchIndex();
+    void runSearch(const QString& query);
+    void invalidateSearch();
+    void exitSearchMode();
+    void returnSearchedCardsHome();
+    void clearSearchHighlights();
+    void highlightMatches(QWidget* pCard, const QStringList& needles);
+    QLabel* searchCategoryHeader(const QString& key);
+    void connectApplyTriggers();
+    void snapshotValues();
+    bool dirty(const QObject* pControl) const;
+    bool anyDirty(const QList<const QObject*>& controls) const;
+    void applyAll();
+    void maybeDownloadEditorThemes();
 
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
@@ -260,6 +316,60 @@ private:
     QPointer<QAction> mEnableNAWS;
     QPointer<QAction> mEnableCHARSET;
     QPointer<QAction> mEnableNEWENVIRON;
+
+    // One card of one category page: everything it can be found by, and exactly
+    // where it goes back to once the search that borrowed it ends
+    struct SearchCard
+    {
+        QPointer<QWidget> pCard;
+        QString categoryKey;
+        QString text;
+        QVBoxLayout* pHomeLayout = nullptr;
+        int homeIndex = -1;
+        bool onResultsPage = false;
+    };
+
+    QWidget* mpWidget_shell = nullptr;
+    QLabel* mpLabel_wordmark = nullptr;
+    QListWidget* mpListWidget_categories = nullptr;
+    // The one sidebar row that is a link rather than a category
+    QListWidgetItem* mpItem_support = nullptr;
+    QStackedWidget* mpStackedWidget_categories = nullptr;
+    QLineEdit* mpLineEdit_search = nullptr;
+    // The search field's leading glyph, recoloured for the theme in
+    // applyShellStyle() rather than added again on every appearance change
+    QPointer<QAction> mpAction_searchIcon;
+    QLabel* mpLabel_pageTitle = nullptr;
+    QLabel* mpLabel_pageTitleIcon = nullptr;
+    QFrame* mpFrame_migrationBanner = nullptr;
+    QScrollArea* mpScrollArea_searchResults = nullptr;
+    QVBoxLayout* mpLayout_searchResults = nullptr;
+    QLabel* mpLabel_searchEmpty = nullptr;
+    // Thrown away whenever the cards' contents change under it - a profile
+    // appearing brings controls of its own
+    QList<SearchCard> mSearchCards;
+    QList<QPointer<QWidget>> mHighlightedWidgets;
+    QMap<QString, QLabel*> mSearchCategoryHeaders;
+    QPointer<QWidget> mpWidget_spotlight;
+    int mSearchResultsPageIndex = -1;
+    bool mSearchActive = false;
+    QString mCategoryBeforeSearch;
+    QMap<QString, int> mCategoryPageIndexes;
+    QMap<QString, int> mCategoryRows;
+    QTimer* mpTimer_apply = nullptr;
+    // What every apply-relevant control held the last time the dialog read the
+    // settings, keyed by the control (the protocol menu's actions included)
+    QHash<const QObject*, QVariant> mValueSnapshot;
+    // The shortcut editors write through this map rather than through a control
+    // value, so it needs a snapshot of its own
+    QMap<QString, QKeySequence> mShortcutsSnapshot;
+    // Suppresses the instant apply while initWithHost()/clearHostDetails() are
+    // writing the controls rather than the user
+    bool mPopulating = false;
+    // QDialog::closeEvent() calls reject(), which is where the close this is
+    // already inside of would otherwise start again
+    bool mClosing = false;
+    bool mEditorThemesChecked = false;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

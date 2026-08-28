@@ -156,6 +156,18 @@ set(STARTERUI_GROUP_TEST_SOURCES
     TutorialInvitationLayoutTest.cpp
 )
 
+# The settings dialog: its sidebar-and-cards shell, the deep links into it, how
+# a change reaches the Host, and what it does with no profile loaded
+set(SETTINGS_GROUP_TEST_SOURCES
+    SettingsBannerTest.cpp
+    SettingsDeepLinkTest.cpp
+    SettingsDirtyApplyTest.cpp
+    SettingsHostLifecycleTest.cpp
+    SettingsInstantApplyTest.cpp
+    SettingsSearchTest.cpp
+    SettingsShellNavigationTest.cpp
+)
+
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
 set(TEARDOWN_GROUP_TEST_SOURCES
     DialogTeardownTest.cpp
@@ -275,6 +287,7 @@ add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
@@ -417,6 +430,17 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 # MapAreaReassignmentTest reports a cost curve built from thousands of rooms,
 # which takes minutes rather than milliseconds if the quadratic term returns
 set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
+
+# The settings tests build the whole preferences dialog once per test method,
+# and several of them wait out a quiet window to prove no apply happened
+set_tests_properties(SettingsBannerTest
+                     SettingsDeepLinkTest
+                     SettingsDirtyApplyTest
+                     SettingsHostLifecycleTest
+                     SettingsInstantApplyTest
+                     SettingsSearchTest
+                     SettingsShellNavigationTest
+                     PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)

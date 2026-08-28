@@ -1,0 +1,347 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Mudlet Developers - mudlet@mudlet.org           *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+/*
+ * "Find in settings" searches an index built off the real widget tree and shows
+ * what matched by *lending* the matching cards to a results page - they are
+ * moved out of their own category page and put back at the (layout, index) they
+ * were indexed at once the query ends.
+ *
+ * That restoration is the risk the whole feature carries: a card that does not
+ * come home, or comes home in the wrong place, silently loses settings from
+ * the page they belong on, and nothing else in the application would notice.
+ * So the central case here walks every page before and after a search and
+ * compares the two, rather than only checking that the results looked right.
+ *
+ * Run with: ctest -R SettingsSearchTest -V
+ */
+
+#include <QDir>
+#include <QTemporaryDir>
+#include <QtTest/QtTest>
+
+#include <QBoxLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QStackedWidget>
+
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
+#include "Host.h"
+#include "MudletInstanceCoordinator.h"
+#include "TelnetServerStub.h"
+#include "dlgProfilePreferences.h"
+#include "mudlet.h"
+
+#include "GroupedTest.h"
+
+class SettingsSearchTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
+    dlgProfilePreferences* mpPreferences = nullptr;
+    const QString mProfileName = qsl("SettingsSearch-Test");
+    QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
+    const QString mLocalhost = qsl("localhost");
+
+    void deleteProfileDirectory(const QString& profileName)
+    {
+        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        if (dir.exists()) {
+            dir.removeRecursively();
+        }
+    }
+
+    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+
+    QStackedWidget* stack() const { return mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack")); }
+
+    QLineEdit* searchField() const { return mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField")); }
+
+    QWidget* resultsColumn() const { return mpPreferences->findChild<QWidget*>(qsl("settingsColumn_searchResults")); }
+
+    // The field takes the focus first, because that is the only way a query
+    // gets typed - by clicking into it or through Ctrl+F. It matters: the
+    // search lends matching cards to the results page, and reparenting a card
+    // that holds the keyboard focus clears it, handing the focus to the sidebar
+    // - which test_refiningTheQueryWithTheFocusOnAResultCardStaysInSearch pins.
+    void search(const QString& query)
+    {
+        searchField()->setFocus();
+        searchField()->setText(query);
+        QCoreApplication::processEvents();
+    }
+
+    // Where every card on every category page sits, and whether it is showing,
+    // as text so that a mismatch reads as a diff rather than as two pointers
+    QStringList cardPlacements() const
+    {
+        QStringList placements;
+        QStackedWidget* pStack = stack();
+        for (int page = 0, pages = pStack->count(); page < pages; ++page) {
+            auto* pScrollArea = qobject_cast<QScrollArea*>(pStack->widget(page));
+            if (!pScrollArea || pScrollArea->objectName() == qsl("settingsPage_searchResults")) {
+                continue;
+            }
+            QWidget* pColumn = pScrollArea->widget();
+            auto* pColumnLayout = qobject_cast<QBoxLayout*>(pColumn->layout());
+            for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
+                QWidget* pCard = pColumnLayout->itemAt(item)->widget();
+                if (!pCard) {
+                    continue;
+                }
+                placements << qsl("%1[%2] = %3, parented to %4, hidden %5")
+                                      .arg(pColumn->objectName(), QString::number(item), pCard->objectName(), pCard->parentWidget()->objectName(), pCard->isHidden() ? qsl("yes") : qsl("no"));
+            }
+        }
+        return placements;
+    }
+
+    int visibleCategoryHeaders() const
+    {
+        int headers = 0;
+        for (const auto* pLabel : mpPreferences->findChildren<QLabel*>(qsl("settingsSearchHeader"))) {
+            if (pLabel->isVisible()) {
+                ++headers;
+            }
+        }
+        return headers;
+    }
+
+    QStringList highlightedWidgets() const
+    {
+        QStringList highlighted;
+        for (const auto* pWidget : mpPreferences->findChildren<QWidget*>()) {
+            if (pWidget->property("searchMatch").toBool()) {
+                highlighted << pWidget->objectName();
+            }
+        }
+        return highlighted;
+    }
+
+    void openPreferences()
+    {
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        mpPreferences->resize(1060, 760);
+        mpPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
+        QVERIFY2(searchField(), "the settings shell has no search field");
+    }
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own - see the same block in
+        // DialogTeardownTest for why sharing the developer's one does not work
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mPort = QString::number(mpServer->serverPort());
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+        deleteProfileDirectory(mProfileName);
+
+        mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
+        QVERIFY2(mpHost, "No active host after profile creation");
+    }
+
+    void cleanupTestCase()
+    {
+        mpHost = nullptr;
+        delete mpServer;
+        mpServer = nullptr;
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    void init() { openPreferences(); }
+
+    void cleanup()
+    {
+        delete mpPreferences;
+        mpPreferences = nullptr;
+    }
+
+    // The invariant behind lending cards out: after any number of searches,
+    // every page holds exactly the cards it held before, in the same order and
+    // parented to the same column
+    void test_searchingAndClearingLeavesEveryCardWhereItWas()
+    {
+        const QStringList before = cardPlacements();
+        QVERIFY2(before.size() > 12, "fewer cards were found than there are categories, so this case is not walking the pages");
+
+        search(qsl("color"));
+        QVERIFY2(!resultsColumn()->findChildren<QGroupBox*>().isEmpty(), "the search borrowed no cards at all, so putting them back proves nothing");
+        search(qsl("gmcp"));
+        search(qsl("proxy"));
+        search(QString());
+
+        QCOMPARE(cardPlacements(), before);
+    }
+
+    // Results are cross-category and grouped under the category they came from,
+    // which is the half of the feature a per-page filter would not give
+    void test_aSearchShowsMatchesFromMoreThanOneCategory()
+    {
+        search(qsl("color"));
+
+        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+        QCOMPARE(mpPreferences->groupBox_displayColors->parentWidget(), resultsColumn());
+        QCOMPARE(mpPreferences->groupBox_mapperColors->parentWidget(), resultsColumn());
+        QVERIFY2(visibleCategoryHeaders() >= 2, "the results were not grouped under a header per category");
+        QVERIFY2(mpPreferences->findChild<QLabel*>(qsl("settingsSearchEmpty"))->isHidden(), "a search that matched showed the empty state as well");
+    }
+
+    // The protocol names only exist inside the menu that button pops up, where
+    // a walk over the widget tree cannot see them, so the button carries them
+    // as invisible synonyms - and is what gets highlighted for them
+    void test_aKeywordFindsWhatOnlyASubmenuNames()
+    {
+        search(qsl("gmcp"));
+
+        QCOMPARE(mpPreferences->groupBox_protocols->parentWidget(), resultsColumn());
+        QVERIFY2(mpPreferences->pushButton_chooseProtocols->property("searchMatch").toBool(), "the button carrying the protocol keywords was not highlighted");
+    }
+
+    void test_aQueryThatMatchesNothingShowsTheEmptyState()
+    {
+        search(qsl("zzzznothing"));
+
+        auto* pEmpty = mpPreferences->findChild<QLabel*>(qsl("settingsSearchEmpty"));
+        QVERIFY2(pEmpty->isVisible(), "nothing matched and the empty state was not shown");
+        QVERIFY2(pEmpty->text().contains(qsl("zzzznothing")), qPrintable(qsl("the empty state does not echo the query: %1").arg(pEmpty->text())));
+        QVERIFY2(resultsColumn()->findChildren<QGroupBox*>().isEmpty(), "a query that matched nothing still borrowed cards");
+    }
+
+    // The highlight is a dynamic property that a stylesheet paints from, so a
+    // query that ends without taking it off again leaves the marker pen on
+    void test_highlightsAreClearedWhenTheSearchEnds()
+    {
+        search(qsl("color"));
+        QVERIFY2(!highlightedWidgets().isEmpty(), "nothing was highlighted, so clearing the highlights proves nothing");
+
+        search(QString());
+        QCOMPARE(highlightedWidgets(), QStringList());
+    }
+
+    // Picking a category is the other way out of the results, and it has to put
+    // the cards back just as clearing the field does
+    void test_choosingACategoryLeavesSearchMode()
+    {
+        const QStringList before = cardPlacements();
+        search(qsl("color"));
+
+        QListWidget* pList = sidebar();
+        int mapperRow = -1;
+        for (int row = 0, rows = pList->count(); row < rows; ++row) {
+            if (pList->item(row)->data(Qt::UserRole).toString() == qsl("mapper")) {
+                mapperRow = row;
+                break;
+            }
+        }
+        QVERIFY(mapperRow >= 0);
+        pList->setCurrentRow(mapperRow);
+        QCoreApplication::processEvents();
+
+        QVERIFY2(searchField()->text().isEmpty(), "the search field still holds the query after a category was chosen");
+        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_mapper")));
+        QCOMPARE(cardPlacements(), before);
+    }
+
+    // A click on a control of a result card leaves the keyboard focus inside a
+    // card the results only borrowed. The next run of the query hands that card
+    // back to its own page, clearing the focus it carries, so the focus falls to
+    // the sidebar - where an item view with no current index answers a focus-in
+    // by taking the first one, which reads as the user having chosen General and
+    // ends the search.
+    void test_refiningTheQueryWithTheFocusOnAResultCardStaysInSearch()
+    {
+        search(qsl("color"));
+        QCOMPARE(mpPreferences->groupBox_displayColors->parentWidget(), resultsColumn());
+
+        mpPreferences->checkBox_allowServerToRedefineColors->setFocus(Qt::MouseFocusReason);
+        QCOMPARE(QApplication::focusWidget(), mpPreferences->checkBox_allowServerToRedefineColors);
+
+        searchField()->setText(qsl("colors"));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(searchField()->text(), qsl("colors"));
+        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+    }
+
+    // A card the profile's state has hidden - the updater's when there is no
+    // updater, Discord's without the library - is not an option anyone can take
+    // up, so it is not a result either. And the search must hand it back hidden.
+    void test_aHiddenCardIsNeitherAResultNorUnhiddenByTheSearch()
+    {
+        QGroupBox* pCard = mpPreferences->groupBox_spellCheck;
+        QVERIFY2(!pCard->isHidden(), "the card this case hides was hidden already, so hiding it proves nothing");
+        // before the first search, because the index is built on it
+        pCard->hide();
+        const QStringList before = cardPlacements();
+
+        search(qsl("spell"));
+        QVERIFY2(pCard->parentWidget() != resultsColumn(), "a hidden card was lent to the search results");
+
+        search(QString());
+        QVERIFY2(pCard->isHidden(), "the search handed a hidden card back showing");
+        QCOMPARE(cardPlacements(), before);
+    }
+
+    void test_ctrlFFocusesTheSearchField()
+    {
+        mpPreferences->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mpPreferences), "the dialog never became the active window, so a window shortcut cannot fire");
+
+        sidebar()->setFocus();
+        QCOMPARE(QApplication::focusWidget(), sidebar());
+
+        QTest::keyClick(mpPreferences, Qt::Key_F, Qt::ControlModifier);
+        QCOMPARE(QApplication::focusWidget(), searchField());
+    }
+};
+
+#include "SettingsSearchTest.moc"
+MUDLET_GROUPED_TEST_MAIN(SettingsSearchTest)
