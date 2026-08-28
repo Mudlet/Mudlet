@@ -371,6 +371,32 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(containsWrapped(text, "Package install failed"), text)
   end)
 
+  it("tells a script its postponed install failed", function()
+    -- The same install asked for while the profile is being saved is put off and
+    -- answers true there and then, so when the second attempt fails there is no
+    -- return value left for the reason to travel back on. Saying it on the main
+    -- console is all that is left, quiet caller or not.
+    local archive = fixtureDirectory .. "/mudlet-spec-notazip.mpackage"
+    local mark, postponed
+    for _ = 1, 5 do
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+      mark = getLastLineNumber("main")
+      assert.is_true(saveProfile())
+      -- true means it was put off: the archive is not a zip, so an install that is
+      -- carried out there and then answers nil and a reason instead
+      if installPackage(archive) == true then
+        postponed = true
+        break
+      end
+      pumpEvents(200)
+    end
+    assert.is_true(postponed, "the install was never put off, so there is no postponed failure to report")
+
+    assert.is_true(waitUntil(function() return containsWrapped(textFrom(mark), "Package install failed") end, 5000),
+                   textFrom(mark))
+    assert.is_true(containsWrapped(textFrom(mark), "could not unzip package"), textFrom(mark))
+  end)
+
   describe("with the fixture package installed", function()
     local runsBefore, installEvents, packageEvents, handlers
 
@@ -1253,6 +1279,19 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     -- module whose XML will not load stays listed: what changes is that it is said
     assert.is_true(ok)
     assert.is_true(packageInstalled(name))
+  end)
+
+  it("says the same for a package XML installed without an archive around it", function()
+    -- the report lives twice, once per branch, and a bare XML is a route of its
+    -- own: the editor's import and installPackage() with an .xml path both take it
+    local name = "mudlet-spec-badxml-bare"
+    defer(function() removeFixturePackage(name) end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml",
+                          function() return packageInstalled(name) end, "the truncated bare XML")
+
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
   end)
 end)
 
