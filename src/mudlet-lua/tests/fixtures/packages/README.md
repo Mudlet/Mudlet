@@ -29,10 +29,12 @@ deliberately.
 | `mudlet-spec-selfuninstall` | package whose event handler uninstalls its own package (regression #9557) |
 | `mudlet-spec-noconfig` | archive with a package XML but no `config.lua`, so the name comes from the file name |
 | `mudlet-spec-emptyarchive` | archive with neither `config.lua` nor a package XML |
+| `mudlet-spec-manifestonly` | archive with a `config.lua` and no package XML, so its details are filed before it is refused |
 | `mudlet-spec-notazip.mpackage` | not a zip archive at all, for the unpacking error path |
 | `mudlet-spec-badxml` | archive whose package XML is truncated, so the import fails after the package is registered |
 | `mudlet-spec-badconfig` | archive whose `config.lua` names the package and then raises, so the whole manifest is lost and the file name is used |
 | `mudlet-spec-renamer` | archive whose `config.lua` installs it under a different name (`mudlet-spec-renamed`) than the file it came in |
+| `mudlet-spec-dotted` | archive whose `config.lua` names it with a `.xml` on the end, which is trimmed off before it is installed |
 | `mudlet-spec-renamer2` | the same installed name as `mudlet-spec-renamer` but different details, so a refused install's effect on them is observable |
 | `sources/mudlet-spec-badxml-bare` | bare package XML that is truncated, for the same failure reached without an archive around it |
 | `sources/mudlet-spec-xmlonly` | bare package XML, installed without any archive around it |

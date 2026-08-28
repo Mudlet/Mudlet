@@ -1377,6 +1377,45 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
   end)
 end)
 
+describe("Tests installing an archive whose config.lua names it with a file extension", function()
+  it("files the details under the name it installs as, not the one its manifest wrote", function()
+    -- the name a manifest asks for is trimmed of the things a package file is
+    -- called before anything is installed under it, so a manifest that writes
+    -- "mudlet-spec-dotted.xml" installs a package called "mudlet-spec-dotted"
+    local dottedPackage = "mudlet-spec-dotted"
+    local manifestName = dottedPackage .. ".xml"
+    withFixturePackage(dottedPackage)
+
+    assert.equals("3.3", getPackageInfo(dottedPackage, "version"), "the installed package cannot describe itself")
+    assert.same({}, getPackageInfo(manifestName), "the details were filed under a name nothing is installed as")
+
+    -- and details filed under a name nothing is installed as are never taken
+    -- away: an uninstall only knows the name the package went in under, so the
+    -- entry outlives the package and the profile writes it back out for good
+    removeFixturePackage(dottedPackage)
+    assert.same({}, getPackageInfo(manifestName), "an uninstalled package still describes itself under the name its manifest wrote")
+  end)
+end)
+
+describe("Tests installing an archive that is nothing but a manifest", function()
+  it("takes back the details it filed before finding nothing to install", function()
+    -- the name and the details are read out of config.lua before anything is
+    -- installed, so an archive turned away after that has already written them
+    -- in. Left there, getPackageInfo() answers for a package that was never
+    -- installed, the package manager offers a row for it that nothing can
+    -- remove, and the profile writes the entry back out every time it saves.
+    local named = "mudlet-spec-manifestonly-named"
+    defer(function() removeFixturePackage(named) end)
+
+    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-manifestonly.mpackage")
+
+    assert.is_true(contains(reason, "no package found"), tostring(reason))
+    assert.is_false(packageInstalled(named))
+    assert.same({}, getPackageInfo(named), "the refused archive left its details behind under the name it asked for")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. named), "the refused archive stranded the folder it unpacked")
+  end)
+end)
+
 describe("Tests installing an archive whose package XML cannot be read", function()
   it("says the package's contents could not be read", function()
     local name = "mudlet-spec-badxml"

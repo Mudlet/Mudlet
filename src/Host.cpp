@@ -2440,18 +2440,23 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
 
         QDir _dir(_dest);
+        // readPackageConfig() files the archive's own details under the name it
+        // reads out of it, and an install that is turned away after that has to put
+        // back what it overwrote: otherwise a refused install leaves the package
+        // that refused it describing the one it turned down, and an archive nothing
+        // could be read out of leaves a name that was never installed answering
+        // getPackageInfo() and offering itself in the package manager for good.
+        const QMap<QString, QMap<QString, QString>> packageInfoBeforeConfig = mPackageInfo;
+        const QMap<QString, QMap<QString, QString>> moduleInfoBeforeConfig = mModuleInfo;
+        auto takeBackWhatTheManifestOverwrote = [&, this]() {
+            mPackageInfo = packageInfoBeforeConfig;
+            mModuleInfo = moduleInfoBeforeConfig;
+        };
         // before we start importing xmls in, see if the config.lua manifest file exists
         // - if it does, update the packageName from it
         if (_dir.exists(qsl("config.lua"))) {
-            // readPackageConfig() files the archive's own details under the name it
-            // reads out of it, and the refusals below then turn that archive away -
-            // so what it overwrote has to go back, or a refused install leaves the
-            // package that refused it describing the one it turned down.
-            const QMap<QString, QMap<QString, QString>> packageInfoBeforeConfig = mPackageInfo;
-            const QMap<QString, QMap<QString, QString>> moduleInfoBeforeConfig = mModuleInfo;
             auto refuseTheRenamedInstall = [&, this](const QString& reason) {
-                mPackageInfo = packageInfoBeforeConfig;
-                mModuleInfo = moduleInfoBeforeConfig;
+                takeBackWhatTheManifestOverwrote();
                 discardTheFolderThisInstallMade();
                 return fail(reason);
             };
@@ -2580,6 +2585,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // for a module whose name is already in mInstalledModules on the way in
         // (profile loading, and installModule() over a stale entry, both do that).
         if (!registeredFromArchive) {
+            takeBackWhatTheManifestOverwrote();
             if (!discardTheFolderThisInstallMade()) {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
             }
@@ -2994,7 +3000,13 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     if (!error) {
         lua_getglobal(L, "mpackage");
         if (lua_isstring(L, -1)) {
-            packageName = QString(lua_tostring(L, -1));
+            // the name a manifest asks for is trimmed of what a package file is
+            // called before anything is installed under it, so the details have
+            // to be filed under the trimmed name as well: filed under the raw
+            // one, the package that was installed cannot describe itself, and
+            // what was filed sits under a name no uninstall knows to take away,
+            // so it outlives the package and is written back out on every save
+            packageName = sanitizePackageName(QString(lua_tostring(L, -1)));
         }
         lua_pop(L, -1);
         if (!packageName.isEmpty()) {
