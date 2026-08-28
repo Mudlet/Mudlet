@@ -408,8 +408,8 @@ set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 # PackageRepositoryDownloadTest passes in seconds, so this timeout is only ever
 # reached by a run that is already failing - and each of its QTRY assertions has
 # to be allowed to run out, 15s apiece, before it can say what went wrong. That
-# plus profile setup is about 150s, so anything below it turns a readable
-# failure into a silent ctest kill
+# adds up to a couple of minutes across the cases, so a shorter timeout would
+# turn a readable failure into a silent ctest kill
 set_tests_properties(PackageRepositoryDownloadTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout

@@ -25,10 +25,11 @@
  *
  * Nothing but that button starts one, so there is no Lua entry point and the
  * busted suite cannot reach any of it. What decides when the batch is finished
- * is a single counter shared between the reply handlers, and three of the tests
- * here pin down the ends of it that are easiest to get wrong: a download that
- * fails, a selection the repository index cannot answer for, and one whose file
- * cannot be opened for writing. A counter left short of zero leaves the modal
+ * is a single counter shared between the reply handlers, and the tests here pin
+ * down the ends of it that are easiest to get wrong: a download that fails, a
+ * selection the repository index cannot answer for, one whose file cannot be
+ * opened for writing, and a reply landing while the loop is stopped inside a
+ * later selection's warning box. A counter left short of zero leaves the modal
  * "Downloading packages..." dialog up for the rest of the session, on top of a
  * profile the user can no longer click on.
  *
@@ -46,6 +47,8 @@
 #include <QtTest/QtTest>
 
 #include <QDir>
+#include <QElapsedTimer>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -130,26 +133,61 @@ public:
     explicit MessageBoxDismisser(QObject* parent = nullptr)
     : QObject(parent)
     {
+        mSinceStart.start();
         connect(&mTimer, &QTimer::timeout, this, &MessageBoxDismisser::dismissAny);
         mTimer.start(25ms);
     }
 
+    // Leaves each box up for this long before answering it. A box runs an event
+    // loop of its own, so holding one open is how a test decides what else gets
+    // to happen while the code under test is stopped inside it
+    void setHoldFor(std::chrono::milliseconds hold) { mHoldMs = hold.count(); }
+
     QStringList seen() const { return mSeen; }
+
+    // The most boxes open at once. Two means one opened while the code was
+    // already stopped inside another, which is the interleaving worth proving
+    // happened rather than assuming
+    int mostAtOnce() const { return mMostAtOnce; }
 
 private:
     void dismissAny()
     {
         const auto widgets = QApplication::topLevelWidgets();
+        QList<QMessageBox*> visible;
         for (QWidget* widget : widgets) {
             auto* box = qobject_cast<QMessageBox*>(widget);
             if (box && box->isVisible()) {
-                mSeen << box->text();
-                box->done(QMessageBox::Ok);
+                visible << box;
             }
+        }
+        mMostAtOnce = qMax(mMostAtOnce, static_cast<int>(visible.size()));
+
+        const qint64 now = mSinceStart.elapsed();
+        QMessageBox* newest = nullptr;
+        for (QMessageBox* box : visible) {
+            mFirstSeen.insert(box, mFirstSeen.value(box, now));
+            if (!newest || mFirstSeen.value(box) > mFirstSeen.value(newest)) {
+                newest = box;
+            }
+        }
+
+        // Only the newest, because boxes nest: each one runs an event loop inside
+        // the one before it, and an outer box cannot return until the inner has.
+        // Answering them newest first is what unwinds them, and it makes the order
+        // they were recorded in the order they were stacked
+        if (newest && now - mFirstSeen.value(newest) >= mHoldMs) {
+            mSeen << newest->text();
+            mFirstSeen.remove(newest);
+            newest->done(QMessageBox::Ok);
         }
     }
 
     QTimer mTimer;
+    QElapsedTimer mSinceStart;
+    QHash<QMessageBox*, qint64> mFirstSeen;
+    qint64 mHoldMs = 0;
+    int mMostAtOnce = 0;
     QStringList mSeen;
 };
 
@@ -406,6 +444,50 @@ private slots:
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
         QVERIFY(QDir(downloadPath).removeRecursively());
+    }
+
+    // A refusal's warning box runs an event loop, so a download started by an
+    // earlier selection can finish while the loop is stopped inside it. What
+    // stops that from ending the batch early - tearing down the progress dialog
+    // and resetting the package list while the loop is still holding pointers
+    // into it - is that a refusal counts itself only after its box closes, so
+    // its own selection is still outstanding for as long as the box is up, and
+    // the count cannot be zero.
+    //
+    // Three selections, with the refusal in the middle: the last one is the one
+    // that would be run against a torn-down batch, so it reporting its own
+    // failure is what says the loop came through the middle one intact.
+    void test_aReplyFinishingInsideARefusalDoesNotEndTheBatchEarly()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        MessageBoxDismisser dismisser;
+        // long enough for a refused connection to 127.0.0.1 to come back
+        dismisser.setHoldFor(1500ms);
+
+        QPointer<dlgPackageManager> manager = openManagerListing({repositoryEntry(qsl("a-first-download"), qsl("a-first-download.mpackage")),
+                                                                  repositoryEntry(qsl("b-nameless-refusal"), QString()),
+                                                                  repositoryEntry(qsl("c-second-download"), qsl("c-second-download.mpackage"))});
+        QVERIFY2(selectPackages(manager, {qsl("a-first-download"), qsl("b-nameless-refusal"), qsl("c-second-download")}), "The packages under test were not listed in the Explore view");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 3, 30000);
+
+        // Without this the run could come out green having never stacked one box
+        // inside another, which is the whole of what it is here to exercise
+        QVERIFY2(dismisser.mostAtOnce() >= 2, "No two warnings were ever open at once, so nothing finished inside the refusal and the case under test never happened");
+
+        // Recorded newest first, so the first download's failure coming out ahead
+        // of the refusal that was already on screen is what pins the nesting: the
+        // only event loop it could have been delivered in is that refusal's
+        QVERIFY2(dismisser.seen().at(0).contains(qsl("a-first-download")), "The first download did not fail inside the refusal's warning");
+        QVERIFY2(dismisser.seen().at(1).contains(qsl("b-nameless-refusal")), "The refusal's warning was not the one underneath");
+        QVERIFY2(dismisser.seen().at(2).contains(qsl("c-second-download")), "The selection after the refusal was never processed");
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
     }
 };
 
