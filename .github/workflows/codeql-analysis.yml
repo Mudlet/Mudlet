@@ -165,11 +165,7 @@ jobs:
           -DBUILD_TESTING=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        # Ninja defaults to cores + 2, which is six concurrent compiles on a
-        # runner with four cores and 16GB. The largest translation units are
-        # adjacent in the build order and each peaks over 1.3GB before CodeQL's
-        # extractor process takes its share on top, which is what exhausts the
-        # runner and gets it killed mid-build. Three fits.
+        # ninja's default of cores + 2 exhausts this runner's memory
         CMAKE_BUILD_PARALLEL_LEVEL: 3
 
     - name: Perform CodeQL Analysis
