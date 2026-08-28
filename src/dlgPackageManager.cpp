@@ -668,8 +668,8 @@ QString dlgPackageManager::removePackages(const QStringList& packageNames)
         // A save in progress is the refusal the user can do something about. The
         // other one is a package that has gone since the row was drawn - a
         // sibling in this very selection can take it away from its sysUninstall
-        // handler - and the rebuild the caller does clears that up, rather than
-        // blaming a save that is not running.
+        // handler - and the listing rebuild uninstallPackage() does clears that
+        // up, rather than blaming a save that is not running.
         if (mpHost->currentlySavingProfile()) {
             refusedWhileSaving << package;
         } else {
