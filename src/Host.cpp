@@ -2309,24 +2309,61 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return fail(qsl("could not open file '%1'").arg(actualFileName));
     }
 
+    // Whether an uninstall of this name would take anything away, asked of the
+    // six units an uninstall clears rather than of anything standing in for them.
+    // Neither thing a listing can be checked against answers it: a module whose
+    // file sits on a share that is away is still running every one of its items,
+    // and one whose XML stopped part-way through never reaches mModulesLoadedOk
+    // while the items it did import are live. Both would be unlisted, and the
+    // items left behind belong to the name the next install takes - so
+    // uninstalling that takes the module's items with it.
+    auto anythingIsInstalledUnder = [this](const QString& packageName) -> bool {
+        for (auto* item : mTriggerUnit.getTriggerRootNodeList()) {
+            if (item->mPackageName == packageName) {
+                return true;
+            }
+        }
+        for (auto* item : mTimerUnit.getTimerRootNodeList()) {
+            if (item->mPackageName == packageName) {
+                return true;
+            }
+        }
+        for (auto* item : mAliasUnit.getAliasRootNodeList()) {
+            if (item->mPackageName == packageName) {
+                return true;
+            }
+        }
+        for (auto* item : mActionUnit.getActionRootNodeList()) {
+            if (item->mPackageName == packageName) {
+                return true;
+            }
+        }
+        for (auto* item : mScriptUnit.getScriptRootNodeList()) {
+            if (item->mPackageName == packageName) {
+                return true;
+            }
+        }
+        for (auto* item : mKeyUnit.getKeyRootNodeList()) {
+            if (item->mPackageName == packageName) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     // A listing can outlive the module: installModulesList() files the entry back
     // whether the load worked or not, so a profile whose module file has gone
     // keeps the name with nothing behind it. That holds no items for anything to
     // collide with, so it is cleared rather than held against whoever asks for
     // the name next - a package included, which is why this does not live inside
-    // the module-only refusal below.
-    auto aModuleIsUsingTheName = [this](const QString& packageName) -> bool {
+    // the module-only refusal below. The items are filed under the bare name, so
+    // this cannot tell a package's from a module's: every caller settles whether
+    // a package holds the name before asking.
+    auto aModuleIsUsingTheName = [this, &anythingIsInstalledUnder](const QString& packageName) -> bool {
         if (!mInstalledModules.contains(packageName) && !mActiveModules.contains(packageName)) {
             return false;
         }
-        // Whether the module loaded is what says there is something here, not
-        // whether its file can be reached: a module is a link to a file the user
-        // keeps where they like - a share, an external disk, a folder something
-        // else is syncing - and one that loaded is listed and running every one
-        // of its items whether that path resolves this second or not. Asking the
-        // filesystem unlists it, leaving its items behind under a name the next
-        // install takes, so uninstalling that takes the module's items too.
-        if (mModulesLoadedOk.contains(packageName)) {
+        if (anythingIsInstalledUnder(packageName)) {
             return true;
         }
         mInstalledModules.remove(packageName);
@@ -2353,18 +2390,19 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 
     QString packageName = sanitizePackageName(fileName);
     if (thing != enums::PackageModuleType::Package) {
+        // An uninstall takes items away by name alone, so one name installed both
+        // ways loses both halves' items whichever half is removed. A profile saved
+        // before this was refused can still hold the combination and has to go on
+        // loading, so only a fresh install is turned away. Asked before the module
+        // question below, which reads the same items and cannot tell whose they are.
+        if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
+            //: %1 is the name of the package that is already installed
+            return fail(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+        }
         if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
         } else if (const QString refusal = refusalFromAModuleUsingTheName(packageName); !refusal.isEmpty()) {
             return fail(refusal);
-        }
-        // An uninstall takes items away by name alone, so one name installed both
-        // ways loses both halves' items whichever half is removed. A profile saved
-        // before this was refused can still hold the combination and has to go on
-        // loading, so only a fresh install is turned away.
-        if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
-            //: %1 is the name of the package that is already installed
-            return fail(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
@@ -2482,6 +2520,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             // about the half it did not check, or any archive at all installs over
             // the other half's name and an uninstall then takes both halves' items.
             if (thing != enums::PackageModuleType::Package) {
+                if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
+                    //: %1 is the name of the package that is already installed
+                    return refuseTheRenamedInstall(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+                }
                 // Asked before the sync below, not after: that takes the module
                 // already using the name apart by name alone, so refusing
                 // afterwards would hand back the module that did the refusing
@@ -2491,10 +2533,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 }
                 if (mActiveModules.contains(packageName)) {
                     uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
-                }
-                if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
-                    //: %1 is the name of the package that is already installed
-                    return refuseTheRenamedInstall(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
                 }
             } else {
                 if (mInstalledPackages.contains(packageName)) {

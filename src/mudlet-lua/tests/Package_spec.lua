@@ -1108,6 +1108,27 @@ describe("Tests installing one name as both a package and a module", function()
     assert.equals(0, exists("mudlet-spec-noconfig alias", "alias"), "the refused archive's own contents were installed anyway")
   end)
 
+  -- The other way a live module goes unlisted. A module whose XML stops part-way
+  -- through has imported everything up to the break and is running it, but the
+  -- import reports failure, so the module never reaches the mark that says it
+  -- loaded. Reading that mark rather than the items themselves unlists it just
+  -- the same, and the package that then takes the name takes those items with it
+  -- when it goes.
+  it("refuses a package over a module whose XML stopped part-way through", function()
+    local partial = "mudlet-spec-partialxml"
+    local archive = withFixtureModule(partial)
+
+    assert.is_true(moduleInstalled(partial), "the module whose XML broke was not listed")
+    assert.equals(1, exists(partial .. " alias", "alias"), "the items imported before the break did not survive")
+
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(partial), "the package was installed over a module that is still running")
+    assert.is_true(moduleInstalled(partial), "the live module was unlisted because its XML had not loaded in full")
+    assert.equals(1, exists(partial .. " alias", "alias"), "the module lost its alias to an install that was refused")
+  end)
+
   -- The two refusals above run on the name the archive's file has. An archive
   -- carrying a config.lua is renamed to whatever that file says straight after,
   -- so an archive under any other name reached the registration with a name the

@@ -32,6 +32,7 @@ deliberately.
 | `mudlet-spec-manifestonly` | archive with a `config.lua` and no package XML, so its details are filed before it is refused |
 | `mudlet-spec-notazip.mpackage` | not a zip archive at all, for the unpacking error path |
 | `mudlet-spec-badxml` | archive whose package XML is truncated, so the import fails after the package is registered |
+| `mudlet-spec-partialxml` | archive whose package XML stops after one alias and one script, so those items import and the load still fails |
 | `mudlet-spec-emptyname` | archive whose `config.lua` asks for a name that trims away to nothing, so there is no name to install under |
 | `mudlet-spec-badconfig` | archive whose `config.lua` names the package and then raises, so the whole manifest is lost and the file name is used |
 | `mudlet-spec-renamer` | archive whose `config.lua` installs it under a different name (`mudlet-spec-renamed`) than the file it came in |
