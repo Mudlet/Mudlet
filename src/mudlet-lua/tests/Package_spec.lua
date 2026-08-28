@@ -1490,6 +1490,12 @@ describe("Tests installing an archive whose package XML cannot be read", functio
 end)
 
 describe("Tests installing an archive whose config.lua will not run", function()
+  local function warningsSince(mark)
+    local stripped = (tostring(textFrom(mark)):gsub("%s+", ""))
+    local _, occurrences = stripped:gsub("couldnotberead", "")
+    return occurrences
+  end
+
   it("says the manifest was lost and installs under the archive's own name", function()
     local name = "mudlet-spec-badconfig"
     defer(function() removeFixturePackage(name) end)
@@ -1513,6 +1519,29 @@ describe("Tests installing an archive whose config.lua will not run", function()
     -- anything depending on it all stop matching, with nothing to go on
     assert.same({}, getPackageInfo(name))
     assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
+  -- The same archive installed as a module is reinstalled on every profile save
+  -- and on every reloadModule(), so saying it there is the same sentence over
+  -- and over for a manifest the user was told about once already, on the
+  -- install they asked for.
+  it("does not say it again on every module sync", function()
+    local name = "mudlet-spec-badconfig"
+    defer(function() removeFixturePackage("mudlet-spec-badconfig-renamed") end)
+
+    local before = getLastLineNumber("main")
+    withFixtureModule(name)
+    assert.is_true(moduleInstalled(name), "the fixture module did not install")
+    assert.is_true(warningsSince(before) >= 1, "the install the user asked for never said the manifest was lost")
+
+    assert.is_true(waitForProfileSaveToPass())
+    local mark = getLastLineNumber("main")
+    reloadModule(name)
+    pumpEvents(600)
+    reloadModule(name)
+    pumpEvents(600)
+
+    assert.equals(0, warningsSince(mark), "the manifest warning came back on every module sync")
   end)
 
   -- Trimming the name a manifest asks for can leave nothing at all, and the

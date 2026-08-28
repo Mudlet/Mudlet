@@ -651,24 +651,52 @@ void dlgPackageManager::slot_openPackageWebsite()
     mudlet::self()->openWebPage(qsl("https://packages.mudlet.org/packages#pkg-") + currentItem->text());
 }
 
+// Returns what to tell the user about the removals that did not happen, empty
+// when they all did. Separate from the slot so the wording can be tested: the
+// dialog has no Lua entry point and the box below blocks.
+QString dlgPackageManager::removePackages(const QStringList& packageNames)
+{
+    QStringList refusedWhileSaving;
+    QStringList noLongerInstalled;
+    for (const QString& package : packageNames) {
+        if (mpHost->uninstallPackage(package, enums::PackageModuleType::Package)) {
+            continue;
+        }
+        // A save in progress is the refusal the user can do something about. The
+        // other one is a package that has gone since the row was drawn - a
+        // sibling in this very selection can take it away from its sysUninstall
+        // handler - and the rebuild the caller does clears that up, rather than
+        // blaming a save that is not running.
+        if (mpHost->currentlySavingProfile()) {
+            refusedWhileSaving << package;
+        } else {
+            noLongerInstalled << package;
+        }
+    }
+
+    QStringList sentences;
+    if (!refusedWhileSaving.isEmpty()) {
+        //: %1 is a comma separated list of the packages that are still installed
+        sentences << tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedWhileSaving.join(qsl(", ")));
+    }
+    if (!noLongerInstalled.isEmpty()) {
+        //: %1 is a comma separated list of the packages that turned out not to be installed any more
+        sentences << tr("These are no longer installed, so there was nothing to remove: %1.").arg(noLongerInstalled.join(qsl(", ")));
+    }
+    return sentences.join(qsl(" "));
+}
+
 void dlgPackageManager::slot_removePackages()
 {
     const QList<QListWidgetItem*> selectedItems = packageList->selectedItems();
-    QStringList removePackages;
+    QStringList selectedPackages;
 
     for (QListWidgetItem* item : selectedItems) {
-        removePackages << item->text();
+        selectedPackages << item->text();
     }
 
-    QStringList refusedPackages;
-    for (const QString& package : std::as_const(removePackages)) {
-        if (!mpHost->uninstallPackage(package, enums::PackageModuleType::Package)) {
-            refusedPackages << package;
-        }
-    }
-    if (!refusedPackages.isEmpty()) {
-        //: %1 is a comma separated list of the packages that are still installed
-        const QString msg = tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedPackages.join(qsl(", ")));
+    const QString msg = removePackages(selectedPackages);
+    if (!msg.isEmpty()) {
         QMessageBox::warning(this, tr("Removal failed"), msg);
     }
 

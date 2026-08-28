@@ -93,6 +93,15 @@
 #error Mudlet requires a version of libzip of at least 1.0
 #endif
 
+// How the handlers that put an operation off until the profile has finished
+// saving are hooked up. Both of them start a save of their own, and a save
+// that finishes announces itself synchronously, so a directly connected
+// handler is re-entered from inside its own body - once per operation that was
+// waiting, and a poll that asks during a save leaves one waiting per ask.
+// Queued keeps every one of them at the bottom of the stack; single-shot stops
+// a second announcement running an operation that has already been carried out.
+static constexpr auto deferredSaveHandlerConnection = static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection);
+
 using namespace std::chrono;
 
 stopWatch::stopWatch()
@@ -865,10 +874,15 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            reloadModule(syncModuleName);
-            obj->deleteLater();
-        });
+        connect(
+                this,
+                &Host::profileSaveFinished,
+                obj,
+                [=, this]() {
+                    reloadModule(syncModuleName);
+                    obj->deleteLater();
+                },
+                deferredSaveHandlerConnection);
         return;
     }
     QMap<QString, QStringList> installedModules = mInstalledModules;
@@ -2236,21 +2250,26 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (currentlySavingProfile()) {
         // Auto-retry installation after save completes
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            auto [ok, msg] = installPackage(fileName, thing, quiet);
-            if (!ok) {
-                qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
-                // A non-quiet install has already been reported by fail() inside the
-                // call above. A quiet one has not, and cannot be: quiet's bargain is
-                // that the caller gets the reason as a return value instead of a
-                // console line, and this caller was handed {true, ""} long before the
-                // failure happened. Nobody else can say it, so say it here.
-                if (quiet) {
-                    postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
-                }
-            }
-            obj->deleteLater();
-        });
+        connect(
+                this,
+                &Host::profileSaveFinished,
+                obj,
+                [=, this]() {
+                    auto [ok, msg] = installPackage(fileName, thing, quiet);
+                    if (!ok) {
+                        qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
+                        // A non-quiet install has already been reported by fail() inside the
+                        // call above. A quiet one has not, and cannot be: quiet's bargain is
+                        // that the caller gets the reason as a return value instead of a
+                        // console line, and this caller was handed {true, ""} long before the
+                        // failure happened. Nobody else can say it, so say it here.
+                        if (quiet) {
+                            postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
+                        }
+                    }
+                    obj->deleteLater();
+                },
+                deferredSaveHandlerConnection);
         return {true, QString()};
     }
 
@@ -2508,11 +2527,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 // from the repository and anything depending on it all stop
                 // matching it. Nothing else says a word about that.
                 qWarning() << "Host::installPackage() could not read the manifest of" << fileName << ":" << whyTheManifestWasNotRead;
-                // said even to a quiet caller, for the same reason the deferred
+                // Said even to a quiet caller, for the same reason the deferred
                 // install above says its failure: the install goes on to succeed,
-                // so there is no return value left to carry this
-                //: %1 is the name the package is being installed under, %2 is the error its config.lua gave
-                postMessage(tr("[ WARN ]  - The config.lua of \"%1\" could not be read, so it is being installed under that name with no details: %2").arg(packageName, whyTheManifestWasNotRead));
+                // so there is no return value left to carry this. A module sync is
+                // the exception - it reinstalls the same archive on every save and
+                // on every reloadModule(), so saying it there is the same sentence
+                // again forever for a manifest the user has already been told about
+                // once, on the install they asked for.
+                if (thing != enums::PackageModuleType::ModuleSync) {
+                    //: %1 is the name the package is being installed under, %2 is the error its config.lua gave
+                    postMessage(tr("[ WARN ]  - The config.lua of \"%1\" could not be read, so it is being installed under that name with no details: %2").arg(packageName, whyTheManifestWasNotRead));
+                }
             }
             // now that the packageName changed, redo relevant checks to make sure it's still valid.
             // The refusal further up only ever saw the archive's own file name, and
