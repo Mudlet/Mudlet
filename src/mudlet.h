@@ -403,6 +403,10 @@ public:
     // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
     // startup which the user may leave as is or force on or off:
     bool mShowIconsOnMenuOriginally = true;
+    // Whether Mudlet was the active application at the last state change, so
+    // sysApplicationFocusChangeEvent is raised on a change of that and not on
+    // every transition Qt reports between its inactive states
+    bool mApplicationActive = true;
     // 2 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
     QString mTEXT_ON_BG_STYLESHEET;
@@ -572,6 +576,7 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
+    void slot_applicationStateChanged(const Qt::ApplicationState);
     void slot_refreshTabIndicatorsDelayed();
     void slot_telnetConnectionStateChanged();
 
