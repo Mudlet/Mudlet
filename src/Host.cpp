@@ -2279,9 +2279,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // installs ignore it altogether. Say it once here instead. Script
     // installs pass quiet and get the reason back as a return value, so they are
     // left to report it themselves rather than having it appear unbidden.
-    auto fail = [this, &fileName, quiet](const QString& reason) -> std::pair<bool, QString> {
+    // A module sync is the exception, for the reason the manifest warning further
+    // down gives: it reinstalls the same archive on every save and on every
+    // reloadModule(), so a sync that cannot read its source would say the same
+    // sentence again forever.
+    auto fail = [this, &fileName, quiet, thing](const QString& reason) -> std::pair<bool, QString> {
         qWarning() << "Host::installPackage() failed for" << fileName << ":" << reason;
-        if (!quiet) {
+        if (!quiet && thing != enums::PackageModuleType::ModuleSync) {
             //: %1 is the package or module file the user tried to install, %2 is the reason it could not be
             postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, reason));
         }
@@ -2413,7 +2417,22 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return QString();
     };
 
+    // sanitizePackageName() takes off the parts of a file name that are not the
+    // package's own - the folders it sits in, the extension - by removing them
+    // wherever they appear rather than only at the end, so a name made of nothing
+    // else comes back as "." or "..". Both name a folder outside the one packages
+    // are unpacked into, and the archive is unpacked straight into whatever this
+    // settles on: "...mpackage" leaves "..", which is the folder holding every
+    // profile.
+    auto nameIsAStepOutOfTheProfile = [](const QString& name) {
+        return name.isEmpty() || name == QLatin1String(".") || name == QLatin1String("..") || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'));
+    };
+
     QString packageName = sanitizePackageName(fileName);
+    if (nameIsAStepOutOfTheProfile(packageName)) {
+        //: %1 is the file the user tried to install, which has no name of its own left once the folders it sits in and its extension are taken off
+        return fail(tr("\"%1\" leaves no name to install it under. Please rename the file and try again.").arg(fileName));
+    }
     // Nothing settles the name an install lands under until config.lua has been
     // read, and that can rename the archive to anything at all - so a name the
     // other half is using is not necessarily a name this ever installs under.
@@ -2575,6 +2594,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 }
             }
         }
+        if (nameIsAStepOutOfTheProfile(packageName)) {
+            //: %1 is the name the package's config.lua asked to be installed under
+            return refuseTheRenamedInstall(tr("The config.lua of this package asks to be installed as \"%1\", which is not a name a package can have.").arg(packageName));
+        }
         // The name this installs under is settled now, so this is where a name
         // that is spoken for is answered: everything above only ever saw the
         // archive's own file name, and config.lua has just renamed this to
@@ -2611,7 +2634,26 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // has nothing to move, and asking to rename a folder onto itself is
         // refused by the very check below
         if (QDir(newpath).absolutePath() != _dir.absolutePath()) {
-            if (_dir.rename(_dir.absolutePath(), newpath)) {
+            bool movedIntoPlace = _dir.rename(_dir.absolutePath(), newpath);
+            if (!movedIntoPlace && thing == enums::PackageModuleType::ModuleSync && moduleInfoBeforeConfig.contains(packageName)) {
+                // A sync's uninstall leaves the module's folder alone on purpose,
+                // for the reinstall to write over - which is what happens when the
+                // archive's file name is the module's name. One that renames itself
+                // unpacks under its file name instead, so the folder it has to go
+                // back into is in the way of its own rename: last time's folder
+                // would be imported, the files just unpacked would be left in the
+                // profile for good under the archive's file name, and the module
+                // would never take up an update. Asked of mModuleInfo as it was
+                // before config.lua spoke, so this only ever replaces a folder the
+                // profile already knew as this module's - a name the manifest has
+                // only just asked for could be the profile's own "map" or "log".
+                const QString theModulesFolderFromLastTime = QDir(newpath).absolutePath();
+                if (theModulesFolderFromLastTime.startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
+                    removeDir(theModulesFolderFromLastTime, theModulesFolderFromLastTime);
+                    movedIntoPlace = _dir.rename(_dir.absolutePath(), newpath);
+                }
+            }
+            if (movedIntoPlace) {
                 if (!folderThisInstallMade.isEmpty()) {
                     folderThisInstallMade = QDir(newpath).absolutePath();
                 }
@@ -2628,9 +2670,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 //: %1 is the name the package's config.lua asks to be installed under
                 return refuseTheRenamedInstall(
                         tr("A folder called \"%1\" is already in the profile, so the package could not be put in place. Please remove or rename that folder first.").arg(packageName));
+            } else {
+                // Going on reads the folder that was in the way, so the one just
+                // unpacked is of no further use: leaving it would put a folder in
+                // the profile under the archive's file name that nothing ever
+                // takes away again.
+                discardTheFolderThisInstallMade();
             }
-            // a sync or a profile load is putting back what is already there,
-            // so the folder in the way is this same module's own from last time
         }
         _dir = QDir(newpath);
         QStringList _filterList;

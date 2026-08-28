@@ -1254,6 +1254,96 @@ describe("Tests installing one name as both a package and a module", function()
     assert.equals(1, exists("mudlet-spec-noconfig alias", "alias"), "the module under the file name lost its alias to the package install")
   end)
 
+  -- A module whose config.lua renames it is unpacked under its archive's own file
+  -- name by every sync, so its rename always lands on the folder the module
+  -- already has - and a sync's uninstall leaves that folder alone on purpose, for
+  -- the reinstall to write over.
+  it("takes an updated archive up when it reloads a module whose config.lua renames it", function()
+    local path = copyOfRenamerInTheProfile()
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "SETUP: the module's alias was not there before the reload")
+
+    -- a module is reloaded from the archive it was installed from, so writing a
+    -- different archive over that file is what the user updating a module looks
+    -- like from here. This one installs under the same name and different items.
+    copyFile(otherRenamerArchive, path)
+
+    -- a postponed reload is dropped rather than carried out later, and a dropped
+    -- one would leave everything below true without the reload ever happening
+    assert.is_true(waitForProfileSaveToPass(), "SETUP: a save was still running, so the reload would have been dropped")
+    reloadModule(renamedTo)
+    pumpEvents(1000)
+
+    assert.is_true(moduleInstalled(renamedTo), "the reload took the module away")
+    assert.equals(1, exists("mudlet-spec-renamer2 alias", "alias"), "the reload put back what the module held before rather than what its archive holds now")
+    assert.equals(0, exists(renamedTo .. " alias", "alias"), "the items of the archive that was replaced are still installed")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the reload left the folder it unpacked into in the profile, under the archive's file name")
+  end)
+
+  -- The folder an install is staged in is taken away again on every way out, so
+  -- one still sitting there is the leavings of an install that was interrupted.
+  -- Unpacking on top of it would import whatever it still holds under the name
+  -- being installed, which is somebody else's items under the user's package.
+  it("does not install what a staging folder left over from an interrupted install holds", function()
+    lfs.mkdir(scratchDirectory)
+    local squatterDirectory = scratchDirectory .. "/under-the-file-name"
+    lfs.mkdir(squatterDirectory)
+    local squatter = squatterDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(squatter)
+      lfs.rmdir(squatterDirectory)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", squatter)
+    defer(function() removeFixturePackage("mudlet-spec-renamer") end)
+    installUntilConfirmed(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
+                          "a package under the renaming archive's file name")
+
+    -- only a name the other half already holds is staged, which is why the
+    -- package above has to be installed first for this folder to be in the way
+    local leftOver = getMudletHomeDir() .. "/mudlet-spec-renamer.mudlet-installing"
+    lfs.mkdir(leftOver)
+    defer(function()
+      os.remove(leftOver .. "/mudlet-spec-leftover.xml")
+      lfs.rmdir(leftOver)
+    end)
+    local stray = io.open(leftOver .. "/mudlet-spec-leftover.xml", "w")
+    assert.is_truthy(stray, "could not write the leftover staging folder's XML")
+    stray:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-leftover alias</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-leftover$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+    stray:close()
+    assert.is_true(fileExists(leftOver), "SETUP: the leftover staging folder was not created")
+
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, copyOfRenamerInTheProfile(), function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module past a leftover staging folder")
+
+    assert.equals(0, exists("mudlet-spec-leftover alias", "alias"), "the leftover staging folder's items were installed under the module's name")
+  end)
+
   it("refuses a module whose config.lua renames it onto an installed module", function()
     local path = copyOfRenamerInTheProfile()
     defer(function() removeFixtureModule(renamedTo) end)
@@ -1441,8 +1531,15 @@ describe("Tests installing a package while the profile is being saved", function
       removeFixturePackage("mudlet-spec-noconfig")
     end)
     installFixturePackage(minimalPackage)
+    saveProfile()
+    -- SETUP: installPackage() answers an empty path true only from the
+    -- postponement at its head, so this says a save really is running. Without
+    -- it a drained save turns this spec into a plain install test that passes
+    -- whether the postponement works or not.
+    assert.is_true(installPackage(""), "SETUP: no profile save was running, so nothing below was postponed")
 
     assert.is_true(installPackage(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage"))
+    assert.is_false(packageInstalled("mudlet-spec-noconfig"), "the install was carried out there and then rather than postponed")
     assert.is_true(waitUntil(function() return packageInstalled("mudlet-spec-noconfig") end, 5000))
   end)
 end)
@@ -1637,6 +1734,35 @@ describe("Tests installing an archive whose config.lua will not run", function()
     assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
     assert.same({}, getPackageInfo(name))
     assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
+  -- A package file's ending is taken out of the name wherever it appears rather
+  -- than only off the end, so "...mpackage" gives up the ".mpackage" sitting in
+  -- its middle and what is left is "..". The name becomes the folder the archive
+  -- is unpacked into, and that one is the folder holding every profile.
+  it("refuses a name that trims down to a step out of the profile", function()
+    lfs.mkdir(scratchDirectory)
+    local climber = scratchDirectory .. "/...mpackage"
+    defer(function()
+      os.remove(climber)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", climber)
+
+    local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\][^/\\]+$")
+    assert.is_string(profilesDirectory, "could not work out the folder holding the profiles")
+    local before = {}
+    for entry in lfs.dir(profilesDirectory) do
+      before[entry] = true
+    end
+
+    local reason = installUntilRefused(installPackage, climber)
+    assert.is_truthy(reason, "a name that climbs out of the profile was installed")
+
+    for entry in lfs.dir(profilesDirectory) do
+      assert.is_true(before[entry] == true, "the archive was unpacked into the folder holding every profile: " .. entry)
+    end
+    assert.equals(0, exists("mudlet-spec-noconfig alias", "alias"), "the archive's items were installed anyway")
   end)
 end)
 
