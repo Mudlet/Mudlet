@@ -1262,14 +1262,33 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.is_nil(getLabelText("glfFontNotAString"):find("<font face", 1, true))
     end)
 
+    it("normalises a font constraint that is present but false", function()
+      -- false is a font that is not a string like any other, so it has to leave the
+      -- same empty string behind - not itself, which no reader of .font expects
+      local built = track(Geyser.Label:new({name = "glfFontFalse", x = 0, y = 240, width = 200, height = 50, font = false}))
+      assert.are.equal("", built.font)
+      assert.is_nil(getLabelText("glfFontFalse"):find("<font face", 1, true))
+    end)
+
     it("takes the font of a label used as a prototype", function()
       local prototype = track(Geyser.Label:new({name = "glfPrototype", x = 0, y = 120, width = 200, height = 50}))
       prototype:setFont("Ubuntu Mono")
       local child = track(prototype:new({name = "glfPrototypeChild", x = 0, y = 180, width = 200, height = 50}))
-      -- the child writes no font of its own, so the prototype's is inherited and
-      -- reaches the markup; the child's widget font is its own and stays default
+      -- inherited through the prototype, the font reaches the markup but was never
+      -- set on the child's own widget, so getFont() still reports the default
       assert.are.equal("Ubuntu Mono", child.font)
       assert.is_truthy(getLabelText("glfPrototypeChild"):find('<font face ="Ubuntu Mono">', 1, true))
+      assert.are_not.equal("Ubuntu Mono", getFont("glfPrototypeChild"))
+    end)
+
+    it("keeps a child's own font off the label it was cloned from", function()
+      local prototype = track(Geyser.Label:new({name = "glfOwnPrototype", x = 0, y = 300, width = 200, height = 50}))
+      prototype:setFont("Ubuntu Mono")
+      local child = track(prototype:new({name = "glfOwnChild", x = 0, y = 360, width = 200, height = 50, font = "Bitstream Vera Sans Mono"}))
+      -- an own field on the child, so writing it must not reach through to the
+      -- prototype and re-font every other label cloned from it
+      assert.are.equal("Bitstream Vera Sans Mono", child.font)
+      assert.are.equal("Ubuntu Mono", prototype.font)
     end)
   end)
 

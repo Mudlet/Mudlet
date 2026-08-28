@@ -1348,8 +1348,8 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
         return {false, qsl("specified font is invalid (its letters have 0 width)")};
     }
 
-    // Only an explicit new choice - the preferences dialog or Lua's setFont() -
-    // retires the stand-in. The family cannot decide that for itself: while the
+    // Only an explicit new choice of family retires the stand-in, never a size or
+    // antialiasing tweak. The family cannot decide that for itself: while the
     // stand-in is up the family on show IS the stand-in, so a user picking that
     // very family and the preferences re-sending it because only the size or the
     // antialiasing changed look exactly alike.
@@ -1374,20 +1374,30 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
     return {true, QString()};
 }
 
-// Also completely specifies the font for use in the main console and elsewhere:
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     QFont font;
+    // A description fromString() will not read leaves the font as constructed, which
+    // is the application's proportional UI font rather than a record of what the
+    // profile asked for. It rejects one that names no family, so that is covered too.
     if (!font.fromString(fontData)) {
         qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the font in use is kept.";
         return;
     }
 
-    // A profile's own saved font and a font a package brings with it both arrive
-    // here, which can be long after a stand-in for a missing font went up. Either
-    // is a choice of family rather than an adjustment, so it retires the stand-in
-    // and becomes what gets saved - otherwise it is undone again on the next save.
-    setDisplayFont(font, DisplayFontChange::UserChoice);
+    // <mDisplayFont> is written only by a profile's own save, and so reaches here
+    // twice: reading that save, before the one-shot check that stands a default in
+    // for a missing font, and again if such a save is installed as a package, which
+    // can be long after it. The second is a choice of family rather than an
+    // adjustment, so it retires the stand-in and becomes what gets saved. A family
+    // that is not installed retires nothing though - the check does not run a second
+    // time, so nothing would notice this one is missing too and the family the
+    // profile asked for would be forgotten in favour of one nobody has.
+    const auto resolved = resolveFontFamily(font.family());
+    const auto change = resolved.available ? DisplayFontChange::UserChoice : DisplayFontChange::Adjustment;
+    if (const auto [applied, error] = setDisplayFont(font, change); !applied) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" was refused: " << error;
+    }
 }
 
 void Host::setDisplayFontSize(int size)
