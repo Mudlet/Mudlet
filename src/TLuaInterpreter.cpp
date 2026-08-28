@@ -7876,9 +7876,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
     // of learning about, so it comes back as a second return value rather than
     // only reaching a user who happens to have the debug console open:
     auto successWithWarning = [&](const QString& warning) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(QString::fromUtf8(lua_tostring(L, 1))) >> &host;
-            TDebug(Qt::white, QColorConstants::Svg::orange) << qsl("setConfig: %1\n").arg(warning) >> &host;
+        if (TDebug::wants(TDebug::Category::Other)) {
+            TDebug(Qt::white, Qt::blue, TDebug::Category::Other) << qsl("setConfig: a script has changed %1\n").arg(QString::fromUtf8(lua_tostring(L, 1))) >> &host;
+        }
+        if (TDebug::wants(TDebug::Category::LuaWarning)) {
+            TDebug(Qt::white, QColorConstants::Svg::orange, TDebug::Category::LuaWarning) << qsl("setConfig: %1\n").arg(warning) >> &host;
         }
         lua_pushboolean(L, true);
         lua_pushstring(L, warning.toUtf8().constData());

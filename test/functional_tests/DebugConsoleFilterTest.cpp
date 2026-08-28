@@ -22,6 +22,7 @@
 #include "GroupedTest.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "PortableModeTestHelper.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TLuaInterpreter.h"
@@ -42,12 +43,30 @@ class DebugConsoleFilterTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-DebugConsoleFilter";
     QString mPort; // assigned the stub's actual loopback port in init()
     const QString mLocalhost = "localhost";
 
 private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        QVERIFY(mConfigDir.isValid());
+        // pre-create $XDG_CONFIG_HOME/mudlet/profiles so setupConfig() adopts it
+        // and the test never touches the real profiles or settings
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
@@ -58,6 +77,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
