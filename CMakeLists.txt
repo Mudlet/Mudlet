@@ -303,4 +303,12 @@ add_subdirectory(3rdparty/communi)
 add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
-add_subdirectory(test)
+
+# A CodeQL scan only reports on src/, yet the test tree is nearly half the C++
+# compile edges and links mudlet_core statically into dozens more executables,
+# so that workflow sets BUILD_TESTING=OFF. CTest's conventional name, defaulting
+# to ON, leaves every other build unchanged.
+option(BUILD_TESTING "Build the test tree" ON)
+if(BUILD_TESTING)
+  add_subdirectory(test)
+endif()

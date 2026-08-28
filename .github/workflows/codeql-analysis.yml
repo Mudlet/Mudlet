@@ -162,8 +162,15 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DBUILD_TESTING=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        # Ninja defaults to cores + 2, which is six concurrent compiles on a
+        # runner with four cores and 16GB. The largest translation units are
+        # adjacent in the build order and each peaks over 1.3GB before CodeQL's
+        # extractor process takes its share on top, which is what exhausts the
+        # runner and gets it killed mid-build. Three fits.
+        CMAKE_BUILD_PARALLEL_LEVEL: 3
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4.37.7
