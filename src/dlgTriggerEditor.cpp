@@ -10884,6 +10884,9 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
         // If this is the first time the window is shown we want any previously
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();
+        // Every time it is opened, not just the first: the filters may well
+        // have been narrowed since it was last closed:
+        TDebug::announceFilters();
     }
     mudlet::self()->refreshTabBar();
 }

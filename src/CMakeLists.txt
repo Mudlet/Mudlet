@@ -134,6 +134,7 @@ set(mudlet_SRCS
     TConsole.cpp
     TConsoleModel.cpp
     TDebug.cpp
+    TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -370,6 +371,7 @@ set(mudlet_HDRS
     TConsole.h
     TConsoleModel.h
     TDebug.h
+    TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h

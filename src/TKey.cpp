@@ -158,8 +158,8 @@ void TKey::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
@@ -172,8 +172,8 @@ void TKey::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
@@ -240,7 +240,7 @@ void TKey::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this);
+        mpHost->mLuaInterpreter.call_luafunction(this, mName);
         return;
     }
 

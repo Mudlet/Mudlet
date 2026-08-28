@@ -34,6 +34,7 @@ endif()
 set(WINDOW_GROUP_TEST_SOURCES
     ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
+    DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp

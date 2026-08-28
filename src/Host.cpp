@@ -836,9 +836,11 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     const int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
-    if (mudlet::smDebugMode && s == nullptr) {
-        //: This error message will appear when the xml file inside the module zip cannot be updated for some reason.
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".").arg(filename_xml, zipName, zip_strerror(zipFile));
+    if (s == nullptr) {
+        // Not a TDebug: this runs on a worker thread, which must not touch a
+        // profile's console.
+        qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open xml file \"" << filename_xml
+                                       << "\" inside the module to update it, error: \"" << zip_strerror(zipFile) << "\"";
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
 
@@ -849,10 +851,7 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     }
 
     if (err == -1) {
-        if (mudlet::smDebugMode && err == -1) {
-            //: This error message will appear when a module is saved as package but cannot be done for some reason.
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".").arg(moduleName, zipName, zip_strerror(zipFile));
-        }
+        qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to save the module, error: \"" << zip_strerror(zipFile) << "\"";
         // Properly dispose of things after failing to zip_close(...) the
         // archive:
         zip_discard(zipFile);
@@ -1993,9 +1992,11 @@ void Host::runTriggers(int line)
     QString haystack = consoleModel.mCurrentLine;
     haystack.append('\n');
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> this;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> this;
+    if (TDebug::wants(TDebug::Category::GameLine)) {
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
+        // haystack already ends in a newline - adding another leaves a
+        // blank row under every single game line:
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << haystack >> this;
     }
     incomingStreamProcessor(haystack, line);
 
@@ -2860,8 +2861,8 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
         break;
     }
 
-    if (mudlet::smDebugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Error) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> this;
     }
 
     lua_pop(L, -1);
