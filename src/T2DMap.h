@@ -278,6 +278,17 @@ public:
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
     bool mShiftMode = false;
+    // How many rooms the area's exit index handed paintRoomExits() for the
+    // last frame, or -1 where the index was not used. Only the tests read it:
+    // a test that means to exercise the index would otherwise pass just as
+    // happily on the loop over every room that it falls back to.
+    int mLodExitIndexRoomsHandedOver = -1;
+    // Forces the reduced tier onto the loop over every room, so a test can
+    // require that the index path draws the very same frame. The index is
+    // only ever allowed to hand over too many rooms, never too few, and
+    // comparing the two frames is the only check of that which does not have
+    // to know which rooms those should be. Never set outside the tests.
+    bool mLodExitIndexDisabled = false;
     QPointer<QComboBox> arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom = 0;

@@ -96,21 +96,21 @@ public:
     bool isHidden() const { return hidden; }
     void setHidden(const bool);
     int getNorth() const { return north; }
-    void setNorth(int id) { north = id; }
+    void setNorth(int id) { setPlanarExit(north, id); }
     int getNorthwest() const { return northwest; }
-    void setNorthwest(int id) { northwest = id; }
+    void setNorthwest(int id) { setPlanarExit(northwest, id); }
     int getNortheast() const { return northeast; }
-    void setNortheast(int id) { northeast = id; }
+    void setNortheast(int id) { setPlanarExit(northeast, id); }
     int getSouth() const { return south; }
-    void setSouth(int id) { south = id; }
+    void setSouth(int id) { setPlanarExit(south, id); }
     int getSouthwest() const { return southwest; }
-    void setSouthwest(int id) { southwest = id; }
+    void setSouthwest(int id) { setPlanarExit(southwest, id); }
     int getSoutheast() const { return southeast; }
-    void setSoutheast(int id) { southeast = id; }
+    void setSoutheast(int id) { setPlanarExit(southeast, id); }
     int getWest() const { return west; }
-    void setWest(int id) { west = id; }
+    void setWest(int id) { setPlanarExit(west, id); }
     int getEast() const { return east; }
-    void setEast(int id) { east = id; }
+    void setEast(int id) { setPlanarExit(east, id); }
     int getUp() const { return up; }
     void setUp(int id) { up = id; }
     int getDown() const { return down; }
@@ -178,6 +178,9 @@ public:
 
 
 private:
+    void setPlanarExit(int&, const int);
+    void refreshLodExitIndex();
+
     bool readJsonExits(const QJsonObject&);
     void readJsonExitStubs(const QJsonObject&);
     bool readJsonNormalExit(const QJsonObject&, const int);
