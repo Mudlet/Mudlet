@@ -1189,12 +1189,12 @@ describe("Tests installing one name as both a package and a module", function()
                     "the refused install stranded the folder it unpacked in the profile")
   end)
 
+  -- The archive unpacks under its own file name and is then renamed to the name
+  -- its config.lua gives. A folder already sitting at that name makes the rename
+  -- fail, and the two below are what that has to come to: the folder is left
+  -- exactly as it was found, the one this install unpacked goes with the
+  -- refusal, and nothing in the folder that was there is taken for the package.
   it("leaves a folder already using the name in a config.lua alone", function()
-    -- the archive unpacks under its own file name and is then renamed to the
-    -- name its config.lua gives. A folder already sitting at that name makes the
-    -- rename fail, and the install carries on reading the folder that was there
-    -- - so the folder it may still delete has to be the one it unpacked, not the
-    -- one it found
     local occupied = getMudletHomeDir() .. "/" .. renamedTo
     local occupant = occupied .. "/please-do-not-delete-me.txt"
     lfs.mkdir(occupied)
@@ -1208,11 +1208,64 @@ describe("Tests installing one name as both a package and a module", function()
     end)
 
     local reason = installUntilRefused(installPackage, renamerArchive)
-    assert.is_true(contains(reason, "no package found"), tostring(reason))
+    assert.is_true(contains(reason, "already in the profile"), tostring(reason))
     assert.is_true(fileExists(occupant), "the install deleted a folder it found rather than the one it unpacked")
     assert.is_false(packageInstalled(renamedTo), "the install registered the contents of a folder it did not unpack")
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
                     "the install whose rename failed stranded the folder it unpacked")
+  end)
+
+  it("does not install what it finds in a folder already using the name", function()
+    -- an orphaned package folder is easy to come by - #9654 leaves one behind,
+    -- and so does an uninstall whose folder removal did not go through - and one
+    -- holding a package XML was read in place of the archive: its contents were
+    -- imported, registered under the name the archive asked for, and the install
+    -- reported success. The user is then running a package nobody asked for
+    -- while the manager, getPackageInfo() and the repository all describe the
+    -- archive they installed.
+    local occupied = getMudletHomeDir() .. "/" .. renamedTo
+    local occupant = occupied .. "/whatever-was-here-before.xml"
+    lfs.mkdir(occupied)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-occupant alias</name>
+			<script>echo("mudlet-spec-occupant alias fired\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-occupant$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+    file:close()
+    defer(function()
+      removeFixturePackage(renamedTo)
+      os.remove(occupant)
+      lfs.rmdir(occupied)
+    end)
+
+    local reason = installUntilRefused(installPackage, renamerArchive)
+    assert.is_true(contains(reason, "already in the profile"), tostring(reason))
+    assert.is_false(packageInstalled(renamedTo), "a folder the install found was registered as the package")
+    assert.equals(0, exists("mudlet-spec-occupant alias", "alias"), "the install put the contents of a folder it found into the profile")
+    assert.equals(0, exists(renamedTo .. " alias", "alias"), "the refused archive's own contents were installed anyway")
+    assert.is_true(fileExists(occupant), "the install deleted a folder it found rather than the one it unpacked")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the install whose rename failed stranded the folder it unpacked")
+    assert.same({}, getPackageInfo(renamedTo), "the refused archive left its details behind under the name it asked for")
   end)
 
   it("leaves the details of the package that refused an install alone", function()

@@ -2503,12 +2503,30 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             // continuing, so update the folder name on disk
             const QString newpath(qsl("%1/%2").arg(_home, packageName));
-            // A rename onto a folder that is already there fails, and then the
-            // folder this install made is still at its old name while _dir goes
-            // on to the folder that was already here - which is not ours to
-            // delete, whatever the archive would like.
-            if (_dir.rename(_dir.absolutePath(), newpath) && !folderThisInstallMade.isEmpty()) {
-                folderThisInstallMade = QDir(newpath).absolutePath();
+            // An archive whose manifest names it what its file is already called
+            // has nothing to move, and asking to rename a folder onto itself is
+            // refused by the very check below
+            if (QDir(newpath).absolutePath() != _dir.absolutePath()) {
+                if (_dir.rename(_dir.absolutePath(), newpath)) {
+                    if (!folderThisInstallMade.isEmpty()) {
+                        folderThisInstallMade = QDir(newpath).absolutePath();
+                    }
+                } else if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence) {
+                    // A folder already sitting at the name the manifest asks for
+                    // makes the rename fail, and going on reads that folder rather
+                    // than the one this install unpacked: whatever XML is in it is
+                    // imported, registered under the name the archive asked for,
+                    // and the install reports success - so the user ends up running
+                    // a stranger's package while everything that reports on it
+                    // describes the archive they installed. An orphaned folder is
+                    // easy to come by: #9654 leaves one, and so does an uninstall
+                    // whose folder removal did not go through.
+                    //: %1 is the name the package's config.lua asks to be installed under
+                    return refuseTheRenamedInstall(
+                            tr("A folder called \"%1\" is already in the profile, so the package could not be put in place. Please remove or rename that folder first.").arg(packageName));
+                }
+                // a sync or a profile load is putting back what is already there,
+                // so the folder in the way is this same module's own from last time
             }
             _dir = QDir(newpath);
         }
