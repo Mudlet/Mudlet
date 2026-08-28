@@ -159,6 +159,7 @@ set(STARTERUI_GROUP_TEST_SOURCES
 # The settings dialog: its sidebar-and-cards shell, the deep links into it, how
 # a change reaches the Host, and what it does with no profile loaded
 set(SETTINGS_GROUP_TEST_SOURCES
+    SettingsAppearanceTest.cpp
     SettingsBannerTest.cpp
     SettingsDeepLinkTest.cpp
     SettingsDirtyApplyTest.cpp

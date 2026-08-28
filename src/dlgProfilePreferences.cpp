@@ -1757,10 +1757,20 @@ void dlgProfilePreferences::applyShellStyle()
     if (!mpWidget_shell) {
         return;
     }
-    const QPalette dialogPalette = palette();
-    const QColor cardColor = dialogPalette.color(QPalette::Base);
-    const QColor textColor = dialogPalette.color(QPalette::WindowText);
-    const QColor accentColor = dialogPalette.color(QPalette::Highlight);
+    // The application's palette rather than this dialog's own, because the
+    // dialog's is not a reliable account of the theme at the moment an
+    // appearance change lands here. A stylesheet freezes the palette of the
+    // widget it is assigned to, so the profile's Lua stylesheet leaves the
+    // dialog holding the theme it was shown in - and even without one, the
+    // palette change is delivered as an event that has not been handled by the
+    // time signal_appearanceChanged() arrives. Either way the shell would be
+    // rebuilt out of the theme just left. qApp's palette is swapped
+    // synchronously by mudlet::setAppearance()'s setStyle() call, so it is
+    // already the new one here.
+    const QPalette themePalette = QApplication::palette();
+    const QColor cardColor = themePalette.color(QPalette::Base);
+    const QColor textColor = themePalette.color(QPalette::WindowText);
+    const QColor accentColor = themePalette.color(QPalette::Highlight);
     // Read off the palette rather than from mudlet::inDarkMode(), so that a dark
     // system theme under the "follow the system" appearance gets the dark
     // treatment as well as Mudlet's own dark mode does
@@ -1887,7 +1897,7 @@ void dlgProfilePreferences::applyShellStyle()
     // widget it polishes - and after the stylesheet, because assigning one
     // re-polishes the subtree back to the palette each widget was first
     // polished with.
-    const QColor controlOutlineSource = darkPage ? blend(cardColor, textColor, 0.55) : dialogPalette.color(QPalette::Window);
+    const QColor controlOutlineSource = darkPage ? blend(cardColor, textColor, 0.55) : themePalette.color(QPalette::Window);
     const QColor placeholderText = blend(cardColor, textColor, 0.45);
     for (auto* pControl : mpWidget_shell->findChildren<QWidget*>()) {
         if (!qobject_cast<QAbstractButton*>(pControl) && !qobject_cast<QLineEdit*>(pControl) && !qobject_cast<QAbstractSpinBox*>(pControl) && !qobject_cast<QComboBox*>(pControl)) {
