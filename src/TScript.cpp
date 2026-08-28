@@ -86,7 +86,8 @@ void TScript::compileAll(bool saveLoadingError)
         mNeedsToBeCompiled = true;
     }
     compile(saveLoadingError);
-    for (auto script : *mpMyChildrenList) {
+    for (auto* scriptNode : *mpMyChildrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         script->compileAll(saveLoadingError);
     }
 }

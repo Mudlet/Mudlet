@@ -2872,8 +2872,9 @@ void dlgTriggerEditor::searchTriggers(const QString& text)
 
 void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const QString& text)
 {
-    std::list<TTrigger*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto trigger : *childrenList) {
+    std::list<Tree<TTrigger>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* triggerNode : *childrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         searchSingleTrigger(trigger, text);
         if (trigger->hasChildren()) {
             recursiveSearchTriggers(trigger, text);
@@ -2883,8 +2884,9 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
 
 void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QString& text)
 {
-    std::list<TAlias*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto alias : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* aliasNode : *childrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         searchSingleAlias(alias, text);
         if (alias->hasChildren()) {
             recursiveSearchAlias(alias, text);
@@ -2894,8 +2896,9 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
 
 void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QString& text)
 {
-    std::list<TScript*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto script : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* scriptNode : *childrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         searchSingleScript(script, text);
         if (script->hasChildren()) {
             recursiveSearchScripts(script, text);
@@ -2905,8 +2908,9 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
 
 void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QString& text)
 {
-    std::list<TAction*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto action : *childrenList) {
+    std::list<Tree<TAction>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* actionNode : *childrenList) {
+        auto* action = static_cast<TAction*>(actionNode);
         searchSingleAction(action, text);
         if (action->hasChildren()) {
             recursiveSearchActions(action, text);
@@ -2916,8 +2920,9 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
 
 void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QString& text)
 {
-    std::list<TTimer*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto timer : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* timerNode : *childrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         searchSingleTimer(timer, text);
         if (timer->hasChildren()) {
             recursiveSearchTimers(timer, text);
@@ -2927,8 +2932,9 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
 
 void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& text)
 {
-    std::list<TKey*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         searchSingleKey(key, text);
         if (key->hasChildren()) {
             recursiveSearchKeys(key, text);
@@ -2987,7 +2993,7 @@ void dlgTriggerEditor::delete_alias()
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureAliasAndChildren(pChild, pT->getID(), i);
+                captureAliasAndChildren(static_cast<TAlias*>(pChild), pT->getID(), i);
                 ++i;
             }
         }
@@ -3172,7 +3178,7 @@ void dlgTriggerEditor::delete_action()
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureActionAndChildren(pChild, pT->getID(), i);
+                captureActionAndChildren(static_cast<TAction*>(pChild), pT->getID(), i);
                 ++i;
             }
         }
@@ -3408,7 +3414,7 @@ void dlgTriggerEditor::delete_script()
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureScriptAndChildren(pChild, pT->getID(), i);
+                captureScriptAndChildren(static_cast<TScript*>(pChild), pT->getID(), i);
                 ++i;
             }
         }
@@ -3550,7 +3556,7 @@ void dlgTriggerEditor::delete_key()
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureKeyAndChildren(pChild, pT->getID(), i);
+                captureKeyAndChildren(static_cast<TKey*>(pChild), pT->getID(), i);
                 ++i;
             }
         }
@@ -3692,7 +3698,7 @@ void dlgTriggerEditor::delete_trigger()
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureTriggerAndChildren(pChild, pT->getID(), i);
+                captureTriggerAndChildren(static_cast<TTrigger*>(pChild), pT->getID(), i);
                 ++i;
             }
         }
@@ -3839,7 +3845,7 @@ void dlgTriggerEditor::delete_timer()
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureTimerAndChildren(pChild, pT->getID(), i);
+                captureTimerAndChildren(static_cast<TTimer*>(pChild), pT->getID(), i);
                 ++i;
             }
         }
@@ -9291,8 +9297,9 @@ void dlgTriggerEditor::repopulateVars()
 
 void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    std::list<TTrigger*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto trigger : *childrenList) {
+    std::list<Tree<TTrigger>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* triggerNode : *childrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         const QString s = trigger->getName();
         QStringList sList;
         sList << s;
@@ -9375,8 +9382,9 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
 
 void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    std::list<TKey*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         const QString s = key->getName();
         QStringList sList;
         sList << s;
@@ -9442,8 +9450,9 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
 
 void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    std::list<TScript*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto script : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* scriptNode : *childrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         const QString s = script->getName();
         QStringList sList;
         sList << s;
@@ -9500,8 +9509,9 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
 
 void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    std::list<TAlias*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto alias : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* aliasNode : *childrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         const QString s = alias->getName();
         QStringList sList;
         sList << s;
@@ -9566,8 +9576,9 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
 
 void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    std::list<TAction*>* childrenList = pTriggerParent->getChildrenList();
-    for (auto action : *childrenList) {
+    std::list<Tree<TAction>*>* childrenList = pTriggerParent->getChildrenList();
+    for (auto* actionNode : *childrenList) {
+        auto* action = static_cast<TAction*>(actionNode);
         const QString s = action->getName();
         QStringList sList;
         sList << s;
@@ -9626,8 +9637,9 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
 
 void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
-    for (auto timer : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pTimerParent->getChildrenList();
+    for (auto* timerNode : *childrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         const QString s = timer->getName();
         QStringList sList;
         sList << s;

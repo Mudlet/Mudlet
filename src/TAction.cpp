@@ -89,7 +89,8 @@ void TAction::compileAll()
         }
         mOK_code = false;
     }
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         pTAction->compileAll();
     }
 }
@@ -104,7 +105,8 @@ void TAction::compile()
             mOK_code = false;
         }
     }
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         pTAction->compile();
     }
 }
@@ -184,7 +186,8 @@ void TAction::expandToolbar(TToolBar* pT)
 {
     // The -1 is needed to compensate for the initial pre-increment to TToolBar::mItemCount
     pT->resetItemCount(mButtonFillerOffset - 1);
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         if (!pTAction->isActive()) {
             // This test and conditional loop abort was missing from this method
             // but is needed so that disabled buttons do not appear on
@@ -260,7 +263,8 @@ void TAction::insertActions(TToolBar* pT, QMenu* pMenu)
         pNewMenu->setStyleSheet(css);
         pEAction->setMenu(pNewMenu);
 
-        for (auto childAction : *mpMyChildrenList) {
+        for (auto* childActionNode : *mpMyChildrenList) {
+            auto* childAction = static_cast<TAction*>(childActionNode);
             childAction->insertActions(pT, pNewMenu);
         }
     }
@@ -271,7 +275,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
 {
     // The -1 is needed to compensate for the initial pre-increment to TEasyButtonBar::mItemCount
     pT->resetItemCount(mButtonFillerOffset - 1);
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         if (!pTAction->isActive()) {
             continue;
         }
@@ -336,7 +341,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
 // the need for the split is not yet clear to me! - Slysven
 void TAction::fillMenu(TEasyButtonBar* pT, QMenu* pMenu)
 {
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         if (!pTAction->isActive()) {
             continue;
         }
