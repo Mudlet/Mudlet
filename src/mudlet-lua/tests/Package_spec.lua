@@ -1395,6 +1395,21 @@ describe("Tests installing an archive whose config.lua names it with a file exte
     removeFixturePackage(dottedPackage)
     assert.same({}, getPackageInfo(manifestName), "an uninstalled package still describes itself under the name its manifest wrote")
   end)
+
+  -- Trimming is asked for at more than one level of an install, and taking one
+  -- ending off can leave another that was not there before, so a name trimmed
+  -- once and the same name trimmed twice come out different: the package is
+  -- installed under one of them and its details filed under the other.
+  it("trims a name that hides a second ending under the first all the way down", function()
+    local nestedPackage = "mudlet-spec-nested"
+    local manifestName = nestedPackage .. ".x.zipml"
+    local halfTrimmedName = nestedPackage .. ".xml"
+    withFixturePackage(nestedPackage)
+
+    assert.equals("1.0", getPackageInfo(nestedPackage, "version"), "the installed package cannot describe itself")
+    assert.same({}, getPackageInfo(manifestName), "the details were filed under the name the manifest wrote")
+    assert.same({}, getPackageInfo(halfTrimmedName), "the details were filed under a name only half of the trimming reached")
+  end)
 end)
 
 describe("Tests installing an archive that is nothing but a manifest", function()
@@ -1475,6 +1490,25 @@ describe("Tests installing an archive whose config.lua will not run", function()
                     "the package installed under the name of a manifest that never ran")
     -- what the silence costs: a name-based uninstall, a repository update and
     -- anything depending on it all stop matching, with nothing to go on
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
+  -- Trimming the name a manifest asks for can leave nothing at all, and the
+  -- install then falls back to the name the archive's own file has. That is the
+  -- same loss as a config.lua that will not run - no details filed, nothing to
+  -- match a name-based uninstall or a repository update against - so it is said
+  -- rather than passed over in silence.
+  it("says so when the name its config.lua asks for trims away to nothing", function()
+    local name = "mudlet-spec-emptyname"
+    defer(function() removeFixturePackage(name) end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture whose manifest name trims away")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
     assert.same({}, getPackageInfo(name))
     assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
   end)

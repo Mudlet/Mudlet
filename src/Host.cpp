@@ -2709,12 +2709,25 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 
 QString Host::sanitizePackageName(const QString packageName) const
 {
-    auto tempName = packageName.section(qsl("/"), -1);
-    tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
-    tempName.remove(qsl(".xml"), Qt::CaseInsensitive);
-    tempName.remove(qsl(".zip"), Qt::CaseInsensitive);
-    tempName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
-    tempName.remove(QLatin1Char('\\'));
+    // Taking an ending off can leave another that was not there to begin with -
+    // ".x.zipml" gives up its ".zip" to become ".xml" - so this goes round until
+    // a pass finds nothing left to take. One pass is not the same answer as two,
+    // and this is asked at more than one level of an install: the name a package
+    // is installed under and the name its details are filed under would otherwise
+    // come out of the same string differently, leaving it unable to describe
+    // itself and its details behind under a name no uninstall knows to take away.
+    // Each pass can only shorten the name, so this always comes to a stop.
+    QString tempName = packageName;
+    QString beforeThisPass;
+    while (tempName != beforeThisPass) {
+        beforeThisPass = tempName;
+        tempName = tempName.section(qsl("/"), -1);
+        tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
+        tempName.remove(qsl(".xml"), Qt::CaseInsensitive);
+        tempName.remove(qsl(".zip"), Qt::CaseInsensitive);
+        tempName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
+        tempName.remove(QLatin1Char('\\'));
+    }
     return tempName;
 }
 
@@ -3005,16 +3018,26 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     }
     if (!error) {
         lua_getglobal(L, "mpackage");
+        QString theNameItAsksFor;
         if (lua_isstring(L, -1)) {
+            theNameItAsksFor = QString(lua_tostring(L, -1));
             // the name a manifest asks for is trimmed of what a package file is
             // called before anything is installed under it, so the details have
             // to be filed under the trimmed name as well: filed under the raw
             // one, the package that was installed cannot describe itself, and
             // what was filed sits under a name no uninstall knows to take away,
             // so it outlives the package and is written back out on every save
-            packageName = sanitizePackageName(QString(lua_tostring(L, -1)));
+            packageName = sanitizePackageName(theNameItAsksFor);
         }
         lua_pop(L, -1);
+        if (!theNameItAsksFor.isEmpty() && packageName.isEmpty()) {
+            // Trimming can leave nothing at all - "MyPackage/" and ".mpackage"
+            // both do - and there is then no name to install under or to file the
+            // details beneath. Said, rather than quietly falling back to the name
+            // the archive's own file has and leaving no details at all.
+            lua_close(L);
+            return noManifest(qsl("the name \"%1\" its config.lua asks for has nothing left in it once the endings a package file is named by are taken off").arg(theNameItAsksFor));
+        }
         if (!packageName.isEmpty()) {
             //get rid of lua version
             lua_getglobal(L, "_G");
