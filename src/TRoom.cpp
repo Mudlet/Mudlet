@@ -738,6 +738,17 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
     }
 }
 
+void TRoom::indexCustomLines()
+{
+    if (customLines.empty() || !mpRoomDB) {
+        return;
+    }
+    TArea* pA = mpRoomDB->getArea(area);
+    if (pA) {
+        pA->addRoomWithCustomLines(id, mZ);
+    }
+}
+
 void TRoom::calcRoomDimensions()
 {
     min_x = mX;
@@ -746,8 +757,19 @@ void TRoom::calcRoomDimensions()
     max_y = mY;
 
     if (customLines.empty()) {
+        // The room may have just lost its last line: left in the index it
+        // would cost every later frame a lookup and a cull test for lines that
+        // are no longer there.
+        if (mpRoomDB) {
+            TArea* pA = mpRoomDB->getArea(area);
+            if (pA) {
+                pA->removeRoomWithCustomLines(id, mZ);
+            }
+        }
         return;
     }
+
+    indexCustomLines();
 
     QMapIterator<QString, QList<QPointF>> it(customLines);
     while (it.hasNext()) {

@@ -69,6 +69,11 @@ public:
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
+    // Puts this room into its area's index of rooms with custom exit lines,
+    // which is how the renderer finds lines that reach the viewport from a room
+    // that does not. calcRoomDimensions() does it too, so only code that adds a
+    // custom line without going through that needs to call this.
+    void indexCustomLines();
     bool setArea(int);
     int getExitWeight(const QString& cmd);
 

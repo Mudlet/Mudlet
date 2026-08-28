@@ -80,6 +80,9 @@ public:
     ~T2DMap() override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
+    // Public only so that MapRenderBenchmark can say how many rooms a frame
+    // could have drawn without hand-copying the arithmetic that decides it.
+    static QRect viewportRoomBounds(float rx0, float ry0, float roomWidth, float roomHeight, float widgetWidth, float widgetHeight);
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
@@ -425,19 +428,8 @@ private:
     QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    inline void drawRoom(QPainter&,
-                         QFont&,
-                         QFont&,
-                         QPen&,
-                         TRoom*,
-                         const bool isGridMode,
-                         const bool areRoomIdsLegible,
-                         const bool showRoomNames,
-                         const int,
-                         const float,
-                         const float,
-                         const QMap<int, QPointF>&,
-                         const bool showRoomCollision);
+    inline void drawRoom(
+            QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const bool showRoomCollision);
     // Batch rendering for large grid mode areas - draws rooms grouped by color
     void drawGridModeRooms(QPainter&,
                            const TArea* pDrawnArea,
@@ -454,7 +446,38 @@ private:
                            QPointF& playerRoomOnWidgetCoordinates,
                            bool areRoomIdsLegible,
                            QString* profileOutput = nullptr);
-    void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
+    // The non-grid room loop for zooms where a room is a few pixels across.
+    void drawNonGridModeRoomsLod(QPainter&,
+                                 const TArea* pDrawnArea,
+                                 int zLevel,
+                                 int playerRoomId,
+                                 const QList<int>& viewportRooms,
+                                 float widgetWidth,
+                                 float widgetHeight,
+                                 bool& isPlayerRoomVisible,
+                                 QPointF& playerRoomOnWidgetCoordinates,
+                                 QString* profileOutput = nullptr);
+    QColor environmentColor(int environmentId) const;
+    QSize lodRoomBlobSize() const;
+    // One exit line waiting to be drawn. The destination room is carried
+    // rather than just its id because the drawing pass needs its coordinates,
+    // and looking it up again there costs a second room-database probe for
+    // every exit of every room in the viewport. It is only good for the one
+    // paintRoomExits() room iteration that gathered it, which clears and
+    // refills the list before moving on to the next room.
+    struct ExitToPaint
+    {
+        const TRoom* destination = nullptr;
+        int destinationId = 0;
+        // Set when the destination's exit in the opposite direction does not
+        // come back here. This alone does not decide whether an arrow is drawn:
+        // the drawing pass looks at every exit to the same destination, so an
+        // exit that is not one-way still gets an arrow when a sibling exit to
+        // that same room is.
+        bool oneWay = false;
+    };
+    void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
+    void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
