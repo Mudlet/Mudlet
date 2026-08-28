@@ -1629,8 +1629,10 @@ describe("Tests mapper functions against a shared fixture", function()
       -- Guarantee a clean routing graph even if an assertion above failed.
       setExitWeightFilter(nil)
       setExitWeight(rA1, "east", 0)
-      lockRoom(rA2, false)
       lockExit(rA1, "east", false)
+      for _, id in ipairs({rA2, rB1, rB2, rG1, rSandA, rSandB}) do
+        lockRoom(id, false)
+      end
     end)
 
     it("finds the shortest route and fills the speedwalk globals", function()
@@ -1701,6 +1703,106 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok = getPath(rA1, rA3)
       assert.is_true(ok)
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    -- Every case above edits the map first, so each one searches a graph that
+    -- has just been rebuilt. These four do not, which is what puts them on the
+    -- state findPath() carries from one search to the next.
+
+    it("does not inherit the previous search's state", function()
+      local firstOk = getPath(rA1, rA3)
+      assert.is_true(firstOk)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+
+      -- Reversed, so the second search has to better the rooms the first one
+      -- had already settled rather than reaching fresh ones.
+      local ok, weight = getPath(rA3, rA1)
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({"w", "w"}, speedWalkDir)
+      assert.are.same({tostring(rA2), tostring(rA1)}, speedWalkPath)
+    end)
+
+    it("does not inherit the state of a search that found nothing", function()
+      -- Giving up means settling every room reachable from the start, so this
+      -- leaves behind the largest amount of state a search on this map can.
+      local failedOk = getPath(rA1, rSandA)
+      assert.is_false(failedOk)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("does not reuse the old room numbering after the graph is rebuilt", function()
+      local firstOk = getPath(rA1, rB2)
+      assert.is_true(firstOk)
+
+      -- Locking rooms drops them from the graph, so the rooms left are
+      -- renumbered and the numbers the search above recorded no longer name the
+      -- rooms they did. Fewer rooms than before is the case that matters: a
+      -- surviving number can then be past the end of the state itself.
+      for _, id in ipairs({rA2, rB1, rB2, rG1, rSandA, rSandB}) do
+        lockRoom(id, true)
+      end
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+  end)
+
+  describe("Tests pathfinding where the weights disagree with the coordinates", function()
+    -- A* is steered by straight-line distance to the target but pays in exit
+    -- weights, and nothing makes the two agree. rX sits right beside the target
+    -- and is reached early over a costly exit; the cheap way to it only turns up
+    -- later, through rY, which is the wrong way entirely as the crow flies. The
+    -- route through rZ is there to be beaten: it wins unless the better price
+    -- for rX is carried forward to the target.
+    local areaWeighted
+    local rWStart, rX, rY, rZ, rWGoal
+
+    setup(function()
+      areaWeighted = addAreaName("MapperSpecWeighted")
+
+      local function makeRoom(x, y)
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, areaWeighted)
+        setRoomCoordinates(id, x, y, 0)
+        return id
+      end
+
+      rWGoal = makeRoom(0, 0)
+      rX = makeRoom(1, 0)
+      rZ = makeRoom(0, 10)
+      rY = makeRoom(0, 20)
+      rWStart = makeRoom(0, 30)
+
+      -- One-way throughout, so the graph is exactly the one the weights
+      -- describe and no return exit offers a cheaper way round.
+      setExit(rWStart, rX, "southeast"); setExitWeight(rWStart, "southeast", 10)
+      setExit(rWStart, rZ, "southwest"); setExitWeight(rWStart, "southwest", 5)
+      setExit(rWStart, rY, "south"); setExitWeight(rWStart, "south", 1)
+      setExit(rY, rX, "southeast"); setExitWeight(rY, "southeast", 1)
+      setExit(rZ, rWGoal, "south"); setExitWeight(rZ, "south", 20)
+      setExit(rX, rWGoal, "west"); setExitWeight(rX, "west", 20)
+    end)
+
+    teardown(function()
+      for _, id in ipairs({rWStart, rX, rY, rZ, rWGoal}) do
+        deleteRoom(id)
+      end
+      deleteArea("MapperSpecWeighted")
+    end)
+
+    it("takes the cheapest route even though a nearer room was settled first", function()
+      local ok, weight = getPath(rWStart, rWGoal)
+      assert.is_true(ok)
+      assert.are.equal(22, weight)
+      assert.are.same({tostring(rY), tostring(rX), tostring(rWGoal)}, speedWalkPath)
     end)
   end)
 
