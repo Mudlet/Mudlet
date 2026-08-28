@@ -31,6 +31,10 @@
  * of the session, and revert whatever a script did to that setting afterwards.
  * mValueSnapshot itself is private, so all of this goes through behaviour.
  *
+ * A setting spread over several controls has to hold up component by
+ * component, not just group by group: editing one member of such a group must
+ * not carry its siblings' controls back to the Host with it.
+ *
  * Run with: ctest -R SettingsDirtyApplyTest -V
  */
 
@@ -88,6 +92,8 @@ private:
     bool mAnnounceBefore = false;
     bool mTextAnalyzerBefore = false;
     QString mLogDirBefore;
+    bool mLogHtmlBefore = false;
+    bool mLogTimestampsBefore = false;
     QString mEditorThemeBefore;
     QString mEditorThemeDarkBefore;
     QMap<QString, QKeySequence> mShortcutsBefore;
@@ -189,6 +195,8 @@ private slots:
         mAnnounceBefore = mpHost->mAnnounceIncomingText;
         mTextAnalyzerBefore = mpHost->mEnableTextAnalyzer;
         mLogDirBefore = mpHost->mLogDir;
+        mLogHtmlBefore = mpHost->mIsNextLogFileInHtmlFormat;
+        mLogTimestampsBefore = mpHost->mIsLoggingTimestamps;
         mEditorThemeBefore = mpHost->mEditorTheme;
         mEditorThemeDarkBefore = mpHost->mEditorThemeDark;
         mShortcutsBefore.clear();
@@ -207,6 +215,8 @@ private slots:
         mpHost->mAnnounceIncomingText = mAnnounceBefore;
         mpHost->mEnableTextAnalyzer = mTextAnalyzerBefore;
         mpHost->mLogDir = mLogDirBefore;
+        mpHost->mIsNextLogFileInHtmlFormat = mLogHtmlBefore;
+        mpHost->mIsLoggingTimestamps = mLogTimestampsBefore;
         mpHost->mEditorTheme = mEditorThemeBefore;
         mpHost->mEditorThemeDark = mEditorThemeDarkBefore;
         for (const auto& [key, pSequence] : mpHost->profileShortcuts) {
@@ -278,6 +288,55 @@ private slots:
         QVERIFY2(waitForApply(applySpy), "editing the border never wrote the settings back");
 
         QCOMPARE(mpHost->userBorders().top(), typedIn);
+    }
+
+    // A script's change is per component, so a guard that is only per group is
+    // not enough: editing one border must not carry the other three's controls
+    // - one of which is showing what a script has already moved on from - back
+    // to the Host along with it.
+    void test_anExternalBorderChangeSurvivesASiblingBorderEdit()
+    {
+        mpHost->setUserBorders(QMargins(0, 0, 0, 0));
+        openPreferences();
+        QCOMPARE(mpPreferences->topBorderHeight->value(), 0);
+        QCOMPARE(mpPreferences->leftBorderWidth->value(), 0);
+
+        // what `lua setBorderTop(50)` does to the Host
+        const int setElsewhere = 50;
+        mpHost->setUserBorders(QMargins(0, setElsewhere, 0, 0));
+        QVERIFY2(mpPreferences->topBorderHeight->value() != setElsewhere, "the spin box already showed the border the script set, so writing it back could not lose anything");
+
+        // ...and now the user edits a *sibling* of it, inside the same group
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        const int typedIn = 33;
+        mpPreferences->leftBorderWidth->setValue(typedIn);
+        QVERIFY2(waitForApply(applySpy), "editing a border never wrote the settings back");
+
+        QCOMPARE(mpHost->userBorders().left(), typedIn);
+        QVERIFY2(mpHost->userBorders().top() == setElsewhere, "editing one border wrote another border's stale spin box back over what a script had set");
+    }
+
+    // The same thing where the group writes several separate Host members
+    // rather than one composed value - the log options, whose five controls the
+    // whole block used to be rewritten from.
+    void test_anExternalLogOptionSurvivesASiblingLogEdit()
+    {
+        mpHost->mIsNextLogFileInHtmlFormat = false;
+        mpHost->mIsLoggingTimestamps = false;
+        openPreferences();
+        QCOMPARE(mpPreferences->mIsToLogInHtml->isChecked(), false);
+        QCOMPARE(mpPreferences->mIsLoggingTimestamps->isChecked(), false);
+
+        // what the profile's own logging menu, or a script, turns on underneath
+        mpHost->mIsNextLogFileInHtmlFormat = true;
+        QVERIFY2(!mpPreferences->mIsToLogInHtml->isChecked(), "the check box already showed what was set outside, so writing it back could not lose anything");
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->mIsLoggingTimestamps->click();
+        QVERIFY2(waitForApply(applySpy), "ticking the timestamps option never wrote the settings back");
+
+        QVERIFY(mpHost->mIsLoggingTimestamps);
+        QVERIFY2(mpHost->mIsNextLogFileInHtmlFormat, "ticking one log option wrote a sibling option's stale check box back over what was set outside the dialog");
     }
 
     // The log folder is picked with a button and shown in a read-only line edit,

@@ -2064,8 +2064,13 @@ bool dlgProfilePreferences::dirty(const QObject* pControl) const
     return *it != controlValue(pControl);
 }
 
-// For a setting that is spread over several controls - the borders, the log
-// options - one changing means the whole group is written
+// For a setting that is spread over several controls - the borders, the
+// Discord privacy flags - one of them changing means the write happens. What is
+// written is still composed control by control: a control that is not itself
+// dirty contributes the value the Host holds at this moment rather than what it
+// is showing, which may be a value a script has since moved on from (#10165).
+// Where the group's members are separate settings rather than one composed
+// value, each takes its own dirty() guard instead of appearing here.
 bool dlgProfilePreferences::anyDirty(const QList<const QObject*>& controls) const
 {
     for (const auto* pControl : controls) {
@@ -5037,13 +5042,13 @@ void dlgProfilePreferences::applyAll()
 
         // Save console buffer settings and apply them
         if (anyDirty({checkBox_useMaxBufferSize, console_buffer_size_spinBox})) {
-            const bool useMaxBuffer = checkBox_useMaxBufferSize->isChecked();
+            const bool useMaxBuffer = dirty(checkBox_useMaxBufferSize) ? checkBox_useMaxBufferSize->isChecked() : pHost->getUseMaxConsoleBufferSize();
             int newBufferSize;
 
             if (useMaxBuffer && pHost->mpConsole) {
                 newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
             } else {
-                newBufferSize = console_buffer_size_spinBox->value();
+                newBufferSize = dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
             }
 
             // Calculate batch delete size as 5% of buffer size (minimum 100)
@@ -5173,7 +5178,11 @@ void dlgProfilePreferences::applyAll()
             }
         }
         if (anyDirty({leftBorderWidth, topBorderHeight, rightBorderWidth, bottomBorderHeight})) {
-            const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
+            const QMargins liveBorders = pHost->userBorders();
+            const QMargins newBorders{dirty(leftBorderWidth) ? leftBorderWidth->value() : liveBorders.left(),
+                                      dirty(topBorderHeight) ? topBorderHeight->value() : liveBorders.top(),
+                                      dirty(rightBorderWidth) ? rightBorderWidth->value() : liveBorders.right(),
+                                      dirty(bottomBorderHeight) ? bottomBorderHeight->value() : liveBorders.bottom()};
             pHost->setUserBorders(newBorders);
         }
         if (dirty(commandLineMinimumHeight)) {
@@ -5185,13 +5194,21 @@ void dlgProfilePreferences::applyAll()
         if (dirty(checkBox_mForceMXPProcessorOn)) {
             pHost->setForceMXPProcessorOn(checkBox_mForceMXPProcessorOn->isChecked());
         }
-        // One block: the directory is picked with a button that has no value of
-        // its own, showing up only as the text it puts in lineEdit_logFileFolder
-        if (anyDirty({mIsToLogInHtml, mIsLoggingTimestamps, lineEdit_logFileFolder, lineEdit_logFileName, comboBox_logFileNameFormat})) {
+        if (dirty(mIsToLogInHtml)) {
             pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
+        }
+        if (dirty(mIsLoggingTimestamps)) {
             pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
+        }
+        // The directory is picked with a button that has no value of its own,
+        // showing up only as the text it puts in lineEdit_logFileFolder
+        if (dirty(lineEdit_logFileFolder)) {
             pHost->mLogDir = mLogDirPath;
+        }
+        if (dirty(lineEdit_logFileName)) {
             pHost->mLogFileName = lineEdit_logFileName->text();
+        }
+        if (dirty(comboBox_logFileNameFormat)) {
             pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         }
         if (dirty(checkBox_antiAlias)) {
@@ -5208,11 +5225,19 @@ void dlgProfilePreferences::applyAll()
             }
         }
 
-        if (anyDirty({groupBox_proxy, lineEdit_proxyAddress, lineEdit_proxyPort, lineEdit_proxyUsername, lineEdit_proxyPassword})) {
+        if (dirty(groupBox_proxy)) {
             pHost->mUseProxy = groupBox_proxy->isChecked();
+        }
+        if (dirty(lineEdit_proxyAddress)) {
             pHost->mProxyAddress = lineEdit_proxyAddress->text();
+        }
+        if (dirty(lineEdit_proxyPort)) {
             pHost->mProxyPort = lineEdit_proxyPort->text().toUInt();
+        }
+        if (dirty(lineEdit_proxyUsername)) {
             pHost->mProxyUsername = lineEdit_proxyUsername->text();
+        }
+        if (dirty(lineEdit_proxyPassword)) {
             pHost->mProxyPassword = lineEdit_proxyPassword->text();
         }
 
@@ -5290,7 +5315,10 @@ void dlgProfilePreferences::applyAll()
         // carries to actually move:
         if (pHost->mpEditorDialog
             && anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
-            pHost->mpEditorDialog->setThemeAndOtherSettings(code_editor_theme_selection_combobox->currentText());
+            // The theme write above has already settled the user's choice into
+            // the Host, so the name comes from there rather than from a combo
+            // box that may be showing a theme a script has since replaced
+            pHost->mpEditorDialog->setThemeAndOtherSettings(mudlet::self()->inDarkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 
         if (dirty(script_preview_combobox)) {
@@ -5317,37 +5345,38 @@ void dlgProfilePreferences::applyAll()
                       checkBox_discordServerAccessToState,
                       checkBox_discordServerAccessToPartyInfo,
                       checkBox_discordServerAccessToTimerInfo})) {
-            auto hideSmallIcon = false, hideSmallIconText = false;
-            if (comboBox_discordSmallIconPrivacy->currentIndex() == 0) {
-                hideSmallIcon = false;
-                hideSmallIconText = false;
-            } else if (comboBox_discordSmallIconPrivacy->currentIndex() == 1) {
-                hideSmallIcon = false;
-                hideSmallIconText = true;
-            } else {
-                hideSmallIcon = true;
-                hideSmallIconText = true;
+            // Six controls, one flags word: start from what the Host holds and
+            // move only the bits whose own control was edited, so the others
+            // keep whatever a script has set them to since population
+            Host::DiscordOptionFlags discordFlags = pHost->mDiscordAccessFlags;
+
+            // A privacy combo box carries two bits: "show it" is its first two
+            // entries, "show the text with it" only the first
+            if (dirty(comboBox_discordLargeIconPrivacy)) {
+                const int privacy = comboBox_discordLargeIconPrivacy->currentIndex();
+                discordFlags.setFlag(Host::DiscordSetLargeIcon, privacy == 0 || privacy == 1);
+                discordFlags.setFlag(Host::DiscordSetLargeIconText, privacy == 0);
+            }
+            if (dirty(comboBox_discordSmallIconPrivacy)) {
+                const int privacy = comboBox_discordSmallIconPrivacy->currentIndex();
+                discordFlags.setFlag(Host::DiscordSetSmallIcon, privacy == 0 || privacy == 1);
+                discordFlags.setFlag(Host::DiscordSetSmallIconText, privacy == 0);
+            }
+            // These four are ticked to *withhold* the item from the server
+            if (dirty(checkBox_discordServerAccessToDetail)) {
+                discordFlags.setFlag(Host::DiscordSetDetail, !checkBox_discordServerAccessToDetail->isChecked());
+            }
+            if (dirty(checkBox_discordServerAccessToState)) {
+                discordFlags.setFlag(Host::DiscordSetState, !checkBox_discordServerAccessToState->isChecked());
+            }
+            if (dirty(checkBox_discordServerAccessToPartyInfo)) {
+                discordFlags.setFlag(Host::DiscordSetPartyInfo, !checkBox_discordServerAccessToPartyInfo->isChecked());
+            }
+            if (dirty(checkBox_discordServerAccessToTimerInfo)) {
+                discordFlags.setFlag(Host::DiscordSetTimeInfo, !checkBox_discordServerAccessToTimerInfo->isChecked());
             }
 
-            auto hideLargeIcon = false, hideLargeIconText = false;
-            if (comboBox_discordLargeIconPrivacy->currentIndex() == 0) {
-                hideLargeIcon = false;
-                hideLargeIconText = false;
-            } else if (comboBox_discordLargeIconPrivacy->currentIndex() == 1) {
-                hideLargeIcon = false;
-                hideLargeIconText = true;
-            } else {
-                hideLargeIcon = true;
-                hideLargeIconText = true;
-            }
-
-            pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(
-                    (hideLargeIcon ? Host::DiscordNoOption : Host::DiscordSetLargeIcon) | (hideLargeIconText ? Host::DiscordNoOption : Host::DiscordSetLargeIconText)
-                    | (hideSmallIcon ? Host::DiscordNoOption : Host::DiscordSetSmallIcon) | (hideSmallIconText ? Host::DiscordNoOption : Host::DiscordSetSmallIconText)
-                    | (checkBox_discordServerAccessToDetail->isChecked() ? Host::DiscordNoOption : Host::DiscordSetDetail)
-                    | (checkBox_discordServerAccessToState->isChecked() ? Host::DiscordNoOption : Host::DiscordSetState)
-                    | (checkBox_discordServerAccessToPartyInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetPartyInfo)
-                    | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo));
+            pHost->mDiscordAccessFlags = discordFlags;
         }
 
         if (anyDirty({radioButton_discordDisabled, radioButton_discordMudletOnly, radioButton_discordGameDetails})) {
@@ -5434,10 +5463,18 @@ void dlgProfilePreferences::applyAll()
             // (QColors) are easiest to retrieve from the TMap instance as the
             // colours are not directly stored here (as for some styles they
             // show a partly "grey-ed out" colour as they are disabled for those
-            // styles):
-            pHost->setPlayerRoomStyleDetails(static_cast<quint8>(comboBox_playerRoomStyle->currentIndex()),
-                                             static_cast<quint8>(spinBox_playerRoomOuterDiameter->value()),
-                                             static_cast<quint8>(spinBox_playerRoomInnerDiameter->value()),
+            // styles). The three that do come from controls are taken one at a
+            // time, so an untouched one contributes what the Host holds now
+            // rather than what its control is showing:
+            quint8 styleCode = 0;
+            quint8 outerDiameter = 0;
+            quint8 innerDiameter = 0;
+            QColor liveOuterColor;
+            QColor liveInnerColor;
+            pHost->getPlayerRoomStyleDetails(styleCode, outerDiameter, innerDiameter, liveOuterColor, liveInnerColor);
+            pHost->setPlayerRoomStyleDetails(dirty(comboBox_playerRoomStyle) ? static_cast<quint8>(comboBox_playerRoomStyle->currentIndex()) : styleCode,
+                                             dirty(spinBox_playerRoomOuterDiameter) ? static_cast<quint8>(spinBox_playerRoomOuterDiameter->value()) : outerDiameter,
+                                             dirty(spinBox_playerRoomInnerDiameter) ? static_cast<quint8>(spinBox_playerRoomInnerDiameter->value()) : innerDiameter,
                                              pHost->mpMap->mPlayerRoomOuterColor,
                                              pHost->mpMap->mPlayerRoomInnerColor);
         }
@@ -5446,6 +5483,13 @@ void dlgProfilePreferences::applyAll()
             auto iterator = mudlet::self()->mpShortcutsManager->iterator();
             while (iterator.hasNext()) {
                 auto key = iterator.next();
+                // Per key for the same reason the value snapshot is per
+                // control: the editors for the other shortcuts are showing what
+                // this dialog was populated with, which may no longer be what
+                // the profile holds
+                if (currentShortcuts.value(key) == mShortcutsSnapshot.value(key)) {
+                    continue;
+                }
                 QKeySequence sequence = currentShortcuts.value(key);
                 auto it = pHost->profileShortcuts.find(key);
                 if (it != pHost->profileShortcuts.end()) {
@@ -5493,7 +5537,10 @@ void dlgProfilePreferences::applyAll()
     }
 
     if (anyDirty({checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs})) {
-        pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
+        const QTextOption::Flags liveOptions = pMudlet->mEditorTextOptions;
+        pMudlet->setEditorTextoptions(dirty(checkBox_showSpacesAndTabs) ? checkBox_showSpacesAndTabs->isChecked() : liveOptions.testFlag(QTextOption::ShowTabsAndSpaces),
+                                      dirty(checkBox_showLineFeedsAndParagraphs) ? checkBox_showLineFeedsAndParagraphs->isChecked()
+                                                                                 : liveOptions.testFlag(QTextOption::ShowLineAndParagraphSeparators));
     }
     if (dirty(checkBox_reportMapIssuesOnScreen)) {
         pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
