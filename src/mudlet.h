@@ -39,6 +39,7 @@
 
 #include "ui_main_window.h"
 #include <QElapsedTimer>
+#include <QHash>
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
@@ -808,16 +809,31 @@ private:
         QString pulseColor2;
     };
     // One sequence for every command, so an id names one thing or nothing
-    QMenu* addonMenuForPath(const QString& menuPath, QString& error);
+    QMenu* addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error);
     bool addonShortcutUsable(const QKeySequence& sequence, QString& error) const;
     static QString addonTooltip(const QString& tooltip);
+    // Qt reads '&' in a QAction's or QToolButton's text as a mnemonic, so a
+    // package's "Fish & Chips" draws without the ampersand and steals Alt+Space.
+    // Only the displayed strings are doubled; the raw name stays the identity
+    // the label-clash checks compare.
+    static QString addonLabel(const QString& name);
+    const Host* addonCommandOwning(const QAction* action) const;
     static void applyAddonIcon(QToolButton* button, QAction* action, const QString& icon);
     void raiseAddonCommandEvent(int commandId);
+    // Copy the checked state of the surface the user just activated onto the
+    // other one. Qt toggles only the control that was pressed, so without this
+    // a command shows a tick in the menu and none on the toolbar.
+    void mirrorAddonCommandChecked(int commandId, bool checked);
 
     QMap<int, AddonCommand> mAddonCommands;
     int mNextAddonCommandId = 1;
     QAction* mpAddonToolbarSeparator = nullptr;
     QPointer<QMenu> mpAddonsMenu;
+    // Which profile a menuPath submenu was built for. Placement has to be
+    // decided by the profile's own commands alone: sharing one namespace meant
+    // whether a package could place a command depended on which unrelated
+    // profiles happened to be open, and on labels it could neither see nor clear.
+    QHash<QMenu*, const Host*> mAddonSubmenuOwners;
 
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen

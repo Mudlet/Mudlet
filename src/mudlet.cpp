@@ -172,10 +172,18 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 // A path part that names an existing leaf item is refused rather than
 // duplicated: two entries with one label, one a command and one a submenu, is
 // not something a package can have meant.
-QMenu* mudlet::addonMenuForPath(const QString& menuPath, QString& error)
+QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error)
 {
     if (!mpAddonsMenu) {
         mpAddonsMenu = menuOptions ? menuOptions->addMenu(tr("Extensions")) : menuBar()->addMenu(tr("Extensions"));
+        if (mpAddonsMenu) {
+            // QMenu::toolTipsVisible is false by default and is not inherited
+            // from the menu above, which is why Mudlet sets it on its own menus
+            // too. Without it the menu half of every command's tooltip never
+            // appears, leaving a documented property that only works on the
+            // toolbar.
+            mpAddonsMenu->setToolTipsVisible(true);
+        }
     }
     if (!mpAddonsMenu) {
         error = tr("the Extensions menu could not be created");
@@ -187,22 +195,51 @@ QMenu* mudlet::addonMenuForPath(const QString& menuPath, QString& error)
     for (const QString& part : menuPath.split(qsl("/"), Qt::SkipEmptyParts)) {
         QMenu* submenu = nullptr;
         for (QAction* action : targetMenu->actions()) {
-            if (action->text() != part) {
+            if (action->text() != addonLabel(part)) {
                 continue;
             }
-            if (!action->menu()) {
-                error = tr("\"%1\" is already a command in this menu, so it cannot also be a submenu").arg(part);
-                return nullptr;
+            // Only this profile's own placements are in the way. Another
+            // profile's command or submenu carrying the same label is not
+            // something this package can see or clear, so it must not decide
+            // whether this placement succeeds.
+            if (QMenu* existingSubmenu = action->menu()) {
+                if (mAddonSubmenuOwners.value(existingSubmenu) != pHost) {
+                    continue;
+                }
+                submenu = existingSubmenu;
+                break;
             }
-            submenu = action->menu();
-            break;
+            if (addonCommandOwning(action) != pHost) {
+                continue;
+            }
+            error = tr("\"%1\" is already a command in this menu, so it cannot also be a submenu").arg(part);
+            return nullptr;
         }
         if (!submenu) {
-            submenu = targetMenu->addMenu(part);
+            submenu = targetMenu->addMenu(addonLabel(part));
+            submenu->setToolTipsVisible(true);
+            mAddonSubmenuOwners.insert(submenu, pHost);
         }
         targetMenu = submenu;
     }
     return targetMenu;
+}
+
+// The command a menu action belongs to, or nothing when the action is not one
+// of ours - which is how a label clash is judged against the same profile only.
+const Host* mudlet::addonCommandOwning(const QAction* action) const
+{
+    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
+        if (it.value().menuAction == action) {
+            return it.value().pHost;
+        }
+    }
+    return nullptr;
+}
+
+QString mudlet::addonLabel(const QString& name)
+{
+    return QString(name).replace(QLatin1Char('&'), QLatin1String("&&"));
 }
 
 // A key sequence Qt could not parse holds Key_unknown rather than nothing, so
@@ -254,13 +291,25 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
     const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
 
-    // The main toolbar is hidden on a fresh profile - #7998 defaults
-    // toolBarVisibility to visibleNever on every platform - so a command with
-    // nowhere else to appear would be placed where nobody can see it. One that
-    // also has a menu item is still reachable, which is why "both" is the
-    // default and only the toolbar-only case is refused.
-    if (wantsToolbar && !wantsMenu && mToolbarVisibility == enums::visibleNever) {
-        error = tr("the main toolbar is hidden, so a toolbar-only command would be invisible - turn it on in Preferences -> General, or place this command on the menu too");
+    // A command is only placeable if at least one surface it asks for is
+    // actually on screen. addCommand() is reachable only with a profile loaded,
+    // so the bit that decides each bar's visibility here is visibleMaskNormally
+    // - the same test slot_handleToolbarVisibilityChanged() applies. Comparing
+    // against visibleNever alone missed visibleOnlyWithoutLoadedProfile, which
+    // hides the toolbar in exactly the state a package can call from, and
+    // nothing looked at the menu bar at all: readLateSettings() migrates anyone
+    // who asked for both bars to never show into that pair, so a default
+    // command could land on two invisible surfaces.
+    const bool toolbarOnScreen = (mToolbarVisibility & enums::visibleMaskNormally);
+    const bool menuBarOnScreen = (mMenuBarVisibility & enums::visibleMaskNormally);
+    if (!(wantsToolbar && toolbarOnScreen) && !(wantsMenu && menuBarOnScreen)) {
+        if (!wantsMenu) {
+            error = tr("the main toolbar is hidden, so a toolbar-only command would be invisible - turn it on in Preferences -> General, or place this command on the menu too");
+        } else if (!wantsToolbar) {
+            error = tr("the menu bar is hidden, so a menu-only command would be invisible - turn it on in Preferences -> General, or place this command on the toolbar too");
+        } else {
+            error = tr("both the menu bar and the main toolbar are hidden, so this command would be invisible - turn one of them on in Preferences -> General");
+        }
         return -1;
     }
 
@@ -278,7 +327,7 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 
     QMenu* targetMenu = nullptr;
     if (wantsMenu) {
-        targetMenu = addonMenuForPath(request.menuPath, error);
+        targetMenu = addonMenuForPath(request.menuPath, pHost, error);
         if (!targetMenu) {
             return -1;
         }
@@ -296,19 +345,20 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
         // which was meant - and the player sees the label twice. Two commands
         // sharing a label is fine, and stays fine; ids are the identity.
         for (const QAction* existing : targetMenu->actions()) {
-            if (existing->menu() && existing->text() == request.name) {
+            if (existing->menu() && existing->text() == addonLabel(request.name) && mAddonSubmenuOwners.value(existing->menu()) == pHost) {
                 error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
                 return -1;
             }
         }
 
-        QAction* action = targetMenu->addAction(request.name);
+        QAction* action = targetMenu->addAction(addonLabel(request.name));
         action->setToolTip(addonTooltip(request.tooltip));
         if (!shortcut.isEmpty()) {
             action->setShortcut(shortcut);
         }
         command.menuAction = action;
-        connect(action, &QAction::triggered, this, [this, commandId]() {
+        connect(action, &QAction::triggered, this, [this, commandId](const bool checked) {
+            mirrorAddonCommandChecked(commandId, checked);
             raiseAddonCommandEvent(commandId);
         });
     }
@@ -318,14 +368,15 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
             mpAddonToolbarSeparator = mpMainToolBar->addSeparator();
         }
         auto* button = new QToolButton(this);
-        button->setText(request.name);
+        button->setText(addonLabel(request.name));
         button->setObjectName(qsl("addon_%1").arg(request.name));
         button->setToolTip(addonTooltip(request.tooltip));
         button->setAutoRaise(true);
         button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
         command.button = button;
         command.toolbarAction = mpMainToolBar->addWidget(button);
-        connect(button, &QToolButton::clicked, this, [this, commandId]() {
+        connect(button, &QToolButton::clicked, this, [this, commandId](const bool checked) {
+            mirrorAddonCommandChecked(commandId, checked);
             raiseAddonCommandEvent(commandId);
         });
     }
@@ -333,6 +384,30 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     applyAddonIcon(command.button, command.menuAction, request.icon);
     mAddonCommands[commandId] = command;
     return commandId;
+}
+
+// Qt toggles only the control the user activated, so a checkable command shown
+// on both surfaces came apart the moment anyone pressed either one: a tick in
+// the menu and none on the toolbar, for one command. Pushing the activated
+// surface's state onto the other before the event is raised keeps the API's
+// central promise - one command, one state, wherever it appears.
+void mudlet::mirrorAddonCommandChecked(const int commandId, const bool checked)
+{
+    if (!mAddonCommands.contains(commandId)) {
+        return;
+    }
+
+    const AddonCommand& command = mAddonCommands[commandId];
+    if (command.button && command.button->isCheckable() && command.button->isChecked() != checked) {
+        // Nothing to raise from the surface that did not move: the event for
+        // this activation is about to go out once, from the caller
+        const QSignalBlocker blocker(command.button);
+        command.button->setChecked(checked);
+    }
+    if (command.menuAction && command.menuAction->isCheckable() && command.menuAction->isChecked() != checked) {
+        const QSignalBlocker blocker(command.menuAction);
+        command.menuAction->setChecked(checked);
+    }
 }
 
 // One event for one command, whichever surface it was pressed on, carrying the
@@ -386,6 +461,13 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         if (parentMenu) {
             parentMenu->removeAction(command.menuAction);
         }
+        // deleteLater() leaves the action a child of this window until the
+        // event loop turns, and addonShortcutUsable() finds it there - so
+        // remove-then-re-add in one script pass, which is the shape of a
+        // package reload or a shortcut change, was refused in the name of a
+        // command that no longer exists. The sequence is given up here rather
+        // than whenever Qt gets round to the deletion.
+        command.menuAction->setShortcut(QKeySequence());
         command.menuAction->deleteLater();
     }
 
@@ -409,6 +491,7 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         } else {
             parentMenu->menuAction()->setVisible(false);
         }
+        mAddonSubmenuOwners.remove(parentMenu);
         parentMenu->deleteLater();
         parentMenu = grandParentMenu;
     }

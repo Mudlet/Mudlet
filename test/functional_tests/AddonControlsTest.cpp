@@ -487,6 +487,141 @@ private slots:
         QTest::qWait(100ms);
     }
 
+    // The API's central promise is one command with one state wherever it
+    // appears, and checked is the one property a user can change without the
+    // package. Qt toggles only the control that was pressed, so this came apart
+    // on the first click: a tick in the menu and none on the toolbar.
+    void test_aCheckableCommandStaysInStepAcrossItsSurfaces()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'Mirrored', menuPath = 'Checked'"));
+        QVERIFY2(commandId > 0, "the command was not placed");
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("setCommandChecked(%1, true)").arg(commandId)));
+
+        QToolButton* pButton = toolbarButtonNamed(qsl("Mirrored"));
+        QAction* pAction = menuActionNamed(qsl("Mirrored"));
+        QVERIFY2(pButton && pAction, "the command is not on both surfaces");
+        QVERIFY(pButton->isChecked());
+        QVERIFY(pAction->isChecked());
+
+        // Qt unchecks the button it just toggled; the menu item has to follow
+        pButton->click();
+        QTest::qWait(100ms);
+        QVERIFY2(!pButton->isChecked(), "the toolbar button did not toggle");
+        QVERIFY2(!pAction->isChecked(), "the menu item still shows a tick for a command the toolbar says is off");
+
+        // and the same from the other side
+        pAction->trigger();
+        QTest::qWait(100ms);
+        QVERIFY2(pAction->isChecked(), "the menu item did not toggle");
+        QVERIFY2(pButton->isChecked(), "the toolbar button still shows unchecked for a command the menu says is on");
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(commandId)));
+        QTest::qWait(100ms);
+    }
+
+    // Qt reads '&' in a QAction's or a QToolButton's text as a mnemonic, so a
+    // package's own label lost the character and took a keyboard shortcut
+    // nobody asked for
+    void test_anAmpersandInALabelIsShownRatherThanSwallowed()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'Fish & Chips', menuPath = 'Ampersand'"));
+        QVERIFY2(commandId > 0, "the command was not placed");
+
+        QAction* pAction = menuActionNamed(qsl("Fish && Chips"));
+        QVERIFY2(pAction, "the menu entry does not carry the label as typed");
+        QCOMPARE(pAction->text(), qsl("Fish && Chips"));
+        QVERIFY2(pAction->shortcut().isEmpty(), "the label's ampersand became a keyboard shortcut");
+
+        QToolButton* pButton = toolbarButtonNamed(qsl("Fish & Chips"));
+        QVERIFY2(pButton, "the command is not on the toolbar");
+        QCOMPARE(pButton->text(), qsl("Fish && Chips"));
+
+        // and the clash rules still compare the name the package gave, not the
+        // doubled form the surfaces display
+        const QString why = refusalReason(mpFirstHost, qsl("name = 'R&D', menuPath = 'Ampersand/Fish & Chips'"));
+        QVERIFY2(!why.isEmpty(), "a menuPath naming the ampersand command was accepted");
+        QVERIFY2(why.contains(qsl("Fish & Chips")), qPrintable(qsl("the refusal does not name the label the package gave: %1").arg(why)));
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(commandId)));
+        QTest::qWait(100ms);
+    }
+
+    // QMenu::toolTipsVisible is false by default and is not inherited, so the
+    // menu half of every tooltip never appeared - leaving a documented property
+    // that only worked on the toolbar
+    void test_theMenuShowsTooltipsAtAll()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'Tipped', menuPath = 'Tips/Nested', tooltip = 'what it does'"));
+        QVERIFY2(commandId > 0, "the command was not placed");
+
+        QAction* pAction = menuActionNamed(qsl("Tipped"));
+        QVERIFY2(pAction, "the command is not in the menu");
+        auto* pParentMenu = qobject_cast<QMenu*>(pAction->parent());
+        QVERIFY2(pParentMenu, "the menu entry has no menu");
+        QVERIFY2(pParentMenu->toolTipsVisible(), "the nested menu would never show a tooltip");
+
+        auto* pGrandParentMenu = qobject_cast<QMenu*>(pParentMenu->parent());
+        QVERIFY2(pGrandParentMenu, "the nested menu has no menu above it");
+        QVERIFY2(pGrandParentMenu->toolTipsVisible(), "the menu above would never show a tooltip");
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(commandId)));
+        QTest::qWait(100ms);
+    }
+
+    // Whether a package could place a command used to depend on which other
+    // profiles happened to be open, refused in the name of a label it can
+    // neither see nor clear
+    void test_anotherProfilesLabelsDoNotBlockPlacement()
+    {
+        const int leafId = addCommand(mpFirstHost, qsl("name = 'SharedLabel', menuPath = ''"));
+        QVERIFY2(leafId > 0, "the first profile's command was not placed");
+        const int nestedId = addCommand(mpFirstHost, qsl("name = 'SubHolder', menuPath = 'ProfileSub'"));
+        QVERIFY2(nestedId > 0, "the first profile's nested command was not placed");
+
+        // the same two clashes the first profile would be refused for
+        const int otherNested = addCommand(mpSecondHost, qsl("name = 'Alice', menuPath = 'SharedLabel'"));
+        QVERIFY2(otherNested > 0, "another profile's command label blocked this profile's submenu");
+        const int otherLeaf = addCommand(mpSecondHost, qsl("name = 'ProfileSub', menuPath = ''"));
+        QVERIFY2(otherLeaf > 0, "another profile's submenu blocked this profile's command");
+
+        // and the rule still holds against the profile's own placements
+        QVERIFY2(!refusalReason(mpFirstHost, qsl("name = 'Alice', menuPath = 'SharedLabel/Voices'")).isEmpty(), "a menuPath naming this profile's own command was accepted");
+        QVERIFY2(!refusalReason(mpSecondHost, qsl("name = 'SharedLabel', menuPath = ''")).isEmpty(), "a command took the label of this profile's own submenu");
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(leafId)));
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(nestedId)));
+        QVERIFY(callReturnedTrue(mpSecondHost, qsl("removeCommand(%1)").arg(otherNested)));
+        QVERIFY(callReturnedTrue(mpSecondHost, qsl("removeCommand(%1)").arg(otherLeaf)));
+        QTest::qWait(100ms);
+    }
+
+    // readLateSettings() migrates anyone who asked for both bars to never show
+    // into a state where a default command lands on two invisible surfaces
+    void test_aCommandIsRefusedWhenEverySurfaceItAsksForIsHidden()
+    {
+        const enums::controlsVisibility restoreToolbar = mudlet::self()->toolBarVisibility();
+        const enums::controlsVisibility restoreMenuBar = mudlet::self()->menuBarVisibility();
+
+        // the toolbar is hidden in exactly the state addCommand is callable
+        // from, which comparing against visibleNever alone did not catch
+        mudlet::self()->setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
+        QVERIFY2(!refusalReason(mpFirstHost, qsl("name = 'HiddenBar', surfaces = 'toolbar'")).isEmpty(), "a toolbar-only command was accepted while the toolbar shows only without a profile");
+
+        mudlet::self()->setMenuBarVisibility(enums::visibleNever);
+        const QString both = refusalReason(mpFirstHost, qsl("name = 'ProbeBlind', menuPath = 'Blind'"));
+        QVERIFY2(!both.isEmpty(), "a command was placed on two invisible surfaces");
+
+        // one bar back is enough for the default to be reachable again
+        mudlet::self()->setMenuBarVisibility(enums::visibleAlways);
+        const int reachableId = addCommand(mpFirstHost, qsl("name = 'ReachableAgain', menuPath = 'Blind'"));
+        QVERIFY2(reachableId > 0, "a command was refused while the menu bar was showing");
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(reachableId)));
+
+        mudlet::self()->setToolBarVisibility(restoreToolbar);
+        mudlet::self()->setMenuBarVisibility(restoreMenuBar);
+        QTest::qWait(100ms);
+    }
+
     // A menuPath part naming an existing command would put two entries with one
     // label in the menu, one a command and one a submenu
     void test_aMenuPathThatNamesACommandIsRefused()

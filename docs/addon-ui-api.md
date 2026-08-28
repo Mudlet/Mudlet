@@ -35,8 +35,8 @@ desktop Mudlet is the menu and the toolbar.
 
 `addCommand` returns an id, or `nil, error` explaining why the command could
 not be placed - an unparseable or already-taken shortcut, a `menuPath` part
-that names an existing command, or `surfaces = "toolbar"` while the main
-toolbar is hidden.
+that names an existing command of this profile's, or every surface it asked
+for being hidden.
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
@@ -44,20 +44,30 @@ toolbar is hidden.
 | `removeCommand(id)` | boolean | Removes the command from every surface. Emptied `menuPath` submenus and the separator go with it; add/remove cycles leave no residue. |
 | `enableCommand(id)` | boolean | Enables it on every surface. |
 | `disableCommand(id)` | boolean | Disables it on every surface. |
-| `setCommandChecked(id, checked)` | boolean | Sets a checkmark (the command becomes checkable on first use), on every surface. |
+| `setCommandChecked(id, checked)` | boolean | Sets a checkmark (the command becomes checkable on first use), on every surface. A checkable command activated by the user stays in step across surfaces: the state the pressed surface reached is the state the others take, before `sysCommandClicked` is raised. |
 | `setCommandIcon(id, icon)` | boolean | Replaces the icon; path rules as above. |
-| `setCommandTooltip(id, tooltip)` | boolean | Replaces the tooltip. Package text is escaped, so `<` and `&` show as typed. |
+| `setCommandTooltip(id, tooltip)` | boolean | Replaces the tooltip. Package text is escaped, so `<` and `&` show as typed - in labels too, where a bare `&` would otherwise be read as a keyboard mnemonic and vanish from the text. |
 | `setCommandPulse(id, enabled[, color1, color2, interval])` | boolean \| `nil, error` | Toolbar-only refinement: a two-colour background pulse (defaults `#ff4444`/`#cc0000`, 500ms). Refuses a colour the client cannot parse, and an `interval` below 1ms. |
 
 **Finding the menu:** the Extensions menu lives in Mudlet's menu bar - on
 macOS that is the system menu bar at the top of the screen, not the Mudlet
 window. It is created on first use and hides itself while empty.
 
-**The main toolbar is hidden by default.** A command placed only on the
-toolbar would be invisible on a fresh profile, so that combination is refused
-with an error rather than returning an id for something nobody can see. A
-command on both surfaces is always reachable, which is why that is the
-default.
+**The main toolbar is hidden by default.** A command is refused when every
+surface it asked for is hidden - the toolbar alone while the toolbar is off,
+the menu alone while the menu bar is off, or either default while both are.
+A command on both surfaces is reachable as long as one bar is showing, which
+is why that is the default.
+
+**Menu placement is per profile.** `menuPath` submenus and the label rule
+below are decided by the calling profile's own commands. Two profiles may use
+the same path or the same label, and whether a package can place a command
+never depends on which other profiles happen to be open - a package cannot see
+another profile's labels, so it could not act on a refusal naming one.
+
+**Detached profiles keep their own chrome.** A profile detached into its own
+window builds its own menu bar and toolbar, and commands are not mirrored into
+them; they stay reachable from the main window.
 
 ## Events
 
@@ -80,9 +90,10 @@ end)
 1. **Ids are the only identity.** Labels, paths and names may repeat - two
    commands may share a label; operations address ids, and an unknown id
    returns `false` rather than erroring. The one exception is that within a
-   single menu a label may not be both a command and a submenu, in either
-   order: a later `menuPath` naming it could not say which was meant, and the
-   player would see the label twice. Ids come from one sequence covering every command, so an id
+   single menu one profile may not use a label as both a command and a submenu,
+   in either order: a later `menuPath` naming it could not say which was meant,
+   and the player would see the label twice. The rule is scoped to the profile,
+   for the reason under *Menu placement is per profile* above. Ids come from one sequence covering every command, so an id
    names one command or nothing. An id belonging to another profile answers
    as an unknown one does: a command only takes orders from the profile that
    created it.
@@ -104,3 +115,11 @@ end)
 6. **A command that cannot be placed says so.** Returning an id for something
    the user cannot see or reach is worse than refusing, because the package
    has no way to find out.
+7. **Package text is data, not markup.** Labels, tooltips and colours come
+   from a package and are escaped or validated before they reach the client's
+   chrome - a `<` must not eat the rest of a tooltip, an `&` must not become a
+   mnemonic, and a colour must not be able to carry styling of its own.
+8. **A checkable command holds one state.** Where a client shows a command on
+   more than one surface and the user can toggle it, activating one surface
+   carries the others with it. Two representations of one command must never
+   disagree about whether it is checked.

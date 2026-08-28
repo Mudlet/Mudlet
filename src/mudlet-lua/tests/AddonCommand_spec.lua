@@ -44,6 +44,20 @@ describe("addon commands", function()
       assert.is_number(place{name = "BothOfThem", surfaces = {"menu", "toolbar"}})
     end)
 
+    -- removeCommand defers the menu action's destruction past the event loop
+    -- turn, so it was still a child of the main window holding its shortcut.
+    -- Remove-then-re-add in one pass - a package reload, or changing a
+    -- command's key - was then refused in the name of a command that had just
+    -- been removed and could not be found by anything the package could call.
+    it("frees a shortcut as soon as the command is removed, not a turn later", function()
+      local first = addCommand{name = "SpecShortcut", menuPath = "Spec", shortcut = "Ctrl+Alt+F9"}
+      assert.is_number(first)
+      assert.is_true(removeCommand(first))
+
+      local second, why = place{name = "SpecShortcutAgain", menuPath = "Spec", shortcut = "Ctrl+Alt+F9"}
+      assert.is_number(second, "the shortcut was still held by the removed command: " .. tostring(why))
+    end)
+
     it("gives each command an id of its own", function()
       local first = place{name = "FirstSpec", menuPath = "Spec"}
       local second = place{name = "SecondSpec", menuPath = "Spec"}
