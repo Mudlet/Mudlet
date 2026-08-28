@@ -39,6 +39,7 @@ deliberately.
 | `mudlet-spec-dotted` | archive whose `config.lua` names it with a `.xml` on the end, which is trimmed off before it is installed |
 | `mudlet-spec-nested` | archive whose `config.lua` name hides a second ending under the first, so one pass over it and two give different answers |
 | `mudlet-spec-renamer2` | the same installed name as `mudlet-spec-renamer` but different details, so a refused install's effect on them is observable |
+| `mudlet-spec-varsonly` | archive holding one variable and no items at all, so a module of it installs and runs while every unit an uninstall clears stays empty |
 | `sources/mudlet-spec-badxml-bare` | bare package XML that is truncated, for the same failure reached without an archive around it |
 | `sources/mudlet-spec-xmlonly` | bare package XML, installed without any archive around it |
 | `sources/mudlet-spec-colorfilter` | bare package XML with colour-pattern and perl children under filter parents; the colour children are the part no Lua API can build |

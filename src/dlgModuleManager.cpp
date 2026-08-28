@@ -189,6 +189,7 @@ void dlgModuleManager::slot_uninstallModule()
             //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
             msg = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(pI->text());
         }
+        //: Title of the dialog that says why a module the user asked to remove was not removed
         QMessageBox::warning(this, tr("Removal failed"), msg);
     }
     // rebuilt whether the removal took or not: refused, this puts back what is

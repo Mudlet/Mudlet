@@ -1129,6 +1129,28 @@ describe("Tests installing one name as both a package and a module", function()
     assert.equals(1, exists(partial .. " alias", "alias"), "the module lost its alias to an install that was refused")
   end)
 
+  -- The other way round: a module of nothing but variables, fonts, images or a
+  -- map loads completely and still leaves every one of the six units empty,
+  -- because XMLimport deletes the master folder of each unit its file did not
+  -- mention. Asking the units alone answers that such a name is free, and that
+  -- answer is acted on - so merely offering a package under the name strikes a
+  -- module that is installed and running off the listing.
+  it("refuses a package over a module that installed no items at all", function()
+    local varsOnly = "mudlet-spec-varsonly"
+    local archive = withFixtureModule(varsOnly)
+    defer(function() mudletSpecVarsOnly = nil end)
+
+    assert.is_true(moduleInstalled(varsOnly), "the module that owns no items was not listed")
+    assert.equals("installed", mudletSpecVarsOnly,
+                  "SETUP: the module never finished loading, so this is the part-way case above rather than the no-items one")
+
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(varsOnly), "the package was installed over a module that is still installed")
+    assert.is_true(moduleInstalled(varsOnly), "the module was struck off the listing by an install that was refused")
+  end)
+
   -- The two refusals above run on the name the archive's file has. An archive
   -- carrying a config.lua is renamed to whatever that file says straight after,
   -- so an archive under any other name reached the registration with a name the
@@ -1176,6 +1198,60 @@ describe("Tests installing one name as both a package and a module", function()
     assert.is_false(packageInstalled(renamedTo), "the package was registered under the name its config.lua asked for")
     assert.is_true(moduleInstalled(renamedTo), "the module that refused the package was removed by the refusal")
     assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed module lost its alias to the refusal")
+  end)
+
+  -- Both refusals above are about an archive that really does end up on the
+  -- name it is turned away over. Asking them of the archive's own file name
+  -- turns away one that never lands on that name at all: this one renames
+  -- itself out of the way, so the only thing the file name settles is which
+  -- folder it is unpacked into - which is the package's own.
+  it("lets a module whose config.lua renames it past a package under its file name", function()
+    lfs.mkdir(scratchDirectory)
+    local squatterDirectory = scratchDirectory .. "/under-the-file-name"
+    lfs.mkdir(squatterDirectory)
+    local squatter = squatterDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(squatter)
+      lfs.rmdir(squatterDirectory)
+      lfs.rmdir(scratchDirectory)
+    end)
+    -- an archive with no config.lua is installed under the name of the file it
+    -- came in, so a copy of one under this name is how a package comes to hold
+    -- the renaming archive's file name
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", squatter)
+    defer(function() removeFixturePackage("mudlet-spec-renamer") end)
+    installUntilConfirmed(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
+                          "a package under the renaming archive's file name")
+
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, copyOfRenamerInTheProfile(), function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module past a package holding its file name")
+
+    assert.is_true(packageInstalled("mudlet-spec-renamer"), "the package under the file name was taken away by an install that did not collide with it")
+    assert.equals(1, exists("mudlet-spec-noconfig alias", "alias"), "the package under the file name lost its alias to the module install")
+    assert.is_true(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer/mudlet-spec-noconfig.xml"),
+                   "the module was unpacked into the folder of the package holding its file name")
+  end)
+
+  -- and the same the other way about, which is a separate refusal
+  it("lets a package whose config.lua renames it past a module under its file name", function()
+    lfs.mkdir(scratchDirectory)
+    local squatter = scratchDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(squatter)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", squatter)
+    defer(function() removeFixtureModule("mudlet-spec-renamer") end)
+    installUntilConfirmed(installModule, squatter, function() return moduleInstalled("mudlet-spec-renamer") end,
+                          "a module under the renaming archive's file name")
+
+    defer(function() removeFixturePackage(renamedTo) end)
+    installUntilConfirmed(installPackage, renamerArchive, function() return packageInstalled(renamedTo) end,
+                          "the renaming fixture as a package past a module holding its file name")
+
+    assert.is_true(moduleInstalled("mudlet-spec-renamer"), "the module under the file name was taken away by an install that did not collide with it")
+    assert.equals(1, exists("mudlet-spec-noconfig alias", "alias"), "the module under the file name lost its alias to the package install")
   end)
 
   it("refuses a module whose config.lua renames it onto an installed module", function()

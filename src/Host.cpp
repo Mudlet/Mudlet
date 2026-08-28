@@ -2382,7 +2382,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (!mInstalledModules.contains(packageName) && !mActiveModules.contains(packageName)) {
             return false;
         }
-        if (anythingIsInstalledUnder(packageName)) {
+        // A module that finished loading holds its name whether or not any of the
+        // six units ended up with something in it. One of nothing but variables,
+        // fonts, images or a map installs completely and leaves every one of them
+        // empty - XMLimport deletes the master folder of each unit its file did
+        // not mention - so asking the units alone answers that the name is free
+        // and deregisters a module that is installed and running.
+        if (mModulesLoadedOk.contains(packageName) || anythingIsInstalledUnder(packageName)) {
             return true;
         }
         mInstalledModules.remove(packageName);
@@ -2408,6 +2414,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     };
 
     QString packageName = sanitizePackageName(fileName);
+    // Nothing settles the name an install lands under until config.lua has been
+    // read, and that can rename the archive to anything at all - so a name the
+    // other half is using is not necessarily a name this ever installs under.
+    // An archive that unpacks a folder is therefore asked again once its manifest
+    // has spoken, and is unpacked beside the folder holding the name rather than
+    // into it in the meantime. A bare XML file carries no manifest and gets no
+    // second chance, so its answer is final here.
+    const bool aManifestCouldStillRenameThis = packageUnpacksAFolder(fileName);
+    QString crossKindRefusalOnTheFileName;
     if (thing != enums::PackageModuleType::Package) {
         // An uninstall takes items away by name alone, so one name installed both
         // ways loses both halves' items whichever half is removed. A profile saved
@@ -2416,7 +2431,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // question below, which reads the same items and cannot tell whose they are.
         if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
             //: %1 is the name of the package that is already installed
-            return fail(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+            const QString refusal = tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName);
+            if (!aManifestCouldStillRenameThis) {
+                return fail(refusal);
+            }
+            crossKindRefusalOnTheFileName = refusal;
         }
         if ((thing == enums::PackageModuleType::ModuleSync) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
@@ -2429,7 +2448,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         if (!mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
             //: %1 is the name of the module that is already installed
-            return fail(tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+            const QString refusal = tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName);
+            if (!aManifestCouldStillRenameThis) {
+                return fail(refusal);
+            }
+            crossKindRefusalOnTheFileName = refusal;
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
@@ -2439,7 +2462,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QFile file2;
     if (packageUnpacksAFolder(fileName)) {
         const QString _home = mudlet::getMudletPath(enums::profileHomePath, getName());
-        const QString _dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+        // Unpacking into a folder the other half of this name owns would write over
+        // its files, and the rename below would then carry that folder off under
+        // whatever the manifest asked for. An archive whose name is already spoken
+        // for is unpacked beside it instead, and moved into place only once its
+        // manifest has been read and the name it really wants turns out to be free.
+        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName)
+                                                                      : mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -2448,6 +2477,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // name, and then whatever its config.lua says, so it can just as well name
         // a folder of the profile's that was already here ("map", "log",
         // "current") - see the refusal further down.
+        if (!crossKindRefusalOnTheFileName.isEmpty() && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
+            // nothing else ever makes a folder with that ending, and every way out
+            // of here takes it away again, so one still sitting there is the
+            // leavings of an install that did not get to finish
+            removeDir(_dest, _dest);
+        }
         const bool destinationAlreadyExisted = QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
@@ -2511,12 +2546,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         };
         // before we start importing xmls in, see if the config.lua manifest file exists
         // - if it does, update the packageName from it
+        auto refuseTheRenamedInstall = [&, this](const QString& reason) {
+            takeBackWhatTheManifestOverwrote();
+            discardTheFolderThisInstallMade();
+            return fail(reason);
+        };
         if (_dir.exists(qsl("config.lua"))) {
-            auto refuseTheRenamedInstall = [&, this](const QString& reason) {
-                takeBackWhatTheManifestOverwrote();
-                discardTheFolderThisInstallMade();
-                return fail(reason);
-            };
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
             QString whyTheManifestWasNotRead;
             readPackageConfig(_dir.absoluteFilePath(qsl("config.lua")), packageName, thing != enums::PackageModuleType::Package, &whyTheManifestWasNotRead);
@@ -2539,65 +2574,65 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     postMessage(tr("[ WARN ]  - The config.lua of \"%1\" could not be read, so it is being installed under that name with no details: %2").arg(packageName, whyTheManifestWasNotRead));
                 }
             }
-            // now that the packageName changed, redo relevant checks to make sure it's still valid.
-            // The refusal further up only ever saw the archive's own file name, and
-            // config.lua has just renamed this to anything it likes - so ask again
-            // about the half it did not check, or any archive at all installs over
-            // the other half's name and an uninstall then takes both halves' items.
-            if (thing != enums::PackageModuleType::Package) {
-                if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
-                    //: %1 is the name of the package that is already installed
-                    return refuseTheRenamedInstall(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
-                }
-                // Asked before the sync below, not after: that takes the module
-                // already using the name apart by name alone, so refusing
-                // afterwards would hand back the module that did the refusing
-                // with nothing left in it.
-                if (const QString refusal = refusalFromAModuleUsingTheName(packageName); !refusal.isEmpty()) {
-                    return refuseTheRenamedInstall(refusal);
-                }
-                if (mActiveModules.contains(packageName)) {
-                    uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
-                }
-            } else {
-                if (mInstalledPackages.contains(packageName)) {
-                    // cleanup and quit if already installed
-                    return refuseTheRenamedInstall(qsl("package %1 is already installed").arg(packageName));
-                }
-                if (!mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
-                    //: %1 is the name of the module that is already installed
-                    return refuseTheRenamedInstall(tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
-                }
-            }
-            // continuing, so update the folder name on disk
-            const QString newpath(qsl("%1/%2").arg(_home, packageName));
-            // An archive whose manifest names it what its file is already called
-            // has nothing to move, and asking to rename a folder onto itself is
-            // refused by the very check below
-            if (QDir(newpath).absolutePath() != _dir.absolutePath()) {
-                if (_dir.rename(_dir.absolutePath(), newpath)) {
-                    if (!folderThisInstallMade.isEmpty()) {
-                        folderThisInstallMade = QDir(newpath).absolutePath();
-                    }
-                } else if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence) {
-                    // A folder already sitting at the name the manifest asks for
-                    // makes the rename fail, and going on reads that folder rather
-                    // than the one this install unpacked: whatever XML is in it is
-                    // imported, registered under the name the archive asked for,
-                    // and the install reports success - so the user ends up running
-                    // a stranger's package while everything that reports on it
-                    // describes the archive they installed. An orphaned folder is
-                    // easy to come by: #9654 leaves one, and so does an uninstall
-                    // whose folder removal did not go through.
-                    //: %1 is the name the package's config.lua asks to be installed under
-                    return refuseTheRenamedInstall(
-                            tr("A folder called \"%1\" is already in the profile, so the package could not be put in place. Please remove or rename that folder first.").arg(packageName));
-                }
-                // a sync or a profile load is putting back what is already there,
-                // so the folder in the way is this same module's own from last time
-            }
-            _dir = QDir(newpath);
         }
+        // The name this installs under is settled now, so this is where a name
+        // that is spoken for is answered: everything above only ever saw the
+        // archive's own file name, and config.lua has just renamed this to
+        // anything it likes. An archive with no manifest passes through here
+        // unchanged and gets the same answer it would have got up there.
+        if (thing != enums::PackageModuleType::Package) {
+            if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
+                //: %1 is the name of the package that is already installed
+                return refuseTheRenamedInstall(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+            }
+            // Asked before the sync below, not after: that takes the module
+            // already using the name apart by name alone, so refusing
+            // afterwards would hand back the module that did the refusing
+            // with nothing left in it.
+            if (const QString refusal = refusalFromAModuleUsingTheName(packageName); !refusal.isEmpty()) {
+                return refuseTheRenamedInstall(refusal);
+            }
+            if (mActiveModules.contains(packageName)) {
+                uninstallPackage(packageName, enums::PackageModuleType::ModuleSync);
+            }
+        } else {
+            if (mInstalledPackages.contains(packageName)) {
+                // cleanup and quit if already installed
+                return refuseTheRenamedInstall(qsl("package %1 is already installed").arg(packageName));
+            }
+            if (!mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
+                //: %1 is the name of the module that is already installed
+                return refuseTheRenamedInstall(tr("A module called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
+            }
+        }
+        // continuing, so update the folder name on disk
+        const QString newpath(qsl("%1/%2").arg(_home, packageName));
+        // An archive whose manifest names it what its file is already called
+        // has nothing to move, and asking to rename a folder onto itself is
+        // refused by the very check below
+        if (QDir(newpath).absolutePath() != _dir.absolutePath()) {
+            if (_dir.rename(_dir.absolutePath(), newpath)) {
+                if (!folderThisInstallMade.isEmpty()) {
+                    folderThisInstallMade = QDir(newpath).absolutePath();
+                }
+            } else if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence) {
+                // A folder already sitting at the name the manifest asks for
+                // makes the rename fail, and going on reads that folder rather
+                // than the one this install unpacked: whatever XML is in it is
+                // imported, registered under the name the archive asked for,
+                // and the install reports success - so the user ends up running
+                // a stranger's package while everything that reports on it
+                // describes the archive they installed. An orphaned folder is
+                // easy to come by: #9654 leaves one, and so does an uninstall
+                // whose folder removal did not go through.
+                //: %1 is the name the package's config.lua asks to be installed under
+                return refuseTheRenamedInstall(
+                        tr("A folder called \"%1\" is already in the profile, so the package could not be put in place. Please remove or rename that folder first.").arg(packageName));
+            }
+            // a sync or a profile load is putting back what is already there,
+            // so the folder in the way is this same module's own from last time
+        }
+        _dir = QDir(newpath);
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);

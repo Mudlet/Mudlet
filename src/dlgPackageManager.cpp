@@ -152,7 +152,10 @@ void dlgPackageManager::downloadRepositoryIndex()
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
     QNetworkReply* reply = manager->get(request);
-    QFile* file = new QFile(outputPath);
+    // Parented so that closing the dialog before the download has finished takes
+    // it with it: the handler below is the only other thing that deletes it, and
+    // the reply that would call it is a grandchild of this dialog.
+    QFile* file = new QFile(outputPath, this);
 
     if (!file->open(QIODevice::WriteOnly)) {
         file->deleteLater();
@@ -697,6 +700,7 @@ void dlgPackageManager::slot_removePackages()
 
     const QString msg = removePackages(selectedPackages);
     if (!msg.isEmpty()) {
+        //: Title of the dialog that says why a package the user asked to remove was not removed
         QMessageBox::warning(this, tr("Removal failed"), msg);
     }
 
