@@ -2319,9 +2319,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (!mInstalledModules.contains(packageName) && !mActiveModules.contains(packageName)) {
             return false;
         }
-        const QString modulePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
-        const QString moduleFile = mInstalledModules.value(packageName).value(0);
-        if (QDir(modulePath).exists() || QFile::exists(moduleFile)) {
+        // Whether the module loaded is what says there is something here, not
+        // whether its file can be reached: a module is a link to a file the user
+        // keeps where they like - a share, an external disk, a folder something
+        // else is syncing - and one that loaded is listed and running every one
+        // of its items whether that path resolves this second or not. Asking the
+        // filesystem unlists it, leaving its items behind under a name the next
+        // install takes, so uninstalling that takes the module's items too.
+        if (mModulesLoadedOk.contains(packageName)) {
             return true;
         }
         mInstalledModules.remove(packageName);

@@ -284,16 +284,17 @@ private slots:
 
     // A module can be left listed with nothing behind it - installModulesList()
     // files one even when its install failed - and the refusal above must not
-    // hold the name for that: nothing is loaded under it and there are no files,
-    // so there is nothing for the package to collide with. Only reachable from
-    // here, because Lua has no way to put a listing in without a module.
+    // hold the name for that: nothing loaded under it, so there is nothing for
+    // the package to collide with. Only reachable from here, because Lua has no
+    // way to put a listing in without a module.
     void test_aModuleListedWithNothingBehindItDoesNotHoldTheName()
     {
         auto* host = startWithBothHalvesWritten();
         QVERIFY2(host, "Could not start the profile");
 
-        // listed, never loaded, and pointing at a file that is not there
-        host->mInstalledModules[mDualName] = QStringList{qsl("%1/gone/%2.mpackage").arg(mudlet::getMudletPath(enums::profileHomePath, mpHostname), mDualName), qsl("0")};
+        // listed, but never in mModulesLoadedOk, which is what says a module
+        // actually loaded
+        host->mInstalledModules[mDualName] = QStringList{moduleHalfPath(), qsl("0")};
         auto [installed, reason] = host->installPackage(packageHalfPath(), enums::PackageModuleType::Package);
         QVERIFY2(installed, qPrintable(qsl("A listing with no module behind it must not hold the name, but: \"%1\"").arg(reason)));
         QVERIFY2(host->mInstalledPackages.contains(mDualName), "The package was answered yes but not listed");

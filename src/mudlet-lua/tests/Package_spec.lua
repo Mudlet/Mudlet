@@ -1042,6 +1042,72 @@ describe("Tests installing one name as both a package and a module", function()
     assert.equals(1, exists(moduleName .. " alias", "alias"), "the installed module lost its alias to the refusal")
   end)
 
+  -- A module is a link to a file, and that file lives wherever the user keeps
+  -- it: a network share, an external disk, a folder something else is syncing.
+  -- Whether the path resolves this second says nothing about the module, which
+  -- is loaded, listed and running all of its items either way - so the refusal
+  -- above has to hold when the file cannot be reached. Answering the question
+  -- with the filesystem unlists a live module instead, and its items stay
+  -- behind under the name the package then takes, so uninstalling that package
+  -- later takes the module's items with it.
+  it("refuses a package over a module whose own file has gone missing", function()
+    local vanishing = "mudlet-spec-vanished"
+    lfs.mkdir(scratchDirectory)
+    local moduleFile = scratchDirectory .. "/" .. vanishing .. ".xml"
+    local archive = scratchDirectory .. "/" .. vanishing .. ".mpackage"
+    defer(function()
+      removeFixturePackage(vanishing)
+      removeFixtureModule(vanishing)
+      os.remove(moduleFile)
+      os.remove(archive)
+      lfs.rmdir(scratchDirectory)
+    end)
+
+    local file = io.open(moduleFile, "w")
+    assert.is_not_nil(file, "could not write to " .. moduleFile)
+    file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-vanished alias</name>
+			<script>echo("mudlet-spec-vanished alias fired\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-vanished$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+    file:close()
+
+    installUntilConfirmed(installModule, moduleFile, function() return moduleInstalled(vanishing) end,
+                          "the module whose file is about to go")
+    assert.equals(1, exists(vanishing .. " alias", "alias"), "the module's alias was never installed")
+    -- a module loaded from an XML unpacks no folder of its own, so the file is
+    -- the only thing on disk there is to look for
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. vanishing))
+    assert.is_true(os.remove(moduleFile) ~= nil, "could not take the module's file away")
+
+    -- no config.lua in this one, so it installs under the name of the copy
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", archive)
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(vanishing), "the package was installed over a module that is still running")
+    assert.is_true(moduleInstalled(vanishing), "the live module was unlisted because its file could not be reached")
+    assert.equals(1, exists(vanishing .. " alias", "alias"), "the module lost its alias to an install that was refused")
+    assert.equals(0, exists("mudlet-spec-noconfig alias", "alias"), "the refused archive's own contents were installed anyway")
+  end)
+
   -- The two refusals above run on the name the archive's file has. An archive
   -- carrying a config.lua is renamed to whatever that file says straight after,
   -- so an archive under any other name reached the registration with a name the
