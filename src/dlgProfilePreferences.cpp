@@ -87,6 +87,7 @@
 #include <QShortcut>
 #include <QStackedWidget>
 #include <QStyle>
+#include <QToolButton>
 #include <QVariantAnimation>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
@@ -103,6 +104,11 @@ static constexpr int scmContentColumnWidth = 640;
 static constexpr int scmSidebarWidth = 232;
 static constexpr int scmSidebarPadding = 12;
 static constexpr int scmSidebarAccentBarWidth = 3;
+// The check indicator a checkable card draws in its title, and how far to the
+// right of the frame edge that leaves the title itself - measured, because the
+// second follows from the first through the style rather than by arithmetic
+static constexpr int scmCardIndicatorSize = 13;
+static constexpr int scmCardTitleInset = 21;
 
 // A QDoubleSpinBox rounds whatever it is given to the number of decimals it
 // displays, so it holds no more precision than that - but TMap and the Lua API
@@ -548,10 +554,27 @@ void dlgProfilePreferences::buildShell()
     auto* pTitleRowLayout = new QHBoxLayout(pTitleRow);
     pTitleRowLayout->setContentsMargins(0, 0, 0, 0);
     pTitleRowLayout->setSpacing(10);
+    // Only ever seen beside the "Search results" title, so it takes no room on
+    // a category page and cannot push that page's own title sideways
+    mpButton_searchBack = new QToolButton(pTitleRow);
+    mpButton_searchBack->setObjectName(qsl("settingsSearchBack"));
+    mpButton_searchBack->setArrowType(Qt::LeftArrow);
+    mpButton_searchBack->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    mpButton_searchBack->setAutoRaise(true);
+    // ...and reachable by keyboard, which a tool button is not by default
+    mpButton_searchBack->setFocusPolicy(Qt::StrongFocus);
+    mpButton_searchBack->hide();
+    connect(mpButton_searchBack, &QAbstractButton::clicked, this, [this]() {
+        // The same door the sidebar uses, so leaving the results by either
+        // route cannot end anywhere different
+        showCategory(mCategoryBeforeSearch.isEmpty() ? qsl("general") : mCategoryBeforeSearch);
+    });
+    pTitleRowLayout->addWidget(mpButton_searchBack);
     mpLabel_pageTitleIcon = new QLabel(pTitleRow);
     mpLabel_pageTitleIcon->setObjectName(qsl("settingsPageTitleIcon"));
-    // Holds its place while the search results are showing and it has no icon
-    // to draw, so the title does not step sideways on the way in and out
+    // A fixed width, so that the title starts at the same x on every category
+    // page whatever the shape of that category's icon. The search results have
+    // the back chevron in this place instead, and hide it.
     mpLabel_pageTitleIcon->setFixedWidth(20);
     pTitleRowLayout->addWidget(mpLabel_pageTitleIcon);
     mpLabel_pageTitle = new QLabel(pTitleRow);
@@ -576,8 +599,7 @@ void dlgProfilePreferences::buildShell()
     auto* pCard_systemIntegration = createCard(qsl("card_systemIntegration"));
     moveIntoCard(pCard_systemIntegration, {telnetHandlerEnabled, checkBox_showIconsOnMenus});
     buildMigrationBanner();
-    buildCategoryPage(qsl("general"),
-                      {mpFrame_migrationBanner, groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration});
+    buildCategoryPage(qsl("general"), {groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration});
 
     auto* pCard_theme = createCard(qsl("card_theme"));
     addCardRow(pCard_theme, label_appearance, comboBox_appearance);
@@ -605,11 +627,6 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX});
     auto* pCard_network = createCard(qsl("card_network"));
     addCardRow(pCard_network, label_networkPacketTimeout, doubleSpinBox_networkPacketTimeout);
-    // The protocols themselves are only named inside the menu this button pops
-    // up, where a search over the widget tree cannot see them - so the button
-    // carries them as invisible synonyms instead. Not translated: these are the
-    // protocol names as the games and their documentation spell them.
-    pushButton_chooseProtocols->setProperty("searchKeywords", qsl("GMCP MSDP MSSP MSP MXP MTTS MNES NAWS CHARSET NEW-ENVIRON telnet"));
     buildCategoryPage(qsl("connection"), {groupBox_protocols, pCard_dataEncoding, groupBox_specialOptions, pCard_network});
 
     auto* pCard_passwords = createCard(qsl("card_passwords"));
@@ -657,7 +674,7 @@ void dlgProfilePreferences::buildShell()
     showCategory(qsl("general"));
 }
 
-// Left null once dismissed, which the General page takes in its stride
+// Left null once dismissed, which every page takes in its stride
 void dlgProfilePreferences::buildMigrationBanner()
 {
     if (mudlet::getQSettings()->value(qsl("settingsRedesignBannerSeen"), false).toBool()) {
@@ -666,6 +683,9 @@ void dlgProfilePreferences::buildMigrationBanner()
 
     mpFrame_migrationBanner = new QFrame(this);
     mpFrame_migrationBanner->setObjectName(qsl("settingsMigrationBanner"));
+    // Shown by placeBannerOn() once it is on a page; parented to the dialog
+    // until then so that nothing draws it over the shell
+    mpFrame_migrationBanner->hide();
     auto* pBannerLayout = new QVBoxLayout(mpFrame_migrationBanner);
     pBannerLayout->setSpacing(8);
     // Lines the banner's text up with the text inside the cards below it: a
@@ -690,8 +710,36 @@ void dlgProfilePreferences::buildMigrationBanner()
 
     connect(pDismissButton, &QAbstractButton::clicked, this, [this]() {
         mudlet::getQSettings()->setValue(qsl("settingsRedesignBannerSeen"), true);
-        mpFrame_migrationBanner->hide();
+        // Off the page it is on and out of the member, so that no later page
+        // switch brings it back. Kept alive rather than deleted: the click that
+        // dismissed it is still being delivered to a button inside it.
+        placeBannerOn(nullptr);
+        mpFrame_migrationBanner = nullptr;
     });
+}
+
+// The banner is not a card of any one category, and it is not pinned above the
+// stack either - pinned, it would eat about 130px of every page's height at the
+// dialog's 780x560 minimum. It rides at the top of whichever page is showing
+// instead, and comes off every page while the search owns the stack: a card's
+// place in the search index is the position it holds in its column, and a
+// banner sitting above it would make every one of those a place too low.
+void dlgProfilePreferences::placeBannerOn(QWidget* pColumn)
+{
+    QWidget* pDestination = pColumn ? pColumn : static_cast<QWidget*>(this);
+    if (!mpFrame_migrationBanner || mpFrame_migrationBanner->parentWidget() == pDestination) {
+        return;
+    }
+    detachFromLayout(mpFrame_migrationBanner);
+    auto* pColumnLayout = pColumn ? qobject_cast<QVBoxLayout*>(pColumn->layout()) : nullptr;
+    if (!pColumnLayout) {
+        mpFrame_migrationBanner->setParent(this);
+        mpFrame_migrationBanner->hide();
+        return;
+    }
+    pColumnLayout->insertWidget(0, mpFrame_migrationBanner);
+    // Reparenting hides a widget, and the page may not be the one on show yet
+    mpFrame_migrationBanner->show();
 }
 
 // The pseudo-category the search results live on: category subheaders and the
@@ -798,6 +846,7 @@ void dlgProfilePreferences::addCategory(const QString& key, const QString& iconF
     pItem->setData(Qt::UserRole, key);
     pItem->setSizeHint(QSize(0, 36));
     mCategoryRows.insert(key, mpListWidget_categories->row(pItem));
+    mCategoryIconFiles.insert(key, iconFile);
 }
 
 void dlgProfilePreferences::retranslateShell()
@@ -808,6 +857,12 @@ void dlgProfilePreferences::retranslateShell()
     mpLineEdit_search->setPlaceholderText(tr("Find in settings"));
     //: Accessible name of the list that switches between the settings dialog's categories
     mpListWidget_categories->setAccessibleName(tr("Settings categories"));
+    //: Button at the left of the "Search results" heading, leading back to the settings category the search was started from
+    mpButton_searchBack->setText(tr("Back"));
+    //: Tooltip and accessible name of the button that leaves the settings search results
+    const QString backToSettings = tr("Back to the settings you were on");
+    mpButton_searchBack->setToolTip(backToSettings);
+    mpButton_searchBack->setAccessibleName(backToSettings);
     //: Sidebar link at the bottom of the settings dialog, opening the Mudlet wiki in a browser
     mpItem_support->setText(tr("Mudlet support"));
 
@@ -875,10 +930,88 @@ void dlgProfilePreferences::retranslateShell()
         mpFrame_migrationBanner->findChild<QPushButton*>(qsl("settingsMigrationBannerDismiss"))->setText(tr("Got it"));
     }
 
+    setSearchKeywords();
+
     // Nothing is current while the shell is still being built, and the search's
     // own title comes back with the next query:
     if (const QListWidgetItem* pCurrent = mpListWidget_categories->currentItem(); pCurrent && !mSearchActive) {
         mpLabel_pageTitle->setText(pCurrent->text());
+    }
+}
+
+// What a player types when they do not know what Mudlet calls a setting: the
+// acronym for it, the name another client uses, the thing it is for. Each list
+// is folded into the text of the card the control sits on, and highlights that
+// control when one of its words is what matched.
+void dlgProfilePreferences::setSearchKeywords()
+{
+    // The protocols themselves are only named inside the menu this button pops
+    // up, where a search over the widget tree cannot see them. Not translated:
+    // these are the protocol names as the games and their documentation spell
+    // them.
+    pushButton_chooseProtocols->setProperty("searchKeywords", qsl("GMCP MSDP MSSP MSP MXP MTTS MNES NAWS CHARSET NEW-ENVIRON telnet"));
+
+    QList<std::pair<QWidget*, QString>> synonyms;
+    //: Comma-separated synonyms for the settings search. Translate them into the words a player of your language would type when looking for this setting, rather than transliterating the English ones; acronyms and protocol names that your language uses untranslated can be left as they are. This one is for the secure connection settings.
+    synonyms.append({groupBox_ssl, tr("TLS, SSL, secure connection, encryption, certificate")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the reminder offered when the game supports a secure connection.
+    synonyms.append({checkBox_askTlsAvailable, tr("TLS, SSL, secure connection, reminder")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the proxy server settings.
+    synonyms.append({groupBox_proxy, tr("proxy, SOCKS, tunnel, firewall")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where game passwords are kept.
+    synonyms.append({label_store_passwords_in, tr("password, keyring, keychain, credentials, sign in, two-factor, 2FA")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the password as it is typed.
+    synonyms.append({disable_password_masking_checkbox, tr("password, masking, hidden characters")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for telling the game that a screen reader is in use.
+    synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
+    synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.
+    synonyms.append({mIsLoggingTimestamps, tr("timestamps, time, date, transcript")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.
+    synonyms.append({mIsToLogInHtml, tr("transcript, HTML, plain text, log format")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where long lines are broken.
+    synonyms.append({groupBox_wrapping, tr("wrap, word wrap, line length, columns, indent")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how much past text is kept.
+    synonyms.append({groupBox_consoleBuffer, tr("scrollback, history, buffer, lines kept")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for fetching a map the game offers.
+    synonyms.append({groupBox_downloadMapOptions, tr("download map, fetch map, map from the game")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for links in the game's text being clickable.
+    synonyms.append({checkBox_enableOSC8Hyperlinks, tr("hyperlink, link, clickable URL, OSC8")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing script errors in the game window.
+    synonyms.append({checkBox_echoLuaErrors, tr("echo, error messages, script errors, Lua errors")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the character encoding used to talk to the game.
+    synonyms.append({label_encoding, tr("encoding, character set, charset, UTF-8, Unicode, Latin-1")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for when the menu bar is shown.
+    synonyms.append({label_menuBarVisiblity, tr("menu bar, hide menus, fullscreen, distraction free")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for when the toolbar is shown.
+    synonyms.append({label_toolBarVisibility, tr("toolbar, hide buttons, fullscreen, distraction free")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for checking spelling as the player types.
+    synonyms.append({groupBox_spellCheck, tr("spelling, spell check, dictionary, typos")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the language Mudlet's own interface is in.
+    synonyms.append({label_guiLanguage, tr("language, locale, translation, interface language")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the light or dark look of Mudlet.
+    synonyms.append({label_appearance, tr("dark mode, light mode, night mode, theme, colour scheme")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether crash reports are sent.
+    synonyms.append({label_crashReportPolicy, tr("crash, telemetry, diagnostics, error reports")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for what Discord is told about the game being played.
+    synonyms.append({groupBox_discordPrivacy, tr("Discord, rich presence, status, what I am playing")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the MudMaster chat protocol.
+    synonyms.append({groupBox_MMCPOptions, tr("MMCP, chat, MudMaster, player to player")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the telnet protocols Mudlet negotiates with the game.
+    synonyms.append({groupBox_protocols, tr("protocols, compression, MCCP, negotiation, telnet options")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for throwing away downloaded sounds and music.
+    synonyms.append({groupBox_purgeMediaCache, tr("cache, sounds, music, downloaded media, clear")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the main window's keyboard shortcuts.
+    synonyms.append({groupBox_main_window_shortcuts, tr("keyboard shortcuts, hotkeys, key bindings, accelerators")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for saving the profile when Mudlet is closed.
+    synonyms.append({mFORCE_SAVE_ON_EXIT, tr("autosave, save on exit, backup")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game's text is drawn in.
+    synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
+    synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
+    for (const auto& [pControl, words] : synonyms) {
+        pControl->setProperty("searchKeywords", words);
     }
 }
 
@@ -912,6 +1045,13 @@ void dlgProfilePreferences::buildCategoryPage(const QString& key, const QList<QW
         }
         detachFromLayout(pCard);
         pCard->setProperty("settingsCard", true);
+        // A checkable card's title starts after its check indicator, a plain
+        // one's at the frame edge - 19px apart, which reads as the titles of a
+        // page wandering. Landmine 11 forbids taking the checkability away, so
+        // the plain ones are given the same inset instead. Named as a property
+        // because a stylesheet cannot ask whether a group box is checkable.
+        auto* pGroupBox = qobject_cast<QGroupBox*>(pCard);
+        pCard->setProperty("settingsCardTitleInset", pGroupBox && !pGroupBox->isCheckable());
         pColumnLayout->addWidget(pCard);
     }
     pColumnLayout->addStretch(1);
@@ -1207,7 +1347,9 @@ static void collectFocusableInLayoutOrder(const QLayout* pLayout, QList<QWidget*
 // widgets fall among another page's does not matter.
 void dlgProfilePreferences::rebuildTabOrder()
 {
-    QList<QWidget*> chain{mpLineEdit_search, mpListWidget_categories};
+    // The back chevron only exists while the results are showing, and a hidden
+    // widget is skipped by a traversal rather than trapping it
+    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpListWidget_categories};
     for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
         const QString key = mpListWidget_categories->item(row)->data(Qt::UserRole).toString();
         auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(mCategoryPageIndexes.value(key, -1)));
@@ -1440,9 +1582,10 @@ void dlgProfilePreferences::buildSearchIndex()
             continue;
         }
         for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
+            // The migration banner is not on any page while this runs, so
+            // every widget a column holds here is a card - see placeBannerOn()
             QWidget* pCard = pColumnLayout->itemAt(item)->widget();
-            // The banner is not a setting, so it is not something to find:
-            if (!pCard || pCard == mpFrame_migrationBanner) {
+            if (!pCard) {
                 continue;
             }
             QStringList parts;
@@ -1469,6 +1612,9 @@ void dlgProfilePreferences::runSearch(const QString& query)
         exitSearchMode();
         return;
     }
+    // Before the index is built and before any card is lent out, because a
+    // banner at the top of a page shifts every card on it by one place
+    placeBannerOn(nullptr);
     if (mSearchCards.isEmpty()) {
         buildSearchIndex();
     }
@@ -1551,9 +1697,10 @@ void dlgProfilePreferences::runSearch(const QString& query)
     mpLayout_searchResults->setStretch(0, matchCount ? 0 : 1);
     //: Title shown in place of a category name while the settings search is showing its results
     mpLabel_pageTitle->setText(tr("Search results"));
-    // Emptied rather than hidden: hiding it takes the row's spacing with it, and
-    // the title then steps left of where every category's starts
-    mpLabel_pageTitleIcon->clear();
+    // The back chevron stands where the category icon does on every other page,
+    // so the icon's placeholder goes rather than leaving a gap between the two
+    mpLabel_pageTitleIcon->hide();
+    mpButton_searchBack->show();
     mpStackedWidget_categories->setCurrentIndex(mSearchResultsPageIndex);
     // As on a category page, a card needing more than the reading width gets it:
     capColumnWidth(mpScrollArea_searchResults);
@@ -1605,6 +1752,7 @@ void dlgProfilePreferences::exitSearchMode()
     setUpdatesEnabled(false);
     returnSearchedCardsHome();
     clearSearchHighlights();
+    mpButton_searchBack->hide();
     mpLabel_searchEmpty->hide();
     mpLayout_searchResults->setStretch(0, 0);
 
@@ -1671,13 +1819,20 @@ QLabel* dlgProfilePreferences::searchCategoryHeader(const QString& key)
     if (!pHeader) {
         pHeader = new QLabel(mpScrollArea_searchResults->widget());
         pHeader->setObjectName(qsl("settingsSearchHeader"));
+        // The icon rides in the text as rich text, which is the only way one
+        // label draws a picture and a word side by side
+        pHeader->setTextFormat(Qt::RichText);
         pHeader->hide();
         mSearchCategoryHeaders.insert(key, pHeader);
     }
     // Set every time rather than once: the header says what the sidebar says,
     // and a language change replaces that under a header this map is holding
     const QListWidgetItem* pItem = mpListWidget_categories->item(mCategoryRows.value(key, -1));
-    pHeader->setText(pItem ? pItem->text() : key);
+    const QString name = (pItem ? pItem->text() : key).toHtmlEscaped();
+    const QString iconFile = mCategoryIconFiles.value(key);
+    // The same icon the sidebar row carries, so a result is tied back to where
+    // it lives by more than its name
+    pHeader->setText(iconFile.isEmpty() ? name : qsl("<img src=\":/icons/%1\" width=\"18\" height=\"18\">&nbsp;%2").arg(iconFile, name));
     return pHeader;
 }
 
@@ -1707,6 +1862,9 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     }
     mpStackedWidget_categories->setCurrentIndex(mCategoryPageIndexes.value(key, mCategoryPageIndexes.value(qsl("general"))));
     auto* pShownPage = qobject_cast<QScrollArea*>(mpStackedWidget_categories->currentWidget());
+    // Before the width is capped, so that what is measured is the page as it
+    // will be shown
+    placeBannerOn(pShownPage ? pShownPage->widget() : nullptr);
     capColumnWidth(pShownPage);
     // A card's padding arrives with the stylesheet, which is applied as the page
     // is first shown - after the cap above has measured it without. Left there,
@@ -1719,6 +1877,7 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     });
     mpLabel_pageTitle->setText(pItem->text());
     mpLabel_pageTitleIcon->setPixmap(pItem->icon().pixmap(QSize(20, 20), devicePixelRatioF()));
+    mpLabel_pageTitleIcon->show();
 
     if (key == qsl("editor") && !mEditorThemesChecked) {
         mEditorThemesChecked = true;
@@ -1804,6 +1963,26 @@ void dlgProfilePreferences::applyShellStyle()
     // the bar keeps its width and takes the pill's own rounded corners.
     const qreal accentBarStop = static_cast<qreal>(scmSidebarAccentBarWidth) / (scmSidebarWidth - 2 * scmSidebarPadding);
 
+    // Fusion draws a group box's check indicator from palette(window) darkened
+    // by 40%, which on a dark card is a 1.1:1 outline - the one control whose
+    // contrast the palette pass below cannot rescue, because a stylesheet
+    // background-color lands on the same role and would take the card's title
+    // band with it. Drawn from the stylesheet instead, its outline is named
+    // outright, and the checked state has to be drawn out in full because a
+    // styled indicator gets no check mark of its own.
+    const QColor indicatorOutline = blend(cardColor, textColor, darkPage ? 0.55 : 0.45);
+    const QString cardIndicatorRules = qsl("QGroupBox[settingsCard=\"true\"]::indicator { width: %1px; height: %1px; border: 1px solid %2; border-radius: 3px; background-color: %3; }"
+                                           "QGroupBox[settingsCard=\"true\"]::indicator:hover { border: 1px solid %4; }"
+                                           // The check mark is a fixed green rather than anything drawn
+                                           // from the accent, so the fill it lands on has to be the card
+                                           // and not the accent: a profile whose highlight colour is
+                                           // orange would otherwise put green on orange
+                                           "QGroupBox[settingsCard=\"true\"]::indicator:checked { border: 1px solid %4; image: url(:/icons/dialog-ok-apply_small.png); }"
+                                           // ...and the other half of lining the titles up: a plain card's
+                                           // title starts where a checkable one's indicator does
+                                           "QGroupBox[settingsCardTitleInset=\"true\"]::title { left: %5px; }")
+                                               .arg(QString::number(scmCardIndicatorSize), indicatorOutline.name(), cardColor.name(), accentColor.name(), QString::number(scmCardTitleInset));
+
     mpWidget_shell->setStyleSheet(qsl("#settingsShell, #settingsSidebar, #settingsContent { background-color: %1; }"
                                       // The view's own selection paint has to be turned off, or the
                                       // platform style draws it over the text of the item as a square
@@ -1875,9 +2054,15 @@ void dlgProfilePreferences::applyShellStyle()
                                       // The property is put on and taken off by the search itself:
                                       "QLabel[searchMatch=\"true\"], QCheckBox[searchMatch=\"true\"], QRadioButton[searchMatch=\"true\"], QPushButton[searchMatch=\"true\"]"
                                       " { background-color: %10; border-radius: 3px; }"
-                                      "QGroupBox[searchMatch=\"true\"]::title { background-color: %10; border-radius: 3px; }")
+                                      "QGroupBox[searchMatch=\"true\"]::title { background-color: %10; border-radius: 3px; }"
+                                      // Only ever seen beside the "Search results" title, so it is
+                                      // drawn as a piece of that heading rather than as a button
+                                      "#settingsSearchBack { border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; color: %2; background: transparent; }"
+                                      "#settingsSearchBack:hover { background-color: %3; }"
+                                      "#settingsSearchBack:focus { border: 1px solid %5; }")
                                           .arg(pageColor.name(), textColor.name(), hoverSoft, accentSoft, accentColor.name(), accentText.name(), borderColor.name(), cardColor.name(), mutedText.name())
-                                          .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name()));
+                                          .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name())
+                                  + cardIndicatorRules);
 
     // Fusion draws every control outline - checkbox and radio indicators
     // included - as palette(window) darkened by 40%, which in the dark theme
@@ -5833,8 +6018,13 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 
     auto themesAge = QFileInfo(mudlet::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
 
+    // A functional test that visits the Editor category would otherwise be one
+    // file modification time away from a live fetch of github.com, which fails
+    // slowly and intermittently rather than red. Set, this takes the same route
+    // a themes file that is still fresh does.
+    const bool downloadSuppressed = qEnvironmentVariableIsSet("MUDLET_TEST_NO_THEME_DOWNLOAD");
     // if the cache file exists and is younger than the specified age (24h by default), don't refresh it
-    if (themesAge.isValid() && themesAge.msecsTo(QDateTime::currentDateTimeUtc()) / (themesUpdatePeriod) < 1) {
+    if (downloadSuppressed || (themesAge.isValid() && themesAge.msecsTo(QDateTime::currentDateTimeUtc()) / (themesUpdatePeriod) < 1)) {
         populateThemesList();
         return;
     }

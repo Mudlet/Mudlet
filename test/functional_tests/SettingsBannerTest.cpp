@@ -18,12 +18,13 @@
  ***************************************************************************/
 
 /*
- * The "Same settings, new look!" card at the top of the General page. It
- * explains where everything went, and it stands on every opening of the
- * settings until it is dismissed: only the "Got it" button records that it has
- * been seen. A banner that came back after that would be an every-session nag,
- * and one that never appeared would leave the whole reorganisation
- * unannounced.
+ * The "Same settings, new look!" card at the top of whichever settings page is
+ * showing. It explains where everything went, and it stands on every opening of
+ * the settings until it is dismissed: only the "Got it" button records that it
+ * has been seen. A banner that came back after that would be an every-session
+ * nag, and one that never appeared would leave the whole reorganisation
+ * unannounced - and one that only ever appeared on General would be missed by
+ * anyone who opened the settings straight onto another category.
  *
  * The flag behind it lives in the shared Mudlet.ini rather than in a profile,
  * which is also why the config root has to be this process's own - see
@@ -36,7 +37,9 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QBoxLayout>
 #include <QFrame>
+#include <QListWidget>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSettings>
@@ -75,6 +78,27 @@ private:
     }
 
     QFrame* banner() const { return mpPreferences->findChild<QFrame*>(qsl("settingsMigrationBanner")); }
+
+    // The widget every card of one category page is laid out in
+    QWidget* columnOf(const QString& key) const
+    {
+        auto* pPage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_%1").arg(key));
+        return pPage ? pPage->widget() : nullptr;
+    }
+
+    void selectCategory(const QString& key)
+    {
+        auto* pList = mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList"));
+        QVERIFY2(pList, "the settings shell has no category sidebar");
+        for (int row = 0, rows = pList->count(); row < rows; ++row) {
+            if (pList->item(row)->data(Qt::UserRole).toString() == key) {
+                pList->setCurrentRow(row);
+                QCoreApplication::processEvents();
+                return;
+            }
+        }
+        QFAIL(qPrintable(qsl("no sidebar item for category '%1'").arg(key)));
+    }
 
     void openPreferences()
     {
@@ -153,10 +177,28 @@ private slots:
         QFrame* pBanner = banner();
         QVERIFY2(pBanner, "the migration banner was not built on a fresh installation");
         QVERIFY2(pBanner->isVisible(), "the migration banner was built but not shown");
-        auto* pGeneralPage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_general"));
-        QVERIFY2(pGeneralPage, "the General page is not there under the object name this looks it up by");
-        QVERIFY2(pGeneralPage->widget()->isAncestorOf(pBanner), "the migration banner is not pinned to the top of the General page");
-        QCOMPARE(pGeneralPage->widget()->layout()->indexOf(pBanner), 0);
+        QWidget* pGeneralColumn = columnOf(qsl("general"));
+        QVERIFY2(pGeneralColumn, "the General page is not there under the object name this looks it up by");
+        QVERIFY2(pGeneralColumn->isAncestorOf(pBanner), "the migration banner is not at the top of the page the dialog opens on");
+        QCOMPARE(pGeneralColumn->layout()->indexOf(pBanner), 0);
+    }
+
+    // Whichever page is showing carries it, because a deep link or a
+    // remembered category can open the dialog anywhere but General
+    void test_theBannerRidesAlongToASecondCategory()
+    {
+        openPreferences();
+        QFrame* pBanner = banner();
+        QVERIFY(pBanner);
+
+        selectCategory(qsl("mapper"));
+
+        QWidget* pMapperColumn = columnOf(qsl("mapper"));
+        QVERIFY(pMapperColumn);
+        QVERIFY2(pMapperColumn->isAncestorOf(pBanner), "the migration banner stayed on the General page instead of following the category being shown");
+        QCOMPARE(pMapperColumn->layout()->indexOf(pBanner), 0);
+        QVERIFY2(pBanner->isVisible(), "the migration banner arrived on the second page hidden");
+        QCOMPARE(columnOf(qsl("general"))->layout()->indexOf(pBanner), -1);
     }
 
     void test_dismissingTheBannerHidesItAndRemembersThat()
@@ -171,6 +213,24 @@ private slots:
 
         QVERIFY2(pBanner->isHidden(), "dismissing the banner left it on screen");
         QVERIFY2(mudlet::getQSettings()->value(mBannerSeenKey, false).toBool(), "dismissing the banner did not record that it had been seen");
+    }
+
+    // One "Got it" is meant to be the end of it everywhere, not just on the
+    // page it was clicked from
+    void test_dismissingTheBannerTakesItOffEveryPage()
+    {
+        openPreferences();
+        QFrame* pBanner = banner();
+        QVERIFY(pBanner);
+        pBanner->findChild<QPushButton*>(qsl("settingsMigrationBannerDismiss"))->click();
+
+        for (const QString& key : {qsl("appearance"), qsl("mapper"), qsl("general")}) {
+            selectCategory(key);
+            QWidget* pColumn = columnOf(key);
+            QVERIFY(pColumn);
+            QVERIFY2(pColumn->layout()->indexOf(pBanner) < 0, qPrintable(qsl("the dismissed banner came back on the '%1' page").arg(key)));
+        }
+        QVERIFY2(pBanner->isHidden(), "the dismissed banner is still showing somewhere");
     }
 
     void test_aLaterDialogDoesNotShowTheBanner()

@@ -78,6 +78,7 @@ private:
     // too - and without this it would be the developer's own ~/.cache
     QTemporaryDir mCacheDir;
     QByteArray mSavedXdgCache;
+    QByteArray mSavedNoThemeDownload;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
@@ -108,9 +109,9 @@ private:
 
     static bool waitForApply(QSignalSpy& spy) { return !spy.isEmpty() || spy.wait(scmApplyTimeout); }
 
-    // The themes the editor page offers are read from this file. Written fresh
-    // each time, which is also what keeps the first visit to the Editor page on
-    // maybeDownloadEditorThemes()'s cached branch instead of a network fetch.
+    // The themes the editor page offers are read from this file. What keeps the
+    // first visit to the Editor page off the network is
+    // MUDLET_TEST_NO_THEME_DOWNLOAD rather than this file's freshness.
     static void writeEditorThemesFile(const QByteArray& contents)
     {
         const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
@@ -158,6 +159,9 @@ private slots:
         QVERIFY(mCacheDir.isValid());
         mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
         qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
+        // Nothing here may reach github.com for the edbee themes
+        mSavedNoThemeDownload = qgetenv("MUDLET_TEST_NO_THEME_DOWNLOAD");
+        qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", "1");
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -187,6 +191,7 @@ private slots:
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
         mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME") : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
+        mSavedNoThemeDownload.isNull() ? qunsetenv("MUDLET_TEST_NO_THEME_DOWNLOAD") : qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", mSavedNoThemeDownload);
     }
 
     void init()

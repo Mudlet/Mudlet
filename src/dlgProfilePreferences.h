@@ -41,6 +41,7 @@ class QListWidget;
 class QListWidgetItem;
 class QScrollArea;
 class QStackedWidget;
+class QToolButton;
 class QVBoxLayout;
 class TAction;
 class TAlias;
@@ -263,6 +264,10 @@ private:
     // once as the shell is built and again from slot_guiLanguageChanged(), so
     // each of those strings is written in exactly one place.
     void retranslateShell();
+    // Synonyms a player might type for a setting whose own words do not
+    // include them. Written here rather than in the .ui file so that they can
+    // carry a translator note, and re-read on a language change.
+    void setSearchKeywords();
     void moveIntoCard(QGroupBox* pCard, const QList<QWidget*>& controls);
     void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
     void retitleCards();
@@ -273,6 +278,9 @@ private:
     void rebuildTabOrder();
     void guardScrollWheel();
     void buildMigrationBanner();
+    // The banner belongs to no one category: it is lent to the top of whichever
+    // page is showing, and taken off every page while the search has the stack
+    void placeBannerOn(QWidget* pColumn);
     void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
@@ -339,6 +347,8 @@ private:
     // The search field's leading glyph, recoloured for the theme in
     // applyShellStyle() rather than added again on every appearance change
     QPointer<QAction> mpAction_searchIcon;
+    // Leads out of the search results, back to the category they interrupted
+    QToolButton* mpButton_searchBack = nullptr;
     QLabel* mpLabel_pageTitle = nullptr;
     QLabel* mpLabel_pageTitleIcon = nullptr;
     QFrame* mpFrame_migrationBanner = nullptr;
@@ -356,6 +366,9 @@ private:
     QString mCategoryBeforeSearch;
     QMap<QString, int> mCategoryPageIndexes;
     QMap<QString, int> mCategoryRows;
+    // The sidebar item holds the icon, but a rich-text header needs the
+    // resource path it was loaded from
+    QMap<QString, QString> mCategoryIconFiles;
     QTimer* mpTimer_apply = nullptr;
     // What every apply-relevant control held the last time the dialog read the
     // settings, keyed by the control (the protocol menu's actions included)

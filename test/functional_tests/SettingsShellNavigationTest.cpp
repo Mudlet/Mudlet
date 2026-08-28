@@ -48,10 +48,13 @@
 #include <QListWidget>
 #include <QScrollArea>
 #include <QSettings>
+#include <QScopeGuard>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QStyleOptionGroupBox>
 #include <QTranslator>
 #include <QWheelEvent>
+#include <cmath>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -62,6 +65,44 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+// WCAG's ratio, which is what the redesign's contrast targets are written in
+static qreal relativeLuminance(const QColor& colour)
+{
+    const auto channel = [](const qreal value) {
+        return value <= 0.04045 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(colour.redF()) + 0.7152 * channel(colour.greenF()) + 0.0722 * channel(colour.blueF());
+}
+
+static qreal contrastRatio(const QColor& one, const QColor& other)
+{
+    const qreal first = relativeLuminance(one);
+    const qreal second = relativeLuminance(other);
+    return (std::max(first, second) + 0.05) / (std::min(first, second) + 0.05);
+}
+
+// What QGroupBox::paintEvent() hands the style, so that a rect asked for here
+// is the one the card was actually drawn with - a check indicator is only
+// reserved room for when the box is checkable
+static QStyleOptionGroupBox groupBoxStyleOption(const QGroupBox* pGroupBox)
+{
+    QStyleOptionGroupBox option;
+    option.initFrom(pGroupBox);
+    option.subControls = QStyle::SC_GroupBoxFrame;
+    if (pGroupBox->isCheckable()) {
+        option.subControls |= QStyle::SC_GroupBoxCheckBox;
+        option.state |= pGroupBox->isChecked() ? QStyle::State_On : QStyle::State_Off;
+    }
+    if (!pGroupBox->title().isEmpty()) {
+        option.subControls |= QStyle::SC_GroupBoxLabel;
+    }
+    option.text = pGroupBox->title();
+    option.textAlignment = Qt::AlignLeft;
+    option.lineWidth = 0;
+    option.midLineWidth = 0;
+    return option;
+}
 
 // Brackets every string it is asked for, so that a case can tell what the
 // dialog re-read on a language change from what it is still showing from
@@ -92,6 +133,7 @@ private:
     // too - and without this it would be the developer's own ~/.cache
     QTemporaryDir mCacheDir;
     QByteArray mSavedXdgCache;
+    QByteArray mSavedNoThemeDownload;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
@@ -124,17 +166,22 @@ private:
         }
     }
 
-    // The first visit to the Editor category refreshes the edbee themes from
-    // colorsublime, which is a network round trip. A themes file younger than
-    // the update period sends maybeDownloadEditorThemes() down its cached
-    // branch instead, so walking every category here reaches no network.
-    void writeFreshEditorThemesFile()
+    // The themes the Editor page offers are read from this file; its
+    // modification time no longer decides anything, because
+    // MUDLET_TEST_NO_THEME_DOWNLOAD is what keeps that page off the network.
+    static void writeEditorThemesFile(const QDateTime& modified)
     {
         const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
         QVERIFY(themes.write("[]") == 2);
+        // Closed before the time is set, because the flush that closing does
+        // would otherwise put the modification time back to now
+        themes.close();
+        QVERIFY(themes.open(QIODevice::ReadWrite));
+        QVERIFY(themes.setFileTime(modified, QFileDevice::FileModificationTime));
+        themes.close();
     }
 
     QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
@@ -195,6 +242,10 @@ private slots:
         QVERIFY(mCacheDir.isValid());
         mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
         qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
+        // Nothing here may reach github.com for the edbee themes, whatever the
+        // themes file on disk looks like
+        mSavedNoThemeDownload = qgetenv("MUDLET_TEST_NO_THEME_DOWNLOAD");
+        qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", "1");
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -206,7 +257,9 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mProfileName);
-        writeFreshEditorThemesFile();
+        // Two days old, so that anything reading the modification time would
+        // set off a download - which is exactly what the hook has to stop
+        writeEditorThemesFile(QDateTime::currentDateTime().addDays(-2));
 
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "No active host after profile creation");
@@ -225,6 +278,7 @@ private slots:
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
         mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME") : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
+        mSavedNoThemeDownload.isNull() ? qunsetenv("MUDLET_TEST_NO_THEME_DOWNLOAD") : qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", mSavedNoThemeDownload);
     }
 
     void init() { openPreferences(); }
@@ -397,6 +451,140 @@ private slots:
         selectCategory(qsl("mapper"));
         selectCategory(qsl("editor"));
         QVERIFY2(!pSettings->contains(qsl("colorSublimeThemesURL")), "the Editor category refreshed its themes again on a later visit");
+    }
+
+    // Fusion draws a group box's check indicator from palette(window) darkened
+    // by 40%, which on a dark card came out at about 1.1:1 - an outline nobody
+    // can see. The shell names that outline itself; this is the measurement
+    // that says it is still visible, in the theme it was invisible in.
+    void test_aCheckableCardsCheckIndicatorIsVisibleInTheDarkTheme()
+    {
+        const auto appearanceBefore = mudlet::self()->mAppearance;
+        auto restore = qScopeGuard([appearanceBefore]() {
+            mudlet::self()->setAppearance(appearanceBefore);
+        });
+        // Set before the dialog is built, because the shell reads the palette
+        // as it assembles its stylesheet
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        mudlet::self()->setAppearance(enums::Appearance::dark);
+        openPreferences();
+        selectCategory(qsl("privacy"));
+
+        QGroupBox* pCard = mpPreferences->groupBox_ssl;
+        QVERIFY2(pCard->isCheckable(), "the card this case measures is not checkable, so it draws no indicator");
+        QStyleOptionGroupBox option = groupBoxStyleOption(pCard);
+        const QRect indicator = pCard->style()->subControlRect(QStyle::CC_GroupBox, &option, QStyle::SC_GroupBoxCheckBox, pCard);
+        QVERIFY2(indicator.width() > 4 && indicator.height() > 4, qPrintable(qsl("the check indicator has no rectangle to sample: %1x%2").arg(indicator.width()).arg(indicator.height())));
+
+        const QImage painted = pCard->grab().toImage();
+        // The strongest colour the indicator's box is drawn in, against the
+        // page showing through beside it
+        const QColor page = painted.pixelColor(indicator.right() + 4, indicator.center().y());
+        qreal worst = 1.0;
+        QColor outline = page;
+        for (int x = indicator.left(); x <= indicator.right(); ++x) {
+            const QColor sample = painted.pixelColor(x, indicator.top());
+            if (contrastRatio(sample, page) > contrastRatio(outline, page)) {
+                outline = sample;
+            }
+        }
+        worst = contrastRatio(outline, page);
+        QVERIFY2(worst >= 3.0,
+                 qPrintable(qsl("the dark theme draws the card's check indicator as %1 against %2, a contrast of %3:1").arg(outline.name(), page.name(), QString::number(worst, 'f', 2))));
+    }
+
+    // A checkable card's title starts after its check indicator and a plain
+    // one's at the frame edge, which reads as the headings of a page wandering
+    // in and out. The plain ones are inset to match rather than the checkable
+    // ones being made plain, which landmine 11 forbids.
+    void test_everyCardTitleStartsAtTheSameDistanceFromItsFrame()
+    {
+        selectCategory(qsl("privacy"));
+
+        const auto titleLeft = [](QGroupBox* pCard) {
+            QStyleOptionGroupBox option = groupBoxStyleOption(pCard);
+            return pCard->style()->subControlRect(QStyle::CC_GroupBox, &option, QStyle::SC_GroupBoxLabel, pCard).left();
+        };
+
+        QGroupBox* pCheckable = mpPreferences->groupBox_ssl;
+        auto* pPlain = mpPreferences->findChild<QGroupBox*>(qsl("card_passwords"));
+        QVERIFY(pPlain);
+        QVERIFY2(pCheckable->isCheckable(), "the checkable card this case compares against is not checkable");
+        QVERIFY2(!pPlain->isCheckable(), "the plain card this case compares is checkable, so there is no inset to check");
+
+        QCOMPARE(titleLeft(pPlain), titleLeft(pCheckable));
+    }
+
+    // Nothing about a test run should depend on a file modification time to
+    // stay off the network: an unlucky one used to be all that stood between a
+    // visit to the Editor page and a live fetch of github.com, which fails
+    // slowly and intermittently rather than red.
+    void test_theThemeDownloadHookKeepsTheEditorPageOffTheNetwork()
+    {
+        QSettings* pSettings = mudlet::getQSettings();
+        const QVariant savedUrl = pSettings->value(qsl("colorSublimeThemesURL"));
+        // So that a run where the hook does not hold reaches nothing real
+        pSettings->setValue(qsl("colorSublimeThemesURL"), qsl("file:///nonexistent/themes.zip"));
+
+        const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
+        QVERIFY2(QFileInfo(file).lastModified() < QDateTime::currentDateTime().addDays(-1),
+                 "the themes file is younger than the update period, so its own freshness would keep this page off the network and the hook would prove nothing");
+
+        selectCategory(qsl("editor"));
+
+        QVERIFY2(mpPreferences->theme_download_label->isHidden(), "a stale themes file still started a theme download, so MUDLET_TEST_NO_THEME_DOWNLOAD did not suppress it");
+
+        savedUrl.isValid() ? pSettings->setValue(qsl("colorSublimeThemesURL"), savedUrl) : pSettings->remove(qsl("colorSublimeThemesURL"));
+    }
+
+    // The dialog is a window a player sizes to suit their screen, and one that
+    // forgot that between openings would be re-sized on every visit
+    void test_theDialogOpensAtTheSizeItWasLastClosedAt()
+    {
+        // init() opened one at a fixed size; this case wants its own. Bigger
+        // than the dialog's 780x560 minimum and smaller than the offscreen
+        // platform's 800x600 screen, which restoreGeometry() would shrink a
+        // window to fit.
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        mpPreferences->resize(790, 570);
+        mpPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
+        const QSize chosen = mpPreferences->size();
+        QVERIFY2(chosen != QSize(1060, 760), "the size this case chose is the one a dialog with no remembered geometry takes anyway");
+        // Closing is what writes the geometry out
+        mpPreferences->close();
+        delete mpPreferences;
+
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        mpPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
+
+        QCOMPARE(mpPreferences->size(), chosen);
+    }
+
+    // Every text the search index was built from is replaced by a language
+    // change, and the cards it lent out are somewhere else while it happens
+    void test_aLanguageChangeMidSearchSendsEveryCardHome()
+    {
+        selectCategory(qsl("mapper"));
+        QLineEdit* pSearchField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        pSearchField->setFocus();
+        pSearchField->setText(qsl("color"));
+        QCoreApplication::processEvents();
+        QVERIFY2(mpPreferences->groupBox_mapperColors->parentWidget() == mpPreferences->findChild<QWidget*>(qsl("settingsColumn_searchResults")),
+                 "the search borrowed no card, so sending them home proves nothing");
+
+        BracketingTranslator translator;
+        QCoreApplication::installTranslator(&translator);
+        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        QCoreApplication::removeTranslator(&translator);
+        QCoreApplication::processEvents();
+
+        QVERIFY2(pSearchField->text().isEmpty(), "the language change left the query standing in the search field");
+        QCOMPARE(mpPreferences->groupBox_mapperColors->parentWidget(), pageOf(qsl("mapper"))->widget());
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
     }
 
     // retranslateUi() puts back what the .ui file carries and nothing else, so

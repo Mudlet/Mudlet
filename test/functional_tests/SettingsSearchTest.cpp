@@ -44,6 +44,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
+#include <QToolButton>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -110,13 +111,19 @@ private:
             }
             QWidget* pColumn = pScrollArea->widget();
             auto* pColumnLayout = qobject_cast<QBoxLayout*>(pColumn->layout());
+            // Counted over the cards rather than over the layout, because the
+            // migration banner rides at the top of whichever page is showing:
+            // it is not a card any page is meant to get back, and its coming
+            // and going would otherwise shift every index under it
+            int cardPosition = 0;
             for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
                 QWidget* pCard = pColumnLayout->itemAt(item)->widget();
-                if (!pCard) {
+                if (!pCard || pCard->objectName() == qsl("settingsMigrationBanner")) {
                     continue;
                 }
-                placements << qsl("%1[%2] = %3, parented to %4, hidden %5")
-                                      .arg(pColumn->objectName(), QString::number(item), pCard->objectName(), pCard->parentWidget()->objectName(), pCard->isHidden() ? qsl("yes") : qsl("no"));
+                placements
+                        << qsl("%1[%2] = %3, parented to %4, hidden %5")
+                                   .arg(pColumn->objectName(), QString::number(cardPosition++), pCard->objectName(), pCard->parentWidget()->objectName(), pCard->isHidden() ? qsl("yes") : qsl("no"));
             }
         }
         return placements;
@@ -328,6 +335,100 @@ private slots:
         search(QString());
         QVERIFY2(pCard->isHidden(), "the search handed a hidden card back showing");
         QCOMPARE(cardPlacements(), before);
+    }
+
+    // The chevron beside the "Search results" heading is the way out for
+    // someone who reached the results and wants the page they came from back -
+    // the same door the sidebar is, rather than a second one of its own
+    void test_theBackChevronReturnsToTheCategoryTheSearchInterrupted()
+    {
+        const QStringList before = cardPlacements();
+        QListWidget* pList = sidebar();
+        int mapperRow = -1;
+        for (int row = 0, rows = pList->count(); row < rows; ++row) {
+            if (pList->item(row)->data(Qt::UserRole).toString() == qsl("mapper")) {
+                mapperRow = row;
+                break;
+            }
+        }
+        QVERIFY(mapperRow >= 0);
+        pList->setCurrentRow(mapperRow);
+        QCoreApplication::processEvents();
+
+        auto* pBack = mpPreferences->findChild<QToolButton*>(qsl("settingsSearchBack"));
+        QVERIFY2(pBack, "the search results have no back button");
+        QVERIFY2(pBack->isHidden(), "the back button is on show while a category page is");
+
+        search(qsl("color"));
+        QVERIFY2(pBack->isVisible(), "the search results came up without a way back");
+        // A keyboard user has to be able to reach it, which a tool button is
+        // not set up for by default
+        QVERIFY2((pBack->focusPolicy() & Qt::TabFocus) == Qt::TabFocus, "the back button cannot be reached with the keyboard");
+
+        pBack->click();
+        QCoreApplication::processEvents();
+
+        QVERIFY2(searchField()->text().isEmpty(), "the back button left the query standing in the search field");
+        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_mapper")));
+        QVERIFY2(pBack->isHidden(), "the back button is still showing after the search ended");
+        QCOMPARE(cardPlacements(), before);
+    }
+
+    // A result header says which category the cards under it live on. The
+    // sidebar says that with a name and an icon; the header says it with both.
+    void test_eachResultHeaderCarriesItsCategorysIcon()
+    {
+        search(qsl("color"));
+
+        QStringList headerTexts;
+        QString mainDisplayHeader;
+        for (const auto* pLabel : mpPreferences->findChildren<QLabel*>(qsl("settingsSearchHeader"))) {
+            if (!pLabel->isVisible()) {
+                continue;
+            }
+            headerTexts << pLabel->text();
+            if (pLabel->text().contains(qsl("Main display"))) {
+                mainDisplayHeader = pLabel->text();
+            }
+        }
+        QVERIFY2(headerTexts.size() >= 2, "fewer than two categories matched, so this case is not looking at more than one header");
+        for (const QString& text : headerTexts) {
+            QVERIFY2(text.contains(qsl("<img src=\":/icons/")), qPrintable(qsl("a results header carries no category icon: %1").arg(text)));
+        }
+        // The icon that category's sidebar row was built with, and the name
+        // still beside it rather than replaced by the picture
+        QVERIFY2(!mainDisplayHeader.isEmpty(), "the Main display category matched no header, so this case cannot name the icon it expects");
+        QVERIFY2(mainDisplayHeader.contains(qsl("<img src=\":/icons/view-split-left-right.png\"")),
+                 qPrintable(qsl("the Main display header does not carry that category's own icon: %1").arg(mainDisplayHeader)));
+    }
+
+    // Half of what someone types into a settings search is not a word the
+    // settings use: they know the acronym, or what another client calls it.
+    // The synonyms are what closes that gap, and they are only worth having if
+    // they are attached to the card the answer is on.
+    void test_aSynonymFindsASettingThatDoesNotUseTheWord()
+    {
+        search(qsl("keyring"));
+        QCOMPARE(mpPreferences->findChild<QGroupBox*>(qsl("card_passwords"))->parentWidget(), resultsColumn());
+
+        search(qsl("scrollback"));
+        QCOMPARE(mpPreferences->groupBox_consoleBuffer->parentWidget(), resultsColumn());
+
+        search(qsl("nvda"));
+        QCOMPARE(mpPreferences->groupBox_accessibility->parentWidget(), resultsColumn());
+    }
+
+    // Accents and keyboard accelerators are folded out of both sides of the
+    // comparison, so a query typed without either still finds what carries them
+    void test_aQueryWithoutAccentsFindsACardThatHasThem()
+    {
+        // Set before the first search of this dialog, because that is when the
+        // index is built off the widget tree
+        mpPreferences->checkBox_askTlsAvailable->setProperty("searchKeywords", QString::fromUtf8("Réseau &Privé"));
+
+        search(qsl("reseau prive"));
+
+        QCOMPARE(mpPreferences->findChild<QGroupBox*>(qsl("card_secureConnectionReminder"))->parentWidget(), resultsColumn());
     }
 
     void test_ctrlFFocusesTheSearchField()

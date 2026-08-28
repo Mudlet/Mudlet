@@ -62,6 +62,7 @@ private:
     // too - and without this it would be the developer's own ~/.cache
     QTemporaryDir mCacheDir;
     QByteArray mSavedXdgCache;
+    QByteArray mSavedNoThemeDownload;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
@@ -77,10 +78,10 @@ private:
         }
     }
 
-    // tab_codeEditor lands on the Editor category, whose first visit would
-    // otherwise fetch the edbee themes over the network - a themes file younger
-    // than the update period sends that down its cached branch instead
-    void writeFreshEditorThemesFile()
+    // tab_codeEditor lands on the Editor category, which reads the themes it
+    // offers from this file. What keeps that visit off the network is
+    // MUDLET_TEST_NO_THEME_DOWNLOAD rather than anything about this file.
+    static void writeEditorThemesFile()
     {
         const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
@@ -138,6 +139,9 @@ private slots:
         QVERIFY(mCacheDir.isValid());
         mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
         qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
+        // Nothing here may reach github.com for the edbee themes
+        mSavedNoThemeDownload = qgetenv("MUDLET_TEST_NO_THEME_DOWNLOAD");
+        qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", "1");
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -149,7 +153,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mProfileName);
-        writeFreshEditorThemesFile();
+        writeEditorThemesFile();
 
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "No active host after profile creation");
@@ -168,6 +172,7 @@ private slots:
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
         mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME") : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
+        mSavedNoThemeDownload.isNull() ? qunsetenv("MUDLET_TEST_NO_THEME_DOWNLOAD") : qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", mSavedNoThemeDownload);
     }
 
     void init() { openPreferences(); }
@@ -283,6 +288,24 @@ private slots:
         QCOMPARE(currentCategory(), qsl("privacy"));
         QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_privacy")));
         QVERIFY2(waitForSpotlight(), "the deep link that arrived during a search drew no spotlight");
+    }
+
+    // The pulse is a widget laid over a card, transparent to the mouse but
+    // still a child of the page. One left behind after its animation would
+    // stack up, one per deep link, over pages the player goes on using.
+    void test_theSpotlightTakesItselfAwayWhenItHasFinished()
+    {
+        mpPreferences->setTab(qsl("tab_connection"));
+        QVERIFY2(waitForSpotlight(), "the deep link drew no spotlight, so there is nothing to see cleaned up");
+
+        // The fade runs for 2.5s and the widget is deleted on the next turn
+        // of the event loop after it
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) == nullptr;
+                         },
+                         8000),
+                 "the spotlight was still a child of the dialog long after its animation had finished");
     }
 };
 
