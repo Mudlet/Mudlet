@@ -257,8 +257,34 @@ private:
     QWidget* buildSidebar();
     void addCategory(const QString& key, const QString& iconFile);
     void addSidebarSeparator();
+    // The scrolling column every page is, whether the sidebar leads to it or a
+    // card does
+    QScrollArea* buildPage(const QString& objectSuffix, const QList<QWidget*>& cards);
     void buildCategoryPage(const QString& key, const QList<QWidget*>& cards);
+    // A page reached by drilling into a card rather than from the sidebar: the
+    // sidebar stays on the parent category, and a breadcrumb with a back
+    // chevron leads back out of it
+    void addSubpage(const QString& categoryKey, const QString& subKey, QWidget* pOpenerCard, const QList<QWidget*>& cards);
+    void showSubpage(const QString& categoryKey, const QString& subKey, QWidget* pSpotlightTarget = nullptr);
+    void leaveSubpage();
+    // Which subpage, if any, a widget lives on - "category/sub", or empty for
+    // anything on a category page
+    QString subpageHolding(const QWidget* pWidget) const;
     QGroupBox* createCard(const QString& objectName);
+    // One muted line under a card's title saying what the card is for, ending
+    // in a "Learn more" link where the wiki has a page about it
+    void setCardDescription(QGroupBox* pCard, const QString& description, const QString& learnMoreUrl = QString());
+    void setCardDescriptions();
+    // The ten telnet protocols, as a page of checkboxes reached from the
+    // Connection page's protocols card
+    void buildProtocolsSubpage();
+    void updateProtocolSummary();
+    void buildDiscordSummaryCard();
+    void updateDiscordSummary();
+    // The one status hero: what the current connection's security actually is,
+    // rather than what the settings below it ask for
+    void buildSecurityStatusCard();
+    void updateSecurityStatus();
     // Every string the shell shows that setupUi() did not make, and that
     // retranslateUi() therefore cannot put back on a language change. Called
     // once as the shell is built and again from slot_guiLanguageChanged(), so
@@ -295,6 +321,7 @@ private:
     void clearSearchHighlights();
     void highlightMatches(QWidget* pCard, const QStringList& needles);
     QLabel* searchCategoryHeader(const QString& key);
+    QPushButton* searchSubpageLink(const QString& subpageKey, QWidget* pCard);
     void connectApplyTriggers();
     void snapshotValues();
     bool dirty(const QObject* pControl) const;
@@ -313,24 +340,26 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
-    QPointer<QMenu> protocolMenu;
-    QPointer<QAction> mEnableGMCP;
-    QPointer<QAction> mEnableMSDP;
-    QPointer<QAction> mEnableMSSP;
-    QPointer<QAction> mEnableMSP;
-    QPointer<QAction> mEnableMXP;
-    QPointer<QAction> mEnableMTTS;
-    QPointer<QAction> mEnableMNES;
-    QPointer<QAction> mEnableNAWS;
-    QPointer<QAction> mEnableCHARSET;
-    QPointer<QAction> mEnableNEWENVIRON;
+    // The ten telnet protocols, on the Connection page's protocols subpage
+    QPointer<QCheckBox> mEnableGMCP;
+    QPointer<QCheckBox> mEnableMSDP;
+    QPointer<QCheckBox> mEnableMSSP;
+    QPointer<QCheckBox> mEnableMSP;
+    QPointer<QCheckBox> mEnableMXP;
+    QPointer<QCheckBox> mEnableMTTS;
+    QPointer<QCheckBox> mEnableMNES;
+    QPointer<QCheckBox> mEnableNAWS;
+    QPointer<QCheckBox> mEnableCHARSET;
+    QPointer<QCheckBox> mEnableNEWENVIRON;
 
-    // One card of one category page: everything it can be found by, and exactly
-    // where it goes back to once the search that borrowed it ends
+    // One card of one page: everything it can be found by, and exactly where it
+    // goes back to once the search that borrowed it ends. A card on a subpage
+    // is never borrowed - the results offer the way into its subpage instead.
     struct SearchCard
     {
         QPointer<QWidget> pCard;
         QString categoryKey;
+        QString subpageKey;
         QString text;
         QVBoxLayout* pHomeLayout = nullptr;
         int homeIndex = -1;
@@ -349,6 +378,8 @@ private:
     QPointer<QAction> mpAction_searchIcon;
     // Leads out of the search results, back to the category they interrupted
     QToolButton* mpButton_searchBack = nullptr;
+    // ...and its counterpart on a subpage, leading up to the parent category
+    QToolButton* mpButton_subpageBack = nullptr;
     QLabel* mpLabel_pageTitle = nullptr;
     QLabel* mpLabel_pageTitleIcon = nullptr;
     QFrame* mpFrame_migrationBanner = nullptr;
@@ -360,10 +391,33 @@ private:
     QList<SearchCard> mSearchCards;
     QList<QPointer<QWidget>> mHighlightedWidgets;
     QMap<QString, QLabel*> mSearchCategoryHeaders;
+    // The way into a subpage whose contents matched but whose opener card did
+    // not, one per subpage, kept between searches like the headers are
+    QMap<QString, QPushButton*> mSearchSubpageLinks;
     QPointer<QWidget> mpWidget_spotlight;
     int mSearchResultsPageIndex = -1;
     bool mSearchActive = false;
     QString mCategoryBeforeSearch;
+    // Which subpage the search interrupted, so that leaving the results by any
+    // door comes back to the page the query was typed on
+    QString mSubpageBeforeSearch;
+    // "category/sub" while a subpage is showing, empty on a category page
+    QString mCurrentSubpage;
+    QMap<QString, int> mSubpageIndexes;
+    // What the breadcrumb calls each subpage - written by retranslateShell()
+    QMap<QString, QString> mSubpageTitles;
+    // The scroll area of each subpage, so that a card can be asked which page
+    // it is on without walking the stack
+    QHash<const QWidget*, QString> mSubpageOfPage;
+    // The card on the parent category page that drills into each subpage
+    QMap<QString, QPointer<QWidget>> mSubpageOpeners;
+    QPointer<QGroupBox> mpCard_protocolList;
+    QPointer<QGroupBox> mpCard_discord;
+    QPointer<QPushButton> mpButton_discordSubpage;
+    QPointer<QGroupBox> mpCard_securityStatus;
+    QPointer<QLabel> mpLabel_securityHeadline;
+    QPointer<QLabel> mpLabel_securityDetail;
+    QPointer<QLabel> mpLabel_securityLink;
     QMap<QString, int> mCategoryPageIndexes;
     QMap<QString, int> mCategoryRows;
     // The sidebar item holds the icon, but a rich-text header needs the
@@ -371,7 +425,7 @@ private:
     QMap<QString, QString> mCategoryIconFiles;
     QTimer* mpTimer_apply = nullptr;
     // What every apply-relevant control held the last time the dialog read the
-    // settings, keyed by the control (the protocol menu's actions included)
+    // settings, keyed by the control
     QHash<const QObject*, QVariant> mValueSnapshot;
     // The shortcut editors write through this map rather than through a control
     // value, so it needs a snapshot of its own

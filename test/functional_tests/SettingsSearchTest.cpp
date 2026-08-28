@@ -431,6 +431,55 @@ private slots:
         QCOMPARE(mpPreferences->findChild<QGroupBox*>(qsl("card_secureConnectionReminder"))->parentWidget(), resultsColumn());
     }
 
+    // What a subpage holds is findable too, but a card on one is not lent to
+    // the results - taking it would leave the page it belongs to empty behind
+    // the row that opens it. The result is the way in instead, and following it
+    // lands on the subpage with the card it found outlined.
+    void test_aWordOnlyASubpageUsesOffersTheWayIntoIt()
+    {
+        // Set before the first search of this dialog, because that is when the
+        // index is built off the widget tree. A synonym rather than a word from
+        // the descriptions, so that rewording them cannot quietly stop this
+        // case from testing anything.
+        auto* pSubpageCard = mpPreferences->findChild<QGroupBox*>(qsl("card_protocolList"));
+        QVERIFY2(pSubpageCard, "the game protocols subpage has no card");
+        pSubpageCard->setProperty("searchKeywords", qsl("zzsubpageonlyword"));
+
+        search(qsl("zzsubpageonlyword"));
+
+        QVERIFY2(pSubpageCard->parentWidget() != resultsColumn(), "a card on a subpage was lent to the results, which would empty the page behind the row that opens it");
+        auto* pLink = mpPreferences->findChild<QPushButton*>(qsl("settingsSearchSubpageResult"));
+        QVERIFY2(pLink, "a match on a subpage offered no way into it");
+        QVERIFY2(pLink->isVisible(), "the way into the subpage was built but not shown");
+        QCOMPARE(pLink->parentWidget(), resultsColumn());
+        QVERIFY2(!pLink->text().isEmpty(), "the way into the subpage is unlabelled");
+
+        pLink->click();
+        QCoreApplication::processEvents();
+        QVERIFY2(searchField()->text().isEmpty(), "following a result left the query standing in the search field");
+        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")));
+        QCOMPARE(sidebar()->currentItem()->data(Qt::UserRole).toString(), qsl("connection"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
+                         },
+                         5000),
+                 "following a subpage result drew no spotlight over the card it found");
+    }
+
+    // ...and where the row that opens the subpage is itself a result, that row
+    // is the answer: offering both would be the same setting listed twice.
+    void test_aMatchOnBothTheOpenerAndItsSubpageIsListedOnce()
+    {
+        // "gmcp" is on the opener as a synonym and on the subpage as the real
+        // name of a checkbox, so it matches both
+        search(qsl("gmcp"));
+
+        QCOMPARE(mpPreferences->groupBox_protocols->parentWidget(), resultsColumn());
+        auto* pLink = mpPreferences->findChild<QPushButton*>(qsl("settingsSearchSubpageResult"));
+        QVERIFY2(!pLink || pLink->isHidden(), "the subpage was offered as a second result beside the card that opens it");
+    }
+
     void test_ctrlFFocusesTheSearchField()
     {
         mpPreferences->activateWindow();

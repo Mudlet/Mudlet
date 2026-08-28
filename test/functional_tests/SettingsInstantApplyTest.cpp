@@ -35,11 +35,10 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include <QAction>
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QMenu>
+#include <QScrollArea>
 #include <QSignalSpy>
 
 #include "PortableModeTestHelper.h"
@@ -278,34 +277,27 @@ private slots:
         mpHost->mCommandSeparator = before;
     }
 
-    // The ten protocol toggles are QActions in the menu behind "Choose
-    // protocols" rather than controls on a page, so instant apply reaches them
-    // through branches of its own.
-    void test_aProtocolToggledInItsMenuReachesTheHost()
+    // The ten protocol toggles are ordinary checkboxes on the subpage the
+    // Connection page's protocols card leads to, so instant apply reaches them
+    // the same way it reaches every other checkbox.
+    void test_aProtocolToggledOnItsSubpageReachesTheHost()
     {
         openPreferences();
-        QMenu* pMenu = mpPreferences->pushButton_chooseProtocols->menu();
-        QVERIFY2(pMenu, "the Choose protocols button has no menu to toggle a protocol in");
-
-        QAction* pGmcp = nullptr;
-        for (auto* pAction : pMenu->actions()) {
-            if (pAction->text().startsWith(qsl("GMCP"))) {
-                pGmcp = pAction;
-                break;
-            }
-        }
-        QVERIFY2(pGmcp, "the protocol menu has no GMCP entry");
+        auto* pGmcp = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_enableGMCP"));
+        QVERIFY2(pGmcp, "the game protocols subpage has no GMCP checkbox");
+        QVERIFY2(mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")), "the game protocols subpage was not built");
         const bool before = mpHost->mEnableGMCP;
         QCOMPARE(pGmcp->isChecked(), before);
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
-        pGmcp->trigger();
+        pGmcp->toggle();
         QCOMPARE(pGmcp->isChecked(), !before);
         QVERIFY2(waitForApply(applySpy), "toggling a protocol never wrote the settings back");
 
         QCOMPARE(mpHost->mEnableGMCP, !before);
         mpHost->mEnableGMCP = before;
     }
+
 
     // Esc reaches closeEvent() through QDialog::reject(), which makes it a close
     // rather than a discard.

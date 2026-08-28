@@ -44,12 +44,10 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QMenu>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QSpinBox>
@@ -405,25 +403,18 @@ private slots:
         QCOMPARE(dark ? mpHost->mEditorThemeDark : mpHost->mEditorTheme, qsl("PhaseDProbe"));
     }
 
-    // The protocol menu's QActions are snapshotted like any control, so a
-    // protocol a script turned on is not written back over by the next edit
-    // somewhere else in the dialog.
+    // The protocol checkboxes are snapshotted like any control, so a protocol a
+    // script turned on is not written back over by the next edit somewhere else
+    // in the dialog - even though they sit on a subpage rather than on the
+    // category page itself.
     void test_anExternalProtocolChangeSurvivesAnUnrelatedEdit()
     {
         openPreferences();
-        QMenu* pMenu = mpPreferences->pushButton_chooseProtocols->menu();
-        QVERIFY2(pMenu, "the Choose protocols button has no menu");
-        QAction* pMsp = nullptr;
-        for (auto* pAction : pMenu->actions()) {
-            if (pAction->text().startsWith(qsl("MSP"))) {
-                pMsp = pAction;
-                break;
-            }
-        }
-        QVERIFY2(pMsp, "the protocol menu has no MSP entry");
+        auto* pMsp = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_enableMSP"));
+        QVERIFY2(pMsp, "the game protocols subpage has no MSP checkbox");
 
-        // what `lua enableMSP()` would do, with the menu still showing the old
-        // state
+        // what `lua enableMSP()` would do, with the subpage still showing the
+        // old state
         const bool shown = pMsp->isChecked();
         mpHost->mEnableMSP = !shown;
 

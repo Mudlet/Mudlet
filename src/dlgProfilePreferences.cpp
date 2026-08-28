@@ -41,6 +41,7 @@
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "ctelnet.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -158,6 +159,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     // Only unhide this if it is needed
     groupBox_discordPrivacy->hide();
+    if (mpCard_discord) {
+        mpCard_discord->hide();
+    }
 
     auto updateDiscordPrivacyControls = [this]() {
         const bool enablePrivacy = radioButton_discordGameDetails->isChecked();
@@ -565,11 +569,25 @@ void dlgProfilePreferences::buildShell()
     mpButton_searchBack->setFocusPolicy(Qt::StrongFocus);
     mpButton_searchBack->hide();
     connect(mpButton_searchBack, &QAbstractButton::clicked, this, [this]() {
-        // The same door the sidebar uses, so leaving the results by either
-        // route cannot end anywhere different
+        // The same doors the sidebar and a card use, so leaving the results by
+        // any route cannot end anywhere different
+        if (const QString subpage = mSubpageBeforeSearch; !subpage.isEmpty()) {
+            showSubpage(subpage.section(QLatin1Char('/'), 0, 0), subpage.section(QLatin1Char('/'), 1));
+            return;
+        }
         showCategory(mCategoryBeforeSearch.isEmpty() ? qsl("general") : mCategoryBeforeSearch);
     });
     pTitleRowLayout->addWidget(mpButton_searchBack);
+    // The same place in the row and the same shape, for the other way of being
+    // somewhere the sidebar did not lead to. Only ever one of the two shows.
+    mpButton_subpageBack = new QToolButton(pTitleRow);
+    mpButton_subpageBack->setObjectName(qsl("settingsSubpageBack"));
+    mpButton_subpageBack->setArrowType(Qt::LeftArrow);
+    mpButton_subpageBack->setAutoRaise(true);
+    mpButton_subpageBack->setFocusPolicy(Qt::StrongFocus);
+    mpButton_subpageBack->hide();
+    connect(mpButton_subpageBack, &QAbstractButton::clicked, this, &dlgProfilePreferences::leaveSubpage);
+    pTitleRowLayout->addWidget(mpButton_subpageBack);
     mpLabel_pageTitleIcon = new QLabel(pTitleRow);
     mpLabel_pageTitleIcon->setObjectName(qsl("settingsPageTitleIcon"));
     // A fixed width, so that the title starts at the same x on every category
@@ -620,14 +638,21 @@ void dlgProfilePreferences::buildShell()
 
     buildCategoryPage(qsl("mapper"), {groupBox_mapFiles, groupBox_downloadMapOptions, groupBox_mapViewOptions, groupBox_mapperColors, groupBox_playerRoomStyle});
 
-    buildCategoryPage(qsl("chat"), {groupBox_discordPrivacy, groupBox_MMCPOptions});
+    // Sixteen controls is more than a card can carry legibly, so the Chat page
+    // gets the one line that says what Discord is being told, and the controls
+    // themselves move to a page of their own behind it
+    buildDiscordSummaryCard();
+    buildCategoryPage(qsl("chat"), {mpCard_discord, groupBox_MMCPOptions});
+    addSubpage(qsl("chat"), qsl("discord"), mpCard_discord, {groupBox_discordPrivacy});
 
     auto* pCard_dataEncoding = createCard(qsl("card_dataEncoding"));
     addCardRow(pCard_dataEncoding, label_encoding, comboBox_encoding);
     moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX});
     auto* pCard_network = createCard(qsl("card_network"));
     addCardRow(pCard_network, label_networkPacketTimeout, doubleSpinBox_networkPacketTimeout);
+    buildProtocolsSubpage();
     buildCategoryPage(qsl("connection"), {groupBox_protocols, pCard_dataEncoding, groupBox_specialOptions, pCard_network});
+    addSubpage(qsl("connection"), qsl("protocols"), groupBox_protocols, {mpCard_protocolList});
 
     auto* pCard_passwords = createCard(qsl("card_passwords"));
     addCardRow(pCard_passwords, label_store_passwords_in, comboBox_store_passwords_in);
@@ -644,7 +669,9 @@ void dlgProfilePreferences::buildShell()
     auto* pCard_secureReminder = createCard(qsl("card_secureConnectionReminder"));
     pCard_secureReminder->setProperty("settingsCardPlain", true);
     moveIntoCard(pCard_secureReminder, {checkBox_askTlsAvailable});
-    buildCategoryPage(qsl("privacy"), {groupBox_ssl, pCard_secureReminder, groupBox_proxy, pCard_passwords, pCard_serverPermissions, groupBox_purgeMediaCache, pCard_crashReports});
+    buildSecurityStatusCard();
+    buildCategoryPage(qsl("privacy"),
+                      {mpCard_securityStatus, groupBox_ssl, pCard_secureReminder, groupBox_proxy, pCard_passwords, pCard_serverPermissions, groupBox_purgeMediaCache, pCard_crashReports});
 
     buildCategoryPage(qsl("accessibility"), {groupBox_accessibility});
 
@@ -863,6 +890,10 @@ void dlgProfilePreferences::retranslateShell()
     const QString backToSettings = tr("Back to the settings you were on");
     mpButton_searchBack->setToolTip(backToSettings);
     mpButton_searchBack->setAccessibleName(backToSettings);
+    //: Tooltip and accessible name of the chevron beside a settings subpage's breadcrumb, leading back to the category the subpage belongs to
+    const QString backToCategory = tr("Back to the category this page belongs to");
+    mpButton_subpageBack->setToolTip(backToCategory);
+    mpButton_subpageBack->setAccessibleName(backToCategory);
     //: Sidebar link at the bottom of the settings dialog, opening the Mudlet wiki in a browser
     mpItem_support->setText(tr("Mudlet support"));
 
@@ -914,11 +945,65 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_serverPermissions"), tr("Server permissions")});
     //: Card title on the Privacy and security settings page, above the crash report sending policy
     cardTitles.append({qsl("card_crashReports"), tr("Crash reports")});
+    //: Card title on the Chat and sharing settings page, above the row leading to the Discord Rich Presence settings
+    cardTitles.append({qsl("card_discord"), tr("Discord Rich Presence")});
+    //: Card title on the game protocols subpage, above the ten protocols Mudlet can offer the game
+    cardTitles.append({qsl("card_protocolList"), tr("Protocols to offer the game")});
     for (const auto& [objectName, title] : cardTitles) {
         if (auto* pCard = findChild<QGroupBox*>(objectName); pCard) {
             pCard->setTitle(title);
         }
     }
+
+    //: Breadcrumb name of the subpage holding the telnet protocols, reached from the Connection settings page
+    mSubpageTitles.insert(qsl("connection/protocols"), tr("Game protocols"));
+    //: Breadcrumb name of the subpage holding the Discord Rich Presence settings, reached from the Chat and sharing settings page
+    mSubpageTitles.insert(qsl("chat/discord"), tr("Discord Rich Presence"));
+
+    QList<std::tuple<QCheckBox*, QString, QString>> protocols;
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableCHARSET, tr("CHARSET: Character Encoding Standard"), tr("Lets Mudlet and the game agree on how letters are spelled out, so accented and non-Latin text arrives intact.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableGMCP,
+                      tr("GMCP: Generic Mud Communication Protocol"),
+                      tr("Lets the game send your health, room and inventory as data, which is what most modern packages and user interfaces are built on.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableMNES, tr("MNES: Mud New-Environ Standard"), tr("Tells the game a short list of facts about Mudlet, such as its name and version.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableMSDP, tr("MSDP: Mud Server Data Protocol"), tr("An older way for the game to send data about your character, used where GMCP is not offered.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableMSP, tr("MSP: Mud Sound Protocol"), tr("Lets the game play sound effects and music through Mudlet.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableMSSP, tr("MSSP: Mud Server Status Protocol"), tr("Lets the game tell Mudlet about itself - how many players are on, what it is about - for game listings.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableMTTS,
+                      tr("MTTS: Mud Terminal Type Standard"),
+                      tr("Tells the game which client you are using and what it can display, so it can send colour and Unicode when Mudlet supports them.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableMXP, tr("MXP: Mud eXtension Protocol"), tr("Lets the game mark up its text with clickable links, commands and pop-up menus.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableNAWS, tr("NAWS: Negotiate About Window Size"), tr("Tells the game how wide your window is, so it can wrap its text to fit rather than guessing.")});
+    //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
+    protocols.append({mEnableNEWENVIRON, tr("NEW-ENVIRON: Client Variables Standard"), tr("Tells the game more about Mudlet than MNES does, including support for clickable links in plain text.")});
+    for (const auto& [pCheckBox, name, description] : protocols) {
+        if (!pCheckBox) {
+            continue;
+        }
+        pCheckBox->setText(name);
+        if (auto* pLabel = findChild<QLabel*>(qsl("%1_description").arg(pCheckBox->objectName())); pLabel) {
+            pLabel->setText(description);
+        }
+    }
+    //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
+    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables "
+                               "including OSC link support."));
+    //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
+    mEnableNEWENVIRON->setToolTip(
+            tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
+    updateProtocolSummary();
+    updateDiscordSummary();
+    updateSecurityStatus();
+    setCardDescriptions();
 
     if (mpFrame_migrationBanner) {
         //: Title of the banner explaining that the settings dialog has been reorganised
@@ -935,7 +1020,11 @@ void dlgProfilePreferences::retranslateShell()
     // Nothing is current while the shell is still being built, and the search's
     // own title comes back with the next query:
     if (const QListWidgetItem* pCurrent = mpListWidget_categories->currentItem(); pCurrent && !mSearchActive) {
-        mpLabel_pageTitle->setText(pCurrent->text());
+        if (mCurrentSubpage.isEmpty()) {
+            mpLabel_pageTitle->setText(pCurrent->text());
+        } else {
+            mpLabel_pageTitle->setText(tr("%1 › %2").arg(pCurrent->text(), mSubpageTitles.value(mCurrentSubpage)));
+        }
     }
 }
 
@@ -945,10 +1034,11 @@ void dlgProfilePreferences::retranslateShell()
 // control when one of its words is what matched.
 void dlgProfilePreferences::setSearchKeywords()
 {
-    // The protocols themselves are only named inside the menu this button pops
-    // up, where a search over the widget tree cannot see them. Not translated:
-    // these are the protocol names as the games and their documentation spell
-    // them.
+    // The protocols are named on the subpage this row leads to, which the search
+    // does index - but a result there is a way in rather than the setting
+    // itself, so the row keeps the acronyms too and a search for one lands on
+    // the card that owns them. Not translated: these are the protocol names as
+    // the games and their documentation spell them.
     pushButton_chooseProtocols->setProperty("searchKeywords", qsl("GMCP MSDP MSSP MSP MXP MTTS MNES NAWS CHARSET NEW-ENVIRON telnet"));
 
     QList<std::pair<QWidget*, QString>> synonyms;
@@ -995,7 +1085,7 @@ void dlgProfilePreferences::setSearchKeywords()
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether crash reports are sent.
     synonyms.append({label_crashReportPolicy, tr("crash, telemetry, diagnostics, error reports")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for what Discord is told about the game being played.
-    synonyms.append({groupBox_discordPrivacy, tr("Discord, rich presence, status, what I am playing")});
+    synonyms.append({mpCard_discord, tr("Discord, rich presence, status, what I am playing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the MudMaster chat protocol.
     synonyms.append({groupBox_MMCPOptions, tr("MMCP, chat, MudMaster, player to player")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the telnet protocols Mudlet negotiates with the game.
@@ -1026,16 +1116,16 @@ void dlgProfilePreferences::addSidebarSeparator()
     mpListWidget_categories->setItemWidget(pItem, pLine);
 }
 
-void dlgProfilePreferences::buildCategoryPage(const QString& key, const QList<QWidget*>& cards)
+QScrollArea* dlgProfilePreferences::buildPage(const QString& objectSuffix, const QList<QWidget*>& cards)
 {
     auto* pScrollArea = new QScrollArea(mpStackedWidget_categories);
-    pScrollArea->setObjectName(qsl("settingsPage_%1").arg(key));
+    pScrollArea->setObjectName(qsl("settingsPage_%1").arg(objectSuffix));
     pScrollArea->setFrameShape(QFrame::NoFrame);
     pScrollArea->setWidgetResizable(true);
     markAsShellSurface(pScrollArea);
 
     auto* pColumn = new QWidget(pScrollArea);
-    pColumn->setObjectName(qsl("settingsColumn_%1").arg(key));
+    pColumn->setObjectName(qsl("settingsColumn_%1").arg(objectSuffix));
     auto* pColumnLayout = new QVBoxLayout(pColumn);
     pColumnLayout->setContentsMargins(0, 0, 0, 0);
     pColumnLayout->setSpacing(16);
@@ -1063,8 +1153,93 @@ void dlgProfilePreferences::buildCategoryPage(const QString& key, const QList<QW
     markAsShellSurface(pColumn);
     markAsShellSurface(pScrollArea->viewport());
     capColumnWidth(pScrollArea);
+    return pScrollArea;
+}
 
-    mCategoryPageIndexes.insert(key, mpStackedWidget_categories->addWidget(pScrollArea));
+void dlgProfilePreferences::buildCategoryPage(const QString& key, const QList<QWidget*>& cards)
+{
+    mCategoryPageIndexes.insert(key, mpStackedWidget_categories->addWidget(buildPage(key, cards)));
+}
+
+// A subpage is an ordinary page of the same stack: the sidebar has no row for
+// it, so the only ways in are the card that opens it, a deep link naming
+// "category/sub", and a search result that found something on it.
+void dlgProfilePreferences::addSubpage(const QString& categoryKey, const QString& subKey, QWidget* pOpenerCard, const QList<QWidget*>& cards)
+{
+    const QString key = qsl("%1/%2").arg(categoryKey, subKey);
+    QScrollArea* pPage = buildPage(qsl("%1_%2").arg(categoryKey, subKey), cards);
+    mSubpageIndexes.insert(key, mpStackedWidget_categories->addWidget(pPage));
+    mSubpageOfPage.insert(pPage, key);
+    mSubpageOpeners.insert(key, pOpenerCard);
+}
+
+QString dlgProfilePreferences::subpageHolding(const QWidget* pWidget) const
+{
+    for (const QWidget* pAncestor = pWidget; pAncestor; pAncestor = pAncestor->parentWidget()) {
+        if (const auto it = mSubpageOfPage.constFind(pAncestor); it != mSubpageOfPage.constEnd()) {
+            return *it;
+        }
+    }
+    return {};
+}
+
+void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QString& subKey, QWidget* pSpotlightTarget)
+{
+    const QString key = qsl("%1/%2").arg(categoryKey, subKey);
+    if (!mSubpageIndexes.contains(key)) {
+        // Every way in is written in C++, so a name that leads nowhere is a
+        // typo rather than anything a user can do:
+        qWarning() << "dlgProfilePreferences::showSubpage(...) WARNING - there is no settings subpage" << key << "- showing the category instead.";
+        showCategory(categoryKey, pSpotlightTarget);
+        return;
+    }
+    if (mSearchActive) {
+        // Clearing the field is what sends every borrowed card home, and that
+        // has to finish before the stack is pointed anywhere else. This subpage
+        // is the one being asked for, whatever the query interrupted.
+        mSubpageBeforeSearch.clear();
+        mpLineEdit_search->clear();
+    }
+    // Cleared before the sidebar moves, because the row-changed slot takes a
+    // sidebar move to mean a category page is what is being shown:
+    mCurrentSubpage.clear();
+    mpListWidget_categories->setCurrentRow(mCategoryRows.value(categoryKey, 0));
+    mCurrentSubpage = key;
+
+    auto* pPage = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(mSubpageIndexes.value(key)));
+    mpStackedWidget_categories->setCurrentWidget(pPage);
+    capColumnWidth(pPage);
+    // As on a category page: the cap taken above measured the cards before the
+    // stylesheet gave them their padding
+    QTimer::singleShot(0, this, [this, pPage]() {
+        if (pPage && mpStackedWidget_categories->currentWidget() == pPage) {
+            capColumnWidth(pPage);
+        }
+    });
+
+    mpLabel_pageTitleIcon->hide();
+    mpButton_searchBack->hide();
+    mpButton_subpageBack->show();
+    const QListWidgetItem* pItem = mpListWidget_categories->item(mCategoryRows.value(categoryKey, -1));
+    //: Breadcrumb over a settings subpage: %1 is the category it belongs to, %2 the subpage's own name
+    mpLabel_pageTitle->setText(tr("%1 › %2").arg(pItem ? pItem->text() : categoryKey, mSubpageTitles.value(key)));
+    spotlight(pSpotlightTarget);
+}
+
+void dlgProfilePreferences::leaveSubpage()
+{
+    if (mCurrentSubpage.isEmpty()) {
+        return;
+    }
+    const int row = mCategoryRows.value(mCurrentSubpage.section(QLatin1Char('/'), 0, 0), 0);
+    // The sidebar never left the parent category, so there is no row change to
+    // carry the page back - the slot that a change would have run is called
+    // outright, and it is what clears mCurrentSubpage
+    if (mpListWidget_categories->currentRow() == row) {
+        slot_categorySelected(row);
+        return;
+    }
+    mpListWidget_categories->setCurrentRow(row);
 }
 
 // A card that no group box in the .ui file corresponds to. Its title comes from
@@ -1126,6 +1301,368 @@ void dlgProfilePreferences::addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidge
         return;
     }
     pCardLayout->addLayout(pRowLayout);
+}
+
+// A grid has no notion of inserting a row, so every item is taken out and put
+// back one row lower. The row properties move with them; the columns are
+// untouched, which is what keeps a .ui file's column stretches meaning what
+// they said.
+static void insertGridRowAtTop(QGridLayout* pGrid, QWidget* pWidget)
+{
+    const int rows = pGrid->rowCount();
+    const int columns = std::max(1, pGrid->columnCount());
+    QList<std::pair<int, int>> rowProperties;
+    rowProperties.reserve(rows);
+    for (int row = 0; row < rows; ++row) {
+        rowProperties.append({pGrid->rowStretch(row), pGrid->rowMinimumHeight(row)});
+    }
+
+    QList<std::tuple<QLayoutItem*, int, int, int, int>> items;
+    items.reserve(pGrid->count());
+    while (pGrid->count()) {
+        int row = 0;
+        int column = 0;
+        int rowSpan = 1;
+        int columnSpan = 1;
+        pGrid->getItemPosition(0, &row, &column, &rowSpan, &columnSpan);
+        items.append({pGrid->takeAt(0), row, column, rowSpan, columnSpan});
+    }
+
+    pGrid->addWidget(pWidget, 0, 0, 1, columns);
+    for (const auto& [pItem, row, column, rowSpan, columnSpan] : items) {
+        pGrid->addItem(pItem, row + 1, column, rowSpan, columnSpan, pItem->alignment());
+    }
+    pGrid->setRowStretch(0, 0);
+    pGrid->setRowMinimumHeight(0, 0);
+    for (int row = 0; row < rows; ++row) {
+        pGrid->setRowStretch(row + 1, rowProperties.at(row).first);
+        pGrid->setRowMinimumHeight(row + 1, rowProperties.at(row).second);
+    }
+}
+
+// A row that leads somewhere rather than setting something: full card width,
+// its text on the left and a chevron at the right edge, drawn by the shell
+// stylesheet from the property this puts on.
+static void makeChevronRow(QAbstractButton* pButton)
+{
+    pButton->setProperty("settingsChevronRow", true);
+    pButton->setCursor(Qt::PointingHandCursor);
+    pButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+}
+
+// The line under a card's title saying what the card is for. Created on the
+// first call and only re-worded afterwards, so that a language change does not
+// leave a page with two of them.
+void dlgProfilePreferences::setCardDescription(QGroupBox* pCard, const QString& description, const QString& learnMoreUrl)
+{
+    if (!pCard) {
+        return;
+    }
+    QLabel* pLabel = pCard->findChild<QLabel*>(qsl("settingsCardDescription"), Qt::FindDirectChildrenOnly);
+    if (!pLabel) {
+        pLabel = new QLabel(pCard);
+        pLabel->setObjectName(qsl("settingsCardDescription"));
+        pLabel->setWordWrap(true);
+        pLabel->setTextFormat(Qt::RichText);
+        pLabel->setOpenExternalLinks(true);
+        pLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+        if (auto* pGrid = qobject_cast<QGridLayout*>(pCard->layout()); pGrid) {
+            insertGridRowAtTop(pGrid, pLabel);
+        } else if (auto* pBox = qobject_cast<QBoxLayout*>(pCard->layout()); pBox) {
+            if (pBox->direction() == QBoxLayout::LeftToRight || pBox->direction() == QBoxLayout::RightToLeft) {
+                // A card laid out as one row has no above to put the line in, so
+                // its row becomes a row nested in a column
+                auto* pRow = new QHBoxLayout();
+                pRow->setSpacing(pBox->spacing());
+                while (pBox->count()) {
+                    pRow->addItem(pBox->takeAt(0));
+                }
+                pBox->setDirection(QBoxLayout::TopToBottom);
+                pBox->addWidget(pLabel);
+                pBox->addLayout(pRow);
+            } else {
+                pBox->insertWidget(0, pLabel);
+            }
+        } else {
+            qWarning() << "dlgProfilePreferences::setCardDescription(...) WARNING - the card" << pCard->objectName() << "has no layout its description line can go into.";
+            return;
+        }
+    }
+    if (learnMoreUrl.isEmpty()) {
+        pLabel->setText(description.toHtmlEscaped());
+        return;
+    }
+    //: Link at the end of a settings card's description line, opening the Mudlet wiki page about that setting
+    pLabel->setText(qsl("%1 <a href=\"%2\">%3</a>").arg(description.toHtmlEscaped(), learnMoreUrl, tr("Learn more").toHtmlEscaped()));
+}
+
+// Every card whose title does not already say what the card is for. Called from
+// retranslateShell(), so a language change re-words them.
+void dlgProfilePreferences::setCardDescriptions()
+{
+    //: Description line under the "System integration" card title on the General settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_systemIntegration")), tr("How Mudlet fits in with the rest of your desktop."));
+    //: Description line under the "Web search" card title on the General settings page
+    setCardDescription(groupbox_searchEngineSelection, tr("The site Mudlet opens when you pick \"search on the web\" after selecting some text in the game."));
+    //: Description line under the "Scrollback" card title on the Main display settings page
+    setCardDescription(groupBox_consoleBuffer, tr("How much of what the game has already sent stays available to scroll back through."));
+    //: Description line under the "Scripting" card title on the Editor settings page
+    setCardDescription(groupBox_autoComplete, tr("What the script editor offers while you write Lua, and where mistakes in it are reported."), qsl("https://wiki.mudlet.org/w/Manual:Scripting"));
+    //: Description line under the "Download map" card title on the Mapper settings page
+    setCardDescription(
+            groupBox_downloadMapOptions, tr("Some games publish a ready-made map that Mudlet can fetch for you instead of you walking it yourself."), qsl("https://wiki.mudlet.org/w/Manual:Mapper"));
+    //: Description line under the "Discord Rich Presence" card title on the Chat and sharing settings page
+    setCardDescription(
+            mpCard_discord, tr("Shows what you are playing on your Discord profile, and decides how much of it other people get to see."), qsl("https://wiki.mudlet.org/w/Standards:Discord_GMCP"));
+    //: Description line under the "MMCP" card title on the Chat and sharing settings page
+    setCardDescription(groupBox_MMCPOptions, tr("Chat directly with other players' clients, without the messages going through the game."));
+    //: Description line under the "Game protocols" card title on the Connection settings page
+    setCardDescription(groupBox_protocols,
+                       tr("Extras Mudlet offers the game beyond plain text - sound, map data, your window size and the like. The game decides which of them it uses."),
+                       qsl("https://wiki.mudlet.org/w/Manual:Supported_Protocols"));
+    //: Description line under the "Data encoding" card title on the Connection settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_dataEncoding")),
+                       tr("How the bytes the game sends are turned into letters. Use what the game's own documentation asks for."),
+                       qsl("https://wiki.mudlet.org/w/Manual:Unicode"));
+    //: Description line under the "Compatibility" card title on the Connection settings page
+    setCardDescription(groupBox_specialOptions, tr("Workarounds for games whose servers do things their own way. Leave these off unless the game asks you to turn one on."));
+    //: Description line under the "Network" card title on the Connection settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_network")), tr("How long Mudlet waits for the rest of a slow message before drawing what it already has."));
+    //: Description line under the "Secure connection" card title on the Privacy and security settings page
+    setCardDescription(groupBox_ssl, tr("Encrypts everything travelling between Mudlet and the game, so nobody in between can read it. The game has to offer a secure port of its own."));
+    //: Description line under the "Proxy" card title on the Privacy and security settings page
+    setCardDescription(groupBox_proxy, tr("Sends Mudlet's traffic through another server first - needed on networks that block games directly."));
+    //: Description line under the "Passwords" card title on the Privacy and security settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_passwords")), tr("Where Mudlet keeps the passwords you have let it remember for you."));
+    //: Description line under the "Server permissions" card title on the Privacy and security settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_serverPermissions")), tr("What the game is allowed to put on your screen or play through your speakers without asking first."));
+    //: Description line under the "Media cache" card title on the Privacy and security settings page
+    setCardDescription(groupBox_purgeMediaCache,
+                       tr("Sounds and music the game sends are kept on disk so they only have to be downloaded once."),
+                       qsl("https://wiki.mudlet.org/w/Standards:MUD_Client_Media_Protocol"));
+    //: Description line under the "Crash reports" card title on the Privacy and security settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_crashReports")),
+                       tr("If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent."));
+    //: Description line under the "Developer" card title on the Advanced settings page
+    setCardDescription(groupBox_debug, tr("Diagnostics for people writing packages and scripts. Leave these off for ordinary play."));
+}
+
+// The Connection page's protocols card stops being a button with a menu behind
+// it and becomes a row that leads to a page: ten checkboxes, each saying in a
+// line what the protocol is for.
+void dlgProfilePreferences::buildProtocolsSubpage()
+{
+    mpCard_protocolList = createCard(qsl("card_protocolList"));
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(mpCard_protocolList->layout());
+    pCardLayout->setSpacing(4);
+
+    const auto addProtocol = [this, pCardLayout](const QString& objectName) {
+        auto* pCheckBox = new QCheckBox(mpCard_protocolList);
+        pCheckBox->setObjectName(objectName);
+        pCardLayout->addWidget(pCheckBox);
+        auto* pDescription = new QLabel(mpCard_protocolList);
+        pDescription->setObjectName(qsl("%1_description").arg(objectName));
+        pDescription->setProperty("settingsControlDescription", true);
+        pDescription->setWordWrap(true);
+        pCardLayout->addWidget(pDescription);
+        return pCheckBox;
+    };
+
+    // The order the menu listed them in, which is the order a player looking
+    // for one of these acronyms would expect to find it in
+    mEnableCHARSET = addProtocol(qsl("checkBox_enableCHARSET"));
+    mEnableGMCP = addProtocol(qsl("checkBox_enableGMCP"));
+    mEnableMNES = addProtocol(qsl("checkBox_enableMNES"));
+    mEnableMSDP = addProtocol(qsl("checkBox_enableMSDP"));
+    mEnableMSP = addProtocol(qsl("checkBox_enableMSP"));
+    mEnableMSSP = addProtocol(qsl("checkBox_enableMSSP"));
+    mEnableMTTS = addProtocol(qsl("checkBox_enableMTTS"));
+    mEnableMXP = addProtocol(qsl("checkBox_enableMXP"));
+    mEnableNAWS = addProtocol(qsl("checkBox_enableNAWS"));
+    mEnableNEWENVIRON = addProtocol(qsl("checkBox_enableNEWENVIRON"));
+
+    // The warning belongs on the page the change is made on rather than on the
+    // card that only leads there
+    moveIntoCard(mpCard_protocolList, {need_reconnect_for_data_protocol});
+
+    // These wirings are the same for every profile - they are about what the
+    // controls mean to each other, not about any one Host - so they are made
+    // once here rather than again on each initWithHost(), which would stack a
+    // second copy of each every time a profile came and went.
+    for (auto* pCheckBox : {mEnableCHARSET.data(),
+                            mEnableGMCP.data(),
+                            mEnableMNES.data(),
+                            mEnableMSDP.data(),
+                            mEnableMSP.data(),
+                            mEnableMSSP.data(),
+                            mEnableMTTS.data(),
+                            mEnableMXP.data(),
+                            mEnableNAWS.data(),
+                            mEnableNEWENVIRON.data()}) {
+        connect(pCheckBox, &QAbstractButton::toggled, this, [this]() {
+            // Reading a profile's settings into the controls is not a change
+            // anyone has to reconnect for:
+            if (!mPopulating) {
+                need_reconnect_for_data_protocol->show();
+            }
+            updateProtocolSummary();
+        });
+    }
+    connect(mEnableGMCP, &QAbstractButton::toggled, pushButton_forgetSavedSignIn, &QWidget::setEnabled);
+    connect(mEnableMNES, &QAbstractButton::toggled, this, [this](const bool checked) {
+        if (!mPopulating && checked && mEnableNEWENVIRON->isChecked()) {
+            mEnableNEWENVIRON->setChecked(false);
+        }
+    });
+    connect(mEnableNEWENVIRON, &QAbstractButton::toggled, this, [this](const bool checked) {
+        if (!mPopulating && checked && mEnableMNES->isChecked()) {
+            mEnableMNES->setChecked(false);
+        }
+    });
+
+    // The button keeps its object name, its tab stop and its place in the four
+    // host enable/disable lists: all that changes is where it leads
+    pushButton_chooseProtocols->setMenu(nullptr);
+    makeChevronRow(pushButton_chooseProtocols);
+    connect(pushButton_chooseProtocols, &QAbstractButton::clicked, this, [this]() {
+        showSubpage(qsl("connection"), qsl("protocols"));
+    });
+}
+
+void dlgProfilePreferences::updateProtocolSummary()
+{
+    int enabled = 0;
+    int total = 0;
+    for (const auto& pCheckBox : {mEnableCHARSET, mEnableGMCP, mEnableMNES, mEnableMSDP, mEnableMSP, mEnableMSSP, mEnableMTTS, mEnableMXP, mEnableNAWS, mEnableNEWENVIRON}) {
+        if (!pCheckBox) {
+            continue;
+        }
+        ++total;
+        if (pCheckBox->isChecked()) {
+            ++enabled;
+        }
+    }
+    // Written as two numbers rather than as a plural form: an untranslated
+    // %n string still shows its "(s)" in English, and this row is too
+    // prominent to read as "9 protocol(s) on"
+    //: Text of the row on the Connection page's game protocols card that opens the list of protocols; %1 is how many are switched on, %2 how many there are
+    pushButton_chooseProtocols->setText(tr("%1 of %2 turned on").arg(QString::number(enabled), QString::number(total)));
+}
+
+// The Chat page keeps the one line that says what Discord is being told; the
+// controls that decide it move to a page of their own.
+void dlgProfilePreferences::buildDiscordSummaryCard()
+{
+    mpCard_discord = createCard(qsl("card_discord"));
+    mpButton_discordSubpage = new QPushButton(mpCard_discord);
+    mpButton_discordSubpage->setObjectName(qsl("pushButton_discordSettings"));
+    makeChevronRow(mpButton_discordSubpage);
+    qobject_cast<QVBoxLayout*>(mpCard_discord->layout())->addWidget(mpButton_discordSubpage);
+    connect(mpButton_discordSubpage, &QAbstractButton::clicked, this, [this]() {
+        showSubpage(qsl("chat"), qsl("discord"));
+    });
+    for (auto* pRadioButton : {radioButton_discordDisabled, radioButton_discordMudletOnly, radioButton_discordGameDetails}) {
+        connect(pRadioButton, &QAbstractButton::toggled, this, &dlgProfilePreferences::updateDiscordSummary);
+    }
+}
+
+void dlgProfilePreferences::updateDiscordSummary()
+{
+    if (!mpButton_discordSubpage) {
+        return;
+    }
+    QString state;
+    if (radioButton_discordDisabled->isChecked()) {
+        //: Summary on the Chat and sharing page's Discord card, on the row that opens the Discord settings
+        state = tr("Off - Discord is told nothing");
+    } else if (radioButton_discordMudletOnly->isChecked()) {
+        //: Summary on the Chat and sharing page's Discord card, on the row that opens the Discord settings
+        state = tr("On - Discord is told you are using Mudlet");
+    } else {
+        //: Summary on the Chat and sharing page's Discord card, on the row that opens the Discord settings
+        state = tr("On - Discord is told which game you are playing");
+    }
+    mpButton_discordSubpage->setText(state);
+}
+
+// The one status hero: what the connection actually is at this moment, above
+// the settings that ask for it.
+void dlgProfilePreferences::buildSecurityStatusCard()
+{
+    mpCard_securityStatus = createCard(qsl("card_securityStatus"));
+    mpCard_securityStatus->setProperty("settingsHero", true);
+    // It carries no setting, so it needs no title and no room above the frame
+    // for one either
+    mpCard_securityStatus->setProperty("settingsCardPlain", true);
+    auto* pLayout = qobject_cast<QVBoxLayout*>(mpCard_securityStatus->layout());
+
+    mpLabel_securityHeadline = new QLabel(mpCard_securityStatus);
+    mpLabel_securityHeadline->setObjectName(qsl("settingsHeroHeadline"));
+    mpLabel_securityHeadline->setWordWrap(true);
+    pLayout->addWidget(mpLabel_securityHeadline);
+
+    mpLabel_securityDetail = new QLabel(mpCard_securityStatus);
+    mpLabel_securityDetail->setObjectName(qsl("settingsHeroDetail"));
+    mpLabel_securityDetail->setWordWrap(true);
+    pLayout->addWidget(mpLabel_securityDetail);
+
+    mpLabel_securityLink = new QLabel(mpCard_securityStatus);
+    mpLabel_securityLink->setObjectName(qsl("settingsHeroLink"));
+    mpLabel_securityLink->setTextFormat(Qt::RichText);
+    // The hero adds no setting of its own: the link leads to the card that
+    // holds the one it is reporting on
+    connect(mpLabel_securityLink, &QLabel::linkActivated, this, [this]() {
+        showCategory(qsl("privacy"), groupBox_ssl);
+    });
+    pLayout->addWidget(mpLabel_securityLink);
+}
+
+void dlgProfilePreferences::updateSecurityStatus()
+{
+    if (!mpCard_securityStatus) {
+        return;
+    }
+    Host* pHost = mpHost;
+    // With no profile loaded there is no connection to report on, and the cards
+    // below say so by being greyed out
+    mpCard_securityStatus->setVisible(pHost != nullptr);
+    if (!pHost) {
+        return;
+    }
+
+    const bool connected = pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+    QString headline;
+    QString detail;
+    if (!connected) {
+        //: Headline of the security status card on the Privacy and security settings page, when the profile is not connected to its game
+        headline = tr("Not connected");
+        //: Detail line of the security status card on the Privacy and security settings page, when the profile is not connected to its game
+        detail = tr("Connect to the game to see whether this connection is encrypted.");
+    } else if (pHost->mTelnet.currentlySecure()) {
+        //: Headline of the security status card on the Privacy and security settings page, when the connection to the game is encrypted; %1 is the game's address
+        headline = tr("Your connection to %1 is encrypted").arg(pHost->getUrl());
+#if !defined(QT_NO_SSL)
+        if (const QSslCertificate certificate = pHost->mTelnet.getPeerCertificate(); !certificate.isNull()) {
+            const QString issuer = certificate.issuerInfo(QSslCertificate::CommonName).join(qsl(", "));
+            const QString expiry = certificate.expiryDate().toString(mudlet::self()->getUserLocale().dateFormat(QLocale::ShortFormat));
+            //: Detail line of the security status card on the Privacy and security settings page; %1 is who issued the game's certificate, %2 the date it stops being valid
+            detail = tr("The game's certificate was issued by %1 and is valid until %2.").arg(issuer.isEmpty() ? tr("an unnamed authority") : issuer, expiry);
+        }
+#endif
+        if (detail.isEmpty()) {
+            //: Detail line of the security status card on the Privacy and security settings page, when the connection is encrypted but the game presented no certificate details
+            detail = tr("Nobody between you and the game can read what you send.");
+        }
+    } else {
+        //: Headline of the security status card on the Privacy and security settings page, when the connection to the game is not encrypted; %1 is the game's address
+        headline = tr("Your connection to %1 is not encrypted").arg(pHost->getUrl());
+        //: Detail line of the security status card on the Privacy and security settings page, when the connection is not encrypted
+        detail = tr("Everything you send, your password included, travels in the clear. Games that offer a secure port let you turn this around below.");
+    }
+    mpLabel_securityHeadline->setText(headline);
+    mpLabel_securityDetail->setText(detail);
+    //: Link on the security status card of the Privacy and security settings page, leading to the "Secure connection" card below it
+    mpLabel_securityLink->setText(qsl("<a href=\"#secureConnection\">%1</a>").arg(tr("Secure connection settings").toHtmlEscaped()));
 }
 
 // The .ui file titles these group boxes after the tab they sat on, and
@@ -1349,15 +1886,25 @@ void dlgProfilePreferences::rebuildTabOrder()
 {
     // The back chevron only exists while the results are showing, and a hidden
     // widget is skipped by a traversal rather than trapping it
-    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpListWidget_categories};
+    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpButton_subpageBack, mpListWidget_categories};
+    const auto collectPage = [&chain, this](const int pageIndex) {
+        auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(pageIndex));
+        QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
+        if (pColumn && pColumn->layout()) {
+            collectFocusableInLayoutOrder(pColumn->layout(), chain);
+        }
+    };
     for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
         const QString key = mpListWidget_categories->item(row)->data(Qt::UserRole).toString();
-        auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(mCategoryPageIndexes.value(key, -1)));
-        QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
-        if (!pColumn || !pColumn->layout()) {
-            continue;
+        collectPage(mCategoryPageIndexes.value(key, -1));
+        // ...and each subpage right after the category it belongs to, so that a
+        // page reached by drilling in is as traversable as one the sidebar leads to
+        const QString prefix = key + QLatin1Char('/');
+        for (auto it = mSubpageIndexes.constBegin(); it != mSubpageIndexes.constEnd(); ++it) {
+            if (it.key().startsWith(prefix)) {
+                collectPage(it.value());
+            }
         }
-        collectFocusableInLayoutOrder(pColumn->layout(), chain);
     }
     for (int i = 1, total = chain.size(); i < total; ++i) {
         setTabOrder(chain.at(i - 1), chain.at(i));
@@ -1417,6 +1964,7 @@ void dlgProfilePreferences::showCategory(const QString& key, QWidget* pSpotlight
     // the category the sidebar is already on changes nothing. So the query goes
     // here rather than being left to the selection to clear.
     if (mSearchActive) {
+        mSubpageBeforeSearch.clear();
         mpLineEdit_search->clear();
     }
     QString category = key;
@@ -1571,15 +2119,14 @@ static QString highlightTextOf(const QWidget* pWidget)
 void dlgProfilePreferences::buildSearchIndex()
 {
     mSearchCards.clear();
-    for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
-        const QString key = mpListWidget_categories->item(row)->data(Qt::UserRole).toString();
-        if (key.isEmpty()) {
-            continue;
-        }
-        auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(mCategoryPageIndexes.value(key, -1)));
+    // A category's own cards are indexed before the cards of its subpages, so
+    // that a query matching both meets the card that leads into the subpage
+    // before it meets the subpage
+    const auto indexPage = [this](const int pageIndex, const QString& categoryKey, const QString& subpageKey) {
+        auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(pageIndex));
         auto* pColumnLayout = pScrollArea ? qobject_cast<QVBoxLayout*>(pScrollArea->widget()->layout()) : nullptr;
         if (!pColumnLayout) {
-            continue;
+            return;
         }
         for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
             // The migration banner is not on any page while this runs, so
@@ -1596,11 +2143,26 @@ void dlgProfilePreferences::buildSearchIndex()
 
             SearchCard entry;
             entry.pCard = pCard;
-            entry.categoryKey = key;
+            entry.categoryKey = categoryKey;
+            entry.subpageKey = subpageKey;
             entry.text = foldForSearch(parts.join(QLatin1Char(' ')));
             entry.pHomeLayout = pColumnLayout;
             entry.homeIndex = item;
             mSearchCards.append(entry);
+        }
+    };
+
+    for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
+        const QString key = mpListWidget_categories->item(row)->data(Qt::UserRole).toString();
+        if (key.isEmpty()) {
+            continue;
+        }
+        indexPage(mCategoryPageIndexes.value(key, -1), key, QString());
+        const QString prefix = key + QLatin1Char('/');
+        for (auto it = mSubpageIndexes.constBegin(); it != mSubpageIndexes.constEnd(); ++it) {
+            if (it.key().startsWith(prefix)) {
+                indexPage(it.value(), key, it.key());
+            }
         }
     }
 }
@@ -1622,6 +2184,11 @@ void dlgProfilePreferences::runSearch(const QString& query)
         mSearchActive = true;
         const QListWidgetItem* pCurrent = mpListWidget_categories->currentItem();
         mCategoryBeforeSearch = pCurrent ? pCurrent->data(Qt::UserRole).toString() : QString();
+        // A search started on a subpage comes back to that subpage, and while
+        // it runs the results are what Escape and the chevron lead out of
+        mSubpageBeforeSearch = mCurrentSubpage;
+        mCurrentSubpage.clear();
+        mpButton_subpageBack->hide();
         // Only the selection goes, never the current row: an item view answers
         // a focus-in that finds no current index by taking the first one, which
         // reads as the user having chosen General and ends the search. That
@@ -1645,6 +2212,8 @@ void dlgProfilePreferences::runSearch(const QString& query)
 
     QString lastCategory;
     int matchCount = 0;
+    QList<const QWidget*> matchedCards;
+    QStringList linkedSubpages;
     for (auto& entry : mSearchCards) {
         // A card the profile's state has hidden - the updater's, Discord's - is
         // not an option anyone can take up, so it is not a result either:
@@ -1661,6 +2230,28 @@ void dlgProfilePreferences::runSearch(const QString& query)
         if (!matched) {
             continue;
         }
+        // A subpage's card is not lent to the results - taking it would leave
+        // the page it belongs to empty behind the row that opens it. The
+        // results offer the way in instead, unless that way in is already here
+        // as a result of its own.
+        if (!entry.subpageKey.isEmpty()) {
+            if (linkedSubpages.contains(entry.subpageKey) || matchedCards.contains(mSubpageOpeners.value(entry.subpageKey).data())) {
+                continue;
+            }
+            linkedSubpages.append(entry.subpageKey);
+            if (entry.categoryKey != lastCategory) {
+                lastCategory = entry.categoryKey;
+                QLabel* pHeader = searchCategoryHeader(entry.categoryKey);
+                mpLayout_searchResults->insertWidget(mpLayout_searchResults->count() - 1, pHeader);
+                pHeader->show();
+            }
+            QPushButton* pLink = searchSubpageLink(entry.subpageKey, entry.pCard);
+            mpLayout_searchResults->insertWidget(mpLayout_searchResults->count() - 1, pLink);
+            pLink->show();
+            ++matchCount;
+            continue;
+        }
+        matchedCards.append(entry.pCard);
 
         if (entry.categoryKey != lastCategory) {
             lastCategory = entry.categoryKey;
@@ -1730,6 +2321,10 @@ void dlgProfilePreferences::returnSearchedCardsHome()
         mpLayout_searchResults->removeWidget(pHeader);
         pHeader->hide();
     }
+    for (auto* pLink : std::as_const(mSearchSubpageLinks)) {
+        mpLayout_searchResults->removeWidget(pLink);
+        pLink->hide();
+    }
     mPopulating = wasPopulating;
 }
 
@@ -1766,6 +2361,12 @@ void dlgProfilePreferences::exitSearchMode()
         // still current and setCurrentRow() would report no change:
         mpListWidget_categories->item(row)->setSelected(true);
         slot_categorySelected(row);
+    }
+    // ...and if it was a subpage the query interrupted, the category page it
+    // belongs to is only half the way back
+    if (const QString subpage = mSubpageBeforeSearch; !subpage.isEmpty()) {
+        mSubpageBeforeSearch.clear();
+        showSubpage(subpage.section(QLatin1Char('/'), 0, 0), subpage.section(QLatin1Char('/'), 1));
     }
     setUpdatesEnabled(true);
 }
@@ -1836,6 +2437,31 @@ QLabel* dlgProfilePreferences::searchCategoryHeader(const QString& key)
     return pHeader;
 }
 
+// What a search result on a subpage looks like: not the card - taking that
+// would empty the page behind the row that opens it - but the way in, which
+// lands on the subpage with the card it found already outlined.
+QPushButton* dlgProfilePreferences::searchSubpageLink(const QString& subpageKey, QWidget* pCard)
+{
+    QPushButton* pLink = mSearchSubpageLinks.value(subpageKey, nullptr);
+    if (!pLink) {
+        pLink = new QPushButton(mpScrollArea_searchResults->widget());
+        pLink->setObjectName(qsl("settingsSearchSubpageResult"));
+        makeChevronRow(pLink);
+        pLink->hide();
+        mSearchSubpageLinks.insert(subpageKey, pLink);
+    }
+    // Re-worded every time, because a language change replaces the name under a
+    // link this map is holding
+    pLink->setText(mSubpageTitles.value(subpageKey));
+    // ...and re-aimed every time, because which card on the subpage matched is
+    // this query's answer rather than the last one's
+    disconnect(pLink, &QAbstractButton::clicked, this, nullptr);
+    connect(pLink, &QAbstractButton::clicked, this, [this, subpageKey, pCard = QPointer<QWidget>(pCard)]() {
+        showSubpage(subpageKey.section(QLatin1Char('/'), 0, 0), subpageKey.section(QLatin1Char('/'), 1), pCard);
+    });
+    return pLink;
+}
+
 void dlgProfilePreferences::slot_categorySelected(const int row)
 {
     QListWidgetItem* pItem = mpListWidget_categories->item(row);
@@ -1848,9 +2474,15 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     }
     if (mSearchActive) {
         // Picking a category is one of the ways out of the results, and
-        // clearing the field is what puts every borrowed card back:
+        // clearing the field is what puts every borrowed card back. Whatever
+        // page the query interrupted, this is the one being asked for now:
+        mSubpageBeforeSearch.clear();
         mpLineEdit_search->clear();
     }
+    // Whatever else this slot is being run for, what comes out of it is a
+    // category page - so any subpage that was showing is being left:
+    mCurrentSubpage.clear();
+    mpButton_subpageBack->hide();
     // QStackedLayout hands the keyboard focus from the outgoing page to the
     // incoming one, and taking it off a control the page has scrolled out of
     // sight scrolls that page back to the top on the way past. A sidebar click
@@ -1887,9 +2519,17 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
 
 void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
 {
-    const QString url = pItem ? pItem->data(Qt::UserRole + 1).toString() : QString();
-    if (!url.isEmpty()) {
+    if (!pItem) {
+        return;
+    }
+    if (const QString url = pItem->data(Qt::UserRole + 1).toString(); !url.isEmpty()) {
         QDesktopServices::openUrl(QUrl(url));
+        return;
+    }
+    // Choosing the category a subpage belongs to is no row change, so the
+    // row-changed slot never runs and the subpage would simply stay put:
+    if (const QString key = pItem->data(Qt::UserRole).toString(); !key.isEmpty() && mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
+        leaveSubpage();
     }
 }
 
@@ -2057,9 +2697,28 @@ void dlgProfilePreferences::applyShellStyle()
                                       "QGroupBox[searchMatch=\"true\"]::title { background-color: %10; border-radius: 3px; }"
                                       // Only ever seen beside the "Search results" title, so it is
                                       // drawn as a piece of that heading rather than as a button
-                                      "#settingsSearchBack { border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; color: %2; background: transparent; }"
-                                      "#settingsSearchBack:hover { background-color: %3; }"
-                                      "#settingsSearchBack:focus { border: 1px solid %5; }")
+                                      "#settingsSearchBack, #settingsSubpageBack { border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; color: %2; background: transparent; }"
+                                      "#settingsSearchBack:hover, #settingsSubpageBack:hover { background-color: %3; }"
+                                      "#settingsSearchBack:focus, #settingsSubpageBack:focus { border: 1px solid %5; }"
+                                      // The line under a card's title, and the one under a protocol's
+                                      // name: quieter than what they describe, and indented under it
+                                      "#settingsCardDescription { color: %9; }"
+                                      "QLabel[settingsControlDescription=\"true\"] { color: %9; margin-left: 20px; margin-bottom: 6px; }"
+                                      // A row that leads somewhere: its text at the left, a chevron at
+                                      // the right edge, and the whole card's width to be clicked on
+                                      "QAbstractButton[settingsChevronRow=\"true\"] { text-align: left; padding: 8px 30px 8px 10px; border: 1px solid %7; border-radius: 6px;"
+                                      // Qt's stylesheets cannot scale a background image, so the
+                                      // chevron has to be the 16px copy of the icon rather than the
+                                      // 48px one beside it
+                                      " background-color: transparent; background-image: url(:/icons/arrow-right_grey-16x.png); background-repeat: no-repeat;"
+                                      " background-position: right center; background-origin: padding; }"
+                                      "QAbstractButton[settingsChevronRow=\"true\"]:hover { background-color: %3; }"
+                                      "QAbstractButton[settingsChevronRow=\"true\"]:focus { border: 1px solid %5; }"
+                                      // The one status hero: it carries no setting, so it is tinted
+                                      // rather than framed like the cards that do
+                                      "QGroupBox[settingsHero=\"true\"] { background-color: %4; border: 1px solid %5; }"
+                                      "#settingsHeroHeadline { font-weight: bold; font-size: 115%; }"
+                                      "#settingsHeroDetail { color: %9; }")
                                           .arg(pageColor.name(), textColor.name(), hoverSoft, accentSoft, accentColor.name(), accentText.name(), borderColor.name(), cardColor.name(), mutedText.name())
                                           .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name())
                                   + cardIndicatorRules);
@@ -2087,10 +2746,20 @@ void dlgProfilePreferences::applyShellStyle()
     }
 
     // A rich-text anchor takes its colour from the palette rather than from the
-    // stylesheet, and the theme's default is not chosen against a card
-    QPalette emptyStatePalette = mpLabel_searchEmpty->palette();
-    emptyStatePalette.setColor(QPalette::Link, accentText);
-    mpLabel_searchEmpty->setPalette(emptyStatePalette);
+    // stylesheet, and the theme's default is not chosen against a card. Every
+    // label the shell puts a link in needs the same treatment.
+    QList<QLabel*> linkLabels{mpLabel_searchEmpty, mpLabel_securityLink.data()};
+    for (auto* pDescription : findChildren<QLabel*>(qsl("settingsCardDescription"))) {
+        linkLabels.append(pDescription);
+    }
+    for (auto* pLabel : linkLabels) {
+        if (!pLabel) {
+            continue;
+        }
+        QPalette linkPalette = pLabel->palette();
+        linkPalette.setColor(QPalette::Link, accentText);
+        pLabel->setPalette(linkPalette);
+    }
 }
 
 // Controls are found by type rather than listed by hand, since a list would
@@ -2137,15 +2806,6 @@ void dlgProfilePreferences::connectApplyTriggers()
         }
         connect(pLineEdit, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_lineEditFinished, Qt::UniqueConnection);
     }
-    // The telnet protocols are the one setting that is edited through a menu
-    // rather than a control on a page:
-    if (protocolMenu) {
-        for (auto* pAction : protocolMenu->actions()) {
-            if (pAction->isCheckable()) {
-                connect(pAction, &QAction::toggled, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
-            }
-        }
-    }
 }
 
 // An invalid QVariant for anything holding no value a setting is written from.
@@ -2185,9 +2845,6 @@ static QVariant controlValue(const QObject* pControl)
     if (const auto* pLineEdit = qobject_cast<const QLineEdit*>(pControl)) {
         return pLineEdit->text();
     }
-    if (const auto* pAction = qobject_cast<const QAction*>(pControl)) {
-        return pAction->isCheckable() ? QVariant(pAction->isChecked()) : QVariant();
-    }
     return {};
 }
 
@@ -2221,14 +2878,6 @@ void dlgProfilePreferences::snapshotValues()
             continue;
         }
         mValueSnapshot.insert(pWidget, value);
-    }
-    if (protocolMenu) {
-        for (const auto* pAction : protocolMenu->actions()) {
-            const QVariant value = controlValue(pAction);
-            if (value.isValid()) {
-                mValueSnapshot.insert(pAction, value);
-            }
-        }
     }
     mShortcutsSnapshot = currentShortcuts;
 }
@@ -2319,6 +2968,9 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupBox_protocols -----
     groupBox_protocols->setEnabled(false);
     pushButton_chooseProtocols->setEnabled(false);
+    // The protocols themselves are on a page of their own now, which the card
+    // above no longer encloses:
+    mpCard_protocolList->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
     // ----- groupBox_logOptions -----
@@ -2405,6 +3057,9 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_askTlsAvailable->setEnabled(false);
 
     groupBox_discordPrivacy->hide();
+    if (mpCard_discord) {
+        mpCard_discord->hide();
+    }
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(false);
@@ -2451,6 +3106,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupBox_protocols->setEnabled(true);
     pushButton_chooseProtocols->setEnabled(true);
+    mpCard_protocolList->setEnabled(true);
 
     groupBox_logOptions->setEnabled(true);
 
@@ -2523,6 +3179,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     // ===== tab_chat =====
     groupBox_discordPrivacy->show();
+    mpCard_discord->show();
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
@@ -2764,6 +3421,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     if (mudlet::self()->mDiscord.libraryLoaded()) {
         Host::DiscordOptionFlags const discordFlags = pHost->mDiscordAccessFlags;
         groupBox_discordPrivacy->show();
+        mpCard_discord->show();
 
         const bool enablePrivacy = (pHost->mDiscordMode == Host::DiscordShowGameDetails);
         comboBox_discordLargeIconPrivacy->setEnabled(enablePrivacy);
@@ -2877,68 +3535,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
-    if (!protocolMenu) {
-        protocolMenu = new QMenu(tr("Protocols"), this);
-    }
-    protocolMenu->clear();
-
-    mEnableCHARSET = new QAction(tr("CHARSET: Character Encoding Standard"), protocolMenu);
-    mEnableCHARSET->setCheckable(true);
+    // The protocol checkboxes and everything they mean to each other were built
+    // once, in buildProtocolsSubpage(); a profile only decides what they show
     mEnableCHARSET->setChecked(pHost->mEnableCHARSET);
-    protocolMenu->addAction(mEnableCHARSET);
-
-    mEnableGMCP = new QAction(tr("GMCP: Generic Mud Communication Protocol"), protocolMenu);
-    mEnableGMCP->setCheckable(true);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
-    protocolMenu->addAction(mEnableGMCP);
-
-    mEnableMNES = new QAction(tr("MNES: Mud New-Environ Standard"), protocolMenu);
-    mEnableMNES->setCheckable(true);
     mEnableMNES->setChecked(pHost->mEnableMNES);
-    //: Tooltip for MNES protocol option explaining mutual exclusivity with NEW-ENVIRON
-    mEnableMNES->setToolTip(tr("MNES uses the same telnet option as NEW-ENVIRON, so only one can be active. MNES sends a minimal set of variables, while NEW-ENVIRON sends extended variables "
-                               "including OSC link support."));
-    protocolMenu->addAction(mEnableMNES);
-
-    mEnableMSDP = new QAction(tr("MSDP: Mud Server Data Protocol"), protocolMenu);
-    mEnableMSDP->setCheckable(true);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
-    protocolMenu->addAction(mEnableMSDP);
-
-    mEnableMSP = new QAction(tr("MSP: Mud Sound Protocol"), protocolMenu);
-    mEnableMSP->setCheckable(true);
     mEnableMSP->setChecked(pHost->mEnableMSP);
-    protocolMenu->addAction(mEnableMSP);
-
-    mEnableMSSP = new QAction(tr("MSSP: Mud Server Status Protocol"), protocolMenu);
-    mEnableMSSP->setCheckable(true);
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
-    protocolMenu->addAction(mEnableMSSP);
-
-    mEnableMTTS = new QAction(tr("MTTS: Mud Terminal Type Standard"), protocolMenu);
-    mEnableMTTS->setCheckable(true);
     mEnableMTTS->setChecked(pHost->mEnableMTTS);
-    protocolMenu->addAction(mEnableMTTS);
-
-    mEnableMXP = new QAction(tr("MXP: Mud eXtension Protocol"), protocolMenu);
-    mEnableMXP->setCheckable(true);
     mEnableMXP->setChecked(pHost->mEnableMXP);
-    protocolMenu->addAction(mEnableMXP);
-
-    mEnableNAWS = new QAction(tr("NAWS: Negotiate About Window Size"), protocolMenu);
-    mEnableNAWS->setCheckable(true);
     mEnableNAWS->setChecked(pHost->mEnableNAWS);
-    protocolMenu->addAction(mEnableNAWS);
-
-    mEnableNEWENVIRON = new QAction(tr("NEW-ENVIRON: Client Variables Standard"), protocolMenu);
-    mEnableNEWENVIRON->setCheckable(true);
     mEnableNEWENVIRON->setChecked(pHost->mEnableNEWENVIRON);
-    //: Tooltip for NEW-ENVIRON protocol option explaining mutual exclusivity with MNES
-    mEnableNEWENVIRON->setToolTip(
-            tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
-    protocolMenu->addAction(mEnableNEWENVIRON);
-
-    pushButton_chooseProtocols->setMenu(protocolMenu);
+    updateProtocolSummary();
 
     groupBox_purgeMediaCache->setVisible(true);
     connect(buttonPurgeMediaCache, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_purgeMediaCache);
@@ -3308,6 +3917,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // Identify which Profile we are showing the settings for:
     setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
+    updateSecurityStatus();
+    updateDiscordSummary();
 
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
@@ -3364,31 +3975,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor);
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor);
 
-    connect(mEnableGMCP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    // The GMCP Char.Login "forget saved sign-in" control is only meaningful when GMCP is on.
-    connect(mEnableGMCP, &QAction::toggled, pushButton_forgetSavedSignIn, &QWidget::setEnabled);
     connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn);
-    connect(mEnableMSDP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMSSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMSP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMXP, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMTTS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMNES, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableNAWS, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableCHARSET, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableNEWENVIRON, &QAction::toggled, need_reconnect_for_data_protocol, &QWidget::show);
 
-    // MNES and NEW-ENVIRON both use telnet option 39, so they are mutually exclusive
-    connect(mEnableMNES, &QAction::toggled, this, [this](bool checked) {
-        if (checked && mEnableNEWENVIRON->isChecked()) {
-            mEnableNEWENVIRON->setChecked(false);
-        }
-    });
-    connect(mEnableNEWENVIRON, &QAction::toggled, this, [this](bool checked) {
-        if (checked && mEnableMNES->isChecked()) {
-            mEnableMNES->setChecked(false);
-        }
-    });
+    // The security hero says what this profile's connection actually is at this
+    // moment, so it has to hear about the connection coming and going
+    connect(&pHost->mTelnet, &cTelnet::signal_connecting, this, &dlgProfilePreferences::updateSecurityStatus, Qt::UniqueConnection);
+    connect(&pHost->mTelnet, &cTelnet::signal_connected, this, &dlgProfilePreferences::updateSecurityStatus, Qt::UniqueConnection);
+    connect(&pHost->mTelnet, &cTelnet::signal_disconnected, this, &dlgProfilePreferences::updateSecurityStatus, Qt::UniqueConnection);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -3619,16 +4212,10 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(mEnableGMCP, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableMSSP, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableMSDP, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableMSP, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableMXP, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableMTTS, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableMNES, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableNAWS, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableCHARSET, &QAction::toggled, nullptr, nullptr);
-    disconnect(mEnableNEWENVIRON, &QAction::toggled, nullptr, nullptr);
+    // The protocol checkboxes are deliberately not in this list any more: what
+    // they are wired to says how the controls relate to each other rather than
+    // anything about a Host, so buildProtocolsSubpage() wires them once and
+    // nothing here has to take that apart again.
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -3780,6 +4367,8 @@ void dlgProfilePreferences::clearHostDetails()
     pushButton_forgetSavedSignIn->setEnabled(false);
     pushButton_forgetSavedSignIn->setVisible(false);
     groupBox_proxy->setDisabled(true);
+    // With no profile there is no connection for the hero to report on
+    updateSecurityStatus();
 
     // Remove the reference to the Host/profile in the title:
     setWindowTitle(tr("Profile preferences"));
@@ -4001,9 +4590,21 @@ void dlgProfilePreferences::setTab(QString tab)
         }
     } else if (const int separator = tab.indexOf(QLatin1Char('/')); separator > 0) {
         category = tab.left(separator);
-        pSpotlightTarget = findChild<QWidget*>(tab.mid(separator + 1));
+        const QString target = tab.mid(separator + 1);
+        if (mSubpageIndexes.contains(tab)) {
+            showSubpage(category, target);
+            return;
+        }
+        pSpotlightTarget = findChild<QWidget*>(target);
     }
 
+    // A card that lives on a subpage is only reachable by going into it, so a
+    // link naming one takes that way in rather than landing on the category
+    // page with nothing to spotlight
+    if (const QString subpage = subpageHolding(pSpotlightTarget); !subpage.isEmpty()) {
+        showSubpage(subpage.section(QLatin1Char('/'), 0, 0), subpage.section(QLatin1Char('/'), 1), pSpotlightTarget);
+        return;
+    }
     showCategory(category, pSpotlightTarget);
 }
 
@@ -7530,6 +8131,12 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 
 void dlgProfilePreferences::reject()
 {
+    // Esc goes up a level before it goes out of the dialog: on a subpage it
+    // means the same as the back chevron beside the breadcrumb.
+    if (!mClosing && !mCurrentSubpage.isEmpty()) {
+        leaveSubpage();
+        return;
+    }
     // Esc has to mean what the window's close button means, and QDialog's own
     // reject() hides the dialog without ever sending a close event - so it is
     // routed through close(), which arrives back here from

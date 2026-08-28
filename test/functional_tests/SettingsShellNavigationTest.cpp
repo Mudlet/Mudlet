@@ -41,6 +41,7 @@
 #include <QtTest/QtTest>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
 #include <QLabel>
@@ -50,8 +51,10 @@
 #include <QSettings>
 #include <QScopeGuard>
 #include <QSpinBox>
+#include <QRegularExpression>
 #include <QStackedWidget>
 #include <QStyleOptionGroupBox>
+#include <QToolButton>
 #include <QTranslator>
 #include <QWheelEvent>
 #include <cmath>
@@ -678,6 +681,129 @@ private slots:
         QCoreApplication::processEvents();
 
         QVERIFY2(pSpinBox->value() != 10, "the wheel was refused by a spin box that had the keyboard focus");
+    }
+
+    // A card that holds too much to read on a page of its own is a row that
+    // leads to one: the sidebar stays where it was, the title becomes a
+    // breadcrumb, and the chevron and Escape both go back up a level.
+    void test_aCardWithASubpageDrillsIntoItAndBackOut()
+    {
+        auto* pSubpage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols"));
+        auto* pCategoryPage = pageOf(qsl("connection"));
+        QVERIFY2(pSubpage, "the game protocols subpage was not built");
+        QVERIFY(pCategoryPage);
+        selectCategory(qsl("connection"));
+
+        mpPreferences->pushButton_chooseProtocols->click();
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pSubpage);
+        // The sidebar still says which category this page belongs to
+        QCOMPARE(sidebar()->currentRow(), rowOf(qsl("connection")));
+
+        auto* pTitle = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitle"));
+        const QString breadcrumb = pTitle->text();
+        QVERIFY2(breadcrumb.startsWith(sidebar()->item(rowOf(qsl("connection")))->text()), qPrintable(qsl("the subpage's title '%1' does not begin with the category it belongs to").arg(breadcrumb)));
+        QVERIFY2(breadcrumb.contains(QChar(0x203a)), qPrintable(qsl("the subpage's title '%1' is not a breadcrumb").arg(breadcrumb)));
+
+        auto* pBack = mpPreferences->findChild<QToolButton*>(qsl("settingsSubpageBack"));
+        QVERIFY2(pBack, "there is no subpage back chevron");
+        QVERIFY2(pBack->isVisible(), "the subpage showed no back chevron");
+        pBack->click();
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pCategoryPage);
+        QCOMPARE(pTitle->text(), sidebar()->item(rowOf(qsl("connection")))->text());
+        QVERIFY2(pBack->isHidden(), "the back chevron stayed on show once a category page was back");
+
+        // ...and Escape means the same thing there, rather than closing
+        mpPreferences->pushButton_chooseProtocols->click();
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pSubpage);
+        QTest::keyClick(mpPreferences, Qt::Key_Escape);
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pCategoryPage);
+        QVERIFY2(mpPreferences->isVisible(), "Escape on a subpage closed the whole dialog instead of going up a level");
+    }
+
+    // Every protocol that used to be a check item in a pop-up menu is a
+    // checkbox with a line of its own saying what it does.
+    void test_everyProtocolIsACheckboxWithADescription()
+    {
+        const QStringList protocols{qsl("CHARSET"), qsl("GMCP"), qsl("MNES"), qsl("MSDP"), qsl("MSP"), qsl("MSSP"), qsl("MTTS"), qsl("MXP"), qsl("NAWS"), qsl("NEWENVIRON")};
+        auto* pSubpage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols"));
+        QVERIFY2(pSubpage, "the game protocols subpage was not built");
+        for (const QString& protocol : protocols) {
+            auto* pCheckBox = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_enable%1").arg(protocol));
+            QVERIFY2(pCheckBox, qPrintable(qsl("there is no checkbox for the %1 protocol").arg(protocol)));
+            QVERIFY2(pSubpage->widget()->isAncestorOf(pCheckBox), qPrintable(qsl("the %1 checkbox is not on the protocols subpage").arg(protocol)));
+            QVERIFY2(!pCheckBox->text().isEmpty(), qPrintable(qsl("the %1 checkbox has no label").arg(protocol)));
+            auto* pDescription = mpPreferences->findChild<QLabel*>(qsl("checkBox_enable%1_description").arg(protocol));
+            QVERIFY2(pDescription, qPrintable(qsl("the %1 checkbox has no description label").arg(protocol)));
+            QVERIFY2(!pDescription->text().isEmpty(), qPrintable(qsl("the %1 checkbox's description is empty").arg(protocol)));
+        }
+    }
+
+    // A description says what a card is for in the player's own terms, and
+    // where the wiki has a page about it, ends in a link to that page.
+    void test_cardsThatNeedOneCarryADescriptionLine()
+    {
+        const QStringList described{qsl("groupBox_protocols"), qsl("groupBox_ssl"), qsl("groupBox_proxy"), qsl("card_passwords"), qsl("card_crashReports"), qsl("card_discord")};
+        for (const QString& objectName : described) {
+            auto* pCard = mpPreferences->findChild<QGroupBox*>(objectName);
+            QVERIFY2(pCard, qPrintable(qsl("there is no card called %1").arg(objectName)));
+            auto* pDescription = pCard->findChild<QLabel*>(qsl("settingsCardDescription"), Qt::FindDirectChildrenOnly);
+            QVERIFY2(pDescription, qPrintable(qsl("the %1 card has no description line").arg(objectName)));
+            QVERIFY2(!pDescription->text().isEmpty(), qPrintable(qsl("the %1 card's description is empty").arg(objectName)));
+            // The line goes above everything the card already held
+            auto* pLayout = pCard->layout();
+            QCOMPARE(pLayout->itemAt(0)->widget(), pDescription);
+        }
+
+        // Only where a page really exists: every link the descriptions carry
+        // has to be one of the wiki pages this phase checked resolves
+        const QStringList knownPages{qsl("https://wiki.mudlet.org/w/Manual:Scripting"),
+                                     qsl("https://wiki.mudlet.org/w/Manual:Mapper"),
+                                     qsl("https://wiki.mudlet.org/w/Standards:Discord_GMCP"),
+                                     qsl("https://wiki.mudlet.org/w/Manual:Supported_Protocols"),
+                                     qsl("https://wiki.mudlet.org/w/Manual:Unicode"),
+                                     qsl("https://wiki.mudlet.org/w/Standards:MUD_Client_Media_Protocol")};
+        static const QRegularExpression href(qsl("href=\"([^\"]+)\""));
+        int linked = 0;
+        for (const auto* pDescription : mpPreferences->findChildren<QLabel*>(qsl("settingsCardDescription"))) {
+            for (const auto& match : href.globalMatch(pDescription->text())) {
+                ++linked;
+                QVERIFY2(knownPages.contains(match.captured(1)), qPrintable(qsl("a card description links to '%1', which is not one of the wiki pages checked for this").arg(match.captured(1))));
+            }
+        }
+        QVERIFY2(linked >= 5, qPrintable(qsl("only %1 card descriptions carry a Learn more link").arg(linked)));
+    }
+
+    // The one status hero: it says what the connection is rather than what the
+    // settings under it ask for, and it adds no setting of its own.
+    void test_theSecurityHeroReportsTheLiveConnection()
+    {
+        selectCategory(qsl("privacy"));
+        auto* pHero = mpPreferences->findChild<QGroupBox*>(qsl("card_securityStatus"));
+        QVERIFY2(pHero, "the Privacy and security page has no security status card");
+        QScrollArea* pPage = pageOf(qsl("privacy"));
+        auto* pColumnLayout = qobject_cast<QBoxLayout*>(pPage->widget()->layout());
+        // Above every card on the page, the migration banner aside
+        int firstCard = 0;
+        while (pColumnLayout->itemAt(firstCard)->widget() && pColumnLayout->itemAt(firstCard)->widget()->objectName() == qsl("settingsMigrationBanner")) {
+            ++firstCard;
+        }
+        QCOMPARE(pColumnLayout->itemAt(firstCard)->widget(), pHero);
+
+        auto* pHeadline = mpPreferences->findChild<QLabel*>(qsl("settingsHeroHeadline"));
+        auto* pDetail = mpPreferences->findChild<QLabel*>(qsl("settingsHeroDetail"));
+        QVERIFY(pHeadline && pDetail);
+        QVERIFY2(!pHeadline->text().isEmpty(), "the security hero says nothing about the connection");
+        QVERIFY2(!pDetail->text().isEmpty(), "the security hero offers no detail line");
+        // This profile talks to the stub over a plain socket, so whichever way
+        // the connection went, the hero must not be claiming encryption
+        QVERIFY2(!pHeadline->text().contains(qsl("is encrypted")), qPrintable(qsl("the hero calls an unencrypted connection secure: '%1'").arg(pHeadline->text())));
+
+        // It reflects rather than sets: no control of its own writes a setting
+        QVERIFY2(pHero->findChildren<QAbstractButton*>().isEmpty(), "the security hero grew a control of its own - it is meant to reflect and link, not to set");
     }
 };
 

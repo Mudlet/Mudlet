@@ -290,6 +290,26 @@ private slots:
         QVERIFY2(waitForSpotlight(), "the deep link that arrived during a search drew no spotlight");
     }
 
+    // A subpage is deep-linkable in its own right: "category/subpageKey" goes
+    // into it rather than landing on the category page with the row that opens
+    // it, and the sidebar still shows which category that is.
+    void test_aSubpageTargetGoesIntoTheSubpage()
+    {
+        mpPreferences->setTab(qsl("connection/protocols"));
+        QCOMPARE(currentCategory(), qsl("connection"));
+        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")));
+    }
+
+    // ...and so is a card that lives on one: naming it takes the way in rather
+    // than leaving the spotlight on a page nobody is looking at.
+    void test_aCardOnASubpageIsReachedThroughItsSubpage()
+    {
+        mpPreferences->setTab(qsl("connection/card_protocolList"));
+        QCOMPARE(currentCategory(), qsl("connection"));
+        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")));
+        QVERIFY2(waitForSpotlight(), "the deep link to a card on a subpage drew no spotlight");
+    }
+
     // The pulse is a widget laid over a card, transparent to the mouse but
     // still a child of the page. One left behind after its animation would
     // stack up, one per deep link, over pages the player goes on using.
