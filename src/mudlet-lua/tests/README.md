@@ -133,6 +133,9 @@ that records the last input before it is fed, so the tail of that file is the
 crashing input after an abort - see the header comment in each spec for the full
 list of variables.
 
+Some seeds abort today: the fuzzers reach bugs that are still open, so treat an
+abort as a finding to reduce and report rather than as a broken harness.
+
 ## Creating tests
 
 See [Busted manual](https://lunarmodules.github.io/busted/) and currently existing tests for examples on how to write tests.

@@ -118,10 +118,6 @@ end
 
 -- The op table. Each entry manipulates the given window with wild arguments.
 -- All are pcall-guarded; the aim is to reach the C++ underneath, not to succeed.
-local function argWin(win)
-    return win == "main" and {} or { win }        -- main-window forms omit the name
-end
-
 local function callWin(fn, win, ...)
     if win == "main" then
         return pcall(fn, ...)
@@ -145,14 +141,14 @@ local OPS = {
     function(win) logOp("copy %s", win); callWin(copy, win) end,
     function(win) logOp("paste %s", win); callWin(paste, win) end,
     function(win) logOp("appendBuffer %s", win); callWin(appendBuffer, win) end,
-    function(win) local a, b = wildInt(), wildInt(); logOp("getLines %s %d %d", win, a, b); pcall(getLines, a, b) end,
+    function(win) local a, b = wildInt(), wildInt(); logOp("getLines %s %d %d", win, a, b); callWin(getLines, win, a, b) end,
     function(win) logOp("getColumnNumber %s", win); callWin(getColumnNumber, win) end,
     function(win) logOp("getLineNumber %s", win); callWin(getLineNumber, win) end,
     function(win) logOp("getLastLineNumber %s", win); callWin(getLastLineNumber, win) end,
     function(win) logOp("getCurrentLine %s", win); callWin(getCurrentLine, win) end,
     function(win) local n = wildInt(); logOp("setWindowWrap %s %d", win, n); callWin(setWindowWrap, win, n) end,
     function(win) local n = wildInt(); logOp("setWindowWrapIndent %s %d", win, n); callWin(setWindowWrapIndent, win, n) end,
-    function(win) local t = wildText(); logOp("insertHTML %s %q", win, t); callWin(insertText, win, "<b>" .. t .. "</b>") end,
+    function(win) local t = "<b>" .. wildText() .. "</b>"; logOp("insertHTML %s %q", win, t); callWin(insertText, win, t) end,
     function(win) logOp("clearWindow %s", win); callWin(clearWindow, win) end,
     function(win) logOp("feed-more %s", win); seedLines(win, rrange(1, 3)) end,
     function(win) local n = wildInt(); logOp("selectCaptureGroup %s %d", win, n); callWin(selectCaptureGroup, win, n) end,
