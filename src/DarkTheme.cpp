@@ -42,6 +42,11 @@ void DarkTheme::polish(QPalette& palette)
     palette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
     palette.setColor(QPalette::ToolTipText, Qt::white);
     palette.setColor(QPalette::Text, Qt::white);
+    // Qt derives this role from the light theme's text colour, which on a dark
+    // field draws the placeholder all but black, so derive it from ours instead
+    QColor placeholderText(palette.color(QPalette::Text));
+    placeholderText.setAlphaF(0.5f);
+    palette.setColor(QPalette::PlaceholderText, placeholderText);
     palette.setColor(QPalette::Dark, QColor(35, 35, 35));
     palette.setColor(QPalette::Light, QColor(75, 75, 75));
     palette.setColor(QPalette::Midlight, QColor(64, 64, 64));
