@@ -485,6 +485,32 @@ describe("Tests the functionality of uninstallPackage", function()
     assert.equals(1, #detailed)
     assert.equals(minimalPackage, detailed[1][1])
   end)
+
+  it("still describes the package while its uninstall is being announced", function()
+    withFixturePackage(minimalPackage)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- what a handler hears this event to do is tidy up after the package, and
+    -- what it has to go on is the package's own details: its version decides
+    -- which of its settings to migrate or throw away, its title is what it names
+    -- in whatever it says to the user. Dropping those first leaves the handler
+    -- asking about a package that no longer describes itself, with the uninstall
+    -- already past the point of being called off.
+    local versionSeen, titleSeen
+    local handler = registerAnonymousEventHandler("sysUninstall", function(_, which)
+      if which == minimalPackage then
+        versionSeen = getPackageInfo(minimalPackage, "version")
+        titleSeen = getPackageInfo(minimalPackage, "title")
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+
+    removeFixturePackage(minimalPackage)
+
+    assert.equals("1.0", versionSeen, "the package's details were dropped before its uninstall was announced")
+    assert.equals("Minimal fixture package for Package_spec.lua", titleSeen)
+    assert.same({}, getPackageInfo(minimalPackage), "the details outlived the uninstall")
+  end)
 end)
 
 describe("Tests the functionality of getPackages", function()

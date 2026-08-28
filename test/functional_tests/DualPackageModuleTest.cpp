@@ -310,11 +310,22 @@ private slots:
         QCOMPARE(aliasCount(host, qsl("dual-spec package alias")), 1);
         QCOMPARE(aliasCount(host, qsl("dual-spec module alias")), 1);
 
+        // neither half carries a config.lua, so the details they would have been
+        // installed with are put in by hand
+        host->mPackageInfo[mDualName] = QMap<QString, QString>{{qsl("mpackage"), mDualName}, {qsl("version"), qsl("1.0")}};
+        host->mModuleInfo[mDualName] = QMap<QString, QString>{{qsl("mpackage"), mDualName}, {qsl("version"), qsl("2.0")}};
+
         QVERIFY2(host->uninstallPackage(mDualName, enums::PackageModuleType::Package), "The uninstall was refused");
         QApplication::processEvents();
 
         QVERIFY2(!host->mInstalledPackages.contains(mDualName), "The package half stayed listed");
         QVERIFY2(!host->mInstalledModules.contains(mDualName), "The module half stayed listed after its items were destroyed with the package's");
+        QVERIFY2(!host->mPackageInfo.contains(mDualName), "The named half kept its details");
+        // the half that was not named is removed by the block that catches the
+        // combination, and its details have to go with it: leaving them is what
+        // has getModuleInfo() describing a module that is not installed any more,
+        // and what puts a row nothing can remove in the package manager's search
+        QVERIFY2(!host->mModuleInfo.contains(mDualName), "The half that was not named kept its details, so it still describes itself after being removed");
         QCOMPARE(aliasCount(host, qsl("dual-spec package alias")), 0);
         QCOMPARE(aliasCount(host, qsl("dual-spec module alias")), 0);
         QVERIFY2(bufferContains(qsl("was installed as both a package and a module")), qPrintable(qsl("Removing both halves has to be announced, but the buffer held: \"%1\"").arg(joinedBuffer())));
