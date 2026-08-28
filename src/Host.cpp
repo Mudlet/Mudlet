@@ -1378,8 +1378,16 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     QFont font;
-    font.fromString(fontData);
-    setDisplayFont(font);
+    if (!font.fromString(fontData)) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the font in use is kept.";
+        return;
+    }
+
+    // A profile's own saved font and a font a package brings with it both arrive
+    // here, which can be long after a stand-in for a missing font went up. Either
+    // is a choice of family rather than an adjustment, so it retires the stand-in
+    // and becomes what gets saved - otherwise it is undone again on the next save.
+    setDisplayFont(font, DisplayFontChange::UserChoice);
 }
 
 void Host::setDisplayFontSize(int size)

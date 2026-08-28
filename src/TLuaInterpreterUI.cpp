@@ -752,15 +752,12 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
 
     QFont font = pT->font();
     const auto resolved = host.resolveFontFamily(fontName);
-    if (resolved.available) {
-        font.setFamily(resolved.family);
-        font.setWeight(resolved.weight);
-    } else {
-        // The font database leaves out families the platform still resolves -
-        // fontconfig aliases such as "Helvetica" - and this function always
-        // handed the name straight to Qt, so an unknown one keeps doing that
-        font.setFamily(fontName);
-    }
+    // An unlisted name goes through as given: the font database leaves out
+    // families the platform still resolves, such as the fontconfig alias
+    // "Helvetica". The weight comes from the resolution either way, so the bold
+    // of an earlier "Family Style" name is not left behind on the next family.
+    font.setFamily(resolved.available ? resolved.family : fontName);
+    font.setWeight(resolved.weight);
     pT->setFont(font);
     lua_pushboolean(L, true);
     return 1;

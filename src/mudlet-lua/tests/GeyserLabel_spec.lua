@@ -1256,7 +1256,20 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       local built
       assert.has_no.errors(function() built = track(Geyser.Label:new({name = "glfFontNotAString", x = 0, y = 60, width = 200, height = 50, font = 12})) end)
       assert.is_truthy(built)
+      -- the refused constraint must not be left to reach the markup, where
+      -- string.format would put the bare number in the <font face>
       assert.are.equal("", built.font)
+      assert.is_nil(getLabelText("glfFontNotAString"):find("<font face", 1, true))
+    end)
+
+    it("takes the font of a label used as a prototype", function()
+      local prototype = track(Geyser.Label:new({name = "glfPrototype", x = 0, y = 120, width = 200, height = 50}))
+      prototype:setFont("Ubuntu Mono")
+      local child = track(prototype:new({name = "glfPrototypeChild", x = 0, y = 180, width = 200, height = 50}))
+      -- the child writes no font of its own, so the prototype's is inherited and
+      -- reaches the markup; the child's widget font is its own and stays default
+      assert.are.equal("Ubuntu Mono", child.font)
+      assert.is_truthy(getLabelText("glfPrototypeChild"):find('<font face ="Ubuntu Mono">', 1, true))
     end)
   end)
 

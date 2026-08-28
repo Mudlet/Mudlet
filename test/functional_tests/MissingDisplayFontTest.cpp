@@ -52,7 +52,9 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTextBox.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -375,6 +377,63 @@ private slots:
 
         QVERIFY(mpHost->setDisplayFont(QFont(Host::scmDefaultFontFamily, 14, QFont::Normal), Host::DisplayFontChange::UserChoice).first);
         QCOMPARE(mpHost->getDisplayFontForSaving().family(), Host::scmDefaultFontFamily);
+    }
+
+    // A profile's own <mDisplayFont>, and one a package brings with it, both come
+    // in through setDisplayFontFromString() - which can happen long after a
+    // stand-in went up. It is a choice of family and has to become what is saved,
+    // or the font the package asked for is undone again on the next save.
+    void test_aDisplayFontArrivingFromXmlBecomesTheFamilyTheProfileAsksFor()
+    {
+        QVERIFY(mpHost->setDisplayFont(QFont(mMissingFamily, 14, QFont::Normal)).first);
+        QVERIFY(mpHost->substituteMissingDisplayFont());
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        mpHost->setDisplayFontFromString(QFont(mOtherBundledFamily, 12).toString());
+        QCOMPARE(mpHost->getDisplayFont().family(), mOtherBundledFamily);
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mOtherBundledFamily);
+        QCOMPARE(mpHost->getDisplayFontForSaving().pointSize(), 12);
+    }
+
+    // A truncated or empty <mDisplayFont> leaves QFont::fromString() with a
+    // proportional "Sans Serif" that its letters do have a width for, so nothing
+    // downstream turns it away. Taking it would count as a choice of family and
+    // throw away the record of the font the profile really asks for.
+    void test_aFontDescriptionThatCannotBeReadLeavesTheFontAlone()
+    {
+        QVERIFY(mpHost->setDisplayFont(QFont(mMissingFamily, 14, QFont::Normal)).first);
+        QVERIFY(mpHost->substituteMissingDisplayFont());
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        mpHost->setDisplayFontFromString(QString());
+        QCOMPARE(mpHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+    }
+
+    // setTextEditFont() takes the weight out of a "Family Style" name, so it has
+    // to put the weight back to normal for a name that carries none - or the bold
+    // of an earlier call is left behind on whatever family is set next.
+    void test_setTextEditFontDoesNotLeaveAnEarlierWeightBehind()
+    {
+        const QString profileName = qsl("MissingDisplayFont-TextEdit-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createTextEdit('main', 'mdfTextEdit', 0, 0, 100, 50)")));
+        auto* pTextEdit = pHost->mpConsole->mTextBoxMap.value(qsl("mdfTextEdit"));
+        QVERIFY2(pTextEdit, "the test text edit was not created");
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1 Bold')").arg(mOtherBundledFamily)));
+        QCOMPARE(pTextEdit->font().weight(), QFont::Bold);
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1')").arg(mMissingFamily)));
+        QCOMPARE(pTextEdit->font().family(), mMissingFamily);
+        QCOMPARE(pTextEdit->font().weight(), QFont::Normal);
     }
 
     // The whole point of the check, over the production load path: the console
