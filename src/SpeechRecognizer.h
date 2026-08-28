@@ -192,9 +192,6 @@ public:
 
     virtual QString backendVersion() const = 0;
 
-    // Check if the backend is available (library loaded, etc.)
-    virtual bool backendAvailable() const = 0;
-
     // === Recognition Settings ===
 
     // Sensitivity mode controls how quickly the recognizer detects end of speech.

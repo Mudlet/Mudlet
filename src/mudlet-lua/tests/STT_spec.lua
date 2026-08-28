@@ -135,6 +135,40 @@ describe("stt bridge", function()
       assert.is_string(err, "a refusal should say why")
     end)
 
+    -- "Refusals speak" has to hold with no engine installed too, which is
+    -- where there is no recognizer to emit through and so was the one place it
+    -- did not: a package driving the bridge from events alone saw nothing
+    -- happen and could not tell a missing engine from a quiet microphone.
+    it("tells a package listening for sysSTTError why it refused", function()
+      local seen
+      local handler = registerAnonymousEventHandler("sysSTTError", function(_, message) seen = message end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local _, err = stt.init("/definitely/not/a/model/path/for/testing")
+      assert.is_string(seen, "the refusal was returned to the caller but never announced")
+      assert.are.equal(err, seen, "the event and the return value should carry the same reason")
+    end)
+
+    -- A refusal that is the script's own mistake is not news for every package
+    -- on the profile - only what the engine could not do is
+    it("does not announce an argument mistake as an engine error", function()
+      local raised = false
+      local handler = registerAnonymousEventHandler("sysSTTError", function() raised = true end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      stt.setSilenceTimeout(-1)
+      assert.is_false(raised, "a bad argument is a script error, not something the engine reports")
+    end)
+
+    -- modelPath is what a package reads to decide whether setup already
+    -- happened, so a path that failed to load standing in it skips the init
+    -- that was needed
+    it("names no model after a failed load", function()
+      if stt.initialized() then return end
+      stt.init("/definitely/not/a/model/path/for/testing")
+      assert.are.equal("", stt.getInfo().modelPath, "a model that never loaded was reported as loaded")
+    end)
+
     -- The message has to name the thing that is actually missing. When the
     -- engine library is absent no backend is available, so no model can be
     -- chosen however many are installed - and being told to install a model
@@ -145,6 +179,18 @@ describe("stt bridge", function()
       assert.is_nil(ok, "init with no engine library should fail")
       assert.is_string(err)
       assert.is_truthy(err:find("librar"), "the refusal should name the engine library, got: " .. tostring(err))
+    end)
+
+    -- With the library present and no model, the refusal has to name the
+    -- directory a model belongs in. It used to report a made-up default path
+    -- as missing, which named a directory the reader never created and left
+    -- the "install a model" message unreachable.
+    it("names where a model belongs when none is installed", function()
+      if not stt.available() or #stt.listModels() > 0 then return end
+      local ok, err = stt.init()
+      assert.is_nil(ok, "init with no model installed should fail")
+      assert.is_string(err)
+      assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
     end)
 
     it("refuses to start before a model is loaded", function()
@@ -170,6 +216,15 @@ describe("stt bridge", function()
   describe("safe when nothing is set up", function()
 
     it("stops without complaint when nothing is listening", function()
+      -- Only from a state that is not error: "stopped" and "was never running
+      -- because it failed" are different answers, and the second one is
+      -- reported rather than dressed up as the first
+      if stt.getInfo().state == "error" then
+        local ok, err = stt.stop()
+        assert.is_nil(ok, "stopping in an error state should not claim a clean stop")
+        assert.is_string(err)
+        return
+      end
       assert.is_true(stt.stop(), "stopping nothing is not an error")
     end)
 

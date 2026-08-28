@@ -28,6 +28,7 @@
 #include <QString>
 #include <QVariantList>
 
+class QJsonArray;
 class QJsonObject;
 class SpeechAudioCapture;
 
@@ -86,14 +87,18 @@ public:
     float audioLevel() const override { return listening() ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
     void releaseResources() override;
-    QString modelPath() const override { return mModelPath; }
+    // Both read through the live model handle rather than answering from a
+    // remembered string. getInfo() documents modelPath as "the model actually
+    // loaded (empty when none)" and a package reads it to decide whether setup
+    // has already happened, so where the assignment sits must not be able to
+    // make it name a model that failed to load or has just been freed.
+    QString modelPath() const override { return mVoskModel ? mModelPath : QString(); }
 
-    QString currentLanguage() const override { return mCurrentLanguage; }
+    QString currentLanguage() const override { return mVoskModel ? mCurrentLanguage : QString(); }
     bool setLanguage(const QString& languageCode) override;
 
     QString backendName() const override { return qsl("Vosk"); }
     QString backendVersion() const override;
-    bool backendAvailable() const override;
 
     // SpeechRecognizer sensitivity interface (maps to EndpointerMode)
     bool setSensitivity(Sensitivity sensitivity) override;
@@ -105,6 +110,16 @@ public:
 
     // Whether the Vosk library can be used, loading it on the first ask
     static bool libraryAvailable();
+
+    // Re-read capabilities and emit capabilitiesChanged() if they moved. Called
+    // when a model loads, and again when the library is unloaded or reloaded
+    // underneath this instance - wordResults follows a symbol from it, so that
+    // is the other moment what this backend can do genuinely changes.
+    void announceCapabilitiesIfChanged();
+
+    // Whether stt.unloadLibrary() has latched the library out, so a refusal can
+    // say that rather than "not installed"
+    static bool libraryUnloadedByRequest() { return sLibraryUnloadedByRequest; }
 
     // Unload the library and forget everything resolved from it, so a later
     // probe starts fresh. False when the module would not unload, which means
@@ -126,6 +141,13 @@ public:
     // Get the path to the currently selected model (from settings, or auto-detect best available)
     static QString getSelectedModelPath();
 
+    // The model name settings ask for when that model is not installed, empty
+    // otherwise. getSelectedModelPath() answers with whatever else is on disk
+    // in that case, which keeps speech working but hands a package configured
+    // for one language a decoder for another - so the substitution is reported
+    // rather than made quietly.
+    static QString missingSelectedModel();
+
 
     // The directory models are installed into
     static QString modelsDirectoryPath();
@@ -136,6 +158,15 @@ public:
 
     // Get the "best" available model (prefers larger models over smaller ones)
     static QString getBestAvailableModel();
+
+    // Whether the leading word of a result spans enough silence to be a decoder
+    // artifact rather than speech, and the word detail for a result whose
+    // leading word was struck from the text. Pure functions over what the
+    // decoder returned, and public because what they decide is whether a word
+    // the player actually said survives - there is no other way to hold them to
+    // that without a microphone and a live model.
+    static bool leadingWordIsPhantom(const QJsonArray& words);
+    static QVariantList wordsFromResult(const QJsonArray& words, bool skipLeading);
 
 private slots:
     // Consumes 16kHz mono Int16 PCM from the shared capture component

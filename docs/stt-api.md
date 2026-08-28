@@ -28,9 +28,9 @@ Design contract, before the tables:
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
-| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. With no argument, uses the default installed model; errors clearly when none exists. |
+| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. With no argument, uses the default installed model. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds. |
 | `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client that must ask permission first reports `starting`, and the outcome arrives as `sysSTTStateChanged`. A request refused outright — no model, a phrase still processing, a microphone that will not open, permission already denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening, or while `starting`, succeeds without asking twice. |
-| `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. |
+| `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. Stopping when nothing is listening succeeds; stopping in `error` returns `nil` and a message, since "stopped" and "was never running because it failed" are different answers. |
 | `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
 | `stt.close()` | `true` | Release the model and native resources; state returns to `uninitialized`. Safe when nothing is initialized. |
 | `stt.available()` | boolean | The engine is present and loadable. False is the normal state on a machine with nothing installed. |
@@ -71,7 +71,7 @@ returning `false` with a message, `listModels` returning `{}`.
 | `silenceTimeout` | integer | Current timeout in ms; `0` while disabled. |
 | `audioLevel` | number | Level last received from the microphone, `0.0`–`1.0`; `0` while not listening. Sampled during speech, it distinguishes a phrase the engine misheard from one it barely received — failures that look identical in the text and need opposite remedies. |
 | `sensitivity` | string | `"short"`, `"default"` or `"long"`; how quickly an utterance is judged finished. |
-| `capabilities` | table | See below. **May change when a model is loaded**, since on some backends biasing is a property of the model rather than of the engine — re-read after `stt.init()` rather than caching it at startup. |
+| `capabilities` | table | See below. **May change when a model is loaded**, or when the engine library is unloaded or reloaded — on some backends biasing is a property of the model rather than of the engine. Re-read after `stt.init()` rather than caching at startup, or follow `sysSTTCapabilitiesChanged`. |
 | `version`, `language` | string | Present once a recognizer instance exists. |
 | `searchPaths` | table | Where the engine library is looked for (platform-tier; may be empty). |
 
@@ -89,16 +89,18 @@ words = true, onDevice = true}`.
 
 ## Events
 
-All events are raised on the **active profile**, with string arguments only —
-the one argument type every client event system carries.
+All events are raised on the **active profile**, and every handler receives
+**two string arguments**: the event name, then the payload below. String
+arguments only — the one type every client event system carries.
 
 | Event | Argument | When |
 | --- | --- | --- |
 | `sysSTTPartialResult` | text so far | During recognition; may revise as more audio arrives. Never final. |
 | `sysSTTResult` | final text | An utterance completed — by endpointing, `stt.stop()`, or the silence timeout. The consumer's cue to act on the text. |
 | `sysSTTWords` | JSON string | Alongside each `sysSTTResult`, on backends whose `words` capability is true. Describes **the text as emitted**: an implementation that drops a word from the result must drop it here too, or the two events describe different phrases. Schema below. |
-| `sysSTTStateChanged` | state name | Any transition between the five states. |
-| `sysSTTError` | translated message | Anything the user should know went wrong: refusals to start, capture faults, model failures. The state moves to `error` for faults, but refusal messages can arrive without a state change. |
+| `sysSTTStateChanged` | state name | Any transition between the six states. |
+| `sysSTTError` | message | Anything the user should know went wrong: refusals to start, capture faults, model failures, and a configured model quietly replaced by another. The state moves to `error` for faults, but refusal messages can arrive without a state change. Refusals carry the same text the call returned as its second value; faults reported by the engine are translated. **Raised with no engine installed too** — a consumer driving the bridge from events alone must be able to tell "no engine" from "nothing said yet". |
+| `sysSTTCapabilitiesChanged` | JSON string | The `capabilities` table changed: a model loaded, or the engine library was unloaded or reloaded underneath it. Same keys as `getInfo().capabilities`. |
 
 ### `sysSTTWords` schema
 
@@ -124,8 +126,11 @@ capability.
    lone filler word arriving at near-silence or below 0.8 confidence, and a
    leading word whose timings show it spanned a pause rather than being
    spoken. Neither reports, because neither was said.
-2. **Refusals speak.** A `start()` that cannot start says why through
-   `sysSTTError`; silence after a call means it worked.
+2. **Refusals speak.** A call that cannot do what was asked says why through
+   `sysSTTError` as well as in its return value; silence after a call means it
+   worked. This holds when there is no engine at all: an implementation with
+   nothing installed still raises the event, or a consumer written against
+   events alone cannot tell a missing engine from a quiet microphone.
 3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
    Packages branch on it: `true` → engine handles vocabulary; `false` → apply
    client-side correction.

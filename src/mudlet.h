@@ -235,6 +235,11 @@ public:
     // events; all routing and UI policy lives in packages consuming them.
     void initSpeechRecognition();
     SpeechRecognizer* speechRecognizer() const;
+    // Raise one sysSTT* event on the active profile. Public because the stt.*
+    // bindings refuse before a recognizer exists - with no engine installed
+    // there is no object to emit through, and "refusals speak" has to hold
+    // there too or a consumer cannot tell "no engine" from "nothing said yet".
+    void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);

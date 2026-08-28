@@ -77,7 +77,7 @@ static constexpr double MIN_PHANTOM_LEADING_WORD_SECONDS = 1.0;
 // by, so the word stands: a libvosk that cannot report timings would otherwise
 // lose the first word of every utterance to a guess, silently - "the dragon
 // attacks" arriving as "dragon attacks" with nothing said about it.
-static bool leadingWordIsPhantom(const QJsonArray& words)
+bool VoskRecognizer::leadingWordIsPhantom(const QJsonArray& words)
 {
     if (words.isEmpty()) {
         return false;
@@ -113,7 +113,7 @@ static std::optional<double> singleWordConfidence(const QJsonObject& resultObjec
 // from the text: the two are emitted together and describing different
 // sequences would make the word list evidence for a phrase nobody was told
 // about.
-static QVariantList wordsFromResult(const QJsonArray& words, const bool skipLeading)
+QVariantList VoskRecognizer::wordsFromResult(const QJsonArray& words, const bool skipLeading)
 {
     QVariantList wordsList;
     for (int index = skipLeading ? 1 : 0; index < words.size(); ++index) {
@@ -219,9 +219,11 @@ bool VoskRecognizer::loadVoskLibrary()
 
     sLibraryLoaded = true;
 
-    // Set Vosk log level to quiet (only errors)
+    // Vosk is silenced because it writes Kaldi's decoding chatter to stderr on
+    // every utterance, which is not Mudlet's output to spend. MUDLET_STT_VOSK_LOG
+    // gives it back when the engine itself is what needs diagnosing.
     if (s_vosk_set_log_level) {
-        s_vosk_set_log_level(-1);
+        s_vosk_set_log_level(qEnvironmentVariableIsSet("MUDLET_STT_VOSK_LOG") ? qEnvironmentVariableIntValue("MUDLET_STT_VOSK_LOG") : -1);
     }
 
     return true;
@@ -237,6 +239,14 @@ bool VoskRecognizer::libraryAvailable()
         loadVoskLibrary();
     }
     return sLibraryLoaded;
+}
+
+void VoskRecognizer::announceCapabilitiesIfChanged()
+{
+    if (const Capabilities current = capabilities(); !(current == mAnnouncedCapabilities)) {
+        mAnnouncedCapabilities = current;
+        emit capabilitiesChanged(current);
+    }
 }
 
 bool VoskRecognizer::resetLibraryLoadState()
@@ -292,11 +302,6 @@ QStringList VoskRecognizer::librarySearchPaths()
     return paths;
 }
 
-bool VoskRecognizer::backendAvailable() const
-{
-    return libraryAvailable();
-}
-
 QString VoskRecognizer::backendVersion() const
 {
     // Vosk doesn't provide a version API, return a placeholder
@@ -305,6 +310,18 @@ QString VoskRecognizer::backendVersion() const
 
 bool VoskRecognizer::initialize(const QString& modelPath)
 {
+    // Its own guard, ahead of the availability check and not folded into it:
+    // loading a model is a write, and going through loadVoskLibrary() mapped
+    // the library back in regardless of the latch stt.unloadLibrary() set - so
+    // a plain stt.init() undid the unload and locked the file the caller meant
+    // to replace, with only a permission error to show for it.
+    if (sLibraryUnloadedByRequest) {
+        setState(State::Error);
+        //: Shown when a script asks to load a model after unloading the recognition library and before asking for it back
+        emit errorOccurred(tr("The speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model."));
+        return false;
+    }
+
     if (!loadVoskLibrary()) {
         setState(State::Error);
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
@@ -320,6 +337,12 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     mpCapture->stop();
 
     releaseVoskResources();
+    // Both describe a model that has just been freed. Leaving them standing
+    // meant a failed re-init reported state = error alongside the previous
+    // model's path and language, so a package probing modelPath to decide
+    // whether setup had already happened skipped the init it needed.
+    mModelPath.clear();
+    mCurrentLanguage.clear();
 
     QDir modelDir(modelPath);
     if (!modelDir.exists()) {
@@ -356,10 +379,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // wordResults is derived from a symbol that resolves when the library
     // loads, so what this backend can do has just changed. The header promises
     // consumers hear about that rather than having to re-read on spec.
-    if (const Capabilities current = capabilities(); !(current == mAnnouncedCapabilities)) {
-        mAnnouncedCapabilities = current;
-        emit capabilitiesChanged(current);
-    }
+    announceCapabilitiesIfChanged();
 
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
@@ -856,8 +876,11 @@ QString VoskRecognizer::defaultModelPath()
         return selected;
     }
 
-    // Fallback to hardcoded default path for backward compatibility
-    return mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-models/vosk-model-small-en-us-0.15"));
+    // No fallback to a hardcoded model name: getSelectedModelPath() already
+    // finds anything installed, so the only thing a made-up path could do is
+    // send the caller a "model path does not exist" naming a directory they
+    // never created, in place of the "install a model" they needed to read.
+    return QString();
 }
 
 QString VoskRecognizer::modelsDirectoryPath()
@@ -951,6 +974,19 @@ QString VoskRecognizer::getSelectedModelPath()
     }
 
     return QString();
+}
+
+QString VoskRecognizer::missingSelectedModel()
+{
+    QSettings settings;
+    settings.beginGroup(qsl("SpeechRecognition"));
+    const QString selectedModel = settings.value(qsl("selectedModel")).toString();
+    settings.endGroup();
+
+    if (selectedModel.isEmpty() || QDir(modelsDirectoryPath() + QDir::separator() + selectedModel).exists()) {
+        return QString();
+    }
+    return selectedModel;
 }
 
 bool VoskRecognizer::setEndpointerMode(EndpointerMode mode)

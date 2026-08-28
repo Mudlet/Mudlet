@@ -55,16 +55,6 @@ public:
     // A backend is available if its library is loaded and functional.
     static QList<Backend> availableBackends();
 
-    // Check if a specific backend is available.
-    static bool backendAvailable(Backend backend);
-
-
-    // Get short identifier for a backend (for settings storage).
-    static QString backendIdentifier(Backend backend);
-
-    // Parse a backend identifier string back to enum.
-    // Returns Auto if the identifier is not recognized.
-    static Backend backendFromIdentifier(const QString& identifier);
 
     // Get the default model path for the specified backend (or Auto for first available).
     // Returns empty string if no model path is configured for the backend.

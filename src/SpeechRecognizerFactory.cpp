@@ -72,56 +72,6 @@ QList<SpeechRecognizerFactory::Backend> SpeechRecognizerFactory::availableBacken
     return backends;
 }
 
-bool SpeechRecognizerFactory::backendAvailable(Backend backend)
-{
-    switch (backend) {
-    case Backend::Vosk:
-        return VoskRecognizer::libraryAvailable();
-
-    case Backend::Whisper:
-        return false; // Not yet implemented
-
-    case Backend::Platform:
-        return false; // Not yet implemented
-
-    case Backend::Auto:
-        return !availableBackends().isEmpty();
-    }
-
-    return false;
-}
-
-QString SpeechRecognizerFactory::backendIdentifier(Backend backend)
-{
-    switch (backend) {
-    case Backend::Vosk:
-        return qsl("vosk");
-    case Backend::Whisper:
-        return qsl("whisper");
-    case Backend::Platform:
-        return qsl("platform");
-    case Backend::Auto:
-        return qsl("auto");
-    }
-
-    return qsl("auto");
-}
-
-SpeechRecognizerFactory::Backend SpeechRecognizerFactory::backendFromIdentifier(const QString& identifier)
-{
-    if (identifier == QLatin1String("vosk")) {
-        return Backend::Vosk;
-    }
-    if (identifier == QLatin1String("whisper")) {
-        return Backend::Whisper;
-    }
-    if (identifier == QLatin1String("platform")) {
-        return Backend::Platform;
-    }
-
-    return Backend::Auto;
-}
-
 QString SpeechRecognizerFactory::defaultModelPath(Backend backend)
 {
     // Handle Auto selection - pick the first available backend

@@ -177,6 +177,20 @@ SpeechRecognizer* mudlet::speechRecognizer() const
     return mpSpeechRecognizer;
 }
 
+void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList.append(name);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(value);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(event);
+}
+
 void mudlet::initSpeechRecognition()
 {
     if (mpSpeechRecognizer) {
@@ -191,33 +205,36 @@ void mudlet::initSpeechRecognition()
     // Bridge glue only: recognizer signals surface as Lua events on the active
     // profile. Text routing, UI state and policy all belong to the packages
     // consuming these events, not to the core.
-    auto raiseSpeechEvent = [this](const QString& name, const QString& value) {
-        Host* pHost = getActiveHost();
-        if (!pHost) {
-            return;
-        }
-        TEvent event{};
-        event.mArgumentList.append(name);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(value);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        pHost->raiseEvent(event);
-    };
-
-    connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, [raiseSpeechEvent](const QString& text) { raiseSpeechEvent(qsl("sysSTTPartialResult"), text); });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, [raiseSpeechEvent](const QString& text) { raiseSpeechEvent(qsl("sysSTTResult"), text); });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, [raiseSpeechEvent](const QString& message) { raiseSpeechEvent(qsl("sysSTTError"), message); });
+    connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, [this](const QString& text) {
+        raiseSpeechEvent(qsl("sysSTTPartialResult"), text);
+    });
+    connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, [this](const QString& text) {
+        raiseSpeechEvent(qsl("sysSTTResult"), text);
+    });
+    connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, [this](const QString& message) {
+        raiseSpeechEvent(qsl("sysSTTError"), message);
+    });
     // Word-level detail travels as one JSON string argument: table arguments
     // need per-Host Lua registry bookkeeping this glue should not own, and a
     // string is the one type every client's event system carries
-    connect(mpSpeechRecognizer, &SpeechRecognizer::wordsResult, this, [raiseSpeechEvent](const QVariantList& words) {
+    connect(mpSpeechRecognizer, &SpeechRecognizer::wordsResult, this, [this](const QVariantList& words) {
         QJsonArray array;
         for (const QVariant& word : words) {
             array.append(QJsonObject::fromVariantMap(word.toMap()));
         }
         raiseSpeechEvent(qsl("sysSTTWords"), QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact)));
     });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [raiseSpeechEvent](SpeechRecognizer::State newState) {
+    // Documented as re-readable rather than cached, so the change has to reach
+    // a consumer that did read it once - which is the obvious thing to do
+    connect(mpSpeechRecognizer, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities newCapabilities) {
+        QJsonObject capabilities;
+        capabilities.insert(qsl("biasing"), newCapabilities.biasing);
+        capabilities.insert(qsl("grammar"), newCapabilities.grammar);
+        capabilities.insert(qsl("words"), newCapabilities.wordResults);
+        capabilities.insert(qsl("onDevice"), newCapabilities.onDevice);
+        raiseSpeechEvent(qsl("sysSTTCapabilitiesChanged"), QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact)));
+    });
+    connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
         QString stateName;
         switch (newState) {
         case SpeechRecognizer::State::Ready:
@@ -2179,6 +2196,14 @@ void mudlet::closeHost(const QString& name)
     emit signal_hostDestroyed(pH, --hostCount);
     // This is what kills the Host instance:
     mHostManager.deleteHost(name);
+    // One recognizer is shared across profiles and outlives any one of them,
+    // but with none left there is no profile to raise sysSTT* on and nobody to
+    // stop it: a session the closing profile started would otherwise hold the
+    // microphone open, recording light and all, for the rest of the run.
+    if (!mHostManager.getHostCount() && mpSpeechRecognizer) {
+        mpSpeechRecognizer->cancel();
+        mpSpeechRecognizer->releaseResources();
+    }
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
     // Update main window title since a profile was closed
