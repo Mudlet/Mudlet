@@ -138,6 +138,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
     DualPackageModuleTest.cpp
+    ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageSelfRemovalTest.cpp

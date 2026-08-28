@@ -2903,6 +2903,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     if (mpPackageManager) {
         mpPackageManager->resetPackageList();
     }
+    // the Module Manager lists what a script can take away behind its back, and
+    // a row left over from a module that has gone offers a removal that can only
+    // be refused - installPackage() already puts the listing straight this way
+    if (mpModuleManager) {
+        mpModuleManager->layoutModules();
+    }
     return true;
 }
 
