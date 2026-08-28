@@ -280,6 +280,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
+    // cTelnet is declared ahead of the members reset() clears (mMxpProcessor,
+    // mMSSPTlsPort, mIsRemoteEchoingActive and friends), so it cannot do this from
+    // its own constructor - at that point those members do not exist yet.
+    mTelnet.reset();
+
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal));
 

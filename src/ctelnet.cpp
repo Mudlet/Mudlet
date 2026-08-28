@@ -156,9 +156,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
         mAcceptableEncodings << TBuffer::getEncodingNames();
     }
 
-    // initialize telnet session
-    reset();
-
     mpPostingTimer->setInterval(mTimeOut);
     connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
@@ -241,7 +238,7 @@ void cTelnet::reset()
     // Half of an ANSI sequence left over from the previous connection can only
     // ever be completed by bytes that will never arrive, so drop it instead of
     // letting it consume the new connection's output. There is nothing to drop
-    // when this runs from the constructor, before the profile has a console:
+    // when this runs from the Host constructor, before the profile has a console:
     if (mpHost->mpConsole) {
         mpHost->mpConsole->buffer.resetSequenceParserState();
     }
@@ -249,13 +246,7 @@ void cTelnet::reset()
     // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
     // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
     mpHost->setUserSentInputThisConnection(false);
-}
 
-// The same forgetting, for the parts of a game's story about itself that are kept on the Host.
-// Kept out of reset() because the cTelnet constructor calls that, and cTelnet is declared ahead of
-// these members, so at that point they have not been constructed yet.
-void cTelnet::forgetGameSuppliedHostState()
-{
     // Every other place that turns enableMXP off does this too. Without it the processor is left
     // enabled holding a half-built tag from the last game, and TBuffer's tag watchdog answers to
     // the processor alone, so the next escape code spills that tag into the next game's output.
@@ -919,7 +910,6 @@ void cTelnet::slot_socketConnected()
 
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     reset();
-    forgetGameSuppliedHostState();
     setKeepAlive(mpSocket->socketDescriptor());
 
 #if !defined(QT_NO_SSL)
@@ -1010,7 +1000,6 @@ void cTelnet::slot_socketDisconnected()
     }
     mNeedDecompression = false;
     reset();
-    forgetGameSuppliedHostState();
 
     if (!mpHost->isClosingDown()) {
 #if !defined(QT_NO_SSL)
@@ -4708,7 +4697,7 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 
     if (accepted) {
         // Read before disconnecting: a socket with nothing pending can emit disconnected() from
-        // inside disconnectFromHost(), and forgetGameSuppliedHostState() drops the advertised port.
+        // inside disconnectFromHost(), and reset() drops the advertised port.
         const int securePort = mpHost->mMSSPTlsPort;
         // The socket test above passes for a connection made *after* the one that advertised, so
         // it does not catch an answer that outlived its offer - but the port is forgotten with the
