@@ -301,13 +301,11 @@ private slots:
     // Every other case here rests on the tab strip being gone from the shell.
     // The tab widget itself survives, holding no pages, so what has to be
     // checked is that it is out of the layout rather than deleted.
-    void test_theTabWidgetAndTheSaveRowAreOutOfTheLayout()
+    void test_theTabWidgetIsOutOfTheLayout()
     {
         QCOMPARE(mpPreferences->vBoxLayout_main->indexOf(mpPreferences->tabWidget), -1);
-        QCOMPARE(mpPreferences->vBoxLayout_main->indexOf(mpPreferences->widget_bottom), -1);
         QCOMPARE(mpPreferences->tabWidget->count(), 0);
         QVERIFY2(mpPreferences->tabWidget->isHidden(), "the emptied tab widget is still on screen");
-        QVERIFY2(mpPreferences->widget_bottom->isHidden(), "the Save button row is still on screen");
 
         auto* pShell = mpPreferences->findChild<QWidget*>(qsl("settingsShell"));
         QVERIFY2(pShell, "the sidebar-and-cards shell was never built");

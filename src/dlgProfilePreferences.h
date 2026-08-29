@@ -187,9 +187,6 @@ public slots:
     void slot_setMMCPChatName(const QString&);
     void slot_mmcpChatNameChanged();
 
-    // Save.
-    void slot_saveAndClose();
-
     void slot_hideActionLabel();
     void slot_setEncoding(const int);
 

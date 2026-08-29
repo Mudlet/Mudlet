@@ -324,7 +324,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
-    connect(closeButton, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_saveAndClose);
     connect(pMudlet, &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
     connect(pMudlet, &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
     // Because QComboBox::currentIndexChanged has multiple (overloaded) forms we
@@ -702,10 +701,6 @@ void dlgProfilePreferences::buildShell()
     }
     vBoxLayout_main->removeWidget(tabWidget);
     tabWidget->hide();
-    // Kept alive, parented to the dialog and out of every layout: the hidden
-    // Save button is still what MapSymbolFontTest clicks to apply and close:
-    vBoxLayout_main->removeWidget(widget_bottom);
-    widget_bottom->hide();
     vBoxLayout_main->setContentsMargins(0, 0, 0, 0);
     vBoxLayout_main->setSpacing(0);
 
@@ -6967,12 +6962,6 @@ void dlgProfilePreferences::slot_lineEditFinished()
         pLineEdit->setModified(false);
     }
     slot_scheduleApply();
-}
-
-// Instant apply has already written every change; closeEvent() does the rest
-void dlgProfilePreferences::slot_saveAndClose()
-{
-    close();
 }
 
 void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
