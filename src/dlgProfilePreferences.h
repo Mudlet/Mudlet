@@ -384,9 +384,15 @@ private:
     void fitCheckBoxesToColumn(QWidget* pColumn);
     void wrapCheckBox(QCheckBox* pCheckBox);
     void unwrapCheckBox(QCheckBox* pCheckBox);
-    // Below the width the sidebar needs to stand beside a full reading column it
-    // collapses to a rail of icons, driven by the window's size alone
-    int widthNeededForFullSidebar() const;
+    // The two window widths the sidebar is driven by: the one past which the
+    // dialog gains nothing but empty strip, and the one below which the sidebar
+    // trades its names for a rail of icons
+    struct SidebarWidths
+    {
+        int collapseBelow = 0;
+        int fullyExpanded = 0;
+    };
+    SidebarWidths sidebarWidths() const;
     void updateSidebarMode();
     void setSidebarCollapsed(bool collapsed);
     void rebuildTabOrder();

@@ -992,11 +992,13 @@ private slots:
         openPreferences();
     }
 
-    // "Too narrow" was measured against the 640px reading column rather than the
-    // page on screen, and a translated page whose controls do not fit 640 is
-    // capped wider. Between the two numbers the sidebar stayed full and the page
-    // scrolled sideways (#10242).
-    void test_theSidebarCollapsesForAPageWiderThanTheReadingColumn()
+    // A translation can push a page past the reading column, and the window is
+    // allowed to be narrower than that page wants. The names in the sidebar are
+    // not what pays for it first: they are kept while the page still gets a
+    // whole reading column to draw in, and given up only below that. Holding
+    // them to the widest page instead left them standing at exactly one window
+    // width - see test_narrowingAwayTheWhitespaceKeepsTheSidebarsNames().
+    void test_aPageWiderThanTheReadingColumnKeepsOneBeforeTheSidebarGoes()
     {
         delete mpPreferences;
         mpPreferences = nullptr;
@@ -1028,27 +1030,27 @@ private slots:
         }
         QVERIFY2(!wide.isEmpty(), "no German page is capped wider than the 640px reading column, so the breakpoint cannot be wrong in the way this case describes");
 
+        bool sawACollapse = false;
         for (const QString& key : wide) {
-            const int cap = pageOf(key)->widget()->maximumWidth();
             for (int width = 800; width <= 1400; width += 25) {
                 mpPreferences->resize(width, 700);
                 qApp->processEvents();
                 selectCategory(key);
                 qApp->processEvents();
-                QScrollArea* pPage = pageOf(key);
                 if (pSidebar->width() < fullSidebar) {
-                    // collapsed already: nothing further was available to give
+                    sawACollapse = true;
                     continue;
                 }
-                QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
-                         qPrintable(qsl("the German '%1' page needs %2px and got a %3px viewport at a %4px window, while the sidebar kept its full %5px - collapsing it would have fitted the page")
+                QScrollArea* pPage = pageOf(key);
+                QVERIFY2(pPage->viewport()->width() >= 640,
+                         qPrintable(qsl("the German '%1' page was given a %2px viewport - less than the 640px reading column - at a %3px window, while the sidebar kept its full %4px")
                                             .arg(key)
-                                            .arg(cap)
                                             .arg(pPage->viewport()->width())
                                             .arg(width)
                                             .arg(pSidebar->width())));
             }
         }
+        QVERIFY2(sawACollapse, "the sidebar kept its names all the way down to an 800px window, so this case never saw the collapse it is about");
         mpPreferences->resize(1060, 760);
     }
 
@@ -1134,6 +1136,101 @@ private slots:
         QScrollArea* pPage = pageOf(qsl("general"));
         QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
                  qPrintable(qsl("the General page needs %1px and got a %2px viewport at the widest the window may go").arg(pPage->widget()->width()).arg(pPage->viewport()->width())));
+    }
+
+    // Reported against the redesign: the strip of empty window beside a page
+    // narrower than the widest one could not be taken back, because the first
+    // pixel in from the widest the window would go collapsed the sidebar.
+    void test_narrowingAwayTheWhitespaceKeepsTheSidebarsNames()
+    {
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        // German for the whitespace: the widest the window may go answers to
+        // the widest page there is, so a strip only opens up beside the others
+        // once a translation has pushed one of them past the reading column
+        auto* pGerman = new QTranslator(qApp);
+        QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so no page is wider than the reading column to leave a strip beside the rest");
+        QVERIFY(qApp->installTranslator(pGerman));
+        auto removeTranslator = qScopeGuard([pGerman]() {
+            qApp->removeTranslator(pGerman);
+            delete pGerman;
+        });
+        openPreferences();
+
+        auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
+        QVERIFY2(pSidebar, "the settings shell has no sidebar to collapse");
+        mpPreferences->resize(mpPreferences->maximumWidth(), 760);
+        qApp->processEvents();
+        const int widest = mpPreferences->width();
+        QCOMPARE(widest, mpPreferences->maximumWidth());
+        const int fullSidebar = pSidebar->width();
+        QVERIFY2(fullSidebar > 200, qPrintable(qsl("the sidebar is only %1px wide at the widest the window goes, so this case cannot tell a collapse from where it started").arg(fullSidebar)));
+
+        // What the strip beside a page is: the widest the window may go answers
+        // to the widest page there is, and every narrower page is left with the
+        // difference. Taken from the caps rather than off the screen, because
+        // the gap on screen also holds the pane's margin and the room a page
+        // keeps for a scrollbar it is not showing - neither of which is the
+        // window's to give back.
+        int widestCap = 0;
+        QString narrowPage;
+        for (const QString& key : specOrderedCategories()) {
+            selectCategory(key);
+            qApp->processEvents();
+            const int cap = pageOf(key)->widget()->maximumWidth();
+            widestCap = std::max(widestCap, cap);
+            if (cap == 640 && narrowPage.isEmpty()) {
+                narrowPage = key;
+            }
+        }
+        QVERIFY2(!narrowPage.isEmpty(), "every German page is capped wider than the reading column, so none of them shows the strip this case is about");
+        const int strip = widestCap - 640;
+        QVERIFY2(strip > 0, "no German page is capped wider than the reading column, so there is no strip beside the others to take back");
+
+        selectCategory(narrowPage);
+        qApp->processEvents();
+        mpPreferences->resize(widest - strip, 760);
+        qApp->processEvents();
+        QCOMPARE(mpPreferences->width(), widest - strip);
+        QVERIFY2(pSidebar->width() == fullSidebar,
+                 qPrintable(qsl("taking back the %1px the '%2' page is left over - from %3px to %4px - collapsed the sidebar to %5px")
+                                    .arg(strip)
+                                    .arg(narrowPage)
+                                    .arg(widest)
+                                    .arg(widest - strip)
+                                    .arg(pSidebar->width())));
+        mpPreferences->resize(1060, 760);
+    }
+
+    // Reported against the redesign: picking a language collapsed the sidebar,
+    // on a window nobody had touched. A longer set of translated strings moves
+    // the widest the window may go, and the collapse used to be judged against
+    // that same number - so the window was suddenly below it.
+    void test_aLanguageChangeDoesNotCollapseTheSidebar()
+    {
+        auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
+        QVERIFY2(pSidebar, "the settings shell has no sidebar to collapse");
+        mpPreferences->resize(mpPreferences->maximumWidth(), 760);
+        qApp->processEvents();
+        const int widthBefore = mpPreferences->width();
+        const int fullSidebar = pSidebar->width();
+        QVERIFY2(fullSidebar > 200, qPrintable(qsl("the sidebar is only %1px wide before the language changes, so this case cannot tell a collapse from where it started").arg(fullSidebar)));
+
+        auto* pGerman = new QTranslator(qApp);
+        QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so nothing here would lengthen a string");
+        QVERIFY(qApp->installTranslator(pGerman));
+        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        qApp->processEvents();
+        // Read before the translator goes, so a failure cannot leave it
+        // installed for the cases that follow
+        const int sidebarAfter = pSidebar->width();
+        const int widthAfter = mpPreferences->width();
+        qApp->removeTranslator(pGerman);
+        delete pGerman;
+
+        QCOMPARE(widthAfter, widthBefore);
+        QVERIFY2(sidebarAfter == fullSidebar,
+                 qPrintable(qsl("changing the language collapsed the sidebar from %1px to %2px, on a window still %3px wide").arg(fullSidebar).arg(sidebarAfter).arg(widthAfter)));
     }
 };
 

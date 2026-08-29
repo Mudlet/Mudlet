@@ -85,6 +85,7 @@
 #include <QLineEdit>
 #include <QHBoxLayout>
 #include <QListWidget>
+#include <QLocale>
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QScopedValueRollback>
@@ -393,6 +394,17 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         }
     }
     comboBox_guiLanguage->model()->sort(0);
+    // Every entry is named in its own language, which is what someone who reads
+    // it would look for - but a search for one they do not read is typed in the
+    // language they do, and no English name for any of them is on the card
+    QStringList languageSearchNames;
+    for (int i = 0, total = comboBox_guiLanguage->count(); i < total; ++i) {
+        const QLocale locale(comboBox_guiLanguage->itemData(i).toString());
+        languageSearchNames << QLocale::languageToString(locale.language()) << locale.nativeLanguageName();
+    }
+    languageSearchNames.removeDuplicates();
+    comboBox_guiLanguage->setProperty(scmProp_searchKeywords, languageSearchNames.join(qsl(", ")));
+
     auto currentLanguage = pMudlet->getInterfaceLanguage();
     int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
     if (Q_LIKELY(currentIndex != -1)) {
@@ -457,6 +469,23 @@ dlgProfilePreferences::~dlgProfilePreferences()
     // name field and the shortcut editors both act on that one - when this
     // object is no longer a valid receiver (#9574)
     utils::disconnectChildSignals(this);
+}
+
+// QLayout::setAlignment() is documented not to look in child layouts, and a
+// card's controls are nested in them
+static bool alignInLayoutTree(QLayout* pLayout, const QWidget* pWidget, const Qt::Alignment alignment)
+{
+    for (int i = 0, total = pLayout->count(); i < total; ++i) {
+        QLayoutItem* pItem = pLayout->itemAt(i);
+        if (pItem->widget() == pWidget) {
+            pItem->setAlignment(alignment);
+            return true;
+        }
+        if (QLayout* pChildLayout = pItem->layout(); pChildLayout && alignInLayoutTree(pChildLayout, pWidget, alignment)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // QLayout::removeWidget() only looks at its own items, and the .ui file nests
@@ -605,6 +634,12 @@ void dlgProfilePreferences::wrapCheckBox(QCheckBox* pCheckBox)
             return;
         }
         delete pTakenOut;
+        // Without an alignment the container is stretched to whatever the
+        // tallest control on the row is, and the checkbox - held against the
+        // label's first line below - floats to the top of that instead of
+        // sitting level with what it shares the row with. Only the vertical
+        // half is given, so the words still have the whole row to wrap in.
+        alignInLayoutTree(pParentLayout, pContainer, Qt::AlignVCenter);
         auto* pRowLayout = new QHBoxLayout(pContainer);
         pRowLayout->setContentsMargins(0, 0, 0, 0);
         pRowLayout->setSpacing(style()->pixelMetric(QStyle::PM_CheckBoxLabelSpacing, nullptr, pCheckBox));
@@ -1376,7 +1411,7 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
     spotlight(pSpotlightTarget);
 }
 
-// The title row is measured against this as well as shown it - see widthNeededForFullSidebar()
+// The title row is measured against this as well as shown it - see sidebarWidths()
 QString dlgProfilePreferences::breadcrumbFor(const QString& subpageKey) const
 {
     const QString categoryKey = subpageKey.section(QLatin1Char('/'), 0, 0);
@@ -2028,12 +2063,13 @@ void dlgProfilePreferences::updateColumnWidthCaps()
 
 // Measured rather than a number in the source: an interface font, a platform's
 // scrollbar or a translation's longer category names all move it
-int dlgProfilePreferences::widthNeededForFullSidebar() const
+dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() const
 {
+    SidebarWidths widths;
     QWidget* pContent = mpWidget_titleRow ? mpWidget_titleRow->parentWidget() : nullptr;
     // Zero collapses nothing, which is the right answer for a half-built shell
     if (!pContent || !pContent->layout() || !mpLabel_pageTitle || !mpStackedWidget_categories) {
-        return 0;
+        return widths;
     }
     const QMargins contentMargins = pContent->layout()->contentsMargins();
 
@@ -2056,24 +2092,36 @@ int dlgProfilePreferences::widthNeededForFullSidebar() const
     }
 
     // The reading column is a floor, not the answer: a page whose controls do
-    // not fit it is capped wider (capColumnWidth()), and measuring against the
-    // floor left the sidebar expanded over a page that had to scroll sideways
-    // underneath it. Taken over every page rather than the one on show, because
-    // updateSidebarMode() is only reached from a resize and a language change -
-    // a threshold moving with the category would not be re-tested on a change
-    // of category.
+    // not fit it is capped wider (capColumnWidth()). Taken over every page
+    // rather than the one on show, because a width moving with the category
+    // would resize the window on every click in the sidebar.
     int contentColumn = scmContentColumnWidth;
+    int widestPageMinimum = 0;
     for (int page = 0, pages = mpStackedWidget_categories->count(); page < pages; ++page) {
         const auto* pStacked = qobject_cast<const QScrollArea*>(mpStackedWidget_categories->widget(page));
         const QWidget* pColumn = pStacked ? pStacked->widget() : nullptr;
+        if (!pColumn) {
+            continue;
+        }
         // An uncapped page still offers the default maximum, which nothing asked for
-        if (pColumn && pColumn->maximumWidth() < QWIDGETSIZE_MAX) {
+        if (pColumn->maximumWidth() < QWIDGETSIZE_MAX) {
             contentColumn = std::max(contentColumn, pColumn->maximumWidth());
         }
+        widestPageMinimum = std::max(widestPageMinimum, pColumn->minimumSizeHint().width());
     }
 
-    const int contentNeeded = std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle);
-    return scmSidebarWidth + contentMargins.left() + contentMargins.right() + contentNeeded;
+    const int sidebarAndMargins = scmSidebarWidth + contentMargins.left() + contentMargins.right();
+    widths.fullyExpanded = sidebarAndMargins + std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle);
+    // Deliberately not the same number as the width above: held equal, the
+    // sidebar had its names at exactly one window width and the first pixel of
+    // a drag inwards took them away, with no way back short of hitting that
+    // width again. It is instead the narrowest the widest page can be drawn at
+    // without scrolling sideways, and never more than the reading column - so a
+    // page that wants more than a comfortable line, or a re-measure after a
+    // change of language, moves what the window can grow to without moving the
+    // point at which the sidebar gives up its names.
+    widths.collapseBelow = sidebarAndMargins + std::min(scmContentColumnWidth, widestPageMinimum) + scrollBarWidth;
+    return widths;
 }
 
 void dlgProfilePreferences::updateSidebarMode()
@@ -2082,20 +2130,20 @@ void dlgProfilePreferences::updateSidebarMode()
         return;
     }
     // Zero is neither a breakpoint to test against nor a width to hold a window to
-    const int widthNeeded = widthNeededForFullSidebar();
-    if (!widthNeeded) {
+    const SidebarWidths widths = sidebarWidths();
+    if (!widths.fullyExpanded) {
         return;
     }
     // The window's width rather than the space left over: the threshold is what
     // the *expanded* sidebar needs, so collapsing cannot flip the test that
     // collapsed it and start it oscillating
-    setSidebarCollapsed(width() < widthNeeded);
-    // Nothing on a page grows past its column, so every pixel of window past the
-    // number above is empty strip, all of it on one side as a layout puts a
+    setSidebarCollapsed(width() < widths.collapseBelow);
+    // Nothing on a page grows past its column, so every pixel of window past
+    // fullyExpanded is empty strip, all of it on one side as a layout puts a
     // widget narrower than its cell to the left. Refusing the width is what
     // keeps it out: centring would strand the sidebar away from the settings it
     // selects, and stretching the controls is the line length the column stops.
-    setMaximumWidth(std::max(minimumWidth(), widthNeeded));
+    setMaximumWidth(std::max(minimumWidth(), widths.fullyExpanded));
 }
 
 void dlgProfilePreferences::setSidebarCollapsed(const bool collapsed)
