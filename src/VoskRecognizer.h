@@ -28,6 +28,8 @@
 #include <QString>
 #include <QVariantList>
 
+#include <optional>
+
 class QJsonArray;
 class QJsonObject;
 class SpeechAudioCapture;
@@ -174,6 +176,11 @@ public:
     // empty, which is the same path "nothing was said" takes, so an utterance
     // the engine had already accepted vanished with no event and no log line.
     static bool parseEngineResult(const char* json, QJsonObject& result, QString& failureReason);
+
+    // Whether a lone filler word was an artifact rather than something said.
+    // Public for the same reason as the two above: it decides whether a word
+    // the player said survives, and "i" is a MUD player's inventory command.
+    static bool loneFillerWordWasNotSpoken(const QString& text, const std::optional<double>& confidence);
 
 private slots:
     // Consumes 16kHz mono Int16 PCM from the shared capture component

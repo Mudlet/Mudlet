@@ -123,14 +123,18 @@ capability.
    `sysSTTResult`. No path silently drops recognised speech except a fault,
    which reports via `sysSTTError` — and except what the engine produced from
    silence rather than from a person. Desktop Mudlet's Vosk backend discards a
-   lone filler word arriving at near-silence or below 0.8 confidence, and a
-   leading word whose timings show it spanned a pause rather than being
-   spoken. Neither reports, because neither was said.
-2. **Refusals speak.** A call that cannot do what was asked says why through
-   `sysSTTError` as well as in its return value; silence after a call means it
-   worked. This holds when there is no engine at all: an implementation with
-   nothing installed still raises the event, or a consumer written against
-   events alone cannot tell a missing engine from a quiet microphone.
+   lone filler word the decoder itself scored below 0.8 confidence, or that it
+   returned no confidence for at all, and a leading word whose timings show it
+   spanned a pause rather than being spoken. Neither reports, because neither
+   was said. A lone filler word the decoder is confident about is delivered,
+   however the utterance finished - "i" is a command, not an artifact.
+2. **Refusals the engine caused speak.** A call the engine could not satisfy
+   says why through `sysSTTError` as well as in its return value. This holds
+   when there is no engine at all: an implementation with nothing installed
+   still raises the event, or a consumer written against events alone cannot
+   tell a missing engine from a quiet microphone. A refusal caused by the
+   script's own arguments is returned but not announced, since one package's
+   mistake is not news for every other package on the profile.
 3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
    Packages branch on it: `true` → engine handles vocabulary; `false` → apply
    client-side correction.

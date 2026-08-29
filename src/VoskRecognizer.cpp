@@ -108,6 +108,24 @@ static std::optional<double> singleWordConfidence(const QJsonObject& resultObjec
     return words.first().toObject().value(QLatin1String("conf")).toDouble();
 }
 
+// The audio level deliberately plays no part here. slot_pcmReady() used to
+// weigh it, but it is read at the moment the decoder reports an endpoint, and
+// what makes the decoder endpoint at all is the trailing pause - so by then the
+// smoothed level has always decayed below the silence gate. Measured on a
+// phrase peaking at 0.457: 0.013 against a 0.05 gate, which made the test true
+// for every lone filler word whatever the decoder thought of it, and dropped a
+// confidently decoded "i" - a MUD player's inventory command - with no event
+// and no log line. stopListening() reached the right answer by leaving the
+// level out, so both paths now ask the same question.
+/*static*/ bool VoskRecognizer::loneFillerWordWasNotSpoken(const QString& text, const std::optional<double>& confidence)
+{
+    if (text.contains(QLatin1Char(' ')) || !kHallucinationWords->contains(text.toLower())) {
+        return false;
+    }
+
+    return !(confidence && *confidence >= MIN_TRUSTED_SINGLE_WORD_CONFIDENCE);
+}
+
 // Word detail for a final result, as the sysSTTWords schema describes it.
 // skipLeading drops the first word for a result whose leading word was struck
 // from the text: the two are emitted together and describing different
@@ -420,8 +438,11 @@ void VoskRecognizer::startListening()
         // Every refusal but "already listening" reports why: startListening()
         // returns void, so silence here reads to the caller as a successful start
         if (state() == State::Uninitialized) {
-            //: Shown when speech recognition is asked to listen before a language model is loaded
             setState(State::Error);
+            // the setState() call has to stay above this: lupdate drops a
+            // pending //: comment at the next semicolon, so between the two
+            // the note never reaches the translator
+            //: Shown when speech recognition is asked to listen before a language model is loaded
             emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
         } else if (state() == State::Error) {
             //: Shown when speech recognition is asked to listen while it is in an error state
@@ -632,16 +653,7 @@ void VoskRecognizer::stopListening()
         if (decodedResult(s_vosk_recognizer_final_result(mVoskRecognizer), obj)) {
             const QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
-                const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = kHallucinationWords->contains(text.toLower());
-                const std::optional<double> confidence = singleWordConfidence(obj);
-                const bool hasHighConfidence = confidence && *confidence >= MIN_TRUSTED_SINGLE_WORD_CONFIDENCE;
-
-                // The filter slot_pcmReady() applies, without its audio-level
-                // term: capture has already stopped, so there is no current
-                // level to weigh and a lone filler word survives here only on
-                // the decoder's own confidence
-                const bool shouldFilter = isSingleWord && isHallucinationWord && !hasHighConfidence;
+                const bool shouldFilter = loneFillerWordWasNotSpoken(text, singleWordConfidence(obj));
 
                 if (shouldFilter) {
 #ifdef DEBUG_STT
@@ -727,16 +739,11 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
         if (decodedResult(s_vosk_recognizer_result(mVoskRecognizer), obj)) {
             const QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
-                const bool isSingleWord = !text.contains(QLatin1Char(' '));
-                const bool isHallucinationWord = kHallucinationWords->contains(text.toLower());
-                const std::optional<double> confidence = singleWordConfidence(obj);
-                const bool hasLowConfidence = confidence && *confidence < MIN_TRUSTED_SINGLE_WORD_CONFIDENCE;
-
-                const bool shouldFilter = isSingleWord && isHallucinationWord && (mRecentAudioLevel < SILENCE_THRESHOLD * 5.0f || hasLowConfidence);
+                const bool shouldFilter = loneFillerWordWasNotSpoken(text, singleWordConfidence(obj));
 
                 if (shouldFilter) {
 #ifdef DEBUG_STT
-                    qDebug() << "VoskRecognizer: Filtered hallucination (final):" << text << "(level:" << mRecentAudioLevel << ", lowConf:" << hasLowConfidence << ")";
+                    qDebug() << "VoskRecognizer: Filtered hallucination (final):" << text;
 #endif
                 } else {
                     emitFinalResult(obj, text);

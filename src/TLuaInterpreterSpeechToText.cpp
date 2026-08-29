@@ -206,6 +206,12 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
+    // The recognizer is only built on demand, so without this a first call
+    // before stt.init() finds nothing and reports the library as missing on a
+    // machine where stt.getInfo().available is true. Every setter already
+    // builds it here for the same reason.
+    pMudlet->initSpeechRecognition();
+
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
@@ -285,6 +291,8 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     if (!pMudlet) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
+
+    pMudlet->initSpeechRecognition();
 
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer || !pRecognizer->initialized()) {

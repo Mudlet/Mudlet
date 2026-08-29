@@ -55,6 +55,8 @@
 
 #include "GroupedTest.h"
 
+#include <optional>
+
 class SpeechRecognizerContractTest : public QObject
 {
     Q_OBJECT
@@ -330,6 +332,29 @@ private slots:
         pSettings->endGroup();
         QVERIFY(QDir(qsl("%1/vosk-model-small-en-us-0.15").arg(modelsDir)).removeRecursively());
         QVERIFY(QDir(qsl("%1/vosk-model-small-fr-0.22").arg(modelsDir)).removeRecursively());
+    }
+    // The filter that decides whether a lone filler word was really said. Its
+    // audio-level term used to be read at the moment the decoder endpoints -
+    // which is after the trailing pause that caused the endpoint - so it was
+    // always true by then and discarded the word whatever the decoder's
+    // confidence. Measured before the fix: a phrase peaking at 0.457 was down
+    // to 0.013 against a 0.05 gate, and a conf-1.0 "i" was delivered when the
+    // script called stop() but dropped when the decoder endpointed on its own.
+    // "i" is how a MUD player asks for their inventory.
+    void aConfidentLoneFillerWordSurvivesBothWaysOfFinishing()
+    {
+        const std::optional<double> certain{1.0};
+        const std::optional<double> unsure{0.4};
+        const std::optional<double> none{};
+
+        QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("i"), certain), "a confidently decoded inventory command was treated as a decoder artifact");
+        QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("you"), certain), "a confidently decoded filler word was treated as a decoder artifact");
+
+        QVERIFY2(VoskRecognizer::loneFillerWordWasNotSpoken(qsl("i"), unsure), "a filler word the decoder itself doubted was reported as speech");
+        QVERIFY2(VoskRecognizer::loneFillerWordWasNotSpoken(qsl("the"), none), "a filler word with no confidence to judge by was reported as speech");
+
+        QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("dragon"), none), "a word that is not a filler word was discarded");
+        QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("i attack"), none), "a phrase was discarded as though it were a lone filler word");
     }
 };
 
