@@ -308,9 +308,9 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
 
     if (sink) {
         if (eof) {
-            sink->clearSink();
+            sink->discardAll();
         } else if (eol) {
-            sink->clearSinkLastLine();
+            sink->discardLastLine();
         }
     }
 }

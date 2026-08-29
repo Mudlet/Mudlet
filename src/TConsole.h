@@ -280,8 +280,8 @@ public:
     // until its right-click menu asks for it:
     void showSearchBar();
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
-    void clearSink() override;
-    void clearSinkLastLine() override;
+    void discardAll() override;
+    void discardLastLine() override;
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
