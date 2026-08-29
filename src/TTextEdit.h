@@ -131,6 +131,7 @@ public:
     int mOldCaretColumn = 0;
 
     friend class CopyAsImageTest;
+    friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class TTextEditBlinkTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
