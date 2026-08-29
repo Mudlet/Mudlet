@@ -18,22 +18,18 @@
  ***************************************************************************/
 
 /*
- * Issue #10165: a script changes a setting while the settings dialog is open,
- * and the dialog's next write-back reverts it - because it wrote every control
- * back, stale values included. Instant apply makes that happen on any edit at
- * all rather than only when Save is pressed, so applyAll() now writes only the
- * settings whose controls the user really changed.
+ * Issue #10165: a script changes a setting while the settings dialog is open and
+ * the dialog's next write-back reverts it, because it wrote every control back,
+ * stale values included. applyAll() now writes only the settings whose controls
+ * the user really changed.
  *
- * The mechanism behind that is a value snapshot taken after population and
- * again after each apply. Both halves are covered here: the snapshot exists at
- * all, and it is retaken - a snapshot that went stale after the first apply
- * would go on treating a control the user once touched as changed for the rest
- * of the session, and revert whatever a script did to that setting afterwards.
- * mValueSnapshot itself is private, so all of this goes through behaviour.
+ * The mechanism is a value snapshot taken after population and again after each
+ * apply. Both halves are covered here: it exists, and it is retaken - a stale one
+ * would treat a control the user once touched as changed for the rest of the
+ * session. mValueSnapshot is private, so all of this goes through behaviour.
  *
- * A setting spread over several controls has to hold up component by
- * component, not just group by group: editing one member of such a group must
- * not carry its siblings' controls back to the Host with it.
+ * A setting spread over several controls has to hold up component by component:
+ * editing one member must not carry its siblings' controls back with it.
  *
  * Run with: ctest -R SettingsDirtyApplyTest -V
  */

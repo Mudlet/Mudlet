@@ -18,15 +18,9 @@
  ***************************************************************************/
 
 /*
- * The settings dialog has no Save button any more: an edit restarts a 400ms
- * debounce that writes every changed setting back through applyAll(), and
- * closing does the same once more for whatever the debounce had not reached.
- *
- * Four things have to hold for that to be safe, and each is a case below: a
- * change lands with nothing pressed; typing lands when the edit is finished
- * rather than per keystroke; opening the dialog writes nothing at all, since
- * populating it moves several hundred controls; and closing inside the
- * debounce window still writes.
+ * The settings dialog has no Save button: an edit restarts a 400ms debounce that
+ * writes every changed setting back through applyAll(), and closing does the same
+ * once more for whatever the debounce had not reached.
  *
  * Run with: ctest -R SettingsInstantApplyTest -V
  */

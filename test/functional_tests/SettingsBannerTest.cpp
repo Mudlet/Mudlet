@@ -19,15 +19,11 @@
 
 /*
  * The "Same settings, new look!" card at the top of whichever settings page is
- * showing. It explains where everything went, and it stands on every opening of
- * the settings until it is dismissed: only the "Got it" button records that it
- * has been seen. A banner that came back after that would be an every-session
- * nag, and one that never appeared would leave the whole reorganisation
- * unannounced - and one that only ever appeared on General would be missed by
- * anyone who opened the settings straight onto another category.
+ * showing. It stands on every opening of the settings until it is dismissed:
+ * only the "Got it" button records that it has been seen.
  *
  * The flag behind it lives in the shared Mudlet.ini rather than in a profile,
- * which is also why the config root has to be this process's own - see
+ * which is why the config root has to be this process's own - see
  * test_theBannerFlagIsReadFromThisTestsOwnSettings.
  *
  * Run with: ctest -R SettingsBannerTest -V

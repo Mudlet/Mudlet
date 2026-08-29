@@ -18,17 +18,14 @@
  ***************************************************************************/
 
 /*
- * The settings can be opened with no profile loaded, from the profile chooser,
- * and a profile can appear or go away underneath an open dialog. Four
- * hand-maintained lists of widget pointers grey the profile settings out and
- * back in again; the shell moves every one of those widgets onto a different
- * page, so what those lists reach is exactly what a reparenting mistake would
- * break - silently, since a control that is merely on the wrong page still
- * looks fine.
+ * The settings can be opened with no profile loaded, and a profile can appear or
+ * go away underneath an open dialog. Four hand-maintained lists of widget
+ * pointers grey the profile settings out and back in again; the shell moves every
+ * one of those widgets onto a different page, so a reparenting mistake breaks
+ * them silently - a control on the wrong page still looks fine.
  *
  * Repopulating for a profile that has just appeared also has to stay under the
- * populate guard: without it, writing several hundred controls would schedule
- * an apply, and the dialog would write settings back that nobody asked it to.
+ * populate guard, or writing several hundred controls would schedule an apply.
  *
  * Run with: ctest -R SettingsHostLifecycleTest -V
  */

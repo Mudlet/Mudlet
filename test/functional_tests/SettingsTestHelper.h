@@ -29,15 +29,13 @@
 
 #include "mudlet.h"
 
-// What the eight settings tests each used to define for themselves. Free inline
-// functions rather than a QObject on purpose: a header is not listed in
-// test/functional_tests/CMakeLists.txt, so nothing would run moc over it and a
-// Q_OBJECT here would fail to link.
+// Free inline functions rather than a QObject on purpose: a header is not listed
+// in test/functional_tests/CMakeLists.txt, so nothing would run moc over it and
+// a Q_OBJECT here would fail to link.
 //
 // Nothing here may use QVERIFY or QFAIL - both expand to a bare return, so they
 // are ill-formed in a function returning anything. The object names are the
-// dialog's test interface, documented in docs/settings-redesign.md; spelling
-// each of them once is most of the point of this file.
+// dialog's test interface, documented in docs/settings-redesign.md.
 namespace TestSettings {
 
 // Comfortably past the 400ms debounce even on a loaded sanitiser build, and

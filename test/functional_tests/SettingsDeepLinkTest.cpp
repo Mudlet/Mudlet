@@ -21,9 +21,7 @@
  * mudlet::showOptionsDialog(tab, host) still takes a tab objectName, so every
  * caller names a tab of a QTabWidget that no longer exists.
  * dlgProfilePreferences::setTab() is the remap table that keeps those names
- * working, and the whole table is covered here rather than only the five names
- * that are passed today: the other seven are exactly the ones a silent
- * regression would go unnoticed in.
+ * working, and the whole table is covered here.
  *
  * Run with: ctest -R SettingsDeepLinkTest -V
  */

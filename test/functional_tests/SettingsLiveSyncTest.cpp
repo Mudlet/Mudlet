@@ -18,17 +18,14 @@
  ***************************************************************************/
 
 /*
- * The settings dialog stays open for as long as the user leaves it open, while
- * scripts and the game itself move the settings on underneath it. Coming back
- * to its window is when it re-reads them, so that what it shows is what the
- * settings say rather than what they said when it opened.
+ * The settings dialog stays open while scripts and the game move the settings on
+ * underneath it. Coming back to its window is when it re-reads them.
  *
  * Re-reading is indistinguishable from discarding whatever it writes over, so
- * every case here is really about the same question: whose value is on the
- * control. The dialog's own, and the settings win; the user's, and they do -
- * a control changed but not yet applied, a word half typed, a query standing
- * in the search field. And re-reading must never turn into writing: a spin box
- * shown a value it cannot hold exactly must not answer with the rounded one.
+ * every case here asks the same question: whose value is on the control. The
+ * dialog's own, and the settings win; the user's, and they do. And re-reading
+ * must never turn into writing: a spin box shown a value it cannot hold exactly
+ * must not answer with the rounded one.
  *
  * Run with: ctest -R SettingsLiveSyncTest -V
  */

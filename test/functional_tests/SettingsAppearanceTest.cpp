@@ -227,10 +227,9 @@ private slots:
         QVERIFY2(paintedSurface().lightness() < 128, qPrintable(describe(paintedSurface())));
     }
 
-    // The defect as a reader meets it. A card is filled by the shell stylesheet
-    // and the text on it is not, so when the two stop agreeing about the theme
-    // the result is a dark card under dark text: measured at 1.2:1 before this
-    // was fixed, against the 4.5:1 that ordinary text is meant to keep.
+    // A card is filled by the shell stylesheet and the text on it is not, so when
+    // the two stop agreeing about the theme the result is a dark card under dark
+    // text - 1.2:1 before this was fixed, against the 4.5:1 text should keep
     void test_aCardsTextStaysReadableAfterAThemeChange()
     {
         setAppearance(enums::Appearance::dark);

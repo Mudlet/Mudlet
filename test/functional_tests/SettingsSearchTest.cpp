@@ -18,16 +18,13 @@
  ***************************************************************************/
 
 /*
- * "Find in settings" searches an index built off the real widget tree and shows
- * what matched by *lending* the matching cards to a results page - they are
+ * "Find in settings" *lends* the matching cards to a results page: they are
  * moved out of their own category page and put back at the (layout, index) they
  * were indexed at once the query ends.
  *
- * That restoration is the risk the whole feature carries: a card that does not
- * come home, or comes home in the wrong place, silently loses settings from
- * the page they belong on, and nothing else in the application would notice.
- * So the central case here walks every page before and after a search and
- * compares the two, rather than only checking that the results looked right.
+ * That restoration is the risk the feature carries - a card that does not come
+ * home silently loses settings from the page they belong on, and nothing else
+ * would notice - so the central case walks every page before and after a search.
  *
  * Run with: ctest -R SettingsSearchTest -V
  */
@@ -82,11 +79,9 @@ private:
 
     QWidget* resultsColumn() const { return mpPreferences->findChild<QWidget*>(qsl("settingsColumn_searchResults")); }
 
-    // The field takes the focus first, because that is the only way a query
-    // gets typed - by clicking into it or through Ctrl+F. It matters: the
-    // search lends matching cards to the results page, and reparenting a card
-    // that holds the keyboard focus clears it, handing the focus to the sidebar
-    // - which test_refiningTheQueryWithTheFocusOnAResultCardStaysInSearch pins.
+    // The field takes the focus first, because that is the only way a query gets
+    // typed. It matters: reparenting a card that holds the keyboard focus clears
+    // it, handing the focus to the sidebar.
     void search(const QString& query)
     {
         searchField()->setFocus();
@@ -356,13 +351,10 @@ private slots:
         QCOMPARE(cardPlacements(), before);
     }
 
-    // A result header says which category the cards under it live on. The
-    // sidebar says that with a name and an icon; the header says it with both.
-    //
-    // The icon set is single-colour line art tinted for the theme at runtime,
-    // so a header carries the picture itself rather than a path into the
-    // resources - which leaves the shape as the only thing that says which
-    // category's icon it is.
+    // A result header says which category the cards under it live on, with a name
+    // and an icon. The icon set is single-colour line art tinted at runtime, so a
+    // header carries the picture itself rather than a path - which leaves the
+    // shape as the only thing that says whose icon it is.
     void test_eachResultHeaderCarriesItsCategorysIcon()
     {
         search(qsl("color"));
@@ -403,10 +395,9 @@ private slots:
         QCOMPARE(carried.convertToFormat(QImage::Format_Alpha8), expected.convertToFormat(QImage::Format_Alpha8));
     }
 
-    // Half of what someone types into a settings search is not a word the
-    // settings use: they know the acronym, or what another client calls it.
-    // The synonyms are what closes that gap, and they are only worth having if
-    // they are attached to the card the answer is on.
+    // What someone types is often not a word the settings use - an acronym, or
+    // what another client calls it - and a synonym is only worth having if it is
+    // attached to the card the answer is on
     void test_aSynonymFindsASettingThatDoesNotUseTheWord()
     {
         search(qsl("keyring"));

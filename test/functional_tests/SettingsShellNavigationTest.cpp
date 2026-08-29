@@ -23,14 +23,6 @@
  * scrolling card pages. None of that is reachable from Lua - it is private C++
  * inside a dialog - so it is covered here rather than by a spec.
  *
- * What this file pins down: every category exists, in the order the sidebar
- * groups are specified in, and carries the cards the mapping table gives it;
- * the tab widget and the old Save row are really gone from the layout; each
- * page keeps its own scroll position, whether or not one of its own controls
- * holds the keyboard focus as it is left; a wheel that passes over a spin box
- * scrolls the page rather than editing the setting; and the Editor page's
- * one-off theme refresh happens on the first visit only.
- *
  * Run with: ctest -R SettingsShellNavigationTest -V
  */
 
@@ -298,9 +290,8 @@ private slots:
         mpPreferences = nullptr;
     }
 
-    // Every other case here rests on the tab strip being gone from the shell.
-    // The tab widget itself survives, holding no pages, so what has to be
-    // checked is that it is out of the layout rather than deleted.
+    // The tab widget itself survives, holding no pages, so what is checked is
+    // that it is out of the layout rather than deleted
     void test_theTabWidgetIsOutOfTheLayout()
     {
         QCOMPARE(mpPreferences->vBoxLayout_main->indexOf(mpPreferences->tabWidget), -1);
@@ -397,13 +388,10 @@ private slots:
         QCOMPARE(pageOf(qsl("mapper"))->verticalScrollBar()->value(), scrolledTo);
     }
 
-    // A sidebar click gives the list the keyboard focus before the page changes,
-    // which is the only reason the case above holds. A deep link arriving while
-    // a control on the page has the focus does not, and QStackedLayout then
-    // hands that focus over to the incoming page - which, when the control it is
-    // taken from has been scrolled out of sight, takes the page back to its top
-    // on the way. The control focused here is on the first card, so the page has
-    // to scroll to reach it.
+    // A sidebar click focuses the list before the page changes, which is why the
+    // case above holds. A deep link arriving while a control has the focus does
+    // not, and QStackedLayout hands that focus to the incoming page - which takes
+    // it back to the top when the control was scrolled out of sight.
     void test_aPageSwitchWithTheFocusOnThePageKeepsItsScrollPosition()
     {
         selectCategory(qsl("mapper"));
@@ -531,10 +519,8 @@ private slots:
         QCOMPARE(titleLeft(pPlain), titleLeft(pCheckable));
     }
 
-    // Nothing about a test run should depend on a file modification time to
-    // stay off the network: an unlucky one used to be all that stood between a
-    // visit to the Editor page and a live fetch of github.com, which fails
-    // slowly and intermittently rather than red.
+    // No test run should depend on a file modification time to stay off the
+    // network: a live fetch of github.com fails slowly rather than red
     void test_theThemeDownloadHookKeepsTheEditorPageOffTheNetwork()
     {
         QSettings* pSettings = mudlet::getQSettings();
@@ -736,8 +722,7 @@ private slots:
         QVERIFY2(mpPreferences->isVisible(), "Escape on a subpage closed the whole dialog instead of going up a level");
     }
 
-    // Every protocol that used to be a check item in a pop-up menu is a
-    // checkbox with a line of its own saying what it does.
+    // Every protocol is a checkbox with a line of its own saying what it does
     void test_everyProtocolIsACheckboxWithADescription()
     {
         const QStringList protocols{qsl("CHARSET"), qsl("GMCP"), qsl("MNES"), qsl("MSDP"), qsl("MSP"), qsl("MSSP"), qsl("MTTS"), qsl("MXP"), qsl("NAWS"), qsl("NEWENVIRON")};
@@ -818,10 +803,8 @@ private slots:
         QVERIFY2(pHero->findChildren<QAbstractButton*>().isEmpty(), "the security hero grew a control of its own - it is meant to reflect and link, not to set");
     }
 
-    // The window can be made narrower than a sidebar of names and a full
-    // reading column will fit into. Firefox's answer, and now this dialog's,
-    // is to keep the sidebar as a rail of icons rather than to let the page
-    // scroll sideways underneath it.
+    // Narrower than a sidebar of names plus a full reading column, the sidebar
+    // becomes a rail of icons rather than letting the page scroll sideways
     void test_theSidebarCollapsesToARailWhenTheWindowIsTooNarrowForIt()
     {
         auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
@@ -848,8 +831,8 @@ private slots:
         QVERIFY2(sidebar()->item(row)->toolTip().isEmpty(), "an expanded sidebar row kept the tooltip that only stood in for a hidden name");
     }
 
-    // The acceptance test the visual-QA pass asked for: at the size the dialog
-    // refuses to go below, no page is wider than the window showing it.
+    // At the size the dialog refuses to go below, no page is wider than the
+    // window showing it
     void test_atItsMinimumSizeNoPageScrollsSideways()
     {
         mpPreferences->resize(780, 560);
@@ -879,15 +862,12 @@ private slots:
     }
 
     // A QCheckBox draws its label on one line however long it is, so a
-    // translation longer than the reading column is what makes a page scroll
-    // sideways.
+    // translation longer than the reading column makes the page scroll sideways.
     //
-    // What the case does *not* assert is that English never wraps anything.
-    // Whether a given label fits is a question about this machine's fonts as
-    // much as about the words - the same English page wraps under a real X
-    // server and does not under the offscreen platform - so the environment-
-    // independent claim is the one below: only the labels that do not fit give
-    // up their text, and the short ones beside them keep theirs.
+    // Not asserted: that English never wraps anything. Whether a label fits
+    // depends on this machine's fonts - the same English page wraps under a real
+    // X server and not under the offscreen platform - so the claim below is the
+    // environment-independent one: only labels that do not fit give up their text.
     void test_aCheckboxTooLongForTheReadingColumnWrapsIntoALabelBesideIt()
     {
         // 137px of English on a 640px column, so no measurement anywhere can
@@ -932,8 +912,8 @@ private slots:
         mpHost->mAdvertiseScreenReader = before;
     }
 
-    // Section 8's "split the Accessibility card": a card whose title is the
-    // name of the page it is alone on tells the reader nothing.
+    // A card whose title is the name of the page it is alone on tells the reader
+    // nothing
     void test_theAccessibilityPageDoesNotRepeatItsOwnNameOnACard()
     {
         selectCategory(qsl("accessibility"));
@@ -965,11 +945,10 @@ private slots:
         }
     }
 
-    // Greptile P1 on #10241. Escape means "up a level", and the results a
-    // search put on screen are a level of their own - the code that starts a
-    // search says so, and stows the subpage it interrupted to come back to.
-    // What it does not do is teach reject() about the search, so Escape read
-    // the cleared subpage as "nothing to go up from" and closed the dialog.
+    // Escape means "up a level", and search results are a level of their own:
+    // starting a search stows the subpage it interrupted. reject() knew nothing
+    // of the search, so Escape read the cleared subpage as "nothing to go up
+    // from" and closed the dialog (#10241).
     void test_escapeDuringASearchGoesBackToThePageItInterrupted()
     {
         auto* pSearch = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
@@ -1017,12 +996,10 @@ private slots:
         openPreferences();
     }
 
-    // Greptile P1 on #10242. The sidebar collapses when the window is too
-    // narrow for it, but "too narrow" was measured against the 640px reading
-    // column rather than the page actually on screen - and a translated page
-    // whose controls do not fit 640 is capped wider than that. Between the two
-    // numbers the sidebar stayed full and the page scrolled sideways, when
-    // collapsing it was exactly the room that was needed.
+    // "Too narrow" was measured against the 640px reading column rather than the
+    // page on screen, and a translated page whose controls do not fit 640 is
+    // capped wider. Between the two numbers the sidebar stayed full and the page
+    // scrolled sideways (#10242).
     void test_theSidebarCollapsesForAPageWiderThanTheReadingColumn()
     {
         delete mpPreferences;
@@ -1079,11 +1056,9 @@ private slots:
         mpPreferences->resize(1060, 760);
     }
 
-    // A wrapped checkbox's words are a QLabel beside it, and clicking the words
-    // is how a checkbox is used. The click has to arrive the way the window
-    // system delivers one - at the window, for Qt to route - because a test
-    // that hands the press straight to the label skips exactly the propagation
-    // this is about.
+    // Clicking the words is how a checkbox is used. The click has to arrive the
+    // way the window system delivers one - at the window, for Qt to route - as
+    // handing the press straight to the label skips the propagation under test.
     void test_clickingTheWordsOfAWrappedCheckboxTogglesIt()
     {
         delete mpPreferences;
