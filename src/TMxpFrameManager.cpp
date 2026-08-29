@@ -304,13 +304,13 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
 
     mCurrentDestination = frameName;
 
-    auto* console = getCurrentDestinationConsole();
+    auto* sink = currentDestinationSink();
 
-    if (console) {
+    if (sink) {
         if (eof) {
-            console->buffer.clear();
+            sink->clearSink();
         } else if (eol) {
-            console->buffer.clearLastLine();
+            sink->clearSinkLastLine();
         }
     }
 }
@@ -330,14 +330,23 @@ QWidget* TMxpFrameManager::getCurrentDestinationWidget() const
     return frame ? frame->widget.data() : nullptr;
 }
 
-TConsole* TMxpFrameManager::getCurrentDestinationConsole() const
+TPrintSink* TMxpFrameManager::currentDestinationSink() const
 {
     if (mCurrentDestination.isEmpty()) {
-        return qobject_cast<TConsole*>(mpHost->mpConsole);
+        return nullptr;
     }
 
     const auto* frame = getFrame(mCurrentDestination);
-    return frame ? frame->console.data() : nullptr;
+    if (!frame) {
+        return nullptr;
+    }
+
+    TConsole* console = frame->console.data();
+    if (!console || console == mpHost->mpConsole) {
+        return nullptr;
+    }
+
+    return console;
 }
 
 TMxpFrame* TMxpFrameManager::getFrame(const QString& name)

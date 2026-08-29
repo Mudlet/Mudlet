@@ -2238,6 +2238,16 @@ void TConsole::printFormatted(const QString& text, const std::vector<TChar>& for
     }
 }
 
+void TConsole::clearSink()
+{
+    buffer.clear();
+}
+
+void TConsole::clearSinkLastLine()
+{
+    buffer.clearLastLine();
+}
+
 void TConsole::printSystemMessage(const QString& msg)
 {
     const QString txt = tr("System Message: %1").arg(msg);
