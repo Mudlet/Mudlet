@@ -262,19 +262,38 @@ static constexpr int addonMaximumSequenceChunks = 4;
 
 // Qt stops parsing at that many chunks and keeps what it has, so a longer
 // sequence comes back as a shorter one nobody asked for and fires on a prefix
-// of it. Counting the separating commas the way Qt does - one directly after a
-// '+' is the comma key itself, and so is a trailing one - catches that before
-// the truncated sequence is handed out. Anything at or under the cap is left to
-// Qt, which has the rest of the syntax.
+// of it. Counting the separating commas the way Qt does catches that before the
+// truncated sequence is handed out. Anything at or under the cap is left to Qt,
+// which has the rest of the syntax.
+//
+// A comma separates, with two exceptions Qt makes so that the comma key itself
+// can be named: a trailing one is that key, and where two run together the
+// first is the key and the second separates. A comma after a '+' is NOT one of
+// those exceptions - "Ctrl++,A" is the plus key then A, two chunks. Qt then
+// steps over one space, and stops if that was the end of the string, so a
+// sequence written "Ctrl+A, Ctrl+B, " is two steps rather than a third of
+// nothing.
 static int addonSequenceChunkCount(const QString& text)
 {
     int chunks = 1;
     for (int index = 0; index < text.size(); ++index) {
-        if (text.at(index) != QLatin1Char(',') || index == text.size() - 1) {
+        if (text.at(index) != QLatin1Char(',')) {
             continue;
         }
-        if (index > 0 && text.at(index - 1) == QLatin1Char('+')) {
+        if (index == text.size() - 1) {
             continue;
+        }
+        if (text.at(index + 1) == QLatin1Char(',')) {
+            ++index;
+            if (index == text.size() - 1) {
+                continue;
+            }
+        }
+        if (text.at(index + 1) == QLatin1Char(' ')) {
+            ++index;
+            if (index == text.size() - 1) {
+                continue;
+            }
         }
         ++chunks;
     }
@@ -353,17 +372,22 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
     // F3 buffer search, for one - has no label to quote but still ends in the
     // same ambiguous binding. Only shortcuts Qt would actually offer as a
     // candidate count: a disabled one never fires, and a Qt::WidgetShortcut
-    // one needs its own widget focused, which a widget with no focus policy
-    // never is. Every TConsole builds a Ctrl+W shortcut of that second kind
-    // that is not connected to anything, and counting it refused Ctrl+W to
-    // every package on the platforms where nothing uses it.
+    // one fires only while its own widget is the focus widget, which a widget
+    // that hands its focus to a proxy never becomes. Every TConsole builds a
+    // Ctrl+W shortcut of that second kind that is not connected to anything,
+    // and counting it refused Ctrl+W to every package on the platforms where
+    // nothing uses it.
+    //
+    // The proxy is the test rather than the focus policy: setFocus() ignores
+    // the policy, so a Qt::NoFocus widget holds the focus perfectly well and
+    // its shortcut would then be a live candidate after all.
     for (const QShortcut* shortcut : findChildren<QShortcut*>()) {
         if (!shortcut->isEnabled() || shortcut->key() != sequence) {
             continue;
         }
         if (shortcut->context() == Qt::WidgetShortcut) {
             const QWidget* pOwner = qobject_cast<QWidget*>(shortcut->parent());
-            if (!pOwner || pOwner->focusPolicy() == Qt::NoFocus) {
+            if (!pOwner || pOwner->focusProxy()) {
                 continue;
             }
         }

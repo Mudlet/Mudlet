@@ -23,7 +23,7 @@ local id = addCommand{
   icon     = "/path/icon.png",    -- filesystem path, Qt resource path, or theme name
   tooltip  = "Configure voices",
   menuPath = "Speech",            -- position within Extensions; "Speech/Voices" nests
-  shortcut = "Ctrl+Alt+S",        -- needs the menu item, so not with surfaces = "toolbar"
+  shortcut = "Ctrl+Alt+P",        -- needs the menu item, so not with surfaces = "toolbar"
   surfaces = {"menu", "toolbar"}, -- omit for every surface this client places commands on
 }
 ```
@@ -37,8 +37,9 @@ desktop Mudlet is the menu and the toolbar.
 not be placed. The reasons are:
 
 - `name` is missing, so the command has nothing to show
-- a field was given a value of the wrong type - `menuPath = {"Speech"}`, say -
-  rather than being left out
+- a field was given a value Mudlet cannot read as the type it expects -
+  `menuPath = {"Speech"}`, say - rather than being left out. A number is read
+  as a string, so `menuPath = 12345` places a submenu of that name
 - every surface it asked for is hidden (see *The main toolbar is hidden by
   default* below)
 - a `shortcut` or a `menuPath` was given alongside `surfaces = "toolbar"`,

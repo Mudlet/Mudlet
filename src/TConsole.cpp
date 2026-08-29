@@ -3086,15 +3086,24 @@ void TConsole::setF3SearchEnabled(const bool enabled)
         // child of this console until the event loop turns, and anything
         // asking what currently holds F3 - an addon command wanting it, say -
         // would be told the search still does.
+        //
+        // Forgotten as well as disabled: a QPointer to an object that is only
+        // scheduled for deletion is not yet null, so switching the search off
+        // and straight back on would find these and reuse them, reconnecting to
+        // a shortcut the event loop is about to destroy. The search would then
+        // report itself on with no F3 at all, and the guard above this branch
+        // would refuse to build another.
         if (!mpSearchNextShortcut.isNull()) {
             disconnect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
             mpSearchNextShortcut->setEnabled(false);
             mpSearchNextShortcut->deleteLater();
+            mpSearchNextShortcut.clear();
         }
         if (!mpSearchPrevShortcut.isNull()) {
             disconnect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
             mpSearchPrevShortcut->setEnabled(false);
             mpSearchPrevShortcut->deleteLater();
+            mpSearchPrevShortcut.clear();
         }
     }
 }

@@ -11,10 +11,14 @@
 describe("addon commands", function()
   local placed = {}
 
+  -- Everything goes through this rather than addCommand directly: a failed
+  -- assertion abandons the rest of its block, so a command placed by a spec
+  -- that then fails would stay on the menu - and on its key - for every spec
+  -- after it, turning one regression into a cascade of unrelated ones.
   local function place(fields)
-    local id = addCommand(fields)
+    local id, why = addCommand(fields)
     if id then placed[#placed + 1] = id end
-    return id
+    return id, why
   end
 
   after_each(function()
@@ -30,7 +34,7 @@ describe("addon commands", function()
     end)
 
     it("refuses a command with no name to show", function()
-      local id, why = addCommand{menuPath = "Spec"}
+      local id, why = place{menuPath = "Spec"}
       assert.is_nil(id)
       assert.is_string(why)
     end)
@@ -40,7 +44,7 @@ describe("addon commands", function()
     -- does take one, so this is an easy thing to write - and it used to place
     -- the command at the top of Extensions without a word.
     it("refuses a field of the wrong type rather than dropping it", function()
-      local id, why = addCommand{name = "WrongTypeSpec", menuPath = {"Speech", "Voices"}}
+      local id, why = place{name = "WrongTypeSpec", menuPath = {"Speech", "Voices"}}
       assert.is_nil(id, "the menu path was the wrong type and was dropped without a word")
       assert.is_truthy(why:find("menuPath", 1, true), "the refusal does not say which field: " .. tostring(why))
       assert.is_truthy(why:find("table", 1, true), "the refusal does not say what it found: " .. tostring(why))
@@ -50,13 +54,13 @@ describe("addon commands", function()
     -- not a type mistake and has to reach the sequence parser to be refused for
     -- what it actually is
     it("leaves a number to whatever reads the field", function()
-      local id, why = addCommand{name = "NumberFieldSpec", shortcut = 12345}
+      local id, why = place{name = "NumberFieldSpec", shortcut = 12345}
       assert.is_nil(id)
       assert.is_falsy(why:find("number", 1, true), "the number was refused as a type mistake: " .. tostring(why))
     end)
 
     it("refuses a surface this client does not have", function()
-      local id, why = addCommand{name = "Nowhere", surfaces = "hologram"}
+      local id, why = place{name = "Nowhere", surfaces = "hologram"}
       assert.is_nil(id)
       assert.is_string(why)
     end)
@@ -75,12 +79,27 @@ describe("addon commands", function()
     -- command's key - was then refused in the name of a command that had just
     -- been removed and could not be found by anything the package could call.
     it("frees a shortcut as soon as the command is removed, not a turn later", function()
-      local first = addCommand{name = "SpecShortcut", menuPath = "Spec", shortcut = "Ctrl+Alt+F9"}
+      local first = place{name = "SpecShortcut", menuPath = "Spec", shortcut = "Ctrl+Alt+F9"}
       assert.is_number(first)
       assert.is_true(removeCommand(first))
 
       local second, why = place{name = "SpecShortcutAgain", menuPath = "Spec", shortcut = "Ctrl+Alt+F9"}
       assert.is_number(second, "the shortcut was still held by the removed command: " .. tostring(why))
+    end)
+
+    -- docs/addon-ui-api.md opens with this, so it is the first thing anyone
+    -- writing a package copies. It shipped asking for Ctrl+Alt+S, which is
+    -- Toggle Emergency Stop, and so refused the whole command on the spot.
+    it("places the example the documentation opens with", function()
+      local id, why = place{
+        name     = "Speech settings",
+        icon     = "/path/icon.png",
+        tooltip  = "Configure voices",
+        menuPath = "Speech",
+        shortcut = "Ctrl+Alt+P",
+        surfaces = {"menu", "toolbar"},
+      }
+      assert.is_number(id, "the documented example does not work: " .. tostring(why))
     end)
 
     it("gives each command an id of its own", function()
@@ -97,7 +116,7 @@ describe("addon commands", function()
     -- up therefore handed Ctrl+1 to a package and left the player with two
     -- things on one key, which Qt resolves by disabling both.
     it("refuses one Mudlet uses for switching profiles, and says what holds it", function()
-      local id, why = addCommand{name = "ProfileKeySpec", shortcut = "Ctrl+1"}
+      local id, why = place{name = "ProfileKeySpec", shortcut = "Ctrl+1"}
       assert.is_nil(id, "Ctrl+1 switches to the first profile and was handed out anyway")
       -- naming the holder is the difference between a package author fixing
       -- their shortcut and guessing at one. The name is translated, so what
@@ -105,58 +124,119 @@ describe("addon commands", function()
       assert.is_truthy(why:find('"', 1, true), "the refusal does not say what holds the key: " .. tostring(why))
     end)
 
-    -- The other arm of the same question: this key does hang on a menu action,
-    -- so it is found by the scan of those rather than by asking what Mudlet
-    -- reserves. Ctrl+Alt+L is spelt the same way on every platform, which the
-    -- profile tab keys are not - macOS puts those on the physical Ctrl key,
-    -- while the Ctrl in a package's string is Cmd there.
-    it("refuses one Mudlet uses from its own menu", function()
-      local id, why = addCommand{name = "MenuKeySpec", shortcut = "Ctrl+Alt+L"}
+    -- Ctrl+Alt+L is spelt the same way on every platform, which the profile tab
+    -- keys are not - macOS puts those on the physical Ctrl key, while the Ctrl
+    -- in a package's string is Cmd there.
+    it("refuses one Mudlet reserves for a menu command", function()
+      local id, why = place{name = "MenuKeySpec", shortcut = "Ctrl+Alt+L"}
       assert.is_nil(id, "Ctrl+Alt+L toggles logging and was handed out anyway")
       assert.is_truthy(why:find('"', 1, true), "the refusal does not say what holds the key: " .. tostring(why))
     end)
 
+    -- The other arm of the same question. Mudlet's own keys are answered from
+    -- what it reserves, but a key another command of this profile is already on
+    -- hangs off that command's menu action and is found by the scan of those -
+    -- the arm that has to tell a command of this profile, whose name may be
+    -- quoted back, from one of another profile, whose name may not.
+    it("refuses one a command of this profile already has, and names it", function()
+      assert.is_number(place{name = "HolderSpec", shortcut = "Ctrl+Alt+J"})
+      local id, why = place{name = "WantsItSpec", shortcut = "Ctrl+Alt+J"}
+      assert.is_nil(id, "two commands were put on one key, which disables both")
+      assert.is_truthy(why:find("HolderSpec", 1, true), "the refusal does not name this profile's own command: " .. tostring(why))
+    end)
+
     -- Not every QShortcut on the window is a key the player can reach: a
-    -- widget-context one on a widget that takes no focus never fires, and every
-    -- console builds one for Ctrl+W that is connected to nothing. Counting
-    -- those refused a free key to every package.
+    -- widget-context one fires only while its own widget is the focus widget,
+    -- and every console hands its focus to the command line, so the Ctrl+W
+    -- shortcut each one builds can never fire. Counting those refused a free
+    -- key to every package.
+    --
+    -- Every kind of console is opened first, because the ones a profile makes
+    -- later are the ones that would quietly take the key back.
     it("hands out a key held only by a shortcut that could never fire", function()
       if getOS() == "mac" then
         -- Ctrl in a key sequence is Cmd there, and Cmd+W closes the profile
         return
       end
-      local id, why = addCommand{name = "DeadShortcutSpec", shortcut = "Ctrl+W"}
+      createMiniConsole("DeadShortcutMini", 0, 0, 100, 100)
+      openUserWindow("DeadShortcutWindow")
+
+      local id, why = place{name = "DeadShortcutSpec", shortcut = "Ctrl+W"}
       assert.is_number(id, "nothing on this platform uses Ctrl+W, yet: " .. tostring(why))
       removeCommand(id)
+
+      closeUserWindow("DeadShortcutWindow")
     end)
 
     -- Switching the buffer search off deletes its shortcuts through the event
     -- loop, so for the rest of the turn they were still on the window and F3
     -- was refused to a package that could by then have it
     it("hands out a key as soon as whatever held it is switched off", function()
+      local was = getConfig("f3SearchEnabled")
       setConfig("f3SearchEnabled", true)
-      local held = addCommand{name = "F3HeldSpec", shortcut = "F3"}
+      local held = place{name = "F3HeldSpec", shortcut = "F3"}
       if held then
         removeCommand(held)
       end
       assert.is_nil(held, "F3 is the buffer search's key while the search is on")
 
       setConfig("f3SearchEnabled", false)
-      local id, why = addCommand{name = "F3FreeSpec", shortcut = "F3"}
+      local id, why = place{name = "F3FreeSpec", shortcut = "F3"}
       assert.is_number(id, "F3 was still refused after the search was switched off: " .. tostring(why))
       removeCommand(id)
+      setConfig("f3SearchEnabled", was)
+    end)
+
+    -- Switching it off and straight back on is one turn, so the shortcuts the
+    -- off leg retired have not been destroyed yet. Reusing them would leave the
+    -- search on with no key at all, which shows up here as F3 being free while
+    -- the search says it is running.
+    it("keeps the search's key when it is switched off and on in one turn", function()
+      local was = getConfig("f3SearchEnabled")
+      setConfig("f3SearchEnabled", true)
+      setConfig("f3SearchEnabled", false)
+      setConfig("f3SearchEnabled", true)
+
+      local id, why = place{name = "F3ReentrantSpec", shortcut = "F3"}
+      assert.is_nil(id, "the search reports itself on, yet F3 was free to take: " .. tostring(why))
+      setConfig("f3SearchEnabled", was)
     end)
 
     -- Qt keeps the first four chunks of a longer sequence and drops the rest,
     -- so the command went onto a key nobody had asked for
     it("refuses one of more steps than Qt can hold", function()
-      local id, why = addCommand{name = "FiveStepSpec", shortcut = "Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3, Ctrl+Alt+F4, Ctrl+Alt+F5"}
+      local id, why = place{name = "FiveStepSpec", shortcut = "Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3, Ctrl+Alt+F4, Ctrl+Alt+F5"}
       assert.is_nil(id, "the fifth step was dropped and the rest handed out anyway")
-      assert.is_string(why)
+      -- the refusal has to be the length one: every other reason a shortcut is
+      -- turned down would leave this passing while the length check was gone
+      assert.is_truthy(why:find("4", 1, true), "refused, but not for its length: " .. tostring(why))
     end)
 
     it("takes one of exactly as many steps as Qt can hold", function()
       assert.is_number(place{name = "FourStepSpec", shortcut = "Ctrl+Alt+F5, Ctrl+Alt+F6, Ctrl+Alt+F7, Ctrl+Alt+F8"})
+    end)
+
+    -- Qt steps over the separator and the one space after it and then stops,
+    -- so a list written with a trailing separator - which is what generating
+    -- one in a loop produces - is the steps it names and not one more of
+    -- nothing. Counting that phantom step refused a sequence Qt would bind.
+    it("takes one of that length written with a trailing separator", function()
+      local id, why = place{name = "TrailingSeparatorSpec", shortcut = "Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3, Ctrl+Alt+F12, "}
+      assert.is_number(id, "the trailing separator was counted as a step of its own: " .. tostring(why))
+    end)
+
+    -- A step naming the plus key ends in the same character that joins a
+    -- modifier to its key, and counting steps by looking at what precedes the
+    -- comma reads "Ctrl++, A" as one step rather than two. That undercount let
+    -- an over-long sequence past the check to be truncated by Qt after all.
+    it("refuses an over-long one whose first step is the plus key", function()
+      local id, why = place{name = "PlusFiveStepSpec", shortcut = "Ctrl++, Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3, Ctrl+Alt+F4"}
+      assert.is_nil(id, "the fifth step was dropped and the rest handed out anyway")
+      assert.is_truthy(why:find("4", 1, true), "refused, but not for its length: " .. tostring(why))
+    end)
+
+    it("takes the plus key as a step of a sequence it can hold", function()
+      assert.is_number(place{name = "PlusStepSpec", shortcut = "Ctrl++, Ctrl+Alt+F11"})
     end)
 
     -- The comma separates the steps and is also a key in its own right, so
@@ -165,17 +245,27 @@ describe("addon commands", function()
       assert.is_number(place{name = "CommaKeySpec", shortcut = "Ctrl+,"})
     end)
 
+    -- and the two spellings of it have to be told apart at the limit, where
+    -- counting a comma key as a separator is the difference between a sequence
+    -- that fits and one that is refused for being a step too long. Qt reads
+    -- the doubled comma as the comma key followed by a separator, so this is
+    -- four steps, not five.
+    it("takes a sequence of the greatest length whose first step is a comma", function()
+      local id, why = place{name = "CommaStepSpec", shortcut = "Ctrl+,, Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3"}
+      assert.is_number(id, "the comma key was counted as a separator and the sequence read as too long: " .. tostring(why))
+    end)
+
     -- Qt parses an unreadable chunk into Key_unknown rather than dropping it,
     -- so a typo in any chunk but the first passed the emptiness test, showed a
     -- half-written sequence in the menu and never fired
     it("refuses one whose second chunk is a typo", function()
-      local id, why = addCommand{name = "TypoKeySpec", shortcut = "Ctrl+Alt+F10, Ctrl+Shft+B"}
+      local id, why = place{name = "TypoKeySpec", shortcut = "Ctrl+Alt+F10, Ctrl+Shft+B"}
       assert.is_nil(id, "the sequence holds an unparseable chunk and was accepted anyway")
       assert.is_string(why)
     end)
 
     it("refuses one on a command kept off the menu, whatever the bars are doing", function()
-      local id, why = addCommand{name = "ToolbarKeySpec", surfaces = "toolbar", shortcut = "Ctrl+Alt+F11"}
+      local id, why = place{name = "ToolbarKeySpec", surfaces = "toolbar", shortcut = "Ctrl+Alt+F11"}
       assert.is_nil(id)
       assert.is_truthy(why:find("toolbar", 1, true))
     end)
@@ -185,13 +275,13 @@ describe("addon commands", function()
     -- Each of these used to fall through to "both", so a package naming
     -- nothing usable got its command placed everywhere instead of an answer
     it("refuses an empty list, which asks for the command to go nowhere", function()
-      local id, why = addCommand{name = "NowhereSpec", surfaces = {}}
+      local id, why = place{name = "NowhereSpec", surfaces = {}}
       assert.is_nil(id)
       assert.is_string(why)
     end)
 
     it("refuses a value that is neither a name nor a list", function()
-      local id, why = addCommand{name = "BooleanSurfaceSpec", surfaces = true}
+      local id, why = place{name = "BooleanSurfaceSpec", surfaces = true}
       assert.is_nil(id)
       assert.is_string(why)
     end)
@@ -200,13 +290,13 @@ describe("addon commands", function()
     -- message used to quote the empty string and send packages looking for a
     -- surface with no name
     it("refuses a keyed table and says what it found", function()
-      local id, why = addCommand{name = "KeyedSurfaceSpec", surfaces = {menu = true, toolbar = true}}
+      local id, why = place{name = "KeyedSurfaceSpec", surfaces = {menu = true, toolbar = true}}
       assert.is_nil(id)
       assert.is_truthy(why:find("boolean", 1, true))
     end)
 
     it("refuses a menu path on a command kept off the menu", function()
-      local id, why = addCommand{name = "PathlessSpec", surfaces = "toolbar", menuPath = "Spec"}
+      local id, why = place{name = "PathlessSpec", surfaces = "toolbar", menuPath = "Spec"}
       assert.is_nil(id, "the menu path had nowhere to go and was dropped without a word")
       assert.is_truthy(why:find("toolbar", 1, true))
     end)
@@ -227,7 +317,7 @@ describe("addon commands", function()
     end)
 
     it("is what an id becomes once its command is removed", function()
-      local id = addCommand{name = "Fleeting", menuPath = "Spec"}
+      local id = place{name = "Fleeting", menuPath = "Spec"}
       assert.is_true(removeCommand(id))
       assert.is_false(removeCommand(id))
       assert.is_false(enableCommand(id))

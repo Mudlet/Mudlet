@@ -513,6 +513,9 @@ private slots:
 
         const QString why = refusalReason(mpSecondHost, qsl("name = 'WantsIt', menuPath = 'Keys', shortcut = 'Ctrl+Alt+J'"));
         QVERIFY2(!why.isEmpty(), "the other profile was handed a key already in use, which disables both");
+        // pinned to the sequence: any other reason the command could be turned
+        // down would satisfy a bare non-empty check while the clash went unseen
+        QVERIFY2(why.contains(QKeySequence(qsl("Ctrl+Alt+J")).toString(QKeySequence::NativeText)), qPrintable(qsl("refused, but not over the shortcut: %1").arg(why)));
         QVERIFY2(!why.contains(qsl("PrivateToFirst")), qPrintable(qsl("the refusal names a command belonging to another profile: %1").arg(why)));
 
         QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(firstId)));
