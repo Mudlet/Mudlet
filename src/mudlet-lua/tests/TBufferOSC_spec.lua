@@ -529,6 +529,54 @@ describe("Tests TBuffer OSC sequence handling", function()
       end)
     end)
 
+    -- deleteLine() shifts every line below the one it removes, so a tracked
+    -- link's recorded line number stops matching where its text now sits - the
+    -- same defect as above reached by the route a trigger gag takes.
+    it("does not rewrite an unrelated line after deleteLine() moved the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscdelseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCDEL1(" .. link .. ")OSCDEL1\n"))
+        local registeredAt, concealed = findLine("OSCDEL1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+        -- concealment proves the link registered, so there is tracked state to go stale
+        assert.equals("OSCDEL1(          )OSCDEL1", concealed)
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscdelfiller padded out well past the link column " .. i .. "\n") end
+
+        -- take a line above the link, so everything below it moves up one
+        assert.is_true(moveCursor(0, 0))
+        deleteLine()
+        local movedTo = findLine("OSCDEL1")
+        assert.equals(registeredAt - 1, movedTo, "deleting an earlier line did not move the link's line up")
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        -- the link's own line is the one that should change: it reveals where the
+        -- text actually sits now, and every other line is left alone
+        assert.equals("OSCDEL1(HIDDENWORD)OSCDEL1", getLines("main", movedTo, movedTo + 1)[1],
+          "the reveal did not land on the line the link moved to")
+        for lineNumber = 0, lastLine do
+          if lineNumber ~= movedTo then
+            assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+              "a link tracked across deleteLine() rewrote line " .. lineNumber)
+          end
+        end
+      end)
+    end)
+
     -- clearWindow() discards every line, so a tracked link's line number stops
     -- meaning anything - the same defect as above reached by a second route. The
     -- buffer is refilled afterwards so a broken reveal has something to overwrite.
@@ -543,7 +591,7 @@ describe("Tests TBuffer OSC sequence handling", function()
         local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
         assert.is_true(feedTriggers("OSCCLR1(" .. link .. ")OSCCLR1\n"))
         local registeredAt, concealed = findLine("OSCCLR1")
-        assert.is_truthy(registeredAt, "the line carrying the link never reached the buffer")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
         -- concealment proves the link registered, so there is tracked state for
         -- clearWindow() to leave behind
         assert.equals("OSCCLR1(          )OSCCLR1", concealed)

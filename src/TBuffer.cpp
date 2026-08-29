@@ -5698,7 +5698,7 @@ void TBuffer::clear()
     mCurrentHyperlinkLinkId = 0;
     mHyperlinkActive = false;
 
-    // clear before the loop below empties the buffer so that a pending visibility change doesn't rewrite a line that happens to land on a tracked line number
+    // every line is about to go, so the tracked links and any announcement queued for them go with it
     if (mpConsole) { // null while the buffer is being constructed
         mpConsole->getHyperlinkVisibilityManager().clear();
     }
@@ -5924,6 +5924,12 @@ bool TBuffer::deleteLines(int from, int to)
             } else if (commitLineIndex > to) {
                 commitLineIndex -= delta;
             }
+        }
+
+        // Tracked OSC 8 hyperlinks are addressed by line number too, so they
+        // shift with everything else - any whose line just went away are dropped
+        if (mpConsole) {
+            mpConsole->getHyperlinkVisibilityManager().adjustLineNumbers(from, delta);
         }
         return true;
     }

@@ -681,18 +681,6 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 
             queueHiddenAnnouncement();
 
-            // SAFE line number adjustment: Only adjust links that are on lines > targetLine
-            // Update in-place to avoid copying the entire map
-            for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                if (it.value().lineNumber > targetLine) {
-                    int originalLine = it.value().lineNumber;
-                    it.value().lineNumber--;
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote() << "[OSC] Adjusted link" << it.key() << "from line" << originalLine << "to line" << it.value().lineNumber;
-#endif
-                }
-            }
-
             // Stop timer if no more timer-based links exist
             bool hasTimers = false;
             for (const auto& remainingLink : std::as_const(mTrackedLinks)) {

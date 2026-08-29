@@ -161,6 +161,54 @@ private slots:
         QCOMPARE(pConsole->getLinkStore().getHintsConst(linkId), QStringList{mLinkHint});
     }
 
+    // A wholeline concealment deletes the link's own line, and deleteLines() now
+    // moves every link below it up one. The manager used to do that itself right
+    // afterwards, which would move them twice. Driven through onLinkClicked()
+    // because a click is the only thing that conceals without a delay, and there
+    // is no Lua entry point for one - see TBufferOSC_spec.lua, which says as much.
+    void test_aWholelineConcealmentMovesTheLinksBelowItOnlyOnce()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        QVERIFY(pConsole->clear(qsl("main")));
+
+        fill(pConsole, qsl("seed"), 3);
+        const int goingId = appendLink(pConsole);
+        fill(pConsole, qsl("between"), 2);
+        const int survivingId = appendLink(pConsole);
+        qApp->processEvents();
+
+        const int goingOn = lineContaining(buffer, mLinkText);
+        QVERIFY2(goingOn >= 0, "the first link's text never reached the buffer");
+        const int survivingOn = lineContaining(buffer, mLinkText, goingOn + 1);
+        QVERIFY2(survivingOn > goingOn, "the second link has to sit below the first for this to cover anything");
+
+        // returns whether the text should be blanked, and this one starts visible
+        manager.registerHyperlink(goingId, goingOn, 0, mLinkText.length(), mLinkText, wholeLineConcealStyling());
+        manager.registerHyperlink(survivingId, survivingOn, 0, mLinkText.length(), mLinkText, concealLaterStyling());
+
+        // blank the survivor, so that the reveal below is the only thing that can
+        // put its text back - otherwise the text sits there and the case passes
+        // however wrong the line number has become
+        manager.concealLink(survivingId);
+        QVERIFY2(manager.isLinkConcealed(survivingId), "the surviving link did not conceal");
+        QVERIFY2(lineContaining(buffer, mLinkText) == goingOn, "the survivor's text is still in the buffer, so a reveal would prove nothing");
+
+        // clicking conceals it, and a wholeline concealment takes the line with it
+        manager.onLinkClicked(goingId);
+        qApp->processEvents();
+        QVERIFY2(!manager.trackedLinkIds().contains(goingId), "the clicked link was not concealed away");
+        QVERIFY2(manager.trackedLinkIds().contains(survivingId), "the link below was dropped along with the deleted line");
+        QVERIFY2(lineContaining(buffer, mLinkText) < 0, "the deleted line took its text but the survivor's came back early");
+
+        // revealing writes the link's text back at the line number the manager
+        // holds, so where it lands is what that number now says
+        manager.revealLink(survivingId);
+        qApp->processEvents();
+        QCOMPARE(lineContaining(buffer, mLinkText), survivingOn - 1);
+    }
+
     // Clearing the window deletes every line, so nothing is referenced any more
     // and a tracked link's command has to go with the rest.
     void test_clearingTheWindowStillDropsATrackedLinksCommands()
@@ -226,9 +274,22 @@ private:
         }
     }
 
-    int lineContaining(const TBuffer& buffer, const QString& needle) const
+    // The wholeline flag is what makes performConcealment() delete the line
+    // rather than blank the link out. No delay and no expire trigger, so the
+    // click conceals it there and then.
+    Mudlet::HyperlinkStyling wholeLineConcealStyling() const
     {
-        for (int i = 0; i < static_cast<int>(buffer.lineBuffer.size()); ++i) {
+        Mudlet::HyperlinkStyling styling;
+        styling.visibility.hasVisibilitySettings = true;
+        styling.visibility.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
+        styling.visibility.isConcealed = false;
+        styling.visibility.deletesEntireLine = true;
+        return styling;
+    }
+
+    int lineContaining(const TBuffer& buffer, const QString& needle, const int from = 0) const
+    {
+        for (int i = from; i < static_cast<int>(buffer.lineBuffer.size()); ++i) {
             if (buffer.lineBuffer.at(i).contains(needle)) {
                 return i;
             }
