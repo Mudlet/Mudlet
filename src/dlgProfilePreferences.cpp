@@ -2157,10 +2157,23 @@ void dlgProfilePreferences::updateSidebarMode()
     if (!mpWidget_sidebar) {
         return;
     }
+    // A shell still being assembled reports zero, which is neither a
+    // breakpoint to test against nor a width to hold a window to
+    const int widthNeeded = widthNeededForFullSidebar();
+    if (!widthNeeded) {
+        return;
+    }
     // The window's width rather than the space left over: the threshold is
     // what the *expanded* sidebar needs, so collapsing cannot make the test
     // that collapsed it come out the other way and start it oscillating.
-    setSidebarCollapsed(width() < widthNeededForFullSidebar());
+    setSidebarCollapsed(width() < widthNeeded);
+    // Nothing on a page grows past its column, so every pixel of window past
+    // the number above is empty strip - and all of it lands on one side, as a
+    // layout puts a widget narrower than its cell to the left. Refusing the
+    // width is what keeps the strip out: centring the column instead would
+    // strand the sidebar away from the settings it selects, and stretching the
+    // controls across the window is the line length the column exists to stop.
+    setMaximumWidth(std::max(minimumWidth(), widthNeeded));
 }
 
 void dlgProfilePreferences::setSidebarCollapsed(const bool collapsed)
@@ -2894,6 +2907,10 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     QTimer::singleShot(0, this, [this, pShownPage]() {
         if (pShownPage && mpStackedWidget_categories->currentWidget() == pShownPage) {
             capColumnWidth(pShownPage);
+            // A cap that grew here moved both the sidebar's breakpoint and the
+            // width the window is held to, neither of which is re-taken until
+            // the next resize
+            updateSidebarMode();
         }
     });
     mpLabel_pageTitle->setText(pItem->text());

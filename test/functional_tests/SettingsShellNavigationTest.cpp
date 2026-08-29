@@ -1078,6 +1078,41 @@ private slots:
         }
         mpPreferences->resize(1060, 760);
     }
+
+    // Every control on a page stops at the reading column, so a window dragged
+    // wider than the shell needs would show that width as blank strip beside
+    // the settings and nothing else. It refuses to take it.
+    void test_theWindowWillNotGrowWiderThanTheShellNeeds()
+    {
+        // Above the 780x560 minimum and below any width the shell could need,
+        // so a window that took this one proves a resize is honoured at all -
+        // without which the case below would pass on a window that ignores
+        // every resize it is given
+        mpPreferences->resize(850, 700);
+        qApp->processEvents();
+        QCOMPARE(mpPreferences->width(), 850);
+
+        mpPreferences->resize(2000, 700);
+        qApp->processEvents();
+
+        // The defect this stops. Measured off the page rather than the stack
+        // holding it: the stack fills the content pane whatever the window is
+        // doing, and it is the capped page inside it that the strip opens up
+        // beside.
+        QWidget* pPageShown = stack()->currentWidget();
+        const int strip = mpPreferences->width() - pPageShown->mapTo(mpPreferences, QPoint(pPageShown->width(), 0)).x();
+        QVERIFY2(strip <= 48, qPrintable(qsl("%1px of the %2px window is empty to the right of the page").arg(strip).arg(mpPreferences->width())));
+        QVERIFY2(mpPreferences->width() < 2000, "the window grew to the whole 2000px it was offered");
+        QCOMPARE(mpPreferences->width(), mpPreferences->maximumWidth());
+
+        // ...and that it is a width the shell is whole at: the sidebar has its
+        // names, and the page is not scrolling sideways to fit
+        auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
+        QVERIFY2(pSidebar && pSidebar->width() > 200, "the widest the window may go is a width the sidebar is still collapsed at");
+        QScrollArea* pPage = pageOf(qsl("general"));
+        QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
+                 qPrintable(qsl("the General page needs %1px and got a %2px viewport at the widest the window may go").arg(pPage->widget()->width()).arg(pPage->viewport()->width())));
+    }
 };
 
 #include "SettingsShellNavigationTest.moc"
