@@ -1247,7 +1247,7 @@ void TDetachedWindow::updateToolBarActions()
     mpActionScripts->setEnabled(hasActiveProfile);
     mpActionKeys->setEnabled(hasActiveProfile);
     mpActionVariables->setEnabled(hasActiveProfile);
-    mpActionMapper->setEnabled(hasActiveProfile);
+    mpActionMapper->setEnabled(hasActiveProfile && pHost->mMapperButtonMode != Host::MapperButtonMode::Disabled);
     mpActionNotes->setEnabled(hasActiveProfile);
     mpActionOptions->setEnabled(hasActiveProfile);
     mpActionReplay->setEnabled(hasActiveProfile);
@@ -2717,6 +2717,10 @@ void TDetachedWindow::slot_showMapperDialog()
 
     auto pMap = pHost->mpMap.data();
     if (!pMap) {
+        return;
+    }
+
+    if (pHost->interceptMapperButton()) {
         return;
     }
 
