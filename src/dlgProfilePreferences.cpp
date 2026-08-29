@@ -2123,7 +2123,28 @@ int dlgProfilePreferences::widthNeededForFullSidebar() const
         widestTitle = std::max(widestTitle, titleMetrics.horizontalAdvance(breadcrumbFor(it.key())));
     }
 
-    const int contentNeeded = std::max(scmContentColumnWidth + scrollBarWidth, titleRowChrome + widestTitle);
+    // The reading column is a floor, not the answer: a page whose controls do
+    // not fit it is capped wider than it (capColumnWidth()), and measuring the
+    // breakpoint against the floor left the sidebar expanded over a page that
+    // then had to scroll sideways underneath it - when collapsing the sidebar
+    // was the room that was missing. Taken over every page rather than the one
+    // on show, because the breakpoint belongs to the dialog: updateSidebarMode()
+    // is only reached from a resize and a language change, so a threshold that
+    // moved with the selected category would not be re-tested when the category
+    // changed. In English every cap is the reading column and this is that
+    // number; a translation is what moves it.
+    int contentColumn = scmContentColumnWidth;
+    for (int page = 0, pages = mpStackedWidget_categories->count(); page < pages; ++page) {
+        const auto* pStacked = qobject_cast<const QScrollArea*>(mpStackedWidget_categories->widget(page));
+        const QWidget* pColumn = pStacked ? pStacked->widget() : nullptr;
+        // A page yet to be capped for the first time still offers the default
+        // maximum, which is not a width anything has asked for
+        if (pColumn && pColumn->maximumWidth() < QWIDGETSIZE_MAX) {
+            contentColumn = std::max(contentColumn, pColumn->maximumWidth());
+        }
+    }
+
+    const int contentNeeded = std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle);
     return scmSidebarWidth + contentMargins.left() + contentMargins.right() + contentNeeded;
 }
 
@@ -4450,7 +4471,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -8813,8 +8834,17 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 
 void dlgProfilePreferences::reject()
 {
-    // Esc goes up a level before it goes out of the dialog: on a subpage it
-    // means the same as the back chevron beside the breadcrumb.
+    // Esc goes up a level before it goes out of the dialog, and the results of
+    // a search are a level of their own. Clearing the query is what leaves
+    // them: it hands the borrowed cards back and returns to the page the
+    // search interrupted - including a subpage, which runSearch() stows for
+    // exactly this, having cleared mCurrentSubpage on the way in.
+    if (!mClosing && mSearchActive) {
+        mpLineEdit_search->clear();
+        return;
+    }
+    // ...and on a subpage Esc means the same as the back chevron beside the
+    // breadcrumb.
     if (!mClosing && !mCurrentSubpage.isEmpty()) {
         leaveSubpage();
         return;

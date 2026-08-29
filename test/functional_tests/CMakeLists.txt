@@ -435,7 +435,8 @@ set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 
 # The settings tests build the whole preferences dialog once per test method,
 # and several of them wait out a quiet window to prove no apply happened
-set_tests_properties(SettingsBannerTest
+set_tests_properties(SettingsAppearanceTest
+                     SettingsBannerTest
                      SettingsDeepLinkTest
                      SettingsDirtyApplyTest
                      SettingsHostLifecycleTest

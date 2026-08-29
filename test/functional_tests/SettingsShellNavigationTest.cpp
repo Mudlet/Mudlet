@@ -952,6 +952,120 @@ private slots:
             QVERIFY2(pOption->isVisible(), qPrintable(qsl("%1 is not showing on the Accessibility page").arg(pOption->objectName())));
         }
     }
+
+    // Greptile P1 on #10241. Escape means "up a level", and the results a
+    // search put on screen are a level of their own - the code that starts a
+    // search says so, and stows the subpage it interrupted to come back to.
+    // What it does not do is teach reject() about the search, so Escape read
+    // the cleared subpage as "nothing to go up from" and closed the dialog.
+    void test_escapeDuringASearchGoesBackToThePageItInterrupted()
+    {
+        auto* pSearch = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        QVERIFY2(pSearch, "the settings shell has no search field");
+
+        // ...from a category page first
+        selectCategory(qsl("mapper"));
+        QScrollArea* pMapper = pageOf(qsl("mapper"));
+        QCOMPARE(stack()->currentWidget(), pMapper);
+        pSearch->setText(qsl("color"));
+        qApp->processEvents();
+        QVERIFY2(stack()->currentWidget() != pMapper, "typing a query never left the category page for the results");
+
+        QTest::keyClick(mpPreferences, Qt::Key_Escape);
+        qApp->processEvents();
+        QVERIFY2(mpPreferences->isVisible(), "Escape in a search closed the whole dialog instead of leaving the results");
+        QVERIFY2(pSearch->text().isEmpty(), "Escape left the query in the field");
+        QCOMPARE(stack()->currentWidget(), pMapper);
+
+        // ...and from a subpage, which is the case the search itself promises
+        // to come back to
+        mpPreferences->setTab(qsl("connection/protocols"));
+        qApp->processEvents();
+        QScrollArea* pSubpage = pageOf(qsl("connection_protocols"));
+        QVERIFY2(pSubpage, "the game protocols subpage was not built");
+        QCOMPARE(stack()->currentWidget(), pSubpage);
+
+        pSearch->setText(qsl("color"));
+        qApp->processEvents();
+        QVERIFY2(stack()->currentWidget() != pSubpage, "typing a query never left the subpage for the results");
+
+        QTest::keyClick(mpPreferences, Qt::Key_Escape);
+        qApp->processEvents();
+        QVERIFY2(mpPreferences->isVisible(), "Escape in a search started on a subpage closed the whole dialog");
+        QCOMPARE(stack()->currentWidget(), pSubpage);
+
+        // ...and a second Escape, with no search and no subpage left to leave,
+        // still means close
+        selectCategory(qsl("general"));
+        QTest::keyClick(mpPreferences, Qt::Key_Escape);
+        qApp->processEvents();
+        QVERIFY2(!mpPreferences->isVisible(), "Escape with nothing left to go up from no longer closes the dialog");
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        openPreferences();
+    }
+
+    // Greptile P1 on #10242. The sidebar collapses when the window is too
+    // narrow for it, but "too narrow" was measured against the 640px reading
+    // column rather than the page actually on screen - and a translated page
+    // whose controls do not fit 640 is capped wider than that. Between the two
+    // numbers the sidebar stayed full and the page scrolled sideways, when
+    // collapsing it was exactly the room that was needed.
+    void test_theSidebarCollapsesForAPageWiderThanTheReadingColumn()
+    {
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        auto* pGerman = new QTranslator(qApp);
+        QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so no page is wider than the reading column to measure against");
+        QVERIFY(qApp->installTranslator(pGerman));
+        auto removeTranslator = qScopeGuard([pGerman]() {
+            qApp->removeTranslator(pGerman);
+            delete pGerman;
+        });
+        openPreferences();
+
+        auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
+        QVERIFY2(pSidebar, "the settings shell has no sidebar to collapse");
+        mpPreferences->resize(1500, 760);
+        qApp->processEvents();
+        const int fullSidebar = pSidebar->width();
+        QVERIFY2(fullSidebar > 200, qPrintable(qsl("the sidebar is only %1px wide at 1500x760, so this case cannot tell a collapse from where it started").arg(fullSidebar)));
+
+        // The pages this can be asked about at all: the ones a translation has
+        // pushed past the reading column
+        QStringList wide;
+        for (const QString& key : specOrderedCategories()) {
+            selectCategory(key);
+            qApp->processEvents();
+            if (pageOf(key)->widget()->maximumWidth() > 640) {
+                wide.append(key);
+            }
+        }
+        QVERIFY2(!wide.isEmpty(), "no German page is capped wider than the 640px reading column, so the breakpoint cannot be wrong in the way this case describes");
+
+        for (const QString& key : wide) {
+            const int cap = pageOf(key)->widget()->maximumWidth();
+            for (int width = 800; width <= 1400; width += 25) {
+                mpPreferences->resize(width, 700);
+                qApp->processEvents();
+                selectCategory(key);
+                qApp->processEvents();
+                QScrollArea* pPage = pageOf(key);
+                if (pSidebar->width() < fullSidebar) {
+                    // collapsed already: nothing further was available to give
+                    continue;
+                }
+                QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
+                         qPrintable(qsl("the German '%1' page needs %2px and got a %3px viewport at a %4px window, while the sidebar kept its full %5px - collapsing it would have fitted the page")
+                                            .arg(key)
+                                            .arg(cap)
+                                            .arg(pPage->viewport()->width())
+                                            .arg(width)
+                                            .arg(pSidebar->width())));
+            }
+        }
+        mpPreferences->resize(1060, 760);
+    }
 };
 
 #include "SettingsShellNavigationTest.moc"
