@@ -66,7 +66,7 @@ function unzip( what, dest )
   local function readEntry( filename )
     local _f = z:open( filename )
     if not _f then
-      return ""
+      return nil
     end
     local chunks = {}
     while true do
@@ -103,13 +103,17 @@ function unzip( what, dest )
       end
     end
     if file.uncompressed_size > 0 then
-      local out = io.open( _path, "wb" )
-      if out then
-        -- cecho("<green>unpacking file:".._path.."\n")
-        out:write( _data )
-        out:close()
+      if not _data then
+        cecho("<red>ERROR: can't read archived file:" .. file.filename .. "\n")
       else
-        cecho("<red>ERROR: can't write file:" .. _path .. "\n")
+        local out = io.open( _path, "wb" )
+        if out then
+          -- cecho("<green>unpacking file:".._path.."\n")
+          out:write( _data )
+          out:close()
+        else
+          cecho("<red>ERROR: can't write file:" .. _path .. "\n")
+        end
       end
     end
   end
