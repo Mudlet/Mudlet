@@ -56,6 +56,7 @@
 #include <QAbstractSpinBox>
 #include <QAccessible>
 #include <QApplication>
+#include <QBuffer>
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QDesktopServices>
@@ -115,11 +116,11 @@ static constexpr int scmSidebarAccentBarWidth = 3;
 // room for an 18px category icon, its selection pill and the accent bar.
 static constexpr int scmSidebarRailWidth = 48;
 static constexpr int scmSidebarRailPadding = 6;
-// The check indicator a checkable card draws in its title, and how far to the
-// right of the frame edge that leaves the title itself - measured, because the
-// second follows from the first through the style rather than by arithmetic
+// The check indicator a checkable card draws in its title. How far right of the
+// frame edge that leaves the title is not a constant to go with it: the style
+// decides how much room to leave after the indicator, and Fusion and the macOS
+// style disagree - so it is measured, in measuredCardTitleInset().
 static constexpr int scmCardIndicatorSize = 13;
-static constexpr int scmCardTitleInset = 21;
 
 // The sidebar's categories, as the deep links, the page object names and the
 // search index all spell them. Named because a mistyped key otherwise compiles
@@ -1015,29 +1016,29 @@ private:
 QList<dlgProfilePreferences::CategoryDefinition> dlgProfilePreferences::categoryDefinitions() const
 {
     return {//: Sidebar category in the settings dialog, holding saving, language, logging, web search and update options
-            {scmCategory_general, qsl("configure.png"), tr("General")},
+            {scmCategory_general, qsl("settings-general.png"), tr("General")},
             //: Sidebar category in the settings dialog, holding the theme, icon sizes and profile tab options
-            {scmCategory_appearance, qsl("applications-accessories.png"), tr("Appearance")},
+            {scmCategory_appearance, qsl("settings-appearance.png"), tr("Appearance")},
             //: Sidebar category in the settings dialog, holding the font, colors, borders and wrapping of the game's text window
-            {scmCategory_mainDisplay, qsl("view-split-left-right.png"), tr("Main display")},
+            {scmCategory_mainDisplay, qsl("settings-display.png"), tr("Main display")},
             //: Sidebar category in the settings dialog, holding the options of the command line the player types into
-            {scmCategory_inputLine, qsl("edit-select-all.png"), tr("Input line")},
+            {scmCategory_inputLine, qsl("settings-input.png"), tr("Input line")},
             //: Sidebar category in the settings dialog, holding the script editor's options
-            {scmCategory_editor, qsl("accessories-text-editor.png"), tr("Editor")},
+            {scmCategory_editor, qsl("settings-editor.png"), tr("Editor")},
             //: Sidebar category in the settings dialog, holding the map's files, view and colors
-            {scmCategory_mapper, qsl("mudlet_room_exits.png"), tr("Mapper")},
+            {scmCategory_mapper, qsl("settings-mapper.png"), tr("Mapper")},
             //: Sidebar category in the settings dialog, holding the Discord Rich Presence and MudMaster chat options
-            {scmCategory_chat, qsl("internet-telephony.png"), tr("Chat and sharing")},
+            {scmCategory_chat, qsl("settings-chat.png"), tr("Chat and sharing")},
             //: Sidebar category in the settings dialog, holding the game protocol, encoding and compatibility options
-            {scmCategory_connection, qsl("applications-internet.png"), tr("Connection"), true},
+            {scmCategory_connection, qsl("settings-connection.png"), tr("Connection"), true},
             //: Sidebar category in the settings dialog, holding the secure connection, proxy, password and permission options
-            {scmCategory_privacy, qsl("document-encrypt.png"), tr("Privacy and security")},
+            {scmCategory_privacy, qsl("settings-privacy.png"), tr("Privacy and security")},
             //: Sidebar category in the settings dialog, holding the screen reader and other accessibility options
-            {scmCategory_accessibility, qsl("system-users.png"), tr("Accessibility")},
+            {scmCategory_accessibility, qsl("settings-accessibility.png"), tr("Accessibility")},
             //: Sidebar category in the settings dialog, holding the main window's keyboard shortcuts
-            {scmCategory_shortcuts, qsl("preferences-desktop-keyboard.png"), tr("Shortcuts")},
+            {scmCategory_shortcuts, qsl("settings-shortcuts.png"), tr("Shortcuts")},
             //: Sidebar category in the settings dialog, holding development and diagnostic options
-            {scmCategory_advanced, qsl("tools-report-bug.png"), tr("Advanced")}};
+            {scmCategory_advanced, qsl("settings-advanced.png"), tr("Advanced")}};
 }
 
 QWidget* dlgProfilePreferences::buildSidebar()
@@ -1083,7 +1084,6 @@ QWidget* dlgProfilePreferences::buildSidebar()
 
     addSidebarSeparator();
     mpItem_support = new QListWidgetItem(mpListWidget_categories);
-    mpItem_support->setIcon(QIcon(qsl(":/icons/help-hint.png")));
     mpItem_support->setData(scmRole_externalUrl, qsl("https://wiki.mudlet.org"));
     // Enabled so it can be clicked, but not selectable: it opens a browser
     // rather than switching to a page of its own
@@ -1095,7 +1095,10 @@ QWidget* dlgProfilePreferences::buildSidebar()
 
 void dlgProfilePreferences::addCategory(const QString& key, const QString& iconFile)
 {
-    auto* pItem = new QListWidgetItem(QIcon(qsl(":/icons/%1").arg(iconFile)), QString(), mpListWidget_categories);
+    // No icon yet: the set is a single-colour one, so which colour it is drawn
+    // in is not known until applyShellStyle() has read the theme off the
+    // palette. The constructor always reaches that before the dialog is shown.
+    auto* pItem = new QListWidgetItem(QString(), mpListWidget_categories);
     pItem->setData(scmRole_categoryKey, key);
     pItem->setSizeHint(QSize(0, 36));
     CategoryPlace& place = mCategories[key];
@@ -1364,10 +1367,11 @@ QScrollArea* dlgProfilePreferences::buildPage(const QString& objectSuffix, const
         detachFromLayout(pCard);
         pCard->setProperty("settingsCard", true);
         // A checkable card's title starts after its check indicator, a plain
-        // one's at the frame edge - 19px apart, which reads as the titles of a
-        // page wandering. Landmine 11 forbids taking the checkability away, so
-        // the plain ones are given the same inset instead. Named as a property
-        // because a stylesheet cannot ask whether a group box is checkable.
+        // one's at the frame edge - twenty-odd pixels apart, which reads as the
+        // titles of a page wandering. Landmine 11 forbids taking the
+        // checkability away, so the plain ones are given the same inset
+        // instead. Named as a property because a stylesheet cannot ask whether
+        // a group box is checkable.
         auto* pGroupBox = qobject_cast<QGroupBox*>(pCard);
         pCard->setProperty("settingsCardTitleInset", pGroupBox && !pGroupBox->isCheckable());
         pColumnLayout->addWidget(pCard);
@@ -2814,10 +2818,11 @@ QLabel* dlgProfilePreferences::searchCategoryHeader(const QString& key)
     // and a language change replaces that under a header this map is holding
     const QListWidgetItem* pItem = mpListWidget_categories->item(categoryRow(key));
     const QString name = (pItem ? pItem->text() : key).toHtmlEscaped();
-    const QString iconFile = mCategories.value(key).iconFile;
-    // The same icon the sidebar row carries, so a result is tied back to where
-    // it lives by more than its name
-    pHeader->setText(iconFile.isEmpty() ? name : qsl("<img src=\":/icons/%1\" width=\"18\" height=\"18\">&nbsp;%2").arg(iconFile, name));
+    // The same icon the sidebar row carries, in the same colour, so a result is
+    // tied back to where it lives by more than its name. Inline rather than by
+    // path, because the colour is put on at runtime - see restyleSidebarIcons()
+    const QString iconMarkup = mCategoryIconMarkup.value(key);
+    pHeader->setText(iconMarkup.isEmpty() ? name : qsl("%1&nbsp;%2").arg(iconMarkup, name));
     return pHeader;
 }
 
@@ -2930,6 +2935,108 @@ static QString rgba(const QColor& color, const qreal alpha)
     return qsl("rgba(%1, %2, %3, %4)").arg(QString::number(color.red()), QString::number(color.green()), QString::number(color.blue()), QString::number(alpha, 'f', 3));
 }
 
+// The sidebar's icons are single-colour line drawings, so they are coloured
+// here rather than shipped coloured. The shape lives in the alpha channel:
+// filling through it keeps the antialiased edges that recolouring the pixels
+// themselves would harden into a staircase.
+static QPixmap tintedGlyph(const QPixmap& source, const QColor& color)
+{
+    QPixmap glyph = source;
+    QPainter painter(&glyph);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(glyph.rect(), color);
+    painter.end();
+    return glyph;
+}
+
+// How far a checkable card's title starts to the right of a plain one's, with
+// the same indicator rules on both that a card is about to be given. Measured
+// off a throwaway pair rather than added up from the indicator's width, because
+// what a style leaves between an indicator and the words after it is the
+// style's business: Fusion allows 6px and the macOS style 8, and a card laid
+// out to the wrong one has its titles two pixels apart.
+static int measuredCardTitleInset(QWidget* pParent, const QString& indicatorRules)
+{
+    const auto titleLeft = [&](const bool checkable) {
+        QGroupBox box(pParent);
+        box.setProperty("settingsCard", true);
+        box.setCheckable(checkable);
+        // Never shown, and never read: a box with no title has no label to
+        // place, so there has to be one for the style to place
+        box.setTitle(qsl("Aa"));
+        // Its own rather than the shell's, which on the first pass has not been
+        // assigned yet - and the shell's is the very string being built
+        box.setStyleSheet(indicatorRules);
+        QStyleOptionGroupBox option;
+        option.initFrom(&box);
+        option.subControls = QStyle::SC_GroupBoxFrame | QStyle::SC_GroupBoxLabel;
+        if (checkable) {
+            option.subControls |= QStyle::SC_GroupBoxCheckBox;
+            option.state |= QStyle::State_On;
+        }
+        option.text = box.title();
+        option.textAlignment = Qt::AlignLeft;
+        option.lineWidth = 0;
+        option.midLineWidth = 0;
+        return box.style()->subControlRect(QStyle::CC_GroupBox, &option, QStyle::SC_GroupBoxLabel, &box).left();
+    };
+    return qMax(0, titleLeft(true) - titleLeft(false));
+}
+
+// A QLabel's rich text can only reach a picture through a URL, and a glyph
+// tinted at runtime has no path to be reached by - so it travels inline.
+static QString inlineGlyph(const QPixmap& glyph)
+{
+    QByteArray png;
+    QBuffer buffer(&png);
+    buffer.open(QIODevice::WriteOnly);
+    glyph.save(&buffer, "PNG");
+    return qsl(R"(<img src="data:image/png;base64,%1" width="18" height="18">)").arg(QString::fromLatin1(png.toBase64()));
+}
+
+// Every sidebar row's icon, in the two colours a row is ever drawn in. Called
+// from applyShellStyle() alone, which is both where the colours come from and
+// the one thing an appearance change runs again.
+void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QColor& selected)
+{
+    if (!mpListWidget_categories) {
+        return;
+    }
+    mCategoryIconMarkup.clear();
+    for (auto it = mCategories.cbegin(), end = mCategories.cend(); it != end; ++it) {
+        QListWidgetItem* pItem = mpListWidget_categories->item(it.value().row);
+        if (!pItem || it.value().iconFile.isEmpty()) {
+            continue;
+        }
+        const QPixmap source(qsl(":/icons/%1").arg(it.value().iconFile));
+        const QPixmap quiet = tintedGlyph(source, normal);
+        QIcon icon(quiet);
+        // What the view asks for once a row is selected, and what it would
+        // otherwise make for itself by washing the icon in the highlight colour
+        icon.addPixmap(tintedGlyph(source, selected), QIcon::Selected);
+        pItem->setIcon(icon);
+        mCategoryIconMarkup.insert(it.key(), inlineGlyph(quiet));
+    }
+    if (mpItem_support) {
+        mpItem_support->setIcon(QIcon(tintedGlyph(QPixmap(qsl(":/icons/settings-support.png")), normal)));
+    }
+    // A header built under the previous theme is holding the picture that theme
+    // was given; re-wording it is what puts the new one in
+    const QStringList builtHeaders = mSearchCategoryHeaders.keys();
+    for (const QString& key : builtHeaders) {
+        searchCategoryHeader(key);
+    }
+    // The title over the page took a copy of the row's icon when the page was
+    // shown - which the first time round is before this has run at all, leaving
+    // the opening page's title bare. Hidden means a subpage or the search
+    // results, neither of which shows one.
+    if (mpLabel_pageTitleIcon && !mpLabel_pageTitleIcon->isHidden()) {
+        if (const QListWidgetItem* pCurrent = mpListWidget_categories->currentItem()) {
+            mpLabel_pageTitleIcon->setPixmap(pCurrent->icon().pixmap(QSize(20, 20), devicePixelRatioF()));
+        }
+    }
+}
+
 // The shell's own look, kept on the shell widget rather than on the dialog:
 // mudlet::showOptionsDialog() assigns the profile's Lua stylesheet to the
 // dialog on every show, which would otherwise throw this away. Every selector
@@ -2980,16 +3087,12 @@ void dlgProfilePreferences::applyShellStyle()
     const QColor scrollHandleHover = blend(pageColor, textColor, 0.40);
 
     if (mpAction_searchIcon) {
-        // The one glyph the icon resource has for searching is the editor's
-        // binoculars, which is monochrome - so it can simply be recoloured to
-        // whatever the placeholder text beside it is using
-        QPixmap glyph(qsl(":/icons/searchOptions-none.png"));
-        QPainter painter(&glyph);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(glyph.rect(), mutedText);
-        painter.end();
-        mpAction_searchIcon->setIcon(QIcon(glyph));
+        mpAction_searchIcon->setIcon(QIcon(tintedGlyph(QPixmap(qsl(":/icons/settings-search.png")), mutedText)));
     }
+    // Quieter than the name beside them, and the accent under the name of the
+    // row that is selected - which is what the stylesheet below dresses the
+    // sidebar's text in
+    restyleSidebarIcons(mutedText, accentText);
 
     // A border-left accent bar is drawn as an arc where the pill's corner radius
     // is, which pinches the bar to nothing at both ends and leaves a notch of
@@ -3014,11 +3117,12 @@ void dlgProfilePreferences::applyShellStyle()
                                            // from the accent, so the fill it lands on has to be the card
                                            // and not the accent: a profile whose highlight colour is
                                            // orange would otherwise put green on orange
-                                           "QGroupBox[settingsCard=\"true\"]::indicator:checked { border: 1px solid %4; image: url(:/icons/dialog-ok-apply_small.png); }"
-                                           // ...and the other half of lining the titles up: a plain card's
-                                           // title starts where a checkable one's indicator does
-                                           "QGroupBox[settingsCardTitleInset=\"true\"]::title { left: %5px; }")
-                                               .arg(QString::number(scmCardIndicatorSize), indicatorOutline.name(), cardColor.name(), accentColor.name(), QString::number(scmCardTitleInset));
+                                           "QGroupBox[settingsCard=\"true\"]::indicator:checked { border: 1px solid %4; image: url(:/icons/dialog-ok-apply_small.png); }")
+                                               .arg(QString::number(scmCardIndicatorSize), indicatorOutline.name(), cardColor.name(), accentColor.name());
+    // ...and the other half of lining the titles up: a plain card's title starts
+    // where a checkable one's does, which is only known once the rules above are
+    // the ones being laid out under
+    const QString cardTitleRule = qsl("QGroupBox[settingsCardTitleInset=\"true\"]::title { left: %1px; }").arg(QString::number(measuredCardTitleInset(mpWidget_shell, cardIndicatorRules)));
 
     mpWidget_shell->setStyleSheet(qsl("#settingsShell, #settingsSidebar, #settingsContent { background-color: %1; }"
                                       // The view's own selection paint has to be turned off, or the
@@ -3131,7 +3235,7 @@ void dlgProfilePreferences::applyShellStyle()
                                           .arg(pageColor.name(), textColor.name(), hoverSoft, accentSoft, accentColor.name(), accentText.name(), borderColor.name(), cardColor.name(), mutedText.name())
                                           .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name())
                                           .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5))
-                                  + cardIndicatorRules);
+                                  + cardIndicatorRules + cardTitleRule);
 
     // Fusion draws every control outline - checkbox and radio indicators
     // included - as palette(window) darkened by 40%, which in the dark theme

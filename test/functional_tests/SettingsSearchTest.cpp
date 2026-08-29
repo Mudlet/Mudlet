@@ -358,30 +358,49 @@ private slots:
 
     // A result header says which category the cards under it live on. The
     // sidebar says that with a name and an icon; the header says it with both.
+    //
+    // The icon set is single-colour line art tinted for the theme at runtime,
+    // so a header carries the picture itself rather than a path into the
+    // resources - which leaves the shape as the only thing that says which
+    // category's icon it is.
     void test_eachResultHeaderCarriesItsCategorysIcon()
     {
         search(qsl("color"));
 
+        // Spelled out rather than as a raw string: moc does not parse one
+        // inside a macro, and fails the whole file with "missing ')'"
+        const QRegularExpression glyphPattern(qsl("<img src=\"data:image/png;base64,([^\"]+)\""));
         QStringList headerTexts;
-        QString mainDisplayHeader;
+        QStringList glyphs;
+        QString mainDisplayGlyph;
         for (const auto* pLabel : mpPreferences->findChildren<QLabel*>(qsl("settingsSearchHeader"))) {
             if (!pLabel->isVisible()) {
                 continue;
             }
             headerTexts << pLabel->text();
+            const QRegularExpressionMatch match = glyphPattern.match(pLabel->text());
+            QVERIFY2(match.hasMatch(), qPrintable(qsl("a results header carries no category icon: %1").arg(pLabel->text())));
+            glyphs << match.captured(1);
             if (pLabel->text().contains(qsl("Main display"))) {
-                mainDisplayHeader = pLabel->text();
+                mainDisplayGlyph = match.captured(1);
             }
         }
         QVERIFY2(headerTexts.size() >= 2, "fewer than two categories matched, so this case is not looking at more than one header");
-        for (const QString& text : headerTexts) {
-            QVERIFY2(text.contains(qsl("<img src=\":/icons/")), qPrintable(qsl("a results header carries no category icon: %1").arg(text)));
-        }
+        // One picture repeated on every header would be a decoration rather
+        // than each category's own icon, and every assertion above would still
+        // pass
+        QCOMPARE(QSet<QString>(glyphs.cbegin(), glyphs.cend()).size(), glyphs.size());
+
         // The icon that category's sidebar row was built with, and the name
         // still beside it rather than replaced by the picture
-        QVERIFY2(!mainDisplayHeader.isEmpty(), "the Main display category matched no header, so this case cannot name the icon it expects");
-        QVERIFY2(mainDisplayHeader.contains(qsl("<img src=\":/icons/view-split-left-right.png\"")),
-                 qPrintable(qsl("the Main display header does not carry that category's own icon: %1").arg(mainDisplayHeader)));
+        QVERIFY2(!mainDisplayGlyph.isEmpty(), "the Main display category matched no header, so this case cannot name the icon it expects");
+        QImage carried;
+        QVERIFY(carried.loadFromData(QByteArray::fromBase64(mainDisplayGlyph.toLatin1()), "PNG"));
+        // Tinting replaces the colour and keeps the alpha, so the shape is what
+        // survives out of the file and into the header
+        const QImage expected(qsl(":/icons/settings-display.png"));
+        QCOMPARE(carried.size(), expected.size());
+        QCOMPARE(carried.convertToFormat(QImage::Format_Alpha8), expected.convertToFormat(QImage::Format_Alpha8));
     }
 
     // Half of what someone types into a settings search is not a word the

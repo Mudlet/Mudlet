@@ -369,6 +369,18 @@ private slots:
         }
     }
 
+    // The title over a page carries that category's icon beside its name, taken
+    // off the sidebar row as the page is shown. The row is handed its icon by
+    // the theme pass rather than built with one, and the opening page is shown
+    // before that pass runs - so it is the one page whose title can end up bare.
+    void test_theOpeningPagesTitleCarriesItsIcon()
+    {
+        auto* pIcon = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitleIcon"));
+        QVERIFY(pIcon);
+        QVERIFY2(!pIcon->isHidden(), "the title over the opening page shows no icon at all");
+        QVERIFY2(!pIcon->pixmap().isNull(), "the title over the opening page carries a blank icon");
+    }
+
     // Each page is its own scroll area, so walking away from one and coming
     // back has to land where it was left rather than at the top
     void test_eachCategoryKeepsItsOwnScrollPosition()

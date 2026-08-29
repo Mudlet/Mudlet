@@ -197,6 +197,20 @@
         <file>icons/searchOptions-wholeWords.png</file>
         <file>icons/searchOptions-withVariables+wholeWords.png</file>
         <file>icons/searchOptions-withVariables.png</file>
+        <file>icons/settings-accessibility.png</file>
+        <file>icons/settings-advanced.png</file>
+        <file>icons/settings-appearance.png</file>
+        <file>icons/settings-chat.png</file>
+        <file>icons/settings-connection.png</file>
+        <file>icons/settings-display.png</file>
+        <file>icons/settings-editor.png</file>
+        <file>icons/settings-general.png</file>
+        <file>icons/settings-input.png</file>
+        <file>icons/settings-mapper.png</file>
+        <file>icons/settings-privacy.png</file>
+        <file>icons/settings-search.png</file>
+        <file>icons/settings-shortcuts.png</file>
+        <file>icons/settings-support.png</file>
         <file>icons/Slothmud.png</file>
         <file>icons/starmourn.png</file>
         <file>icons/solid-line.png</file>

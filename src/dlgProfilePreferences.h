@@ -416,6 +416,7 @@ private:
     void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
+    void restyleSidebarIcons(const QColor& normal, const QColor& selected);
     // "Find in settings" - an index over the real widget tree, and a results
     // page the matching cards are lent to for as long as the query stands:
     void buildSearchResultsPage();
@@ -530,9 +531,9 @@ private:
     QPointer<QLabel> mpLabel_securityDetail;
     QPointer<QLabel> mpLabel_securityLink;
     // Where each sidebar category ended up: its row in the sidebar, its page in
-    // the stack, and - because the sidebar item holds the icon but a rich-text
-    // search header needs the path it was loaded from - the icon file. One
-    // table rather than three maps that have to be kept saying the same thing.
+    // the stack, and - because the item is handed a coloured copy rather than
+    // the file itself - the icon file to make that copy from. One table rather
+    // than three maps that have to be kept saying the same thing.
     struct CategoryPlace
     {
         int row = -1;
@@ -540,6 +541,10 @@ private:
         QString iconFile;
     };
     QMap<QString, CategoryPlace> mCategories;
+    // The sidebar's icon for each category, as the rich text a search header
+    // shows it with: written out by restyleSidebarIcons(), because the colour
+    // it carries is the theme's rather than the file's
+    QMap<QString, QString> mCategoryIconMarkup;
     QTimer* mpTimer_apply = nullptr;
     // The sidebar is a rail of icons rather than a list of names
     bool mSidebarCollapsed = false;
