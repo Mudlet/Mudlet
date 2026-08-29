@@ -70,9 +70,10 @@ Reading the numbers:
 - Check that `.gcda` files exist under `build-coverage/test/` before trusting numbers for
   code only the standalone test binaries exercise; runs have been observed where they
   deposited none, leaving such code looking exercised only as far as specs reached it.
-- Rank files by uncovered-line mass, not percentage: `lua rollup.lua coverage.csv` (both in
-  this skill's directory) writes `rollup.md` with a per-subsystem rollup and a per-file
-  table sorted by uncovered mass. `./check-lines.sh coverage.json src/Foo.cpp 100 200`
+- Rank files by uncovered-line mass, not percentage:
+  `lua .agents/skills/improve-test-coverage/rollup.lua coverage.csv` writes `rollup.md`
+  with a per-subsystem rollup and a per-file table sorted by uncovered mass.
+  `.agents/skills/improve-test-coverage/check-lines.sh coverage.json src/Foo.cpp 100 200`
   answers "is this specific path covered" from the JSON export.
 
 ## Know when to stop

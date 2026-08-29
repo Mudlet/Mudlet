@@ -20,8 +20,9 @@ on a local machine read the `build-mudlet` skill first.
 ## Procedure
 
 1. **Build a sanitizer binary**: `cmake --preset linux-debug` for AddressSanitizer;
-   `linux-debug-ubsan` for a second pass that catches what ASan cannot (uninitialised
-   reads, invalid bools, misaligned access). macOS variants exist - see `cmake
+   `linux-debug-ubsan` for a second pass that catches what ASan cannot (loads of invalid
+   bool and enum values - including from uninitialised memory, see the gotchas below -
+   misaligned access, integer overflow). macOS variants exist - see `cmake
    --list-presets`.
 2. **Run the existing fuzzers with a handful of fresh seeds** (invocation below). Vary the
    seed, not just the iteration count - each seed explores a different path prefix.
