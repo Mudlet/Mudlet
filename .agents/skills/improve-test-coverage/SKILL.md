@@ -9,9 +9,10 @@ user-invocable: true
 argument-hint: Optional subsystem or file to cover (e.g. "ctelnet", "the mapper")
 ---
 
-Runs out of the box on Claude Code for the web (the SessionStart hook provisions the
-toolchain); elsewhere read the `build-mudlet` skill first. For busted mechanics, see
-`src/mudlet-lua/tests/README.md`.
+Runs out of the box on Claude Code for the web, whose containers are Linux (the
+SessionStart hook provisions the toolchain); elsewhere read the `build-mudlet` skill
+first. Commands below default to Linux; where macOS or Windows differs it is called out
+inline. For busted mechanics, see `src/mudlet-lua/tests/README.md`.
 
 ## Procedure
 
@@ -37,8 +38,18 @@ toolchain); elsewhere read the `build-mudlet` skill first. For busted mechanics,
 
 ## Measuring
 
-Needs `gcovr` and `jq` (apt on Linux; the web containers get them from the SessionStart
-hook).
+Needs `gcovr` and `jq` (apt on Linux, `brew` on macOS; the web containers get them from
+the SessionStart hook).
+
+**Measure on Linux.** The recipe below is gcc + gcov, and the ranking it produces is
+platform-independent - the code Mudlet compiles is very nearly the same everywhere, so
+there is nothing to gain from a second platform's numbers and quite a lot of yak-shaving
+to lose. If you are on macOS anyway, the same recipe works with `macos-debug-nosan`
+provided gcovr is told to use clang's gcov shim
+(`gcovr --gcov-executable "llvm-cov gcov" ...`); mixing its output with a gcc run's is
+meaningless, so pick one and stay there. Windows is unexplored: MSYS2 has both compilers,
+so `--coverage` may well work, but nobody has run it - do not present a Windows number as
+a baseline without first proving the `.gcda` files appear.
 
 ```bash
 # gcov instrumentation wants gcc, the Linux default. See build-mudlet for parallelism limits.
@@ -47,6 +58,8 @@ cmake --preset linux-debug-nosan -B build-coverage \
   -DCMAKE_EXE_LINKER_FLAGS=--coverage
 cmake --build build-coverage
 
+# run-lua-tests.sh is Linux-only (xvfb-run, GNU timeout); see
+# src/mudlet-lua/tests/README.md for the per-platform equivalent.
 .claude/scripts/run-lua-tests.sh build-coverage/src/mudlet
 (cd build-coverage && ctest --output-on-failure)
 

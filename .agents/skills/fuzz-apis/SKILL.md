@@ -9,16 +9,21 @@ user-invocable: true
 argument-hint: Optional surface to fuzz (e.g. "GMCP handlers", "the buffer API")
 ---
 
-Runs out of the box on Claude Code for the web (the SessionStart hook provisions the
-toolchain); elsewhere read the `build-mudlet` skill first.
+Runs out of the box on Claude Code for the web, whose containers are Linux (the
+SessionStart hook provisions the toolchain); elsewhere read the `build-mudlet` skill
+first. Commands below default to Linux; where macOS or Windows differs it is called out
+inline.
 
 ## Procedure
 
 1. **Build a sanitizer binary**: `cmake --preset linux-debug` for AddressSanitizer;
    `linux-debug-ubsan` for a second pass that catches what ASan cannot (loads of invalid
    bool and enum values - including from uninitialised memory, see the gotchas below -
-   misaligned access, integer overflow). macOS variants exist - see `cmake
-   --list-presets`.
+   misaligned access, integer overflow). `macos-debug` and `macos-debug-ubsan` are the
+   same pair on macOS. **Windows cannot fuzz**: `src/CMakeLists.txt` skips
+   `EnableSanitizers.cmake` under `WIN32` ("Sanitizers disabled on Windows" in the
+   configure output), so a Windows build reports nothing however hard you fuzz it - do
+   this work on Linux or macOS, and confirm a Windows-specific suspicion by other means.
 2. **Run the existing fuzzers with a handful of fresh seeds** (invocation below). Vary the
    seed, not just the iteration count - each seed explores a different path prefix.
 3. **On an abort, triage it** (rules below): replay the seed, reduce the recorded input,
@@ -63,6 +68,12 @@ comment.
 MUDLET_FUZZ=1 MUDLET_FUZZ_SEED=7 .claude/scripts/run-lua-tests.sh build/src/mudlet
 ```
 
+That runner is Linux-only (`xvfb-run`, GNU `timeout`). On macOS set the same environment
+by hand and launch the bundle's binary
+(`build-macos-debug-ubsan/src/mudlet.app/Contents/MacOS/mudlet`) windowed or with
+`-platform offscreen`; `src/mudlet-lua/tests/README.md` carries the per-platform busted
+setup and the isolated-config-root invocation.
+
 Calibration: by 2026-08 the telnet generator had run ~48k feeds and ~19k compiled patterns
 across 6 seeds clean under ASan - that surface is well explored at default settings.
 
@@ -73,7 +84,9 @@ across 6 seeds clean under ASan - that surface is well explored at default setti
   report VANISHING is not proof of a fix - unrelated changes shift heap layout and silence
   it by luck. `MALLOC_PERTURB_=1` fills fresh allocations with 0xfe and makes it fire every
   run. That works because plain UBSan keeps glibc's malloc; ASan replaces it, so use the
-  ubsan preset for this.
+  ubsan preset for this. `MALLOC_PERTURB_` is a glibc feature and does nothing on macOS;
+  libmalloc's equivalents are `MallocPreScribble=1` (0xaa into fresh allocations) and
+  `MallocScribble=1` (0x55 into freed ones), likewise ignored under ASan.
 - Verify a fix by grepping the run for the SYMBOL under test, not the file:line - the fix
   itself shifts line numbers.
 - Under ASan, a run where every spec printed green but the runner still exited non-zero is
