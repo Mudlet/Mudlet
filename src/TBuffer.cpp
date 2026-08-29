@@ -4872,7 +4872,13 @@ int TBuffer::remapLinkId(const TLinkStore& sourceLinkStore, const int sourceLink
         return destLinkId;
     }
 
-    destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost);
+    // a reference of this store's own, so freeing either store's leaves the other link working
+    QVector<int> luaReference;
+    for (const int sourceReference : sourceLinkStore.getReference(sourceLinkId)) {
+        luaReference.append(mpHost && sourceReference > 0 ? mpHost->mLuaInterpreter.duplicateLuaRegistryIndex(sourceReference) : 0);
+    }
+
+    destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost, luaReference, sourceLinkStore.getExpireName(sourceLinkId));
     if (sourceLinkStore.hasStyling(sourceLinkId)) {
         mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
     }

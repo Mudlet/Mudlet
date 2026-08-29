@@ -139,7 +139,7 @@ private slots:
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 0, 110, 300, 100)\n"
                                                                  "echoLink('%1', 'OWN', [[send('MINE')]], 'own hint')\n"
                                                                  "echo('%1', '\\none\\ntwo\\nthree\\n')\n"
-                                                                 "echoLink('%2', [[send('look')]], 'hint')\n"
+                                                                 "echoLink('%2', [[send('pasted')]], 'hint')\n"
                                                                  "echo('\\n')")
                                                                      .arg(targetName, mLinkText));
         qApp->processEvents();
@@ -161,7 +161,7 @@ private slots:
         QVERIFY2(pastedId != ownId, "the pasted characters point at the target's own link id");
         const QString pastedCommands = pTarget->getLinkStore().getLinksConst(pastedId).join(QChar::Space);
         QVERIFY2(!pastedCommands.contains(qsl("send('MINE')")), "the pasted link resolves to the destination's own command");
-        QVERIFY2(pastedCommands.contains(qsl("send('look')")), "the pasted link does not resolve to the command it was copied from");
+        QVERIFY2(pastedCommands.contains(qsl("send('pasted')")), "the pasted link does not resolve to the command it was copied from");
     }
 
     // One source link can occupy more than one run of characters, with plain
@@ -276,10 +276,94 @@ private slots:
         QVERIFY2(pConsole->getLinkStore().getLinksConst(id).isEmpty(), "an unreferenced link survived its line being trimmed away, so the store grows for the life of the profile");
     }
 
+    // A link whose command is a Lua function carries only a registry reference,
+    // so a copy that drops it looks like a link and runs nothing.
+    void test_aPastedFunctionLinkKeepsAReferenceOfItsOwn()
+    {
+        const QString targetName = qsl("pastedFunctionLink");
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 0, 220, 300, 100)\n"
+                                                                 "echo('%1', 'one\\ntwo\\nthree\\n')\n"
+                                                                 "echoLink('FNLINK', function() send('fromFunction') end, 'fnhint')\n"
+                                                                 "echo('\\n')")
+                                                                     .arg(targetName));
+        qApp->processEvents();
+
+        auto* pTarget = mpHost->mpConsole->mSubConsoleMap.value(targetName);
+        QVERIFY2(pTarget, "the target miniconsole was not created");
+        QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
+
+        const QPoint selectionStart = mpHost->mpConsole->P_begin;
+        const int sourceId = mpHost->mpConsole->buffer.buffer.at(selectionStart.y()).at(selectionStart.x()).linkIndex();
+        const int sourceReference = mpHost->mpConsole->buffer.mLinkStore.getReference(sourceId).value(0);
+        QVERIFY2(sourceReference > 0, "echoLink() given a function registered no Lua reference, so this test covers nothing");
+
+        mpHost->mpConsole->copy();
+        QVERIFY(pTarget->moveCursor(0, 0));
+        pTarget->paste();
+        qApp->processEvents();
+
+        const int pastedId = pastedLinkId(pTarget);
+        QVERIFY2(pastedId > 0, "paste() carried no link index across, so this test covers nothing");
+        const int pastedReference = pTarget->getLinkStore().getReference(pastedId).value(0);
+        QVERIFY2(pastedReference > 0, "the pasted link holds no Lua reference, so clicking it runs an empty command");
+        QVERIFY2(pastedReference != sourceReference, "the pasted link shares the source's registry reference, so freeing either would break the other");
+    }
+
+    // Only MXP gives a link an expire group, so the source is seeded directly.
+    // appendFormatted() is the path copy() itself takes to build the slice.
+    void test_aCopiedLinkKeepsItsExpireGroup()
+    {
+        TBuffer source(mpHost);
+        const int sourceId = source.mLinkStore.addLinks(QStringList{qsl("send('expiring')")}, QStringList{qsl("hint")}, mpHost, QVector<int>(), qsl("expgroup"));
+        QVERIFY(sourceId > 0);
+
+        TBuffer destination(mpHost);
+        const std::vector<TChar> formatting(4, TChar(Qt::white, Qt::black, TChar::None, sourceId));
+        destination.appendFormatted(qsl("LINK"), formatting, source.mLinkStore);
+
+        const int destinationId = copiedLinkId(destination);
+        QVERIFY2(destinationId > 0, "the copied characters carry no link index, so this test covers nothing");
+        QCOMPARE(destination.mLinkStore.getExpireName(destinationId), qsl("expgroup"));
+
+        destination.mLinkStore.expireLinks(qsl("expgroup"), mpHost);
+        QVERIFY2(destination.mLinkStore.getLinksConst(destinationId).isEmpty(), "the copied link outlived an expireLinks() of the group it was copied with");
+    }
+
+    void test_aCopiedLinkKeepsItsStyling()
+    {
+        TBuffer source(mpHost);
+        const int sourceId = source.mLinkStore.addLinks(QStringList{qsl("send('styled')")}, QStringList{qsl("hint")}, mpHost);
+        Mudlet::HyperlinkStyling styling;
+        styling.hasCustomStyling = true;
+        styling.isBold = true;
+        source.mLinkStore.setStyling(sourceId, styling);
+
+        TBuffer destination(mpHost);
+        const std::vector<TChar> formatting(4, TChar(Qt::white, Qt::black, TChar::None, sourceId));
+        destination.appendFormatted(qsl("LINK"), formatting, source.mLinkStore);
+
+        const int destinationId = copiedLinkId(destination);
+        QVERIFY2(destinationId > 0, "the copied characters carry no link index, so this test covers nothing");
+        QVERIFY2(destination.mLinkStore.hasStyling(destinationId), "the copied link lost the styling the source had");
+        QVERIFY2(destination.mLinkStore.getStyling(destinationId).isBold, "the copied link's styling did not come across intact");
+    }
+
 private:
     TConsole* miniconsole() const { return mpHost->mpConsole->mSubConsoleMap.value(mMiniName); }
 
     // Highest link index still present in a console's buffer, 0 for none
+    static int copiedLinkId(const TBuffer& destination)
+    {
+        for (const auto& line : destination.buffer) {
+            for (const TChar& character : line) {
+                if (character.linkIndex() > 0) {
+                    return character.linkIndex();
+                }
+            }
+        }
+        return 0;
+    }
+
     int pastedLinkId(TConsole* pConsole) const
     {
         int found = 0;
@@ -297,7 +381,9 @@ private:
     bool selectLinkRunInMainConsole() const
     {
         const auto& mainBuffer = mpHost->mpConsole->buffer;
-        for (int y = 0, lines = static_cast<int>(mainBuffer.buffer.size()); y < lines; ++y) {
+        // backwards: every case before this one left its own link-bearing line
+        // higher up, and copying that one tests whatever it happened to hold
+        for (int y = static_cast<int>(mainBuffer.buffer.size()) - 1; y >= 0; --y) {
             const auto& line = mainBuffer.buffer.at(y);
             int from = -1;
             int to = -1;
