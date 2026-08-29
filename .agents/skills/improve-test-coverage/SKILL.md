@@ -1,41 +1,35 @@
 ---
 name: improve-test-coverage
 description: >-
-  Raise Mudlet's test coverage to a reasonable level. Runnable as a task on its own: measure
-  C++ line coverage, pick the targets that pay with the user, write specs that reach C++,
-  and prove each new test actually tests something. Also read before writing tests for any
-  subsystem.
+  Raise Mudlet's C++ test coverage to a reasonable level: measure line coverage, pick
+  targets that pay with the user, write specs that reach C++, prove each new test bites.
+  Read before writing tests for any subsystem.
 license: GPL-2.0-or-later
 user-invocable: true
 argument-hint: Optional subsystem or file to cover (e.g. "ctelnet", "the mapper")
 ---
 
-## When to use
-
-Invoke as a task ("improve test coverage", "/improve-test-coverage ctelnet"), or read before
-writing tests for a subsystem you did not just change. It runs out of the box: on Claude
-Code for the web the repository's SessionStart hook provisions the whole toolchain; on a
-local machine read the `build-mudlet` skill first. For busted mechanics, see
+Runs out of the box on Claude Code for the web (the SessionStart hook provisions the
+toolchain); elsewhere read the `build-mudlet` skill first. For busted mechanics, see
 `src/mudlet-lua/tests/README.md`.
 
 ## Procedure
 
-1. **Measure before writing.** Do not work from folklore about what is untested: when the
-   first real baseline was taken (2026-08), two of three "known gaps" turned out to be
-   already covered. Build one instrumented tree, run BOTH harnesses on it, then rank (recipe
-   below).
+1. **Measure before writing.** Folklore about what is untested goes stale: at the first
+   real baseline (2026-08), two of three "known gaps" were already covered. Build one
+   instrumented tree, run BOTH harnesses on it, then rank (recipe below).
 2. **Pick a target that pays.** If the user named a subsystem, cover that. Otherwise show
    them the top of the uncovered-mass ranking and let them pick. Skip what does not pay
    (list below).
 3. **Write specs first.** A busted spec is the default; a C++ functional test needs one of
-   the specific justifications in `CLAUDE.md`'s Tests section. The "Reaching C++ from a
-   spec" section below shows how far specs actually reach.
+   the specific justifications in `CLAUDE.md`'s Tests section. Specs reach further than
+   they look (below).
 4. **Prove every test red before trusting it green** (see "Prove the test tests
    something"). Both harnesses fail silently when set up wrong - a misconfigured run is
    green.
 5. **Stop at reasonable** (see "Know when to stop"). Re-run gcovr and record before/after
    for the files touched.
-6. **Deliver**: open a pull request with the `open-pr` skill, quoting the coverage
+6. **Deliver**: a pull request via the `open-pr` skill, quoting the coverage
    before/after. Bugs found along the way are filed separately, each with an empirical
    repro - a probe that fails on one side of the change and passes on the other - never
    from code reading alone: a second code path routinely compensates for the defect a
@@ -65,8 +59,9 @@ gcovr -r . build-coverage/src/CMakeFiles/mudlet_core.dir \
 
 Reading the numbers:
 
-- gcov "lines" are instrumented lines, roughly half the physical line count, and the branch
-  percentage is dragged down by compiler-generated branches. Use both only relatively.
+- gcov "lines" are instrumented lines, roughly half the physical line count, and the
+  branch percentage is dragged down by compiler-generated branches. Use both only
+  relatively.
 - Check that `.gcda` files exist under `build-coverage/test/` before trusting numbers for
   code only the standalone test binaries exercise; runs have been observed where they
   deposited none, leaving such code looking exercised only as far as specs reached it.
@@ -79,23 +74,24 @@ Reading the numbers:
 ## Know when to stop
 
 Complete coverage is not the goal - a reasonable level is. Chasing the last percent
-produces brittle tests that mirror the implementation line by line, and those cost more in
-maintenance than they catch.
+produces brittle tests that mirror the implementation, costing more in maintenance than
+they catch.
 
 - A test must pin behaviour someone could plausibly break. If the strongest assertion you
   can write restates the code, do not write it.
 - Poor value per uncovered line, skip: the 3D mapper and `T2DMap` paint paths, the
-  zero-coverage `dlg*` dialogs, `CustomLine` mouse handlers - all driven by GUI events that
-  tests cannot cheaply synthesise.
+  zero-coverage `dlg*` dialogs, `CustomLine` mouse handlers - all driven by GUI events
+  that tests cannot cheaply synthesise.
 - Prefer breadth across load-bearing subsystems over depth in one file.
-- Calibration, from the 2026-08 baseline: `src/` was 52.6% lines overall - specs alone gave
-  36.1%, functional tests another 16.5 points. The weakest heavily-used file was
+- Calibration, from the 2026-08 baseline: `src/` was 52.6% lines overall - specs alone
+  gave 36.1%, functional tests another 16.5 points. The weakest heavily-used file was
   `ctelnet.cpp` at 44%; one wave of specs plus a functional-test group took it to 67.5%,
   and that was a good place to stop.
 
 ## Reaching C++ from a spec
 
-The self-test profile runs the real application, so specs reach much further than they look:
+The self-test profile runs the real application, so specs reach much further than they
+look:
 
 - `feedTelnet()` drives the real telnet parser (`cTelnet::processSocketData`): IAC
   negotiation, subnegotiation (GMCP/MSDP/MSSP/CHARSET), ANSI/CSI/OSC, encodings. It needs
@@ -133,12 +129,12 @@ Sandbox gotcha: busted sandboxes each file, so a counter shared across callbacks
 
 ## Prove the test tests something
 
-- Fail-without-fix, always: sabotage the code the test claims to cover and watch it go red.
-  Cut EVERY mechanism that could produce the behaviour, not just the obvious one - a second
-  path can keep the behaviour correct and make the test look wrong instead.
+- Fail-without-fix, always: sabotage the code the test claims to cover and watch it go
+  red. Cut EVERY mechanism that could produce the behaviour, not just the obvious one - a
+  second path can keep the behaviour correct and make the test look wrong instead.
 - Pin preconditions: assert the state is NOT already the target before acting, then act,
   then assert. A field with a plausible default satisfies the final assertion without the
   code under test ever running.
-- After a C++ sabotage leg, rebuild once the source is restored - restoring the source does
-  not restore the binary, and a stale tree then fails exactly the new tests, which reads
-  like a real regression.
+- After a C++ sabotage leg, rebuild once the source is restored - restoring the source
+  does not restore the binary, and a stale tree then fails exactly the new tests, which
+  reads like a real regression.

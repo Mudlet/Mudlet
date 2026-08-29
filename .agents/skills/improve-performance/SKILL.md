@@ -1,41 +1,37 @@
 ---
 name: improve-performance
 description: >-
-  Make Mudlet faster. Runnable as a task on its own: pick a subsystem with the user - telnet
-  and text pipeline, trigger engine, 2D mapper, pathfinding - then measure, find the real
-  cost, fix it and prove the win. Also read before benchmarking anything or evaluating any
-  performance claim.
+  Make Mudlet faster: pick a subsystem with the user, measure, find the real cost, fix it
+  and prove the win. Read before benchmarking anything or evaluating a performance claim.
 license: GPL-2.0-or-later
 user-invocable: true
 argument-hint: Optional subsystem to speed up (e.g. "the 2D mapper", "triggers")
 ---
 
-## When to use
-
-Invoke as a task ("make Mudlet faster", "/improve-performance triggers"), or read before any
-benchmarking or optimisation work. It runs out of the box: on Claude Code for the web the
-repository's SessionStart hook provisions the whole toolchain; on a local machine read the
-`build-mudlet` skill first.
+Runs out of the box on Claude Code for the web (the SessionStart hook provisions the
+toolchain); elsewhere read the `build-mudlet` skill first.
 
 ## Procedure
 
-1. **Pick the battlefield with the user.** If they named a subsystem, that is the target. If
-   not, ask them to pick rather than choosing silently - it is their client.
-   Proven-fertile ground: telnet + text pipeline throughput, the trigger
-   engine, 2D mapper rendering, map pathfinding, profile load and startup time. "You pick"
-   is also an answer: profile a busy session and take the top entry.
+1. **Pick the battlefield with the user.** If they named a subsystem, that is the target;
+   otherwise ask them to pick rather than choosing silently. Proven-fertile ground: telnet
+   + text pipeline throughput, the trigger engine, 2D mapper rendering, map pathfinding,
+   profile load and startup time. "You pick" is also an answer: profile a busy session and
+   take the top entry.
 2. **Build a benchmark-safe tree**: the `linux-debug-nosan` preset. Never benchmark a
-   sanitizer build - ASan (the default `linux-debug` preset) roughly halves text throughput.
-3. **Establish a baseline.** Use an in-tree benchmark where one covers the area (see below);
-   otherwise write a small harness following the patterns below. Record the exact
-   invocation - the after-number is worthless if it cannot be reproduced.
-4. **Find where the time goes** using the rules below: detect by shape, identify by ablation
-   or profiler, never by code reading.
-5. **Fix and re-measure A/B** under the measurement discipline below. Keep the fix only if
-   the end-to-end number moves, not just the microbenchmark.
-6. **Prove no behaviour change** - run the busted specs (`.claude/scripts/run-lua-tests.sh`)
-   and `ctest` - then open a pull request with the `open-pr` skill, quoting the before and
-   after numbers and the exact harness invocation so a reviewer can reproduce them.
+   sanitizer build - ASan (the default `linux-debug` preset) roughly halves text
+   throughput.
+3. **Establish a baseline** with an in-tree benchmark (below), or a small harness
+   following the patterns below. Record the exact invocation - an unreproducible number is
+   worthless.
+4. **Find where the time goes**: detect by shape, identify by ablation or profiler, never
+   by code reading (rules below).
+5. **Fix and re-measure A/B.** Keep the fix only if the end-to-end number moves, not just
+   the microbenchmark.
+6. **Prove no behaviour change** - run the busted specs
+   (`.claude/scripts/run-lua-tests.sh`) and `ctest` - then open a pull request with the
+   `open-pr` skill, quoting before/after numbers and the exact invocation so a reviewer
+   can reproduce them.
 
 ## Keep the numbers honest
 
@@ -47,34 +43,33 @@ repository's SessionStart hook provisions the whole toolchain; on a local machin
   for pid in $(pgrep -x 'cc1plus|cc1|ld|mold|ninja|cmake|make'); do readlink /proc/$pid/cwd; done
   ```
 
-  Never gate on loadavg: it is exponentially weighted with a ~60s lag, so it reads quiet in
-  the trough between build steps and busy for a minute after the machine actually went
-  idle. A concurrent build roughly doubles every timing, and one that comes and goes
-  mid-run leaves a plausible-looking number rather than an obviously broken one. Discard a
-  contaminated run; do not salvage it.
+  Never gate on loadavg: it lags ~60s both ways, reading quiet in the trough between build
+  steps and busy after the machine went idle. A concurrent build roughly doubles every
+  timing, and one that comes and goes mid-run leaves a plausible-looking number rather
+  than an obviously broken one. Discard a contaminated run; do not salvage it.
 - Alternate A and B runs rather than all of one then all of the other, and give each run a
-  private `HOME` so profile state cannot differ between sides. A profile with packages
+  private `HOME` so profile state cannot differ between sides - a profile with packages
   installed runs their triggers against every benchmark line.
 - An A/B ratio survives a measurement defect both sides share; absolute figures do not.
-  Before quoting an absolute number, validate the harness itself. A cloud or CI container
-  is noisier still and may be CPU-throttled: quote only ratios from one, never absolutes.
+  Validate the harness before quoting an absolute number. A cloud or CI container is
+  noisier still and may be CPU-throttled: quote only ratios from one.
 
 ## Find where the time goes
 
-- Fixed-cost detector: a timing flat across a large range of input sizes is setup cost, not
-  the algorithm. Two measurements at different sizes find it, no profiler needed.
+- Fixed-cost detector: a timing flat across a large range of input sizes is setup cost,
+  not the algorithm. Two measurements at different sizes find it, no profiler needed.
 - That detects; it does not diagnose. Identify by ablation - patch out the suspect,
-  rebuild, remeasure - or by a profiler, never by code reading. A written, specific,
-  plausible explanation for one 80ms mapper cost was simply wrong; a ten-minute ablation
-  found the real one. The test of a code-reading diagnosis is whether the figure was
-  predicted before it was measured, not fitted afterwards.
+  rebuild, remeasure - or by a profiler, never by code reading: a written, plausible
+  explanation for one 80ms mapper cost was simply wrong; a ten-minute ablation found the
+  real one. The test of a diagnosis is whether the figure was predicted before it was
+  measured, not fitted afterwards.
 - Removing hot-loop lookups buys nothing when they hit a cache line the previous iteration
-  pulled in; the wins come from cold, scattered dereferences and allocation churn. "N
+  pulled in; wins come from cold, scattered dereferences and allocation churn. "N
   redundant lookups per frame" is not, by itself, a cost model.
 - After removing one fixed cost, a still-flat timing usually means a second fixed cost was
   hiding behind the first - not that the fix failed.
-- Measure end to end before investing in an isolated win: SIMD gave 9.6x on the telnet byte
-  loop in isolation and ~1% on real traffic.
+- Measure end to end before investing in an isolated win: SIMD gave 9.6x on the telnet
+  byte loop in isolation and ~1% on real traffic.
 - Calibration from past wins: a 56ms flat pathfinding setup cost became 0.14ms; a mapper
   view-fit went 150ms to 55ms; per-line allocations dropped 38.6% from one deque-to-vector
   swap. All were fixed costs or churn; none were hot-loop micro-optimisation.
@@ -82,7 +77,7 @@ repository's SessionStart hook provisions the whole toolchain; on a local machin
 ## In-tree benchmarks
 
 Four live in `test/functional_tests/`, built alongside the functional tests into
-`<build>/test/functional_tests/`. How to run each is not obvious, so:
+`<build>/test/functional_tests/`:
 
 - `PipelineBenchmark` (text pipeline, latin-1 decode, trigger engine, peak memory,
   default-package cost, display) is report-only: ctest runs it only when the tree was
@@ -110,10 +105,10 @@ When extending them:
   point). Keep that guard in new slots - the one slot that historically lacked it reported
   a +133% improvement that was really +46%. TelnetBenchmark has no such guard.
 - Display measurement: `TTextEdit` takes its row count from its visible region, so resize
-  the main window and read `getScreenHeight()` - resizing a pane alone leaves it clipped by
-  its parents, and `getRowCount()` is a font-metric estimate, not the paint path. Scroll
-  strides must exceed one screenful, or `drawForeground()` serves frames from its cached
-  pixmap and inflates throughput several-fold.
+  the main window and read `getScreenHeight()` - resizing a pane alone leaves it clipped
+  by its parents, and `getRowCount()` is a font-metric estimate, not the paint path.
+  Scroll strides must exceed one screenful, or `drawForeground()` serves frames from its
+  cached pixmap and inflates throughput several-fold.
 - Vary the text every iteration when echoing in a loop: several Qt paths
   (`QLabel::setText` among them) short-circuit on identical input, and the benchmark then
   measures nothing at all.

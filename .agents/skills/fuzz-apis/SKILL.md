@@ -1,21 +1,16 @@
 ---
 name: fuzz-apis
 description: >-
-  Fuzz Mudlet's parsers and scripting API to find crashes and undefined behaviour. Runnable
-  as a task on its own: build a sanitizer binary, run the seeded in-process fuzzers with
-  fresh seeds, extend them to new surfaces, and triage what falls out. Also read before
-  triaging any sanitizer report.
+  Fuzz Mudlet's parsers and scripting API for crashes and undefined behaviour: build a
+  sanitizer binary, run the seeded in-process fuzzers with fresh seeds, extend them to new
+  surfaces, triage what falls out. Read before triaging any sanitizer report.
 license: GPL-2.0-or-later
 user-invocable: true
 argument-hint: Optional surface to fuzz (e.g. "GMCP handlers", "the buffer API")
 ---
 
-## When to use
-
-Invoke as a task ("fuzz Mudlet", "/fuzz-apis the buffer API"), or read before fuzzing any
-surface or triaging a sanitizer report a fuzz run produced. It runs out of the box: on
-Claude Code for the web the repository's SessionStart hook provisions the whole toolchain;
-on a local machine read the `build-mudlet` skill first.
+Runs out of the box on Claude Code for the web (the SessionStart hook provisions the
+toolchain); elsewhere read the `build-mudlet` skill first.
 
 ## Procedure
 
