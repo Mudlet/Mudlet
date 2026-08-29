@@ -578,20 +578,52 @@ private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0, qApp, [hostname, address, port]() {
+            // Each step waits for the state the next one needs instead of a flat
+            // 100ms. Under the offscreen platform every one of them is already
+            // true - startAutoLogin() shows the dialog before it returns, and
+            // QTest sends its mouse and key events rather than posting them - so
+            // the whole sequence costs nothing, where the sleeps cost 700ms of
+            // every profile start. Waiting on the state rather than on the clock
+            // is also what keeps that safe on a runner slow enough to need it.
+            const auto waitForFocusToLeave = [](QWidget* previous) {
+                // Bounded by what the sleep it replaces allowed, so a platform
+                // that moves focus asynchronously is no worse off than before.
+                QTest::qWaitFor(
+                        [previous]() {
+                            return QApplication::focusWidget() && QApplication::focusWidget() != previous;
+                        },
+                        100);
+            };
+
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
+            // The dialog hides the whole panel this button lives on while no
+            // profile exists, so its visibility is not what to wait for - it is
+            // clicked directly either way. The dialog owning it is.
+            QTest::qWaitFor(
+                    []() {
+                        return !mudlet::self()->mpConnectionDialog.isNull();
+                    },
+                    5000);
+            if (mudlet::self()->mpConnectionDialog.isNull()) {
+                // Leaves the profile unloaded, which the caller's spy reports.
+                return;
+            }
+
+            QWidget* beforeClick = QApplication::focusWidget();
             QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
+            waitForFocusToLeave(beforeClick);
+
             QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QWidget* nameField = QApplication::focusWidget();
+            QTest::keyClick(nameField, Qt::Key_Tab);
+            waitForFocusToLeave(nameField);
+
             QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
+            QWidget* addressField = QApplication::focusWidget();
+            QTest::keyClick(addressField, Qt::Key_Tab);
+            waitForFocusToLeave(addressField);
+
             QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
 
