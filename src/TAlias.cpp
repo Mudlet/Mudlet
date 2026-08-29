@@ -145,8 +145,8 @@ bool TAlias::match(const QString& haystack)
 
     ovector = pcre2_get_ovector_pointer(match_data);
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::cyan, Qt::black) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
+    if (TDebug::wants(TDebug::Category::Alias)) {
+        TDebug(Qt::cyan, Qt::black, TDebug::Category::Alias, mName) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
     }
 
     matchCondition = true; // alias has matched
@@ -165,9 +165,9 @@ bool TAlias::match(const QString& haystack)
         match.append(substring_start, substring_length);
         captureList.push_back(match);
         posList.push_back(utf16_pos);
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::darkCyan, Qt::black) << "Alias: capture group #" << (i + 1) << " = " >> mpHost;
-            TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Alias)) {
+            TDebug(Qt::darkCyan, Qt::black, TDebug::Category::Alias, mName) << "Alias: capture group #" << (i + 1) << " = " >> mpHost;
+            TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Alias, mName) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
     }
 
@@ -228,9 +228,9 @@ bool TAlias::match(const QString& haystack)
             match.append(substring_start, substring_length);
             captureList.push_back(match);
             posList.push_back(utf16_pos);
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::darkCyan, Qt::black) << "capture group #" << (i + 1) << " = " >> mpHost;
-                TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Alias)) {
+                TDebug(Qt::darkCyan, Qt::black, TDebug::Category::Alias, mName) << "capture group #" << (i + 1) << " = " >> mpHost;
+                TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Alias, mName) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
             }
         }
     }
@@ -285,9 +285,9 @@ void TAlias::compileRegex()
         PCRE2_UCHAR errorBuffer[256];
         pcre2_get_error_message(errorcode, errorBuffer, sizeof(errorBuffer));
         const char* error = reinterpret_cast<const char*>(errorBuffer);
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
-            TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
+            TDebug(Qt::red, Qt::gray, TDebug::Category::Error, mName) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
         }
         setError(qsl("<b>%1</b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
@@ -312,8 +312,8 @@ void TAlias::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
@@ -327,8 +327,8 @@ void TAlias::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
@@ -386,7 +386,7 @@ void TAlias::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this);
+        mpHost->mLuaInterpreter.call_luafunction(this, mName);
         return;
     }
 

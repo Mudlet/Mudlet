@@ -464,10 +464,10 @@ QRect TMxpFrameManager::calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* pare
     // Add small padding compensation for character-based frames to ensure full character visibility
     // This accounts for any internal widget padding or text rendering margins
     if (isCharacterHeight || isCharacterWidth) {
-        if (isCharacterWidth && frameWidth > 0) {
+        if (isCharacterWidth) {
             frameWidth += 4; // Add 4px horizontal padding for character visibility
         }
-        if (isCharacterHeight && frameHeight > 0) {
+        if (isCharacterHeight) {
             frameHeight += 4; // Add 4px vertical padding for character visibility
         }
     }

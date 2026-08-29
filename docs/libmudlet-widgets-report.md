@@ -34,9 +34,9 @@ mix of moving and refactoring.
 
 | Metric | Count |
 | --- | ---: |
-| Source files in `mudlet_core` | 400 |
+| Source files in `mudlet_core` | 402 |
 | Files depending on Qt Widgets | 147 |
-| Clean files | 253 |
+| Clean files | 255 |
 | Committed baseline | 147 |
 
 ## Offending files
@@ -75,8 +75,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgModuleManager.cpp` | 2 | 27 | QFileDialog, QMessageBox, QWidget, QDialog, QAbstractButton, QTableWidget, QHeaderView, QTableWidgetItem |
 | `TUiTour.cpp` | 8 | 21 | QFrame, QHBoxLayout, QLabel, QMenu, QMenuBar, QPushButton, QToolBar, QVBoxLayout, QWidget |
 | `TCommandLine.cpp` | 2 | 22 | QScrollBar, QToolButton, QWidget, QPlainTextEdit, QFrame, QApplication, QMenu |
-| `TDetachedWindow.h` | 7 | 17 | QMainWindow, QVBoxLayout, QToolBar, QToolButton, QLabel, QStackedWidget, QDockWidget, QWidget, QMenu |
 | `TTabBar.cpp` | 3 | 21 | QApplication, QStyleOption, QStyleOptionTab, QWidget, QStyle, QProxyStyle, QTabBar |
+| `TDetachedWindow.h` | 7 | 16 | QMainWindow, QVBoxLayout, QToolBar, QToolButton, QLabel, QStackedWidget, QDockWidget, QMenu |
 | `T2DMap.h` | 2 | 19 | QTreeWidget, QWidget, QCheckBox, QComboBox, QListWidgetItem, QPushButton, QTreeWidgetItem, QMenu, QDialog |
 | `dlgTriggerPatternEdit.cpp` | 8 | 11 | QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QPlainTextEdit, QComboBox, QLineEdit, QWidget |
 | `TEasyButtonBar.cpp` | 1 | 17 | QGridLayout, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton, QPushButton |
@@ -84,8 +84,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TToolBar.cpp` | 0 | 18 | QWidget, QDockWidget, QGridLayout, QSizePolicy, QAbstractButton, QPushButton |
 | `dlgConnectionProfiles.h` | 0 | 16 | QTabBar, QDialog, QWidget, QListWidgetItem, QListWidget, QLabel, QPushButton |
 | `TFeatureCallout.cpp` | 4 | 12 | QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget |
+| `TLabel.cpp` | 0 | 16 | QWidget, QLabel |
 | `main.cpp` | 3 | 12 | QCheckBox, QMessageBox, QSplashScreen, QApplication |
-| `TLabel.cpp` | 0 | 15 | QWidget, QLabel |
 | `utils.h` | 2 | 13 | QApplication, QWidget |
 | `dlgNotepad.h` | 0 | 14 | QLabel, QLineEdit, QPlainTextEdit, QToolButton, QMainWindow, QWidget |
 | `dlgMapper.h` | 0 | 13 | QFrame, QLabel, QProgressBar, QPushButton, QWidget, QMenu |
@@ -194,7 +194,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `HostManager.cpp` | 0 | 1 | QApplication |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (253)
+## Clean files (255)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -314,6 +314,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TAstar.h`
 - `TBuffer.cpp`
 - `TBuffer.h`
+- `TConsoleModel.cpp`
+- `TConsoleModel.h`
 - `TDebug.cpp`
 - `TDebug.h`
 - `TEncodingHelper.cpp`

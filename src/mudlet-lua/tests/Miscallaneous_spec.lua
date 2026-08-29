@@ -763,6 +763,42 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
       end)
 
+      -- The HTML log is a whole second document format: its own file
+      -- extension, a CSS header naming the console's own font, a title, and a
+      -- closing tag pair only the stop path writes.
+      describe("Tests the functionality of logging in HTML", function()
+        it("wraps the session in a document naming the console font", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          logPath = select(3, startLogging(true))
+          assert.is_string(logPath)
+          assert.is_truthy(logPath:match("%.html$"), "an HTML log did not get an .html file name: " .. tostring(logPath))
+
+          echo("mudlet-spec-html-logged-line\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+          assert.is_true(contains(contents, "<html>"), "the HTML log has no opening document tag")
+          assert.is_true(contains(contents, "</div></body>"), "the HTML log was never closed off when logging stopped")
+          -- getFont() reports the same resolved family the log header is built
+          -- from, so this holds whatever font the profile ended up with
+          assert.is_true(contains(contents, "font-family: '" .. getFont() .. "'"),
+            "the HTML log header does not name the console font")
+          assert.is_true(contains(contents, getProfileName()), "the HTML log title does not name the profile")
+          assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
+        end)
+      end)
+
       -- A received line is held back from the log until the next one commits.
       -- That deferral is what duplicate detection needs, and it is also the
       -- window in which a trigger can still gag the line with deleteLine().

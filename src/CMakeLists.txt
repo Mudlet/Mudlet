@@ -126,12 +126,15 @@ set(mudlet_SRCS
     TAlias.cpp
     TArea.cpp
     TAreaGridIndex.cpp
+    TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
+    TConsoleModel.cpp
     TDebug.cpp
+    TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -359,6 +362,7 @@ set(mudlet_HDRS
     TAlias.h
     TArea.h
     TAreaGridIndex.h
+    TAreaLodExitIndex.h
     TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
@@ -367,6 +371,7 @@ set(mudlet_HDRS
     TConsole.h
     TConsoleModel.h
     TDebug.h
+    TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h
@@ -949,7 +954,11 @@ if(UNIX AND NOT APPLE)
     PATTERN "*.mpackage" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the map fixture the pathfinding specs need. It stays zipped rather than
+    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
+    # and every package built from this tree would carry the difference
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"

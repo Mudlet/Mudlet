@@ -94,8 +94,7 @@ bool TRoomDB::addRoom(int id)
         return true;
     }
     if (id <= 0) {
-        mpMap->logError(tr("Room not created. RoomID %1 is not allowed as room numbers must be greater than zero!")
-                                .arg(QString::number(id)));
+        mpMap->logError(tr("Room not created. RoomID %1 is not allowed as room numbers must be greater than zero!").arg(QString::number(id)));
     }
     return false;
 }
@@ -550,8 +549,7 @@ bool TRoomDB::addArea(int id)
         }
         return true;
     }
-    mpMap->logError(tr("Area not added. An area with AreaID %1 already exists!")
-                            .arg(QString::number(id)));
+    mpMap->logError(tr("Area not added. An area with AreaID %1 already exists!").arg(QString::number(id)));
     return false;
 }
 
@@ -1336,7 +1334,19 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
 
 bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)
 {
-    return addRoom(i, pT, true);
+    if (addRoom(i, pT, true)) {
+        return true;
+    }
+
+    // addRoom() refuses an id that is already taken and takes no ownership when
+    // it does, so this room has to go here or it leaks - restoring onto a map
+    // that still holds rooms is the case that reaches this. TRoom::restore()
+    // has already put the colliding id on it, and ~TRoom() would use that id to
+    // remove the room legitimately holding it, so unhook it first - the same
+    // dance deleteDisplacedArea() does for an area.
+    pT->mpRoomDB = nullptr;
+    delete pT;
+    return false;
 }
 
 // Used by XMLimport to fix TArea::rooms data after import
