@@ -587,6 +587,14 @@ private:
     // through mainConsoleModel()/sharedMainConsoleModel().
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
 
+    // Read during the construction of the members below, so it has to be
+    // declared - and therefore initialised - ahead of them. cTelnet::postMessage()
+    // asks isClosingDown() to decide whether a message can be delivered or must be
+    // stacked up, and TLuaInterpreter's constructor posts the Lua module loading
+    // messages through it, so this is read while Host is still being built. The
+    // same shape as the reset() call #10229 moved out of cTelnet's constructor.
+    bool mIsClosingDown = false;
+
 public:
     // Make this the first public member instantiated so we can use ITS font
     // as the "reference" or "master" font for whole profile - and so we don't
@@ -1053,7 +1061,6 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-    bool mIsClosingDown = false;
 
     QString mLine;
     QString mLogin;
