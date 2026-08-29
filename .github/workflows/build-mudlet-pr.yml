@@ -54,9 +54,9 @@ jobs:
           # Note: using / in the "buildname" has significance - replacing the
           # ',' in some of the following with a '/' seemed to cause extra
           # spurious steps in the build and broke things! - SlySven
-          # Smaller than build-mudlet.yml's on purpose - only builds that produce
-          # an artifact. 'ubuntu (x86_64)' and 'ubuntu / clang' still run there on
-          # every push to development and nightly.
+          # Smaller than build-mudlet.yml's on purpose: it leaves out
+          # 'ubuntu (x86_64)', which is the same OS, compiler and Qt as the gcc
+          # build below. That one still runs on every push to development.
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests + leak detection'
@@ -68,6 +68,14 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
+          # produces no artifact, but is the only configuration built without the
+          # updater, the 3D mapper and the bundled fonts, so it is the only one
+          # that can catch code depending on them before it is merged
+          - os: ubuntu-latest
+            buildname: 'ubuntu / clang'
+            compiler: clang_64
+            gcc_compiler_version: 10
+            qt: '6.11.1'
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
             compiler: clang_64
