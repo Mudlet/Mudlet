@@ -180,23 +180,24 @@ private slots:
         QVERIFY2(mPaintCount > 0, "repaint() delivered no paint event, so the pacer's cooldown never started and nothing below is inside a pacing window");
 
         QSignalSpy pacerFired(pane->mpPaintPacer, &QTimer::timeout);
-        QElapsedTimer sinceRepaint;
-        sinceRepaint.start();
         mPaintCount = 0;
         console->print(qsl("trailing line\n"));
 
-        // Read after the print, so this is an upper bound on how late scheduleUpdate()
-        // ran inside it. Under the bound the print was certainly inside the cooldown
-        // and the frame owed deferral; over it the pane was entitled to paint at once,
-        // and asserting deferral anyway would be the same wall-clock trap the flood
-        // half above was just fixed for - one preemption longer than a window and a
-        // healthy pane fails.
-        const qint64 sinceRepaintMs = sinceRepaint.elapsed();
-        const bool printLandedInsideTheCooldown = sinceRepaintMs < TTextEdit::csmPaintPaceMs;
+        // The clock scheduleUpdate() itself consults, read just after the print: it
+        // overshoots what that call saw by the print's tail alone, well under a
+        // millisecond, and leaves the paint's own duration out of the reckoning
+        // entirely. Under the bound the print certainly landed inside the cooldown
+        // and the frame owed deferral; over it the pane may already have been
+        // entitled to paint at once, and asserting deferral anyway would be the
+        // wall-clock trap the flood half above guards against. Sound only while
+        // nothing inside print() paints synchronously, which is what the isActive()
+        // check below already rests on.
+        const qint64 paneCooldownMs = pane->mSincePaint.elapsed();
+        const bool printLandedInsideTheCooldown = paneCooldownMs < TTextEdit::csmPaintPaceMs;
         if (printLandedInsideTheCooldown) {
             QVERIFY2(pane->mpPaintPacer->isActive(), "the print inside the cooldown did not hold a frame back, so frames are not being deferred at all");
         } else {
-            qWarning() << "the print landed" << sinceRepaintMs << "ms after the paint, past the" << TTextEdit::csmPaintPaceMs << "ms cooldown - deferral not exercised this run";
+            qWarning() << "the print landed" << paneCooldownMs << "ms after the paint began, past the" << TTextEdit::csmPaintPaceMs << "ms cooldown - deferral not exercised this run";
         }
 
         QVERIFY2(QTest::qWaitFor(
