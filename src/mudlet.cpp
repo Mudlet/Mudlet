@@ -243,6 +243,25 @@ QString mudlet::addonLabel(const QString& name)
     return QString(name).replace(QLatin1Char('&'), QLatin1String("&&"));
 }
 
+QString mudlet::addonPlainLabel(const QString& label)
+{
+    QString plain;
+    plain.reserve(label.size());
+    for (int index = 0; index < label.size(); ++index) {
+        if (label.at(index) != QLatin1Char('&')) {
+            plain.append(label.at(index));
+            continue;
+        }
+        // A doubled marker is one literal ampersand; a single one marks the
+        // key that follows and is not part of the text at all
+        if (index + 1 < label.size() && label.at(index + 1) == QLatin1Char('&')) {
+            plain.append(QLatin1Char('&'));
+            ++index;
+        }
+    }
+    return plain;
+}
+
 // A key sequence Qt could not parse holds Key_unknown rather than nothing, so
 // a typo passes an isEmpty() test, shows a blank shortcut column and never
 // fires. One already spoken for is worse than useless: Qt disables both, and
@@ -257,7 +276,11 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, QString& error) c
 
     for (const QAction* action : findChildren<QAction*>()) {
         if (action->shortcut() == sequence) {
-            error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), action->text());
+            // The label as the player reads it: an addon command's text carries
+            // the doubled ampersand that makes Qt draw one, and Mudlet's own
+            // actions carry the single marker that names their access key.
+            // Quoting either hands a package a label it cannot find on screen.
+            error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), addonPlainLabel(action->text()));
             return false;
         }
     }
@@ -373,7 +396,12 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
         button->setObjectName(qsl("addon_%1").arg(request.name));
         button->setToolTip(addonTooltip(request.tooltip));
         button->setAutoRaise(true);
+        // Both, and not the style alone: a widget added through addWidget()
+        // inherits neither, so a button took Qt's 16px default beside Mudlet's
+        // own at whatever size the toolbar was on - until the user next changed
+        // the icon size, which is the only thing that called the helper below.
         button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+        button->setIconSize(mpMainToolBar->iconSize());
         command.button = button;
         command.toolbarAction = mpMainToolBar->addWidget(button);
         connect(button, &QToolButton::clicked, this, [this, commandId](const bool checked) {

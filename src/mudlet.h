@@ -824,6 +824,9 @@ private:
     // Only the displayed strings are doubled; the raw name stays the identity
     // the label-clash checks compare.
     static QString addonLabel(const QString& name);
+    // The inverse, for a message rather than a surface: a refusal quoting Qt's
+    // mnemonic syntax names a label that appears nowhere on screen.
+    static QString addonPlainLabel(const QString& label);
     const Host* addonCommandOwning(const QAction* action) const;
     static void applyAddonIcon(QToolButton* button, QAction* action, const QString& icon);
     void raiseAddonCommandEvent(int commandId);

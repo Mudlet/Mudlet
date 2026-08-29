@@ -37,6 +37,7 @@
 #include <QAction>
 #include <QMenu>
 #include <QSignalSpy>
+#include <QToolBar>
 #include <QToolButton>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -536,11 +537,39 @@ private slots:
         QVERIFY2(pButton, "the command is not on the toolbar");
         QCOMPARE(pButton->text(), qsl("Fish && Chips"));
 
+        // The doubling is display syntax for the surfaces, so it must not reach
+        // a message: a refusal quoting "Fish && Chips" names a label that is
+        // nowhere on screen and that the package never wrote
+        const int takenId = addCommand(mpFirstHost, qsl("name = 'Fish & Chips', menuPath = 'Ampersand2', shortcut = 'Ctrl+Alt+F7'"));
+        QVERIFY2(takenId > 0, "the command with a shortcut was not placed");
+        const QString clash = refusalReason(mpFirstHost, qsl("name = 'Rival', menuPath = 'Ampersand2', shortcut = 'Ctrl+Alt+F7'"));
+        QVERIFY2(!clash.isEmpty(), "a shortcut already taken was accepted");
+        QVERIFY2(clash.contains(qsl("\"Fish & Chips\"")), qPrintable(qsl("the refusal does not name the label as the player reads it: %1").arg(clash)));
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(takenId)));
+
         // and the clash rules still compare the name the package gave, not the
         // doubled form the surfaces display
         const QString why = refusalReason(mpFirstHost, qsl("name = 'R&D', menuPath = 'Ampersand/Fish & Chips'"));
         QVERIFY2(!why.isEmpty(), "a menuPath naming the ampersand command was accepted");
         QVERIFY2(why.contains(qsl("Fish & Chips")), qPrintable(qsl("the refusal does not name the label the package gave: %1").arg(why)));
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(commandId)));
+        QTest::qWait(100ms);
+    }
+
+    // A widget added to a QToolBar through addWidget() inherits neither the
+    // toolbar's button style nor its icon size, so an addon button drew its
+    // icon at Qt's default beside Mudlet's own until the user next changed the
+    // icon size - the one thing that re-applied both
+    void test_aButtonIsBuiltAtTheToolbarsIconSize()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'Sized', menuPath = 'Sizing'"));
+        QVERIFY2(commandId > 0, "the command was not placed");
+
+        QToolButton* pButton = toolbarButtonNamed(qsl("Sized"));
+        QVERIFY2(pButton, "the command is not on the toolbar");
+        QCOMPARE(pButton->iconSize(), mudlet::self()->mpMainToolBar->iconSize());
+        QCOMPARE(pButton->toolButtonStyle(), mudlet::self()->mpMainToolBar->toolButtonStyle());
 
         QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(commandId)));
         QTest::qWait(100ms);
