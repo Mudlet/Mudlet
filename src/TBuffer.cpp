@@ -1819,6 +1819,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
                       "data character and attribute data items!";
     }
+    if (lineBuffer.isEmpty()) {
+        appendEmptyLine();
+    }
     if (!lineBuffer.back().isEmpty()) {
         if (!line.isEmpty()) {
             lineBuffer << line;
@@ -4948,6 +4951,9 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const QString& timeStampOverride)
 {
+    if (buffer.empty()) {
+        appendEmptyLine();
+    }
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
     appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID, timeStampOverride);
