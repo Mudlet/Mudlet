@@ -54,6 +54,54 @@ class TTimer;
 class TTrigger;
 
 
+// The pairing instant apply needs: what every apply-relevant control held the
+// last time the dialog read the settings, so that an apply writes back only
+// what the user has changed since rather than the whole page (#10165). The
+// shortcut editors write through a map instead of through a control value, so
+// they are here too - that is the whole of the pairing in one place.
+//
+// Both references are to members of the dialog that owns this, so both outlive
+// it. Snapshot keys may dangle if a control is ever destroyed: they are only
+// ever compared, never dereferenced, and a control coming into being after the
+// last snapshot reads as dirty, which is the safe way round.
+class SettingsSnapshot
+{
+public:
+    Q_DISABLE_COPY(SettingsSnapshot)
+    SettingsSnapshot(const QWidget& owner, const QMap<QString, QKeySequence>& shortcuts);
+    // Whether a widget holds a value a setting is written from at all. The
+    // types are the ones connectApplyTriggers() listens to, so everything able
+    // to schedule an apply can also be told apart from how it was populated.
+    static bool carriesValue(const QObject* pControl);
+    // Called once the controls hold what the settings say - after population,
+    // and after each apply - so that anything differing from this afterwards is
+    // the user's own edit
+    void take();
+    // ...and for one control whose list was rebuilt under a dialog already
+    // showing it
+    void take(const QObject* pControl);
+    bool dirty(const QObject* pControl) const;
+    bool anyDirty(const QList<const QObject*>& controls) const;
+    bool shortcutsDirty() const;
+    bool shortcutDirty(const QString& key) const;
+    // Anything the user has changed that the settings do not know about yet: a
+    // control differing from its snapshot, a shortcut editor holding a sequence
+    // that has not been committed, a line edit part-way through a word, or an
+    // apply still waiting out its debounce
+    bool pendingEdits(const QTimer* pApplyTimer, const QLineEdit* pSearchField) const;
+    // The editor showing each shortcut, so that a second profile re-reads the
+    // editors the first one left behind rather than adding a second row of them
+    TKeySequenceEdit* editorFor(const QString& key) const;
+    void addEditor(const QString& key, TKeySequenceEdit* pEditor);
+
+private:
+    const QWidget& mOwner;
+    const QMap<QString, QKeySequence>& mCurrentShortcuts;
+    QHash<const QObject*, QVariant> mValues;
+    QMap<QString, QKeySequence> mShortcuts;
+    QMap<QString, QPointer<TKeySequenceEdit>> mEditors;
+};
+
 class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
@@ -255,13 +303,8 @@ private:
     // Re-reads the settings into a dialog that has been left open, so that a
     // change made from Lua or from another dialog is what the user comes back
     // to. Refuses whenever the dialog is holding an edit of its own, because
-    // re-reading would throw that edit away - see pendingEdits().
+    // re-reading would throw that edit away - see SettingsSnapshot::pendingEdits().
     void refreshFromSettings();
-    // Anything the user has changed that the settings do not know about yet: a
-    // control differing from its snapshot, a shortcut editor holding a sequence
-    // that has not been committed, a line edit part-way through a word, or an
-    // apply still waiting out its debounce
-    bool pendingEdits() const;
     QString certificateWarningCheckBoxStyle() const;
     QString certificateWarningLabelStyle() const;
     void restyleCertificateWarnings();
@@ -286,7 +329,22 @@ private:
     void buildShell();
     QWidget* buildSidebar();
     void addCategory(const QString& key, const QString& iconFile);
+    // The one place a settings category is declared: the order the sidebar
+    // lists them in, the icon each row shows, the name under it, and where the
+    // two separators go. Re-read on a language change, which is what brings the
+    // names back translated.
+    struct CategoryDefinition
+    {
+        QString key;
+        QString iconFile;
+        QString name;
+        bool separatorAbove = false;
+    };
+    QList<CategoryDefinition> categoryDefinitions() const;
+    // The sidebar row a category is on, or -1 for a key naming none
+    int categoryRow(const QString& key) const;
     void addSidebarSeparator();
+    QScrollArea* createScrollPage(const QString& objectSuffix);
     // The scrolling column every page is, whether the sidebar leads to it or a
     // card does
     QScrollArea* buildPage(const QString& objectSuffix, const QList<QWidget*>& cards);
@@ -374,9 +432,6 @@ private:
     QLabel* searchCategoryHeader(const QString& key);
     QPushButton* searchSubpageLink(const QString& subpageKey, QWidget* pCard);
     void connectApplyTriggers();
-    void snapshotValues();
-    bool dirty(const QObject* pControl) const;
-    bool anyDirty(const QList<const QObject*>& controls) const;
     void applyAll();
     void maybeDownloadEditorThemes();
 
@@ -391,9 +446,10 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
-    // The editor showing each of those, so that a second profile re-reads the
-    // editors the first one left behind rather than adding a second row of them
-    QMap<QString, QPointer<TKeySequenceEdit>> mShortcutEditors;
+    // ...and what those looked like the last time the settings were read, with
+    // the rest of the dirty-apply pairing. Declared after currentShortcuts,
+    // which it holds a reference to.
+    SettingsSnapshot mSnapshot{*this, currentShortcuts};
     // The ten telnet protocols, on the Connection page's protocols subpage
     QPointer<QCheckBox> mEnableGMCP;
     QPointer<QCheckBox> mEnableMSDP;
@@ -476,18 +532,18 @@ private:
     QPointer<QLabel> mpLabel_securityHeadline;
     QPointer<QLabel> mpLabel_securityDetail;
     QPointer<QLabel> mpLabel_securityLink;
-    QMap<QString, int> mCategoryPageIndexes;
-    QMap<QString, int> mCategoryRows;
-    // The sidebar item holds the icon, but a rich-text header needs the
-    // resource path it was loaded from
-    QMap<QString, QString> mCategoryIconFiles;
+    // Where each sidebar category ended up: its row in the sidebar, its page in
+    // the stack, and - because the sidebar item holds the icon but a rich-text
+    // search header needs the path it was loaded from - the icon file. One
+    // table rather than three maps that have to be kept saying the same thing.
+    struct CategoryPlace
+    {
+        int row = -1;
+        int pageIndex = -1;
+        QString iconFile;
+    };
+    QMap<QString, CategoryPlace> mCategories;
     QTimer* mpTimer_apply = nullptr;
-    // What every apply-relevant control held the last time the dialog read the
-    // settings, keyed by the control
-    QHash<const QObject*, QVariant> mValueSnapshot;
-    // The shortcut editors write through this map rather than through a control
-    // value, so it needs a snapshot of its own
-    QMap<QString, QKeySequence> mShortcutsSnapshot;
     // The sidebar is a rail of icons rather than a list of names
     bool mSidebarCollapsed = false;
     // Set once buildShell() has finished moving controls between cards, which

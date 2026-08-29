@@ -55,6 +55,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
@@ -84,7 +85,6 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    static constexpr int scmApplyTimeout = 10000;
 
     // The borders as this test found them, put back after each case
     QMargins mBordersBefore;
@@ -97,15 +97,8 @@ private:
     QString mEditorThemeDarkBefore;
     QMap<QString, QKeySequence> mShortcutsBefore;
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    static bool waitForApply(QSignalSpy& spy) { return !spy.isEmpty() || spy.wait(scmApplyTimeout); }
 
     // The themes the editor page offers are read from this file. What keeps the
     // first visit to the Editor page off the network is
@@ -121,7 +114,7 @@ private:
 
     void selectCategory(const QString& key)
     {
-        QListWidget* pList = mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList"));
+        QListWidget* pList = TestSettings::sidebar(mpPreferences);
         QVERIFY2(pList, "the settings shell has no category sidebar");
         for (int row = 0, rows = pList->count(); row < rows; ++row) {
             if (pList->item(row)->data(Qt::UserRole).toString() == key) {
@@ -244,7 +237,7 @@ private slots:
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         const bool announceBefore = mpHost->mAnnounceIncomingText;
         mpPreferences->checkBox_announceIncomingText->click();
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(mpHost->userBorders().top(), setElsewhere);
         QCOMPARE(mpHost->mAnnounceIncomingText, !announceBefore);
@@ -261,7 +254,7 @@ private slots:
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         const bool announceBefore = mpHost->mAnnounceIncomingText;
         mpPreferences->checkBox_announceIncomingText->click();
-        QVERIFY2(waitForApply(applySpy), "the first edit never reached the Host");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the first edit never reached the Host");
         QCOMPARE(mpHost->mAnnounceIncomingText, !announceBefore);
 
         // now a script puts that same setting back, with the control still
@@ -272,7 +265,7 @@ private slots:
         applySpy.clear();
         const bool analyzerBefore = mpHost->mEnableTextAnalyzer;
         mpPreferences->checkBox_enableTextAnalyzer->click();
-        QVERIFY2(waitForApply(applySpy), "the second edit never reached the Host");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the second edit never reached the Host");
 
         QCOMPARE(mpHost->mEnableTextAnalyzer, !analyzerBefore);
         QVERIFY2(mpHost->mAnnounceIncomingText == announceBefore, "an apply wrote back a control the user had changed before the previous apply, reverting what was set from outside");
@@ -288,7 +281,7 @@ private slots:
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         const int typedIn = 77;
         mpPreferences->topBorderHeight->setValue(typedIn);
-        QVERIFY2(waitForApply(applySpy), "editing the border never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "editing the border never wrote the settings back");
 
         QCOMPARE(mpHost->userBorders().top(), typedIn);
     }
@@ -313,7 +306,7 @@ private slots:
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         const int typedIn = 33;
         mpPreferences->leftBorderWidth->setValue(typedIn);
-        QVERIFY2(waitForApply(applySpy), "editing a border never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "editing a border never wrote the settings back");
 
         QCOMPARE(mpHost->userBorders().left(), typedIn);
         QVERIFY2(mpHost->userBorders().top() == setElsewhere, "editing one border wrote another border's stale spin box back over what a script had set");
@@ -336,7 +329,7 @@ private slots:
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->mIsLoggingTimestamps->click();
-        QVERIFY2(waitForApply(applySpy), "ticking the timestamps option never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "ticking the timestamps option never wrote the settings back");
 
         QVERIFY(mpHost->mIsLoggingTimestamps);
         QVERIFY2(mpHost->mIsNextLogFileInHtmlFormat, "ticking one log option wrote a sibling option's stale check box back over what was set outside the dialog");
@@ -353,7 +346,7 @@ private slots:
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->slot_resetLogDir();
-        QVERIFY2(waitForApply(applySpy), "resetting the log folder never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "resetting the log folder never wrote the settings back");
         QCOMPARE(mpHost->mLogDir, QString());
     }
 
@@ -376,7 +369,7 @@ private slots:
         openPreferences();
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->toolButton_resetMainWindowShortcuts->click();
-        QVERIFY2(waitForApply(applySpy), "resetting the shortcuts to their defaults never wrote them back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "resetting the shortcuts to their defaults never wrote them back");
         QCOMPARE(*mpHost->profileShortcuts.at(key), defaultSequence);
     }
 
@@ -398,7 +391,7 @@ private slots:
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->checkBox_announceIncomingText->click();
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(dark ? mpHost->mEditorThemeDark : mpHost->mEditorTheme, qsl("PhaseDProbe"));
     }
@@ -420,7 +413,7 @@ private slots:
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->checkBox_announceIncomingText->click();
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(mpHost->mEnableMSP, !shown);
         mpHost->mEnableMSP = shown;
@@ -440,7 +433,7 @@ private slots:
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->checkBox_announceIncomingText->click();
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(pSettings->value(qsl("telnetHandlerEnabled")).toBool(), !shown);
         pSettings->setValue(qsl("telnetHandlerEnabled"), shown);

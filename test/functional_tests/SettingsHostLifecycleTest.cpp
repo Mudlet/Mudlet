@@ -51,6 +51,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -74,18 +75,9 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    static constexpr int scmQuietWindow = 1500;
-    static constexpr int scmApplyTimeout = 10000;
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    static bool waitForApply(QSignalSpy& spy) { return !spy.isEmpty() || spy.wait(scmApplyTimeout); }
 
     // Takes the dialog to write by reference rather than returning it, because
     // QVERIFY expands to a bare return and so needs a void function - and the
@@ -104,7 +96,7 @@ private:
     QStringList cardPlacements() const
     {
         QStringList placements;
-        QStackedWidget* pStack = mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack"));
+        QStackedWidget* pStack = TestSettings::stack(mpPreferences);
         for (int page = 0, pages = pStack->count(); page < pages; ++page) {
             auto* pScrollArea = qobject_cast<QScrollArea*>(pStack->widget(page));
             if (!pScrollArea || pScrollArea->objectName() == qsl("settingsPage_searchResults")) {
@@ -234,7 +226,7 @@ private slots:
         verifyProfileSettingsAre(true);
         QCOMPARE(mpPreferences->command_separator_lineedit->text(), mpHost->getCommandSeparator());
         QCOMPARE(mpPreferences->checkBox_highlightHistory->isChecked(), mpHost->mHighlightHistory);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "repopulating the dialog for a profile that had just appeared applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "repopulating the dialog for a profile that had just appeared applied the settings");
     }
 
     // ...and the mirror image: the profile is closed while its settings are
@@ -249,7 +241,7 @@ private slots:
         mpPreferences->slot_handleHostDeletion(mpHost);
 
         verifyProfileSettingsAre(false);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "clearing the dialog for a profile that had gone away applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "clearing the dialog for a profile that had gone away applied the settings");
     }
 
     // One dialog per profile plus the profile chooser's own means two can be up
@@ -273,7 +265,7 @@ private slots:
         const int iconSize = (iconSizeBefore % mpPreferences->MainIconSize->maximum()) + 1;
         QVERIFY(iconSize != iconSizeBefore);
         mpPreferences->MainIconSize->setValue(iconSize);
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(mpSecondPreferences->MainIconSize->value(), iconSize);
     }
@@ -313,7 +305,7 @@ private slots:
         mpPreferences->slot_handleHostAddition(mpHost, 1);
 
         QCOMPARE(controlInventory(), afterFirstProfile);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "walking a profile out and back in again applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "walking a profile out and back in again applied the settings");
     }
 
     // A profile can arrive while the search results are showing, and those
@@ -337,7 +329,7 @@ private slots:
 
         QVERIFY2(pSearch->text().isEmpty(), "the profile arriving left the query standing in the search field");
         QCOMPARE(cardPlacements(), before);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "repopulating for a profile that arrived mid-search applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "repopulating for a profile that arrived mid-search applied the settings");
     }
 };
 

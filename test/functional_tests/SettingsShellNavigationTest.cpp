@@ -61,6 +61,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -161,13 +162,7 @@ private:
                 qsl("advanced")};
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
     // The themes the Editor page offers are read from this file; its
     // modification time no longer decides anything, because
@@ -187,11 +182,22 @@ private:
         themes.close();
     }
 
-    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+    QListWidget* sidebar() const { return TestSettings::sidebar(mpPreferences); }
 
-    QStackedWidget* stack() const { return mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack")); }
+    QStackedWidget* stack() const { return TestSettings::stack(mpPreferences); }
 
-    QScrollArea* pageOf(const QString& key) const { return mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_%1").arg(key)); }
+    QScrollArea* pageOf(const QString& key) const { return TestSettings::pageOf(mpPreferences, key); }
+
+    // Writes through the two references rather than returning them: QVERIFY2
+    // expands to a bare return, so anything using it has to return void.
+    void scrollMapperPageHalfWayDown(QScrollBar*& pMapperBar, int& scrolledTo)
+    {
+        pMapperBar = pageOf(qsl("mapper"))->verticalScrollBar();
+        QVERIFY2(pMapperBar->maximum() > 0, "the Mapper page fits its viewport, so a scroll position could not be retained or lost");
+        scrolledTo = pMapperBar->maximum() / 2;
+        pMapperBar->setValue(scrolledTo);
+        QVERIFY2(scrolledTo > 0, "the Mapper page scrolls by less than two pixels, so this proves nothing");
+    }
 
     int rowOf(const QString& key) const
     {
@@ -370,11 +376,9 @@ private slots:
     void test_eachCategoryKeepsItsOwnScrollPosition()
     {
         selectCategory(qsl("mapper"));
-        QScrollBar* pMapperBar = pageOf(qsl("mapper"))->verticalScrollBar();
-        QVERIFY2(pMapperBar->maximum() > 0, "the Mapper page fits its viewport, so a scroll position could not be retained or lost");
-        const int scrolledTo = pMapperBar->maximum() / 2;
-        pMapperBar->setValue(scrolledTo);
-        QVERIFY2(scrolledTo > 0, "the Mapper page scrolls by less than two pixels, so this proves nothing");
+        QScrollBar* pMapperBar = nullptr;
+        int scrolledTo = 0;
+        scrollMapperPageHalfWayDown(pMapperBar, scrolledTo);
 
         selectCategory(qsl("general"));
         QCOMPARE(stack()->currentWidget(), pageOf(qsl("general")));
@@ -393,11 +397,9 @@ private slots:
     void test_aPageSwitchWithTheFocusOnThePageKeepsItsScrollPosition()
     {
         selectCategory(qsl("mapper"));
-        QScrollBar* pMapperBar = pageOf(qsl("mapper"))->verticalScrollBar();
-        QVERIFY2(pMapperBar->maximum() > 0, "the Mapper page fits its viewport, so a scroll position could not be retained or lost");
-        const int scrolledTo = pMapperBar->maximum() / 2;
-        pMapperBar->setValue(scrolledTo);
-        QVERIFY2(scrolledTo > 0, "the Mapper page scrolls by less than two pixels, so this proves nothing");
+        QScrollBar* pMapperBar = nullptr;
+        int scrolledTo = 0;
+        scrollMapperPageHalfWayDown(pMapperBar, scrolledTo);
 
         mpPreferences->pushButton_saveMap->setFocus();
         QCOMPARE(QApplication::focusWidget(), mpPreferences->pushButton_saveMap);

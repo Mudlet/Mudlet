@@ -48,6 +48,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -70,17 +71,12 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+    QListWidget* sidebar() const { return TestSettings::sidebar(mpPreferences); }
 
-    QStackedWidget* stack() const { return mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack")); }
+    QStackedWidget* stack() const { return TestSettings::stack(mpPreferences); }
+    QScrollArea* pageOf(const QString& key) const { return TestSettings::pageOf(mpPreferences, key); }
 
     QLineEdit* searchField() const { return mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField")); }
 
@@ -234,7 +230,7 @@ private slots:
     {
         search(qsl("color"));
 
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
         QCOMPARE(mpPreferences->groupBox_displayColors->parentWidget(), resultsColumn());
         QCOMPARE(mpPreferences->groupBox_mapperColors->parentWidget(), resultsColumn());
         QVERIFY2(visibleCategoryHeaders() >= 2, "the results were not grouped under a header per category");
@@ -280,20 +276,13 @@ private slots:
         const QStringList before = cardPlacements();
         search(qsl("color"));
 
-        QListWidget* pList = sidebar();
-        int mapperRow = -1;
-        for (int row = 0, rows = pList->count(); row < rows; ++row) {
-            if (pList->item(row)->data(Qt::UserRole).toString() == qsl("mapper")) {
-                mapperRow = row;
-                break;
-            }
-        }
+        const int mapperRow = TestSettings::rowOf(mpPreferences, qsl("mapper"));
         QVERIFY(mapperRow >= 0);
-        pList->setCurrentRow(mapperRow);
+        sidebar()->setCurrentRow(mapperRow);
         QCoreApplication::processEvents();
 
         QVERIFY2(searchField()->text().isEmpty(), "the search field still holds the query after a category was chosen");
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_mapper")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
         QCOMPARE(cardPlacements(), before);
     }
 
@@ -315,7 +304,7 @@ private slots:
         QCoreApplication::processEvents();
 
         QCOMPARE(searchField()->text(), qsl("colors"));
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
     }
 
     // A card the profile's state has hidden - the updater's when there is no
@@ -343,16 +332,9 @@ private slots:
     void test_theBackChevronReturnsToTheCategoryTheSearchInterrupted()
     {
         const QStringList before = cardPlacements();
-        QListWidget* pList = sidebar();
-        int mapperRow = -1;
-        for (int row = 0, rows = pList->count(); row < rows; ++row) {
-            if (pList->item(row)->data(Qt::UserRole).toString() == qsl("mapper")) {
-                mapperRow = row;
-                break;
-            }
-        }
+        const int mapperRow = TestSettings::rowOf(mpPreferences, qsl("mapper"));
         QVERIFY(mapperRow >= 0);
-        pList->setCurrentRow(mapperRow);
+        sidebar()->setCurrentRow(mapperRow);
         QCoreApplication::processEvents();
 
         auto* pBack = mpPreferences->findChild<QToolButton*>(qsl("settingsSearchBack"));
@@ -369,7 +351,7 @@ private slots:
         QCoreApplication::processEvents();
 
         QVERIFY2(searchField()->text().isEmpty(), "the back button left the query standing in the search field");
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_mapper")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
         QVERIFY2(pBack->isHidden(), "the back button is still showing after the search ended");
         QCOMPARE(cardPlacements(), before);
     }
@@ -457,7 +439,7 @@ private slots:
         pLink->click();
         QCoreApplication::processEvents();
         QVERIFY2(searchField()->text().isEmpty(), "following a result left the query standing in the search field");
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("connection_protocols")));
         QCOMPARE(sidebar()->currentItem()->data(Qt::UserRole).toString(), qsl("connection"));
         QVERIFY2(QTest::qWaitFor(
                          [this]() {

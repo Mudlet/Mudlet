@@ -46,6 +46,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -69,26 +70,20 @@ private:
     const QString mLocalhost = qsl("localhost");
     const QString mBannerSeenKey = qsl("settingsRedesignBannerSeen");
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
     QFrame* banner() const { return mpPreferences->findChild<QFrame*>(qsl("settingsMigrationBanner")); }
 
     // The widget every card of one category page is laid out in
     QWidget* columnOf(const QString& key) const
     {
-        auto* pPage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_%1").arg(key));
+        auto* pPage = TestSettings::pageOf(mpPreferences, key);
         return pPage ? pPage->widget() : nullptr;
     }
 
     void selectCategory(const QString& key)
     {
-        auto* pList = mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList"));
+        auto* pList = TestSettings::sidebar(mpPreferences);
         QVERIFY2(pList, "the settings shell has no category sidebar");
         for (int row = 0, rows = pList->count(); row < rows; ++row) {
             if (pList->item(row)->data(Qt::UserRole).toString() == key) {

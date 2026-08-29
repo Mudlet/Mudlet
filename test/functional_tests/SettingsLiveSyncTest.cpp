@@ -49,6 +49,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -72,19 +73,9 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    // Comfortably past the 400ms debounce even on a loaded sanitiser build
-    static constexpr int scmQuietWindow = 1500;
-    static constexpr int scmApplyTimeout = 10000;
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    static bool waitForApply(QSignalSpy& spy) { return !spy.isEmpty() || spy.wait(scmApplyTimeout); }
 
     void openPreferences()
     {
@@ -193,7 +184,7 @@ private slots:
 
         QCOMPARE(mpPreferences->wrap_at_spinBox->value(), wrapFromAScript);
         QCOMPARE(mpPreferences->command_separator_lineedit->text(), qsl("!!"));
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "re-reading the settings applied them");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "re-reading the settings applied them");
     }
 
     // ...and it is the activation a window manager delivers that does it, not
@@ -237,7 +228,7 @@ private slots:
         returnToTheDialog();
 
         QCOMPARE(mpPreferences->wrap_at_spinBox->value(), wrapTheUserTyped);
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
         QCOMPARE(mpHost->mWrapAt, wrapTheUserTyped);
     }
 
@@ -282,7 +273,7 @@ private slots:
 
         QCOMPARE(mpPreferences->spinBox_roomSize->value(), 7);
         QCOMPARE(mpHost->mRoomSize, sizeFromAScript);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "re-reading the settings applied them");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "re-reading the settings applied them");
     }
 
     // An apply is the other moment nothing of the user's is outstanding, so the
@@ -297,7 +288,7 @@ private slots:
         const int wrapFromAScript = mpHost->mWrapAt + 31;
         mpHost->mWrapAt = wrapFromAScript;
 
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
         QCoreApplication::processEvents();
 
         QCOMPARE(mpPreferences->wrap_at_spinBox->value(), wrapFromAScript);
@@ -328,7 +319,7 @@ private slots:
         openPreferences();
         mpPreferences->setTab(qsl("connection/protocols"));
         QCoreApplication::processEvents();
-        auto* pStack = mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack"));
+        auto* pStack = TestSettings::stack(mpPreferences);
         QVERIFY(pStack);
         QCOMPARE(pStack->currentWidget()->objectName(), qsl("settingsPage_connection_protocols"));
 
@@ -350,7 +341,7 @@ private slots:
         openPreferences();
         QFrame* pBanner = mpPreferences->findChild<QFrame*>(qsl("settingsMigrationBanner"));
         QVERIFY2(pBanner, "the migration banner was not built, so this case is watching nothing");
-        auto* pStack = mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack"));
+        auto* pStack = TestSettings::stack(mpPreferences);
         QWidget* pColumn = qobject_cast<QScrollArea*>(pStack->currentWidget())->widget();
         QCOMPARE(pColumn->layout()->indexOf(pBanner), 0);
 
@@ -401,7 +392,7 @@ private slots:
         openPreferences();
         QLineEdit* pSearch = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
         QVERIFY2(pSearch, "the settings shell has no search field");
-        auto* pStack = mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack"));
+        auto* pStack = TestSettings::stack(mpPreferences);
         QVERIFY(pStack);
 
         pSearch->setFocus();

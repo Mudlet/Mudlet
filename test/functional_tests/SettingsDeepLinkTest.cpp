@@ -42,6 +42,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -70,13 +71,7 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
     // tab_codeEditor lands on the Editor category, which reads the themes it
     // offers from this file. What keeps that visit off the network is
@@ -90,9 +85,10 @@ private:
         QVERIFY(themes.write("[]") == 2);
     }
 
-    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+    QListWidget* sidebar() const { return TestSettings::sidebar(mpPreferences); }
 
-    QStackedWidget* stack() const { return mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack")); }
+    QStackedWidget* stack() const { return TestSettings::stack(mpPreferences); }
+    QScrollArea* pageOf(const QString& key) const { return TestSettings::pageOf(mpPreferences, key); }
 
     QString currentCategory() const
     {
@@ -207,7 +203,7 @@ private slots:
             mpPreferences->setTab(category == qsl("advanced") ? qsl("general") : qsl("advanced"));
             mpPreferences->setTab(legacyTab);
             QCOMPARE(currentCategory(), category);
-            QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_%1").arg(category)));
+            QCOMPARE(stack()->currentWidget(), pageOf(category));
         }
     }
 
@@ -233,7 +229,7 @@ private slots:
 
         QWidget* pPulse = waitForSpotlight();
         QVERIFY2(pPulse, "the tab_connection deep link drew no spotlight");
-        auto* pPage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_privacy"));
+        auto* pPage = pageOf(qsl("privacy"));
         QVERIFY2(pPage, "the Privacy page is not there under the object name this looks it up by");
         QCOMPARE(pPulse->parentWidget(), pPage->widget());
 
@@ -248,7 +244,7 @@ private slots:
     void test_aNewStyleTargetScrollsItsCardIntoView()
     {
         mpPreferences->setTab(qsl("mapper"));
-        auto* pPage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_mapper"));
+        auto* pPage = pageOf(qsl("mapper"));
         QVERIFY2(pPage, "the Mapper page is not there under the object name this looks it up by");
         QVERIFY2(pPage->verticalScrollBar()->maximum() > 0, "the Mapper page fits its viewport, so scrolling to a card could not be detected");
         pPage->verticalScrollBar()->setValue(0);
@@ -280,13 +276,13 @@ private slots:
         pSearch->setFocus();
         pSearch->setText(qsl("color"));
         QCoreApplication::processEvents();
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
 
         mpPreferences->setTab(qsl("tab_connection"));
 
         QVERIFY2(pSearch->text().isEmpty(), "the deep link left the query standing in the search field");
         QCOMPARE(currentCategory(), qsl("privacy"));
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_privacy")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("privacy")));
         QVERIFY2(waitForSpotlight(), "the deep link that arrived during a search drew no spotlight");
     }
 
@@ -297,7 +293,7 @@ private slots:
     {
         mpPreferences->setTab(qsl("connection/protocols"));
         QCOMPARE(currentCategory(), qsl("connection"));
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("connection_protocols")));
     }
 
     // ...and so is a card that lives on one: naming it takes the way in rather
@@ -306,7 +302,7 @@ private slots:
     {
         mpPreferences->setTab(qsl("connection/card_protocolList"));
         QCOMPARE(currentCategory(), qsl("connection"));
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("connection_protocols")));
         QVERIFY2(waitForSpotlight(), "the deep link to a card on a subpage drew no spotlight");
     }
 
