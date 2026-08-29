@@ -52,13 +52,18 @@ inline.
 
 - **Benchmark on a quiet machine, and prove it was quiet.** A concurrent build roughly
   doubles every timing, and load that comes and goes mid-run leaves a plausible-looking
-  number rather than an obviously broken one. Before starting, shut down what you can:
-  other builds and test suites, a second agent's Mudlet, browsers and VMs, and the
-  platform's own background work - Spotlight (`mds`) indexing a fresh build tree and Time
-  Machine on macOS, Windows Defender scanning one and Windows Search indexing it, a
-  `updatedb`/backup cron on Linux. On a laptop, run on mains power: both macOS and Windows
-  down-clock aggressively on battery, and a thermally throttled machine produces a smooth
-  downward drift that looks exactly like a regression.
+  number rather than an obviously broken one. So look, before you start, at what else is
+  running: other builds and test suites, a second agent's Mudlet, browsers, VMs and
+  containers, and the platform's own background work - Spotlight (`mds`) indexing a fresh
+  build tree or Time Machine on macOS, Defender scanning one or Windows Search indexing
+  it, an `updatedb` or backup job on Linux. On a laptop, mains power rather than battery:
+  both macOS and Windows down-clock aggressively on battery, and a thermally throttled
+  machine produces a smooth downward drift that looks exactly like a regression.
+- **Never close, kill or suspend any of it yourself.** Those are the user's processes and
+  quite possibly their work in progress - a VM mid-session, a build someone is waiting on.
+  Report what you found and ask them to quiet the machine, or wait for it to finish, or
+  benchmark anyway and say in the write-up what was running. Only work this session
+  started itself is yours to stop.
 - Record the top CPU consumers into the log itself immediately before AND after each run,
   so a contaminated run is identifiable afterwards rather than merely suspected:
 
@@ -95,7 +100,9 @@ inline.
   side against one that has already run ten times. If cold start is itself the subject,
   drop the caches deliberately between runs instead of hoping - Linux
   `sync; echo 3 | sudo tee /proc/sys/vm/drop_caches`, macOS `sudo purge`, Windows
-  Sysinternals `RAMMap -Ew` - and say in the write-up which of the two you measured.
+  Sysinternals `RAMMap -Ew` - and say in the write-up which of the two you measured. All
+  three need elevation and empty the cache for everything on the machine, not just your
+  run, so ask the user before running one.
 - Alternate A and B runs rather than all of one then all of the other, and give each run
   its own config root so profile state cannot differ between sides - a profile with
   packages installed runs their triggers against every benchmark line. Mudlet keeps that
