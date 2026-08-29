@@ -64,6 +64,14 @@ private:
     static constexpr int csmBatchCount = 20;
     static constexpr int csmBatchGapMs = 2;
 
+    // Mirrors TTextEdit::csmPaintPaceMs, which is private. The cap this test holds
+    // the pane to, and the unit the flood's frame budget is counted in.
+    static constexpr int csmPaintPaceMs = 16;
+
+    // Absorbs a frame that straddles the end of the flood plus one repaint the pane
+    // owes to something other than the flood, such as the cursor blinking.
+    static constexpr int csmPaintSlack = 2;
+
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
@@ -122,17 +130,37 @@ private slots:
         pane->installEventFilter(this);
 
         mPaintCount = 0;
+        QElapsedTimer floodTimer;
+        floodTimer.start();
         for (int i = 0; i < csmBatchCount; ++i) {
             mpServer->sendRaw(qsl("line %1\r\n").arg(i).toUtf8());
             QTest::qWait(csmBatchGapMs);
         }
         const int paintsDuringFlood = mPaintCount;
+        const qint64 floodMs = floodTimer.elapsed();
 
         QTest::qWait(200ms);
         QVERIFY2(waitForTextInBuffer(qsl("line %1").arg(csmBatchCount - 1)), "the flood never reached the buffer, so nothing was being paced");
         QVERIFY2(paintsDuringFlood > 0, "the pane painted nothing at all during the flood, so this test cannot tell pacing from a dead harness");
-        QVERIFY2(paintsDuringFlood < csmBatchCount / 2,
-                 qPrintable(qsl("%1 packets drew %2 frames - the pane is still painting per packet rather than per pacing window").arg(csmBatchCount).arg(paintsDuringFlood)));
+
+        // What a paced pane owes is one frame per window it spent, so that is what the
+        // count has to be measured against. Measuring it against a share of the packet
+        // count instead holds only while qWait() sleeps for about the gap it is asked
+        // for: on a loaded runner it sleeps several times that, the same flood stretches
+        // over a window per packet, and a pane pacing perfectly draws a frame per packet
+        // with nothing wrong with it. An unpaced pane is still caught, because it paints
+        // per packet however few windows the flood spanned.
+        const int windowsSpanned = static_cast<int>(floodMs / csmPaintPaceMs) + 1;
+        if (windowsSpanned + csmPaintSlack >= csmBatchCount) {
+            qWarning() << "flood of" << csmBatchCount << "packets took" << floodMs << "ms, a pacing window per packet - pacing not asserted this run";
+        } else {
+            QVERIFY2(paintsDuringFlood <= windowsSpanned + csmPaintSlack,
+                     qPrintable(qsl("%1 packets over %2ms spanned %3 pacing windows but drew %4 frames - the pane is painting per packet rather than per pacing window")
+                                        .arg(csmBatchCount)
+                                        .arg(floodMs)
+                                        .arg(windowsSpanned)
+                                        .arg(paintsDuringFlood)));
+        }
 
         // Whatever arrives while a frame is still being held back has to be
         // painted when that frame lands. Landing a paint first is what puts the
