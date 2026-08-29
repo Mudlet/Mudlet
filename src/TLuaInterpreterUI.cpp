@@ -4338,21 +4338,40 @@ int TLuaInterpreter::addCommand(lua_State* L)
     }
 
     mudlet::CommandRequest request;
-    auto stringField = [L](const char* field) -> QString {
+    // Leaving a field out and giving it the wrong type are different mistakes:
+    // the first asks for nothing, the second asks for something and is ignored.
+    // menuPath is the one that bites, because the path is conceptually a list
+    // and the sibling surfaces field really does take one, so menuPath =
+    // {"Speech", "Voices"} is an easy thing to write and used to place the
+    // command at the top of Extensions without a word. Numbers are left alone:
+    // lua_isstring() accepts them, so shortcut = 12345 still reaches the
+    // sequence parser and is refused there for what it actually is.
+    QString wrongField;
+    QString wrongType;
+    auto stringField = [&](const char* field) -> QString {
         lua_getfield(L, 1, field);
-        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        QString value;
+        if (lua_isstring(L, -1)) {
+            value = QString::fromUtf8(lua_tostring(L, -1));
+        } else if (!lua_isnoneornil(L, -1) && wrongField.isEmpty()) {
+            wrongField = QString::fromUtf8(field);
+            wrongType = QString::fromUtf8(luaL_typename(L, -1));
+        }
         lua_pop(L, 1);
         return value;
     };
 
     request.name = stringField("name");
-    if (request.name.isEmpty()) {
-        return warnArgumentValue(L, __func__, "a command needs a name to show");
-    }
     request.icon = stringField("icon");
     request.tooltip = stringField("tooltip");
     request.menuPath = stringField("menuPath");
     request.shortcut = stringField("shortcut");
+    if (!wrongField.isEmpty()) {
+        return warnArgumentValue(L, __func__, qsl("%1 has to be a string and this one is a %2").arg(wrongField, wrongType));
+    }
+    if (request.name.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a command needs a name to show");
+    }
 
     // surfaces is a list rather than a single word, so a client that grows
     // another surface takes another entry rather than a new spelling of "both".
@@ -4383,8 +4402,9 @@ int TLuaInterpreter::addCommand(lua_State* L)
         lua_pushnil(L);
         while (lua_next(L, -2) != 0) {
             // A list of names, so a key/value table such as {menu = true} is a
-            // mistake worth naming: quoting the value it holds would ask the
-            // package to look for a surface called "true"
+            // mistake worth naming by type: a boolean has no string form, so
+            // quoting the value would send the package looking for a surface
+            // named by the empty string
             if (!lua_isstring(L, -1)) {
                 const QString type = QString::fromUtf8(luaL_typename(L, -1));
                 lua_pop(L, 3);

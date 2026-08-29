@@ -257,12 +257,36 @@ QString mudlet::addonPlainLabel(const QString& label)
     return plain;
 }
 
+// QKeySequencePrivate::MaxKeyCount, which Qt does not publish
+static constexpr int addonMaximumSequenceChunks = 4;
+
+// Qt stops parsing at that many chunks and keeps what it has, so a longer
+// sequence comes back as a shorter one nobody asked for and fires on a prefix
+// of it. Counting the separating commas the way Qt does - one directly after a
+// '+' is the comma key itself, and so is a trailing one - catches that before
+// the truncated sequence is handed out. Anything at or under the cap is left to
+// Qt, which has the rest of the syntax.
+static int addonSequenceChunkCount(const QString& text)
+{
+    int chunks = 1;
+    for (int index = 0; index < text.size(); ++index) {
+        if (text.at(index) != QLatin1Char(',') || index == text.size() - 1) {
+            continue;
+        }
+        if (index > 0 && text.at(index - 1) == QLatin1Char('+')) {
+            continue;
+        }
+        ++chunks;
+    }
+    return chunks;
+}
+
 // A key sequence Qt could not parse holds Key_unknown rather than nothing, so
 // a typo passes an isEmpty() test, shows a blank shortcut column and never
 // fires. One already spoken for is worse than useless: Qt disables both, and
 // the "Ambiguous shortcut overload" warning goes to a console that release
 // builds do not have.
-bool mudlet::addonShortcutUsable(const QKeySequence& sequence, QString& error) const
+bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const
 {
     if (sequence.isEmpty()) {
         //: Refusal shown to a package that asked for a keyboard shortcut Qt could not make sense of
@@ -302,26 +326,50 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, QString& error) c
     }
 
     for (const QAction* action : findChildren<QAction*>()) {
-        if (action->shortcut() == sequence) {
-            // The label as the player reads it: an addon command's text carries
-            // the doubled ampersand that makes Qt draw one, and Mudlet's own
-            // actions carry the single marker that names their access key.
-            // Quoting either hands a package a label it cannot find on screen.
-            //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of whatever already uses it
-            error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), addonPlainLabel(action->text()));
+        if (action->shortcut() != sequence) {
+            continue;
+        }
+        // Menu actions are shared between profiles, so the holder can be a
+        // command another profile placed. Its name is that package's business
+        // and nothing this one can act on, so the key is reported as taken
+        // without saying by whom - the alternative leaks a label out of a
+        // profile the caller cannot see.
+        const Host* pOwner = addonCommandOwning(action);
+        if (pOwner && pOwner != pHost) {
+            //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that a command belonging to a different profile already uses
+            error = tr("%1 is already taken by a command from another profile").arg(sequence.toString(QKeySequence::NativeText));
             return false;
         }
+        // The label as the player reads it: an addon command's text carries
+        // the doubled ampersand that makes Qt draw one, and Mudlet's own
+        // actions carry the single marker that names their access key.
+        // Quoting either hands a package a label it cannot find on screen.
+        //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of whatever already uses it
+        error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), addonPlainLabel(action->text()));
+        return false;
     }
 
     // Anything else holding the sequence on this window - the main console's
     // F3 buffer search, for one - has no label to quote but still ends in the
-    // same ambiguous binding.
+    // same ambiguous binding. Only shortcuts Qt would actually offer as a
+    // candidate count: a disabled one never fires, and a Qt::WidgetShortcut
+    // one needs its own widget focused, which a widget with no focus policy
+    // never is. Every TConsole builds a Ctrl+W shortcut of that second kind
+    // that is not connected to anything, and counting it refused Ctrl+W to
+    // every package on the platforms where nothing uses it.
     for (const QShortcut* shortcut : findChildren<QShortcut*>()) {
-        if (shortcut->key() == sequence) {
-            //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that Mudlet itself already uses
-            error = tr("%1 is already taken by Mudlet").arg(sequence.toString(QKeySequence::NativeText));
-            return false;
+        if (!shortcut->isEnabled() || shortcut->key() != sequence) {
+            continue;
         }
+        if (shortcut->context() == Qt::WidgetShortcut) {
+            const QWidget* pOwner = qobject_cast<QWidget*>(shortcut->parent());
+            if (!pOwner || pOwner->focusPolicy() == Qt::NoFocus) {
+                continue;
+            }
+        }
+        //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that Mudlet itself already uses
+        error = tr("%1 is already taken by Mudlet").arg(sequence.toString(QKeySequence::NativeText));
+        return false;
     }
     return true;
 }
@@ -413,8 +461,13 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
             error = tr("the menu bar is hidden, so a shortcut would never fire - turn it on in Preferences -> General");
             return -1;
         }
+        if (addonSequenceChunkCount(request.shortcut) > addonMaximumSequenceChunks) {
+            //: Refusal shown to a package that asked for a keyboard shortcut of more steps than Qt can hold, %n is that limit as a number
+            error = tr("a key sequence can be %n step(s) long at most", "", addonMaximumSequenceChunks);
+            return -1;
+        }
         shortcut = QKeySequence(request.shortcut);
-        if (!addonShortcutUsable(shortcut, error)) {
+        if (!addonShortcutUsable(shortcut, pHost, error)) {
             return -1;
         }
     }
@@ -429,8 +482,6 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 
     const int commandId = mNextAddonCommandId++;
     AddonCommand command;
-    command.name = request.name;
-    command.menuPath = request.menuPath;
     command.pHost = pHost;
 
     if (wantsMenu) {

@@ -1,7 +1,12 @@
--- The cheaper half of the addon command API: what every binding answers for an
--- id it does not know, what the pulse refuses, and that a command's surfaces
--- stay in step. The parts needing a real click, a real event loop turn or a
--- second profile are in test/functional_tests/AddonControlsTest.cpp instead.
+-- The cheaper half of the addon command API: what a request has to look like
+-- to be placed at all, what every binding answers for an id it does not know,
+-- and what the pulse refuses. Whether any of it reached a widget needs the
+-- widget read back, so that, the click, and anything wanting a second profile
+-- are in test/functional_tests/AddonControlsTest.cpp instead.
+--
+-- Refusals are translated, so an assertion matches only the parts of a message
+-- that are not: a field name, a Lua type name, or the surface names a package
+-- writes in its own code.
 
 describe("addon commands", function()
   local placed = {}
@@ -28,6 +33,26 @@ describe("addon commands", function()
       local id, why = addCommand{menuPath = "Spec"}
       assert.is_nil(id)
       assert.is_string(why)
+    end)
+
+    -- Leaving a field out and giving it the wrong type are different mistakes.
+    -- A menu path is conceptually a list and the sibling surfaces field really
+    -- does take one, so this is an easy thing to write - and it used to place
+    -- the command at the top of Extensions without a word.
+    it("refuses a field of the wrong type rather than dropping it", function()
+      local id, why = addCommand{name = "WrongTypeSpec", menuPath = {"Speech", "Voices"}}
+      assert.is_nil(id, "the menu path was the wrong type and was dropped without a word")
+      assert.is_truthy(why:find("menuPath", 1, true), "the refusal does not say which field: " .. tostring(why))
+      assert.is_truthy(why:find("table", 1, true), "the refusal does not say what it found: " .. tostring(why))
+    end)
+
+    -- Lua 5.1 answers "yes" when asked whether a number is a string, so this is
+    -- not a type mistake and has to reach the sequence parser to be refused for
+    -- what it actually is
+    it("leaves a number to whatever reads the field", function()
+      local id, why = addCommand{name = "NumberFieldSpec", shortcut = 12345}
+      assert.is_nil(id)
+      assert.is_falsy(why:find("number", 1, true), "the number was refused as a type mistake: " .. tostring(why))
     end)
 
     it("refuses a surface this client does not have", function()
@@ -75,14 +100,69 @@ describe("addon commands", function()
       local id, why = addCommand{name = "ProfileKeySpec", shortcut = "Ctrl+1"}
       assert.is_nil(id, "Ctrl+1 switches to the first profile and was handed out anyway")
       -- naming the holder is the difference between a package author fixing
-      -- their shortcut and guessing at one
-      assert.is_truthy(why:find("profile", 1, true), "the refusal does not say what holds the key: " .. tostring(why))
+      -- their shortcut and guessing at one. The name is translated, so what
+      -- can be checked here is that one was quoted at all
+      assert.is_truthy(why:find('"', 1, true), "the refusal does not say what holds the key: " .. tostring(why))
     end)
 
-    it("refuses one Mudlet uses for the next profile", function()
-      local id, why = addCommand{name = "NextProfileKeySpec", shortcut = "Ctrl+Tab"}
-      assert.is_nil(id, "Ctrl+Tab moves to the next profile and was handed out anyway")
-      assert.is_truthy(why:find("profile", 1, true), "the refusal does not say what holds the key: " .. tostring(why))
+    -- The other arm of the same question: this key does hang on a menu action,
+    -- so it is found by the scan of those rather than by asking what Mudlet
+    -- reserves. Ctrl+Alt+L is spelt the same way on every platform, which the
+    -- profile tab keys are not - macOS puts those on the physical Ctrl key,
+    -- while the Ctrl in a package's string is Cmd there.
+    it("refuses one Mudlet uses from its own menu", function()
+      local id, why = addCommand{name = "MenuKeySpec", shortcut = "Ctrl+Alt+L"}
+      assert.is_nil(id, "Ctrl+Alt+L toggles logging and was handed out anyway")
+      assert.is_truthy(why:find('"', 1, true), "the refusal does not say what holds the key: " .. tostring(why))
+    end)
+
+    -- Not every QShortcut on the window is a key the player can reach: a
+    -- widget-context one on a widget that takes no focus never fires, and every
+    -- console builds one for Ctrl+W that is connected to nothing. Counting
+    -- those refused a free key to every package.
+    it("hands out a key held only by a shortcut that could never fire", function()
+      if getOS() == "mac" then
+        -- Ctrl in a key sequence is Cmd there, and Cmd+W closes the profile
+        return
+      end
+      local id, why = addCommand{name = "DeadShortcutSpec", shortcut = "Ctrl+W"}
+      assert.is_number(id, "nothing on this platform uses Ctrl+W, yet: " .. tostring(why))
+      removeCommand(id)
+    end)
+
+    -- Switching the buffer search off deletes its shortcuts through the event
+    -- loop, so for the rest of the turn they were still on the window and F3
+    -- was refused to a package that could by then have it
+    it("hands out a key as soon as whatever held it is switched off", function()
+      setConfig("f3SearchEnabled", true)
+      local held = addCommand{name = "F3HeldSpec", shortcut = "F3"}
+      if held then
+        removeCommand(held)
+      end
+      assert.is_nil(held, "F3 is the buffer search's key while the search is on")
+
+      setConfig("f3SearchEnabled", false)
+      local id, why = addCommand{name = "F3FreeSpec", shortcut = "F3"}
+      assert.is_number(id, "F3 was still refused after the search was switched off: " .. tostring(why))
+      removeCommand(id)
+    end)
+
+    -- Qt keeps the first four chunks of a longer sequence and drops the rest,
+    -- so the command went onto a key nobody had asked for
+    it("refuses one of more steps than Qt can hold", function()
+      local id, why = addCommand{name = "FiveStepSpec", shortcut = "Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3, Ctrl+Alt+F4, Ctrl+Alt+F5"}
+      assert.is_nil(id, "the fifth step was dropped and the rest handed out anyway")
+      assert.is_string(why)
+    end)
+
+    it("takes one of exactly as many steps as Qt can hold", function()
+      assert.is_number(place{name = "FourStepSpec", shortcut = "Ctrl+Alt+F5, Ctrl+Alt+F6, Ctrl+Alt+F7, Ctrl+Alt+F8"})
+    end)
+
+    -- The comma separates the steps and is also a key in its own right, so
+    -- counting them naively reads "Ctrl+," as two steps of nothing
+    it("takes the comma key itself", function()
+      assert.is_number(place{name = "CommaKeySpec", shortcut = "Ctrl+,"})
     end)
 
     -- Qt parses an unreadable chunk into Key_unknown rather than dropping it,
@@ -97,7 +177,7 @@ describe("addon commands", function()
     it("refuses one on a command kept off the menu, whatever the bars are doing", function()
       local id, why = addCommand{name = "ToolbarKeySpec", surfaces = "toolbar", shortcut = "Ctrl+Alt+F11"}
       assert.is_nil(id)
-      assert.is_truthy(why:find("shortcut", 1, true))
+      assert.is_truthy(why:find("toolbar", 1, true))
     end)
   end)
 
@@ -128,7 +208,7 @@ describe("addon commands", function()
     it("refuses a menu path on a command kept off the menu", function()
       local id, why = addCommand{name = "PathlessSpec", surfaces = "toolbar", menuPath = "Spec"}
       assert.is_nil(id, "the menu path had nowhere to go and was dropped without a word")
-      assert.is_truthy(why:find("menu path", 1, true))
+      assert.is_truthy(why:find("toolbar", 1, true))
     end)
   end)
 

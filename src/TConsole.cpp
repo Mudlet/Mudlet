@@ -3082,12 +3082,18 @@ void TConsole::setF3SearchEnabled(const bool enabled)
         connect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown, Qt::UniqueConnection);
         connect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp, Qt::UniqueConnection);
     } else {
+        // Disabled as well as deleted: deleteLater() leaves the shortcut a
+        // child of this console until the event loop turns, and anything
+        // asking what currently holds F3 - an addon command wanting it, say -
+        // would be told the search still does.
         if (!mpSearchNextShortcut.isNull()) {
             disconnect(mpSearchNextShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferDown);
+            mpSearchNextShortcut->setEnabled(false);
             mpSearchNextShortcut->deleteLater();
         }
         if (!mpSearchPrevShortcut.isNull()) {
             disconnect(mpSearchPrevShortcut, &QShortcut::activated, this, &TConsole::slot_searchBufferUp);
+            mpSearchPrevShortcut->setEnabled(false);
             mpSearchPrevShortcut->deleteLater();
         }
     }

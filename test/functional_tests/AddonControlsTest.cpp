@@ -156,6 +156,15 @@ private:
             qWarning() << "addCommand did not run:" << error;
             return QString();
         }
+        // A request that was accepted has no reason to give and has left a
+        // command on the surfaces for every later case to trip over, so it is
+        // taken away again and reported as the empty string it really is.
+        const int placedId = luaGlobalNumber(pHost, qsl("_addonId"));
+        if (placedId > 0) {
+            qWarning() << "addCommand placed the command instead of refusing it:" << fields;
+            runLua(pHost, qsl("removeCommand(%1)").arg(placedId));
+            return QString();
+        }
         return luaGlobalString(pHost, qsl("_addonWhy"));
     }
 
@@ -196,16 +205,40 @@ private:
         return !answer;
     }
 
-    QToolButton* toolbarButtonNamed(const QString& name) const { return mudlet::self()->findChild<QToolButton*>(qsl("addon_%1").arg(name)); }
+    // On the main toolbar rather than merely somewhere in the window: a button
+    // built but never added is still findable by name, and looks from here
+    // exactly like one the player can press.
+    QToolButton* toolbarButtonNamed(const QString& name) const
+    {
+        QToolButton* pButton = mudlet::self()->findChild<QToolButton*>(qsl("addon_%1").arg(name));
+        if (!pButton) {
+            return nullptr;
+        }
+        for (const QWidget* pParent = pButton->parentWidget(); pParent; pParent = pParent->parentWidget()) {
+            if (pParent == mudlet::self()->mpMainToolBar) {
+                return pButton;
+            }
+        }
+        return nullptr;
+    }
 
     // Menu items carry no object name, so they are found the way a user finds
-    // them - by the text on them
+    // them - by the text on them, and only inside the menu they are documented
+    // to appear in. Every command's item sits in Extensions or a submenu of it,
+    // and Extensions hangs off Options, so walking up from the item is what
+    // separates a placed command from one whose action exists but is parented
+    // somewhere the player will never open.
     QAction* menuActionNamed(const QString& name) const
     {
         const QList<QAction*> actions = mudlet::self()->findChildren<QAction*>();
         for (QAction* action : actions) {
-            if (!action->menu() && action->text() == name) {
-                return action;
+            if (action->menu() || action->text() != name) {
+                continue;
+            }
+            for (const QWidget* pParent = qobject_cast<QWidget*>(action->parent()); pParent; pParent = pParent->parentWidget()) {
+                if (pParent == mudlet::self()->menuOptions) {
+                    return action;
+                }
             }
         }
         return nullptr;
@@ -469,9 +502,26 @@ private slots:
         QTest::qWait(100ms);
     }
 
-    // The same clash from the other side: a submenu exists, and a command tries
-    // to take its label. The review said the duplicate happened in either
-    // order, and the first fix only closed one of them.
+    // Two profiles share one window, so a key a package asks for can be held by
+    // a command another profile placed. That still has to be a refusal, but the
+    // holder's name belongs to a profile this package cannot see and could not
+    // act on if it could.
+    void test_aShortcutHeldByAnotherProfileIsRefusedWithoutNamingIt()
+    {
+        const int firstId = addCommand(mpFirstHost, qsl("name = 'PrivateToFirst', menuPath = 'Keys', shortcut = 'Ctrl+Alt+J'"));
+        QVERIFY2(firstId > 0, "the first profile could not take a free shortcut");
+
+        const QString why = refusalReason(mpSecondHost, qsl("name = 'WantsIt', menuPath = 'Keys', shortcut = 'Ctrl+Alt+J'"));
+        QVERIFY2(!why.isEmpty(), "the other profile was handed a key already in use, which disables both");
+        QVERIFY2(!why.contains(qsl("PrivateToFirst")), qPrintable(qsl("the refusal names a command belonging to another profile: %1").arg(why)));
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(firstId)));
+        QTest::qWait(100ms);
+    }
+
+    // The same clash from the other side: the submenu exists first and a
+    // command tries to take its label. Refusing only the other order leaves the
+    // menu showing one label twice, once as an item and once as a submenu.
     void test_aCommandCannotTakeASubmenusLabel()
     {
         const int nestedId = addCommand(mpFirstHost, qsl("name = 'Alice', menuPath = 'Voices'"));
