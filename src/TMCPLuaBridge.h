@@ -82,7 +82,8 @@ private:
     static Host* targetHost(const QString& profileName, QString& failure);
     static QJsonValue luaToJson(lua_State* L, int index, int depth, int& nodeBudget);
     static QJsonValue luaTableToJson(lua_State* L, int index, int depth, int& nodeBudget);
-    static QString readString(lua_State* L, int index);
+    // A negative limit reads the whole string; a limit cuts it off there and says so.
+    static QString readString(lua_State* L, int index, qsizetype limit = -1);
     static QString numberKey(double value);
     static QString jsonToText(const QJsonValue& value);
 };

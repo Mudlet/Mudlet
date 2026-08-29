@@ -167,6 +167,11 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # ninja's default of cores + 2 exhausts this runner's memory
         CMAKE_BUILD_PARALLEL_LEVEL: 3
+        # An environment variable rather than a -D: CMake reads this one through
+        # include_optional_module(), which only ever consults the environment.
+        # Without it the one feature that opens a port and runs arbitrary Lua
+        # would be compiled out and so absent from the CodeQL database.
+        WITH_MCPSERVER: "ON"
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4.37.8

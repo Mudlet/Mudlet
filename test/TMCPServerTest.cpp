@@ -29,8 +29,10 @@
 #include <QJsonArray>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QNetworkInterface>
 #include <QNetworkRequest>
 #include <QTcpServer>
+#include <QTcpSocket>
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -113,6 +115,25 @@ private:
         }
         names.sort();
         return names;
+    }
+
+    struct WalkTiming
+    {
+        bool ok = false;
+        qint64 addedMs = 0;
+    };
+
+    // How long converting a table cost, over and above building the same table and not
+    // returning it. Timing the snippet as a whole would mostly measure how fast this
+    // machine runs a Lua loop of that many iterations, which says nothing about the walk.
+    WalkTiming timeWalk(const QString& build) const
+    {
+        QElapsedTimer elapsed;
+        elapsed.start();
+        const bool builtOk = TMCPLuaBridge::runLua(L, build + qsl("return #t"), 60000).success;
+        const qint64 withoutWalk = elapsed.restart();
+        const bool walkedOk = TMCPLuaBridge::runLua(L, build + qsl("return t"), 60000).success;
+        return {builtOk && walkedOk, elapsed.elapsed() - withoutWalk};
     }
 
     const void* globalPrint() const
@@ -548,6 +569,19 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(reply.status, StatusCode::Ok);
     }
 
+    void testAWrongTokenInTheUrlPathIsRefused()
+    {
+        // The path is the route a client is pointed at, so it is also the one an intruder
+        // would guess at; it has to be checked, not merely read.
+        QHttpHeaders headers = headersFor(qsl("tools/list"));
+        headers.removeAll("Authorization");
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list")), headers, qsl("not-the-token"));
+
+        QCOMPARE(reply.status, StatusCode::Unauthorized);
+        QVERIFY(reply.body.value(qsl("result")).isUndefined());
+    }
+
     void testTheShownEndpointCarriesTheToken()
     {
         QVERIFY(server->startServer(0).started);
@@ -658,6 +692,47 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5000);
 
         QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 405);
+
+        server->stopServer();
+    }
+
+    void testARetiredMethodIsTurnedAwayRatherThanNotFound()
+    {
+        // DELETE ended a session up to revision 2025-11-25. A 404 would read to an old
+        // client as the wrong address rather than as a method that no longer exists, so
+        // the route has to be registered - and its registration has to be checked.
+        QVERIFY(server->startServer(0).started);
+
+        QNetworkAccessManager manager;
+        const QScopedPointer<QNetworkReply> reply(manager.deleteResource(QNetworkRequest{QUrl(server->getEndpoint())}));
+        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5000);
+
+        QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 405);
+
+        server->stopServer();
+    }
+
+    void testTheServerIsNotReachableFromOffThisComputer()
+    {
+        // The tool runs arbitrary Lua, so binding to anything but loopback would hand the
+        // whole local network a shell on this machine. Checked against a real address of
+        // this host rather than by reading the bind call.
+        QHostAddress routable;
+        for (const QHostAddress& address : QNetworkInterface::allAddresses()) {
+            if (!address.isLoopback() && !address.isLinkLocal() && address.protocol() == QAbstractSocket::IPv4Protocol) {
+                routable = address;
+                break;
+            }
+        }
+        if (routable.isNull()) {
+            QSKIP("this machine has no non-loopback IPv4 address to try");
+        }
+
+        QVERIFY(server->startServer(0).started);
+
+        QTcpSocket socket;
+        socket.connectToHost(routable, server->getPort());
+        QVERIFY2(!socket.waitForConnected(2000), qPrintable(qsl("the server accepted a connection to %1").arg(routable.toString())));
 
         server->stopServer();
     }
@@ -890,6 +965,64 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(elapsed.elapsed() < 5000, "the node budget did not cut the walk short");
     }
 
+    void testAVeryLongStringIsCutShortRatherThanSentWhole()
+    {
+        // Counting nodes does not bound a reply on its own: one string is a single node
+        // however long it is, and this one is 3MB.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("return string.rep('x', 3000000)"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.size() < 200000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+        // Saying so matters as much as doing it: a model handed a silently shortened
+        // string would read it as the whole value and reason from a wrong answer.
+        QVERIFY2(result.text.contains(qsl("cut short")), qPrintable(result.text.right(200)));
+    }
+
+    void testATableOfLargeStringsIsBoundedByHowMuchTextItCarries()
+    {
+        // Each string here is under the per-string cap, so only charging string length
+        // against the node budget keeps 500 of them from adding up to the same blow-up.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 500 do t[i] = string.rep('x', 90000) end return t"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+    }
+
+    void testAWideKeyedTableIsCutShortQuickly()
+    {
+        // QJsonObject keeps its keys sorted, so every insert moves everything after it:
+        // uncapped, this table took 4675ms to render, all of it on Mudlet's only thread.
+        const WalkTiming timing = timeWalk(qsl("local t = {} for i = 1, 400000 do t['key'..i] = i end "));
+
+        QVERIFY(timing.ok);
+        QVERIFY2(timing.addedMs < 2000, qPrintable(qsl("the walk added %1ms").arg(timing.addedMs)));
+    }
+
+    void testALongArrayIsCutShortQuicklyAndIsStillAnArray()
+    {
+        const WalkTiming timing = timeWalk(qsl("local t = {} for i = 1, 2000000 do t[i] = i end "));
+
+        QVERIFY(timing.ok);
+        QVERIFY2(timing.addedMs < 2000, qPrintable(qsl("the walk added %1ms").arg(timing.addedMs)));
+
+        // A table too big to walk through in full is still a list. Giving up on that and
+        // rendering it as {"1":1, "10":10, "100":100} both reads wrong to a model and,
+        // because those keys are then sorted, took 5114ms against this branch's 86ms.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 2000000 do t[i] = i end return t"), 60000);
+        QVERIFY(result.success);
+        QVERIFY2(result.text.startsWith(qsl("[1,2,3")), qPrintable(result.text.left(60)));
+    }
+
+    void testAWideTableSaysItsKeysWereLeftOut()
+    {
+        // Cutting a table off without saying so would read to a model as a table that
+        // genuinely holds only those keys.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 50000 do t['key'..i] = i end return t"), 60000);
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.contains(qsl("left out")), qPrintable(result.text.left(200)));
+    }
+
     void testTheHookIsPutBackAfterTheCall()
     {
         // A count hook left armed would charge this deadline to whatever the interpreter
@@ -898,6 +1031,21 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QVERIFY(lua_gethook(L) == nullptr);
         QCOMPARE(lua_gethookmask(L), 0);
+    }
+
+    void testAHookThatWasAlreadyArmedIsPutBackWithItsMaskAndCount()
+    {
+        // Mudlet arms its own count hook while a script runs, so a snippet called from
+        // there has one to restore rather than none - and restoring it with the wrong
+        // count would change how often that hook fires for the rest of the session.
+        const auto otherHook = [](lua_State*, lua_Debug*) {};
+        lua_sethook(L, otherHook, LUA_MASKCOUNT | LUA_MASKLINE, 4242);
+
+        TMCPLuaBridge::runLua(L, qsl("while true do end"), 200);
+
+        QVERIFY(lua_gethook(L) == otherHook);
+        QCOMPARE(lua_gethookmask(L), LUA_MASKCOUNT | LUA_MASKLINE);
+        QCOMPARE(lua_gethookcount(L), 4242);
     }
 
     void testNonScalarKeysDoNotOverwriteEachOther()

@@ -106,7 +106,12 @@ public:
         // -32000 to -32019 range must not be used by new implementations.
         HeaderMismatch = -32020,
         UnsupportedProtocolVersion = -32022,
-        Unauthorized = -32024
+        // The specification defines only -32020, -32021 and -32022, and says an
+        // implementation "MUST NOT emit any code from this sub-range that is not defined
+        // by this specification", so a code of Mudlet's own goes outside the whole
+        // -32768 to -32000 JSON-RPC reserved range as the spec directs. Clients key on
+        // the accompanying HTTP 401 rather than on this number.
+        Unauthorized = -31001
     };
 
 private:

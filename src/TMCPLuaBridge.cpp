@@ -97,6 +97,22 @@ static constexpr int csmMaxTableDepth = 12;
 // Cap how many values may be converted in total as well.
 static constexpr int csmMaxNodes = 200000;
 
+// Counting nodes alone does not bound the reply either, because one node can be arbitrarily
+// large: string.rep("x", 3e8) is a single node and 300MB of it. Long strings are cut off,
+// and their length is charged against the node budget as well, so that a table of many
+// merely-large strings cannot add up to the same blow-up one enormous string would.
+static constexpr qsizetype csmMaxStringLength = 100000;
+// A separate, much smaller ceiling for the keys of one table, because QJsonObject keeps its
+// keys sorted and so every insert moves everything after it: measured on this machine,
+// 50000 keys cost 289ms, 100000 cost 1221ms and 400000 cost 4675ms, all of it on the only
+// thread Mudlet has. A JSON array has no such cost, which is why only this branch is capped.
+static constexpr int csmMaxObjectKeys = 20000;
+
+// Eight characters to the node, so a reply made entirely of text tops out around 1.6MB -
+// measured, not guessed: 64 to the node let 500 strings of 90000 characters each, every one
+// of them under the cut-off above, still add up to a 12.8MB reply.
+static constexpr qsizetype csmStringBytesPerNode = 8;
+
 // A count hook gives the VM the wall-clock deadline declared in the header. A snippet that
 // swallows the error inside its own loop can still spin - no cooperative limit can prevent
 // that - but it can no longer do so by accident.
@@ -112,9 +128,30 @@ static int smDeadlineMs = TMCPLuaBridge::csmDefaultDeadlineMs;
 static void executionDeadlineHook(lua_State* L, lua_Debug*)
 {
     if (smExecutionTimer.isValid() && smExecutionTimer.elapsed() >= smExecutionDeadline) {
-        //: Error shown to an AI model when the Lua code it sent ran for too long and was stopped. %1 is a whole number of seconds.
-        luaL_error(L, "%s", TMCPLuaBridge::tr("stopped after running for more than %1 seconds").arg((smDeadlineMs + 999) / 1000).toUtf8().constData());
+        // Lua is built as C, so raising an error here leaves by longjmp and no destructor
+        // between this frame and the enclosing lua_pcall() runs. The message is therefore
+        // built and handed to Lua inside a scope that has ended before the jump, leaving
+        // nothing alive to leak - passing a temporary straight to luaL_error() would leak
+        // every one of them on every timeout.
+        {
+            //: Error shown to an AI model when the Lua code it sent ran for too long and was stopped. %1 is a whole number of seconds.
+            const QByteArray message = TMCPLuaBridge::tr("stopped after running for more than %1 seconds").arg((smDeadlineMs + 999) / 1000).toUtf8();
+            lua_pushlstring(L, message.constData(), message.size());
+        }
+        lua_error(L);
     }
+}
+
+// error() can be handed a table rather than a string - error({code = 2}) is legal Lua - and
+// lua_tostring() answers null for one of those. QString::fromUtf8(nullptr) is empty, which
+// would reach the model as a prefix with the reason missing.
+static QString errorMessageAt(lua_State* L, int index)
+{
+    if (const char* text = lua_tostring(L, index)) {
+        return QString::fromUtf8(text);
+    }
+    //: Stands in for a Lua error message that could not be read.
+    return TMCPLuaBridge::tr("unknown error");
 }
 
 TMCPLuaBridge::TMCPLuaBridge(QObject* parent)
@@ -257,11 +294,21 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode, int de
     const int stackBefore = lua_gettop(L);
 
     if (luaL_loadstring(L, csmLuaRunner) != 0) {
-        const QString message = QString::fromUtf8(lua_tostring(L, -1));
+        const QString message = errorMessageAt(L, -1);
         lua_settop(L, stackBefore);
         //: Error shown to an AI model when Mudlet's own wrapper code failed to compile, which means a bug in Mudlet. %1 is the compiler message.
         return {false, tr("Could not compile Mudlet's Lua runner: %1").arg(message)};
     }
+
+    // Pushed before the hook is armed, not after. This is the one allocation here whose
+    // size a model chooses, so it is the one that can plausibly run the interpreter out of
+    // memory - and that leaves by longjmp, which runs no destructor, so the scope guard
+    // below would never put the hook back and every later trigger in the profile would die
+    // on a deadline that had already passed.
+    // Push the length too: lua_pushstring() would stop at the first embedded NUL and
+    // silently run only the leading fragment of the snippet.
+    const QByteArray code = luaCode.toUtf8();
+    lua_pushlstring(L, code.constData(), code.size());
 
     // Put back whatever was hooked before, and on every exit: leaving a count hook armed
     // would charge the deadline to the next thing this interpreter runs.
@@ -288,12 +335,8 @@ MCPToolResult TMCPLuaBridge::runLua(lua_State* L, const QString& luaCode, int de
         }
     });
 
-    // Push the length too: lua_pushstring() would stop at the first embedded NUL and
-    // silently run only the leading fragment of the snippet.
-    const QByteArray code = luaCode.toUtf8();
-    lua_pushlstring(L, code.constData(), code.size());
     if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
-        const QString message = QString::fromUtf8(lua_tostring(L, -1));
+        const QString message = errorMessageAt(L, -1);
         lua_settop(L, stackBefore);
         //: Error shown to an AI model when the Lua code it sent failed. %1 is the message from Lua.
         return {false, tr("Lua error: %1").arg(message)};
@@ -377,8 +420,13 @@ QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth, int& nod
         }
         return QJsonValue(number);
     }
-    case LUA_TSTRING:
-        return QJsonValue(readString(L, index));
+    case LUA_TSTRING: {
+        const QString text = readString(L, index, csmMaxStringLength);
+        // Charged against the same budget as any other value, so that a table of large
+        // strings runs out of budget in proportion to how much text it actually carries.
+        nodeBudget -= static_cast<int>(text.size() / csmStringBytesPerNode);
+        return QJsonValue(text);
+    }
     case LUA_TTABLE:
         return luaTableToJson(L, index, depth, nodeBudget);
     default:
@@ -405,13 +453,20 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
     int sequenceKeyCount = 0;
     QSet<QString> stringKeys;
     QSet<QString> numberKeys;
+    // This pass allocates a set entry per key, so a table with millions of keys costs
+    // memory and time before a single value has been rendered - the node budget is only
+    // spent in luaToJson(), which this pass never reaches. Stop counting once the table
+    // has already outgrown what the reply may hold; the render below stops at the same
+    // point and leaves the "left out" marker there, so nothing goes missing in silence.
+    const int keysWorthCounting = qMax(nodeBudget, 0);
+    bool walkCutShort = false;
     lua_pushnil(L);
     while (lua_next(L, index) != 0) {
         ++keyCount;
         // lua_tostring() on a number key would rewrite the key in place, and lua_next()
         // then loses its place in the table - so read numbers without converting them.
         if (lua_type(L, -2) == LUA_TSTRING) {
-            stringKeys.insert(readString(L, -2));
+            stringKeys.insert(readString(L, -2, csmMaxStringLength));
         } else if (lua_type(L, -2) == LUA_TNUMBER) {
             const double number = lua_tonumber(L, -2);
             numberKeys.insert(numberKey(number));
@@ -420,17 +475,37 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
             }
         }
         lua_pop(L, 1);
+        if (keyCount > keysWorthCounting) {
+            // Leaving a lua_next() walk early means popping the key it is holding, which
+            // the loop would otherwise have handed back on the next call.
+            lua_pop(L, 1);
+            walkCutShort = true;
+            break;
+        }
     }
 
     // Counting keys is not enough on its own: lua_objlen() may answer any border of a table
     // that has a hole, so { "a", nil, "c", x = "d" } has three keys and a border of three,
     // and the array branch would render ["a",null,"c"] and drop x without a trace.
-    if (length > 0 && keyCount == length && sequenceKeyCount == length) {
+    //
+    // A walk that stopped early has not seen every key, so it cannot rule out a non-scalar
+    // key further in. It is still a sequence as far as it got, and the render below stops
+    // at the budget long before the end anyway, so the leading run is rendered as an array:
+    // spelling a 400000-entry list as {"1":.., "10":.., "100":..} reads wrong and, because
+    // QJsonObject keeps its keys sorted, measured 5114ms against 84ms for the array.
+    const bool looksLikeASequence = walkCutShort ? sequenceKeyCount == keyCount : keyCount == length && sequenceKeyCount == length;
+    if (length > 0 && looksLikeASequence) {
         QJsonArray array;
         for (int i = 1; i <= length; ++i) {
             lua_rawgeti(L, index, i);
             array.append(luaToJson(L, lua_gettop(L), depth + 1, nodeBudget));
             lua_pop(L, 1);
+            if (nodeBudget < 0) {
+                // luaToJson() has just appended the "left out" marker, so the reader is
+                // told where the value stops. Running the loop out would append another
+                // copy of that same marker for every element still to come.
+                break;
+            }
         }
         return array;
     }
@@ -446,7 +521,7 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
     while (lua_next(L, index) != 0) {
         QString key;
         if (lua_type(L, -2) == LUA_TSTRING) {
-            key = readString(L, -2);
+            key = readString(L, -2, csmMaxStringLength);
         } else if (lua_type(L, -2) == LUA_TNUMBER) {
             key = numberKey(lua_tonumber(L, -2));
             if (bracketNumbers) {
@@ -470,11 +545,21 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         }
         object[uniqueKey] = luaToJson(L, lua_gettop(L), depth + 1, nodeBudget);
         lua_pop(L, 1);
+        if (nodeBudget < 0 || object.size() >= csmMaxObjectKeys) {
+            // Leaving a lua_next() walk early means popping the key it is holding, which
+            // the loop would otherwise have handed back on the next call.
+            lua_pop(L, 1);
+            if (nodeBudget >= 0) {
+                //: Stands in for the keys of a Lua table that were too many to send to an AI model.
+                object[tr("<too many keys, the rest were left out>")] = QJsonValue();
+            }
+            break;
+        }
     }
     return object;
 }
 
-QString TMCPLuaBridge::readString(lua_State* L, int index)
+QString TMCPLuaBridge::readString(lua_State* L, int index, qsizetype limit)
 {
     // Read the length rather than treating it as a C string: Lua strings may hold NULs, and
     // stopping at the first one truncates a value - or, for a table key, collides two
@@ -483,7 +568,15 @@ QString TMCPLuaBridge::readString(lua_State* L, int index)
     // number in place and lua_next() then loses its place in the table.
     size_t length = 0;
     const char* text = lua_tolstring(L, index, &length);
-    return QString::fromUtf8(text, static_cast<int>(length));
+    // qsizetype, not int: a string over 2GB would make the cast negative, and fromUtf8()
+    // reads a negative length as "NUL-terminated" - truncating at the first embedded NUL,
+    // which is the very loss this function exists to prevent.
+    const auto size = static_cast<qsizetype>(length);
+    if (limit >= 0 && size > limit) {
+        //: Marks where a Lua string was cut short because it was too big to send to an AI model. %L1 is how many bytes it held in total.
+        return QString::fromUtf8(text, limit) + TMCPLuaBridge::tr("<...cut short, %L1 bytes in total>").arg(size);
+    }
+    return QString::fromUtf8(text, size);
 }
 
 QString TMCPLuaBridge::numberKey(double value)

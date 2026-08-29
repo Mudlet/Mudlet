@@ -99,13 +99,22 @@ MCPStartResult TMCPServer::startServer(quint16 port)
         return QHttpServerResponse(QHttpServerResponse::StatusCode::MethodNotAllowed);
     };
     const QHttpServerRequest::Methods retiredMethods = QHttpServerRequest::Method::Get | QHttpServerRequest::Method::Delete;
-    httpServer->route(qsl("/"), retiredMethods, onRetiredMethod);
-    httpServer->route(qsl("/mcp"), retiredMethods, onRetiredMethod);
+    const auto rootRetired = httpServer->route(qsl("/"), retiredMethods, onRetiredMethod);
+    const auto mcpRetired = httpServer->route(qsl("/mcp"), retiredMethods, onRetiredMethod);
     // The endpoint Mudlet hands out carries the token in the path, so that is the address
     // an old client would try these on; without this it gets a bare 404 instead.
-    httpServer->route(qsl("/mcp/<arg>"), retiredMethods, [onRetiredMethod](const QString&, const QHttpServerRequest& request) {
+    const auto tokenRetired = httpServer->route(qsl("/mcp/<arg>"), retiredMethods, [onRetiredMethod](const QString&, const QHttpServerRequest& request) {
         return onRetiredMethod(request);
     });
+    // Checked for the same reason as the POST routes above: a registration that quietly
+    // failed would answer 404 instead of 405, which is exactly the bare 404 that leaves an
+    // old client hanging rather than telling it the stream is gone.
+    if (!rootRetired || !mcpRetired || !tokenRetired) {
+        qWarning() << "TMCPServer: could not register the routes that turn away retired methods";
+        delete httpServer;
+        //: Reported when the MCP server could not set up the addresses it answers on.
+        return {false, tr("The server could not register the addresses it answers on.")};
+    }
 
     auto* tcpServer = new QTcpServer(httpServer);
     if (!tcpServer->listen(QHostAddress::LocalHost, port)) {

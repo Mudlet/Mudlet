@@ -3654,14 +3654,25 @@ void dlgProfilePreferences::slot_saveAndClose()
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
 #ifdef INCLUDE_MCPSERVER
     QString mcpError;
-    if (!pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), static_cast<quint16>(spinBox_mcpServerPort->value()), mcpError)) {
+    const auto requestedMcpPort = static_cast<quint16>(spinBox_mcpServerPort->value());
+    if (!pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), requestedMcpPort, mcpError)) {
+        // A server that was already up is put back on the port it was serving on, which
+        // also puts the saved port back. Telling the user their setting was kept would
+        // then be untrue, and they would look for a change that is not there.
+        const quint16 keptMcpPort = pMudlet->mcpServerPort();
+        const QString advice = keptMcpPort == requestedMcpPort
+                                       //: %1 is a TCP port number, %2 the reason the socket could not be opened.
+                                       ? tr("Mudlet could not listen on port %1: %2\n\n"
+                                            "Another program may already be using that port. The setting has been kept, so open Preferences again to pick a different port.")
+                                                 .arg(QString::number(requestedMcpPort), mcpError)
+                                       //: %1 is the TCP port number that could not be opened, %2 the reason, %3 the port Mudlet carried on serving on instead.
+                                       : tr("Mudlet could not listen on port %1: %2\n\n"
+                                            "Another program may already be using that port, so Mudlet is still serving on port %3. Open Preferences again to pick a different port.")
+                                                 .arg(QString::number(requestedMcpPort), mcpError, QString::number(keptMcpPort));
         QMessageBox::warning(this,
                              //: Title of a warning shown when the AI assistant (MCP) server could not be started.
                              tr("Could not start the MCP server"),
-                             //: %1 is a TCP port number, %2 the reason the socket could not be opened.
-                             tr("Mudlet could not listen on port %1: %2\n\n"
-                                "Another program may already be using that port. The setting has been kept, so open Preferences again to pick a different port.")
-                                     .arg(QString::number(spinBox_mcpServerPort->value()), mcpError));
+                             advice);
     }
 #endif
     pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));

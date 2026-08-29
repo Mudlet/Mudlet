@@ -125,6 +125,7 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
+        WITH_MCPSERVER: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: check ccache stats post build

@@ -3524,8 +3524,19 @@ bool mudlet::setMCPEnabled(const bool enabled, const quint16 port, QString& erro
         // Go back to the port that was working rather than leave the user with nothing: a
         // typo in the port box would otherwise take down a server that was serving fine,
         // and mMCPServerPort would persist the port that does not work.
-        if (wasRunning && mpMCPServer->startServer(previousPort).started) {
-            mMCPServerPort = previousPort;
+        if (wasRunning) {
+            const MCPStartResult fallback = mpMCPServer->startServer(previousPort);
+            if (fallback.started) {
+                mMCPServerPort = previousPort;
+            } else {
+                // Both ports are gone, so the user now has no server at all rather than
+                // the one they started with. Saying so matters: the rest of the message
+                // names only the port they typed, and would read as though the server
+                // they already had were still serving.
+                error.append(QChar::LineFeed);
+                //: Added to the MCP failure message when the port Mudlet was serving on could not be taken back either. %1 is a TCP port number, %2 the reason it could not be opened.
+                error.append(tr("Mudlet could not go back to port %1 either, so it is no longer serving: %2").arg(QString::number(previousPort), fallback.error));
+            }
         }
         return false;
     }
