@@ -37,8 +37,9 @@ function Geyser.TextEdit:setStyleSheet(css)
   self.stylesheet = css
 end
 
---- @param font the font family name
--- @return true if the font changed, nil+error if it is not installed
+--- @param font the font family name. A family the font database does not list is
+-- passed on for Qt to substitute for
+-- @return true, or nil+error if there is no text edit by that name
 function Geyser.TextEdit:setFont(font)
   return setTextEditFont(self.name, font)
 end

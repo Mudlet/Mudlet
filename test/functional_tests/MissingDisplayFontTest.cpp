@@ -24,19 +24,21 @@
  * in whatever the font database picked (issue #4159).
  *
  * The profile load path takes the family straight from the saved XML through
- * QFont::fromString() into Host::setDisplayFont(), which only rejects a font
- * whose glyphs have zero width - so the check has to happen afterwards, once
+ * QFont::fromString() into Host::setDisplayFont(), which turns away only a
+ * description it cannot read and a font whose glyphs have zero width - so the
+ * check on the family itself has to happen afterwards, once
  * the fonts bundled inside installed packages and modules are registered too.
  * That is Host::substituteMissingDisplayFont(), and this covers it and the
  * shared Host::resolveFontFamily() it is built on. There is no Lua entry point
  * for either, which is why this is a functional test rather than a spec.
  *
- * The first cases exercise those two directly; the last two go through the
+ * The first cases exercise those two directly; the closing ones go through the
  * production load path instead - mudlet::loadProfile() followed by
  * slot_connectionDialogueFinished(), which is exactly what Lua's loadProfile()
- * does - because where the check is made from decides both whether the player
- * ever sees the warning and whether a font a module supplies is mistaken for a
- * missing one.
+ * does - because where the check is made from decides whether the player ever
+ * sees the warning, whether a font a module supplies is mistaken for a missing
+ * one, and whether one that leaves with an uninstalled package is noticed at
+ * all.
  *
  * Run with: ctest -R MissingDisplayFontTest -V
  */
@@ -52,7 +54,9 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTextBox.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -73,6 +77,10 @@ private:
     // A second family Mudlet bundles, so a case can pick another installed font -
     // or have a module bring one - without depending on what this machine has:
     const QString mOtherBundledFamily = qsl("Ubuntu Mono");
+    // The name a bundled font is renamed to so a package can be the only place it
+    // comes from: unlike a family Mudlet bundles, taking the package away really
+    // does take this one off the machine.
+    const QString mPackageSuppliedFamily = qsl("Zqxwvu Package Font Mono");
     QTemporaryDir mConfigDir;
     QTemporaryDir mSaveDir;
     QTemporaryDir mArchiveDir;
@@ -112,6 +120,43 @@ private:
             return QByteArray();
         }
         return font.readAll();
+    }
+
+    // A copy of a bundled font under a family name no font database anywhere
+    // lists. The name records are overwritten in place with a replacement of the
+    // same length, so every offset in the name table stays valid - and neither
+    // FreeType nor Qt checks the table checksums. Both the ASCII and the UTF-16BE
+    // record have to be caught, since a TrueType name table carries the family
+    // under each encoding.
+    static QByteArray renamedFontBytes(const QString& resourcePath, const QString& fromFamily, const QString& toFamily)
+    {
+        QByteArray bytes = bundledFontBytes(resourcePath);
+        if (bytes.isEmpty() || fromFamily.size() != toFamily.size()) {
+            return QByteArray();
+        }
+        const auto asUtf16Be = [](const QString& text) {
+            QByteArray encoded;
+            encoded.reserve(text.size() * 2);
+            for (const QChar character : text) {
+                encoded.append(static_cast<char>(character.unicode() >> 8));
+                encoded.append(static_cast<char>(character.unicode() & 0xFF));
+            }
+            return encoded;
+        };
+        // The PostScript name is the family with the spaces squeezed out, and it
+        // has to change too: CoreText refuses a font carrying a PostScript name
+        // it has already registered, which would leave this one unavailable on
+        // macOS while the original it was copied from is loaded.
+        const QString fromPostScriptName = QString(fromFamily).remove(QChar::Space);
+        const QString toPostScriptName = QString(toFamily).remove(QChar::Space);
+        if (fromPostScriptName.size() != toPostScriptName.size()) {
+            return QByteArray();
+        }
+        bytes.replace(fromFamily.toLatin1(), toFamily.toLatin1());
+        bytes.replace(asUtf16Be(fromFamily), asUtf16Be(toFamily));
+        bytes.replace(fromPostScriptName.toLatin1(), toPostScriptName.toLatin1());
+        bytes.replace(asUtf16Be(fromPostScriptName), asUtf16Be(toPostScriptName));
+        return bytes;
     }
 
     static QByteArray minimalPackageXml(const QString& packageName)
@@ -158,6 +203,29 @@ private:
     // module to install: XMLimport::readHost() defaults every attribute it does
     // not find and skips the children it does not know, so nothing else is
     // needed to reach Host::setDisplayFontFromString().
+    // <mDisplayFont> is written by XMLexport::writeHost(), and that runs only for
+    // a profile's own save - no package or module Mudlet exports carries one. So
+    // this is both what a profile save looks like and the only thing that can
+    // bring a display font in through an install.
+    bool writeHostPackageXml(const QString& path, const QString& fontFamily)
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            return false;
+        }
+        const QString xml = qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                "<!DOCTYPE MudletPackage>\n"
+                                "<MudletPackage version=\"1.001\">\n"
+                                "<HostPackage>\n"
+                                "<Host>\n"
+                                "<mDisplayFont>%1</mDisplayFont>\n"
+                                "</Host>\n"
+                                "</HostPackage>\n"
+                                "</MudletPackage>\n")
+                                    .arg(QFont(fontFamily, 12).toString());
+        return file.write(xml.toUtf8()) != -1;
+    }
+
     bool writeProfileSave(const QString& profileName, const QString& fontFamily, const QString& moduleName = QString(), const QString& modulePath = QString())
     {
         const QString folder = mudlet::getMudletPath(enums::profileXmlFilesPath, profileName);
@@ -377,6 +445,93 @@ private slots:
         QCOMPARE(mpHost->getDisplayFontForSaving().family(), Host::scmDefaultFontFamily);
     }
 
+    // The same as the install case above, driven directly, so the two halves of
+    // the rule are pinned without a profile load either side of them.
+    void test_aDisplayFontArrivingFromXmlBecomesTheFamilyTheProfileAsksFor()
+    {
+        QVERIFY(mpHost->setDisplayFont(QFont(mMissingFamily, 14, QFont::Normal)).first);
+        QVERIFY(mpHost->substituteMissingDisplayFont());
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        mpHost->setDisplayFontFromString(QFont(mOtherBundledFamily, 12).toString());
+        QCOMPARE(mpHost->getDisplayFont().family(), mOtherBundledFamily);
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mOtherBundledFamily);
+        QCOMPARE(mpHost->getDisplayFontForSaving().pointSize(), 12);
+    }
+
+    // A family this machine does not have cannot retire the stand-in: the check
+    // that put it up runs once, at profile load, so nothing would notice the new
+    // family is missing too and the one the profile asked for would be forgotten.
+    void test_aDisplayFontFromXmlNamingAnUninstalledFamilyKeepsTheRecordedChoice()
+    {
+        QVERIFY(mpHost->setDisplayFont(QFont(mMissingFamily, 14, QFont::Normal)).first);
+        QVERIFY(mpHost->substituteMissingDisplayFont());
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        mpHost->setDisplayFontFromString(QFont(qsl("Another Font That Is Not There"), 12).toString());
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+    }
+
+    // A truncated <mDisplayFont>, or one naming no family at all, would otherwise
+    // leave a default-constructed proportional font whose letters do have a width,
+    // so nothing downstream turns it away - and taking it would count as a choice
+    // of family and throw away the record of the font the profile really asks for.
+    // The ignoreMessage() is what pins this to the guard rather than to the
+    // zero-width refusal, which produces the same outcome by another route.
+    void test_aFontDescriptionThatCannotBeReadLeavesTheFontAlone()
+    {
+        QVERIFY(mpHost->setDisplayFont(QFont(mMissingFamily, 14, QFont::Normal)).first);
+        QVERIFY(mpHost->substituteMissingDisplayFont());
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        QTest::ignoreMessage(QtWarningMsg, R"(Host::setDisplayFontFromString(...) WARNING - "" is not a font description, so the font in use is kept.)");
+        mpHost->setDisplayFontFromString(QString());
+        QCOMPARE(mpHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        // a description that is well formed apart from naming no family, which Qt
+        // turns away as well - the font in use has to survive that one too
+        const QString noFamily = QFont(QString(), 12).toString();
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl(R"(Host::setDisplayFontFromString(...) WARNING - "%1" is not a font description, so the font in use is kept.)").arg(noFamily)));
+        mpHost->setDisplayFontFromString(noFamily);
+        QCOMPARE(mpHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(mpHost->getDisplayFontForSaving().family(), mMissingFamily);
+    }
+
+    // setTextEditFont() takes the weight out of a "Family Style" name, so it has
+    // to put the weight back to normal for a name that carries none - on both the
+    // listed and the unlisted family, or the bold of an earlier call is left
+    // behind on whatever family is set next.
+    void test_setTextEditFontDoesNotLeaveAnEarlierWeightBehind()
+    {
+        const QString profileName = qsl("MissingDisplayFont-TextEdit-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createTextEdit('main', 'mdfTextEdit', 0, 0, 100, 50)")));
+        auto* pTextEdit = pHost->mpConsole->mTextBoxMap.value(qsl("mdfTextEdit"));
+        QVERIFY2(pTextEdit, "the test text edit was not created");
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1 Bold')").arg(mOtherBundledFamily)));
+        QCOMPARE(pTextEdit->font().family(), mOtherBundledFamily);
+        QCOMPARE(pTextEdit->font().weight(), QFont::Bold);
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1')").arg(mMissingFamily)));
+        QCOMPARE(pTextEdit->font().family(), mMissingFamily);
+        QCOMPARE(pTextEdit->font().weight(), QFont::Normal);
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1 Bold')").arg(mOtherBundledFamily)));
+        QCOMPARE(pTextEdit->font().weight(), QFont::Bold);
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1')").arg(Host::scmDefaultFontFamily)));
+        QCOMPARE(pTextEdit->font().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pTextEdit->font().weight(), QFont::Normal);
+    }
+
     // The whole point of the check, over the production load path: the console
     // is drawn in a font that is really there, the player is told why, and the
     // profile goes on asking for the font they chose - a stand-in for a font
@@ -406,6 +561,42 @@ private slots:
         pHost->waitForProfileSave();
         QVERIFY2(QFileInfo::exists(xmlPath), qPrintable(qsl("profile XML was not written to %1").arg(xmlPath)));
         QCOMPARE(savedDisplayFontFamily(xmlPath), mMissingFamily);
+    }
+
+    // The one production path that reaches setDisplayFontFromString() after the
+    // check has already run: a profile save installed as a package. An installed
+    // family has to retire the stand-in and become what is saved; an uninstalled
+    // one must not, because the check never runs again to notice it is missing.
+    void test_aProfileSaveInstalledAsAPackageRetiresTheStandInOnlyIfItsFontIsInstalled()
+    {
+        const QString profileName = qsl("MissingDisplayFont-Install-Test");
+        QVERIFY2(writeProfileSave(profileName, mMissingFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        const QString absentFamily = qsl("Another Font That Is Not There");
+        const QString absentPath = mArchiveDir.filePath(qsl("font-absent.xml"));
+        QVERIFY2(writeHostPackageXml(absentPath, absentFamily), "could not write the package XML");
+        QVERIFY2(pHost->installPackage(absentPath, enums::PackageModuleType::Package).first, "the package naming an uninstalled font did not install");
+        // An install saves the profile, and installPackage() defers a second one
+        // for as long as that save is in flight - so without this the next install
+        // is only queued and the case would pass on a font that never arrived.
+        pHost->waitForProfileSave();
+        QCOMPARE(pHost->getDisplayFont().family(), absentFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        const QString presentPath = mArchiveDir.filePath(qsl("font-present.xml"));
+        QVERIFY2(writeHostPackageXml(presentPath, mOtherBundledFamily), "could not write the package XML");
+        QVERIFY2(pHost->installPackage(presentPath, enums::PackageModuleType::Package).first, "the package naming an installed font did not install");
+        pHost->waitForProfileSave();
+        QCOMPARE(pHost->getDisplayFont().family(), mOtherBundledFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mOtherBundledFamily);
     }
 
     // A module's fonts are only registered once the modules are installed, which
@@ -439,6 +630,50 @@ private slots:
         QCOMPARE(pHost->getDisplayFont().family(), mOtherBundledFamily);
         const QString shown = consoleText(pHost);
         QVERIFY2(!shown.contains(qsl("is not installed on this computer")), qPrintable(qsl("a font the module supplies was reported missing; the console holds: %1").arg(shown)));
+    }
+
+    // The mirror of the module case: a package's fonts are registered before its
+    // scripts run, so a package can ship a font and ask for it as it installs -
+    // which is what MedUI in the package repository does. Uninstalling takes the
+    // font back off the machine, so the display font has to be checked again or
+    // the console silently drops to whatever family Qt picks next.
+    void test_uninstallingThePackageAFontCameFromFallsBackToTheBundledDefault()
+    {
+        const QString packageName = qsl("font-uninstall");
+        const QString packagePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(packageName));
+        const QByteArray fontBytes = renamedFontBytes(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), Host::scmDefaultFontFamily, mPackageSuppliedFamily);
+        QVERIFY2(!fontBytes.isEmpty(), "the bundled font could not be read out of the Qt resources and renamed");
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("%1.ttf").arg(packageName), fontBytes}, {qsl("%1.xml").arg(packageName), minimalPackageXml(packageName)}};
+        QVERIFY2(writeArchive(packagePath, entries), "could not write the test package archive");
+
+        const QString profileName = qsl("MissingDisplayFont-Uninstall-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(!mudlet::self()->getAvailableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive),
+                 "the package's family is already installed, so this cannot tell whether uninstalling removed it");
+
+        QVERIFY2(pHost->installPackage(packagePath, enums::PackageModuleType::Package).first, "the package carrying the font did not install");
+        pHost->waitForProfileSave();
+        QVERIFY2(mudlet::self()->getAvailableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's font was never registered");
+
+        // What the package's own install-time script does with setFont()
+        QVERIFY(pHost->setDisplayFont(QFont(mPackageSuppliedFamily, 12), Host::DisplayFontChange::UserChoice).first);
+        QCOMPARE(pHost->getDisplayFont().family(), mPackageSuppliedFamily);
+
+        QVERIFY2(pHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package did not uninstall");
+        pHost->waitForProfileSave();
+        QVERIFY2(!mudlet::self()->getAvailableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's font is still registered, so nothing has gone missing to notice");
+
+        QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mPackageSuppliedFamily);
+        const QString shown = consoleText(pHost);
+        QVERIFY2(shown.contains(qsl("[ WARN ]")), qPrintable(qsl("no warning reached the main console; it holds: %1").arg(shown)));
+        QVERIFY2(shown.contains(mPackageSuppliedFamily), qPrintable(qsl("the warning does not name the font that went missing; the console holds: %1").arg(shown)));
     }
 };
 

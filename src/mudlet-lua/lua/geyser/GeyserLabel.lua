@@ -258,7 +258,9 @@ end
 -- name, is applied to the label's widget font and remembered as the font database spells
 -- it, while a name the database does not list is passed on to the markup for Qt to
 -- substitute for, with a warning through debugc(). Only a font that is not a string is
--- refused, with nil+error, and leaves the current font alone.
+-- refused, with nil+error, and leaves the current font alone. A font inherited from
+-- a label used as a prototype was never set on this label's widget, so it reaches the
+-- markup only - self.font and getFont(self.name) can differ for that one case.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
   if type(font) ~= "string" then
@@ -1013,10 +1015,15 @@ function Geyser.Label:new (cons, container)
   Geyser.Color.applyColors(me)
   -- the constraints table is copied wholesale, so a font entry lands in me.font
   -- without ever reaching the label; clear it first and put it back through
-  -- setFont(), which echoes for itself when it takes the font. The `not` covers
-  -- a font that is not a string, which setFont() refuses without echoing.
-  me.font = ""
-  if not (cons.font and me:setFont(cons.font)) then
+  -- setFont(), which echoes for itself when it takes the font, and does not when
+  -- it refuses a font that is not a string. Nothing is written to me.font when
+  -- the constraints carry no font: an own field would shadow a prototype's.
+  if cons.font ~= nil then
+    me.font = ""
+    if not me:setFont(cons.font) then
+      me:echo()
+    end
+  else
     me:echo()
   end
 
