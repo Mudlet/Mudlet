@@ -148,7 +148,9 @@ local OPS = {
     function(win) logOp("getCurrentLine %s", win); callWin(getCurrentLine, win) end,
     function(win) local n = wildInt(); logOp("setWindowWrap %s %d", win, n); callWin(setWindowWrap, win, n) end,
     function(win) local n = wildInt(); logOp("setWindowWrapIndent %s %d", win, n); callWin(setWindowWrapIndent, win, n) end,
-    function(win) local t = "<b>" .. wildText() .. "</b>"; logOp("insertHTML %s %q", win, t); callWin(insertText, win, t) end,
+    -- insertHTML takes the text alone and always writes to the main console,
+    -- so there is no per-window form to drive through callWin()
+    function(win) local t = "<b>" .. wildText() .. "</b>"; logOp("insertHTML main %q", t); pcall(insertHTML, t) end,
     function(win) logOp("clearWindow %s", win); callWin(clearWindow, win) end,
     function(win) logOp("feed-more %s", win); seedLines(win, rrange(1, 3)) end,
     function(win) local n = wildInt(); logOp("selectCaptureGroup %s %d", win, n); callWin(selectCaptureGroup, win, n) end,
