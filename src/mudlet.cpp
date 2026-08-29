@@ -5198,6 +5198,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     mPackagesToInstallList.clear();
 
+    // Only now are the fonts of the modules and the default packages registered
+    // too, so a family the profile names can be told apart from one that is
+    // merely not loaded yet - and the real console exists, so the stand-in this
+    // may pick lands on it and the warning reaches the player.
+    pHost->substituteMissingDisplayFont();
+
     // Now load the default (latest stored) map file:
     pHost->loadMap();
 

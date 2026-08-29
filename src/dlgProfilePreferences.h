@@ -24,6 +24,7 @@
  ***************************************************************************/
 
 
+#include "Host.h"
 #include "mudlet.h"
 
 #include "ui_profile_preferences.h"
@@ -31,7 +32,6 @@
 #include <QList>
 #include <QMap>
 
-class Host;
 class QCloseEvent;
 class QDoubleSpinBox;
 class TAction;
@@ -230,7 +230,7 @@ private:
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();
-    bool updateDisplayFont();
+    bool updateDisplayFont(Host::DisplayFontChange change);
     void cancelShortcutCaptures();
     void setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits);
     void updateShortcutConflictWarning();

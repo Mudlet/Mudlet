@@ -773,7 +773,14 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
     }
 
     QFont font = pT->font();
-    font.setFamily(fontName);
+    // An unlisted name comes back from the resolution as it was given, and goes
+    // through: the font database leaves out families the platform still resolves,
+    // such as the fontconfig alias "Helvetica". The weight comes from the
+    // resolution either way, so the bold of an earlier "Family Style" name is not
+    // left behind on the next family.
+    const auto resolved = host.resolveFontFamily(fontName);
+    font.setFamily(resolved.family);
+    font.setWeight(resolved.weight);
     pT->setFont(font);
     lua_pushboolean(L, true);
     return 1;
@@ -1380,14 +1387,26 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFont
 int TLuaInterpreter::getFont(lua_State* L)
 {
-    QString windowName = qsl("main");
-    windowName = WINDOW_NAME(L, 1);
-    auto console = CONSOLE(L, windowName);
+    const QString windowName{WINDOW_NAME(L, 1)};
     Host& host = getHostFromLua(L);
 
     auto actualFontFamily = [](const QFont& font) -> QString {
         return QFontInfo(font).family();
     };
+
+    // A console wins a name a label also carries, the way it does for every other
+    // window function. Labels are not in the map CONSOLE() searches, so a name no
+    // console answers to is tried as a label before that macro gets to refuse it:
+    auto console = CONSOLE_NIL(L, windowName);
+    if (!console) {
+        if (host.mpConsole) {
+            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(windowName)) {
+                lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
+                return 1;
+            }
+        }
+        console = CONSOLE(L, windowName);
+    }
 
     QString fontName;
 
@@ -3137,35 +3156,43 @@ int TLuaInterpreter::setFont(lua_State* L)
         return warnArgumentValue(L, __func__, "font must not be empty");
     }
 
-    QString effectiveFontName = fontName;
-    QFont::Weight fontWeight = QFont::Normal;
-
-    if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
-        // Font not found - try parsing as a static font name with style
-        auto [baseName, weight] = host.parseFontNameAndStyle(fontName);
-
-        if (mudlet::self()->getAvailableFonts().contains(baseName, Qt::CaseInsensitive)) {
-            // Found the base font family, use it with the parsed weight
-            effectiveFontName = baseName;
-            fontWeight = weight;
-            qDebug() << "setFont(): Font" << fontName << "not found, using" << baseName << "with weight" << fontWeight;
-        } else {
-            // Still not found - report error
-            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
-        }
+    const auto resolved = host.resolveFontFamily(fontName);
+    if (!resolved.available) {
+        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
     }
+
+    const QString effectiveFontName = resolved.family;
+    const QFont::Weight fontWeight = resolved.weight;
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 #if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
     QFont::insertSubstitution(effectiveFontName, qsl("Noto Color Emoji"));
-    // TODO issue #4159: a nonexisting font breaks the console
 #endif
     // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
 
-    auto console = CONSOLE(L, QString{windowName});
+    // A console wins a name a label also carries - nothing stops a label being
+    // called "main". Labels are not in the map CONSOLE() searches, so a name no
+    // console answers to is tried as a label before that macro gets to refuse it:
+    const QString targetName{windowName};
+    auto console = CONSOLE_NIL(L, targetName);
+    if (!console) {
+        if (host.mpConsole) {
+            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(targetName)) {
+                QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
+                if (fontWeight != QFont::Normal) {
+                    labelFont.setWeight(fontWeight);
+                }
+                pLabel->setFont(labelFont);
+                lua_pushboolean(L, true);
+                return 1;
+            }
+        }
+        console = CONSOLE(L, targetName);
+    }
+
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
         QFont newFont = host.createFontWithSettings(effectiveFontName, host.getDisplayFont().pointSize());
@@ -3174,7 +3201,7 @@ int TLuaInterpreter::setFont(lua_State* L)
             newFont.setWeight(fontWeight);
         }
 
-        auto result = host.setDisplayFont(newFont);
+        auto result = host.setDisplayFont(newFont, Host::DisplayFontChange::UserChoice);
 
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
