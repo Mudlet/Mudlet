@@ -38,10 +38,51 @@ function unzip( what, dest )
     return
   end
 
+  -- Two different libraries answer to the global `zip`: Mudlet loads lua-zip
+  -- (brimworks) first and only falls back to luazip (Kepler) on builds where
+  -- brimworks is missing (see TLuaInterpreter.cpp). They enumerate an archive
+  -- differently - brimworks counts entries with get_num_files() and describes
+  -- each one with stat(i), indexed from 1, while Kepler hands back an iterator
+  -- from files() - so walk whichever one actually loaded. Both yield the same
+  -- {filename, uncompressed_size} shape the rest of this function expects.
+  local function entries()
+    if type( z.get_num_files ) == "function" then
+      local index, count = 0, z:get_num_files()
+      return function()
+        index = index + 1
+        if index > count then
+          return nil
+        end
+        local info = z:stat( index )
+        return { filename = info.name, uncompressed_size = info.size }
+      end
+    end
+    return z:files()
+  end
+
+  -- brimworks' entry:read() wants a byte count and rejects io.read's "*a" with
+  -- "number expected, got string"; reading in fixed chunks until one comes back
+  -- empty is understood by both libraries.
+  local function readEntry( filename )
+    local _f = z:open( filename )
+    if not _f then
+      return ""
+    end
+    local chunks = {}
+    while true do
+      local chunk = _f:read( 1024 * 1024 )
+      if not chunk or chunk == "" then
+        break
+      end
+      chunks[#chunks + 1] = chunk
+    end
+    _f:close()
+    return table.concat( chunks )
+  end
+
   local createdDirs = {}
-  for file in z:files() do
-    local _f, err = z:open( file.filename )
-    local _data = _f:read("*a")
+  for file in entries() do
+    local _data = readEntry( file.filename )
     local _path = dest .. file.filename
     local _dir = string.split( file.filename, '/' )
     local created = dest;
@@ -61,7 +102,6 @@ function unzip( what, dest )
         end
       end
     end
-    local _path = dest .. file.filename
     if file.uncompressed_size > 0 then
       local out = io.open( _path, "wb" )
       if out then
@@ -72,7 +112,6 @@ function unzip( what, dest )
         cecho("<red>ERROR: can't write file:" .. _path .. "\n")
       end
     end
-    _f:close();
   end
   z:close()
 end
