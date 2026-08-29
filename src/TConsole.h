@@ -270,7 +270,12 @@ public:
     void scrollUp(int lines);
     void print(const QString& msg);
     void print(const char*);
-    void print(const QString& msg, QColor fgColor, QColor bgColor);
+    // timeStampOverride is for content being replayed after being held back -
+    // it keeps the time the text arrived instead of the time it is shown:
+    void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
+    // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
+    // until its right-click menu asks for it:
+    void showSearchBar();
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
@@ -279,6 +284,9 @@ public:
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
+    // Repaint just the lines the current selection covers, for the callers that
+    // change their text where it stands instead of appending new text.
+    void markSelectionDirty();
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     void setFontSize(int);
     void setFontName(const QString& fontName);
@@ -344,6 +352,9 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
+    // The Central Debug Console's find bar, floating over the bottom right of
+    // the console itself:
+    QPointer<QWidget> mpFindBar;
 
     // The buffer, cursor/prompt state and fg/bg colours live in a core
     // TConsoleModel reached through model(). For the main console that model is
@@ -473,8 +484,11 @@ private slots:
     void slot_clearSearchResults();
     void slot_hyperlinkVisibilityChanged();
     void focusOnSearchResultAndAnnounce(int searchX, int searchY);
+    void hideSearchBar();
 
 private:
+    void createFindBar();
+    void positionFindBar();
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();

@@ -53,6 +53,7 @@ public:
     QString getCurrentProfileName() const;
     TMainConsole* getCurrentConsole() const;
     TMainConsole* getConsole(const QString& profileName) const;
+    void updateToolBarActions();
     int getProfileCount() const { return mProfileConsoleMap.size(); }
 
     void updateToolbarForProfile(Host* pHost);
@@ -176,7 +177,6 @@ private:
     void createMenus();
     void createToolBar();
     void connectToolBarActions();
-    void updateToolBarActions();
     void updateWindowTitle();
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile

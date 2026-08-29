@@ -126,6 +126,7 @@ set(mudlet_SRCS
     TAlias.cpp
     TArea.cpp
     TAreaGridIndex.cpp
+    TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TBuffer.cpp
@@ -133,6 +134,7 @@ set(mudlet_SRCS
     TConsole.cpp
     TConsoleModel.cpp
     TDebug.cpp
+    TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -360,6 +362,7 @@ set(mudlet_HDRS
     TAlias.h
     TArea.h
     TAreaGridIndex.h
+    TAreaLodExitIndex.h
     TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
@@ -368,6 +371,7 @@ set(mudlet_HDRS
     TConsole.h
     TConsoleModel.h
     TDebug.h
+    TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h

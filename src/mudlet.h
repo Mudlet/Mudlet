@@ -92,6 +92,7 @@ class Host;
 class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
+class TDebugFilterBar;
 class TDetachedWindow;
 class TDockWidget;
 class TEvent;
@@ -183,6 +184,7 @@ public:
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
     inline static QPointer<QMainWindow> smpDebugArea;
+    inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
@@ -220,6 +222,7 @@ public:
     void doAutoLogin(const QString&, bool offline);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
+    void updateMapActionAvailability();
     void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
@@ -401,6 +404,10 @@ public:
     // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
     // startup which the user may leave as is or force on or off:
     bool mShowIconsOnMenuOriginally = true;
+    // Whether Mudlet was the active application at the last state change, so
+    // sysApplicationFocusChangeEvent is raised on a change of that and not on
+    // every transition Qt reports between its inactive states
+    bool mApplicationActive = true;
     // 2 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
     QString mTEXT_ON_BG_STYLESHEET;
@@ -571,6 +578,7 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
+    void slot_applicationStateChanged(const Qt::ApplicationState);
     void slot_refreshTabIndicatorsDelayed();
     void slot_telnetConnectionStateChanged();
 
@@ -785,6 +793,11 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+
+    // The map actions' enabled state before the active profile's
+    // "mapperButton" setConfig mode is applied on top - the last baseline the
+    // toolbar management functions computed
+    bool mMapActionBaselineEnabled = false;
 
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;

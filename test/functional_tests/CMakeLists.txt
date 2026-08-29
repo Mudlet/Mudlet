@@ -34,8 +34,10 @@ endif()
 set(WINDOW_GROUP_TEST_SOURCES
     ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
+    DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
+    FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
@@ -53,6 +55,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
+    RecolouredLineCacheTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
@@ -67,6 +70,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     DefaultGameDeleteTest.cpp
+    MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
     ProfileLifecycleTest.cpp
@@ -125,10 +129,14 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
+    MapLevelOfDetailTest.cpp
+    MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
+    MapSymbolFontTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
@@ -136,6 +144,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageFontsOnRefusedArchiveTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageSelfRemovalTest.cpp
 )
@@ -192,6 +201,21 @@ add_functional_test_binary(UndoServerWrapReplay UndoServerWrapReplay.cpp)
 # also registers it with ctest.
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_functional_test_binary(PipelineBenchmark PipelineBenchmark.cpp)
+# The 2D mapper's companion. Never registered with ctest at all: it needs a map
+# file too big to commit, handed to it in MUDLET_BENCH_MAP, and skips without one.
+# The benchmarks stay standalone binaries rather than joining a group, at the
+# cost of a link step and ~250MB each, for two reasons. add_grouped_test_binary()
+# registers an add_test() per source, so joining one would put an always-skipped
+# case into every CI run; and a group binary's layout and static initialisers
+# change whenever any unrelated sibling test file does, which is a few percent of
+# wall clock landing in numbers whose whole job is to be compared across builds.
+add_functional_test_binary(MapRenderBenchmark MapRenderBenchmark.cpp)
+# Report-only baseline for the A* speedwalk search and the graph rebuild that
+# feeds it, run as
+#   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./PathfindBenchmark
+# Never registered with ctest at all, because the map it needs is far too big to
+# commit and it skips without one.
+add_functional_test_binary(PathfindBenchmark PathfindBenchmark.cpp)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
@@ -318,6 +342,12 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
+
+# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, and timed out against
+# the default 60s on the macOS x86_64 runner, where it measured 46.95s when it passed. Waiting on
+# the connection dialog instead of sleeping through it took the Linux run from 30s to 9s, so this
+# is headroom rather than a necessity now, and it is what the other per-method-profile tests use.
+set_tests_properties(DebugConsoleFilterTest PROPERTIES TIMEOUT 300)
 
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout

@@ -72,12 +72,26 @@
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QToolBar>
+#include <QtMath>
 #include <QUiLoader>
 #include <QLineEdit>
 #include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 using namespace std::chrono_literals;
+
+// A QDoubleSpinBox rounds whatever it is given to the number of decimals it
+// displays, so it holds no more precision than that - but TMap and the Lua API
+// both keep the room symbol scaling factor to the full qreal. Both directions
+// of the exchange between the two ask whether the box is already showing a
+// value rather than comparing the two numbers outright: the refresh must not
+// rewrite the box between two keystrokes of a factor being typed into it, and
+// Save must not write a rounded copy back over the factor a script set.
+static bool spinBoxShows(const QDoubleSpinBox* pSpinBox, const qreal value)
+{
+    const qreal scale = qPow(10.0, pSpinBox->decimals());
+    return qFuzzyCompare(pSpinBox->value(), qRound64(value * scale) / scale);
+}
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost)
 : QDialog(pParentWidget)
@@ -1136,10 +1150,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapSymbols);
         mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapSymbols);
-        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(qsl("×"));
-        mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
+        mpDoubleSpinBox_mapSymbolFontFudge->setRange(TMap::scmMinimumSymbolFontFudgeFactor, TMap::scmMaximumSymbolFontFudgeFactor);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
+        // Qt's default of two decimals would show a factor set from Lua as
+        // something it is not - the API takes any value in the range. Both this
+        // and the range have to be in place before the value, which a spin-box
+        // rounds and clamps as it is given:
+        mpDoubleSpinBox_mapSymbolFontFudge->setDecimals(3);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->getSymbolFontFudgeFactor());
         auto* pSymbolsLayout = qobject_cast<QGridLayout*>(groupBox_mapSymbols->layout());
         if (pSymbolsLayout) {
             const int existingRows = pSymbolsLayout->rowCount();
@@ -1154,11 +1173,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (!pHost || !pHost->mpMap) {
                 return;
             }
-            pHost->mpMap->mMapSymbolFontFudgeFactor = value;
-            if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-                pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-                pHost->mpMap->mpMapper->mp2dMap->update();
-            }
+            pHost->mpMap->setSymbolFontFudgeFactor(value);
         });
 
         label_mapSymbolsFont->setEnabled(true);
@@ -1175,6 +1190,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
+        connect(pHost->mpMap.data(), &TMap::signal_mapSymbolFontChanged, this, &dlgProfilePreferences::slot_mapSymbolFontChanged, Qt::UniqueConnection);
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
@@ -3394,8 +3410,11 @@ void dlgProfilePreferences::slot_saveAndClose()
                 }
             }
 
-            if (mpDoubleSpinBox_mapSymbolFontFudge) {
-                pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+            // Only when the spin-box is what holds the newer value. It carries
+            // no more precision than it displays, so writing it back whenever
+            // Save is clicked would round off a factor a script had set:
+            if (mpDoubleSpinBox_mapSymbolFontFudge && !spinBoxShows(mpDoubleSpinBox_mapSymbolFontFudge, pHost->mpMap->getSymbolFontFudgeFactor())) {
+                pHost->mpMap->setSymbolFontFudgeFactor(mpDoubleSpinBox_mapSymbolFontFudge->value());
             }
 
             if (pHost->mpMap->mpMapper) {
@@ -3758,8 +3777,9 @@ void dlgProfilePreferences::populateScriptsList()
 // adds trigger name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
-    for (auto trigger : *childTriggers) {
+    std::list<Tree<TTrigger>*>* childTriggers = pTriggerParent->getChildrenList();
+    for (auto* triggerNode : *childTriggers) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         if (!trigger->getScript().isEmpty()) {
             items.push_back({trigger->getName(), qsl("trigger"), trigger->getID()});
         }
@@ -3773,8 +3793,9 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
 // adds alias name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
-    for (auto alias : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pAliasParent->getChildrenList();
+    for (auto* aliasNode : *childrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         if (!alias->getScript().isEmpty()) {
             items.push_back({alias->getName(), qsl("alias"), alias->getID()});
         }
@@ -3788,8 +3809,9 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
 // adds timer name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
-    for (auto timer : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pTimerParent->getChildrenList();
+    for (auto* timerNode : *childrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         if (!timer->getScript().isEmpty()) {
             items.push_back({timer->getName(), qsl("timer"), timer->getID()});
         }
@@ -3803,8 +3825,9 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
 // adds key name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pKeyParent->getChildrenList();
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         if (!key->getScript().isEmpty()) {
             items.push_back({key->getName(), qsl("key"), key->getID()});
         }
@@ -3818,8 +3841,9 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
 // adds script name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
-    for (auto script : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pScriptParent->getChildrenList();
+    for (auto* scriptNode : *childrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         if (!script->getScript().isEmpty()) {
             items.push_back({script->getName(), qsl("script"), script->getID()});
         }
@@ -3833,8 +3857,9 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
 // adds action name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TAction*>* childrenList = pActionParent->getChildrenList();
-    for (auto action : *childrenList) {
+    std::list<Tree<TAction>*>* childrenList = pActionParent->getChildrenList();
+    for (auto* actionNode : *childrenList) {
+        auto* action = static_cast<TAction*>(actionNode);
         if (!action->getScript().isEmpty()) {
             items.push_back({action->getName(), qsl("button"), action->getID()});
         }
@@ -4197,6 +4222,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     if (!pTableWidget) {
         return;
     }
+    mGlyphDisplayFont = mpHost->mpMap->getSymbolFont();
 
     // Must turn off sorting at least while inserting items...
     pTableWidget->setSortingEnabled(false);
@@ -4470,24 +4496,7 @@ void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUse
         return;
     }
 
-    if (pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed != isToOnlyUseSelectedFont) {
-        pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed = isToOnlyUseSelectedFont;
-        if (isToOnlyUseSelectedFont) {
-            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
-        } else {
-            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
-        }
-        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-            pHost->mpMap->mpMapper->mp2dMap->repaint();
-            pHost->mpMap->mpMapper->update();
-        }
-
-        if (mpDialogMapGlyphUsage) {
-            generateMapGlyphDisplay();
-        }
-    }
+    pHost->mpMap->setOnlySymbolFontUsed(isToOnlyUseSelectedFont);
 }
 
 void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
@@ -4497,20 +4506,48 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
         return;
     }
 
-    const int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
-    if (pHost->mpMap->mMapSymbolFont != font) {
-        pHost->mpMap->mMapSymbolFont = font;
-        pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
-        // Clear the existing cache of room symbol pixmaps - if there is a mapper:
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-            pHost->mpMap->mpMapper->mp2dMap->repaint();
-            pHost->mpMap->mpMapper->update();
-        }
+    pHost->mpMap->setSymbolFont(font);
+}
 
-        if (mpDialogMapGlyphUsage) {
-            generateMapGlyphDisplay();
-        }
+// Keeps the controls (and the glyph usage dialog, when open) in step with the
+// map's symbol settings however they were changed - including from Lua:
+void dlgProfilePreferences::slot_mapSymbolFontChanged()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    // Only a control that is actually out of step gets written. Blocking the
+    // signals stops the recursion but not the side effects of setting a control
+    // to what it already holds: a spin-box also rewrites its line edit, which
+    // between two keystrokes of a factor being typed in costs the second one.
+    const QFont symbolFont = pHost->mpMap->getSymbolFont();
+    if (fontComboBox_mapSymbols->currentFont().family() != symbolFont.family()) {
+        const QSignalBlocker blocker(fontComboBox_mapSymbols);
+        fontComboBox_mapSymbols->setCurrentFont(symbolFont);
+    }
+
+    const bool onlyUseSelectedFont = pHost->mpMap->getOnlySymbolFontUsed();
+    if (checkBox_isOnlyMapSymbolFontToBeUsed->isChecked() != onlyUseSelectedFont) {
+        const QSignalBlocker blocker(checkBox_isOnlyMapSymbolFontToBeUsed);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(onlyUseSelectedFont);
+    }
+
+    const qreal fudgeFactor = pHost->mpMap->getSymbolFontFudgeFactor();
+    if (mpDoubleSpinBox_mapSymbolFontFudge && !spinBoxShows(mpDoubleSpinBox_mapSymbolFontFudge, fudgeFactor)) {
+        const QSignalBlocker blocker(mpDoubleSpinBox_mapSymbolFontFudge);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(fudgeFactor);
+    }
+
+    // Rebuilding the glyph usage table walks every room in the map, so it is
+    // only done when what it shows has actually changed. That is the font
+    // alone - which of its glyphs the symbols need, and (through the style
+    // strategy) whether other fonts may fill in - and never the scaling
+    // factor, whose spin-box would otherwise mean one whole-map scan per
+    // auto-repeat tick of its arrows.
+    if (mpDialogMapGlyphUsage && symbolFont != mGlyphDisplayFont) {
+        generateMapGlyphDisplay();
     }
 }
 
@@ -5181,7 +5218,7 @@ void dlgProfilePreferences::slot_changeInvertMapZoom(const bool state)
     mudlet::self()->setInvertMapZoom(state);
 }
 
-bool dlgProfilePreferences::updateDisplayFont()
+bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
     if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
         return false;
@@ -5222,7 +5259,7 @@ bool dlgProfilePreferences::updateDisplayFont()
 
     // update the display properly when font or size or antiAliasing selections
     // change.
-    mpHost->setDisplayFont(displayFont);
+    mpHost->setDisplayFont(displayFont, change);
 
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
@@ -5250,21 +5287,23 @@ void dlgProfilePreferences::cancelShortcutCaptures()
 
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    if (!mpHost.isNull() && updateDisplayFont()) {
+    // Only fires from QFontComboBox::currentFontChanged, so the family really is
+    // one the user just picked out of the list
+    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
 }
 
 void dlgProfilePreferences::slot_displayFontSizeChanged()
 {
-    if (!mpHost.isNull() && updateDisplayFont()) {
+    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::Adjustment)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
     }
 }
 
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
-    updateDisplayFont();
+    updateDisplayFont(Host::DisplayFontChange::Adjustment);
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)

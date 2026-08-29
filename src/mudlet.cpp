@@ -33,6 +33,7 @@
 #include "DarkTheme.h"
 #include "LuaInterface.h"
 #include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
@@ -196,6 +197,15 @@ void mudlet::init()
     scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
 
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+
+    // Scripts that care whether the player is looking at Mudlet at all - a
+    // speech package holding a microphone open, an away marker, a timer that
+    // should not run while nobody is watching - have had no way to know.
+    // sysProfileFocusChangeEvent answers which profile is in front, which is a
+    // different question and says nothing when the whole application is behind
+    // another window.
+    mApplicationActive = qGuiApp->applicationState() == Qt::ApplicationActive;
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, &mudlet::slot_applicationStateChanged);
     readEarlySettings(*mpSettings);
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
@@ -1494,6 +1504,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("한국어");
             } else if (!languageCode.compare(QLatin1String("he_IL"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("עִברִית");
+            } else if (!languageCode.compare(QLatin1String("cs_CZ"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("Čeština");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1673,6 +1685,33 @@ void mudlet::slot_packageExporter()
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     utils::forceRepositionDialogOnParentScreen(d, referenceWidget);
+}
+
+// Qt reports several inactive states - suspended, hidden, and plain inactive -
+// and moves between them without the player having done anything. Only the
+// active/not-active distinction is meaningful to a script, so that is what is
+// announced, and only when it changes.
+void mudlet::slot_applicationStateChanged(const Qt::ApplicationState state)
+{
+    const bool nowActive = (state == Qt::ApplicationActive);
+    if (nowActive == mApplicationActive) {
+        return;
+    }
+    mApplicationActive = nowActive;
+
+    // Every profile hears it: this is a fact about the application, not about
+    // which profile is in front, and a profile in a background tab has as much
+    // reason to act on it as the one on screen.
+    TEvent event{};
+    event.mArgumentList << QLatin1String("sysApplicationFocusChangeEvent");
+    // Boolean arguments are carried as "0" for false or "1" for true
+    event.mArgumentList << (nowActive ? QLatin1String("1") : QLatin1String("0"));
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+    for (auto pHost : mHostManager) {
+        if (pHost) {
+            pHost->raiseEvent(event);
+        }
+    }
 }
 
 void mudlet::slot_closeCurrentProfile()
@@ -2542,8 +2581,27 @@ void mudlet::slot_timerFires()
     pQT->deleteLater();
 }
 
+// Applies the active profile's "mapperButton" setConfig mode on top of the
+// baseline the toolbar management functions computed, and lets each detached
+// window re-derive the same for its own profile. Called by those functions and
+// when a script changes the mode at runtime.
+void mudlet::updateMapActionAvailability()
+{
+    Host* pHost = getActiveHost();
+    const bool scriptAllows = !pHost || pHost->mMapperButtonMode != Host::MapperButtonMode::Disabled;
+    mpActionMapper->setEnabled(mMapActionBaselineEnabled && scriptAllows);
+    dactionShowMap->setEnabled(mMapActionBaselineEnabled && scriptAllows);
+
+    for (const auto& detachedWindow : mDetachedWindows) {
+        if (detachedWindow) {
+            detachedWindow->updateToolBarActions();
+        }
+    }
+}
+
 void mudlet::disableToolbarButtons()
 {
+    mMapActionBaselineEnabled = false;
     mpActionTriggers->setEnabled(false);
     dactionScriptEditor->setEnabled(false);
     dactionShowErrors->setEnabled(false);
@@ -2640,8 +2698,8 @@ void mudlet::updateMainWindowToolbarState()
     mpActionKeys->setEnabled(hasActiveProfileInMainWindow);
     mpActionVariables->setEnabled(hasActiveProfileInMainWindow);
 
-    mpActionMapper->setEnabled(hasActiveProfileInMainWindow);
-    dactionShowMap->setEnabled(hasActiveProfileInMainWindow);
+    mMapActionBaselineEnabled = hasActiveProfileInMainWindow;
+    updateMapActionAvailability();
     dactionNewMapWindow->setEnabled(hasActiveProfileInMainWindow);
 
     mpActionNotes->setEnabled(hasActiveProfileInMainWindow);
@@ -2745,8 +2803,8 @@ void mudlet::enableToolbarButtons()
     mpActionMudletDiscord->setEnabled(true);
     dactionDiscord->setEnabled(true);
 
-    mpActionMapper->setEnabled(true);
-    dactionShowMap->setEnabled(true);
+    mMapActionBaselineEnabled = true;
+    updateMapActionAvailability();
     dactionNewMapWindow->setEnabled(true);
 
     mpActionNotes->setEnabled(true);
@@ -3250,6 +3308,16 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
     slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
+
+    if (settings.contains(qsl("debugConsole/categories"))) {
+        // Only categories Mudlet still knows about, so that a category retired
+        // in a later version cannot leave a stale bit set:
+        const auto stored = TDebug::Categories::fromInt(settings.value(qsl("debugConsole/categories")).toInt());
+        TDebug::setEnabledCategories(stored & TDebug::csmAllCategories);
+    }
+    // The text filter is deliberately NOT restored: which kinds of message are
+    // worth seeing is a lasting preference, but the string someone was hunting
+    // for last month would just make the console look broken today.
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -3429,6 +3497,7 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+    settings.setValue(qsl("debugConsole/categories"), TDebug::enabledCategories().toInt());
 #if !defined(Q_OS_MACOS)
     if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
         settings.setValue(qsl("highDpiScaleFactorRoundingPolicy"), qsl("PassThrough"));
@@ -4287,6 +4356,10 @@ void mudlet::slot_mapper()
         return;
     }
 
+    if (pHost->interceptMapperButton()) {
+        return;
+    }
+
     pHost->showHideOrCreateMapper(true);
 }
 
@@ -4316,6 +4389,10 @@ void mudlet::slot_showMapperDialog()
     auto pMap = pHost->mpMap.data();
 
     if (!pMap) {
+        return;
+    }
+
+    if (pHost->interceptMapperButton()) {
         return;
     }
 
@@ -4364,13 +4441,7 @@ void mudlet::slot_showMapperDialog()
             mpCurrentMapDockWidget = nullptr;
 
             // Restore the host's default mapper if it exists
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                    pMap->mpMapper = hostMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         }
 
         return;
@@ -4479,13 +4550,7 @@ void mudlet::slot_showMapperDialog()
             }
 
             // Restore the host's default mapper when hiding
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                    pMap->mpMapper = hostMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         } else {
             // When showing, set this as the active mapper
             mpCurrentMapDockWidget = mapDockWidget;
@@ -4889,6 +4954,17 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->setWindowTitle(tr("Central Debug Console"));
     smpDebugArea->setWindowIcon(QIcon(qsl(":/icons/mudlet_debug.png")));
 
+    // Pausing is a momentary thing, and the state is global while the toolbar
+    // showing it is not - a console left paused when its profile closed would
+    // otherwise come back silently dead:
+    TDebug::setPaused(false);
+    TDebug::discardPausedMessages();
+
+    // The filters are the everyday controls, so they get a row of the window to
+    // themselves - the find bar is the console's own and floats over it.
+    smpDebugFilterBar = new TDebugFilterBar(smpDebugArea);
+    smpDebugArea->addToolBar(Qt::BottomToolBarArea, smpDebugFilterBar);
+
     auto consoleCloser = new TConsoleMonitor(smpDebugArea);
     smpDebugArea->installEventFilter(consoleCloser);
 
@@ -5162,6 +5238,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     }
 
     mPackagesToInstallList.clear();
+
+    // Only now are the fonts of the modules and the default packages registered
+    // too, so a family the profile names can be told apart from one that is
+    // merely not loaded yet - and the real console exists, so the stand-in this
+    // may pick lands on it and the warning reaches the player.
+    pHost->substituteMissingDisplayFont();
 
     // Now load the default (latest stored) map file:
     pHost->loadMap();
@@ -8999,18 +9081,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
-                    if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                            auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                            if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                                pMap->mpMapper = hostMapper;
-#if defined(DEBUG_WINDOW_HANDLING)
-                                qDebug() << "mudlet: Restored host mapper for main window profile" << dockProfileName;
-#endif
-                            }
-                        }
-                    }
+                    pHost->restoreOwnMapper();
                 }
             }
         }
