@@ -1079,6 +1079,57 @@ private slots:
         mpPreferences->resize(1060, 760);
     }
 
+    // A wrapped checkbox's words are a QLabel beside it, and clicking the words
+    // is how a checkbox is used. The click has to arrive the way the window
+    // system delivers one - at the window, for Qt to route - because a test
+    // that hands the press straight to the label skips exactly the propagation
+    // this is about.
+    void test_clickingTheWordsOfAWrappedCheckboxTogglesIt()
+    {
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        auto* pGerman = new QTranslator(qApp);
+        QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so nothing here is wide enough to be wrapped");
+        QVERIFY(qApp->installTranslator(pGerman));
+        auto removeTranslator = qScopeGuard([pGerman]() {
+            qApp->removeTranslator(pGerman);
+            delete pGerman;
+        });
+        openPreferences();
+
+        QLabel* pWrapped = nullptr;
+        QCheckBox* pCheckBox = nullptr;
+        QString wrappedOn;
+        for (const QString& key : specOrderedCategories()) {
+            selectCategory(key);
+            qApp->processEvents();
+            for (QLabel* pLabel : pageOf(key)->widget()->findChildren<QLabel*>(qsl("settingsWrappedLabel"))) {
+                auto* pSibling = pLabel->parentWidget()->findChild<QCheckBox*>(QString(), Qt::FindDirectChildrenOnly);
+                if (pLabel->isVisible() && pSibling && pSibling->isEnabled()) {
+                    pWrapped = pLabel;
+                    pCheckBox = pSibling;
+                    wrappedOn = key;
+                    break;
+                }
+            }
+            if (pWrapped) {
+                break;
+            }
+        }
+        QVERIFY2(pWrapped, "no German checkbox was wrapped, so a click on the words it gave up cannot be tested");
+
+        selectCategory(wrappedOn);
+        qApp->processEvents();
+        pageOf(wrappedOn)->ensureWidgetVisible(pWrapped);
+        qApp->processEvents();
+        const Qt::CheckState before = pCheckBox->checkState();
+        const QPoint inWindow = pWrapped->mapTo(mpPreferences, pWrapped->rect().center());
+        QVERIFY2(mpPreferences->childAt(inWindow) == pWrapped, "the point being clicked is not the label, so this would prove nothing about clicking it");
+        QTest::mouseClick(mpPreferences->windowHandle(), Qt::LeftButton, Qt::NoModifier, inWindow);
+        qApp->processEvents();
+        QVERIFY2(pCheckBox->checkState() != before, qPrintable(qsl("clicking the words of the '%1' checkbox left it where it was").arg(pCheckBox->accessibleName())));
+    }
+
     // Every control on a page stops at the reading column, so a window dragged
     // wider than the shell needs would show that width as blank strip beside
     // the settings and nothing else. It refuses to take it.
