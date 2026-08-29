@@ -317,6 +317,37 @@ private slots:
         }
     }
 
+    // The clash check only runs when a package asks for a key, and a package
+    // on another profile can hold one when the search is switched on: the
+    // menu carries every profile's commands, so this clash crosses profiles
+    // even though a package can never see it coming. Qt answers an ambiguous
+    // shortcut by disabling both, so the profile that switched the search on
+    // has to be told - without being told whose command it was, which is the
+    // other package's business and nothing this profile can act on.
+    void test_theSearchSaysSoWhenAnotherProfilesCommandHoldsItsKey()
+    {
+        runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
+        QTest::qWait(100ms);
+
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileF3', menuPath = 'ClashTest', shortcut = 'F3'"));
+        QVERIFY2(commandId > 0, "F3 could not be taken even with the search off");
+
+        // on the second profile because that is the visible one: a
+        // Qt::WindowShortcut candidate has to be visible to be ambiguous at
+        // all, and a console on a background tab is not
+        runLua(mpSecondHost, qsl("clearWindow()"));
+        runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', true)"));
+        QTest::qWait(200ms);
+        runLua(mpSecondHost, qsl("_clashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
+        const QString text = luaGlobalString(mpSecondHost, qsl("_clashText"));
+
+        runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(text.contains(QKeySequence(Qt::Key_F3).toString(QKeySequence::NativeText)), qPrintable(qsl("the search took F3 from another profile's command without saying so: %1").arg(text)));
+        QVERIFY2(!text.contains(qsl("OtherProfileF3")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
+    }
+
     // docs/addon-ui-api.md gives the click event the id as addCommand returned
     // it, which is a number - the same as every other Mudlet event carrying one
     void test_aClickHandsTheHandlerTheIdAsANumber()

@@ -202,6 +202,26 @@ describe("addon commands", function()
       setConfig("f3SearchEnabled", was)
     end)
 
+    -- The clash check only runs when a package asks for a key. Switching the
+    -- search on afterwards makes the same clash from the other end, and Qt
+    -- answers that by disabling both, so the player loses the search they just
+    -- asked for as well as the command, with nothing on screen to say why.
+    it("says so when the search is switched on over a command's key", function()
+      local was = getConfig("f3SearchEnabled")
+      setConfig("f3SearchEnabled", false)
+
+      local id, why = place{name = "SearchClashSpec", shortcut = "F3"}
+      assert.is_number(id, "F3 could not be taken with the search off: " .. tostring(why))
+
+      clearWindow()
+      setConfig("f3SearchEnabled", true)
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      setConfig("f3SearchEnabled", was)
+
+      assert.is_truthy(text:find("SearchClashSpec", 1, true),
+        "the search took F3 from a command without saying so: " .. text)
+    end)
+
     -- Qt keeps the first four chunks of a longer sequence and drops the rest,
     -- so the command went onto a key nobody had asked for
     it("refuses one of more steps than Qt can hold", function()

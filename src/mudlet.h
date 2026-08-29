@@ -336,6 +336,14 @@ public:
     bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
     // Every command a profile placed, dropped when it closes or resets
     void removeAddonCommandsForHost(Host* pHost);
+    // Which add-on commands hold this key, named as the player reads them.
+    // The clash check only runs when a package asks for a key, and Mudlet's
+    // own bindings can appear afterwards - the buffer search is switched on
+    // long after a package has taken F3 - at which point Qt disables both.
+    // A command belonging to another profile is reported without its name:
+    // that is the other package's business and nothing this profile can act
+    // on, the same rule addonShortcutUsable() follows.
+    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
     void applyToolBarStyleToAddonCommands();
 
     // Brings up the preferences dialog and selects the tab whos objectName is

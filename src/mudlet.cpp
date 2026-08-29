@@ -694,6 +694,30 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
     return true;
 }
 
+QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const
+{
+    QStringList holders;
+    bool anotherProfile = false;
+    for (const AddonCommand& command : mAddonCommands) {
+        // The menu item is the only thing a sequence is ever hung on, which is
+        // why asking for one alongside surfaces = "toolbar" is turned down.
+        const QAction* pAction = command.menuAction;
+        if (!pAction || pAction->shortcut() != sequence) {
+            continue;
+        }
+        if (command.pHost == pHost) {
+            holders.append(qsl("\"%1\"").arg(addonPlainLabel(pAction->text())));
+        } else {
+            anotherProfile = true;
+        }
+    }
+    if (anotherProfile) {
+        //: Stands in for an add-on command's name where naming it would say what a different profile has installed. Appears in a list of what holds a keyboard shortcut.
+        holders.append(tr("a command from another profile"));
+    }
+    return holders;
+}
+
 void mudlet::removeAddonCommandsForHost(Host* pHost)
 {
     QList<int> doomed;
