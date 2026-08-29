@@ -282,7 +282,7 @@ private:
         auto itOriginal = original->mpMyChildrenList->begin();
         auto itImported = imported->mpMyChildrenList->begin();
         while (itOriginal != original->mpMyChildrenList->end()) {
-            compareTriggerNodes(*itOriginal, *itImported, path);
+            compareTriggerNodes(static_cast<TTrigger*>(*itOriginal), static_cast<TTrigger*>(*itImported), path);
             if (QTest::currentTestFailed()) {
                 return;
             }
@@ -307,7 +307,7 @@ private:
         auto itOriginal = original->mpMyChildrenList->begin();
         auto itImported = imported->mpMyChildrenList->begin();
         while (itOriginal != original->mpMyChildrenList->end()) {
-            compareAliasNodes(*itOriginal, *itImported, path);
+            compareAliasNodes(static_cast<TAlias*>(*itOriginal), static_cast<TAlias*>(*itImported), path);
             if (QTest::currentTestFailed()) {
                 return;
             }
@@ -337,7 +337,7 @@ private:
         auto itOriginal = original->mpMyChildrenList->begin();
         auto itImported = imported->mpMyChildrenList->begin();
         while (itOriginal != original->mpMyChildrenList->end()) {
-            compareTimerNodes(*itOriginal, *itImported, path);
+            compareTimerNodes(static_cast<TTimer*>(*itOriginal), static_cast<TTimer*>(*itImported), path);
             if (QTest::currentTestFailed()) {
                 return;
             }
@@ -363,7 +363,7 @@ private:
         auto itOriginal = original->mpMyChildrenList->begin();
         auto itImported = imported->mpMyChildrenList->begin();
         while (itOriginal != original->mpMyChildrenList->end()) {
-            compareKeyNodes(*itOriginal, *itImported, path);
+            compareKeyNodes(static_cast<TKey*>(*itOriginal), static_cast<TKey*>(*itImported), path);
             if (QTest::currentTestFailed()) {
                 return;
             }
@@ -387,7 +387,7 @@ private:
         auto itOriginal = original->mpMyChildrenList->begin();
         auto itImported = imported->mpMyChildrenList->begin();
         while (itOriginal != original->mpMyChildrenList->end()) {
-            compareScriptNodes(*itOriginal, *itImported, path);
+            compareScriptNodes(static_cast<TScript*>(*itOriginal), static_cast<TScript*>(*itImported), path);
             if (QTest::currentTestFailed()) {
                 return;
             }
@@ -415,7 +415,7 @@ private:
     static int countNodes(const QList<T*>& rootNodes)
     {
         int total = 0;
-        std::function<void(T*)> walk = [&](T* node) {
+        std::function<void(Tree<T>*)> walk = [&](Tree<T>* node) {
             ++total;
             for (auto* child : *node->mpMyChildrenList) {
                 walk(child);
