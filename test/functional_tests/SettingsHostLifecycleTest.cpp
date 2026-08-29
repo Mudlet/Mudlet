@@ -316,9 +316,7 @@ private slots:
         QVERIFY2(pSearch, "the settings shell has no search field");
 
         const QStringList before = cardPlacements();
-        pSearch->setFocus();
-        pSearch->setText(qsl("color"));
-        QCoreApplication::processEvents();
+        QVERIFY2(TestSettings::search(mpPreferences, qsl("color")), "the search never ran");
         QVERIFY2(cardPlacements() != before, "the search borrowed no cards at all, so sending them home proves nothing");
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);

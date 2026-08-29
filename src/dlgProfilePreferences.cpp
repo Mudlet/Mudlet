@@ -134,6 +134,11 @@ static const QString scmCategory_advanced = qsl("advanced");
 static constexpr int scmRole_categoryKey = Qt::UserRole;
 static constexpr int scmRole_externalUrl = Qt::UserRole + 1;
 
+// How long the search field waits for the typing to stop. Long enough that a
+// burst of keystrokes costs one search rather than one each, short enough that
+// the pause at the end of a word is not a wait.
+static constexpr auto scmSearchDebounce = 150ms;
+
 // Synonyms a control is searchable by that it does not show anywhere. The
 // property names the shell stylesheet selects on stay literals beside it: a
 // constant cannot be interpolated into a QStringLiteral.
@@ -164,6 +169,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     mpTimer_apply->setSingleShot(true);
     mpTimer_apply->setInterval(400ms);
     connect(mpTimer_apply, &QTimer::timeout, this, &dlgProfilePreferences::applyAll);
+
+    mpTimer_search = new QTimer(this);
+    mpTimer_search->setObjectName(qsl("settingsSearchDebounce"));
+    mpTimer_search->setSingleShot(true);
+    mpTimer_search->setInterval(scmSearchDebounce);
+    connect(mpTimer_search, &QTimer::timeout, this, [this]() {
+        runSearch(mPendingSearch);
+    });
 
     QPixmap holdPixmap;
     holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
@@ -754,6 +767,7 @@ void dlgProfilePreferences::buildShell()
     // Its two controls read as one more display option rather than a card of their own
     moveIntoCard(groupBox_displayOptions, {doubleclick_ignore_label, doubleclick_ignore_lineedit, checkBox_enableOSC8Hyperlinks});
     groupBox_doubleClick->hide();
+    reflowDisplayOptionsCard();
     buildCategoryPage(scmCategory_mainDisplay, {groupBox_font, groupBox_displayColors, groupBox_borders, groupBox_wrapping, groupBox_consoleBuffer, groupBox_displayOptions});
 
     buildCategoryPage(scmCategory_inputLine, {groupBox_input, groupBox_spellCheck});
@@ -770,6 +784,7 @@ void dlgProfilePreferences::buildShell()
     auto* pCard_dataEncoding = createCard(qsl("card_dataEncoding"));
     addCardRow(pCard_dataEncoding, label_encoding, comboBox_encoding);
     moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX});
+    reflowCompatibilityCard();
     auto* pCard_network = createCard(qsl("card_network"));
     addCardRow(pCard_network, label_networkPacketTimeout, doubleSpinBox_networkPacketTimeout);
     buildProtocolsSubpage();
@@ -817,7 +832,7 @@ void dlgProfilePreferences::buildShell()
             slot_sidebarItemClicked(pItem);
         }
     });
-    connect(mpLineEdit_search, &QLineEdit::textChanged, this, &dlgProfilePreferences::runSearch);
+    connect(mpLineEdit_search, &QLineEdit::textChanged, this, &dlgProfilePreferences::queueSearch);
 
     retranslateShell();
 
@@ -1855,12 +1870,17 @@ void dlgProfilePreferences::reflowWideCards()
 
     const QList<QWidget*> featureSizes{label_roomSize, spinBox_roomSize, label_exitSize, spinBox_exitSize, label_borderSize, spinBox_borderSize, label_gridSize, doubleSpinBox_gridSize};
     takeOutOfLayout(groupBox_sizing, featureSizes);
+    // Two pairs to a row, the second starting halfway across, so they line up
+    // with the two columns of checkboxes above instead of bunching to the left
     for (int i = 0, total = featureSizes.size(); i < total; ++i) {
-        groupBox_sizing->addWidget(featureSizes.at(i), i / 4, i % 4);
+        const int pair = i / 2;
+        groupBox_sizing->addWidget(featureSizes.at(i), pair / 2, (pair % 2) * 3 + (i % 2));
     }
     // The spin boxes ask to expand, and across a card's width that stretches
-    // four of them into text fields; an empty column takes the slack instead
-    groupBox_sizing->setColumnStretch(4, 1);
+    // four of them into text fields; the empty column ending each half takes
+    // the slack instead, and equal shares of it put the halves side by side
+    groupBox_sizing->setColumnStretch(2, 1);
+    groupBox_sizing->setColumnStretch(5, 1);
 
     const QList<QWidget*> discordRows{radioButton_discordGameDetails,
                                       radioButton_discordMudletOnly,
@@ -1956,6 +1976,42 @@ void dlgProfilePreferences::reflowWideCards()
     // longer than any column; wrapped, they stop being a floor under its width
     label_mapFileActionResult->setWordWrap(true);
     label_password_migration_notification->setWordWrap(true);
+}
+
+// Three of this card's checkboxes have gone to the pages they belong on and the
+// two double-click controls have arrived stacked, which between them left the
+// .ui grid holding lone widgets in half-empty rows. Laid out again as a pair of
+// checkboxes, then a row for each label-and-control.
+void dlgProfilePreferences::reflowDisplayOptionsCard()
+{
+    const QList<QWidget*> displayOptions{checkBox_useWideAmbiguousEastAsianGlyphs,
+                                         checkBox_enableTextAnalyzer,
+                                         checkBox_enableOSC8Hyperlinks,
+                                         label_controlCharacterHandling,
+                                         comboBox_controlCharacterHandling,
+                                         doubleclick_ignore_label,
+                                         doubleclick_ignore_lineedit};
+    takeOutOfLayout(gridLayout_groupBox_displayOptions, displayOptions);
+    // Both are about which characters the display makes something of
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_useWideAmbiguousEastAsianGlyphs, 0, 0);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_enableTextAnalyzer, 0, 1);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_enableOSC8Hyperlinks, 1, 0, 1, 2);
+    gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 2, 0);
+    gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 2, 1);
+    // Beside its field rather than over it, which is a row saved and puts the
+    // two settings that take an answer on matching lines
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 3, 0);
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 3, 1);
+}
+
+// The reconnect notice closes this card in the .ui, but the workaround moved
+// onto this page lands after it, which strands the notice between two
+// checkboxes now that it stays on screen long enough to be read.
+void dlgProfilePreferences::reflowCompatibilityCard()
+{
+    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, need_reconnect_for_specialoption});
+    gridLayout_groupBox_specialOptions->addWidget(checkBox_USE_IRE_DRIVER_BUGFIX, 2, 1);
+    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 3, 0, 1, 2);
 }
 
 void dlgProfilePreferences::updateColumnWidthCaps()
@@ -2399,10 +2455,49 @@ void dlgProfilePreferences::buildSearchIndex()
     }
 }
 
+// A search is answered by moving every matching card onto the results page and
+// every card already there back, which is most of the dialog while the query is
+// still one or two letters: measured on this page, "s" costs 63ms and "sh" 76ms
+// against the 6ms the finished "shortcuts" costs. Typing is a burst, so only the
+// pause at the end of one is worth answering.
+void dlgProfilePreferences::queueSearch(const QString& query)
+{
+    mPendingSearch = query;
+    // Emptying the field is what hands the borrowed cards back, and a dialog
+    // that keeps them for another moment reads as one that has stuck
+    if (query.trimmed().isEmpty()) {
+        mpTimer_search->stop();
+        runSearch(query);
+        return;
+    }
+    mpTimer_search->start();
+}
+
+// One ideograph is a word where one Latin letter is not, so it is a query worth
+// running; a lone letter matches most of the dialog and answers nothing.
+static bool wordEnoughToSearch(const QStringList& needles)
+{
+    for (const QString& needle : needles) {
+        if (needle.size() >= 2) {
+            return true;
+        }
+        switch (needle.at(0).script()) {
+        case QChar::Script_Han:
+        case QChar::Script_Hiragana:
+        case QChar::Script_Katakana:
+        case QChar::Script_Hangul:
+            return true;
+        default:
+            break;
+        }
+    }
+    return false;
+}
+
 void dlgProfilePreferences::runSearch(const QString& query)
 {
     const QStringList needles = foldForSearch(query).split(QLatin1Char(' '), Qt::SkipEmptyParts);
-    if (needles.isEmpty()) {
+    if (needles.isEmpty() || !wordEnoughToSearch(needles)) {
         exitSearchMode();
         return;
     }
@@ -3292,6 +3387,14 @@ void dlgProfilePreferences::refreshFromSettings()
     // away for the next query to rebuild
     invalidateSearch();
 
+    // Both notices say a change the player has just made will not reach the game
+    // until they reconnect, and both are hidden by initWithHost() below. That is
+    // right when a profile is being read in, but here the reading is Mudlet
+    // writing the controls back after an instant apply - which is the very
+    // change the notice is about, so it has to survive it.
+    const bool reconnectForDataProtocol = !need_reconnect_for_data_protocol->isHidden();
+    const bool reconnectForSpecialOption = !need_reconnect_for_specialoption->isHidden();
+
     // On the two paths that build the dialog, population happens before the
     // write-through connections are made; here they are already there. Written
     // silently, or a setting that has moved travels straight back out of the
@@ -3312,6 +3415,8 @@ void dlgProfilePreferences::refreshFromSettings()
         initWithHost(pHost);
     }
     mPopulating = false;
+    need_reconnect_for_data_protocol->setVisible(reconnectForDataProtocol);
+    need_reconnect_for_specialoption->setVisible(reconnectForSpecialOption);
     // Released before the re-measuring below, which moves checkboxes between parents
     blockers.clear();
 

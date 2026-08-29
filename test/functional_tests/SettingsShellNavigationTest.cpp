@@ -571,9 +571,7 @@ private slots:
     {
         selectCategory(qsl("mapper"));
         QLineEdit* pSearchField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
-        pSearchField->setFocus();
-        pSearchField->setText(qsl("color"));
-        QCoreApplication::processEvents();
+        QVERIFY2(TestSettings::search(mpPreferences, qsl("color")), "the search never ran");
         QVERIFY2(mpPreferences->groupBox_mapperColors->parentWidget() == mpPreferences->findChild<QWidget*>(qsl("settingsColumn_searchResults")),
                  "the search borrowed no card, so sending them home proves nothing");
 
@@ -958,8 +956,7 @@ private slots:
         selectCategory(qsl("mapper"));
         QScrollArea* pMapper = pageOf(qsl("mapper"));
         QCOMPARE(stack()->currentWidget(), pMapper);
-        pSearch->setText(qsl("color"));
-        qApp->processEvents();
+        QVERIFY2(TestSettings::search(mpPreferences, qsl("color")), "the search never ran");
         QVERIFY2(stack()->currentWidget() != pMapper, "typing a query never left the category page for the results");
 
         QTest::keyClick(mpPreferences, Qt::Key_Escape);
@@ -976,8 +973,7 @@ private slots:
         QVERIFY2(pSubpage, "the game protocols subpage was not built");
         QCOMPARE(stack()->currentWidget(), pSubpage);
 
-        pSearch->setText(qsl("color"));
-        qApp->processEvents();
+        QVERIFY2(TestSettings::search(mpPreferences, qsl("color")), "the search never ran");
         QVERIFY2(stack()->currentWidget() != pSubpage, "typing a query never left the subpage for the results");
 
         QTest::keyClick(mpPreferences, Qt::Key_Escape);

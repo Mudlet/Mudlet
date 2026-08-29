@@ -21,11 +21,14 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QScrollArea>
 #include <QSignalSpy>
 #include <QStackedWidget>
+#include <QTimer>
 #include <QWidget>
+#include <QtTest/QTest>
 
 #include "mudlet.h"
 
@@ -87,6 +90,40 @@ inline int rowOf(const QWidget* pDialog, const QString& key)
         }
     }
     return -1;
+}
+
+// Typing is answered on a debounce, so the search has not run by the time
+// setText() returns - this waits on the timer rather than on a length of time.
+// For a case that types by hand because it is about where the focus is.
+inline bool waitForSearch(const QWidget* pDialog)
+{
+    auto* pDebounce = pDialog->findChild<QTimer*>(qsl("settingsSearchDebounce"));
+    if (!pDebounce) {
+        return false;
+    }
+    QCoreApplication::processEvents();
+    const bool ran = QTest::qWaitFor(
+            [pDebounce]() {
+                return !pDebounce->isActive();
+            },
+            scmApplyTimeout);
+    QCoreApplication::processEvents();
+    return ran;
+}
+
+// Types a query and waits for it to have been searched on. The field takes the
+// focus first, because that is the only way a query gets typed, and it matters:
+// reparenting a card that holds the keyboard focus clears it, handing the focus
+// to the sidebar.
+inline bool search(QWidget* pDialog, const QString& query)
+{
+    auto* pField = pDialog->findChild<QLineEdit*>(qsl("settingsSearchField"));
+    if (!pField) {
+        return false;
+    }
+    pField->setFocus();
+    pField->setText(query);
+    return waitForSearch(pDialog);
 }
 
 } // namespace TestSettings

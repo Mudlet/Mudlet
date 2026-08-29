@@ -369,6 +369,8 @@ private:
     void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
     void retitleCards();
     void reflowWideCards();
+    void reflowDisplayOptionsCard();
+    void reflowCompatibilityCard();
     // A column narrower than its contents clips them rather than scrolling, so
     // the cap is the reading width or whatever the widest card needs
     void capColumnWidth(QScrollArea* pScrollArea);
@@ -401,6 +403,7 @@ private:
     // page the matching cards are lent to for as long as the query stands:
     void buildSearchResultsPage();
     void buildSearchIndex();
+    void queueSearch(const QString& query);
     void runSearch(const QString& query);
     void invalidateSearch();
     void exitSearchMode();
@@ -521,6 +524,10 @@ private:
     // it with, written out by restyleSidebarIcons() for the theme's colour
     QMap<QString, QString> mCategoryIconMarkup;
     QTimer* mpTimer_apply = nullptr;
+    // Holds the typing back until it stops, so that a query only part typed is
+    // not answered by moving most of the dialog onto the results page and back
+    QTimer* mpTimer_search = nullptr;
+    QString mPendingSearch;
     // The sidebar is a rail of icons rather than a list of names
     bool mSidebarCollapsed = false;
     // Set once buildShell() has finished moving controls between cards, which is

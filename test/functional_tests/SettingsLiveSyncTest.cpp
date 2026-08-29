@@ -392,9 +392,7 @@ private slots:
         auto* pStack = TestSettings::stack(mpPreferences);
         QVERIFY(pStack);
 
-        pSearch->setFocus();
-        pSearch->setText(qsl("color"));
-        QCoreApplication::processEvents();
+        QVERIFY2(TestSettings::search(mpPreferences, qsl("color")), "the search never ran");
         const int resultsPage = pStack->currentIndex();
         QCOMPARE(pStack->widget(resultsPage)->objectName(), qsl("settingsPage_searchResults"));
 

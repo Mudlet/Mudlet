@@ -271,9 +271,7 @@ private slots:
 
         QLineEdit* pSearch = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
         QVERIFY2(pSearch, "the settings shell has no search field");
-        pSearch->setFocus();
-        pSearch->setText(qsl("color"));
-        QCoreApplication::processEvents();
+        QVERIFY2(TestSettings::search(mpPreferences, qsl("color")), "the search never ran");
         QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
 
         mpPreferences->setTab(qsl("tab_connection"));

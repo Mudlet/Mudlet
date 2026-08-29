@@ -41,6 +41,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
+#include <QTimer>
 #include <QToolButton>
 
 #include "PortableModeTestHelper.h"
@@ -79,15 +80,7 @@ private:
 
     QWidget* resultsColumn() const { return mpPreferences->findChild<QWidget*>(qsl("settingsColumn_searchResults")); }
 
-    // The field takes the focus first, because that is the only way a query gets
-    // typed. It matters: reparenting a card that holds the keyboard focus clears
-    // it, handing the focus to the sidebar.
-    void search(const QString& query)
-    {
-        searchField()->setFocus();
-        searchField()->setText(query);
-        QCoreApplication::processEvents();
-    }
+    void search(const QString& query) { QVERIFY2(TestSettings::search(mpPreferences, query), "the search never ran"); }
 
     // Where every card on every category page sits, and whether it is showing,
     // as text so that a mismatch reads as a diff rather than as two pointers
@@ -243,6 +236,25 @@ private slots:
         QVERIFY2(mpPreferences->pushButton_chooseProtocols->property("searchMatch").toBool(), "the button carrying the protocol keywords was not highlighted");
     }
 
+    // A lone Latin letter matches most of the dialog, and answering it means
+    // moving most of the cards onto the results page and back on the next
+    // keystroke - which is the lag, not the matching. An ideograph is a word,
+    // so one of those is a query.
+    void test_aSingleLetterIsNotAQueryButASingleIdeographIs()
+    {
+        const QStringList before = cardPlacements();
+        QWidget* pPageBefore = stack()->currentWidget();
+
+        search(qsl("s"));
+        QCOMPARE(stack()->currentWidget(), pPageBefore);
+        QCOMPARE(cardPlacements(), before);
+
+        // Whether it matches anything in the language the dialog is in is
+        // beside the point: reaching the results page at all says it was run
+        search(QString::fromUtf8("\xe8\x89\xb2"));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
+    }
+
     void test_aQueryThatMatchesNothingShowsTheEmptyState()
     {
         search(qsl("zzzznothing"));
@@ -296,7 +308,7 @@ private slots:
         QCOMPARE(QApplication::focusWidget(), mpPreferences->checkBox_allowServerToRedefineColors);
 
         searchField()->setText(qsl("colors"));
-        QCoreApplication::processEvents();
+        QVERIFY2(TestSettings::waitForSearch(mpPreferences), "the search never ran");
 
         QCOMPARE(searchField()->text(), qsl("colors"));
         QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
