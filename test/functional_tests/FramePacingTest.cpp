@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QElapsedTimer>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -60,14 +61,17 @@ private:
     int mPaintCount = 0;
 
     // One line per packet, small enough that the cost is the paint and not the
-    // text, and spaced far enough apart that an unpaced pane paints per packet.
+    // text. The gap has to stay well under csmPaintPaceMs: at a whole window per
+    // packet a perfect pacer and a broken one both draw one frame per packet, and
+    // the assertion below degrades to the warning it prints for that case.
     static constexpr int csmBatchCount = 20;
     static constexpr int csmBatchGapMs = 2;
 
-    // Both ends of the flood are already paid for by the +1 on the window count, so
-    // this covers what that count cannot see: elapsed() truncates to whole
-    // milliseconds, leaving the span up to a window short, and an expose or resize
-    // repaint can land in the middle without the pacer gating it.
+    // A window is measured from the last paint rather than off a fixed grid -
+    // paintEvent() restarts the pacer's clock - so paced paints are always at least
+    // csmPaintPaceMs apart and the +1 on the window count is exact whatever the
+    // phase. This covers what that count cannot see: an expose or resize repaint
+    // lands without the pacer gating it. Two rather than one is plain margin.
     static constexpr int csmPaintSlack = 2;
 
 protected:
@@ -144,16 +148,17 @@ private slots:
         // What a paced pane owes is one frame per window it spent, so that is what the
         // count has to be measured against. Measuring it against a share of the packet
         // count instead holds only while qWait() sleeps for about the gap it is asked
-        // for: on a loaded runner it sleeps several times that, the same flood stretches
-        // over a window per packet, and a pane pacing perfectly draws a frame per packet
-        // with nothing wrong with it. An unpaced pane is still caught, because it paints
-        // per packet however few windows the flood spanned.
+        // for: on a loaded runner it sleeps several times that, and the flood that spans
+        // 3 windows here stretched to 10 on CI, where a perfectly paced pane drew the 10
+        // frames it owed and was failed for it. An unpaced pane is still caught while the
+        // flood stays inside far fewer windows than it sent packets, which is what the
+        // warning below checks.
         const int windowsSpanned = static_cast<int>(floodMs / TTextEdit::csmPaintPaceMs) + 1;
 
-        // A pane that paints per packet still breaks this bound whenever the flood
-        // spanned fewer windows than it sent packets, so the bound is worth asserting
-        // even then - it just stops being able to tell the two apart once the runner
-        // is slow enough to hand a packet its own window.
+        // The bound is worth asserting even in that case, so it stays outside the
+        // branch - it just stops telling a paced pane from an unpaced one once the
+        // runner is slow enough that windowsSpanned + csmPaintSlack reaches the
+        // packet count.
         if (windowsSpanned + csmPaintSlack >= csmBatchCount) {
             qWarning() << "flood of" << csmBatchCount << "packets took" << floodMs << "ms, about a pacing window each - pacing is not being told apart from scheduler jitter this run";
         }
@@ -165,28 +170,51 @@ private slots:
                                     .arg(paintsDuringFlood)));
 
         // Whatever arrives while a frame is still being held back has to be painted
-        // when that frame lands. Reaching that case means printing inside the window
-        // a paint just opened, so repaint() lands one synchronously and the print
+        // when that frame lands. Reaching that case means printing inside the 16ms
+        // cooldown a paint just started, so repaint() lands one synchronously and the print
         // follows without returning to the event loop - waiting for a paint instead
         // lets the window lapse, and the print then takes the immediate path and
         // never exercises deferral at all.
+        mPaintCount = 0;
         pane->repaint();
+        QVERIFY2(mPaintCount > 0, "repaint() delivered no paint event, so the pacer's cooldown never started and nothing below is inside a pacing window");
+
+        QSignalSpy pacerFired(pane->mpPaintPacer, &QTimer::timeout);
+        QElapsedTimer sinceRepaint;
+        sinceRepaint.start();
         mPaintCount = 0;
         console->print(qsl("trailing line\n"));
 
-        // The timer being armed is what proves the frame was held back; the wait
-        // below only proves the pane was not left blank. It cannot attribute the
-        // paint to the pacer, because an unrelated repaint lands about 130ms later
-        // anyway, and telling the two apart would need a deadline tight enough to
-        // start failing on a loaded runner - the very thing that made this test
-        // flaky in the first place.
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the print did not hold a frame back, so the pane was not inside a pacing window and this is not exercising deferral at all");
+        // Read after the print, so this is an upper bound on how late scheduleUpdate()
+        // ran inside it. Under the bound the print was certainly inside the cooldown
+        // and the frame owed deferral; over it the pane was entitled to paint at once,
+        // and asserting deferral anyway would be the same wall-clock trap the flood
+        // half above was just fixed for - one preemption longer than a window and a
+        // healthy pane fails.
+        const qint64 sinceRepaintMs = sinceRepaint.elapsed();
+        const bool printLandedInsideTheCooldown = sinceRepaintMs < TTextEdit::csmPaintPaceMs;
+        if (printLandedInsideTheCooldown) {
+            QVERIFY2(pane->mpPaintPacer->isActive(), "the print inside the cooldown did not hold a frame back, so frames are not being deferred at all");
+        } else {
+            qWarning() << "the print landed" << sinceRepaintMs << "ms after the paint, past the" << TTextEdit::csmPaintPaceMs << "ms cooldown - deferral not exercised this run";
+        }
+
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
                              return mPaintCount > 0;
                          },
                          2000),
-                 "the line printed just after a paint was never drawn - pacing dropped the held-back frame instead of landing it one window later");
+                 "the pane never repainted at all in the 2s after the print, so the harness is dead rather than the pacer being at fault");
+
+        // The wait above cannot say which repaint satisfied it - an unrelated one
+        // arrives about 130ms after the print regardless - so the timer having fired
+        // is what ties a frame to the pacer, and it needs no deadline to do it. It
+        // still cannot see a timeout handler that fires and paints nothing; telling
+        // that apart would need a deadline between the two repaints, which is the
+        // wall-clock trap this test was flaky for in the first place.
+        if (printLandedInsideTheCooldown) {
+            QVERIFY2(pacerFired.count() == 1, "the pacer armed a frame and then never fired, so the held-back line waits on an unrelated repaint to appear");
+        }
     }
 
 private:
