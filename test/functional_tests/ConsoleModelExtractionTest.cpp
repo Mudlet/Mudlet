@@ -872,7 +872,7 @@ noViewReport = table.concat(noViewProblems, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
-        // Three of the five answer "no user dictionary enabled" before they ever
+        // Five of the seven calls answer "no user dictionary enabled" before they ever
         // reach the view, so without one they would report a refusal here
         // whether the guard existed or not.
         bool hasUserDictionary = false;
