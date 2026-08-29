@@ -176,19 +176,13 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error)
 {
     if (!mpAddonsMenu) {
-        mpAddonsMenu = menuOptions ? menuOptions->addMenu(tr("Extensions")) : menuBar()->addMenu(tr("Extensions"));
-        if (mpAddonsMenu) {
-            // QMenu::toolTipsVisible is false by default and is not inherited
-            // from the menu above, which is why Mudlet sets it on its own menus
-            // too. Without it the menu half of every command's tooltip never
-            // appears, leaving a documented property that only works on the
-            // toolbar.
-            mpAddonsMenu->setToolTipsVisible(true);
-        }
-    }
-    if (!mpAddonsMenu) {
-        error = tr("the Extensions menu could not be created");
-        return nullptr;
+        //: Name of the menu that packages add their own commands to, shown inside the Options menu
+        mpAddonsMenu = menuOptions->addMenu(tr("Extensions"));
+        // QMenu::toolTipsVisible is false by default and is not inherited from
+        // the menu above, which is why Mudlet sets it on its own menus too.
+        // Without it the menu half of every command's tooltip never appears,
+        // leaving a documented property that only works on the toolbar.
+        mpAddonsMenu->setToolTipsVisible(true);
     }
     mpAddonsMenu->menuAction()->setVisible(true);
 
@@ -213,6 +207,7 @@ QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QStr
             if (addonCommandOwning(action) != pHost) {
                 continue;
             }
+            //: Refusal shown to a package, %1 is one part of the menu path it asked for
             error = tr("\"%1\" is already a command in this menu, so it cannot also be a submenu").arg(part);
             return nullptr;
         }
@@ -269,9 +264,41 @@ QString mudlet::addonPlainLabel(const QString& label)
 // builds do not have.
 bool mudlet::addonShortcutUsable(const QKeySequence& sequence, QString& error) const
 {
-    if (sequence.isEmpty() || sequence[0].key() == Qt::Key_unknown) {
+    if (sequence.isEmpty()) {
+        //: Refusal shown to a package that asked for a keyboard shortcut Qt could not make sense of
         error = tr("that is not a key sequence Qt understands");
         return false;
+    }
+    // Key_unknown can sit in any chunk of a multi-step sequence, not just the
+    // first: "Ctrl+K, Ctrl+Shft+B" parses to a two-chunk sequence whose second
+    // chunk is unknown, which Qt then renders as a trailing comma and never
+    // matches.
+    for (int i = 0; i < sequence.count(); ++i) {
+        if (sequence[i].key() == Qt::Key_unknown) {
+            //: Refusal shown to a package that asked for a keyboard shortcut Qt could not make sense of
+            error = tr("that is not a key sequence Qt understands");
+            return false;
+        }
+    }
+
+    // Mudlet's own sequences are the authority here rather than whatever is
+    // currently wired up, because where they live moves: the profile tab keys
+    // have no menu counterpart and are always plain QShortcuts, and hiding the
+    // menu bar moves every other one onto a QShortcut as well, clearing the
+    // action it came from. A scan of QActions alone therefore answers
+    // differently for the same key depending on a setting the package cannot
+    // see, and says yes to Ctrl+1 in every layout.
+    if (mpShortcutsManager) {
+        QStringListIterator keys = mpShortcutsManager->iterator();
+        while (keys.hasNext()) {
+            const QString key = keys.next();
+            const QKeySequence* pMudletSequence = mpShortcutsManager->getSequence(key);
+            if (pMudletSequence && !pMudletSequence->isEmpty() && *pMudletSequence == sequence) {
+                //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of whatever already uses it
+                error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), mpShortcutsManager->getLabel(key));
+                return false;
+            }
+        }
     }
 
     for (const QAction* action : findChildren<QAction*>()) {
@@ -280,7 +307,19 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, QString& error) c
             // the doubled ampersand that makes Qt draw one, and Mudlet's own
             // actions carry the single marker that names their access key.
             // Quoting either hands a package a label it cannot find on screen.
+            //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of whatever already uses it
             error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), addonPlainLabel(action->text()));
+            return false;
+        }
+    }
+
+    // Anything else holding the sequence on this window - the main console's
+    // F3 buffer search, for one - has no label to quote but still ends in the
+    // same ambiguous binding.
+    for (const QShortcut* shortcut : findChildren<QShortcut*>()) {
+        if (shortcut->key() == sequence) {
+            //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that Mudlet itself already uses
+            error = tr("%1 is already taken by Mudlet").arg(sequence.toString(QKeySequence::NativeText));
             return false;
         }
     }
@@ -288,9 +327,14 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, QString& error) c
 }
 
 // Package text goes into a rich-text tooltip, so it has to be escaped: an
-// unescaped '<' silently eats the rest of the tooltip as markup
+// unescaped '<' silently eats the rest of the tooltip as markup. Wrapping
+// empty text would defeat the "no tooltip" case, because "<p></p>" is not an
+// empty string and Qt shows an empty tooltip box for it.
 QString mudlet::addonTooltip(const QString& tooltip)
 {
+    if (tooltip.isEmpty()) {
+        return QString();
+    }
     return utils::richText(tooltip.toHtmlEscaped());
 }
 
@@ -315,6 +359,24 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
     const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
 
+    // A toolbar button has nowhere to show a menu path or hang a shortcut, so
+    // a package that supplied either has misunderstood where its command is
+    // going. That is a mistake in the request rather than in this client's
+    // layout, so it is answered before anything about what is on screen - the
+    // package gets the same reason whatever the player's bars are doing.
+    if (!wantsMenu) {
+        if (!request.menuPath.isEmpty()) {
+            //: Refusal shown to a package that gave a menu path for a command it also asked to keep off the menu. Leave surfaces and toolbar as they are, they are the names a package writes in its own code
+            error = tr("a menu path needs a menu item to go in, so it cannot be used with surfaces = \"toolbar\"");
+            return -1;
+        }
+        if (!request.shortcut.isEmpty()) {
+            //: Refusal shown to a package that asked for a keyboard shortcut on a command it also asked to keep off the menu. Leave surfaces and toolbar as they are, they are the names a package writes in its own code
+            error = tr("a shortcut needs a menu item to hang on, so it cannot be used with surfaces = \"toolbar\"");
+            return -1;
+        }
+    }
+
     // A command is only placeable if at least one surface it asks for is
     // actually on screen. addCommand() is reachable only with a profile loaded,
     // so the bit that decides each bar's visibility here is visibleMaskNormally
@@ -328,10 +390,13 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     const bool menuBarOnScreen = (mMenuBarVisibility & enums::visibleMaskNormally);
     if (!(wantsToolbar && toolbarOnScreen) && !(wantsMenu && menuBarOnScreen)) {
         if (!wantsMenu) {
+            //: Refusal shown to a package that asked for a toolbar command while the toolbar is switched off. "Preferences -> General" is a menu path and should be translated the same way as those menu entries are
             error = tr("the main toolbar is hidden, so a toolbar-only command would be invisible - turn it on in Preferences -> General, or place this command on the menu too");
         } else if (!wantsToolbar) {
+            //: Refusal shown to a package that asked for a menu command while the menu bar is switched off. "Preferences -> General" is a menu path and should be translated the same way as those menu entries are
             error = tr("the menu bar is hidden, so a menu-only command would be invisible - turn it on in Preferences -> General, or place this command on the toolbar too");
         } else {
+            //: Refusal shown to a package that asked for a command while both the menu bar and the toolbar are switched off. "Preferences -> General" is a menu path and should be translated the same way as those menu entries are
             error = tr("both the menu bar and the main toolbar are hidden, so this command would be invisible - turn one of them on in Preferences -> General");
         }
         return -1;
@@ -339,8 +404,13 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 
     QKeySequence shortcut;
     if (!request.shortcut.isEmpty()) {
-        if (!wantsMenu) {
-            error = tr("a shortcut needs a menu item to hang on, so it cannot be used with surfaces = \"toolbar\"");
+        // The shortcut lives on the menu action, so a hidden menu bar takes it
+        // down with the item: Mudlet's own sequences get moved onto standalone
+        // QShortcuts when that happens (see assignKeySequences()), but a
+        // package's cannot be, since the item is the only thing it has.
+        if (!menuBarOnScreen) {
+            //: Refusal shown to a package that asked for a keyboard shortcut while the menu bar is switched off. "Preferences -> General" is a menu path and should be translated the same way as those menu entries are
+            error = tr("the menu bar is hidden, so a shortcut would never fire - turn it on in Preferences -> General");
             return -1;
         }
         shortcut = QKeySequence(request.shortcut);
@@ -370,6 +440,7 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
         // sharing a label is fine, and stays fine; ids are the identity.
         for (const QAction* existing : targetMenu->actions()) {
             if (existing->menu() && existing->text() == addonLabel(request.name) && mAddonSubmenuOwners.value(existing->menu()) == pHost) {
+                //: Refusal shown to a package, %1 is the name it gave its command
                 error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
                 return -1;
             }
@@ -630,6 +701,7 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
 
     AddonCommand& command = mAddonCommands[commandId];
     if (!command.button) {
+        //: Refusal shown to a package that asked to flash a command placed on the menu only, where there is no button to colour
         error = tr("that command is not on the toolbar, and a pulse has nothing to colour without a button");
         return false;
     }
@@ -641,6 +713,7 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
         // value carrying its own ';' would append declarations of its choosing.
         for (const QString& colour : {color1, color2}) {
             if (!QColor::isValidColorName(colour)) {
+                //: Refusal shown to a package, %1 is the colour name or code it supplied
                 error = tr("\"%1\" is not a colour Qt recognises").arg(colour);
                 return false;
             }

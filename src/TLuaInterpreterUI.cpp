@@ -4382,17 +4382,37 @@ int TLuaInterpreter::addCommand(lua_State* L)
     } else if (lua_istable(L, -1)) {
         lua_pushnil(L);
         while (lua_next(L, -2) != 0) {
-            const QString surface = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+            // A list of names, so a key/value table such as {menu = true} is a
+            // mistake worth naming: quoting the value it holds would ask the
+            // package to look for a surface called "true"
+            if (!lua_isstring(L, -1)) {
+                const QString type = QString::fromUtf8(luaL_typename(L, -1));
+                lua_pop(L, 3);
+                return warnArgumentValue(L, __func__, qsl("surfaces has to be a list of surface names and this one holds a %1 - use surfaces = {'menu', 'toolbar'}").arg(type));
+            }
+            const QString surface = QString::fromUtf8(lua_tostring(L, -1));
             if (!nameSurface(surface)) {
                 lua_pop(L, 3);
                 return warnArgumentValue(L, __func__, qsl("'%1' is not a surface this client has - use 'menu' or 'toolbar'").arg(surface));
             }
             lua_pop(L, 1);
         }
+        // An empty list asks for the command to go nowhere, which no package
+        // can have meant - and silently treating it as "both" would place a
+        // command in the two places it just said it did not want
+        if (!named) {
+            lua_pop(L, 1);
+            return warnArgumentValue(L, __func__, "surfaces is empty, so there is nowhere to put the command - name 'menu', 'toolbar', or leave surfaces out for both");
+        }
+    } else if (!lua_isnoneornil(L, -1)) {
+        const QString type = QString::fromUtf8(luaL_typename(L, -1));
+        lua_pop(L, 1);
+        return warnArgumentValue(L, __func__, qsl("surfaces has to be a surface name or a list of them, not a %1 - use 'menu' or 'toolbar'").arg(type));
     }
     lua_pop(L, 1);
 
-    // Naming nothing means "wherever this client puts commands", which is both
+    // Leaving surfaces out means "wherever this client puts commands", which is
+    // both. Naming it and naming nothing in it is refused above.
     if (!named) {
         request.surfaces = mudlet::CommandSurface::Both;
     } else if (wantsMenu && wantsToolbar) {

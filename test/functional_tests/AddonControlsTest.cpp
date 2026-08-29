@@ -145,12 +145,16 @@ private:
         return luaGlobalNumber(pHost, qsl("_addonId"));
     }
 
-    // The reason a refused command gave, which is the half a package can act on
+    // The reason a refused command gave, which is the half a package can act on.
+    // A chunk that could not run at all is not a refusal and must not read like
+    // one: returning its Lua error here would let a broken binding satisfy an
+    // assertion about the wording of a refusal.
     QString refusalReason(Host* pHost, const QString& fields) const
     {
         const QString error = runLua(pHost, qsl("_addonId, _addonWhy = addCommand{%1}").arg(fields));
         if (!error.isNull()) {
-            return error;
+            qWarning() << "addCommand did not run:" << error;
+            return QString();
         }
         return luaGlobalString(pHost, qsl("_addonWhy"));
     }
@@ -663,6 +667,62 @@ private slots:
         QVERIFY2(why.contains(qsl("Speech")), qPrintable(qsl("the refusal does not name the clash: %1").arg(why)));
 
         QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(leafId)));
+        QTest::qWait(100ms);
+    }
+
+    // A shortcut hangs on the menu item, and a hidden menu bar takes the item
+    // out of reach with it. Mudlet's own sequences are moved onto standalone
+    // QShortcuts when that happens, but a package's cannot be, so accepting one
+    // hands back an id for a key that can never fire.
+    void test_aShortcutIsRefusedWhileTheMenuBarIsHidden()
+    {
+        const enums::controlsVisibility restoreToolbar = mudlet::self()->toolBarVisibility();
+        const enums::controlsVisibility restoreMenuBar = mudlet::self()->menuBarVisibility();
+
+        // the toolbar carries the command, so only the shortcut is in question
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        mudlet::self()->setMenuBarVisibility(enums::visibleNever);
+        const QString why = refusalReason(mpFirstHost, qsl("name = 'Silent', shortcut = 'Ctrl+Alt+F8'"));
+        QVERIFY2(!why.isEmpty(), "a shortcut was accepted with the menu bar hidden, so it could never fire");
+
+        mudlet::self()->setMenuBarVisibility(enums::visibleAlways);
+        const int audibleId = addCommand(mpFirstHost, qsl("name = 'Audible', shortcut = 'Ctrl+Alt+F8'"));
+        QVERIFY2(audibleId > 0, "the same shortcut was refused with the menu bar showing");
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(audibleId)));
+
+        mudlet::self()->setToolBarVisibility(restoreToolbar);
+        mudlet::self()->setMenuBarVisibility(restoreMenuBar);
+        QTest::qWait(100ms);
+    }
+
+    // Package tooltips are wrapped in a paragraph so an unescaped '<' cannot
+    // eat the rest of them. Wrapping nothing produced "<p></p>", which is not
+    // an empty string, so Qt hovered an empty box over a command that had asked
+    // for no tooltip at all - and over one whose tooltip had been taken away.
+    // Passing nothing through instead leaves Qt to its usual fallback, which is
+    // what the rest of Mudlet's actions already do.
+    void test_aCommandWithNoTooltipShowsNoEmptyBox()
+    {
+        const QString emptyBox = qsl("<p></p>");
+        const int id = addCommand(mpFirstHost, qsl("name = 'Bare', menuPath = 'Quiet'"));
+        QVERIFY2(id > 0, "the command was not placed");
+
+        QAction* pAction = menuActionNamed(qsl("Bare"));
+        QVERIFY2(pAction, "the menu item was not found");
+        QVERIFY2(pAction->toolTip() != emptyBox, "the menu item hovers an empty tooltip box");
+
+        QToolButton* pButton = toolbarButtonNamed(qsl("Bare"));
+        QVERIFY2(pButton, "the toolbar button was not found");
+        QVERIFY2(pButton->toolTip() != emptyBox, "the button hovers an empty tooltip box");
+
+        // and taking a tooltip away has to leave nothing behind either
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("setCommandTooltip(%1, 'Something')").arg(id)));
+        QVERIFY(pAction->toolTip().contains(qsl("Something")));
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("setCommandTooltip(%1, '')").arg(id)));
+        QVERIFY2(pAction->toolTip() != emptyBox, "clearing the tooltip left an empty box behind");
+        QVERIFY2(pButton->toolTip() != emptyBox, "clearing the tooltip left an empty box on the button");
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(id)));
         QTest::qWait(100ms);
     }
 };

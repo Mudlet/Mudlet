@@ -65,6 +65,73 @@ describe("addon commands", function()
     end)
   end)
 
+  describe("a shortcut it cannot honour", function()
+    -- Mudlet's own sequences do not all sit on menu actions: the profile
+    -- switching keys never do, and hiding the menu bar moves every other one
+    -- onto a plain QShortcut as well. Answering from what is currently wired
+    -- up therefore handed Ctrl+1 to a package and left the player with two
+    -- things on one key, which Qt resolves by disabling both.
+    it("refuses one Mudlet uses for switching profiles, and says what holds it", function()
+      local id, why = addCommand{name = "ProfileKeySpec", shortcut = "Ctrl+1"}
+      assert.is_nil(id, "Ctrl+1 switches to the first profile and was handed out anyway")
+      -- naming the holder is the difference between a package author fixing
+      -- their shortcut and guessing at one
+      assert.is_truthy(why:find("profile", 1, true), "the refusal does not say what holds the key: " .. tostring(why))
+    end)
+
+    it("refuses one Mudlet uses for the next profile", function()
+      local id, why = addCommand{name = "NextProfileKeySpec", shortcut = "Ctrl+Tab"}
+      assert.is_nil(id, "Ctrl+Tab moves to the next profile and was handed out anyway")
+      assert.is_truthy(why:find("profile", 1, true), "the refusal does not say what holds the key: " .. tostring(why))
+    end)
+
+    -- Qt parses an unreadable chunk into Key_unknown rather than dropping it,
+    -- so a typo in any chunk but the first passed the emptiness test, showed a
+    -- half-written sequence in the menu and never fired
+    it("refuses one whose second chunk is a typo", function()
+      local id, why = addCommand{name = "TypoKeySpec", shortcut = "Ctrl+Alt+F10, Ctrl+Shft+B"}
+      assert.is_nil(id, "the sequence holds an unparseable chunk and was accepted anyway")
+      assert.is_string(why)
+    end)
+
+    it("refuses one on a command kept off the menu, whatever the bars are doing", function()
+      local id, why = addCommand{name = "ToolbarKeySpec", surfaces = "toolbar", shortcut = "Ctrl+Alt+F11"}
+      assert.is_nil(id)
+      assert.is_truthy(why:find("shortcut", 1, true))
+    end)
+  end)
+
+  describe("surfaces", function()
+    -- Each of these used to fall through to "both", so a package naming
+    -- nothing usable got its command placed everywhere instead of an answer
+    it("refuses an empty list, which asks for the command to go nowhere", function()
+      local id, why = addCommand{name = "NowhereSpec", surfaces = {}}
+      assert.is_nil(id)
+      assert.is_string(why)
+    end)
+
+    it("refuses a value that is neither a name nor a list", function()
+      local id, why = addCommand{name = "BooleanSurfaceSpec", surfaces = true}
+      assert.is_nil(id)
+      assert.is_string(why)
+    end)
+
+    -- The list holds names, so a keyed table quotes the type it found: the
+    -- message used to quote the empty string and send packages looking for a
+    -- surface with no name
+    it("refuses a keyed table and says what it found", function()
+      local id, why = addCommand{name = "KeyedSurfaceSpec", surfaces = {menu = true, toolbar = true}}
+      assert.is_nil(id)
+      assert.is_truthy(why:find("boolean", 1, true))
+    end)
+
+    it("refuses a menu path on a command kept off the menu", function()
+      local id, why = addCommand{name = "PathlessSpec", surfaces = "toolbar", menuPath = "Spec"}
+      assert.is_nil(id, "the menu path had nowhere to go and was dropped without a word")
+      assert.is_truthy(why:find("menu path", 1, true))
+    end)
+  end)
+
   describe("an id nobody knows", function()
     -- One sequence covers every command, so an unknown id names nothing at all
     -- rather than something of another kind
