@@ -863,6 +863,52 @@ noViewReport = table.concat(noViewProblems, '; ')
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
     }
 
+    // The Hunspell handles and the profile's word set are the view's, not the
+    // model's, so every spelling function reached through Host::mpConsole for
+    // them and took the client down with it once the window had been closed.
+    void test_spellingFunctionsReportWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        // Three of the five answer "no user dictionary enabled" before they ever
+        // reach the view, so without one they would report a refusal here
+        // whether the guard existed or not.
+        bool hasUserDictionary = false;
+        bool hasSharedDictionary = false;
+        host->getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
+        QVERIFY2(hasUserDictionary, "The profile has no user dictionary, so the dictionary functions never reach the view.");
+        destroyTheView(host);
+
+        runLua(host, qsl(R"LUA(
+noViewSpellProblems = {}
+
+-- nil plus a reason naming the missing window, which is what these answer when
+-- the view holding the dictionaries has gone
+local function expectRefusal(name, ...)
+    local first, second = ...
+    if first ~= nil then
+        table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first))
+    elseif type(second) ~= 'string' or not second:find('main window', 1, true) then
+        table.insert(noViewSpellProblems, name .. ' gave the reason ' .. tostring(second))
+    end
+end
+
+expectRefusal('addWordToDictionary', addWordToDictionary('noviewword'))
+expectRefusal('removeWordFromDictionary', removeWordFromDictionary('noviewword'))
+expectRefusal('getDictionaryWordList', getDictionaryWordList())
+expectRefusal('spellCheckWord', spellCheckWord('noviewword'))
+expectRefusal('spellCheckWord user', spellCheckWord('noviewword', true))
+expectRefusal('spellSuggestWord', spellSuggestWord('noviewword'))
+expectRefusal('spellSuggestWord user', spellSuggestWord('noviewword', true))
+
+noViewSpellReport = table.concat(noViewSpellProblems, '; ')
+)LUA"));
+
+        QCOMPARE(luaGlobalString(host, "noViewSpellReport"), QString());
+    }
+
     // selectCaptureGroup() only reaches the view from inside a trigger that
     // captured something, and a selection needs a widget to live in - so with no
     // window it has to answer the -1 it already answers for a group that is not
