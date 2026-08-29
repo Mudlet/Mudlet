@@ -658,6 +658,7 @@ void mudlet::init()
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(menuEditor, &QMenu::aboutToShow, this, &mudlet::slot_updateShowMapActionText);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_showAboutDialog);
     connect(dactionToggleTimeStamp, &QAction::triggered, this, &mudlet::slot_toggleTimeStamp);
@@ -4362,6 +4363,21 @@ void mudlet::slot_mapper()
     pHost->showHideOrCreateMapper(true);
 }
 
+// The Toolbox map entry toggles the mapper, so its label has to say which way
+// the next activation will take it. Computed as the menu opens rather than
+// tracked on every path that can show or hide a mapper.
+void mudlet::slot_updateShowMapActionText()
+{
+    Host* pHost = getActiveHost();
+    if (pHost && pHost->mapperShown()) {
+        //: Toolbox menu entry while the map is on screen - activating it hides the map
+        dactionShowMap->setText(tr("Hide map"));
+    } else {
+        //: Toolbox menu entry while no map is on screen - activating it shows the map, creating it if need be
+        dactionShowMap->setText(tr("Show map"));
+    }
+}
+
 void mudlet::slot_showMapperDialog()
 {
     Host* pHost = getActiveHost();
@@ -4428,6 +4444,16 @@ void mudlet::slot_showMapperDialog()
             pHost->restoreOwnMapper();
         }
 
+        return;
+    }
+
+    // A script-embedded mapper (Lua createMapper()/Geyser.Mapper) lives inside
+    // the profile's own UI and is the only widget that map updates reach via
+    // TMap::mpMapper; creating a competing dock here would steal that pointer
+    // and leave the embedded mapper stale. Toggle the embedded one instead,
+    // matching what the "Show Map" menu entry does.
+    if (pHost->mpConsole && pHost->mpConsole->mpMapper) {
+        pHost->showHideOrCreateMapper(true);
         return;
     }
 

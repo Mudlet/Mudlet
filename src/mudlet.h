@@ -450,6 +450,7 @@ public slots:
     void slot_showFullChangelog();
 #endif
     void slot_mapper();
+    void slot_updateShowMapActionText();
     void slot_showMapperDialog(); // Enhanced mapper dialog with per-profile dock widgets
     void slot_moduleManager();
     void slot_mudletDiscord();
