@@ -36,6 +36,7 @@
 class Host;
 class QCloseEvent;
 class QDoubleSpinBox;
+class QEvent;
 class QFrame;
 class QListWidget;
 class QListWidgetItem;
@@ -205,6 +206,14 @@ private slots:
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);
     void slot_crashReportPolicyChanged(int index);
+    // Named rather than lambdas so that initWithHost() can make every one of
+    // its connections with Qt::UniqueConnection - see the comment on that
+    // function for why running it twice has to be harmless
+    void slot_mapSymbolFontFudgeChanged(const double factor);
+    void slot_changeMapperShowRoomBorders(const bool state);
+    void slot_changeDrawUpperLowerLevels(const bool state);
+    void slot_changeMapperUseAntiAlias(const bool state);
+    void slot_caretModeKeyChanged(const int index);
 
 
 signals:
@@ -215,6 +224,7 @@ signals:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    bool event(QEvent* pEvent) override;
     bool eventFilter(QObject* pObject, QEvent* pEvent) override;
     void resizeEvent(QResizeEvent* pEvent) override;
 
@@ -233,7 +243,25 @@ private:
     void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
+    // Writes every control a profile decides the value of. Safe to run again on
+    // a dialog that is already showing a profile: everything it builds is built
+    // once and re-read afterwards, every list it fills is emptied first, and
+    // every connection it makes is either Qt::UniqueConnection or inside one of
+    // those build-once blocks. refreshFromSettings() depends on all three.
     void initWithHost(Host*);
+    // ...and its counterpart for the settings that belong to the application
+    // rather than to any profile
+    void populateApplicationSettings();
+    // Re-reads the settings into a dialog that has been left open, so that a
+    // change made from Lua or from another dialog is what the user comes back
+    // to. Refuses whenever the dialog is holding an edit of its own, because
+    // re-reading would throw that edit away - see pendingEdits().
+    void refreshFromSettings();
+    // Anything the user has changed that the settings do not know about yet: a
+    // control differing from its snapshot, a shortcut editor holding a sequence
+    // that has not been committed, a line edit part-way through a word, or an
+    // apply still waiting out its debounce
+    bool pendingEdits() const;
     QString certificateWarningCheckBoxStyle() const;
     QString certificateWarningLabelStyle() const;
     void restyleCertificateWarnings();
@@ -363,6 +391,9 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
+    // The editor showing each of those, so that a second profile re-reads the
+    // editors the first one left behind rather than adding a second row of them
+    QMap<QString, QPointer<TKeySequenceEdit>> mShortcutEditors;
     // The ten telnet protocols, on the Connection page's protocols subpage
     QPointer<QCheckBox> mEnableGMCP;
     QPointer<QCheckBox> mEnableMSDP;
@@ -464,14 +495,19 @@ private:
     // fitCheckBoxesToColumn()
     bool mShellReady = false;
     // Suppresses the instant apply while initWithHost()/clearHostDetails() are
-    // writing the controls rather than the user
+    // writing the controls rather than the user - and, since it is raised for
+    // the whole of a repopulation, what makes re-entering one impossible
     bool mPopulating = false;
-    // QDialog::closeEvent() calls reject(), which is where the close this is
-    // already inside of would otherwise start again
+    // Raised for the whole of closeEvent(): QDialog::closeEvent() calls
+    // reject(), which is where the close this is already inside of would
+    // otherwise start again, and nothing on the way out is worth repopulating
     bool mClosing = false;
     bool mEditorThemesChecked = false;
 
     QString mLogDirPath;
+    // Which profile the keychain has already been asked about for the "forget
+    // saved sign-in" button, so that re-reading the settings does not ask again
+    QString mSignInTokenCheckedFor;
     // Needed to remember the state on construction so that we can sent the same
     // flag back for Host::mUseSharedDictionary even if we turn-off
     // Host::mEnableUserDictionary: - although, following review THAT has been
