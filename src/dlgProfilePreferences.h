@@ -39,6 +39,7 @@ class QDoubleSpinBox;
 class QFrame;
 class QListWidget;
 class QListWidgetItem;
+class QResizeEvent;
 class QScrollArea;
 class QStackedWidget;
 class QToolButton;
@@ -215,6 +216,7 @@ signals:
 protected:
     void closeEvent(QCloseEvent* event) override;
     bool eventFilter(QObject* pObject, QEvent* pEvent) override;
+    void resizeEvent(QResizeEvent* pEvent) override;
 
 private:
     void setColors();
@@ -267,6 +269,8 @@ private:
     void addSubpage(const QString& categoryKey, const QString& subKey, QWidget* pOpenerCard, const QList<QWidget*>& cards);
     void showSubpage(const QString& categoryKey, const QString& subKey, QWidget* pSpotlightTarget = nullptr);
     void leaveSubpage();
+    // "Category › Subpage", the widest thing the title row is ever asked to show
+    QString breadcrumbFor(const QString& subpageKey) const;
     // Which subpage, if any, a widget lives on - "category/sub", or empty for
     // anything on a category page
     QString subpageHolding(const QWidget* pWidget) const;
@@ -298,9 +302,28 @@ private:
     void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
     void retitleCards();
     void reflowWideCards();
+    // A column narrower than its contents clips them rather than scrolling, so
+    // the cap is the reading width or whatever the widest card needs once the
+    // checkboxes on it have been fitted to that width
+    void capColumnWidth(QScrollArea* pScrollArea);
     // The column caps have to be taken again once a profile has filled the
-    // controls, because that is what decides how wide the widest card is
+    // controls, because that is what decides how wide the widest card is - and
+    // again after a language change, which is what decides how wide the text is
     void updateColumnWidthCaps();
+    // A checkbox draws its label on one line however long it is, so a
+    // translation longer than the reading column is what makes a page scroll
+    // sideways. Any that do are turned into an indicator with a wrapping label
+    // beside it, one at a time and only while it measurably narrows the column,
+    // so a language whose text fits keeps native checkboxes throughout.
+    void fitCheckBoxesToColumn(QWidget* pColumn);
+    void wrapCheckBox(QCheckBox* pCheckBox);
+    void unwrapCheckBox(QCheckBox* pCheckBox);
+    // Below the width the sidebar needs to stand beside a full reading column,
+    // it collapses to a rail of icons. Driven by the window's size alone -
+    // there is no preference to get out of step with it.
+    int widthNeededForFullSidebar() const;
+    void updateSidebarMode();
+    void setSidebarCollapsed(bool collapsed);
     void rebuildTabOrder();
     void guardScrollWheel();
     void buildMigrationBanner();
@@ -367,6 +390,10 @@ private:
     };
 
     QWidget* mpWidget_shell = nullptr;
+    // The sidebar and the row the page title sits in: both are measured when
+    // the window is resized, to decide whether the sidebar still fits
+    QWidget* mpWidget_sidebar = nullptr;
+    QWidget* mpWidget_titleRow = nullptr;
     QLabel* mpLabel_wordmark = nullptr;
     QListWidget* mpListWidget_categories = nullptr;
     // The one sidebar row that is a link rather than a category
@@ -430,6 +457,12 @@ private:
     // The shortcut editors write through this map rather than through a control
     // value, so it needs a snapshot of its own
     QMap<QString, QKeySequence> mShortcutsSnapshot;
+    // The sidebar is a rail of icons rather than a list of names
+    bool mSidebarCollapsed = false;
+    // Set once buildShell() has finished moving controls between cards, which
+    // is when it becomes safe to wrap one that does not fit - see
+    // fitCheckBoxesToColumn()
+    bool mShellReady = false;
     // Suppresses the instant apply while initWithHost()/clearHostDetails() are
     // writing the controls rather than the user
     bool mPopulating = false;

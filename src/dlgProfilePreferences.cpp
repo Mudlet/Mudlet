@@ -83,11 +83,14 @@
 #include <QLineEdit>
 #include <QHBoxLayout>
 #include <QListWidget>
+#include <QMouseEvent>
+#include <QResizeEvent>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QStackedWidget>
 #include <QStyle>
+#include <QStyledItemDelegate>
 #include <QToolButton>
 #include <QVariantAnimation>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
@@ -105,6 +108,10 @@ static constexpr int scmContentColumnWidth = 640;
 static constexpr int scmSidebarWidth = 232;
 static constexpr int scmSidebarPadding = 12;
 static constexpr int scmSidebarAccentBarWidth = 3;
+// ...and what is left of both once the window is too narrow to hold the names:
+// room for an 18px category icon, its selection pill and the accent bar.
+static constexpr int scmSidebarRailWidth = 48;
+static constexpr int scmSidebarRailPadding = 6;
 // The check indicator a checkable card draws in its title, and how far to the
 // right of the frame edge that leaves the title itself - measured, because the
 // second follows from the first through the style rather than by arithmetic
@@ -432,18 +439,28 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connectApplyTriggers();
     snapshotValues();
     guardScrollWheel();
-    // Both want the controls a profile brought with it, so they run after
-    // initWithHost() rather than from buildShell()
-    updateColumnWidthCaps();
-    rebuildTabOrder();
 
     applyShellStyle();
+
+    // After the stylesheet, not before it: a card's padding and the weight of
+    // the text on it both arrive with that stylesheet, and a cap measured
+    // without them is a cap taken of a page nobody will ever see. Both want the
+    // controls a profile brought with it too, so neither can move to
+    // buildShell(). This is also the first moment every control is on the card
+    // it belongs on, which is what the checkbox fitting waits for.
+    mShellReady = true;
+    updateColumnWidthCaps();
+    rebuildTabOrder();
 
     setMinimumSize(780, 560);
     const auto geometry = mudlet::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
     if (geometry.isEmpty() || !restoreGeometry(geometry)) {
         resize(1060, 760);
     }
+    // Whichever of the two the window ended up at - resize() on a dialog that
+    // has never been shown does not always deliver a resize event to read it
+    // from
+    updateSidebarMode();
 }
 
 dlgProfilePreferences::~dlgProfilePreferences()
@@ -494,11 +511,24 @@ static void markAsShellSurface(QWidget* pWidget)
     pWidget->setProperty("settingsSurface", true);
 }
 
+// The label a checkbox's text is showing in while it is too long to fit the
+// reading column on one line, or null while it is a plain checkbox. Read off
+// the widget tree rather than kept in a map: the container is only ever built
+// by wrapCheckBox(), and it holds nothing but the two of them.
+static QLabel* wrapLabelOf(const QCheckBox* pCheckBox)
+{
+    QWidget* pContainer = pCheckBox->parentWidget();
+    if (!pContainer || pContainer->objectName() != qsl("settingsCheckBoxWrap")) {
+        return nullptr;
+    }
+    return pContainer->findChild<QLabel*>(QString(), Qt::FindDirectChildrenOnly);
+}
+
 // A column narrower than its contents clips them rather than scrolling, so the
 // cap is the reading width or whatever the widest card needs. The page is held
 // to the column plus its scrollbar so that the bar stays beside what it scrolls
 // instead of at the far edge of a wide window.
-static void capColumnWidth(QScrollArea* pScrollArea)
+void dlgProfilePreferences::capColumnWidth(QScrollArea* pScrollArea)
 {
     QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
     if (!pColumn || !pColumn->layout()) {
@@ -507,9 +537,171 @@ static void capColumnWidth(QScrollArea* pScrollArea)
     // Lifted first, so what is measured is the cards rather than the last cap:
     pColumn->setMaximumWidth(QWIDGETSIZE_MAX);
     pColumn->layout()->activate();
+    fitCheckBoxesToColumn(pColumn);
     const int cap = std::max(scmContentColumnWidth, pColumn->minimumSizeHint().width());
     pColumn->setMaximumWidth(cap);
     pScrollArea->setMaximumWidth(cap + pScrollArea->verticalScrollBar()->sizeHint().width());
+}
+
+// A layout tells the layouts above it that it has changed by *posting* a layout
+// request, and nothing between a wrap and the measurement that judges it runs
+// an event loop to deliver one. Left to itself the column would answer every
+// question out of the cache it had before the wrap, and every wrap would look
+// as though it had achieved nothing.
+//
+// Both halves are needed. A layout's own invalidate() drops what that layout
+// worked out about its items; what a layout caches about a *widget* it holds -
+// the size hints, in the layout item it made for it - is only dropped by
+// updateGeometry() on that widget. Invalidating the card's grid without it
+// leaves the column still holding the card's pre-wrap width.
+static void invalidateLayoutsUpTo(QWidget* pWidget, const QWidget* pColumn)
+{
+    for (QWidget* pAncestor = pWidget; pAncestor; pAncestor = pAncestor->parentWidget()) {
+        if (QLayout* pLayout = pAncestor->layout(); pLayout) {
+            pLayout->invalidate();
+        }
+        pAncestor->updateGeometry();
+        if (pAncestor == pColumn) {
+            return;
+        }
+    }
+}
+
+// Which checkboxes need wrapping is decided by measuring the column, not by
+// counting characters: the pass starts by giving every text back to the
+// checkbox it came from, so what it measures is the language on show now.
+void dlgProfilePreferences::fitCheckBoxesToColumn(QWidget* pColumn)
+{
+    // Nothing is wrapped while the shell is still being put together: the
+    // constructor is still moving controls from the card the .ui file gave them
+    // to the one they belong on, and a control moved out of a wrap it was given
+    // a moment ago would leave that wrap behind, empty, on the page it left.
+    if (!mShellReady) {
+        return;
+    }
+    QList<QCheckBox*> checkBoxes = pColumn->findChildren<QCheckBox*>();
+    for (auto* pCheckBox : checkBoxes) {
+        unwrapCheckBox(pCheckBox);
+        invalidateLayoutsUpTo(pCheckBox, pColumn);
+    }
+    if (pColumn->minimumSizeHint().width() <= scmContentColumnWidth) {
+        return;
+    }
+
+    // Widest first, and only as far as it takes: a page is over the reading
+    // width for one reason more often than for five.
+    std::sort(checkBoxes.begin(), checkBoxes.end(), [](const QCheckBox* pOne, const QCheckBox* pOther) {
+        return pOne->sizeHint().width() > pOther->sizeHint().width();
+    });
+    for (auto* pCheckBox : checkBoxes) {
+        const int before = pColumn->minimumSizeHint().width();
+        if (before <= scmContentColumnWidth) {
+            return;
+        }
+        if (pCheckBox->text().isEmpty()) {
+            continue;
+        }
+        wrapCheckBox(pCheckBox);
+        invalidateLayoutsUpTo(pCheckBox, pColumn);
+        // A checkbox that was not what made the column too wide is put back:
+        // wrapping it would cost the page a line and buy it nothing.
+        if (pColumn->minimumSizeHint().width() >= before) {
+            unwrapCheckBox(pCheckBox);
+            invalidateLayoutsUpTo(pCheckBox, pColumn);
+        }
+    }
+}
+
+// The QCheckBox stays the control of record - the same object the apply
+// triggers, the snapshot and the tests all know - and gives up only its text,
+// which a QLabel can wrap and it cannot. Its accessible name keeps that text,
+// so nothing a screen reader announces changes.
+void dlgProfilePreferences::wrapCheckBox(QCheckBox* pCheckBox)
+{
+    QLabel* pLabel = wrapLabelOf(pCheckBox);
+    if (!pLabel) {
+        QWidget* pParent = pCheckBox->parentWidget();
+        QLayout* pParentLayout = pParent ? pParent->layout() : nullptr;
+        if (!pParentLayout) {
+            return;
+        }
+        auto* pContainer = new QWidget(pParent);
+        pContainer->setObjectName(qsl("settingsCheckBoxWrap"));
+        // Without this the wrapping label's height-for-width stops at the
+        // container, and the row is given one line's worth of room whatever it
+        // has to say
+        QSizePolicy policy = pContainer->sizePolicy();
+        policy.setHeightForWidth(true);
+        pContainer->setSizePolicy(policy);
+        // Takes the checkbox's place cell for cell: a grid keeps the row, the
+        // column, the span and the alignment the .ui file gave it
+        QLayoutItem* pTakenOut = pParentLayout->replaceWidget(pCheckBox, pContainer, Qt::FindChildrenRecursively);
+        if (!pTakenOut) {
+            delete pContainer;
+            return;
+        }
+        delete pTakenOut;
+        auto* pRowLayout = new QHBoxLayout(pContainer);
+        pRowLayout->setContentsMargins(0, 0, 0, 0);
+        pRowLayout->setSpacing(style()->pixelMetric(QStyle::PM_CheckBoxLabelSpacing, nullptr, pCheckBox));
+        pLabel = new QLabel(pContainer);
+        pLabel->setObjectName(qsl("settingsWrappedLabel"));
+        pLabel->setWordWrap(true);
+        // Clicking the words is how a checkbox is used, and the label is where
+        // the words are now - see eventFilter()
+        pLabel->installEventFilter(this);
+        pLabel->setBuddy(pCheckBox);
+        // ...and greys out with it. The four host enable/disable lists name the
+        // checkbox, which no longer draws the words that would have greyed out
+        // with it - so the label follows the checkbox's state instead.
+        pCheckBox->installEventFilter(this);
+        // The indicator sits against the first line rather than in the middle
+        // of however many lines the label turns out to need
+        pRowLayout->addWidget(pCheckBox, 0, Qt::AlignTop);
+        pRowLayout->addWidget(pLabel, 1);
+    }
+    if (pCheckBox->text().isEmpty()) {
+        return;
+    }
+    pLabel->show();
+    pLabel->setText(pCheckBox->text());
+    pLabel->setToolTip(pCheckBox->toolTip());
+    pLabel->setEnabled(pCheckBox->isEnabled());
+    // The search reads a card's text off its widgets, so the synonyms travel
+    // with the words they are synonyms of
+    pLabel->setProperty("searchKeywords", pCheckBox->property("searchKeywords"));
+    pCheckBox->setProperty("searchKeywords", QVariant());
+    pCheckBox->setAccessibleName(pCheckBox->text());
+    pCheckBox->setText(QString());
+}
+
+// The container is left in place - a checkbox that fits one language may not
+// fit the next, and moving it back and forth through the layout would be one
+// more thing to get wrong. An unwrapped one is simply a checkbox with its text
+// again and an empty label beside it.
+void dlgProfilePreferences::unwrapCheckBox(QCheckBox* pCheckBox)
+{
+    QLabel* pLabel = wrapLabelOf(pCheckBox);
+    if (!pLabel || pLabel->text().isEmpty()) {
+        return;
+    }
+    // Handed back only where the checkbox has nothing of its own to say: a
+    // language change writes the new words straight onto the checkbox, and what
+    // the label is holding by then is the *previous* language rather than
+    // anything to give back.
+    if (pCheckBox->text().isEmpty()) {
+        pCheckBox->setText(pLabel->text());
+    }
+    if (pCheckBox->property("searchKeywords").toString().isEmpty()) {
+        pCheckBox->setProperty("searchKeywords", pLabel->property("searchKeywords"));
+    }
+    pCheckBox->setAccessibleName(QString());
+    pLabel->setProperty("searchKeywords", QVariant());
+    pLabel->clear();
+    pLabel->setToolTip(QString());
+    // ...and out of the search index and the layout both, rather than a blank
+    // taking up a line
+    pLabel->hide();
 }
 
 // Every control setupUi() made is *moved* onto the shell rather than recreated:
@@ -554,6 +746,7 @@ void dlgProfilePreferences::buildShell()
     pContentLayout->addWidget(mpLineEdit_search);
 
     auto* pTitleRow = new QWidget(pContent);
+    mpWidget_titleRow = pTitleRow;
     markAsShellSurface(pTitleRow);
     auto* pTitleRowLayout = new QHBoxLayout(pTitleRow);
     pTitleRowLayout->setContentsMargins(0, 0, 0, 0);
@@ -673,7 +866,19 @@ void dlgProfilePreferences::buildShell()
     buildCategoryPage(qsl("privacy"),
                       {mpCard_securityStatus, groupBox_ssl, pCard_secureReminder, groupBox_proxy, pCard_passwords, pCard_serverPermissions, groupBox_purgeMediaCache, pCard_crashReports});
 
-    buildCategoryPage(qsl("accessibility"), {groupBox_accessibility});
+    // Section 8's "split the Accessibility card". One card whose title repeats
+    // the page's own says nothing about what is on it - and the seven options
+    // it held are three different subjects, so it becomes three cards that each
+    // say which. What stays behind on groupBox_accessibility is the two screen
+    // reader options, so the card that "nvda" and the rest are searched for is
+    // still the card the answer is on.
+    auto* pCard_captions = createCard(qsl("card_accessibilityText"));
+    addCardRow(pCard_captions, label_blankLinesBehaviour, comboBox_blankLinesBehaviour);
+    moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
+    auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
+    addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    moveIntoCard(pCard_keyboard, {checkBox_f3SearchEnabled});
+    buildCategoryPage(qsl("accessibility"), {groupBox_accessibility, pCard_captions, pCard_keyboard});
 
     buildCategoryPage(qsl("shortcuts"), {groupBox_main_window_shortcuts});
 
@@ -808,9 +1013,40 @@ void dlgProfilePreferences::buildSearchResultsPage()
     mSearchResultsPageIndex = mpStackedWidget_categories->addWidget(mpScrollArea_searchResults);
 }
 
+// Collapsed, the sidebar shows a category as its icon alone. Emptying the
+// item's text would do that too, but the text is what a screen reader
+// announces the row as and what the tests read a category by - so it is the
+// drawing that leaves it out rather than the data.
+namespace {
+class SidebarItemDelegate : public QStyledItemDelegate
+{
+public:
+    explicit SidebarItemDelegate(QListWidget* pList)
+    : QStyledItemDelegate(pList)
+    , mpList(pList)
+    {
+    }
+
+    void initStyleOption(QStyleOptionViewItem* pOption, const QModelIndex& index) const override
+    {
+        QStyledItemDelegate::initStyleOption(pOption, index);
+        if (!mpList->property("settingsRail").toBool()) {
+            return;
+        }
+        pOption->text.clear();
+        pOption->features &= ~QStyleOptionViewItem::HasDisplay;
+        pOption->decorationAlignment = Qt::AlignCenter;
+    }
+
+private:
+    QListWidget* mpList = nullptr;
+};
+} // namespace
+
 QWidget* dlgProfilePreferences::buildSidebar()
 {
     auto* pSidebar = new QWidget(mpWidget_shell);
+    mpWidget_sidebar = pSidebar;
     pSidebar->setObjectName(qsl("settingsSidebar"));
     pSidebar->setFixedWidth(scmSidebarWidth);
     auto* pSidebarLayout = new QVBoxLayout(pSidebar);
@@ -836,6 +1072,7 @@ QWidget* dlgProfilePreferences::buildSidebar()
     mpListWidget_categories->setFrameShape(QFrame::NoFrame);
     mpListWidget_categories->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     mpListWidget_categories->setIconSize(QSize(18, 18));
+    mpListWidget_categories->setItemDelegate(new SidebarItemDelegate(mpListWidget_categories));
     mpListWidget_categories->installEventFilter(this);
     pSidebarLayout->addWidget(mpListWidget_categories, 1);
 
@@ -949,6 +1186,10 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_discord"), tr("Discord Rich Presence")});
     //: Card title on the game protocols subpage, above the ten protocols Mudlet can offer the game
     cardTitles.append({qsl("card_protocolList"), tr("Protocols to offer the game")});
+    //: Card title on the Accessibility settings page, above the options for blank lines, blinking text and captions
+    cardTitles.append({qsl("card_accessibilityText"), tr("Text and media")});
+    //: Card title on the Accessibility settings page, above the options for moving around Mudlet from the keyboard
+    cardTitles.append({qsl("card_accessibilityKeyboard"), tr("Keyboard")});
     for (const auto& [objectName, title] : cardTitles) {
         if (auto* pCard = findChild<QGroupBox*>(objectName); pCard) {
             pCard->setTitle(title);
@@ -1220,10 +1461,18 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
     mpLabel_pageTitleIcon->hide();
     mpButton_searchBack->hide();
     mpButton_subpageBack->show();
+    mpLabel_pageTitle->setText(breadcrumbFor(key));
+    spotlight(pSpotlightTarget);
+}
+
+// Written in one place because the title row is measured against it as well as
+// shown it - see widthNeededForFullSidebar()
+QString dlgProfilePreferences::breadcrumbFor(const QString& subpageKey) const
+{
+    const QString categoryKey = subpageKey.section(QLatin1Char('/'), 0, 0);
     const QListWidgetItem* pItem = mpListWidget_categories->item(mCategoryRows.value(categoryKey, -1));
     //: Breadcrumb over a settings subpage: %1 is the category it belongs to, %2 the subpage's own name
-    mpLabel_pageTitle->setText(tr("%1 › %2").arg(pItem ? pItem->text() : categoryKey, mSubpageTitles.value(key)));
-    spotlight(pSpotlightTarget);
+    return tr("%1 › %2").arg(pItem ? pItem->text() : categoryKey, mSubpageTitles.value(subpageKey));
 }
 
 void dlgProfilePreferences::leaveSubpage()
@@ -1691,6 +1940,8 @@ void dlgProfilePreferences::retitleCards()
     groupBox_specialOptions->setTitle(tr("Compatibility"));
     //: Card title on the Advanced settings page, above development and diagnostic options
     groupBox_debug->setTitle(tr("Developer"));
+    //: Card title on the Accessibility settings page, above the two options about what the system screen reader is told
+    groupBox_accessibility->setTitle(tr("Screen reader"));
 }
 
 // The .ui file laid these grids out across the full width of a tab: rows of
@@ -1856,7 +2107,92 @@ void dlgProfilePreferences::updateColumnWidthCaps()
     for (const int page : std::as_const(mCategoryPageIndexes)) {
         capColumnWidth(qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(page)));
     }
+    // ...and the pages the sidebar never selects, which are as capable of
+    // holding a card wider than the reading column as any other
+    for (const int page : std::as_const(mSubpageIndexes)) {
+        capColumnWidth(qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(page)));
+    }
     capColumnWidth(mpScrollArea_searchResults);
+}
+
+// Not a number in the source: the sidebar's own width, whatever margins the
+// content area is laid out with, the reading column and the scrollbar beside
+// it, and the widest the title row can be asked to be. An interface font, a
+// platform's scrollbar or a translation's longer category names all move it.
+int dlgProfilePreferences::widthNeededForFullSidebar() const
+{
+    QWidget* pContent = mpWidget_titleRow ? mpWidget_titleRow->parentWidget() : nullptr;
+    // A width of zero collapses nothing, which is the right answer for a shell
+    // that is still being assembled
+    if (!pContent || !pContent->layout() || !mpLabel_pageTitle || !mpStackedWidget_categories) {
+        return 0;
+    }
+    const QMargins contentMargins = pContent->layout()->contentsMargins();
+
+    const auto* pPage = qobject_cast<const QScrollArea*>(mpStackedWidget_categories->currentWidget());
+    const int scrollBarWidth = pPage ? pPage->verticalScrollBar()->sizeHint().width() : 0;
+
+    // What the title row needs is measured off the row itself - the icon, the
+    // spacings, the margins - with the title it happens to be showing swapped
+    // for the widest one it could be asked for. Its two chevrons are hidden
+    // most of the time and a hidden widget asks a layout for nothing, so the
+    // wider of the two is allowed for here rather than read from the row.
+    const QFontMetrics titleMetrics = mpLabel_pageTitle->fontMetrics();
+    const int chevron = std::max(mpButton_searchBack->sizeHint().width(), mpButton_subpageBack->sizeHint().width()) + mpWidget_titleRow->layout()->spacing();
+    const int titleRowChrome = mpWidget_titleRow->sizeHint().width() - titleMetrics.horizontalAdvance(mpLabel_pageTitle->text()) + chevron;
+    int widestTitle = 0;
+    for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
+        widestTitle = std::max(widestTitle, titleMetrics.horizontalAdvance(mpListWidget_categories->item(row)->text()));
+    }
+    for (auto it = mSubpageIndexes.constBegin(); it != mSubpageIndexes.constEnd(); ++it) {
+        widestTitle = std::max(widestTitle, titleMetrics.horizontalAdvance(breadcrumbFor(it.key())));
+    }
+
+    const int contentNeeded = std::max(scmContentColumnWidth + scrollBarWidth, titleRowChrome + widestTitle);
+    return scmSidebarWidth + contentMargins.left() + contentMargins.right() + contentNeeded;
+}
+
+void dlgProfilePreferences::updateSidebarMode()
+{
+    if (!mpWidget_sidebar) {
+        return;
+    }
+    // The window's width rather than the space left over: the threshold is
+    // what the *expanded* sidebar needs, so collapsing cannot make the test
+    // that collapsed it come out the other way and start it oscillating.
+    setSidebarCollapsed(width() < widthNeededForFullSidebar());
+}
+
+void dlgProfilePreferences::setSidebarCollapsed(const bool collapsed)
+{
+    if (collapsed == mSidebarCollapsed && mpWidget_sidebar->width() == (collapsed ? scmSidebarRailWidth : scmSidebarWidth)) {
+        return;
+    }
+    mSidebarCollapsed = collapsed;
+    const int padding = collapsed ? scmSidebarRailPadding : scmSidebarPadding;
+    mpWidget_sidebar->setFixedWidth(collapsed ? scmSidebarRailWidth : scmSidebarWidth);
+    mpWidget_sidebar->layout()->setContentsMargins(padding, 16, padding, 16);
+    // The wordmark goes; the Mudlet icon beside it is as much of a header as
+    // there is room for, and the support row keeps its icon the same way
+    mpLabel_wordmark->setVisible(!collapsed);
+    // What the delegate leaves the names out by, and what the stylesheet draws
+    // the narrower selection pill and its accent bar from
+    mpListWidget_categories->setProperty("settingsRail", collapsed);
+    mpListWidget_categories->style()->unpolish(mpListWidget_categories);
+    mpListWidget_categories->style()->polish(mpListWidget_categories);
+    for (auto* pSeparator : mpListWidget_categories->findChildren<QFrame*>(qsl("settingsSidebarSeparator"))) {
+        pSeparator->setProperty("settingsRail", collapsed);
+        pSeparator->style()->unpolish(pSeparator);
+        pSeparator->style()->polish(pSeparator);
+    }
+    // A name that is no longer drawn is still what the row is: the item keeps
+    // its text - which is its accessible name - and offers it as a tooltip
+    // while there is nowhere to show it.
+    for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
+        QListWidgetItem* pItem = mpListWidget_categories->item(row);
+        pItem->setToolTip(collapsed ? pItem->text() : QString());
+    }
+    mpListWidget_categories->doItemsLayout();
 }
 
 static void collectFocusableInLayoutOrder(const QLayout* pLayout, QList<QWidget*>& chain)
@@ -1927,8 +2263,37 @@ void dlgProfilePreferences::guardScrollWheel()
     }
 }
 
+// Firefox's answer to a narrow window, and the only state in the shell that no
+// preference decides: the sidebar is a rail whenever the window is too narrow
+// to hold it, and a list of names again the moment it is not.
+void dlgProfilePreferences::resizeEvent(QResizeEvent* pEvent)
+{
+    QDialog::resizeEvent(pEvent);
+    updateSidebarMode();
+}
+
 bool dlgProfilePreferences::eventFilter(QObject* pObject, QEvent* pEvent)
 {
+    // A checkbox whose label had to be wrapped into a QLabel beside it keeps
+    // the whole of that label as its click target, which is what a checkbox
+    // with its own text would have been
+    if (pEvent->type() == QEvent::EnabledChange) {
+        if (auto* pCheckBox = qobject_cast<QCheckBox*>(pObject); pCheckBox) {
+            if (QLabel* pLabel = wrapLabelOf(pCheckBox); pLabel) {
+                pLabel->setEnabled(pCheckBox->isEnabled());
+            }
+        }
+    }
+    if (pEvent->type() == QEvent::MouseButtonRelease) {
+        if (auto* pLabel = qobject_cast<QLabel*>(pObject); pLabel && pLabel->objectName() == qsl("settingsWrappedLabel")) {
+            auto* pMouseEvent = static_cast<QMouseEvent*>(pEvent);
+            QCheckBox* pCheckBox = pLabel->parentWidget()->findChild<QCheckBox*>(QString(), Qt::FindDirectChildrenOnly);
+            if (pCheckBox && pCheckBox->isEnabled() && pMouseEvent->button() == Qt::LeftButton && pLabel->rect().contains(pMouseEvent->position().toPoint())) {
+                pCheckBox->click();
+                return true;
+            }
+        }
+    }
     if (pEvent->type() == QEvent::Wheel) {
         auto* pControl = qobject_cast<QWidget*>(pObject);
         if (pControl && !pControl->hasFocus()) {
@@ -2602,6 +2967,9 @@ void dlgProfilePreferences::applyShellStyle()
     // page colour outside it. A gradient is clipped by the radius instead, so
     // the bar keeps its width and takes the pill's own rounded corners.
     const qreal accentBarStop = static_cast<qreal>(scmSidebarAccentBarWidth) / (scmSidebarWidth - 2 * scmSidebarPadding);
+    // ...and the same bar across the narrower item a collapsed sidebar draws,
+    // which is a different fraction of a different width
+    const qreal railAccentBarStop = static_cast<qreal>(scmSidebarAccentBarWidth) / (scmSidebarRailWidth - 2 * scmSidebarRailPadding);
 
     // Fusion draws a group box's check indicator from palette(window) darkened
     // by 40%, which on a dark card is a 1.1:1 outline - the one control whose
@@ -2641,7 +3009,14 @@ void dlgProfilePreferences::applyShellStyle()
                                       // from the selection it already draws; eventFilter() is what
                                       // puts the property on:
                                       "#settingsCategoryList[settingsFocused=\"true\"]::item:selected { border: 1px solid %5; border-left: 3px solid %5; padding-left: 5px; }"
+                                      // Collapsed to a rail, the item is only as wide as the icon
+                                      // it holds - so the pill's padding goes and its accent bar
+                                      // is a different fraction of a different width
+                                      "#settingsCategoryList[settingsRail=\"true\"]::item { padding-left: 0px; }"
+                                      "#settingsCategoryList[settingsRail=\"true\"]::item:selected { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
+                                      " stop:0 %5, stop:%15 %5, stop:%16 %4, stop:1 %4); }"
                                       "#settingsSidebarSeparator { border: none; background-color: %7; margin: 8px 16px; }"
+                                      "#settingsSidebarSeparator[settingsRail=\"true\"] { margin: 8px 2px; }"
                                       "#settingsStack { background: transparent; }"
                                       // The pages, their viewports and their columns are the shell's
                                       // own surfaces rather than page content, so they keep the page
@@ -2704,6 +3079,11 @@ void dlgProfilePreferences::applyShellStyle()
                                       // name: quieter than what they describe, and indented under it
                                       "#settingsCardDescription { color: %9; }"
                                       "QLabel[settingsControlDescription=\"true\"] { color: %9; margin-left: 20px; margin-bottom: 6px; }"
+                                      // The holder a checkbox too long for one line shares with
+                                      // the label carrying its words: the card it sits on is what
+                                      // shows through it, named outright so that a profile's own
+                                      // stylesheet cannot paint a band across the card
+                                      "#settingsCheckBoxWrap { background: transparent; border: none; }"
                                       // A row that leads somewhere: its text at the left, a chevron at
                                       // the right edge, and the whole card's width to be clicked on
                                       "QAbstractButton[settingsChevronRow=\"true\"] { text-align: left; padding: 8px 30px 8px 10px; border: 1px solid %7; border-radius: 6px;"
@@ -2721,6 +3101,7 @@ void dlgProfilePreferences::applyShellStyle()
                                       "#settingsHeroDetail { color: %9; }")
                                           .arg(pageColor.name(), textColor.name(), hoverSoft, accentSoft, accentColor.name(), accentText.name(), borderColor.name(), cardColor.name(), mutedText.name())
                                           .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name())
+                                          .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5))
                                   + cardIndicatorRules);
 
     // Fusion draws every control outline - checkbox and radio indicators
@@ -6918,11 +7299,13 @@ void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 co
         connectApplyTriggers();
         snapshotValues();
         guardScrollWheel();
-        updateColumnWidthCaps();
-        rebuildTabOrder();
         // ...including the palette fix-ups, which the constructor only applied
         // to the controls that existed then:
         applyShellStyle();
+        // ...and after it, for the reason the constructor takes them in this
+        // order: the caps have to measure the cards as the stylesheet leaves them
+        updateColumnWidthCaps();
+        rebuildTabOrder();
     }
 }
 
@@ -7690,6 +8073,12 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     retranslateShell();
     // Every text the search index was built from has just been replaced:
     invalidateSearch();
+    // ...and so has every text the column widths were measured from: a language
+    // whose labels are longer needs wider columns, and the checkboxes that no
+    // longer fit one need re-measuring against the reading width
+    updateColumnWidthCaps();
+    // ...which can move the width the sidebar needs to stand beside them
+    updateSidebarMode();
 
     // Re identify which Profile we are showing the settings for (otherwise if
     // multiple profiles have this dialog open they revert to a plain

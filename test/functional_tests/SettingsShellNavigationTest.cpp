@@ -805,6 +805,153 @@ private slots:
         // It reflects rather than sets: no control of its own writes a setting
         QVERIFY2(pHero->findChildren<QAbstractButton*>().isEmpty(), "the security hero grew a control of its own - it is meant to reflect and link, not to set");
     }
+
+    // The window can be made narrower than a sidebar of names and a full
+    // reading column will fit into. Firefox's answer, and now this dialog's,
+    // is to keep the sidebar as a rail of icons rather than to let the page
+    // scroll sideways underneath it.
+    void test_theSidebarCollapsesToARailWhenTheWindowIsTooNarrowForIt()
+    {
+        auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
+        QVERIFY2(pSidebar, "the settings shell has no sidebar to collapse");
+        const int fullWidth = pSidebar->width();
+        QVERIFY2(fullWidth > 200, qPrintable(qsl("the sidebar is only %1px wide at 1060x760, so this case cannot tell a collapse from where it started").arg(fullWidth)));
+
+        mpPreferences->resize(780, 560);
+        QVERIFY2(pSidebar->width() <= 64, qPrintable(qsl("the sidebar is still %1px wide at the dialog's 780x560 minimum").arg(pSidebar->width())));
+
+        // A rail draws no names, but a name is what a screen reader announces
+        // the row as - so the item keeps its text, and offers it as a tooltip
+        // while there is nowhere on screen to show it
+        const int row = rowOf(qsl("mapper"));
+        QListWidgetItem* pItem = sidebar()->item(row);
+        QVERIFY2(!pItem->text().isEmpty(), "a collapsed sidebar row lost the text that is its accessible name");
+        QCOMPARE(pItem->toolTip(), pItem->text());
+        // ...and it is still the way to a category
+        selectCategory(qsl("mapper"));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
+
+        mpPreferences->resize(1060, 760);
+        QCOMPARE(pSidebar->width(), fullWidth);
+        QVERIFY2(sidebar()->item(row)->toolTip().isEmpty(), "an expanded sidebar row kept the tooltip that only stood in for a hidden name");
+    }
+
+    // The acceptance test the visual-QA pass asked for: at the size the dialog
+    // refuses to go below, no page is wider than the window showing it.
+    void test_atItsMinimumSizeNoPageScrollsSideways()
+    {
+        mpPreferences->resize(780, 560);
+        qApp->processEvents();
+        QStringList pageKeys = specOrderedCategories();
+        for (const QString& key : specOrderedCategories()) {
+            selectCategory(key);
+            // The cap is taken again on the way in, and once more from the
+            // event loop after the stylesheet has had its say
+            qApp->processEvents();
+            QScrollArea* pPage = pageOf(key);
+            QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
+                     qPrintable(qsl("the '%1' page is %2px wide in a %3px viewport at 780x560").arg(key).arg(pPage->widget()->width()).arg(pPage->viewport()->width())));
+            QVERIFY2(!pPage->horizontalScrollBar()->isVisible(), qPrintable(qsl("the '%1' page scrolls sideways at 780x560").arg(key)));
+        }
+        // ...and the pages the sidebar never selects, which have cards of their
+        // own and a breadcrumb over them
+        for (const QString& subpage : {qsl("connection/protocols"), qsl("chat/discord")}) {
+            mpPreferences->setTab(subpage);
+            qApp->processEvents();
+            auto* pPage = qobject_cast<QScrollArea*>(stack()->currentWidget());
+            QVERIFY2(pPage && pPage->objectName() == qsl("settingsPage_%1").arg(QString(subpage).replace(QLatin1Char('/'), QLatin1Char('_'))),
+                     qPrintable(qsl("the deep link '%1' did not reach its subpage").arg(subpage)));
+            QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
+                     qPrintable(qsl("the '%1' subpage is %2px wide in a %3px viewport at 780x560").arg(subpage).arg(pPage->widget()->width()).arg(pPage->viewport()->width())));
+        }
+    }
+
+    // A QCheckBox draws its label on one line however long it is, so a
+    // translation longer than the reading column is what makes a page scroll
+    // sideways.
+    //
+    // What the case does *not* assert is that English never wraps anything.
+    // Whether a given label fits is a question about this machine's fonts as
+    // much as about the words - the same English page wraps under a real X
+    // server and does not under the offscreen platform - so the environment-
+    // independent claim is the one below: only the labels that do not fit give
+    // up their text, and the short ones beside them keep theirs.
+    void test_aCheckboxTooLongForTheReadingColumnWrapsIntoALabelBesideIt()
+    {
+        // 137px of English on a 640px column, so no measurement anywhere can
+        // ask for this one to be wrapped
+        QVERIFY2(!mpPreferences->checkBox_enableBlinkText->text().isEmpty(), "a checkbox that comfortably fits the reading column was wrapped anyway");
+        QVERIFY2(!mpPreferences->checkBox_announceIncomingText->text().isEmpty(), "the whole card was wrapped rather than the one label that did not fit it");
+
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        auto* pGerman = new QTranslator(qApp);
+        QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so the wrapping cannot be measured against a real one");
+        QVERIFY(qApp->installTranslator(pGerman));
+        auto removeTranslator = qScopeGuard([pGerman]() {
+            qApp->removeTranslator(pGerman);
+            delete pGerman;
+        });
+        openPreferences();
+
+        QCheckBox* pBox = mpPreferences->checkBox_advertiseScreenReader;
+        QVERIFY2(pBox->text().isEmpty(), qPrintable(qsl("the German screen reader checkbox kept its own label: '%1'").arg(pBox->text())));
+        QVERIFY2(!pBox->accessibleName().isEmpty(), "the wrapped checkbox has no accessible name, so a screen reader has nothing to announce it as");
+        QWidget* pWrap = pBox->parentWidget();
+        QCOMPARE(pWrap->objectName(), qsl("settingsCheckBoxWrap"));
+        auto* pLabel = pWrap->findChild<QLabel*>(qsl("settingsWrappedLabel"));
+        QVERIFY2(pLabel, "the wrapped checkbox has no label beside it to carry its words");
+        QCOMPARE(pLabel->text(), pBox->accessibleName());
+        QVERIFY2(pLabel->wordWrap(), "the label the checkbox's words moved to does not wrap, which is the whole point of moving them");
+        // ...and the page is back inside the reading column because of it
+        QCOMPARE(pageOf(qsl("accessibility"))->widget()->maximumWidth(), 640);
+        // ...while the checkboxes that fit it are still checkboxes
+        QVERIFY2(!mpPreferences->checkBox_enableBlinkText->text().isEmpty(), "a German checkbox that fits the reading column was wrapped with the one that does not");
+
+        // #10165's guarantee: the QCheckBox is still the control of record, so
+        // clicking the words it no longer draws has to reach the Host
+        selectCategory(qsl("accessibility"));
+        qApp->processEvents();
+        const bool before = mpHost->mAdvertiseScreenReader;
+        QCOMPARE(pBox->isChecked(), before);
+        QTest::mouseClick(pLabel, Qt::LeftButton, Qt::NoModifier, pLabel->rect().center());
+        QCOMPARE(pBox->isChecked(), !before);
+        QCOMPARE(mpHost->mAdvertiseScreenReader, !before);
+        mpHost->mAdvertiseScreenReader = before;
+    }
+
+    // Section 8's "split the Accessibility card": a card whose title is the
+    // name of the page it is alone on tells the reader nothing.
+    void test_theAccessibilityPageDoesNotRepeatItsOwnNameOnACard()
+    {
+        selectCategory(qsl("accessibility"));
+        const QString pageTitle = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitle"))->text();
+        QScrollArea* pPage = pageOf(qsl("accessibility"));
+        auto* pColumnLayout = qobject_cast<QBoxLayout*>(pPage->widget()->layout());
+        QList<QGroupBox*> cards;
+        for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
+            if (auto* pCard = qobject_cast<QGroupBox*>(pColumnLayout->itemAt(item)->widget()); pCard) {
+                cards.append(pCard);
+            }
+        }
+        QVERIFY2(cards.size() >= 3, qPrintable(qsl("the Accessibility page carries %1 card(s), so its options were not split up").arg(cards.size())));
+        for (auto* pCard : cards) {
+            QVERIFY2(!pCard->title().isEmpty(), qPrintable(qsl("the card %1 has no title").arg(pCard->objectName())));
+            QVERIFY2(pCard->title() != pageTitle, qPrintable(qsl("the card %1 is called '%2', which is the page's own name").arg(pCard->objectName(), pCard->title())));
+        }
+        // ...and nothing was lost on the way out of the one card
+        const QList<QWidget*> options{mpPreferences->checkBox_announceIncomingText,
+                                      mpPreferences->checkBox_advertiseScreenReader,
+                                      mpPreferences->checkBox_enableClosedCaption,
+                                      mpPreferences->checkBox_enableBlinkText,
+                                      mpPreferences->checkBox_f3SearchEnabled,
+                                      mpPreferences->comboBox_blankLinesBehaviour,
+                                      mpPreferences->comboBox_caretModeKey};
+        for (auto* pOption : options) {
+            QVERIFY2(pPage->widget()->isAncestorOf(pOption), qPrintable(qsl("%1 fell off the Accessibility page when its card was split").arg(pOption->objectName())));
+            QVERIFY2(pOption->isVisible(), qPrintable(qsl("%1 is not showing on the Accessibility page").arg(pOption->objectName())));
+        }
+    }
 };
 
 #include "SettingsShellNavigationTest.moc"
