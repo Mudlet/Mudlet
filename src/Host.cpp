@@ -3854,6 +3854,31 @@ QDockWidget* Host::mapWidget() const
     return mpConsole->mpDockableMapWidget;
 }
 
+// Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
+// detached windows borrow it while they show a map of their own, and every one
+// of them gives it back through here. createMapper() records the embedded
+// mapper on the console and puts it in the main frame or a user window, so a
+// profile that has one is never the mpDockableMapWidget case below.
+void Host::restoreOwnMapper()
+{
+    if (!mpMap) {
+        return;
+    }
+
+    if (mpConsole && mpConsole->mpMapper) {
+        mpMap->mpMapper = mpConsole->mpMapper;
+    } else if (mpConsole && mpConsole->mpDockableMapWidget) {
+        auto hostMapWidget = mpConsole->mpDockableMapWidget->widget();
+
+        if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
+            mpMap->mpMapper = hostMapper;
+        }
+    }
+#if defined(DEBUG_WINDOW_HANDLING)
+    qDebug() << "Host::restoreOwnMapper:" << getName() << "- map is now drawn by" << mpMap->mpMapper.data();
+#endif
+}
+
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
     auto pM = mapWidget();
@@ -5081,6 +5106,25 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
     auto pC = mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setCommandFgColor(r, g, b, alpha);
+        return true;
+    }
+    return false;
+}
+
+// Returns true when a script has claimed the built-in map buttons for this
+// profile via setConfig("mapperButton", ...): "disabled" swallows the request
+// outright, "scripted" turns it into a sysMapperButtonAction event so the
+// profile's UI package can show or hide its own map window instead.
+bool Host::interceptMapperButton()
+{
+    if (mMapperButtonMode == MapperButtonMode::Disabled) {
+        return true;
+    }
+    if (mMapperButtonMode == MapperButtonMode::Scripted) {
+        TEvent event{};
+        event.mArgumentList.append(QLatin1String("sysMapperButtonAction"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        raiseEvent(event);
         return true;
     }
     return false;

@@ -2584,8 +2584,27 @@ void mudlet::slot_timerFires()
     pQT->deleteLater();
 }
 
+// Applies the active profile's "mapperButton" setConfig mode on top of the
+// baseline the toolbar management functions computed, and lets each detached
+// window re-derive the same for its own profile. Called by those functions and
+// when a script changes the mode at runtime.
+void mudlet::updateMapActionAvailability()
+{
+    Host* pHost = getActiveHost();
+    const bool scriptAllows = !pHost || pHost->mMapperButtonMode != Host::MapperButtonMode::Disabled;
+    mpActionMapper->setEnabled(mMapActionBaselineEnabled && scriptAllows);
+    dactionShowMap->setEnabled(mMapActionBaselineEnabled && scriptAllows);
+
+    for (const auto& detachedWindow : mDetachedWindows) {
+        if (detachedWindow) {
+            detachedWindow->updateToolBarActions();
+        }
+    }
+}
+
 void mudlet::disableToolbarButtons()
 {
+    mMapActionBaselineEnabled = false;
     mpActionTriggers->setEnabled(false);
     dactionScriptEditor->setEnabled(false);
     dactionShowErrors->setEnabled(false);
@@ -2682,8 +2701,8 @@ void mudlet::updateMainWindowToolbarState()
     mpActionKeys->setEnabled(hasActiveProfileInMainWindow);
     mpActionVariables->setEnabled(hasActiveProfileInMainWindow);
 
-    mpActionMapper->setEnabled(hasActiveProfileInMainWindow);
-    dactionShowMap->setEnabled(hasActiveProfileInMainWindow);
+    mMapActionBaselineEnabled = hasActiveProfileInMainWindow;
+    updateMapActionAvailability();
     dactionNewMapWindow->setEnabled(hasActiveProfileInMainWindow);
 
     mpActionNotes->setEnabled(hasActiveProfileInMainWindow);
@@ -2787,8 +2806,8 @@ void mudlet::enableToolbarButtons()
     mpActionMudletDiscord->setEnabled(true);
     dactionDiscord->setEnabled(true);
 
-    mpActionMapper->setEnabled(true);
-    dactionShowMap->setEnabled(true);
+    mMapActionBaselineEnabled = true;
+    updateMapActionAvailability();
     dactionNewMapWindow->setEnabled(true);
 
     mpActionNotes->setEnabled(true);
@@ -4412,6 +4431,10 @@ void mudlet::slot_mapper()
         return;
     }
 
+    if (pHost->interceptMapperButton()) {
+        return;
+    }
+
     pHost->showHideOrCreateMapper(true);
 }
 
@@ -4426,6 +4449,10 @@ void mudlet::slot_showMapperDialog()
     auto pMap = pHost->mpMap.data();
 
     if (!pMap) {
+        return;
+    }
+
+    if (pHost->interceptMapperButton()) {
         return;
     }
 
@@ -4474,13 +4501,7 @@ void mudlet::slot_showMapperDialog()
             mpCurrentMapDockWidget = nullptr;
 
             // Restore the host's default mapper if it exists
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                    pMap->mpMapper = hostMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         }
 
         return;
@@ -4579,13 +4600,7 @@ void mudlet::slot_showMapperDialog()
             }
 
             // Restore the host's default mapper when hiding
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                    pMap->mpMapper = hostMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         } else {
             // When showing, set this as the active mapper
             mpCurrentMapDockWidget = mapDockWidget;
@@ -9123,18 +9138,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
-                    if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                            auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                            if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                                pMap->mpMapper = hostMapper;
-#if defined(DEBUG_WINDOW_HANDLING)
-                                qDebug() << "mudlet: Restored host mapper for main window profile" << dockProfileName;
-#endif
-                            }
-                        }
-                    }
+                    pHost->restoreOwnMapper();
                 }
             }
         }
