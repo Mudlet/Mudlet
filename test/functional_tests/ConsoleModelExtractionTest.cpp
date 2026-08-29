@@ -769,6 +769,203 @@ private slots:
         delete mudlet::self();
     }
 
+    // Every one of these Lua functions used to reach through Host::mpConsole
+    // without checking it, so calling any of them on a profile whose window had
+    // been closed took the whole client down with it. None of them can do what
+    // it was asked here, so each has to report that instead.
+    void test_viewOnlyUiFunctionsReportWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        runLua(host, qsl(R"LUA(
+noViewProblems = {}
+
+-- nil or false plus a reason, which is what a Mudlet Lua function answers when
+-- the thing it was handed does not exist
+local function expectRefusal(name, ...)
+    local first, second = ...
+    if first ~= nil and first ~= false then
+        table.insert(noViewProblems, name .. ' returned ' .. tostring(first))
+    elseif type(second) ~= 'string' or second == '' then
+        table.insert(noViewProblems, name .. ' gave no reason')
+    end
+end
+
+-- functions that answer a plain value rather than reporting a failure
+local function expectValue(name, expected, ...)
+    local first = ...
+    if first ~= expected then
+        table.insert(noViewProblems, name .. ' returned ' .. tostring(first) .. ' rather than ' .. tostring(expected))
+    end
+end
+
+-- an invalid selection has always returned no values at all
+local function expectNothing(name, ...)
+    if select('#', ...) ~= 0 then
+        table.insert(noViewProblems, name .. ' returned ' .. tostring((...)))
+    end
+end
+
+expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
+expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
+expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
+expectRefusal('deleteMiniConsole', deleteMiniConsole('noViewMc'))
+expectRefusal('deleteScrollBox', deleteScrollBox('noViewSb'))
+expectRefusal('createTextEdit', createTextEdit('noViewTe', 0, 0, 100, 20))
+expectRefusal('deleteTextEdit', deleteTextEdit('noViewTe'))
+expectRefusal('getTextEditText', getTextEditText('noViewTe'))
+expectRefusal('setTextEditText', setTextEditText('noViewTe', 'x'))
+expectRefusal('clearTextEdit', clearTextEdit('noViewTe'))
+expectRefusal('setTextEditReadOnly', setTextEditReadOnly('noViewTe', true))
+expectRefusal('setTextEditPlaceholder', setTextEditPlaceholder('noViewTe', 'p'))
+expectRefusal('setTextEditStyleSheet', setTextEditStyleSheet('noViewTe', ''))
+expectRefusal('setTextEditFont', setTextEditFont('noViewTe', 'Courier'))
+expectRefusal('setTextEditFontSize', setTextEditFontSize('noViewTe', 10))
+expectRefusal('setTextEditTabMovesFocus', setTextEditTabMovesFocus('noViewTe', true))
+expectRefusal('getBorderColor', getBorderColor())
+expectRefusal('setBorderColor', setBorderColor(1, 2, 3))
+expectRefusal('getLabelSizeHint', getLabelSizeHint('noViewLbl'))
+expectRefusal('getLabelStyleSheet', getLabelStyleSheet('noViewLbl'))
+expectRefusal('setLabelStyleSheet', setLabelStyleSheet('noViewLbl', ''))
+expectRefusal('getLabelToolTip', getLabelToolTip('noViewLbl'))
+expectRefusal('setLabelToolTip', setLabelToolTip('noViewLbl', 't'))
+expectRefusal('setLabelCursor', setLabelCursor('noViewLbl', 0))
+expectRefusal('setLabelCustomCursor', setLabelCustomCursor('noViewLbl', '/nowhere.png'))
+expectRefusal('getLabelText', getLabelText('noViewLbl'))
+expectRefusal('clearCmdLine', clearCmdLine())
+expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
+expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
+expectRefusal('getMousePosition', getMousePosition())
+expectRefusal('getMainWindowSize', getMainWindowSize())
+expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
+expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
+expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
+expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
+expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
+expectRefusal('setTextFormat', setTextFormat('main', 0, 0, 0, 255, 255, 255, false, false, false))
+expectRefusal('isAnsiBgColor', isAnsiBgColor(1))
+expectRefusal('isAnsiFgColor', isAnsiFgColor(1))
+
+expectValue('hasFocus', false, hasFocus())
+expectValue('lowerWindow', false, lowerWindow('noViewUw'))
+expectValue('raiseWindow', false, raiseWindow('noViewUw'))
+
+expectNothing('getBgColor', getBgColor())
+expectNothing('getFgColor', getFgColor())
+
+noViewReport = table.concat(noViewProblems, '; ')
+)LUA"));
+
+        QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+    }
+
+    // selectCaptureGroup() only reaches the view from inside a trigger that
+    // captured something, and a selection needs a widget to live in - so with no
+    // window it has to answer the -1 it already answers for a group that is not
+    // there.
+    void test_selectCaptureGroupAnswersMinusOneWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        runLua(host,
+               qsl("captureGroupResult = 'the trigger did not run'\n"
+                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(1))]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+
+        host->runTriggers(appendModelLine(model->buffer, qsl("NoViewCapture alpha")));
+
+        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("-1"));
+    }
+
+    // The main console's background is the model's, so a script can still read
+    // back what it set with no window in between.
+    void test_backgroundColourRoundTripsThroughTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor scriptedBackground(0x44, 0x55, 0x66);
+        QVERIFY2(host->mBgColor != scriptedBackground, "The profile already carries the scripted background, so the assertions below cannot fail.");
+        runLua(host,
+               qsl("setBackgroundColor(0x44, 0x55, 0x66)\n"
+                   "readBackR, readBackG, readBackB, readBackA = getBackgroundColor()\n"));
+
+        QCOMPARE(model->mBgColor, scriptedBackground);
+        QCOMPARE(luaGlobalNumber(host, "readBackR"), 0x44);
+        QCOMPARE(luaGlobalNumber(host, "readBackG"), 0x55);
+        QCOMPARE(luaGlobalNumber(host, "readBackB"), 0x66);
+        QCOMPARE(luaGlobalNumber(host, "readBackA"), 255);
+    }
+
+    // The command line's colours live on Host, and the widget only caches them -
+    // TConsole re-reads both when one is built. So with no window the write still
+    // has somewhere to land and still reports success.
+    void test_commandLineColoursReachTheProfileWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        const QColor scriptedBackground(0x12, 0x34, 0x56, 255);
+        const QColor scriptedForeground(0x65, 0x43, 0x21, 255);
+        QVERIFY2(host->mCommandBgColor != scriptedBackground, "The profile already carries the scripted command line background.");
+        QVERIFY2(host->mCommandFgColor != scriptedForeground, "The profile already carries the scripted command line foreground.");
+
+        runLua(host,
+               qsl("commandColoursSet = tostring(setCommandBackgroundColor(0x12, 0x34, 0x56))\n"
+                   "  .. ',' .. tostring(setCommandForegroundColor(0x65, 0x43, 0x21))\n"));
+
+        QCOMPARE(luaGlobalString(host, "commandColoursSet"), qsl("true,true"));
+        QCOMPARE(host->mCommandBgColor, scriptedBackground);
+        QCOMPARE(host->mCommandFgColor, scriptedForeground);
+    }
+
+    // wrapLine() rewrites the buffer, which is the model's, and the wrap width it
+    // has to use is the one the buffer carries - not the profile's, which the view
+    // only copies in when it restyles.
+    void test_wrapLineRewrapsTheModelBufferWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QString longLine = qsl("alpha bravo charlie delta echo foxtrot golf hotel");
+        const int wrappedLine = appendModelLine(model->buffer, longLine);
+        QCOMPARE(model->buffer.line(wrappedLine), longLine);
+        const int linesBefore = model->buffer.getLastLineNumber();
+
+        // narrower than the profile's own width, so reading the wrap settings
+        // from anywhere but the buffer leaves the line alone
+        model->buffer.setWrapAt(20);
+        model->buffer.setWrapIndent(0);
+        model->buffer.setWrapHangingIndent(0);
+        QVERIFY2(host->mWrapAt > longLine.size(), "The profile wraps narrower than the test line, so this cannot tell the two widths apart.");
+
+        runLua(host, qsl("wrapLine('main', %1)").arg(wrappedLine));
+
+        QVERIFY2(model->buffer.getLastLineNumber() > linesBefore, "wrapLine() did not rewrap the model's buffer.");
+        QVERIFY2(model->buffer.line(wrappedLine).size() <= 20, qPrintable(qsl("The rewrapped line is wider than the buffer's wrap width: '%1'").arg(model->buffer.line(wrappedLine))));
+        QVERIFY2(joinedBuffer(model->buffer).contains(longLine), "Rewrapping the model's buffer lost the line's text.");
+    }
+
 private:
     // Utility function to manually start a profile like a user would do via the
     // GUI
