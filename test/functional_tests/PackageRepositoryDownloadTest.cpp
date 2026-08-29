@@ -138,17 +138,26 @@ public:
         mTimer.start(25ms);
     }
 
-    // Leaves each box up for this long before answering it. A box runs an event
-    // loop of its own, so holding one open is how a test decides what else gets
-    // to happen while the code under test is stopped inside it
-    void setHoldFor(std::chrono::milliseconds hold) { mHoldMs = hold.count(); }
+    // Leaves a box that is on its own up until another is stacked on top of it,
+    // for at most this long. Answering a lone box is what would let the run
+    // continue past the very nesting a test is waiting to observe, and how long
+    // the event that stacks the second one takes is not something a loaded CI
+    // runner - or a developer's machine - holds to any fixed figure. The cap is
+    // there so a stack that never comes ends the test rather than hanging it.
+    void setWaitForStacking(std::chrono::milliseconds maxWait) { mWaitForStackingMs = maxWait.count(); }
+
+    // Whether two boxes were ever open at once while that wait was in force, i.e.
+    // whether the nesting actually happened rather than the cap running out
+    bool sawStacking() const { return mSawStacking; }
+
+    // Whether the progress dialog was ever seen gone while a warning box was
+    // still up. finishBatch() is what takes that dialog down, and every warning
+    // here is raised from inside the loop that finishBatch() ends, so a true
+    // means the batch was wound up while the loop was still stopped one frame
+    // further in - the failure the nesting tests exist to catch.
+    bool progressGoneWhileBoxUp() const { return mProgressGoneWhileBoxUp; }
 
     QStringList seen() const { return mSeen; }
-
-    // The most boxes open at once. Two means one opened while the code was
-    // already stopped inside another, which is the interleaving worth proving
-    // happened rather than assuming
-    int mostAtOnce() const { return mMostAtOnce; }
 
 private:
     void dismissAny()
@@ -161,33 +170,70 @@ private:
                 visible << box;
             }
         }
-        mMostAtOnce = qMax(mMostAtOnce, static_cast<int>(visible.size()));
+        if (visible.size() >= 2) {
+            mSawStacking = true;
+        }
+        if (!visible.isEmpty() && !mProgressGoneWhileBoxUp) {
+            // allWidgets() rather than the top-level list above: the progress
+            // dialog is parented to the package manager, so it need not be
+            // enumerated as a window of its own.
+            bool progressUp = false;
+            for (QWidget* widget : QApplication::allWidgets()) {
+                auto* progress = qobject_cast<QProgressDialog*>(widget);
+                if (progress && progress->isVisible()) {
+                    progressUp = true;
+                    break;
+                }
+            }
+            mProgressGoneWhileBoxUp = !progressUp;
+        }
 
         const qint64 now = mSinceStart.elapsed();
-        QMessageBox* newest = nullptr;
         for (QMessageBox* box : visible) {
             mFirstSeen.insert(box, mFirstSeen.value(box, now));
-            if (!newest || mFirstSeen.value(box) > mFirstSeen.value(newest)) {
-                newest = box;
-            }
         }
 
-        // Only the newest, because boxes nest: each one runs an event loop inside
-        // the one before it, and an outer box cannot return until the inner has.
-        // Answering them newest first is what unwinds them, and it makes the order
-        // they were recorded in the order they were stacked
-        if (newest && now - mFirstSeen.value(newest) >= mHoldMs) {
-            mSeen << newest->text();
-            mFirstSeen.remove(newest);
-            newest->done(QMessageBox::Ok);
+        // Which box is on top, asked of the modal stack Qt keeps rather than
+        // worked out from when this timer first saw each one. Two boxes routinely
+        // turn up inside a single 25ms poll - a reply failing inside a warning's
+        // own event loop does exactly that - and then they share a timestamp, so
+        // the tie falls to the order QApplication::topLevelWidgets() returns,
+        // which is not defined. That is a coin flip, and it decided the recorded
+        // order of the nesting test below often enough to fail it about six runs
+        // in ten. activeModalWidget() is the innermost modal by construction.
+        auto* newest = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+        if (!newest || !visible.contains(newest)) {
+            // Not one of ours on top (the progress dialog is modal too). With a
+            // single box up there is no ambiguity left to resolve; with more,
+            // wait rather than guess.
+            newest = (visible.size() == 1) ? visible.constFirst() : nullptr;
         }
+        if (!newest) {
+            return;
+        }
+
+        // Still waiting for the interleaving under test and nothing has stacked
+        // yet: leave the one box that is up alone. Answering it is what would let
+        // the run continue past the very nesting it is here to observe. Once a
+        // stack has been seen the wait is spent, so the boxes that unwind
+        // afterwards are not held for it a second time.
+        if (!mSawStacking && mWaitForStackingMs > 0 && visible.size() < 2 && now - mFirstSeen.value(newest) < mWaitForStackingMs) {
+            return;
+        }
+
+        // Answering the innermost is what unwinds the stack: an outer box cannot
+        // return until the one inside it has, so this records them top down.
+        mSeen << newest->text();
+        mFirstSeen.remove(newest);
+        newest->done(QMessageBox::Ok);
     }
 
     QTimer mTimer;
     QElapsedTimer mSinceStart;
     QHash<QMessageBox*, qint64> mFirstSeen;
-    qint64 mHoldMs = 0;
-    int mMostAtOnce = 0;
+    qint64 mWaitForStackingMs = 0;
+    bool mSawStacking = false;
+    bool mProgressGoneWhileBoxUp = false;
     QStringList mSeen;
 };
 
@@ -461,8 +507,14 @@ private slots:
     {
         mpProxy->setAnswer(StubProxy::Answer::Refuse);
         MessageBoxDismisser dismisser;
-        // long enough for a refused connection to 127.0.0.1 to come back
-        dismisser.setHoldFor(1500ms);
+        // Hold the refusal's box open until the download's failure is stacked on
+        // top of it, rather than for a fixed stretch and hoping the reply lands
+        // inside it. The loop is stopped inside that box for exactly as long as
+        // the box is up, so waiting on the stack itself is what makes the order
+        // below causal instead of a race against how fast a refused connection
+        // comes back - which varies enough to fail this outright, roughly six
+        // runs in ten locally, never mind on a shared CI runner.
+        dismisser.setWaitForStacking(20s);
 
         QPointer<dlgPackageManager> manager = openManagerListing({repositoryEntry(qsl("a-first-download"), qsl("a-first-download.mpackage")),
                                                                   repositoryEntry(qsl("b-nameless-refusal"), QString()),
@@ -474,8 +526,10 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 3, 30000);
 
         // Without this the run could come out green having never stacked one box
-        // inside another, which is the whole of what it is here to exercise
-        QVERIFY2(dismisser.mostAtOnce() >= 2, "No two warnings were ever open at once, so nothing finished inside the refusal and the case under test never happened");
+        // inside another, which is the whole of what it is here to exercise. The
+        // wait above is capped, so this is also what separates "the reply never
+        // landed inside the refusal" from the ordering failures below.
+        QVERIFY2(dismisser.sawStacking(), "No two warnings were ever open at once, so nothing finished inside the refusal and the case under test never happened");
 
         // Recorded newest first, so the first download's failure coming out ahead
         // of the refusal that was already on screen is what pins the nesting: the
@@ -483,6 +537,43 @@ private slots:
         QVERIFY2(dismisser.seen().at(0).contains(qsl("a-first-download")), "The first download did not fail inside the refusal's warning");
         QVERIFY2(dismisser.seen().at(1).contains(qsl("b-nameless-refusal")), "The refusal's warning was not the one underneath");
         QVERIFY2(dismisser.seen().at(2).contains(qsl("c-second-download")), "The selection after the refusal was never processed");
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
+    }
+
+    // The same nesting, with the refusal last. That ordering is what actually
+    // puts the bookkeeping at risk, and the case above cannot: with the refusal
+    // in the middle the selections after it are still outstanding, so the count
+    // cannot reach zero inside its box however the refusal counts itself, and
+    // moving that count to before the box leaves every assertion there green.
+    //
+    // Last, every other selection has already been counted, so a refusal that
+    // counted itself before showing its box would take the count to zero the
+    // moment a download failed inside that box - running finishBatch() there,
+    // which closes the progress dialog, drops the network manager and resets the
+    // package list while the loop is still stopped one frame further in. The
+    // progress dialog still being up at the instant the two boxes are stacked is
+    // what says that did not happen.
+    void test_aRefusalLastKeepsTheBatchOpenUntilItsBoxCloses()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        MessageBoxDismisser dismisser;
+        dismisser.setWaitForStacking(20s);
+
+        QPointer<dlgPackageManager> manager = openManagerListing({repositoryEntry(qsl("a-first-download"), qsl("a-first-download.mpackage")),
+                                                                  repositoryEntry(qsl("b-second-download"), qsl("b-second-download.mpackage")),
+                                                                  repositoryEntry(qsl("c-nameless-refusal"), QString())});
+        QVERIFY2(selectPackages(manager, {qsl("a-first-download"), qsl("b-second-download"), qsl("c-nameless-refusal")}), "The packages under test were not listed in the Explore view");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 3, 30000);
+
+        QVERIFY2(dismisser.sawStacking(), "No two warnings were ever open at once, so nothing finished inside the refusal and the case under test never happened");
+        QVERIFY2(!dismisser.progressGoneWhileBoxUp(), "The batch was wound up while the loop was still stopped inside the refusal's warning");
 
         QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
 
