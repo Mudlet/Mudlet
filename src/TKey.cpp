@@ -88,7 +88,8 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
             }
         }
 
-        for (auto childKey : *mpMyChildrenList) {
+        for (auto* childKeyNode : *mpMyChildrenList) {
+            auto* childKey = static_cast<TKey*>(childKeyNode);
             if (childKey->match(key, modifier, isToMatchAll)) {
                 if (isToMatchAll) {
                     isAMatch = true;
@@ -114,7 +115,8 @@ bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) c
         return true;
     }
 
-    for (auto childKey : *mpMyChildrenList) {
+    for (auto* childKeyNode : *mpMyChildrenList) {
+        auto* childKey = static_cast<TKey*>(childKeyNode);
         if (childKey->wouldMatch(key, modifier)) {
             return true;
         }
@@ -139,7 +141,8 @@ void TKey::enableKey(const QString& name)
     if (mName == name) {
         setIsActive(true);
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->enableKey(name);
     }
 }
@@ -149,7 +152,8 @@ void TKey::disableKey(const QString& name)
     if (mName == name) {
         setIsActive(false);
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->disableKey(name);
     }
 }
@@ -163,7 +167,8 @@ void TKey::compileAll()
         }
         mOK_code = false;
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->compileAll();
     }
 }
@@ -178,7 +183,8 @@ void TKey::compile()
             mOK_code = false;
         }
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->compile();
     }
 }
