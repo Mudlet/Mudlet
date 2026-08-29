@@ -4398,13 +4398,7 @@ void mudlet::slot_showMapperDialog()
             mpCurrentMapDockWidget = nullptr;
 
             // Restore the host's default mapper if it exists
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                    pMap->mpMapper = hostMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         }
 
         return;
@@ -4503,13 +4497,7 @@ void mudlet::slot_showMapperDialog()
             }
 
             // Restore the host's default mapper when hiding
-            if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                    pMap->mpMapper = hostMapper;
-                }
-            }
+            pHost->restoreOwnMapper();
         } else {
             // When showing, set this as the active mapper
             mpCurrentMapDockWidget = mapDockWidget;
@@ -9040,18 +9028,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
 
                 // Restore host's default mapper for the other profile
                 if (auto pHost = mHostManager.getHost(dockProfileName)) {
-                    if (auto pMap = pHost->mpMap.data()) {
-                        if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-                            auto hostMapWidget = pHost->mpConsole->mpDockableMapWidget->widget();
-
-                            if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
-                                pMap->mpMapper = hostMapper;
-#if defined(DEBUG_WINDOW_HANDLING)
-                                qDebug() << "mudlet: Restored host mapper for main window profile" << dockProfileName;
-#endif
-                            }
-                        }
-                    }
+                    pHost->restoreOwnMapper();
                 }
             }
         }

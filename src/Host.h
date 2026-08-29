@@ -453,6 +453,8 @@ public:
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
     QDockWidget* mapWidget() const;
+    // Gives TMap::mpMapper back to this profile's own mapper - see the definition.
+    void restoreOwnMapper();
 
     // Multiple map views support
     std::pair<int, QString> createMapView(int areaId = 0);
