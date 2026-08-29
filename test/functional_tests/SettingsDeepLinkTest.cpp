@@ -42,6 +42,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -62,6 +63,7 @@ private:
     // too - and without this it would be the developer's own ~/.cache
     QTemporaryDir mCacheDir;
     QByteArray mSavedXdgCache;
+    QByteArray mSavedNoThemeDownload;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
@@ -69,18 +71,12 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    // tab_codeEditor lands on the Editor category, whose first visit would
-    // otherwise fetch the edbee themes over the network - a themes file younger
-    // than the update period sends that down its cached branch instead
-    void writeFreshEditorThemesFile()
+    // tab_codeEditor lands on the Editor category, which reads the themes it
+    // offers from this file. What keeps that visit off the network is
+    // MUDLET_TEST_NO_THEME_DOWNLOAD rather than anything about this file.
+    static void writeEditorThemesFile()
     {
         const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
@@ -89,9 +85,10 @@ private:
         QVERIFY(themes.write("[]") == 2);
     }
 
-    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+    QListWidget* sidebar() const { return TestSettings::sidebar(mpPreferences); }
 
-    QStackedWidget* stack() const { return mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack")); }
+    QStackedWidget* stack() const { return TestSettings::stack(mpPreferences); }
+    QScrollArea* pageOf(const QString& key) const { return TestSettings::pageOf(mpPreferences, key); }
 
     QString currentCategory() const
     {
@@ -138,6 +135,9 @@ private slots:
         QVERIFY(mCacheDir.isValid());
         mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
         qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
+        // Nothing here may reach github.com for the edbee themes
+        mSavedNoThemeDownload = qgetenv("MUDLET_TEST_NO_THEME_DOWNLOAD");
+        qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", "1");
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -149,7 +149,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mProfileName);
-        writeFreshEditorThemesFile();
+        writeEditorThemesFile();
 
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "No active host after profile creation");
@@ -168,6 +168,7 @@ private slots:
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
         mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME") : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
+        mSavedNoThemeDownload.isNull() ? qunsetenv("MUDLET_TEST_NO_THEME_DOWNLOAD") : qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", mSavedNoThemeDownload);
     }
 
     void init() { openPreferences(); }
@@ -202,7 +203,7 @@ private slots:
             mpPreferences->setTab(category == qsl("advanced") ? qsl("general") : qsl("advanced"));
             mpPreferences->setTab(legacyTab);
             QCOMPARE(currentCategory(), category);
-            QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_%1").arg(category)));
+            QCOMPARE(stack()->currentWidget(), pageOf(category));
         }
     }
 
@@ -228,7 +229,7 @@ private slots:
 
         QWidget* pPulse = waitForSpotlight();
         QVERIFY2(pPulse, "the tab_connection deep link drew no spotlight");
-        auto* pPage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_privacy"));
+        auto* pPage = pageOf(qsl("privacy"));
         QVERIFY2(pPage, "the Privacy page is not there under the object name this looks it up by");
         QCOMPARE(pPulse->parentWidget(), pPage->widget());
 
@@ -243,7 +244,7 @@ private slots:
     void test_aNewStyleTargetScrollsItsCardIntoView()
     {
         mpPreferences->setTab(qsl("mapper"));
-        auto* pPage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_mapper"));
+        auto* pPage = pageOf(qsl("mapper"));
         QVERIFY2(pPage, "the Mapper page is not there under the object name this looks it up by");
         QVERIFY2(pPage->verticalScrollBar()->maximum() > 0, "the Mapper page fits its viewport, so scrolling to a card could not be detected");
         pPage->verticalScrollBar()->setValue(0);
@@ -275,14 +276,52 @@ private slots:
         pSearch->setFocus();
         pSearch->setText(qsl("color"));
         QCoreApplication::processEvents();
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
 
         mpPreferences->setTab(qsl("tab_connection"));
 
         QVERIFY2(pSearch->text().isEmpty(), "the deep link left the query standing in the search field");
         QCOMPARE(currentCategory(), qsl("privacy"));
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_privacy")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("privacy")));
         QVERIFY2(waitForSpotlight(), "the deep link that arrived during a search drew no spotlight");
+    }
+
+    // A subpage is deep-linkable in its own right: "category/subpageKey" goes
+    // into it rather than landing on the category page with the row that opens
+    // it, and the sidebar still shows which category that is.
+    void test_aSubpageTargetGoesIntoTheSubpage()
+    {
+        mpPreferences->setTab(qsl("connection/protocols"));
+        QCOMPARE(currentCategory(), qsl("connection"));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("connection_protocols")));
+    }
+
+    // ...and so is a card that lives on one: naming it takes the way in rather
+    // than leaving the spotlight on a page nobody is looking at.
+    void test_aCardOnASubpageIsReachedThroughItsSubpage()
+    {
+        mpPreferences->setTab(qsl("connection/card_protocolList"));
+        QCOMPARE(currentCategory(), qsl("connection"));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("connection_protocols")));
+        QVERIFY2(waitForSpotlight(), "the deep link to a card on a subpage drew no spotlight");
+    }
+
+    // The pulse is a widget laid over a card, transparent to the mouse but
+    // still a child of the page. One left behind after its animation would
+    // stack up, one per deep link, over pages the player goes on using.
+    void test_theSpotlightTakesItselfAwayWhenItHasFinished()
+    {
+        mpPreferences->setTab(qsl("tab_connection"));
+        QVERIFY2(waitForSpotlight(), "the deep link drew no spotlight, so there is nothing to see cleaned up");
+
+        // The fade runs for 2.5s and the widget is deleted on the next turn
+        // of the event loop after it
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) == nullptr;
+                         },
+                         8000),
+                 "the spotlight was still a child of the dialog long after its animation had finished");
     }
 };
 

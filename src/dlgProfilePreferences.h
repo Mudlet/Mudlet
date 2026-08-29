@@ -36,11 +36,14 @@
 class Host;
 class QCloseEvent;
 class QDoubleSpinBox;
+class QEvent;
 class QFrame;
 class QListWidget;
 class QListWidgetItem;
+class QResizeEvent;
 class QScrollArea;
 class QStackedWidget;
+class QToolButton;
 class QVBoxLayout;
 class TAction;
 class TAlias;
@@ -50,6 +53,54 @@ class TScript;
 class TTimer;
 class TTrigger;
 
+
+// The pairing instant apply needs: what every apply-relevant control held the
+// last time the dialog read the settings, so that an apply writes back only
+// what the user has changed since rather than the whole page (#10165). The
+// shortcut editors write through a map instead of through a control value, so
+// they are here too - that is the whole of the pairing in one place.
+//
+// Both references are to members of the dialog that owns this, so both outlive
+// it. Snapshot keys may dangle if a control is ever destroyed: they are only
+// ever compared, never dereferenced, and a control coming into being after the
+// last snapshot reads as dirty, which is the safe way round.
+class SettingsSnapshot
+{
+public:
+    Q_DISABLE_COPY(SettingsSnapshot)
+    SettingsSnapshot(const QWidget& owner, const QMap<QString, QKeySequence>& shortcuts);
+    // Whether a widget holds a value a setting is written from at all. The
+    // types are the ones connectApplyTriggers() listens to, so everything able
+    // to schedule an apply can also be told apart from how it was populated.
+    static bool carriesValue(const QObject* pControl);
+    // Called once the controls hold what the settings say - after population,
+    // and after each apply - so that anything differing from this afterwards is
+    // the user's own edit
+    void take();
+    // ...and for one control whose list was rebuilt under a dialog already
+    // showing it
+    void take(const QObject* pControl);
+    bool dirty(const QObject* pControl) const;
+    bool anyDirty(const QList<const QObject*>& controls) const;
+    bool shortcutsDirty() const;
+    bool shortcutDirty(const QString& key) const;
+    // Anything the user has changed that the settings do not know about yet: a
+    // control differing from its snapshot, a shortcut editor holding a sequence
+    // that has not been committed, a line edit part-way through a word, or an
+    // apply still waiting out its debounce
+    bool pendingEdits(const QTimer* pApplyTimer, const QLineEdit* pSearchField) const;
+    // The editor showing each shortcut, so that a second profile re-reads the
+    // editors the first one left behind rather than adding a second row of them
+    TKeySequenceEdit* editorFor(const QString& key) const;
+    void addEditor(const QString& key, TKeySequenceEdit* pEditor);
+
+private:
+    const QWidget& mOwner;
+    const QMap<QString, QKeySequence>& mCurrentShortcuts;
+    QHash<const QObject*, QVariant> mValues;
+    QMap<QString, QKeySequence> mShortcuts;
+    QMap<QString, QPointer<TKeySequenceEdit>> mEditors;
+};
 
 class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
@@ -136,9 +187,6 @@ public slots:
     void slot_setMMCPChatName(const QString&);
     void slot_mmcpChatNameChanged();
 
-    // Save.
-    void slot_saveAndClose();
-
     void slot_hideActionLabel();
     void slot_setEncoding(const int);
 
@@ -203,6 +251,14 @@ private slots:
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);
     void slot_crashReportPolicyChanged(int index);
+    // Named rather than lambdas so that initWithHost() can make every one of
+    // its connections with Qt::UniqueConnection - see the comment on that
+    // function for why running it twice has to be harmless
+    void slot_mapSymbolFontFudgeChanged(const double factor);
+    void slot_changeMapperShowRoomBorders(const bool state);
+    void slot_changeDrawUpperLowerLevels(const bool state);
+    void slot_changeMapperUseAntiAlias(const bool state);
+    void slot_caretModeKeyChanged(const int index);
 
 
 signals:
@@ -213,7 +269,9 @@ signals:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    bool event(QEvent* pEvent) override;
     bool eventFilter(QObject* pObject, QEvent* pEvent) override;
+    void resizeEvent(QResizeEvent* pEvent) override;
 
 private:
     void setColors();
@@ -230,7 +288,20 @@ private:
     void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
+    // Writes every control a profile decides the value of. Safe to run again on
+    // a dialog that is already showing a profile: everything it builds is built
+    // once and re-read afterwards, every list it fills is emptied first, and
+    // every connection it makes is either Qt::UniqueConnection or inside one of
+    // those build-once blocks. refreshFromSettings() depends on all three.
     void initWithHost(Host*);
+    // ...and its counterpart for the settings that belong to the application
+    // rather than to any profile
+    void populateApplicationSettings();
+    // Re-reads the settings into a dialog that has been left open, so that a
+    // change made from Lua or from another dialog is what the user comes back
+    // to. Refuses whenever the dialog is holding an edit of its own, because
+    // re-reading would throw that edit away - see SettingsSnapshot::pendingEdits().
+    void refreshFromSettings();
     QString certificateWarningCheckBoxStyle() const;
     QString certificateWarningLabelStyle() const;
     void restyleCertificateWarnings();
@@ -255,24 +326,93 @@ private:
     void buildShell();
     QWidget* buildSidebar();
     void addCategory(const QString& key, const QString& iconFile);
+    // The one place a settings category is declared: the order the sidebar
+    // lists them in, the icon each row shows, the name under it, and where the
+    // two separators go. Re-read on a language change, which is what brings the
+    // names back translated.
+    struct CategoryDefinition
+    {
+        QString key;
+        QString iconFile;
+        QString name;
+        bool separatorAbove = false;
+    };
+    QList<CategoryDefinition> categoryDefinitions() const;
+    // The sidebar row a category is on, or -1 for a key naming none
+    int categoryRow(const QString& key) const;
     void addSidebarSeparator();
+    QScrollArea* createScrollPage(const QString& objectSuffix);
+    // The scrolling column every page is, whether the sidebar leads to it or a
+    // card does
+    QScrollArea* buildPage(const QString& objectSuffix, const QList<QWidget*>& cards);
     void buildCategoryPage(const QString& key, const QList<QWidget*>& cards);
+    // A page reached by drilling into a card rather than from the sidebar: the
+    // sidebar stays on the parent category, and a breadcrumb with a back
+    // chevron leads back out of it
+    void addSubpage(const QString& categoryKey, const QString& subKey, QWidget* pOpenerCard, const QList<QWidget*>& cards);
+    void showSubpage(const QString& categoryKey, const QString& subKey, QWidget* pSpotlightTarget = nullptr);
+    void leaveSubpage();
+    // "Category › Subpage", the widest thing the title row is ever asked to show
+    QString breadcrumbFor(const QString& subpageKey) const;
+    // Which subpage, if any, a widget lives on - "category/sub", or empty for
+    // anything on a category page
+    QString subpageHolding(const QWidget* pWidget) const;
     QGroupBox* createCard(const QString& objectName);
+    // One muted line under a card's title saying what the card is for, ending
+    // in a "Learn more" link where the wiki has a page about it
+    void setCardDescription(QGroupBox* pCard, const QString& description, const QString& learnMoreUrl = QString());
+    void setCardDescriptions();
+    // The ten telnet protocols, as a page of checkboxes reached from the
+    // Connection page's protocols card
+    void buildProtocolsSubpage();
+    void updateProtocolSummary();
+    void buildDiscordSummaryCard();
+    void updateDiscordSummary();
+    // The one status hero: what the current connection's security actually is,
+    // rather than what the settings below it ask for
+    void buildSecurityStatusCard();
+    void updateSecurityStatus();
     // Every string the shell shows that setupUi() did not make, and that
     // retranslateUi() therefore cannot put back on a language change. Called
     // once as the shell is built and again from slot_guiLanguageChanged(), so
     // each of those strings is written in exactly one place.
     void retranslateShell();
+    // Synonyms a player might type for a setting whose own words do not
+    // include them. Written here rather than in the .ui file so that they can
+    // carry a translator note, and re-read on a language change.
+    void setSearchKeywords();
     void moveIntoCard(QGroupBox* pCard, const QList<QWidget*>& controls);
     void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
     void retitleCards();
     void reflowWideCards();
+    // A column narrower than its contents clips them rather than scrolling, so
+    // the cap is the reading width or whatever the widest card needs once the
+    // checkboxes on it have been fitted to that width
+    void capColumnWidth(QScrollArea* pScrollArea);
     // The column caps have to be taken again once a profile has filled the
-    // controls, because that is what decides how wide the widest card is
+    // controls, because that is what decides how wide the widest card is - and
+    // again after a language change, which is what decides how wide the text is
     void updateColumnWidthCaps();
+    // A checkbox draws its label on one line however long it is, so a
+    // translation longer than the reading column is what makes a page scroll
+    // sideways. Any that do are turned into an indicator with a wrapping label
+    // beside it, one at a time and only while it measurably narrows the column,
+    // so a language whose text fits keeps native checkboxes throughout.
+    void fitCheckBoxesToColumn(QWidget* pColumn);
+    void wrapCheckBox(QCheckBox* pCheckBox);
+    void unwrapCheckBox(QCheckBox* pCheckBox);
+    // Below the width the sidebar needs to stand beside a full reading column,
+    // it collapses to a rail of icons. Driven by the window's size alone -
+    // there is no preference to get out of step with it.
+    int widthNeededForFullSidebar() const;
+    void updateSidebarMode();
+    void setSidebarCollapsed(bool collapsed);
     void rebuildTabOrder();
     void guardScrollWheel();
     void buildMigrationBanner();
+    // The banner belongs to no one category: it is lent to the top of whichever
+    // page is showing, and taken off every page while the search has the stack
+    void placeBannerOn(QWidget* pColumn);
     void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
@@ -287,10 +427,8 @@ private:
     void clearSearchHighlights();
     void highlightMatches(QWidget* pCard, const QStringList& needles);
     QLabel* searchCategoryHeader(const QString& key);
+    QPushButton* searchSubpageLink(const QString& subpageKey, QWidget* pCard);
     void connectApplyTriggers();
-    void snapshotValues();
-    bool dirty(const QObject* pControl) const;
-    bool anyDirty(const QList<const QObject*>& controls) const;
     void applyAll();
     void maybeDownloadEditorThemes();
 
@@ -305,24 +443,30 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
-    QPointer<QMenu> protocolMenu;
-    QPointer<QAction> mEnableGMCP;
-    QPointer<QAction> mEnableMSDP;
-    QPointer<QAction> mEnableMSSP;
-    QPointer<QAction> mEnableMSP;
-    QPointer<QAction> mEnableMXP;
-    QPointer<QAction> mEnableMTTS;
-    QPointer<QAction> mEnableMNES;
-    QPointer<QAction> mEnableNAWS;
-    QPointer<QAction> mEnableCHARSET;
-    QPointer<QAction> mEnableNEWENVIRON;
+    // ...and what those looked like the last time the settings were read, with
+    // the rest of the dirty-apply pairing. Declared after currentShortcuts,
+    // which it holds a reference to.
+    SettingsSnapshot mSnapshot{*this, currentShortcuts};
+    // The ten telnet protocols, on the Connection page's protocols subpage
+    QPointer<QCheckBox> mEnableGMCP;
+    QPointer<QCheckBox> mEnableMSDP;
+    QPointer<QCheckBox> mEnableMSSP;
+    QPointer<QCheckBox> mEnableMSP;
+    QPointer<QCheckBox> mEnableMXP;
+    QPointer<QCheckBox> mEnableMTTS;
+    QPointer<QCheckBox> mEnableMNES;
+    QPointer<QCheckBox> mEnableNAWS;
+    QPointer<QCheckBox> mEnableCHARSET;
+    QPointer<QCheckBox> mEnableNEWENVIRON;
 
-    // One card of one category page: everything it can be found by, and exactly
-    // where it goes back to once the search that borrowed it ends
+    // One card of one page: everything it can be found by, and exactly where it
+    // goes back to once the search that borrowed it ends. A card on a subpage
+    // is never borrowed - the results offer the way into its subpage instead.
     struct SearchCard
     {
         QPointer<QWidget> pCard;
         QString categoryKey;
+        QString subpageKey;
         QString text;
         QVBoxLayout* pHomeLayout = nullptr;
         int homeIndex = -1;
@@ -330,6 +474,10 @@ private:
     };
 
     QWidget* mpWidget_shell = nullptr;
+    // The sidebar and the row the page title sits in: both are measured when
+    // the window is resized, to decide whether the sidebar still fits
+    QWidget* mpWidget_sidebar = nullptr;
+    QWidget* mpWidget_titleRow = nullptr;
     QLabel* mpLabel_wordmark = nullptr;
     QListWidget* mpListWidget_categories = nullptr;
     // The one sidebar row that is a link rather than a category
@@ -339,6 +487,10 @@ private:
     // The search field's leading glyph, recoloured for the theme in
     // applyShellStyle() rather than added again on every appearance change
     QPointer<QAction> mpAction_searchIcon;
+    // Leads out of the search results, back to the category they interrupted
+    QToolButton* mpButton_searchBack = nullptr;
+    // ...and its counterpart on a subpage, leading up to the parent category
+    QToolButton* mpButton_subpageBack = nullptr;
     QLabel* mpLabel_pageTitle = nullptr;
     QLabel* mpLabel_pageTitleIcon = nullptr;
     QFrame* mpFrame_migrationBanner = nullptr;
@@ -350,28 +502,65 @@ private:
     QList<SearchCard> mSearchCards;
     QList<QPointer<QWidget>> mHighlightedWidgets;
     QMap<QString, QLabel*> mSearchCategoryHeaders;
+    // The way into a subpage whose contents matched but whose opener card did
+    // not, one per subpage, kept between searches like the headers are
+    QMap<QString, QPushButton*> mSearchSubpageLinks;
     QPointer<QWidget> mpWidget_spotlight;
     int mSearchResultsPageIndex = -1;
     bool mSearchActive = false;
     QString mCategoryBeforeSearch;
-    QMap<QString, int> mCategoryPageIndexes;
-    QMap<QString, int> mCategoryRows;
+    // Which subpage the search interrupted, so that leaving the results by any
+    // door comes back to the page the query was typed on
+    QString mSubpageBeforeSearch;
+    // "category/sub" while a subpage is showing, empty on a category page
+    QString mCurrentSubpage;
+    QMap<QString, int> mSubpageIndexes;
+    // What the breadcrumb calls each subpage - written by retranslateShell()
+    QMap<QString, QString> mSubpageTitles;
+    // The scroll area of each subpage, so that a card can be asked which page
+    // it is on without walking the stack
+    QHash<const QWidget*, QString> mSubpageOfPage;
+    // The card on the parent category page that drills into each subpage
+    QMap<QString, QPointer<QWidget>> mSubpageOpeners;
+    QPointer<QGroupBox> mpCard_protocolList;
+    QPointer<QGroupBox> mpCard_discord;
+    QPointer<QPushButton> mpButton_discordSubpage;
+    QPointer<QGroupBox> mpCard_securityStatus;
+    QPointer<QLabel> mpLabel_securityHeadline;
+    QPointer<QLabel> mpLabel_securityDetail;
+    QPointer<QLabel> mpLabel_securityLink;
+    // Where each sidebar category ended up: its row in the sidebar, its page in
+    // the stack, and - because the sidebar item holds the icon but a rich-text
+    // search header needs the path it was loaded from - the icon file. One
+    // table rather than three maps that have to be kept saying the same thing.
+    struct CategoryPlace
+    {
+        int row = -1;
+        int pageIndex = -1;
+        QString iconFile;
+    };
+    QMap<QString, CategoryPlace> mCategories;
     QTimer* mpTimer_apply = nullptr;
-    // What every apply-relevant control held the last time the dialog read the
-    // settings, keyed by the control (the protocol menu's actions included)
-    QHash<const QObject*, QVariant> mValueSnapshot;
-    // The shortcut editors write through this map rather than through a control
-    // value, so it needs a snapshot of its own
-    QMap<QString, QKeySequence> mShortcutsSnapshot;
+    // The sidebar is a rail of icons rather than a list of names
+    bool mSidebarCollapsed = false;
+    // Set once buildShell() has finished moving controls between cards, which
+    // is when it becomes safe to wrap one that does not fit - see
+    // fitCheckBoxesToColumn()
+    bool mShellReady = false;
     // Suppresses the instant apply while initWithHost()/clearHostDetails() are
-    // writing the controls rather than the user
+    // writing the controls rather than the user - and, since it is raised for
+    // the whole of a repopulation, what makes re-entering one impossible
     bool mPopulating = false;
-    // QDialog::closeEvent() calls reject(), which is where the close this is
-    // already inside of would otherwise start again
+    // Raised for the whole of closeEvent(): QDialog::closeEvent() calls
+    // reject(), which is where the close this is already inside of would
+    // otherwise start again, and nothing on the way out is worth repopulating
     bool mClosing = false;
     bool mEditorThemesChecked = false;
 
     QString mLogDirPath;
+    // Which profile the keychain has already been asked about for the "forget
+    // saved sign-in" button, so that re-reading the settings does not ask again
+    QString mSignInTokenCheckedFor;
     // Needed to remember the state on construction so that we can sent the same
     // flag back for Host::mUseSharedDictionary even if we turn-off
     // Host::mEnableUserDictionary: - although, following review THAT has been

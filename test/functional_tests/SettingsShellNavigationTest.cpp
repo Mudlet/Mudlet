@@ -41,6 +41,7 @@
 #include <QtTest/QtTest>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
 #include <QLabel>
@@ -48,13 +49,19 @@
 #include <QListWidget>
 #include <QScrollArea>
 #include <QSettings>
+#include <QScopeGuard>
 #include <QSpinBox>
+#include <QRegularExpression>
 #include <QStackedWidget>
+#include <QStyleOptionGroupBox>
+#include <QToolButton>
 #include <QTranslator>
 #include <QWheelEvent>
+#include <cmath>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -62,6 +69,44 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+// WCAG's ratio, which is what the redesign's contrast targets are written in
+static qreal relativeLuminance(const QColor& colour)
+{
+    const auto channel = [](const qreal value) {
+        return value <= 0.04045 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(colour.redF()) + 0.7152 * channel(colour.greenF()) + 0.0722 * channel(colour.blueF());
+}
+
+static qreal contrastRatio(const QColor& one, const QColor& other)
+{
+    const qreal first = relativeLuminance(one);
+    const qreal second = relativeLuminance(other);
+    return (std::max(first, second) + 0.05) / (std::min(first, second) + 0.05);
+}
+
+// What QGroupBox::paintEvent() hands the style, so that a rect asked for here
+// is the one the card was actually drawn with - a check indicator is only
+// reserved room for when the box is checkable
+static QStyleOptionGroupBox groupBoxStyleOption(const QGroupBox* pGroupBox)
+{
+    QStyleOptionGroupBox option;
+    option.initFrom(pGroupBox);
+    option.subControls = QStyle::SC_GroupBoxFrame;
+    if (pGroupBox->isCheckable()) {
+        option.subControls |= QStyle::SC_GroupBoxCheckBox;
+        option.state |= pGroupBox->isChecked() ? QStyle::State_On : QStyle::State_Off;
+    }
+    if (!pGroupBox->title().isEmpty()) {
+        option.subControls |= QStyle::SC_GroupBoxLabel;
+    }
+    option.text = pGroupBox->title();
+    option.textAlignment = Qt::AlignLeft;
+    option.lineWidth = 0;
+    option.midLineWidth = 0;
+    return option;
+}
 
 // Brackets every string it is asked for, so that a case can tell what the
 // dialog re-read on a language change from what it is still showing from
@@ -92,6 +137,7 @@ private:
     // too - and without this it would be the developer's own ~/.cache
     QTemporaryDir mCacheDir;
     QByteArray mSavedXdgCache;
+    QByteArray mSavedNoThemeDownload;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
@@ -116,32 +162,42 @@ private:
                 qsl("advanced")};
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    // The first visit to the Editor category refreshes the edbee themes from
-    // colorsublime, which is a network round trip. A themes file younger than
-    // the update period sends maybeDownloadEditorThemes() down its cached
-    // branch instead, so walking every category here reaches no network.
-    void writeFreshEditorThemesFile()
+    // The themes the Editor page offers are read from this file; its
+    // modification time no longer decides anything, because
+    // MUDLET_TEST_NO_THEME_DOWNLOAD is what keeps that page off the network.
+    static void writeEditorThemesFile(const QDateTime& modified)
     {
         const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
         QVERIFY(themes.write("[]") == 2);
+        // Closed before the time is set, because the flush that closing does
+        // would otherwise put the modification time back to now
+        themes.close();
+        QVERIFY(themes.open(QIODevice::ReadWrite));
+        QVERIFY(themes.setFileTime(modified, QFileDevice::FileModificationTime));
+        themes.close();
     }
 
-    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+    QListWidget* sidebar() const { return TestSettings::sidebar(mpPreferences); }
 
-    QStackedWidget* stack() const { return mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack")); }
+    QStackedWidget* stack() const { return TestSettings::stack(mpPreferences); }
 
-    QScrollArea* pageOf(const QString& key) const { return mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_%1").arg(key)); }
+    QScrollArea* pageOf(const QString& key) const { return TestSettings::pageOf(mpPreferences, key); }
+
+    // Writes through the two references rather than returning them: QVERIFY2
+    // expands to a bare return, so anything using it has to return void.
+    void scrollMapperPageHalfWayDown(QScrollBar*& pMapperBar, int& scrolledTo)
+    {
+        pMapperBar = pageOf(qsl("mapper"))->verticalScrollBar();
+        QVERIFY2(pMapperBar->maximum() > 0, "the Mapper page fits its viewport, so a scroll position could not be retained or lost");
+        scrolledTo = pMapperBar->maximum() / 2;
+        pMapperBar->setValue(scrolledTo);
+        QVERIFY2(scrolledTo > 0, "the Mapper page scrolls by less than two pixels, so this proves nothing");
+    }
 
     int rowOf(const QString& key) const
     {
@@ -195,6 +251,10 @@ private slots:
         QVERIFY(mCacheDir.isValid());
         mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
         qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
+        // Nothing here may reach github.com for the edbee themes, whatever the
+        // themes file on disk looks like
+        mSavedNoThemeDownload = qgetenv("MUDLET_TEST_NO_THEME_DOWNLOAD");
+        qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", "1");
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -206,7 +266,9 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mProfileName);
-        writeFreshEditorThemesFile();
+        // Two days old, so that anything reading the modification time would
+        // set off a download - which is exactly what the hook has to stop
+        writeEditorThemesFile(QDateTime::currentDateTime().addDays(-2));
 
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "No active host after profile creation");
@@ -225,6 +287,7 @@ private slots:
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
         mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME") : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
+        mSavedNoThemeDownload.isNull() ? qunsetenv("MUDLET_TEST_NO_THEME_DOWNLOAD") : qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", mSavedNoThemeDownload);
     }
 
     void init() { openPreferences(); }
@@ -238,13 +301,11 @@ private slots:
     // Every other case here rests on the tab strip being gone from the shell.
     // The tab widget itself survives, holding no pages, so what has to be
     // checked is that it is out of the layout rather than deleted.
-    void test_theTabWidgetAndTheSaveRowAreOutOfTheLayout()
+    void test_theTabWidgetIsOutOfTheLayout()
     {
         QCOMPARE(mpPreferences->vBoxLayout_main->indexOf(mpPreferences->tabWidget), -1);
-        QCOMPARE(mpPreferences->vBoxLayout_main->indexOf(mpPreferences->widget_bottom), -1);
         QCOMPARE(mpPreferences->tabWidget->count(), 0);
         QVERIFY2(mpPreferences->tabWidget->isHidden(), "the emptied tab widget is still on screen");
-        QVERIFY2(mpPreferences->widget_bottom->isHidden(), "the Save button row is still on screen");
 
         auto* pShell = mpPreferences->findChild<QWidget*>(qsl("settingsShell"));
         QVERIFY2(pShell, "the sidebar-and-cards shell was never built");
@@ -313,11 +374,9 @@ private slots:
     void test_eachCategoryKeepsItsOwnScrollPosition()
     {
         selectCategory(qsl("mapper"));
-        QScrollBar* pMapperBar = pageOf(qsl("mapper"))->verticalScrollBar();
-        QVERIFY2(pMapperBar->maximum() > 0, "the Mapper page fits its viewport, so a scroll position could not be retained or lost");
-        const int scrolledTo = pMapperBar->maximum() / 2;
-        pMapperBar->setValue(scrolledTo);
-        QVERIFY2(scrolledTo > 0, "the Mapper page scrolls by less than two pixels, so this proves nothing");
+        QScrollBar* pMapperBar = nullptr;
+        int scrolledTo = 0;
+        scrollMapperPageHalfWayDown(pMapperBar, scrolledTo);
 
         selectCategory(qsl("general"));
         QCOMPARE(stack()->currentWidget(), pageOf(qsl("general")));
@@ -336,11 +395,9 @@ private slots:
     void test_aPageSwitchWithTheFocusOnThePageKeepsItsScrollPosition()
     {
         selectCategory(qsl("mapper"));
-        QScrollBar* pMapperBar = pageOf(qsl("mapper"))->verticalScrollBar();
-        QVERIFY2(pMapperBar->maximum() > 0, "the Mapper page fits its viewport, so a scroll position could not be retained or lost");
-        const int scrolledTo = pMapperBar->maximum() / 2;
-        pMapperBar->setValue(scrolledTo);
-        QVERIFY2(scrolledTo > 0, "the Mapper page scrolls by less than two pixels, so this proves nothing");
+        QScrollBar* pMapperBar = nullptr;
+        int scrolledTo = 0;
+        scrollMapperPageHalfWayDown(pMapperBar, scrolledTo);
 
         mpPreferences->pushButton_saveMap->setFocus();
         QCOMPARE(QApplication::focusWidget(), mpPreferences->pushButton_saveMap);
@@ -397,6 +454,140 @@ private slots:
         selectCategory(qsl("mapper"));
         selectCategory(qsl("editor"));
         QVERIFY2(!pSettings->contains(qsl("colorSublimeThemesURL")), "the Editor category refreshed its themes again on a later visit");
+    }
+
+    // Fusion draws a group box's check indicator from palette(window) darkened
+    // by 40%, which on a dark card came out at about 1.1:1 - an outline nobody
+    // can see. The shell names that outline itself; this is the measurement
+    // that says it is still visible, in the theme it was invisible in.
+    void test_aCheckableCardsCheckIndicatorIsVisibleInTheDarkTheme()
+    {
+        const auto appearanceBefore = mudlet::self()->mAppearance;
+        auto restore = qScopeGuard([appearanceBefore]() {
+            mudlet::self()->setAppearance(appearanceBefore);
+        });
+        // Set before the dialog is built, because the shell reads the palette
+        // as it assembles its stylesheet
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        mudlet::self()->setAppearance(enums::Appearance::dark);
+        openPreferences();
+        selectCategory(qsl("privacy"));
+
+        QGroupBox* pCard = mpPreferences->groupBox_ssl;
+        QVERIFY2(pCard->isCheckable(), "the card this case measures is not checkable, so it draws no indicator");
+        QStyleOptionGroupBox option = groupBoxStyleOption(pCard);
+        const QRect indicator = pCard->style()->subControlRect(QStyle::CC_GroupBox, &option, QStyle::SC_GroupBoxCheckBox, pCard);
+        QVERIFY2(indicator.width() > 4 && indicator.height() > 4, qPrintable(qsl("the check indicator has no rectangle to sample: %1x%2").arg(indicator.width()).arg(indicator.height())));
+
+        const QImage painted = pCard->grab().toImage();
+        // The strongest colour the indicator's box is drawn in, against the
+        // page showing through beside it
+        const QColor page = painted.pixelColor(indicator.right() + 4, indicator.center().y());
+        qreal worst = 1.0;
+        QColor outline = page;
+        for (int x = indicator.left(); x <= indicator.right(); ++x) {
+            const QColor sample = painted.pixelColor(x, indicator.top());
+            if (contrastRatio(sample, page) > contrastRatio(outline, page)) {
+                outline = sample;
+            }
+        }
+        worst = contrastRatio(outline, page);
+        QVERIFY2(worst >= 3.0,
+                 qPrintable(qsl("the dark theme draws the card's check indicator as %1 against %2, a contrast of %3:1").arg(outline.name(), page.name(), QString::number(worst, 'f', 2))));
+    }
+
+    // A checkable card's title starts after its check indicator and a plain
+    // one's at the frame edge, which reads as the headings of a page wandering
+    // in and out. The plain ones are inset to match rather than the checkable
+    // ones being made plain, which landmine 11 forbids.
+    void test_everyCardTitleStartsAtTheSameDistanceFromItsFrame()
+    {
+        selectCategory(qsl("privacy"));
+
+        const auto titleLeft = [](QGroupBox* pCard) {
+            QStyleOptionGroupBox option = groupBoxStyleOption(pCard);
+            return pCard->style()->subControlRect(QStyle::CC_GroupBox, &option, QStyle::SC_GroupBoxLabel, pCard).left();
+        };
+
+        QGroupBox* pCheckable = mpPreferences->groupBox_ssl;
+        auto* pPlain = mpPreferences->findChild<QGroupBox*>(qsl("card_passwords"));
+        QVERIFY(pPlain);
+        QVERIFY2(pCheckable->isCheckable(), "the checkable card this case compares against is not checkable");
+        QVERIFY2(!pPlain->isCheckable(), "the plain card this case compares is checkable, so there is no inset to check");
+
+        QCOMPARE(titleLeft(pPlain), titleLeft(pCheckable));
+    }
+
+    // Nothing about a test run should depend on a file modification time to
+    // stay off the network: an unlucky one used to be all that stood between a
+    // visit to the Editor page and a live fetch of github.com, which fails
+    // slowly and intermittently rather than red.
+    void test_theThemeDownloadHookKeepsTheEditorPageOffTheNetwork()
+    {
+        QSettings* pSettings = mudlet::getQSettings();
+        const QVariant savedUrl = pSettings->value(qsl("colorSublimeThemesURL"));
+        // So that a run where the hook does not hold reaches nothing real
+        pSettings->setValue(qsl("colorSublimeThemesURL"), qsl("file:///nonexistent/themes.zip"));
+
+        const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
+        QVERIFY2(QFileInfo(file).lastModified() < QDateTime::currentDateTime().addDays(-1),
+                 "the themes file is younger than the update period, so its own freshness would keep this page off the network and the hook would prove nothing");
+
+        selectCategory(qsl("editor"));
+
+        QVERIFY2(mpPreferences->theme_download_label->isHidden(), "a stale themes file still started a theme download, so MUDLET_TEST_NO_THEME_DOWNLOAD did not suppress it");
+
+        savedUrl.isValid() ? pSettings->setValue(qsl("colorSublimeThemesURL"), savedUrl) : pSettings->remove(qsl("colorSublimeThemesURL"));
+    }
+
+    // The dialog is a window a player sizes to suit their screen, and one that
+    // forgot that between openings would be re-sized on every visit
+    void test_theDialogOpensAtTheSizeItWasLastClosedAt()
+    {
+        // init() opened one at a fixed size; this case wants its own. Bigger
+        // than the dialog's 780x560 minimum and smaller than the offscreen
+        // platform's 800x600 screen, which restoreGeometry() would shrink a
+        // window to fit.
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        mpPreferences->resize(790, 570);
+        mpPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
+        const QSize chosen = mpPreferences->size();
+        QVERIFY2(chosen != QSize(1060, 760), "the size this case chose is the one a dialog with no remembered geometry takes anyway");
+        // Closing is what writes the geometry out
+        mpPreferences->close();
+        delete mpPreferences;
+
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        mpPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
+
+        QCOMPARE(mpPreferences->size(), chosen);
+    }
+
+    // Every text the search index was built from is replaced by a language
+    // change, and the cards it lent out are somewhere else while it happens
+    void test_aLanguageChangeMidSearchSendsEveryCardHome()
+    {
+        selectCategory(qsl("mapper"));
+        QLineEdit* pSearchField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        pSearchField->setFocus();
+        pSearchField->setText(qsl("color"));
+        QCoreApplication::processEvents();
+        QVERIFY2(mpPreferences->groupBox_mapperColors->parentWidget() == mpPreferences->findChild<QWidget*>(qsl("settingsColumn_searchResults")),
+                 "the search borrowed no card, so sending them home proves nothing");
+
+        BracketingTranslator translator;
+        QCoreApplication::installTranslator(&translator);
+        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        QCoreApplication::removeTranslator(&translator);
+        QCoreApplication::processEvents();
+
+        QVERIFY2(pSearchField->text().isEmpty(), "the language change left the query standing in the search field");
+        QCOMPARE(mpPreferences->groupBox_mapperColors->parentWidget(), pageOf(qsl("mapper"))->widget());
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
     }
 
     // retranslateUi() puts back what the .ui file carries and nothing else, so
@@ -490,6 +681,276 @@ private slots:
         QCoreApplication::processEvents();
 
         QVERIFY2(pSpinBox->value() != 10, "the wheel was refused by a spin box that had the keyboard focus");
+    }
+
+    // A card that holds too much to read on a page of its own is a row that
+    // leads to one: the sidebar stays where it was, the title becomes a
+    // breadcrumb, and the chevron and Escape both go back up a level.
+    void test_aCardWithASubpageDrillsIntoItAndBackOut()
+    {
+        auto* pSubpage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols"));
+        auto* pCategoryPage = pageOf(qsl("connection"));
+        QVERIFY2(pSubpage, "the game protocols subpage was not built");
+        QVERIFY(pCategoryPage);
+        selectCategory(qsl("connection"));
+
+        mpPreferences->pushButton_chooseProtocols->click();
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pSubpage);
+        // The sidebar still says which category this page belongs to
+        QCOMPARE(sidebar()->currentRow(), rowOf(qsl("connection")));
+
+        auto* pTitle = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitle"));
+        const QString breadcrumb = pTitle->text();
+        QVERIFY2(breadcrumb.startsWith(sidebar()->item(rowOf(qsl("connection")))->text()), qPrintable(qsl("the subpage's title '%1' does not begin with the category it belongs to").arg(breadcrumb)));
+        QVERIFY2(breadcrumb.contains(QChar(0x203a)), qPrintable(qsl("the subpage's title '%1' is not a breadcrumb").arg(breadcrumb)));
+
+        auto* pBack = mpPreferences->findChild<QToolButton*>(qsl("settingsSubpageBack"));
+        QVERIFY2(pBack, "there is no subpage back chevron");
+        QVERIFY2(pBack->isVisible(), "the subpage showed no back chevron");
+        pBack->click();
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pCategoryPage);
+        QCOMPARE(pTitle->text(), sidebar()->item(rowOf(qsl("connection")))->text());
+        QVERIFY2(pBack->isHidden(), "the back chevron stayed on show once a category page was back");
+
+        // ...and Escape means the same thing there, rather than closing
+        mpPreferences->pushButton_chooseProtocols->click();
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pSubpage);
+        QTest::keyClick(mpPreferences, Qt::Key_Escape);
+        QCoreApplication::processEvents();
+        QCOMPARE(stack()->currentWidget(), pCategoryPage);
+        QVERIFY2(mpPreferences->isVisible(), "Escape on a subpage closed the whole dialog instead of going up a level");
+    }
+
+    // Every protocol that used to be a check item in a pop-up menu is a
+    // checkbox with a line of its own saying what it does.
+    void test_everyProtocolIsACheckboxWithADescription()
+    {
+        const QStringList protocols{qsl("CHARSET"), qsl("GMCP"), qsl("MNES"), qsl("MSDP"), qsl("MSP"), qsl("MSSP"), qsl("MTTS"), qsl("MXP"), qsl("NAWS"), qsl("NEWENVIRON")};
+        auto* pSubpage = mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols"));
+        QVERIFY2(pSubpage, "the game protocols subpage was not built");
+        for (const QString& protocol : protocols) {
+            auto* pCheckBox = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_enable%1").arg(protocol));
+            QVERIFY2(pCheckBox, qPrintable(qsl("there is no checkbox for the %1 protocol").arg(protocol)));
+            QVERIFY2(pSubpage->widget()->isAncestorOf(pCheckBox), qPrintable(qsl("the %1 checkbox is not on the protocols subpage").arg(protocol)));
+            QVERIFY2(!pCheckBox->text().isEmpty(), qPrintable(qsl("the %1 checkbox has no label").arg(protocol)));
+            auto* pDescription = mpPreferences->findChild<QLabel*>(qsl("checkBox_enable%1_description").arg(protocol));
+            QVERIFY2(pDescription, qPrintable(qsl("the %1 checkbox has no description label").arg(protocol)));
+            QVERIFY2(!pDescription->text().isEmpty(), qPrintable(qsl("the %1 checkbox's description is empty").arg(protocol)));
+        }
+    }
+
+    // A description says what a card is for in the player's own terms, and
+    // where the wiki has a page about it, ends in a link to that page.
+    void test_cardsThatNeedOneCarryADescriptionLine()
+    {
+        const QStringList described{qsl("groupBox_protocols"), qsl("groupBox_ssl"), qsl("groupBox_proxy"), qsl("card_passwords"), qsl("card_crashReports"), qsl("card_discord")};
+        for (const QString& objectName : described) {
+            auto* pCard = mpPreferences->findChild<QGroupBox*>(objectName);
+            QVERIFY2(pCard, qPrintable(qsl("there is no card called %1").arg(objectName)));
+            auto* pDescription = pCard->findChild<QLabel*>(qsl("settingsCardDescription"), Qt::FindDirectChildrenOnly);
+            QVERIFY2(pDescription, qPrintable(qsl("the %1 card has no description line").arg(objectName)));
+            QVERIFY2(!pDescription->text().isEmpty(), qPrintable(qsl("the %1 card's description is empty").arg(objectName)));
+            // The line goes above everything the card already held
+            auto* pLayout = pCard->layout();
+            QCOMPARE(pLayout->itemAt(0)->widget(), pDescription);
+        }
+
+        // Only where a page really exists: every link the descriptions carry
+        // has to be one of the wiki pages this phase checked resolves
+        const QStringList knownPages{qsl("https://wiki.mudlet.org/w/Manual:Scripting"),
+                                     qsl("https://wiki.mudlet.org/w/Manual:Mapper"),
+                                     qsl("https://wiki.mudlet.org/w/Standards:Discord_GMCP"),
+                                     qsl("https://wiki.mudlet.org/w/Manual:Supported_Protocols"),
+                                     qsl("https://wiki.mudlet.org/w/Manual:Unicode"),
+                                     qsl("https://wiki.mudlet.org/w/Standards:MUD_Client_Media_Protocol")};
+        static const QRegularExpression href(qsl("href=\"([^\"]+)\""));
+        int linked = 0;
+        for (const auto* pDescription : mpPreferences->findChildren<QLabel*>(qsl("settingsCardDescription"))) {
+            for (const auto& match : href.globalMatch(pDescription->text())) {
+                ++linked;
+                QVERIFY2(knownPages.contains(match.captured(1)), qPrintable(qsl("a card description links to '%1', which is not one of the wiki pages checked for this").arg(match.captured(1))));
+            }
+        }
+        QVERIFY2(linked >= 5, qPrintable(qsl("only %1 card descriptions carry a Learn more link").arg(linked)));
+    }
+
+    // The one status hero: it says what the connection is rather than what the
+    // settings under it ask for, and it adds no setting of its own.
+    void test_theSecurityHeroReportsTheLiveConnection()
+    {
+        selectCategory(qsl("privacy"));
+        auto* pHero = mpPreferences->findChild<QGroupBox*>(qsl("card_securityStatus"));
+        QVERIFY2(pHero, "the Privacy and security page has no security status card");
+        QScrollArea* pPage = pageOf(qsl("privacy"));
+        auto* pColumnLayout = qobject_cast<QBoxLayout*>(pPage->widget()->layout());
+        // Above every card on the page, the migration banner aside
+        int firstCard = 0;
+        while (pColumnLayout->itemAt(firstCard)->widget() && pColumnLayout->itemAt(firstCard)->widget()->objectName() == qsl("settingsMigrationBanner")) {
+            ++firstCard;
+        }
+        QCOMPARE(pColumnLayout->itemAt(firstCard)->widget(), pHero);
+
+        auto* pHeadline = mpPreferences->findChild<QLabel*>(qsl("settingsHeroHeadline"));
+        auto* pDetail = mpPreferences->findChild<QLabel*>(qsl("settingsHeroDetail"));
+        QVERIFY(pHeadline && pDetail);
+        QVERIFY2(!pHeadline->text().isEmpty(), "the security hero says nothing about the connection");
+        QVERIFY2(!pDetail->text().isEmpty(), "the security hero offers no detail line");
+        // This profile talks to the stub over a plain socket, so whichever way
+        // the connection went, the hero must not be claiming encryption
+        QVERIFY2(!pHeadline->text().contains(qsl("is encrypted")), qPrintable(qsl("the hero calls an unencrypted connection secure: '%1'").arg(pHeadline->text())));
+
+        // It reflects rather than sets: no control of its own writes a setting
+        QVERIFY2(pHero->findChildren<QAbstractButton*>().isEmpty(), "the security hero grew a control of its own - it is meant to reflect and link, not to set");
+    }
+
+    // The window can be made narrower than a sidebar of names and a full
+    // reading column will fit into. Firefox's answer, and now this dialog's,
+    // is to keep the sidebar as a rail of icons rather than to let the page
+    // scroll sideways underneath it.
+    void test_theSidebarCollapsesToARailWhenTheWindowIsTooNarrowForIt()
+    {
+        auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
+        QVERIFY2(pSidebar, "the settings shell has no sidebar to collapse");
+        const int fullWidth = pSidebar->width();
+        QVERIFY2(fullWidth > 200, qPrintable(qsl("the sidebar is only %1px wide at 1060x760, so this case cannot tell a collapse from where it started").arg(fullWidth)));
+
+        mpPreferences->resize(780, 560);
+        QVERIFY2(pSidebar->width() <= 64, qPrintable(qsl("the sidebar is still %1px wide at the dialog's 780x560 minimum").arg(pSidebar->width())));
+
+        // A rail draws no names, but a name is what a screen reader announces
+        // the row as - so the item keeps its text, and offers it as a tooltip
+        // while there is nowhere on screen to show it
+        const int row = rowOf(qsl("mapper"));
+        QListWidgetItem* pItem = sidebar()->item(row);
+        QVERIFY2(!pItem->text().isEmpty(), "a collapsed sidebar row lost the text that is its accessible name");
+        QCOMPARE(pItem->toolTip(), pItem->text());
+        // ...and it is still the way to a category
+        selectCategory(qsl("mapper"));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
+
+        mpPreferences->resize(1060, 760);
+        QCOMPARE(pSidebar->width(), fullWidth);
+        QVERIFY2(sidebar()->item(row)->toolTip().isEmpty(), "an expanded sidebar row kept the tooltip that only stood in for a hidden name");
+    }
+
+    // The acceptance test the visual-QA pass asked for: at the size the dialog
+    // refuses to go below, no page is wider than the window showing it.
+    void test_atItsMinimumSizeNoPageScrollsSideways()
+    {
+        mpPreferences->resize(780, 560);
+        qApp->processEvents();
+        QStringList pageKeys = specOrderedCategories();
+        for (const QString& key : specOrderedCategories()) {
+            selectCategory(key);
+            // The cap is taken again on the way in, and once more from the
+            // event loop after the stylesheet has had its say
+            qApp->processEvents();
+            QScrollArea* pPage = pageOf(key);
+            QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
+                     qPrintable(qsl("the '%1' page is %2px wide in a %3px viewport at 780x560").arg(key).arg(pPage->widget()->width()).arg(pPage->viewport()->width())));
+            QVERIFY2(!pPage->horizontalScrollBar()->isVisible(), qPrintable(qsl("the '%1' page scrolls sideways at 780x560").arg(key)));
+        }
+        // ...and the pages the sidebar never selects, which have cards of their
+        // own and a breadcrumb over them
+        for (const QString& subpage : {qsl("connection/protocols"), qsl("chat/discord")}) {
+            mpPreferences->setTab(subpage);
+            qApp->processEvents();
+            auto* pPage = qobject_cast<QScrollArea*>(stack()->currentWidget());
+            QVERIFY2(pPage && pPage->objectName() == qsl("settingsPage_%1").arg(QString(subpage).replace(QLatin1Char('/'), QLatin1Char('_'))),
+                     qPrintable(qsl("the deep link '%1' did not reach its subpage").arg(subpage)));
+            QVERIFY2(pPage->widget()->width() <= pPage->viewport()->width(),
+                     qPrintable(qsl("the '%1' subpage is %2px wide in a %3px viewport at 780x560").arg(subpage).arg(pPage->widget()->width()).arg(pPage->viewport()->width())));
+        }
+    }
+
+    // A QCheckBox draws its label on one line however long it is, so a
+    // translation longer than the reading column is what makes a page scroll
+    // sideways.
+    //
+    // What the case does *not* assert is that English never wraps anything.
+    // Whether a given label fits is a question about this machine's fonts as
+    // much as about the words - the same English page wraps under a real X
+    // server and does not under the offscreen platform - so the environment-
+    // independent claim is the one below: only the labels that do not fit give
+    // up their text, and the short ones beside them keep theirs.
+    void test_aCheckboxTooLongForTheReadingColumnWrapsIntoALabelBesideIt()
+    {
+        // 137px of English on a 640px column, so no measurement anywhere can
+        // ask for this one to be wrapped
+        QVERIFY2(!mpPreferences->checkBox_enableBlinkText->text().isEmpty(), "a checkbox that comfortably fits the reading column was wrapped anyway");
+        QVERIFY2(!mpPreferences->checkBox_announceIncomingText->text().isEmpty(), "the whole card was wrapped rather than the one label that did not fit it");
+
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        auto* pGerman = new QTranslator(qApp);
+        QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so the wrapping cannot be measured against a real one");
+        QVERIFY(qApp->installTranslator(pGerman));
+        auto removeTranslator = qScopeGuard([pGerman]() {
+            qApp->removeTranslator(pGerman);
+            delete pGerman;
+        });
+        openPreferences();
+
+        QCheckBox* pBox = mpPreferences->checkBox_advertiseScreenReader;
+        QVERIFY2(pBox->text().isEmpty(), qPrintable(qsl("the German screen reader checkbox kept its own label: '%1'").arg(pBox->text())));
+        QVERIFY2(!pBox->accessibleName().isEmpty(), "the wrapped checkbox has no accessible name, so a screen reader has nothing to announce it as");
+        QWidget* pWrap = pBox->parentWidget();
+        QCOMPARE(pWrap->objectName(), qsl("settingsCheckBoxWrap"));
+        auto* pLabel = pWrap->findChild<QLabel*>(qsl("settingsWrappedLabel"));
+        QVERIFY2(pLabel, "the wrapped checkbox has no label beside it to carry its words");
+        QCOMPARE(pLabel->text(), pBox->accessibleName());
+        QVERIFY2(pLabel->wordWrap(), "the label the checkbox's words moved to does not wrap, which is the whole point of moving them");
+        // ...and the page is back inside the reading column because of it
+        QCOMPARE(pageOf(qsl("accessibility"))->widget()->maximumWidth(), 640);
+        // ...while the checkboxes that fit it are still checkboxes
+        QVERIFY2(!mpPreferences->checkBox_enableBlinkText->text().isEmpty(), "a German checkbox that fits the reading column was wrapped with the one that does not");
+
+        // #10165's guarantee: the QCheckBox is still the control of record, so
+        // clicking the words it no longer draws has to reach the Host
+        selectCategory(qsl("accessibility"));
+        qApp->processEvents();
+        const bool before = mpHost->mAdvertiseScreenReader;
+        QCOMPARE(pBox->isChecked(), before);
+        QTest::mouseClick(pLabel, Qt::LeftButton, Qt::NoModifier, pLabel->rect().center());
+        QCOMPARE(pBox->isChecked(), !before);
+        QCOMPARE(mpHost->mAdvertiseScreenReader, !before);
+        mpHost->mAdvertiseScreenReader = before;
+    }
+
+    // Section 8's "split the Accessibility card": a card whose title is the
+    // name of the page it is alone on tells the reader nothing.
+    void test_theAccessibilityPageDoesNotRepeatItsOwnNameOnACard()
+    {
+        selectCategory(qsl("accessibility"));
+        const QString pageTitle = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitle"))->text();
+        QScrollArea* pPage = pageOf(qsl("accessibility"));
+        auto* pColumnLayout = qobject_cast<QBoxLayout*>(pPage->widget()->layout());
+        QList<QGroupBox*> cards;
+        for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
+            if (auto* pCard = qobject_cast<QGroupBox*>(pColumnLayout->itemAt(item)->widget()); pCard) {
+                cards.append(pCard);
+            }
+        }
+        QVERIFY2(cards.size() >= 3, qPrintable(qsl("the Accessibility page carries %1 card(s), so its options were not split up").arg(cards.size())));
+        for (auto* pCard : cards) {
+            QVERIFY2(!pCard->title().isEmpty(), qPrintable(qsl("the card %1 has no title").arg(pCard->objectName())));
+            QVERIFY2(pCard->title() != pageTitle, qPrintable(qsl("the card %1 is called '%2', which is the page's own name").arg(pCard->objectName(), pCard->title())));
+        }
+        // ...and nothing was lost on the way out of the one card
+        const QList<QWidget*> options{mpPreferences->checkBox_announceIncomingText,
+                                      mpPreferences->checkBox_advertiseScreenReader,
+                                      mpPreferences->checkBox_enableClosedCaption,
+                                      mpPreferences->checkBox_enableBlinkText,
+                                      mpPreferences->checkBox_f3SearchEnabled,
+                                      mpPreferences->comboBox_blankLinesBehaviour,
+                                      mpPreferences->comboBox_caretModeKey};
+        for (auto* pOption : options) {
+            QVERIFY2(pPage->widget()->isAncestorOf(pOption), qPrintable(qsl("%1 fell off the Accessibility page when its card was split").arg(pOption->objectName())));
+            QVERIFY2(pOption->isVisible(), qPrintable(qsl("%1 is not showing on the Accessibility page").arg(pOption->objectName())));
+        }
     }
 };
 

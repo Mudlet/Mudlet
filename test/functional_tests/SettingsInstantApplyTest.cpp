@@ -35,15 +35,15 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include <QAction>
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QMenu>
+#include <QScrollArea>
 #include <QSignalSpy>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -66,20 +66,10 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    // Comfortably past the 400ms debounce even on a loaded sanitiser build,
-    // and what a case waits out to say that no apply happened at all
-    static constexpr int scmQuietWindow = 1500;
-    static constexpr int scmApplyTimeout = 10000;
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+    QListWidget* sidebar() const { return TestSettings::sidebar(mpPreferences); }
 
     void selectCategory(const QString& key)
     {
@@ -96,7 +86,6 @@ private:
 
     // applyAll() emits this whatever it ends up writing, so it is what says an
     // apply happened rather than that one particular setting moved
-    static bool waitForApply(QSignalSpy& spy) { return !spy.isEmpty() || spy.wait(scmApplyTimeout); }
 
     // Split so that a case can watch for an apply from before the dialog is on
     // screen: the debounce is armed by the last control population writes, and
@@ -181,7 +170,7 @@ private slots:
         // ...and not before the debounce, or there would be nothing to debounce
         QCOMPARE(mpHost->mHighlightHistory, before);
 
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
         QCOMPARE(mpHost->mHighlightHistory, !before);
     }
 
@@ -203,12 +192,12 @@ private slots:
         QTest::keyClicks(pSeparator, typed);
         QCOMPARE(pSeparator->text(), typed);
 
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "typing into a line edit applied the settings before the edit was finished");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "typing into a line edit applied the settings before the edit was finished");
         QCOMPARE(mpHost->getCommandSeparator(), before);
 
         // Return is what a user finishing with the field presses
         QTest::keyClick(pSeparator, Qt::Key_Return);
-        QVERIFY2(waitForApply(applySpy), "finishing the edit never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "finishing the edit never wrote the settings back");
         QCOMPARE(mpHost->getCommandSeparator(), typed);
     }
 
@@ -220,7 +209,7 @@ private slots:
         constructPreferences();
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         showPreferences();
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "populating the dialog applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "populating the dialog applied the settings");
 
         // ...and neither does walking around it. The Editor category is left
         // out on purpose: its first visit refreshes the edbee themes, which is
@@ -228,7 +217,7 @@ private slots:
         for (const QString& category : {qsl("mainDisplay"), qsl("mapper"), qsl("privacy"), qsl("general")}) {
             selectCategory(category);
         }
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "switching category applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "switching category applied the settings");
     }
 
     // Closing is not a discard, so an edit made inside the last 400ms still has
@@ -266,46 +255,39 @@ private slots:
         pSeparator->setFocus();
         pSeparator->selectAll();
         QTest::keyClicks(pSeparator, halfTyped);
-        QVERIFY2(waitForApply(applySpy), "the unrelated edit never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the unrelated edit never wrote the settings back");
         QCOMPARE(mpHost->getCommandSeparator(), before);
 
         // ...and finishing with the field still writes it
         applySpy.clear();
         QTest::keyClick(pSeparator, Qt::Key_Return);
-        QVERIFY2(waitForApply(applySpy), "finishing the edit never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "finishing the edit never wrote the settings back");
         QCOMPARE(mpHost->getCommandSeparator(), halfTyped);
 
         mpHost->mCommandSeparator = before;
     }
 
-    // The ten protocol toggles are QActions in the menu behind "Choose
-    // protocols" rather than controls on a page, so instant apply reaches them
-    // through branches of its own.
-    void test_aProtocolToggledInItsMenuReachesTheHost()
+    // The ten protocol toggles are ordinary checkboxes on the subpage the
+    // Connection page's protocols card leads to, so instant apply reaches them
+    // the same way it reaches every other checkbox.
+    void test_aProtocolToggledOnItsSubpageReachesTheHost()
     {
         openPreferences();
-        QMenu* pMenu = mpPreferences->pushButton_chooseProtocols->menu();
-        QVERIFY2(pMenu, "the Choose protocols button has no menu to toggle a protocol in");
-
-        QAction* pGmcp = nullptr;
-        for (auto* pAction : pMenu->actions()) {
-            if (pAction->text().startsWith(qsl("GMCP"))) {
-                pGmcp = pAction;
-                break;
-            }
-        }
-        QVERIFY2(pGmcp, "the protocol menu has no GMCP entry");
+        auto* pGmcp = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_enableGMCP"));
+        QVERIFY2(pGmcp, "the game protocols subpage has no GMCP checkbox");
+        QVERIFY2(mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_connection_protocols")), "the game protocols subpage was not built");
         const bool before = mpHost->mEnableGMCP;
         QCOMPARE(pGmcp->isChecked(), before);
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
-        pGmcp->trigger();
+        pGmcp->toggle();
         QCOMPARE(pGmcp->isChecked(), !before);
-        QVERIFY2(waitForApply(applySpy), "toggling a protocol never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "toggling a protocol never wrote the settings back");
 
         QCOMPARE(mpHost->mEnableGMCP, !before);
         mpHost->mEnableGMCP = before;
     }
+
 
     // Esc reaches closeEvent() through QDialog::reject(), which makes it a close
     // rather than a discard.

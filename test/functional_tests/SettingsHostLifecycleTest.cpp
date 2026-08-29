@@ -40,7 +40,9 @@
 #include <QBoxLayout>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QGridLayout>
 #include <QGroupBox>
+#include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QScrollArea>
 #include <QSignalSpy>
@@ -49,6 +51,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -72,18 +75,9 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    static constexpr int scmQuietWindow = 1500;
-    static constexpr int scmApplyTimeout = 10000;
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    static bool waitForApply(QSignalSpy& spy) { return !spy.isEmpty() || spy.wait(scmApplyTimeout); }
 
     // Takes the dialog to write by reference rather than returning it, because
     // QVERIFY expands to a bare return and so needs a void function - and the
@@ -102,7 +96,7 @@ private:
     QStringList cardPlacements() const
     {
         QStringList placements;
-        QStackedWidget* pStack = mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack"));
+        QStackedWidget* pStack = TestSettings::stack(mpPreferences);
         for (int page = 0, pages = pStack->count(); page < pages; ++page) {
             auto* pScrollArea = qobject_cast<QScrollArea*>(pStack->widget(page));
             if (!pScrollArea || pScrollArea->objectName() == qsl("settingsPage_searchResults")) {
@@ -119,6 +113,24 @@ private:
             }
         }
         return placements;
+    }
+
+    // Everything a profile brings with it or fills up, counted in one string so
+    // that a failure names which of them doubled rather than only that one did
+    QString controlInventory() const
+    {
+        return qsl("%1 map symbol scaling spin box(es), %2 shortcut editor(s), %3 item(s) in the shortcuts grid, "
+                   "%4 search engine(s), %5 log name format(s), %6 encoding(s), %7 dictionary/-ies, "
+                   "%8 map save format(s), %9 map history entry/-ies")
+                .arg(QString::number(mpPreferences->groupBox_mapSymbols->findChildren<QDoubleSpinBox*>().size()),
+                     QString::number(mpPreferences->groupBox_main_window_shortcuts->findChildren<QKeySequenceEdit*>().size()),
+                     QString::number(mpPreferences->gridLayout_groupBox_shortcuts->count()),
+                     QString::number(mpPreferences->search_engine_combobox->count()),
+                     QString::number(mpPreferences->comboBox_logFileNameFormat->count()),
+                     QString::number(mpPreferences->comboBox_encoding->count()),
+                     QString::number(mpPreferences->comboBox_dictionary->count()),
+                     QString::number(mpPreferences->comboBox_mapFileSaveFormatVersion->count()),
+                     QString::number(mpPreferences->comboBox_mapHistory->count()));
     }
 
     // What disableHostDetails() greys out, and what it deliberately leaves
@@ -214,7 +226,7 @@ private slots:
         verifyProfileSettingsAre(true);
         QCOMPARE(mpPreferences->command_separator_lineedit->text(), mpHost->getCommandSeparator());
         QCOMPARE(mpPreferences->checkBox_highlightHistory->isChecked(), mpHost->mHighlightHistory);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "repopulating the dialog for a profile that had just appeared applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "repopulating the dialog for a profile that had just appeared applied the settings");
     }
 
     // ...and the mirror image: the profile is closed while its settings are
@@ -229,7 +241,7 @@ private slots:
         mpPreferences->slot_handleHostDeletion(mpHost);
 
         verifyProfileSettingsAre(false);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "clearing the dialog for a profile that had gone away applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "clearing the dialog for a profile that had gone away applied the settings");
     }
 
     // One dialog per profile plus the profile chooser's own means two can be up
@@ -253,7 +265,7 @@ private slots:
         const int iconSize = (iconSizeBefore % mpPreferences->MainIconSize->maximum()) + 1;
         QVERIFY(iconSize != iconSizeBefore);
         mpPreferences->MainIconSize->setValue(iconSize);
-        QVERIFY2(waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(mpSecondPreferences->MainIconSize->value(), iconSize);
     }
@@ -274,6 +286,26 @@ private slots:
         const QPalette shellStyled = mpPreferences->topBorderHeight->palette();
         QCOMPARE(fudgeBoxes.constFirst()->palette().color(QPalette::PlaceholderText), shellStyled.color(QPalette::PlaceholderText));
         QCOMPARE(fudgeBoxes.constFirst()->palette().color(QPalette::Window), shellStyled.color(QPalette::Window));
+    }
+
+    // The dialog outlives profiles, so everything it builds for one - the map
+    // symbol scaling spin box, the shortcut editors - and every list it fills
+    // from one has to be built and filled once however many profiles come and
+    // go. Without that the second profile leaves a second set below the first,
+    // laid out and visible and still wired to write through, and every list on
+    // the page holds two of everything.
+    void test_aProfileArrivingASecondTimeDoesNotDoubleTheDialogsControls()
+    {
+        openPreferences(mpPreferences, nullptr);
+        mpPreferences->slot_handleHostAddition(mpHost, 1);
+        const QString afterFirstProfile = controlInventory();
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->slot_handleHostDeletion(mpHost);
+        mpPreferences->slot_handleHostAddition(mpHost, 1);
+
+        QCOMPARE(controlInventory(), afterFirstProfile);
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "walking a profile out and back in again applied the settings");
     }
 
     // A profile can arrive while the search results are showing, and those
@@ -297,7 +329,7 @@ private slots:
 
         QVERIFY2(pSearch->text().isEmpty(), "the profile arriving left the query standing in the search field");
         QCOMPARE(cardPlacements(), before);
-        QVERIFY2(!applySpy.wait(scmQuietWindow), "repopulating for a profile that arrived mid-search applied the settings");
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "repopulating for a profile that arrived mid-search applied the settings");
     }
 };
 

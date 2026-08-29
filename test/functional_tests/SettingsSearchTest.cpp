@@ -44,9 +44,11 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
+#include <QToolButton>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -69,17 +71,12 @@ private:
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
 
-    QListWidget* sidebar() const { return mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList")); }
+    QListWidget* sidebar() const { return TestSettings::sidebar(mpPreferences); }
 
-    QStackedWidget* stack() const { return mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack")); }
+    QStackedWidget* stack() const { return TestSettings::stack(mpPreferences); }
+    QScrollArea* pageOf(const QString& key) const { return TestSettings::pageOf(mpPreferences, key); }
 
     QLineEdit* searchField() const { return mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField")); }
 
@@ -110,13 +107,19 @@ private:
             }
             QWidget* pColumn = pScrollArea->widget();
             auto* pColumnLayout = qobject_cast<QBoxLayout*>(pColumn->layout());
+            // Counted over the cards rather than over the layout, because the
+            // migration banner rides at the top of whichever page is showing:
+            // it is not a card any page is meant to get back, and its coming
+            // and going would otherwise shift every index under it
+            int cardPosition = 0;
             for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
                 QWidget* pCard = pColumnLayout->itemAt(item)->widget();
-                if (!pCard) {
+                if (!pCard || pCard->objectName() == qsl("settingsMigrationBanner")) {
                     continue;
                 }
-                placements << qsl("%1[%2] = %3, parented to %4, hidden %5")
-                                      .arg(pColumn->objectName(), QString::number(item), pCard->objectName(), pCard->parentWidget()->objectName(), pCard->isHidden() ? qsl("yes") : qsl("no"));
+                placements
+                        << qsl("%1[%2] = %3, parented to %4, hidden %5")
+                                   .arg(pColumn->objectName(), QString::number(cardPosition++), pCard->objectName(), pCard->parentWidget()->objectName(), pCard->isHidden() ? qsl("yes") : qsl("no"));
             }
         }
         return placements;
@@ -227,7 +230,7 @@ private slots:
     {
         search(qsl("color"));
 
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
         QCOMPARE(mpPreferences->groupBox_displayColors->parentWidget(), resultsColumn());
         QCOMPARE(mpPreferences->groupBox_mapperColors->parentWidget(), resultsColumn());
         QVERIFY2(visibleCategoryHeaders() >= 2, "the results were not grouped under a header per category");
@@ -273,20 +276,13 @@ private slots:
         const QStringList before = cardPlacements();
         search(qsl("color"));
 
-        QListWidget* pList = sidebar();
-        int mapperRow = -1;
-        for (int row = 0, rows = pList->count(); row < rows; ++row) {
-            if (pList->item(row)->data(Qt::UserRole).toString() == qsl("mapper")) {
-                mapperRow = row;
-                break;
-            }
-        }
+        const int mapperRow = TestSettings::rowOf(mpPreferences, qsl("mapper"));
         QVERIFY(mapperRow >= 0);
-        pList->setCurrentRow(mapperRow);
+        sidebar()->setCurrentRow(mapperRow);
         QCoreApplication::processEvents();
 
         QVERIFY2(searchField()->text().isEmpty(), "the search field still holds the query after a category was chosen");
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_mapper")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
         QCOMPARE(cardPlacements(), before);
     }
 
@@ -308,7 +304,7 @@ private slots:
         QCoreApplication::processEvents();
 
         QCOMPARE(searchField()->text(), qsl("colors"));
-        QCOMPARE(stack()->currentWidget(), mpPreferences->findChild<QScrollArea*>(qsl("settingsPage_searchResults")));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
     }
 
     // A card the profile's state has hidden - the updater's when there is no
@@ -328,6 +324,142 @@ private slots:
         search(QString());
         QVERIFY2(pCard->isHidden(), "the search handed a hidden card back showing");
         QCOMPARE(cardPlacements(), before);
+    }
+
+    // The chevron beside the "Search results" heading is the way out for
+    // someone who reached the results and wants the page they came from back -
+    // the same door the sidebar is, rather than a second one of its own
+    void test_theBackChevronReturnsToTheCategoryTheSearchInterrupted()
+    {
+        const QStringList before = cardPlacements();
+        const int mapperRow = TestSettings::rowOf(mpPreferences, qsl("mapper"));
+        QVERIFY(mapperRow >= 0);
+        sidebar()->setCurrentRow(mapperRow);
+        QCoreApplication::processEvents();
+
+        auto* pBack = mpPreferences->findChild<QToolButton*>(qsl("settingsSearchBack"));
+        QVERIFY2(pBack, "the search results have no back button");
+        QVERIFY2(pBack->isHidden(), "the back button is on show while a category page is");
+
+        search(qsl("color"));
+        QVERIFY2(pBack->isVisible(), "the search results came up without a way back");
+        // A keyboard user has to be able to reach it, which a tool button is
+        // not set up for by default
+        QVERIFY2((pBack->focusPolicy() & Qt::TabFocus) == Qt::TabFocus, "the back button cannot be reached with the keyboard");
+
+        pBack->click();
+        QCoreApplication::processEvents();
+
+        QVERIFY2(searchField()->text().isEmpty(), "the back button left the query standing in the search field");
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
+        QVERIFY2(pBack->isHidden(), "the back button is still showing after the search ended");
+        QCOMPARE(cardPlacements(), before);
+    }
+
+    // A result header says which category the cards under it live on. The
+    // sidebar says that with a name and an icon; the header says it with both.
+    void test_eachResultHeaderCarriesItsCategorysIcon()
+    {
+        search(qsl("color"));
+
+        QStringList headerTexts;
+        QString mainDisplayHeader;
+        for (const auto* pLabel : mpPreferences->findChildren<QLabel*>(qsl("settingsSearchHeader"))) {
+            if (!pLabel->isVisible()) {
+                continue;
+            }
+            headerTexts << pLabel->text();
+            if (pLabel->text().contains(qsl("Main display"))) {
+                mainDisplayHeader = pLabel->text();
+            }
+        }
+        QVERIFY2(headerTexts.size() >= 2, "fewer than two categories matched, so this case is not looking at more than one header");
+        for (const QString& text : headerTexts) {
+            QVERIFY2(text.contains(qsl("<img src=\":/icons/")), qPrintable(qsl("a results header carries no category icon: %1").arg(text)));
+        }
+        // The icon that category's sidebar row was built with, and the name
+        // still beside it rather than replaced by the picture
+        QVERIFY2(!mainDisplayHeader.isEmpty(), "the Main display category matched no header, so this case cannot name the icon it expects");
+        QVERIFY2(mainDisplayHeader.contains(qsl("<img src=\":/icons/view-split-left-right.png\"")),
+                 qPrintable(qsl("the Main display header does not carry that category's own icon: %1").arg(mainDisplayHeader)));
+    }
+
+    // Half of what someone types into a settings search is not a word the
+    // settings use: they know the acronym, or what another client calls it.
+    // The synonyms are what closes that gap, and they are only worth having if
+    // they are attached to the card the answer is on.
+    void test_aSynonymFindsASettingThatDoesNotUseTheWord()
+    {
+        search(qsl("keyring"));
+        QCOMPARE(mpPreferences->findChild<QGroupBox*>(qsl("card_passwords"))->parentWidget(), resultsColumn());
+
+        search(qsl("scrollback"));
+        QCOMPARE(mpPreferences->groupBox_consoleBuffer->parentWidget(), resultsColumn());
+
+        search(qsl("nvda"));
+        QCOMPARE(mpPreferences->groupBox_accessibility->parentWidget(), resultsColumn());
+    }
+
+    // Accents and keyboard accelerators are folded out of both sides of the
+    // comparison, so a query typed without either still finds what carries them
+    void test_aQueryWithoutAccentsFindsACardThatHasThem()
+    {
+        // Set before the first search of this dialog, because that is when the
+        // index is built off the widget tree
+        mpPreferences->checkBox_askTlsAvailable->setProperty("searchKeywords", QString::fromUtf8("Réseau &Privé"));
+
+        search(qsl("reseau prive"));
+
+        QCOMPARE(mpPreferences->findChild<QGroupBox*>(qsl("card_secureConnectionReminder"))->parentWidget(), resultsColumn());
+    }
+
+    // What a subpage holds is findable too, but a card on one is not lent to
+    // the results - taking it would leave the page it belongs to empty behind
+    // the row that opens it. The result is the way in instead, and following it
+    // lands on the subpage with the card it found outlined.
+    void test_aWordOnlyASubpageUsesOffersTheWayIntoIt()
+    {
+        // Set before the first search of this dialog, because that is when the
+        // index is built off the widget tree. A synonym rather than a word from
+        // the descriptions, so that rewording them cannot quietly stop this
+        // case from testing anything.
+        auto* pSubpageCard = mpPreferences->findChild<QGroupBox*>(qsl("card_protocolList"));
+        QVERIFY2(pSubpageCard, "the game protocols subpage has no card");
+        pSubpageCard->setProperty("searchKeywords", qsl("zzsubpageonlyword"));
+
+        search(qsl("zzsubpageonlyword"));
+
+        QVERIFY2(pSubpageCard->parentWidget() != resultsColumn(), "a card on a subpage was lent to the results, which would empty the page behind the row that opens it");
+        auto* pLink = mpPreferences->findChild<QPushButton*>(qsl("settingsSearchSubpageResult"));
+        QVERIFY2(pLink, "a match on a subpage offered no way into it");
+        QVERIFY2(pLink->isVisible(), "the way into the subpage was built but not shown");
+        QCOMPARE(pLink->parentWidget(), resultsColumn());
+        QVERIFY2(!pLink->text().isEmpty(), "the way into the subpage is unlabelled");
+
+        pLink->click();
+        QCoreApplication::processEvents();
+        QVERIFY2(searchField()->text().isEmpty(), "following a result left the query standing in the search field");
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("connection_protocols")));
+        QCOMPARE(sidebar()->currentItem()->data(Qt::UserRole).toString(), qsl("connection"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
+                         },
+                         5000),
+                 "following a subpage result drew no spotlight over the card it found");
+    }
+
+    // ...and where the row that opens the subpage is itself a result, that row
+    // is the answer: offering both would be the same setting listed twice.
+    void test_aMatchOnBothTheOpenerAndItsSubpageIsListedOnce()
+    {
+        // "gmcp" is on the opener as a synonym and on the subpage as the real
+        // name of a checkbox, so it matches both
+        search(qsl("gmcp"));
+
+        QCOMPARE(mpPreferences->groupBox_protocols->parentWidget(), resultsColumn());
+        auto* pLink = mpPreferences->findChild<QPushButton*>(qsl("settingsSearchSubpageResult"));
+        QVERIFY2(!pLink || pLink->isHidden(), "the subpage was offered as a second result beside the card that opens it");
     }
 
     void test_ctrlFFocusesTheSearchField()

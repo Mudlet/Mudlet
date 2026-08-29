@@ -165,6 +165,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsDirtyApplyTest.cpp
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
+    SettingsLiveSyncTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
 )
@@ -439,6 +440,7 @@ set_tests_properties(SettingsBannerTest
                      SettingsDirtyApplyTest
                      SettingsHostLifecycleTest
                      SettingsInstantApplyTest
+                     SettingsLiveSyncTest
                      SettingsSearchTest
                      SettingsShellNavigationTest
                      PROPERTIES TIMEOUT 300)
