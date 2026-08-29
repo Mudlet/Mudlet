@@ -340,10 +340,10 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
-# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, which used to measure
-# ~47s on the slowest runner - too little headroom against the default 60s. Dropping the fixed
-# sleeps out of its profile-start helper cut that threefold, so this is now headroom rather than
-# a necessity, and it is what the other per-method-profile tests here already use.
+# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, and timed out against
+# the default 60s on the macOS x86_64 runner, where it measured 46.95s when it passed. Waiting on
+# the connection dialog instead of sleeping through it took the Linux run from 30s to 9s, so this
+# is headroom rather than a necessity now, and it is what the other per-method-profile tests use.
 set_tests_properties(DebugConsoleFilterTest PROPERTIES TIMEOUT 300)
 
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several

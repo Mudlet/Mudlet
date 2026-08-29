@@ -573,58 +573,64 @@ private:
         dir.removeRecursively();
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // ClearWindowLogTest).
+    // Starts a profile by driving the connection dialog, as a user would.
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            // Each step waits for the state the next one needs instead of a flat
-            // 100ms. Under the offscreen platform every one of them is already
-            // true - startAutoLogin() shows the dialog before it returns, and
-            // QTest sends its mouse and key events rather than posting them - so
-            // the whole sequence costs nothing, where the sleeps cost 700ms of
-            // every profile start. Waiting on the state rather than on the clock
-            // is also what keeps that safe on a runner slow enough to need it.
-            const auto waitForFocusToLeave = [](QWidget* previous) {
-                // Bounded by what the sleep it replaces allowed, so a platform
-                // that moves focus asynchronously is no worse off than before.
-                QTest::qWaitFor(
-                        [previous]() {
-                            return QApplication::focusWidget() && QApplication::focusWidget() != previous;
-                        },
-                        100);
+            const auto dialog = []() {
+                return mudlet::self()->mpConnectionDialog.data();
             };
 
             mudlet::self()->startAutoLogin({});
-            // The dialog hides the whole panel this button lives on while no
-            // profile exists, so its visibility is not what to wait for - it is
-            // clicked directly either way. The dialog owning it is.
-            QTest::qWaitFor(
-                    []() {
-                        return !mudlet::self()->mpConnectionDialog.isNull();
-                    },
-                    5000);
-            if (mudlet::self()->mpConnectionDialog.isNull()) {
-                // Leaves the profile unloaded, which the caller's spy reports.
+
+            // slot_showConnectionDialog() defers the dialog's show() to a zero
+            // timer, and a field cannot take focus before its window is up, so
+            // this wait has to spin the event loop to get there. A predicate
+            // already true on entry - the dialog merely existing, say - would
+            // not: qWaitFor returns without processing anything in that case.
+            if (!QTest::qWaitFor(
+                        [&dialog]() {
+                            return dialog() && dialog()->isVisible();
+                        },
+                        5000)) {
+                qWarning() << "the connection dialog never appeared";
                 return;
             }
 
-            QWidget* beforeClick = QApplication::focusWidget();
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            waitForFocusToLeave(beforeClick);
+            // Focus is what each step hands to the next, so the field about to
+            // be typed into is the real precondition. Naming it also keeps a
+            // missed handoff a legible warning, rather than the null-widget
+            // assert QTest::keyClicks() aborts the whole process with.
+            const auto waitForFocus = [](QWidget* field, const char* name) {
+                if (QTest::qWaitFor(
+                            [field]() {
+                                return QApplication::focusWidget() == field;
+                            },
+                            5000)) {
+                    return true;
+                }
+                qWarning() << "focus never reached the" << name << "field";
+                return false;
+            };
 
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QWidget* nameField = QApplication::focusWidget();
-            QTest::keyClick(nameField, Qt::Key_Tab);
-            waitForFocusToLeave(nameField);
+            QTest::mouseClick(dialog()->new_profile_button, Qt::LeftButton);
+            if (!waitForFocus(dialog()->profile_name_entry, "profile name")) {
+                return;
+            }
+            QTest::keyClicks(dialog()->profile_name_entry, hostname);
+            QTest::keyClick(dialog()->profile_name_entry, Qt::Key_Tab);
 
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QWidget* addressField = QApplication::focusWidget();
-            QTest::keyClick(addressField, Qt::Key_Tab);
-            waitForFocusToLeave(addressField);
+            if (!waitForFocus(dialog()->host_name_entry, "server address")) {
+                return;
+            }
+            QTest::keyClicks(dialog()->host_name_entry, address);
+            QTest::keyClick(dialog()->host_name_entry, Qt::Key_Tab);
 
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+            if (!waitForFocus(dialog()->port_entry, "port")) {
+                return;
+            }
+            QTest::keyClicks(dialog()->port_entry, port);
+            QTest::keyClick(dialog()->port_entry, Qt::Key_Return);
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
