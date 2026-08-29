@@ -7115,6 +7115,15 @@ void TLuaInterpreter::freeLuaRegistryIndex(int index)
 }
 
 // No documentation available in wiki - internal function
+// A second reference to the same value, for a copy that has to own one of its
+// own: freeing either reference leaves the other one working.
+int TLuaInterpreter::duplicateLuaRegistryIndex(int index)
+{
+    lua_rawgeti(pGlobalLua, LUA_REGISTRYINDEX, index);
+    return luaL_ref(pGlobalLua, LUA_REGISTRYINDEX);
+}
+
+// No documentation available in wiki - internal function
 // Looks for argument types in an 'event' that have stored
 // data in the lua registry, and frees this data.
 void TLuaInterpreter::freeAllInLuaRegistry(TEvent event)
