@@ -328,11 +328,15 @@ describe("Tests functionality of Adjustable.Container", function()
         x = 0, y = 0, width = 100, height = 100,
         autoLoad = false,
       })
-      assert.is_not_nil(saving.autoSaveHandler)
+      local handler = saving.autoSaveHandler
+      assert.is_not_nil(handler)
       saving:delete()
       -- left registered, the handler would write a deleted container's geometry
       -- back out at exit, over whatever took its name in the meantime
       assert.is_nil(saving.autoSaveHandler)
+      -- killAnonymousEventHandler answers falsy for an id it no longer holds,
+      -- which is how a killed registration is told apart from a blanked field
+      assert.is_falsy(killAnonymousEventHandler(handler))
       assert.is_false(saving.autoSave)
     end)
 
@@ -780,9 +784,9 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
   end
 
   -- drives a drag through the handlers a mouse would call. The handlers ask
-  -- getMousePosition where the pointer is, and they look it up in the globals of
-  -- the file they live in, which is not the globals a spec file writes to, so the
-  -- stand-in for the mouse has to go into their own environment
+  -- getMousePosition where the pointer is, so the stand-in goes in through the
+  -- handler's own environment: that holds whether or not the environment is the
+  -- globals table the spec sees
   local function drag(container, grabX, grabY, stepX, stepY, steps)
     local geyser = getfenv(Adjustable.Container.onMove)
     local realGetMousePosition = geyser.getMousePosition
@@ -1252,7 +1256,7 @@ describe("Tests the cost of resizing an Adjustable.Container by its edge", funct
     container = nil
   end)
 
-  -- as with getMousePosition above, Geyser looks moveWindow up in its own globals
+  -- as with getMousePosition above, the counter goes in through Geyser's own environment
   local function placements(work)
     local geyser = getfenv(Geyser.Container.reposition)
     local count = 0
@@ -1273,7 +1277,6 @@ describe("Tests the cost of resizing an Adjustable.Container by its edge", funct
     local realGetMousePosition = geyser.getMousePosition
     local pointerX, pointerY = 500, 400
     geyser.getMousePosition = function() return pointerX, pointerY end
-    finally(function() geyser.getMousePosition = realGetMousePosition end)
 
     -- grabbing within ten pixels of the far edge is what adjust_Info reads as a
     -- resize rather than a move, and it takes a click for onClick to see that
@@ -1281,10 +1284,16 @@ describe("Tests the cost of resizing an Adjustable.Container by its edge", funct
     local grabY = container.adjLabel:get_height() - 2
     local event = {button = "LeftButton", buttons = {"LeftButton"},
                    x = grabX, y = grabY, globalX = pointerX, globalY = pointerY}
+    -- finally() only holds one function, so the mouse stand-in and the drag are
+    -- undone from the same one: a second call would drop the first, leaving
+    -- every later spec running against a mouse frozen at (500, 400)
+    finally(function()
+      pcall(function() container:onRelease(container.adjLabel, event) end)
+      geyser.getMousePosition = realGetMousePosition
+    end)
     container:onRelease(container.adjLabel, event)
     container:onClick(container.adjLabel, event)
     container:onClick(container.adjLabel, event)
-    finally(function() container:onRelease(container.adjLabel, event) end)
 
     -- one geometry update over this container and its child is the yardstick, so
     -- the spec holds whatever the machine's window size makes the subtree cost
@@ -1299,5 +1308,725 @@ describe("Tests the cost of resizing an Adjustable.Container by its edge", funct
 
     assert.is_true(container:get_width() < 300, "the drag has to have resized the container")
     assert.are.equal(oneUpdate * steps, wholeDrag)
+  end)
+end)
+
+-- The parts of Adjustable.Container that are not driven by the mouse: the main
+-- window borders it reserves, the settings it writes to disk, the lock styles
+-- and custom items it puts in its own right click menu, and the two functions
+-- that switch its constraints between pixels and percentages.
+describe("Tests Adjustable.Container borders, persistence and menu items", function()
+  local containers
+  local topLevelBefore
+  local borderBefore
+  local scratchDir = getMudletHomeDir() .. "/gapAdjustableScratch/"
+
+  local function newTopLevelObjects()
+    local new = {}
+    for name in pairs(Geyser.windowList) do
+      if not topLevelBefore[name] then
+        new[#new + 1] = name
+      end
+    end
+    table.sort(new)
+    return new
+  end
+
+  -- Every container is made with autoLoad and autoSave off: loading would pick
+  -- up whatever a previous run left in the profile, and saving would write this
+  -- file's layouts into it.
+  local function make(name, cons)
+    cons = cons or {}
+    cons.name = name
+    cons.x, cons.y = cons.x or 0, cons.y or 0
+    cons.width, cons.height = cons.width or 200, cons.height or 100
+    cons.autoLoad, cons.autoSave = false, false
+    local container = Adjustable.Container:new(cons)
+    containers[#containers + 1] = container
+    return container
+  end
+
+  before_each(function()
+    containers = {}
+    borderBefore = getBorderLeft()
+    -- the border a container reserves is the widest reservation on that edge,
+    -- so an exact comparison below is only meaningful while this block owns it
+    assert.is_true(table.is_empty(Adjustable.Container.Attached.left or {}),
+                   "something outside this file is attached to the left border")
+    topLevelBefore = {}
+    for name in pairs(Geyser.windowList) do
+      topLevelBefore[name] = true
+    end
+  end)
+
+  after_each(function()
+    -- the right click menu opens a nest, which arms a timer that would fire on
+    -- deleted labels seconds later
+    if Geyser.Label.closeAllTimer then
+      killTimer(Geyser.Label.closeAllTimer)
+      Geyser.Label.closeAllTimer = nil
+    end
+    -- pcall, because a raise in one teardown would otherwise strand every
+    -- container after it, each still holding a border reservation and a live
+    -- sysWindowResizeEvent handler
+    local teardownError
+    for index = #containers, 1, -1 do
+      local container = containers[index]
+      local ok, err = pcall(function()
+        if container.attached then
+          container:detach()
+        end
+        container:deleteSaveFile()
+        container:deleteSaveFile(scratchDir)
+        if Adjustable.Container.all[container.name] == container then
+          container:delete()
+        end
+      end)
+      teardownError = teardownError or (not ok and err)
+      Adjustable.Container.all[container.name] = nil
+      local registered = table.index_of(Adjustable.Container.all_windows, container.name)
+      if registered then
+        table.remove(Adjustable.Container.all_windows, registered)
+      end
+    end
+    containers = {}
+    -- menu labels are registered at the top of Geyser rather than under the
+    -- container, so anything a failed delete stranded is swept here
+    for _, name in ipairs(newTopLevelObjects()) do
+      local object = Geyser.windowList[name]
+      if object then
+        -- the scroll tables are keyed by the label object and outlive it
+        Geyser.Label.scrollV[object] = nil
+        Geyser.Label.scrollH[object] = nil
+        object:delete()
+      end
+    end
+    if lfs.attributes(scratchDir, "mode") == "directory" then
+      for file in lfs.dir(scratchDir) do
+        if file ~= "." and file ~= ".." then
+          os.remove(scratchDir .. file)
+        end
+      end
+      lfs.rmdir(scratchDir)
+    end
+    -- last, because detaching above is what hands the border back: a restore
+    -- from an inner after_each would run before that and net nothing
+    setBorderLeft(borderBefore)
+    if teardownError then
+      error(teardownError)
+    end
+  end)
+
+  describe("Adjustable.Container:adjustBorder/setBorderMargin/resetBorder", function()
+    it("does nothing for a container that is not attached", function()
+      local container = make("gapLoose")
+      assert.is_false(container:adjustBorder())
+      assert.are.equal(borderBefore, getBorderLeft())
+    end)
+
+    it("reserves the container's own width plus its margin", function()
+      local container = make("gapMargin", {width = 200})
+      container:attachToBorder("left")
+      assert.are.equal(5, container.attachedMargin)
+      assert.are.equal(container:get_width() + container:get_x() + 5, getBorderLeft())
+    end)
+
+    it("setBorderMargin widens the reservation by the margin it is given", function()
+      local container = make("gapWiderMargin", {width = 200})
+      container:attachToBorder("left")
+      local reserved = getBorderLeft()
+
+      container:setBorderMargin(25)
+
+      assert.are.equal(25, container.attachedMargin)
+      assert.are.equal(reserved + 20, getBorderLeft())
+    end)
+
+    it("re-reserves after the container is resized", function()
+      local container = make("gapResized", {width = 200})
+      container:attachToBorder("left")
+      container:resize(300, 100)
+      container:adjustBorder()
+      assert.are.equal(container:get_width() + container:get_x() + 5, getBorderLeft())
+    end)
+
+    it("detaches a container that has been moved out of reach of its border", function()
+      local container = make("gapOutOfReach", {width = 100})
+      container:attachToBorder("left")
+      assert.are.equal("left", container.attached)
+
+      local mainWidth = getMainWindowSize()
+      container:move(mainWidth * 0.5, 10)
+      container:adjustBorder()
+
+      assert.is_false(container.attached)
+      assert.are.equal(0, getBorderLeft())
+    end)
+
+    it("detaches a container that has been minimized or hidden", function()
+      local minimized = make("gapMinimized", {width = 100})
+      minimized:attachToBorder("left")
+      minimized:minimize()
+      assert.is_false(minimized.attached)
+      assert.are.equal(0, getBorderLeft())
+
+      local hidden = make("gapHidden", {width = 100})
+      hidden:attachToBorder("left")
+      hidden:hide()
+      hidden:adjustBorder()
+      assert.is_false(hidden.attached)
+      assert.are.equal(0, getBorderLeft())
+    end)
+
+    it("keeps the widest reservation when two containers share a border", function()
+      local narrow = make("gapNarrow", {width = 100})
+      local wide = make("gapWide", {width = 300})
+      narrow:attachToBorder("left")
+      wide:attachToBorder("left")
+      assert.are.equal(wide.borderSize, getBorderLeft())
+
+      -- the wide one going away leaves the narrow one's reservation behind
+      wide:detach()
+      assert.are.equal(narrow.borderSize, getBorderLeft())
+    end)
+
+    it("resetBorder gives the whole border back once nothing is attached", function()
+      local container = make("gapReset", {width = 200})
+      container:attachToBorder("left")
+      assert.is_true(getBorderLeft() > 0)
+      container:detach()
+      assert.are.equal(0, getBorderLeft())
+      -- and asking again is idempotent rather than reserving anything back
+      container:resetBorder("left")
+      assert.are.equal(0, getBorderLeft())
+    end)
+  end)
+
+  describe("Adjustable.Container:connectToBorder/disconnect", function()
+    it("does nothing for a container that is not attached", function()
+      local container = make("gapUnattached")
+      container:connectToBorder("left")
+      assert.is_nil(container.connectedToBorder)
+      assert.is_nil(container.connectedContainers)
+    end)
+
+    it("records the connection on both containers", function()
+      local anchor = make("gapAnchor", {width = 150})
+      local follower = make("gapFollower", {width = 150, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+
+      follower:connectToBorder("left")
+
+      assert.is_true(follower.connectedToBorder.left)
+      assert.is_true(anchor.connectedToBorder.left)
+      assert.is_true(anchor.connectedContainers[follower.name])
+    end)
+
+    it("lines a connected container up with the one it is connected to", function()
+      local anchor = make("gapLineAnchor", {width = 150})
+      local follower = make("gapLineFollower", {width = 60, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+
+      follower:connectToBorder("left")
+
+      -- both are on the same border, so the follower takes the anchor's width
+      assert.are.equal(anchor:get_width(), follower:get_width())
+      assert.are.equal(anchor:get_x(), follower:get_x())
+    end)
+
+    it("disconnect unhooks it from every container it was connected to", function()
+      local anchor = make("gapDropAnchor", {width = 150})
+      local follower = make("gapDropFollower", {width = 150, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+
+      follower:disconnect()
+
+      assert.is_nil(follower.connectedToBorder)
+      assert.is_nil(follower.connectedContainers)
+      assert.is_nil(anchor.connectedContainers)
+    end)
+
+    it("disconnect is safe on a container that was never connected", function()
+      local container = make("gapNeverConnected")
+      assert.has_no.errors(function() container:disconnect() end)
+    end)
+
+    it("adjustConnectedContainers does nothing without a border or connections", function()
+      local container = make("gapNoConnections")
+      assert.is_false(container:adjustConnectedContainers())
+      container:attachToBorder("left")
+      assert.is_false(container:adjustConnectedContainers())
+    end)
+  end)
+
+  describe("Adjustable.Container:resizeBorder", function()
+    -- the border is re-measured off a timer rather than on the resize event,
+    -- because setting a border raises another resize event and doing the work
+    -- inline would loop
+    -- resizeBorder does not keep the id of the timer it arms, so nothing can
+    -- kill one: the timer is stubbed out rather than spied on, or every spec
+    -- here would leave one to fire on a deleted container 0.2s later
+    local function countTimers()
+      local armed = 0
+      local realTempTimer = tempTimer
+      _G.tempTimer = function() armed = armed + 1 return -1 end
+      finally(function() _G.tempTimer = realTempTimer end)
+      return function() return armed end
+    end
+
+    it("arms a timer the first time the window size is seen to have changed", function()
+      local container = make("gapResizeBorder")
+      local armed = countTimers()
+
+      container:resizeBorder()
+      assert.are.equal(1, armed())
+
+      -- the size has not moved since, so a second event has nothing to do
+      container:resizeBorder()
+      assert.are.equal(1, armed())
+    end)
+
+    it("remembers the size it last saw", function()
+      local container = make("gapResizeRemembers")
+      countTimers()
+      local mainWidth, mainHeight = getMainWindowSize()
+      container:resizeBorder()
+      assert.are.equal(mainWidth, container.old_w_value)
+      assert.are.equal(mainHeight, container.old_h_value)
+    end)
+  end)
+
+  describe("Adjustable.Container:save/load", function()
+    it("writes to the directory it is given and reads back from it", function()
+      local container = make("gapSaveDir", {x = 20, y = 30})
+      assert.is_true(container:save(nil, scratchDir))
+      assert.is_true(io.exists(scratchDir .. "gapSaveDir.lua"))
+      assert.is_false(io.exists(container.defaultDir .. "gapSaveDir.lua"))
+
+      container:move(300, 400)
+      container:load(nil, scratchDir)
+      assert.are.equal(20, container:get_x())
+      assert.are.equal(30, container:get_y())
+    end)
+
+    it("keeps a slot apart from the settings saved without one", function()
+      local container = make("gapSlots", {x = 20, y = 30})
+      container:save(nil, scratchDir)
+      container:move(120, 60)
+      container:save("backup", scratchDir)
+
+      container:move(300, 400)
+      container:load("backup", scratchDir)
+      assert.are.equal(120, container:get_x())
+      assert.are.equal(60, container:get_y())
+
+      container:load(nil, scratchDir)
+      assert.are.equal(20, container:get_x())
+      assert.are.equal(30, container:get_y())
+    end)
+
+    it("falls back to the default settings for a slot that was never saved", function()
+      local container = make("gapMissingSlot", {x = 20, y = 30})
+      container:save(nil, scratchDir)
+      container:move(300, 400)
+      container:load("nosuchslot", scratchDir)
+      assert.are.equal(20, container:get_x())
+    end)
+
+    it("says so rather than raising when there is nothing to load", function()
+      local container = make("gapNothingSaved")
+      local message = container:load(nil, scratchDir)
+      assert.is_string(message)
+      assert.is_truthy(message:find("Couldn't load settings from", 1, true))
+    end)
+
+    it("brings back the padding, lock style and border margin", function()
+      local container = make("gapSavedFields")
+      container:setPadding(25)
+      container:setBorderMargin(12)
+      container:lockContainer("full")
+      container:save(nil, scratchDir)
+
+      container:unlockContainer()
+      container:setPadding(10)
+      container:setBorderMargin(5)
+
+      container:load(nil, scratchDir)
+
+      assert.are.equal(25, container.padding)
+      assert.are.equal(12, container.attachedMargin)
+      assert.are.equal("full", container.lockStyle)
+      assert.is_true(container.locked)
+    end)
+
+    it("rejects a slot or a directory of the wrong type", function()
+      local container = make("gapBadArgs")
+      assert.has_error(function() container:save({}) end)
+      assert.has_error(function() container:save(nil, 5) end)
+      assert.has_error(function() container:load({}) end)
+      assert.has_error(function() container:load(nil, 5) end)
+      assert.has_error(function() container:deleteSaveFile(5) end)
+    end)
+
+    it("deleteSaveFile removes the file and says so when there is none", function()
+      local container = make("gapDeleteSave")
+      container:save(nil, scratchDir)
+      assert.is_true(container:deleteSaveFile(scratchDir))
+      assert.is_false(io.exists(scratchDir .. "gapDeleteSave.lua"))
+      local message = container:deleteSaveFile(scratchDir)
+      assert.is_string(message)
+      assert.is_truthy(message:find("Couldn't find file to delete", 1, true))
+    end)
+  end)
+
+  -- All three of these walk Adjustable.Container.all, which in a real profile
+  -- also holds the containers a package such as the base UI built. Saving and
+  -- then loading those would put a whole UI through a settings round trip in
+  -- the middle of the suite, so the registry is narrowed to this block's own
+  -- containers for the duration - which is what these functions iterate, so
+  -- nothing about what they do goes unexercised.
+  describe("Adjustable.Container:saveAll/loadAll/doAll", function()
+    local function onlyTheseContainers(...)
+      local registry = {}
+      for _, container in ipairs({...}) do
+        registry[container.name] = container
+      end
+      local real = Adjustable.Container.all
+      Adjustable.Container.all = registry
+      finally(function() Adjustable.Container.all = real end)
+    end
+
+    it("doAll runs the function over every registered container", function()
+      local first = make("gapDoAllOne")
+      local second = make("gapDoAllTwo")
+      onlyTheseContainers(first, second)
+      local seen = {}
+
+      Adjustable.Container:doAll(function(container) seen[container.name] = true end)
+
+      assert.is_true(seen[first.name])
+      assert.is_true(seen[second.name])
+    end)
+
+    it("saveAll and loadAll cover every container at once", function()
+      local first = make("gapAllOne", {x = 10, y = 10})
+      local second = make("gapAllTwo", {x = 40, y = 40})
+      onlyTheseContainers(first, second)
+
+      Adjustable.Container:saveAll(nil, scratchDir)
+      assert.is_true(io.exists(scratchDir .. "gapAllOne.lua"))
+      assert.is_true(io.exists(scratchDir .. "gapAllTwo.lua"))
+
+      first:move(300, 300)
+      second:move(320, 320)
+
+      Adjustable.Container:loadAll(nil, scratchDir)
+
+      assert.are.equal(10, first:get_x())
+      assert.are.equal(40, second:get_x())
+    end)
+  end)
+
+  describe("Adjustable.Container:enableAutoSave/disableAutoSave", function()
+    -- killAnonymousEventHandler answers nil and "Handler with ID 'n' not
+    -- found." for an id it no longer holds, which is how a registration can be
+    -- told apart from a dead one without raising sysExitEvent
+    local function handlerAlive(id)
+      if not id then
+        return false
+      end
+      if killAnonymousEventHandler(id) then
+        return true
+      end
+      return false
+    end
+
+    it("registers a handler that saves on exit, and kills it again", function()
+      local container = make("gapAutoSave")
+      -- made with autoSave off, so there is nothing registered to begin with
+      assert.is_false(container.autoSave)
+      assert.is_nil(container.autoSaveHandler)
+
+      container:enableAutoSave()
+      assert.is_true(container.autoSave)
+      local handler = container.autoSaveHandler
+      assert.is_not_nil(handler)
+
+      container:disableAutoSave()
+      assert.is_false(container.autoSave)
+      -- the handler is really gone rather than only flagged off
+      assert.is_false(handlerAlive(handler))
+    end)
+
+    it("keeps the one handler it already has rather than stacking a second", function()
+      local container = make("gapAutoSaveOnce")
+      container:enableAutoSave()
+      local handler = container.autoSaveHandler
+      container:enableAutoSave()
+      assert.are.equal(handler, container.autoSaveHandler)
+      container:disableAutoSave()
+    end)
+
+    it("registers a different, live handler again after disableAutoSave", function()
+      local container = make("gapAutoSaveReenable")
+      container:enableAutoSave()
+      local firstHandler = container.autoSaveHandler
+      assert.is_not_nil(firstHandler)
+
+      container:disableAutoSave()
+      assert.is_false(handlerAlive(firstHandler))
+      assert.is_nil(container.autoSaveHandler)
+
+      container:enableAutoSave()
+      local secondHandler = container.autoSaveHandler
+      assert.is_true(container.autoSave)
+      assert.are_not.equal(firstHandler, secondHandler)
+      assert.is_true(handlerAlive(secondHandler))
+      container:disableAutoSave()
+    end)
+
+    it("does not error when disableAutoSave is called twice in a row", function()
+      local container = make("gapAutoSaveTwice")
+      -- starting from autoSave off means even the first call has no handler
+      assert.has_no.errors(function() container:disableAutoSave() end)
+      container:enableAutoSave()
+      container:disableAutoSave()
+      assert.has_no.errors(function() container:disableAutoSave() end)
+      assert.is_false(container.autoSave)
+      assert.is_nil(container.autoSaveHandler)
+    end)
+  end)
+
+  describe("Adjustable.Container lock styles", function()
+    it("locks with the style it is named", function()
+      local container = make("gapLockNamed")
+      container:lockContainer("full")
+      assert.is_true(container.locked)
+      assert.are.equal("full", container.lockStyle)
+      -- the full style leaves no padding for the title bar
+      assert.are.equal(container:get_x(), container.Inside:get_x())
+      assert.are.equal(container:get_y(), container.Inside:get_y())
+    end)
+
+    it("locks with the style at the number it is given", function()
+      local container = make("gapLockNumbered")
+      -- the built in styles are registered in order: standard, border, full, light
+      container:lockContainer(2)
+      assert.are.equal("border", container.lockStyle)
+      assert.are.equal(container.padding, container.Inside:get_y() - container:get_y())
+    end)
+
+    it("falls back to the standard style for one it does not know", function()
+      local container = make("gapLockUnknown")
+      container:lockContainer("nonsense")
+      assert.are.equal("standard", container.lockStyle)
+      assert.is_true(container.locked)
+    end)
+
+    it("leaves a minimized container unlocked", function()
+      local container = make("gapLockMinimized")
+      container:minimize()
+      container:lockContainer()
+      assert.is_false(container.locked)
+    end)
+
+    it("newLockStyle adds a style and a menu item for it", function()
+      local container = make("gapNewLockStyle")
+      local ran = 0
+      container:newLockStyle("gapCustomStyle", function() ran = ran + 1 end)
+
+      assert.is_not_nil(container.lockStyles.gapCustomStyle)
+      assert.is_not_nil(container.adjLabel:findMenuElement("lockStylesLabel.gapCustomStyle"))
+
+      container:lockContainer("gapCustomStyle")
+      assert.are.equal(1, ran)
+      assert.are.equal("gapCustomStyle", container.lockStyle)
+    end)
+
+    it("newLockStyle ignores a name it already has", function()
+      local container = make("gapDuplicateLockStyle")
+      local styleCount = #container.lockStyles
+      container:newLockStyle("standard", function() end)
+      assert.are.equal(styleCount, #container.lockStyles)
+    end)
+
+    it("unlockContainer puts the padding and the title back", function()
+      local container = make("gapUnlock")
+      container:setTitle("visible again")
+      container:lockContainer("full")
+      assert.is_nil(getLabelText(container.adjLabel.name):find("visible again", 1, true))
+
+      container:unlockContainer()
+
+      assert.is_false(container.locked)
+      assert.are.equal(container.padding, container.Inside:get_x() - container:get_x())
+      assert.are.equal(container.padding * 2, container.Inside:get_y() - container:get_y())
+      assert.is_truthy(getLabelText(container.adjLabel.name):find("visible again", 1, true))
+    end)
+  end)
+
+  describe("Adjustable.Container custom menu items", function()
+    it("newCustomItem adds a menu item that runs the function it was given", function()
+      local container = make("gapCustomItem")
+      local seen
+      container:newCustomItem("gapDoThing", function(self) seen = self end)
+
+      local item = container.adjLabel:findMenuElement("customItemsLabel.gapDoThing")
+      assert.is_not_nil(item)
+      assert.are.equal("Adjustable.Container.customMenu", item.clickCallback)
+      assert.are.same({container, "gapDoThing"}, item.clickArgs)
+
+      container:customMenu("gapDoThing")
+      assert.are.equal(container, seen)
+    end)
+
+    it("newCustomItem ignores a name it already has", function()
+      local container = make("gapCustomItemTwice")
+      container:newCustomItem("gapOnce", function() end)
+      local itemCount = #container.customItems
+      container:newCustomItem("gapOnce", function() end)
+      assert.are.equal(itemCount, #container.customItems)
+    end)
+
+    it("newCustomItem says which menu parent is missing", function()
+      -- addMenuLabel answers rather than raising, so without that answer being
+      -- checked this comes out as a nil index on the line after it
+      local container = make("gapCustomItemNoParent")
+      -- take the submenu table away from "customItemsLabel", so it is still in
+      -- the menu but has nowhere to put a child. Removing the label itself
+      -- instead would orphan that table, and findMenuElement recurses forever
+      -- on a submenu whose parent entry is gone.
+      local menuItems = container.adjLabel.rightClickMenu.MenuItems
+      table.remove(menuItems, table.index_of(menuItems, "customItemsLabel") + 1)
+
+      local ok, message = pcall(function() container:newCustomItem("gapOrphan", function() end) end)
+
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("Couldn't find menu parent customItemsLabel", 1, true))
+    end)
+
+    it("customMenu does nothing while the container is minimized", function()
+      local container = make("gapCustomMinimized")
+      local runs = 0
+      container:newCustomItem("gapCounted", function() runs = runs + 1 end)
+      container:minimize()
+
+      container:customMenu("gapCounted")
+
+      assert.are.equal(0, runs)
+      container:restore()
+      container:customMenu("gapCounted")
+      assert.are.equal(1, runs)
+    end)
+  end)
+
+  describe("Adjustable.Container:changeMenuStyle/echoRightClickMenu", function()
+    it("restyles every item in the right click menu", function()
+      local container = make("gapMenuStyle")
+      local light = getLabelStyleSheet(container.lockLabel.name)
+
+      container:changeMenuStyle("dark")
+
+      assert.are.equal("dark", container.menuStyleMode)
+      local dark = getLabelStyleSheet(container.lockLabel.name)
+      assert.are_not.equal(light, dark)
+      assert.are.equal(dark, getLabelStyleSheet(container.saveLabel.name))
+    end)
+
+    it("echoRightClickMenu writes each item's text back onto its label", function()
+      local container = make("gapEchoMenu")
+      container.lockLabel:rawEcho("wiped")
+      assert.are.equal("wiped", getLabelText(container.lockLabel.name))
+
+      container:echoRightClickMenu()
+
+      assert.are_not.equal("wiped", getLabelText(container.lockLabel.name))
+      assert.is_truthy(getLabelText(container.lockLabel.name):find(container.lockLabel.txt, 1, true))
+    end)
+  end)
+
+  describe("Adjustable.Container:hideObj", function()
+    it("hides the container and gives its border reservation back", function()
+      local container = make("gapHideObj", {width = 150})
+      container:attachToBorder("left")
+      assert.is_true(getBorderLeft() > 0)
+
+      container:hideObj()
+
+      assert.is_true(container.hidden)
+      assert.is_false(windowVisible(container.adjLabel.name))
+      assert.is_false(container.attached)
+      assert.are.equal(0, getBorderLeft())
+    end)
+  end)
+
+  describe("Adjustable.Container:setAbsolute/setPercent", function()
+    it("turns the constraints into pixels without moving the container", function()
+      local container = make("gapAbsolute", {x = "10%", y = "10%", width = "20%", height = "20%"})
+      local x, y = container:get_x(), container:get_y()
+      local width, height = container:get_width(), container:get_height()
+
+      container:setAbsolute(true, true)
+
+      -- Geyser normalises a number into a pixel string as it applies it, and a
+      -- percentage of the window this suite happens to run in is rarely a whole
+      -- pixel, so the rounding that costs is allowed for
+      assert.is_truthy(tostring(container.x):find("px$"))
+      assert.is_truthy(tostring(container.width):find("px$"))
+      assert.is_true(math.abs(container:get_x() - x) <= 1)
+      assert.is_true(math.abs(container:get_y() - y) <= 1)
+      assert.is_true(math.abs(container:get_width() - width) <= 1)
+      assert.is_true(math.abs(container:get_height() - height) <= 1)
+    end)
+
+    it("turns the constraints into percentages without moving the container", function()
+      local container = make("gapPercent", {x = 40, y = 50, width = 200, height = 100})
+
+      container:setPercent(true, true)
+
+      assert.is_truthy(tostring(container.x):find("%%$"))
+      assert.is_truthy(tostring(container.width):find("%%$"))
+      assert.is_true(math.abs(container:get_x() - 40) <= 1)
+      assert.is_true(math.abs(container:get_y() - 50) <= 1)
+      assert.is_true(math.abs(container:get_width() - 200) <= 1)
+      assert.is_true(math.abs(container:get_height() - 100) <= 1)
+    end)
+
+    it("converts only the half it is asked to", function()
+      local container = make("gapHalfAbsolute", {x = "10%", y = "10%", width = "20%", height = "20%"})
+
+      container:setAbsolute(false, true)
+
+      assert.is_truthy(tostring(container.x):find("px$"))
+      assert.are.equal("20%", container.width)
+    end)
+  end)
+
+  describe("Adjustable.Container:oldnew", function()
+    it("builds a container that adds its children the old way", function()
+      local container = Adjustable.Container:oldnew({
+        name = "gapOldNew",
+        x = 0, y = 0, width = 200, height = 100,
+        autoLoad = false, autoSave = false,
+      })
+      containers[#containers + 1] = container
+      assert.is_false(container.useAdd2)
+      assert.are.equal("adjustablecontainer", container.type)
+      assert.is_not_nil(container.adjLabel)
+      -- a child still lands inside the container's inner container
+      local label = Geyser.Label:new({name = "gapOldNewChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      assert.are.equal(container.Inside, label.container)
+      local x, y, width, height = getWindowGeometry("gapOldNewChild")
+      assert.are.same({
+        container.Inside:get_x(),
+        container.Inside:get_y(),
+        container.Inside:get_width(),
+        container.Inside:get_height(),
+      }, {x, y, width, height})
+    end)
   end)
 end)

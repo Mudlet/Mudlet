@@ -96,6 +96,7 @@ class QFrame;
 class QToolButton;
 class TAction;
 class TKey;
+class TVar;
 class TConsole;
 class dlgVarsMainArea;
 class QShortcut;
@@ -205,6 +206,7 @@ public:
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void showVariableRenameRefused(TVar*);
     void repopulateVars();
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);

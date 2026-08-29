@@ -63,11 +63,17 @@ AUTORUN_BUSTED_TESTS=true \
 MUDLET_TEST_MODE=1 \
 QUIT_MUDLET_AFTER_TESTS=true \
 TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
-xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ```
 
 A failure writes a marker file (`/tmp/busted-tests-failed` on Linux/macOS) so the
 caller can detect it.
+
+`--offline` opens the profile without connecting to its game server, which is
+what lets a spec use `feedTelnet()` - that function only injects while the telnet
+socket is unconnected. Specs that rely on it fail without the flag, so keep it on
+every invocation; when opening the profile through the GUI instead, use the
+connection dialog's **Offline** button.
 
 By default Mudlet reads and writes `~/.config/mudlet`, so two runs started at the
 same time (for example from different checkouts) share one `Mudlet self-test`
@@ -93,8 +99,42 @@ QUIT_MUDLET_AFTER_TESTS=true \
 TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
 XDG_CONFIG_HOME="$CONFIG_DIR" \
 MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
-xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ```
+
+## Running the fuzzers
+
+`TelnetTriggerFuzz_spec.lua` drives random bytes through the telnet parser and
+random patterns through the trigger engine; `BufferManipFuzz_spec.lua` drives the
+console text and selection API with deliberately out-of-range line and column
+indices. Both are diagnostic specs rather than pass/fail tests: they are meant to
+be run against a sanitizer build, where a memory error or undefined behaviour
+aborts the run instead of corrupting silently.
+
+Because busted recurses into this whole directory, both bail out before
+registering anything unless `MUDLET_FUZZ` is set, so a normal run - CI included -
+skips them. Set it to opt in:
+
+```sh
+MUDLET_FUZZ=1 MUDLET_FUZZ_SEED=1 \
+AUTORUN_BUSTED_TESTS=true MUDLET_TEST_MODE=1 QUIT_MUDLET_AFTER_TESTS=true \
+TESTS_DIRECTORY=<full path>/src/mudlet-lua/tests \
+xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
+```
+
+Build the binary with `cmake --preset linux-debug` (AddressSanitizer) or
+`--preset linux-debug-ubsan` (UndefinedBehaviorSanitizer) to get that coverage.
+The telnet fuzzer needs `--offline`, which is what makes `feedTelnet()` run the
+real socket-data state machine.
+
+Every random choice comes from a seeded, self-contained PRNG, so a seed replays
+byte-for-byte. Each fuzzer takes a seed and iteration counts, and a dump path
+that records the last input before it is fed, so the tail of that file is the
+crashing input after an abort - see the header comment in each spec for the full
+list of variables.
+
+Some seeds abort today: the fuzzers reach bugs that are still open, so treat an
+abort as a finding to reduce and report rather than as a broken harness.
 
 ## Creating tests
 

@@ -28,6 +28,7 @@
 
 
 #include "TBuffer.h"
+#include "TConsoleModel.h"
 
 #include <QDataStream>
 #include <QElapsedTimer>
@@ -40,10 +41,10 @@
 
 #include <hunspell/hunspell.h>
 
-#include <deque>
 #include <list>
 #include <map>
 #include <memory>
+#include <vector>
 
 // This contains the details of a font that we might want to maintain a record
 // of, independently of a QFont instance:
@@ -152,9 +153,6 @@ class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
-class THyperlinkCompactManager;
-class THyperlinkSelectionManager;
-class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
@@ -191,6 +189,8 @@ public:
     void reset();
     void resizeConsole();
     Host* getHost();
+    TConsoleModel& model() { return *mpModel; }
+    const TConsoleModel& model() const { return *mpModel; }
     void replace(const QString&);
     void insertHTML(const QString&);
     void insertText(const QString&);
@@ -257,21 +257,12 @@ public:
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
 
-    THyperlinkCompactManager& getHyperlinkCompactManager()
-    {
-        Q_ASSERT(mpHyperlinkCompactManager);
-        return *mpHyperlinkCompactManager;
-    }
-    THyperlinkSelectionManager& getHyperlinkSelectionManager()
-    {
-        Q_ASSERT(mpHyperlinkSelectionManager);
-        return *mpHyperlinkSelectionManager;
-    }
-    THyperlinkVisibilityManager& getHyperlinkVisibilityManager()
-    {
-        Q_ASSERT(mpHyperlinkVisibilityManager);
-        return *mpHyperlinkVisibilityManager;
-    }
+    // Model state, not view state: the main console shares Host's, so a link
+    // concealed while the profile was open stays concealed once the widget has
+    // gone.
+    THyperlinkCompactManager& getHyperlinkCompactManager() { return mpModel->mHyperlinkCompactManager; }
+    THyperlinkSelectionManager& getHyperlinkSelectionManager() { return mpModel->mHyperlinkSelectionManager; }
+    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
     void changeColors();
@@ -279,8 +270,13 @@ public:
     void scrollUp(int lines);
     void print(const QString& msg);
     void print(const char*);
-    void print(const QString& msg, QColor fgColor, QColor bgColor);
-    void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    // timeStampOverride is for content being replayed after being held back -
+    // it keeps the time the text arrived instead of the time it is shown:
+    void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
+    // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
+    // until its right-click menu asks for it:
+    void showSearchBar();
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
@@ -288,6 +284,9 @@ public:
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
+    // Repaint just the lines the current selection covers, for the callers that
+    // change their text where it stands instead of appending new text.
+    void markSelectionDirty();
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     void setFontSize(int);
     void setFontName(const QString& fontName);
@@ -353,8 +352,19 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
+    // The Central Debug Console's find bar, floating over the bottom right of
+    // the console itself:
+    QPointer<QWidget> mpFindBar;
 
-    TBuffer buffer;
+    // The buffer, cursor/prompt state and fg/bg colours live in a core
+    // TConsoleModel reached through model(). For the main console that model is
+    // co-owned with Host (which drives the trigger pipeline through it - see
+    // Host::runTriggers); sub-consoles own theirs. The members below are
+    // references aliasing the model, so the existing buffer/mFgColor/...
+    // accesses across the codebase are unchanged - which is why the model has
+    // to stay declared ahead of every one of them.
+    std::shared_ptr<TConsoleModel> mpModel;
+    TBuffer& buffer;
     static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;
@@ -364,19 +374,22 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-    QColor mBgColor = QColorConstants::Black;
-    QColor mFgColor = QColorConstants::LightGray;
+    QColor& mBgColor;
+    QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    QColor mSystemMessageBgColor = mBgColor;
+    // Not mBgColor: captured once and never updated, so it only ever held the
+    // built-in default - which the model can now have replaced with the
+    // profile's before the console is built.
+    QColor mSystemMessageBgColor = QColorConstants::Black;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
     int mButtonState = 1;
 
     QString mConsoleName;
-    QString mCurrentLine;
-    int mEngineCursor = -1;
+    QString& mCurrentLine;
+    int& mEngineCursor;
 
     int mIndentCount = 0;
     int mHangingIndentCount = 0;
@@ -408,14 +421,14 @@ public:
 
     bool mTriggerEngineMode = false;
 
-    QPoint mUserCursor;
+    QPoint& mUserCursor;
     int mWrapAt = 100;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
     QPoint P_begin;
     QPoint P_end;
     QString mProfileName;
     TSplitter* splitter = nullptr;
-    bool mIsPromptLine = false;
+    bool& mIsPromptLine;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
     QToolButton* replayButton = nullptr;
@@ -469,28 +482,24 @@ protected:
 private slots:
     void slot_adjustAccessibleNames();
     void slot_clearSearchResults();
+    void slot_hyperlinkVisibilityChanged();
     void focusOnSearchResultAndAnnounce(int searchX, int searchY);
+    void hideSearchBar();
 
 private:
+    void createFindBar();
+    void positionFindBar();
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
-    void initializeOSC8StyleFeature();
-    void initializeOSC8MenuFeature();
-    void initializeOSC8TooltipFeature();
-    void initializeOSC8VisibilityFeature();
-    void initializeOSC8SelectionFeature();
-    void initializeOSC8SpoilerFeature();
-    void initializeOSC8DisabledFeature();
-    void initializeOSC8TitleFeature();
-
-    // OSC 8 hyperlink managers
-    std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;
-    std::unique_ptr<THyperlinkSelectionManager> mpHyperlinkSelectionManager;
-    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
 
     ConsoleType mType = UnknownType;
+    // the size the last resize reported to Lua
     QSize mOldSize;
+    // only ever written from a size that was really measured, so what
+    // getMainWindowSize() falls back to while the console is hidden or too small
+    // to measure cannot be a size the window never had
+    mutable QSize mLastMeasuredSize;
     SearchOptions mSearchOptions = SearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;

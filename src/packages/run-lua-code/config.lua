@@ -14,5 +14,5 @@ run Lua code from the command line.
 > lua showColors()                       -- display a color palette
 ```
 ]]
-version = [[5]]
+version = [[6]]
 created = "2024-08-27T05:32:00+02:00"

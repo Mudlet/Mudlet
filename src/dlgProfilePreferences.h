@@ -24,18 +24,20 @@
  ***************************************************************************/
 
 
+#include "Host.h"
 #include "mudlet.h"
 
 #include "ui_profile_preferences.h"
 #include <QDialog>
+#include <QList>
 #include <QMap>
 
-class Host;
 class QCloseEvent;
 class QDoubleSpinBox;
 class TAction;
 class TAlias;
 class TKey;
+class TKeySequenceEdit;
 class TScript;
 class TTimer;
 class TTrigger;
@@ -143,10 +145,10 @@ private slots:
     void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_scriptSelected(int index);
     void slot_tabChanged(int tabIndex);
-    void slot_showNewFeatureCallouts();
     void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
+    void slot_mapSymbolFontChanged();
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
@@ -231,8 +233,9 @@ private:
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();
-    bool updateDisplayFont();
+    bool updateDisplayFont(Host::DisplayFontChange change);
     void cancelShortcutCaptures();
+    void setShortcutsTabOrder(const QList<TKeySequenceEdit*>& sequenceEdits);
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
@@ -243,6 +246,9 @@ private:
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
+    // The map symbol font the glyph usage table was last built from, so that
+    // the other symbol settings changing does not cost a rebuild:
+    QFont mGlyphDisplayFont;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;

@@ -322,5 +322,212 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   end)
 
+  -- A line written through TBuffer::appendLine() that holds the documentation
+  -- phrase is dropped whole, and a banner of worked OSC 8 examples goes into
+  -- the main console's buffer instead - whichever console the line was written
+  -- to. Paths that do not reach appendLine() print the phrase as ordinary text:
+  -- anything the game sends, and an echo from inside a trigger. The injection
+  -- is debounced to a second of wall clock and the timestamp it keeps lives on
+  -- the main buffer, so each spec here waits that window out before it starts.
+  -- The phrase is built rather than written out below, and kept out of the
+  -- describe and it names, so busted's own report cannot set it off.
+  describe("Tests the OSC 8 documentation helper phrase", function()
+    local phrase = "!osc8-" .. "docs"
+    local otherWindow = "osc8DocsSpecWindow"
+    -- pumpEvents() is inert outside test mode, so the debounce window below
+    -- never elapses and the second injection would be suppressed
+    local testMode = os.getenv("MUDLET_TEST_MODE")
+
+    setup(function()
+      createMiniConsole(otherWindow, 0, 0, 200, 100)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(otherWindow)
+    end)
+
+    -- everything main has been told since the marker line, found by scanning
+    -- back for the marker rather than by holding on to an index: sixty lines of
+    -- banner can push the main buffer over its limit, and the trim that follows
+    -- moves every absolute index
+    local function mainSinceMarker(marker)
+      local lastLine = getLastLineNumber("main")
+      local reversed = {}
+      for lineNumber = lastLine, math.max(0, lastLine - 300), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1] or ""
+        if line:find(marker, 1, true) then
+          local ordered = {}
+          for index = #reversed, 1, -1 do
+            ordered[#ordered + 1] = reversed[index]
+          end
+          return ordered
+        end
+        reversed[#reversed + 1] = line
+      end
+      return nil
+    end
+
+    local function someLineHolds(lines, needle)
+      for _, line in ipairs(lines) do
+        if line:find(needle, 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    it("writes the worked examples into the main console", function()
+      if not testMode then
+        pending("waiting out the injection debounce needs MUDLET_TEST_MODE")
+        return
+      end
+      pumpEvents(1100)
+      echo("OSCDOCSMARKA\n")
+      echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
+      local injected = mainSinceMarker("OSCDOCSMARKA")
+      assert.is_truthy(injected, "the marker line the examples follow is gone")
+      assert.is_true(#injected > 10, "only " .. #injected .. " lines were injected")
+      assert.is_true(someLineHolds(injected, "OSC 8 Hyperlink Examples"), table.concat(injected, "\n"))
+      assert.is_true(someLineHolds(injected, "wiki.mudlet.org"), table.concat(injected, "\n"))
+      -- what was written goes whole, not just the phrase out of the middle of it
+      assert.is_false(someLineHolds(injected, "OSCDOCS1"))
+      assert.is_false(someLineHolds(injected, "OSCDOCS2"))
+    end)
+
+    it("writes them into main whichever window they were asked for in", function()
+      if not testMode then
+        pending("waiting out the injection debounce needs MUDLET_TEST_MODE")
+        return
+      end
+      pumpEvents(1100)
+      clearWindow(otherWindow)
+      echo("OSCDOCSMARKB\n")
+      echo(otherWindow, phrase)
+      local injected = mainSinceMarker("OSCDOCSMARKB")
+      assert.is_truthy(injected, "the marker line the examples follow is gone")
+      assert.is_true(someLineHolds(injected, "OSC 8 Hyperlink Examples"), table.concat(injected, "\n"))
+      -- and nothing at all in the window the phrase was written to
+      assert.are.equal("", getLines(otherWindow, 0, 1)[1] or "")
+      -- the debounce timestamp lives on the main buffer, so the window the
+      -- phrase arrived in does not get a window of its own
+      echo(phrase)
+      assert.are.equal(#injected, #mainSinceMarker("OSCDOCSMARKB"))
+    end)
+  end)
+
+  -- Of the three visibility actions a link can carry, a delayed reveal is the
+  -- only one that completes without a click: concealment waits to be clicked
+  -- before its timer even starts, and reveal-then-conceal only gets through its
+  -- reveal half unattended. The link is written concealed and the visibility
+  -- manager puts its text back on the first tick of its 100ms poll past the
+  -- delay, so the wait below is not the delay itself. The manager also restores
+  -- the link indices at the same time, which no Lua call can read back - that
+  -- half of the reveal is left to a functional test.
+  describe("Tests OSC 8 hyperlink visibility expiry", function()
+    local function lineHolding(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
+    -- scans the whole buffer, unlike lineHolding()'s 20-line tail
+    local function findLine(needle)
+      for lineNumber = 0, getLastLineNumber("main") do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
+    -- the buffer size is global state, so restore it even when the body throws or
+    -- a failure here fails an unrelated spec later in the run
+    local function withSmallBuffer(body)
+      local wasLines, wasBatch = getConsoleBufferSize("main")
+      setConsoleBufferSize("main", 100, 20)
+      local ok, err = pcall(body)
+      setConsoleBufferSize("main", wasLines, wasBatch)
+      if not ok then error(err, 0) end
+    end
+
+    it("reveals a link that was written concealed once its delay is up", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        -- pumpEvents() is inert outside test mode, so the reveal never fires
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      local link = "\027]8;;send:osc8reveal?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+      assert.is_true(feedTriggers("OSCREVEAL1(" .. link .. ")OSCREVEAL1\n"))
+      local lineNumber, concealed = lineHolding("OSCREVEAL1")
+      assert.is_truthy(lineNumber, "the line carrying the link never reached the buffer")
+      -- concealment keeps the character count identical so buffer indices stay
+      -- valid, which is why the text is replaced space for space
+      assert.equals("OSCREVEAL1(          )OSCREVEAL1", concealed)
+      pumpEvents(700)
+      assert.equals("OSCREVEAL1(HIDDENWORD)OSCREVEAL1", getLines("main", lineNumber, lineNumber + 1)[1])
+    end)
+
+    it("reveals a link on its own line after the buffer has trimmed", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        local link = "\027]8;;send:osc8trim?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCTRIM1(" .. link .. ")OSCTRIM1\n"))
+        local before = findLine("OSCTRIM1")
+        assert.is_truthy(before, "the line carrying the link never reached the buffer")
+
+        for i = 1, 70 do echo("osctrimfiller " .. i .. "\n") end
+        local moved = findLine("OSCTRIM1")
+        assert.is_truthy(moved, "the link's line scrolled out entirely, so this test proves nothing")
+        assert.is_not.equal(before, moved, "the buffer never trimmed, so this test proves nothing")
+
+        pumpEvents(700)
+        assert.equals("OSCTRIM1(HIDDENWORD)OSCTRIM1", getLines("main", moved, moved + 1)[1])
+      end)
+    end)
+
+    it("does not rewrite an unrelated line when the link's own line was trimmed away", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        -- the link has to sit at a LOW buffer index: its stale index is what a
+        -- broken reveal writes to, and a high one falls outside the trimmed buffer
+        -- where performReveal() no-ops instead of corrupting
+        clearWindow()
+        for i = 1, 3 do echo("oscgoneseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCGONE1(" .. link .. ")OSCGONE1\n"))
+        local registeredAt = findLine("OSCGONE1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes without the fix
+        for i = 1, 260 do echo("oscgonefiller padded out well past the link column " .. i .. "\n") end
+        assert.is_nil(findLine("OSCGONE1"), "the link's line survived, so this test proves nothing")
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        for lineNumber = 0, lastLine do
+          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+            "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
+        end
+      end)
+    end)
+  end)
 
 end)

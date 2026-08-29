@@ -1,7 +1,9 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
 # Changes here likely need to be mirrored there as well, apart from the ccache
 # handling: caches here are scoped to their own pull request ref and keyed per
-# commit, so there is never a key to delete before saving one.
+# commit, so there is never a key to delete before saving one. The generations
+# an earlier push left behind are retired by cleanup-caches.yml instead, which
+# runs in the base repository and so has a writable token even for a fork.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
@@ -59,8 +61,8 @@ jobs:
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
-            gcc_compiler_version: 10
-            qt: '6.9.0'
+            gcc_compiler_version: 12
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
@@ -69,13 +71,13 @@ jobs:
           - os: macos-15-intel
             buildname: 'macos (x86_64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
-          - os: macos-14
+          - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.9.0'
+            qt: '6.11.1'
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -91,7 +93,14 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        cache: true
+        # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
+        # and a copy per runner image, module set and ref took over 40% of the
+        # repository's 10GB cache quota - more than every ccache put together.
+        # Fetching it afresh costs 25-35s a job. Leaving it cached cost far more
+        # than that, because a quota with no headroom has GitHub evicting by
+        # least-recently-used, and a dropped branch ccache is a 20 minute cold
+        # rebuild rather than a 30 second download.
+        cache: false
         modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
 
     - name: Cache Lua build
@@ -131,7 +140,7 @@ jobs:
         # Install all required dependencies
         # brew install can hang indefinitely during bottle pouring, so timeout and retry
         for attempt in 1 2 3; do
-          brew install libzzip libzip ccache expect assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
+          brew install libzzip libzip ccache assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost &
           brew_pid=$!
           ( sleep 120 && kill $brew_pid 2>/dev/null ) &
           watcher_pid=$!
@@ -195,13 +204,10 @@ jobs:
         sudo apt-get update
 
         # Install all required dependencies
-        # imagemagick is for the desktop screenshot
         # liblua5.1-0-dev is needed for CMake to find Lua headers/library
         sudo apt-get install \
           ccache \
-          expect \
           g++-${{matrix.gcc_compiler_version}} \
-          imagemagick \
           libassimp-dev \
           libboost-dev \
           libcurl4-openssl-dev \
@@ -335,7 +341,6 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        sudo apt-get -y install pcre2-utils
         ${{github.workspace}}/CI/validate_deployment.sh
         ${{github.workspace}}/CI/set-build-info.sh
 
@@ -344,7 +349,6 @@ jobs:
       env:
         GITHUB_EVENT_INPUTS_SCHEDULED: ${{inputs.scheduled}}
       run: |
-        brew install pcre2
         ${{github.workspace}}/CI/validate_deployment.sh
         ${{github.workspace}}/CI/set-build-info.sh
         # ccache can't reliably detect that the compiler is clang on macOS, so just say so explicitly.
@@ -375,6 +379,7 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
           -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
           -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
           -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
@@ -397,12 +402,6 @@ jobs:
 
     - name: check ccache stats post build
       run: ccache --show-stats
-
-    # a mold that never got installed just makes the compiler fall back to the
-    # system ld, which builds fine and quietly costs three minutes a run
-    - name: (Linux) Confirm the build used mold
-      if: runner.os == 'Linux'
-      run: readelf -p .comment ${{runner.workspace}}/b/ninja/src/mudlet | grep -q mold
 
     - name: install dependencies for packaging/tests
       run: |
@@ -442,7 +441,7 @@ jobs:
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(nproc)
       env:
         QT_QPA_PLATFORM: offscreen
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
@@ -454,12 +453,12 @@ jobs:
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure
+      run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
     # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
       if: matrix.run_tests != 'true'
-      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure
+      run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
@@ -508,7 +507,9 @@ jobs:
 
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
+      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
 
@@ -616,7 +617,7 @@ jobs:
       # wall-clock time, so the suite needs a budget of its own: the run itself
       # takes ~75s, and the rest is headroom for a slow runner stretching those.
       timeout-minutes: 6
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
@@ -661,9 +662,10 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # The suite alone can run past a minute on the slower Intel runners
-      timeout-minutes: 3
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
+      # tighter limit fails on runner speed rather than on anything the suite did
+      timeout-minutes: 6
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1

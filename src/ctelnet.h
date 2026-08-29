@@ -202,6 +202,7 @@ public:
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
+    void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
@@ -280,6 +281,10 @@ public:
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed = true;
+    // The last round trip that could be measured - a reading taken while Mudlet
+    // was too busy to notice the reply arriving is dropped rather than
+    // published, so this can be older than the last command sent. See
+    // NETWORK_LATENCY_BEAT in ctelnet.cpp:
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
     bool mGA_Driver = false;
@@ -344,6 +349,11 @@ private:
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
+    // Calls reset() from its constructor. It has to be the Host that does that,
+    // and not cTelnet itself, because reset() clears Host members declared after
+    // cTelnet, which do not exist yet while cTelnet is being constructed.
+    friend class Host;
+
 #if defined(QT_NO_SSL)
     void abortLosingSocket(QTcpSocket* losingSocket);
 #else
@@ -359,7 +369,6 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
     void handleFailedConnection();
-    void forgetGameSuppliedHostState();
     void sendLoginAndPass();
 
     QByteArray prepareNewEnvironData(const QString&);
@@ -408,8 +417,16 @@ private:
     void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void beginNetworkLatencyMeasurement();
+    void finishNetworkLatencyMeasurement();
+    void abandonNetworkLatencyMeasurement();
     void setKeepAlive(int socketHandle);
     void processChunks();
+
+private slots:
+    void slot_networkLatencyBeat();
+
+private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
@@ -519,13 +536,20 @@ private:
 
     QNetworkReply* mpPackageDownloadReply = nullptr;
 
-    int mCommands = 0;
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
 
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
+    // ctelnet.cpp:
+    QTimer* mpNetworkLatencyBeatTimer = nullptr;
+    qint64 mNetworkLatencyLastBeatNs = 0;
+    // The worst single gap between beats in the measurement running now, not
+    // the stall time accumulated across it:
+    qint64 mNetworkLatencyWorstStallNs = 0;
+
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
     QTimer* mTimerPasswordModeTimeout = nullptr;

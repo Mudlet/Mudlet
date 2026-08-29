@@ -33,6 +33,7 @@
 #include "DarkTheme.h"
 #include "LuaInterface.h"
 #include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
@@ -200,6 +201,15 @@ void mudlet::init()
     scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
 
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+
+    // Scripts that care whether the player is looking at Mudlet at all - a
+    // speech package holding a microphone open, an away marker, a timer that
+    // should not run while nobody is watching - have had no way to know.
+    // sysProfileFocusChangeEvent answers which profile is in front, which is a
+    // different question and says nothing when the whole application is behind
+    // another window.
+    mApplicationActive = qGuiApp->applicationState() == Qt::ApplicationActive;
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, &mudlet::slot_applicationStateChanged);
     readEarlySettings(*mpSettings);
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
@@ -1497,6 +1507,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("한국어");
             } else if (!languageCode.compare(QLatin1String("he_IL"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("עִברִית");
+            } else if (!languageCode.compare(QLatin1String("cs_CZ"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("Čeština");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1676,6 +1688,33 @@ void mudlet::slot_packageExporter()
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     utils::forceRepositionDialogOnParentScreen(d, referenceWidget);
+}
+
+// Qt reports several inactive states - suspended, hidden, and plain inactive -
+// and moves between them without the player having done anything. Only the
+// active/not-active distinction is meaningful to a script, so that is what is
+// announced, and only when it changes.
+void mudlet::slot_applicationStateChanged(const Qt::ApplicationState state)
+{
+    const bool nowActive = (state == Qt::ApplicationActive);
+    if (nowActive == mApplicationActive) {
+        return;
+    }
+    mApplicationActive = nowActive;
+
+    // Every profile hears it: this is a fact about the application, not about
+    // which profile is in front, and a profile in a background tab has as much
+    // reason to act on it as the one on screen.
+    TEvent event{};
+    event.mArgumentList << QLatin1String("sysApplicationFocusChangeEvent");
+    // Boolean arguments are carried as "0" for false or "1" for true
+    event.mArgumentList << (nowActive ? QLatin1String("1") : QLatin1String("0"));
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+    for (auto pHost : mHostManager) {
+        if (pHost) {
+            pHost->raiseEvent(event);
+        }
+    }
 }
 
 void mudlet::slot_closeCurrentProfile()
@@ -3271,6 +3310,15 @@ void mudlet::readLateSettings(const QSettings& settings)
         }
     }
 #endif
+    if (settings.contains(qsl("debugConsole/categories"))) {
+        // Only categories Mudlet still knows about, so that a category retired
+        // in a later version cannot leave a stale bit set:
+        const auto stored = TDebug::Categories::fromInt(settings.value(qsl("debugConsole/categories")).toInt());
+        TDebug::setEnabledCategories(stored & TDebug::csmAllCategories);
+    }
+    // The text filter is deliberately NOT restored: which kinds of message are
+    // worth seeing is a lasting preference, but the string someone was hunting
+    // for last month would just make the console look broken today.
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -3505,6 +3553,7 @@ void mudlet::writeSettings()
     settings.setValue(qsl("mcpServerEnabled"), mEnableMCP);
     settings.setValue(qsl("mcpServerPort"), mMCPServerPort);
 #endif
+    settings.setValue(qsl("debugConsole/categories"), TDebug::enabledCategories().toInt());
 #if !defined(Q_OS_MACOS)
     if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
         settings.setValue(qsl("highDpiScaleFactorRoundingPolicy"), qsl("PassThrough"));
@@ -4660,6 +4709,14 @@ void mudlet::slot_mudletDiscord()
 
 void mudlet::updateDiscordNamedIcon()
 {
+    // Each detached window owns its own copy of these actions and shows its own
+    // profile's game, so refreshing the main window's pair is not enough
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->updateDiscordNamedIcon();
+        }
+    }
+
     Host* pHost = getActiveHost();
 
     if (!pHost) {
@@ -4795,7 +4852,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
     }
 }
 
-void mudlet::startAutoLogin(const QStringList& cliProfiles)
+void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
 {
     QElapsedTimer timer;
     timer.start();
@@ -4821,7 +4878,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
         if (!hostName.isEmpty()) {
             QElapsedTimer timer;
             timer.start();
-            doAutoLogin(hostName);
+            doAutoLogin(hostName, offline);
             hostList.removeOne(hostName);
             loadedProfiles++;
             qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed() / 1000.0 << "seconds";
@@ -4833,7 +4890,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
         if (val.toInt() == Qt::Checked) {
             QElapsedTimer timer;
             timer.start();
-            doAutoLogin(hostName);
+            doAutoLogin(hostName, offline);
             loadedProfiles++;
             qDebug() << "Profile" << hostName << "loaded in" << timer.elapsed() / 1000.0 << "seconds";
         }
@@ -4932,6 +4989,17 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->setWindowTitle(tr("Central Debug Console"));
     smpDebugArea->setWindowIcon(QIcon(qsl(":/icons/mudlet_debug.png")));
 
+    // Pausing is a momentary thing, and the state is global while the toolbar
+    // showing it is not - a console left paused when its profile closed would
+    // otherwise come back silently dead:
+    TDebug::setPaused(false);
+    TDebug::discardPausedMessages();
+
+    // The filters are the everyday controls, so they get a row of the window to
+    // themselves - the find bar is the console's own and floats over it.
+    smpDebugFilterBar = new TDebugFilterBar(smpDebugArea);
+    smpDebugArea->addToolBar(Qt::BottomToolBarArea, smpDebugFilterBar);
+
     auto consoleCloser = new TConsoleMonitor(smpDebugArea);
     smpDebugArea->installEventFilter(consoleCloser);
 
@@ -4941,7 +5009,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->hide();
 }
 
-void mudlet::doAutoLogin(const QString& profile_name)
+void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
 {
     if (profile_name.isEmpty()) {
         return;
@@ -4952,9 +5020,9 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    loadProfile(profile_name, true);
+    loadProfile(profile_name, !offline);
 
-    slot_connectionDialogueFinished(profile_name, true);
+    slot_connectionDialogueFinished(profile_name, !offline);
     enableToolbarButtons();
 }
 
@@ -5112,7 +5180,16 @@ void mudlet::handleTelnetUri(const QString& uri)
     }
 
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
-    doAutoLogin(profileName);
+    // a telnet:// URI is an explicit request to connect, so --offline does not apply to it
+    doAutoLogin(profileName, false);
+
+    // doAutoLogin() skips a profile that is already open, which with --offline
+    // leaves it loaded but never dialled, so the URI is honoured here instead.
+    // A profile it just connected is past UnconnectedState by now.
+    Host* pHost = mHostManager.getHost(profileName);
+    if (pHost && pHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState) {
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+    }
 
     // Reset flag after telnet:// or telnets:// URI processing is complete
     mProcessingTelnetUri = false;
@@ -5197,6 +5274,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     mPackagesToInstallList.clear();
 
+    // Only now are the fonts of the modules and the default packages registered
+    // too, so a family the profile names can be told apart from one that is
+    // merely not loaded yet - and the real console exists, so the stand-in this
+    // may pick lands on it and the warning reaches the player.
+    pHost->substituteMissingDisplayFont();
+
     // Now load the default (latest stored) map file:
     pHost->loadMap();
 
@@ -5214,6 +5297,10 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         raise();
         activateWindow();
     } else {
+        // no connectIt() on this path, so the telnet parser would otherwise run
+        // on the defaults rather than on the profile's own settings
+        pHost->mTelnet.cacheHostSettings();
+
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
 
@@ -7597,9 +7684,25 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
             // clang-format on
     };
 
+    // mpkg fetches the package listing as it loads and, when the repository carries a
+    // newer mpkg than the bundled one, uninstalls itself at once and reinstalls two
+    // seconds plus a download later. Each of those calls doCleanReset() if an editor is
+    // open, which queues a clear of its tree widgets onto the next event loop turn and
+    // frees every item a test is holding, and each announces itself in the main console.
+    // Whether it lands mid-test is down to how fast the download is.
+    //
+    // generic_mapper below can self-update the same way, but its upstream is this repo's
+    // own development branch, so bundled and remote move together; mpkg is published from
+    // a separate repository on its own schedule, which is what leaves a released Mudlet
+    // upgrading itself mid-test for days at a time.
+    const bool skipSelfUpgradingPackage = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+
     QHashIterator<QString, QStringList> i(defaultScripts);
     while (i.hasNext()) {
         i.next();
+        if (skipSelfUpgradingPackage && i.key() == qsl(":/packages/mpkg/mpkg.mpackage")) {
+            continue;
+        }
         if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
             mudlet::self()->mPackagesToInstallList.append(i.key());
         }
@@ -8044,7 +8147,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Create detached window with toolbar state inherited from main window
     bool toolbarVisible = (mpMainToolBar && mpMainToolBar->isVisible());
-    auto detachedWindow = new TDetachedWindow(profileName, console, this, toolbarVisible);
+    auto detachedWindow = new TDetachedWindow(profileName, console, toolbarVisible);
     mDetachedWindows.insert(profileName, detachedWindow);
 
     // Transfer any dock widgets from the main window to the detached window
@@ -8067,6 +8170,17 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     detachedWindow->show();
     detachedWindow->raise();
     detachedWindow->activateWindow();
+
+    // When a tab is left selected above, its slot_tabChanged() leaves
+    // Host::setFocusOnHostActiveCommandLine()'s zero-timer queued, and that
+    // activates the main window - undoing the activateWindow() just above the
+    // moment control returns to the event loop. Ours is queued later so it runs
+    // later; the 10ms and 50ms retries behind it only setFocus(), which cannot
+    // activate an inactive window.
+    QTimer::singleShot(0ms, detachedWindow, [detachedWindow]() {
+        detachedWindow->raise();
+        detachedWindow->activateWindow();
+    });
 
     // Update multi-view controls
     updateMultiViewControls();

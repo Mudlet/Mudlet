@@ -661,6 +661,54 @@ describe("Tests functionality of Geyser.Gauge", function()
       gauge:setText("green")
       assert.is_truthy(getLabelText("ggsText_text"):find("color: #00ff00", 1, true))
     end)
+
+    it("setFormat replaces the whole text format at once", function()
+      gauge:setBold(true)
+      gauge:setFormat("ci18")
+      gauge:setText("reformatted")
+      local text = getLabelText("ggsText_text")
+      assert.is_truthy(text:find('align="center"', 1, true))
+      assert.is_truthy(text:find("<i>reformatted</i>", 1, true))
+      assert.is_truthy(text:find("font%-size: 18pt"))
+      assert.is_nil(text:find("<b>", 1, true))
+      -- the gauge mirrors the text label's format state, so both copies move
+      assert.are.equal("ci18", gauge.format)
+      assert.is_false(gauge.formatTable.bold)
+      assert.is_true(gauge.formatTable.italics)
+    end)
+  end)
+
+  -- setColor paints the fill bar at full alpha and the backdrop in the same
+  -- colour at a fixed alpha of 100, which is what makes the unfilled part read
+  -- as the same gauge rather than as a hole.
+  describe("Geyser.Gauge:setColor", function()
+    local function backgroundColor(name)
+      local red, green, blue, alpha = getBackgroundColor(name)
+      return {red, green, blue, alpha}
+    end
+
+    it("paints the front at full alpha and the back at a fraction of it", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsColour", x = 0, y = 0, width = 200, height = 40}))
+      gauge:setColor(10, 20, 30)
+      assert.are.same({10, 20, 30, 255}, backgroundColor("ggsColour_front"))
+      assert.are.same({10, 20, 30, 100}, backgroundColor("ggsColour_back"))
+      -- the caption label stays transparent so the fill shows through it
+      assert.are.equal(0, select(4, getBackgroundColor("ggsColour_text")))
+    end)
+
+    it("takes a colour name and a hex code", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsColourName", x = 0, y = 0, width = 200, height = 40}))
+      gauge:setColor("green")
+      assert.are.same({0, 255, 0, 255}, backgroundColor("ggsColourName_front"))
+      gauge:setColor("#0000ff")
+      assert.are.same({0, 0, 255, 255}, backgroundColor("ggsColourName_front"))
+    end)
+
+    it("writes the optional fourth argument onto the text label", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsColourText", x = 0, y = 0, width = 200, height = 40}))
+      gauge:setColor("red", nil, nil, "HP")
+      assert.is_truthy(getLabelText("ggsColourText_text"):find("HP", 1, true))
+    end)
   end)
 
   describe("Geyser.Gauge geometry and visibility", function()
@@ -712,16 +760,19 @@ describe("Tests functionality of Geyser.Gauge", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsClick", x = 0, y = 0, width = 100, height = 20}))
       -- there is no getter for the clickthrough flag, so the delegation to the
       -- three labels is what can be checked
+      -- finally() only holds one function, so both spies are reverted from the
+      -- same one: a second call would drop the first, leaving a spy on a Mudlet
+      -- global that every later spy.on picks up as the real function
       local enable = spy.on(_G, "enableClickthrough")
-      finally(function() enable:revert() end)
+      local disable = spy.on(_G, "disableClickthrough")
+      finally(function() enable:revert() disable:revert() end)
+
       gauge:enableClickthrough()
       assert.spy(enable).was.called(3)
       assert.spy(enable).was.called_with("ggsClick_front")
       assert.spy(enable).was.called_with("ggsClick_back")
       assert.spy(enable).was.called_with("ggsClick_text")
 
-      local disable = spy.on(_G, "disableClickthrough")
-      finally(function() disable:revert() end)
       gauge:disableClickthrough()
       assert.spy(disable).was.called(3)
       assert.spy(disable).was.called_with("ggsClick_text")

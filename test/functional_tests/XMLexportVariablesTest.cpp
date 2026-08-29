@@ -36,8 +36,12 @@
  * Run with: ctest -R XMLexportVariablesTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
@@ -65,18 +69,15 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForXMLexportVariablesTest();
+#include "GroupedTest.h"
 
 class XMLexportVariablesTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgTriggerEditor* mpEditor = nullptr;
@@ -86,7 +87,20 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForXMLexportVariablesTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         // port 0 asks the OS for an ephemeral port, so parallel test runs
@@ -95,6 +109,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -111,8 +126,13 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // A saved variable whose Lua value only comes into existence after the
@@ -266,6 +286,34 @@ private slots:
         vu->savedVars.remove(qsl("untickedMemberTable"));
         vu->savedVars.remove(qsl("untickedMemberTable.kept"));
         QCOMPARE(luaL_dostring(L, "untickedMemberTable = nil"), 0);
+    }
+
+    // A global is free to hold a dot in its own name, and savedVars is keyed by
+    // the dotted path - so such a global reads exactly like a member of a table
+    // of that path. The save used to write that global out under the member's
+    // entry, which handed the next session the wrong variable's value (#9954).
+    void test_globalWithADotInItsNameIsNotExportedUnderAMembersSavedName()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "dottedNameTable = {member = 'the member value'} "
+                               "_G['dottedNameTable.member'] = 'the unrelated global value'"),
+                 0);
+        // what ticking the table and its member in the Variables view records
+        vu->savedVars.insert(qsl("dottedNameTable"));
+        vu->savedVars.insert(qsl("dottedNameTable.member"));
+        lI->getVars(false);
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.contains(qsl("the member value")), "the member the user ticked has to be exported");
+        QVERIFY2(!xml.contains(qsl("the unrelated global value")), "the unrelated global of that dotted name must not be exported in its place");
+
+        vu->savedVars.remove(qsl("dottedNameTable"));
+        vu->savedVars.remove(qsl("dottedNameTable.member"));
+        QCOMPARE(luaL_dostring(L, "dottedNameTable = nil _G['dottedNameTable.member'] = nil"), 0);
     }
 
     // A member table beyond the 10,000-item save limit must not ride along -
@@ -664,6 +712,37 @@ private slots:
         QCOMPARE(luaL_dostring(L, "stackCheckTable = nil"), 0);
     }
 
+    // A member whose key the walk can name but cannot look back up takes the
+    // export's read of its value out through a failure exit, which has to unwind
+    // the profile's live stack like every other one. One save's worth of these
+    // left behind is already past the room the C API guarantees, so it overruns
+    // that stack rather than merely growing it; the repeated saves are what
+    // would catch a smaller leak (#9885).
+    void test_exportOfUnlookupableKeysLeavesTheLuaStackAsItFoundIt()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "unlookupableKeyTable = {plain = 'plain member value'} "
+                               "unlookupableKeyTable[string.char(0xff)] = 'byte keyed value' "
+                               "for i = 1, 200 do unlookupableKeyTable[i + 1/3] = 'fractional key value ' .. i end"),
+                 0);
+        vu->savedVars.insert(qsl("unlookupableKeyTable"));
+
+        const int stackBefore = lua_gettop(L);
+        for (int i = 0; i < 6; ++i) {
+            const QString xml = exportProfileXml();
+            // the members that can be read still have to export, or an
+            // over-eager unwind would pass this test by exporting nothing
+            QVERIFY2(xml.contains(qsl("plain member value")), "a member the export can read must still be written out alongside the ones it cannot");
+            QCOMPARE(lua_gettop(L), stackBefore);
+        }
+
+        vu->savedVars.remove(qsl("unlookupableKeyTable"));
+        QCOMPARE(luaL_dostring(L, "unlookupableKeyTable = nil"), 0);
+    }
+
     // A table-keyed entry costs a Lua registry reference to name at all, and the
     // walk takes that reference before it knows whether the global is saved. The
     // ones it then skips still have to be handed back.
@@ -1036,6 +1115,52 @@ private slots:
         QCOMPARE(luaL_dostring(L, "secondSessionTable = nil"), 0);
     }
 
+    // What a package stores when it keeps a line the game sent it (#9992).
+    // Restoring a variable used to be a line of generated Lua source with the
+    // value in a [[...]] literal and the key in a quoted one: a value holding
+    // "]]" closed the literal early, so the line did not parse and the variable
+    // came back missing, and a value beginning with "]]" left the rest of it
+    // parsed as statements - data the profile had saved ran as Lua on load.
+    void test_savedStringHoldingClosingLongBracketsSurvivesAReload()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        // long brackets one level up, so the payloads below can hold "]]"
+        QCOMPARE(luaL_dostring(L,
+                               "bracketReload = {} "
+                               "bracketReload.lastQuote = [==[the guard says \"]] and that is that\"]==] "
+                               "bracketReload.note = [==[]] bracketReloadRanAsCode = 'yes' --]==] "
+                               "bracketReload['a\"b'] = 'value under a quoted key'"),
+                 0);
+        vu->savedVars.insert(qsl("bracketReload"));
+
+        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
+        auto writer = std::make_shared<XMLexport>(mpHost);
+        QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
+        QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
+
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(luaL_dostring(L, "assert(bracketReload.lastQuote == [==[the guard says \"]] and that is that\"]==])") == 0,
+                 "a saved string holding a closing long bracket did not come back as it was saved");
+        QVERIFY2(luaL_dostring(L, "assert(bracketReload.note == [==[]] bracketReloadRanAsCode = 'yes' --]==])") == 0,
+                 "a saved string beginning with a closing long bracket did not come back as it was saved");
+        QVERIFY2(luaL_dostring(L, "assert(bracketReloadRanAsCode == nil)") == 0, "a saved value is data, and loading the profile it was saved in must not run it");
+        QVERIFY2(luaL_dostring(L, "assert(bracketReload['a\"b'] == 'value under a quoted key')") == 0, "a saved member whose key holds a quote did not come back");
+
+        for (const auto& name : {qsl("bracketReload"), qsl("bracketReload.lastQuote"), qsl("bracketReload.note"), qsl("bracketReload.a\"b")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
+    }
+
 private:
     // Returns false rather than asserting: a QVERIFY here would only return from
     // this helper, leaving the caller to dereference a null editor.
@@ -1073,29 +1198,7 @@ private:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(2000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
@@ -1118,20 +1221,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForXMLexportVariablesTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "XMLexportVariablesTest.moc"
-QTEST_MAIN(XMLexportVariablesTest)
+MUDLET_GROUPED_TEST_MAIN(XMLexportVariablesTest)

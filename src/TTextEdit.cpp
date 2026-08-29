@@ -30,6 +30,8 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
+#include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "THyperlinkSelectionManager.h"
@@ -116,6 +118,15 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
+    mpPaintPacer = new QTimer(this);
+    mpPaintPacer->setSingleShot(true);
+    connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        if (!mPendingPaintRegion.isEmpty()) {
+            update(mPendingPaintRegion);
+            mPendingPaintRegion = QRegion();
+        }
+    });
+
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
@@ -141,6 +152,49 @@ void TTextEdit::forceUpdate()
     update();
 }
 
+void TTextEdit::scheduleUpdate(const QRect& rect)
+{
+    mPendingPaintRegion += rect.isValid() ? rect : QWidget::rect();
+
+    // Nothing painted recently, so this frame's window is open: Qt still merges
+    // whatever else arrives before the event loop gets around to painting.
+    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+        update(mPendingPaintRegion);
+        mPendingPaintRegion = QRegion();
+        return;
+    }
+
+    if (!mpPaintPacer->isActive()) {
+        mpPaintPacer->start(csmPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+    }
+}
+
+void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
+{
+    if (firstLine < 0 || lastLine < firstLine) {
+        return;
+    }
+    mDirtyFirstLine = (mDirtyFirstLine < 0) ? firstLine : std::min(mDirtyFirstLine, firstLine);
+    mDirtyLastLine = (mDirtyLastLine < 0) ? lastLine : std::max(mDirtyLastLine, lastLine);
+
+    if (mFontHeight <= 0 || mScreenHeight <= 0) {
+        // Too early to work out where the lines sit, so fall back to the whole
+        // pane rather than leave the change unpainted.
+        scheduleUpdate();
+        return;
+    }
+
+    const int lineOffset = imageTopLine();
+    const int top = std::max(0, firstLine - lineOffset);
+    const int bottom = std::min(mScreenHeight - 1, lastLine - lineOffset);
+    if (bottom < top) {
+        // Off-screen for this pane. The range stays recorded because the pane
+        // may scroll onto it before the next paint.
+        return;
+    }
+    scheduleUpdate(QRect(0, top * mFontHeight, width(), (bottom - top + 1) * mFontHeight));
+}
+
 void TTextEdit::needUpdate(int y1, int y2)
 {
     if (!mIsTailMode) {
@@ -160,7 +214,7 @@ void TTextEdit::needUpdate(int y1, int y2)
     }
     QRect r(0, top * mFontHeight, mScreenWidth * mFontWidth, bottom * mFontHeight);
     mForceUpdate = true;
-    update(r);
+    scheduleUpdate(r);
 }
 
 void TTextEdit::focusInEvent(QFocusEvent* event)
@@ -349,7 +403,7 @@ void TTextEdit::showNewLines()
             updateScrollBar(mpBuffer->mCursorY);
         }
     }
-    update();
+    scheduleUpdate();
 
 
     if (mpHost && QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
@@ -956,7 +1010,9 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
-    painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space || useQtUnderline || useQtOverline || useQtStrikeOut) {
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
     drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
@@ -965,7 +1021,6 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
 {
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    QFontMetrics fm(painter.font());
 
     // Calculate decoration positions
     int underlineY = textRect.bottom() - 1;
@@ -1176,14 +1231,26 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // the bottom cell - descenders and underscores do at many font sizes - has
     // somewhere to go instead of being cut off by the edge of the pixmap.
     const int pixmapHeight = (mScreenHeight + 1) * mFontHeight;
-    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, pixmapHeight * dpr);
-    pixmap.setDevicePixelRatio(dpr);
-    pixmap.fill(Qt::transparent);
+    const QSize surfaceSize(static_cast<int>(mScreenWidth * mFontWidth * dpr), static_cast<int>(pixmapHeight * dpr));
+    // Building a pane-sized pixmap costs the same whether one line changed or
+    // all of them did, so it is only done when there is no buffer to reuse -
+    // the pane changed size or resolution, or nothing has been painted yet.
+    bool bufferWasJustCleared = false;
+    if (mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
+        mRenderBuffer = QPixmap(surfaceSize);
+        mRenderBuffer.setDevicePixelRatio(dpr);
+        mRenderBuffer.fill(Qt::transparent);
+        bufferWasJustCleared = true;
+    }
+    QPixmap& pixmap = mRenderBuffer;
 
     QPainter p(&pixmap);
     // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
     p.setFont(painter.font());
-    p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    // Source rather than SourceOver for the cache blits below: they have to
+    // overwrite whatever a reused buffer still holds from an earlier frame, and
+    // over a freshly cleared buffer the two modes produce identical pixels.
+    p.setCompositionMode(QPainter::CompositionMode_Source);
 
     int y_top = r.top() / mFontHeight;
     int y_bottom = r.bottom() / mFontHeight;
@@ -1212,11 +1279,15 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         reusedCachedScreenContent = true;
         from = y_top;
         noScroll = true;
-        if (!mForceUpdate && !mMouseTracking) {
-            noCopy = true;
-        } else {
+        if (mForceUpdate || mMouseTracking) {
             y_bottom = mScreenHeight;
             mScrollVector = 0;
+        } else if (mDirtyFirstLine < 0) {
+            // A purely cosmetic repaint - hover, selection - which must not
+            // overwrite the cached screen with its transient state. A pending
+            // in-place change is the opposite: it HAS to reach the cache, or
+            // the next paint would seed from stale ink and lose it.
+            noCopy = true;
         }
     }
     const int scrolledRows = qAbs(mScrollVector);
@@ -1235,12 +1306,31 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
 
     const int lastRow = mScreenHeight - 1;
-    const int drawFrom = qMax(0, from);
+    int drawFrom = qMax(0, from);
     // One row past the dirty region: the last dirty row's ink can spill into the
     // row below, which would otherwise be left showing the ink of whatever used
     // to be on that last row.
-    const int drawTo = qMin(y_bottom + 1, lastRow);
+    int drawTo = qMin(y_bottom + 1, lastRow);
+    // Rows carrying text that changed where it stands. The cache still holds
+    // their old ink, so they join the band whatever the scroll shortcut decided
+    // - which is what makes recolouring a line cost a line instead of a screen.
+    if (mDirtyFirstLine >= 0) {
+        const int dirtyTop = std::max(0, mDirtyFirstLine - lineOffset);
+        const int dirtyBottom = std::min(lastRow, mDirtyLastLine - lineOffset);
+        if (dirtyBottom >= dirtyTop) {
+            drawFrom = std::min(drawFrom, dirtyTop);
+            drawTo = std::max(drawTo, dirtyBottom);
+        }
+    }
     const bool bottomRowIsRepainted = drawTo == lastRow;
+
+    // Neither cache blit ran, so everything outside the band about to be redrawn
+    // is still the previous frame's ink rather than the transparency a newly
+    // allocated pixmap would have started with.
+    if (!reusedCachedScreenContent && !bufferWasJustCleared) {
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+        p.fillRect(QRect(0, 0, mScreenWidth * mFontWidth, pixmapHeight), Qt::transparent);
+    }
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
@@ -1317,11 +1407,20 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawPixmap(0, 0, pixmap);
     if (!noCopy) {
-        mScreenMap = pixmap;
+        // Swapped rather than assigned: leaving the two sharing one buffer would
+        // make the next paint's QPainter deep-copy the whole surface before it
+        // could draw a single glyph, which is the cost being avoided here.
+        mScreenMap.swap(mRenderBuffer);
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
+    if (!noCopy) {
+        // noCopy left the cache untouched, so the change has not been preserved
+        // anywhere yet and the range has to stay pending for the next paint.
+        mDirtyFirstLine = -1;
+        mDirtyLastLine = -1;
+    }
 
     const bool shouldBeRegistered = shouldRegisterBlinkClient(mEnableBlinkText, mHasBlinkingContent, mIsBlinkClientRegistered, reusedCachedScreenContent);
     if (auto* pMudlet = mudlet::self()) {
@@ -1356,6 +1455,16 @@ bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool
 
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
+    mSincePaint.restart();
+    if (!mPendingPaintRegion.isEmpty()) {
+        // Whatever this paint covers is current now, so a deferred repaint of it
+        // would be redundant. Only the remainder - if a partial expose left one -
+        // still needs the pacer.
+        mPendingPaintRegion -= e->region();
+        if (mPendingPaintRegion.isEmpty()) {
+            mpPaintPacer->stop();
+        }
+    }
     const QRect& rect = e->rect();
 
     if (mFontWidth <= 0 || mFontHeight <= 0) {
@@ -1778,6 +1887,72 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
 
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 {
+    if (!(mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole)) {
+        event->accept();
+        return;
+    }
+
+    // Turning the line you are already looking at into a filter beats typing it
+    // into the box, so the selection drives most of this menu. establishSelectedText()
+    // is what actually decides whether there IS a selection - mPA and mPB keep
+    // their old values after one is dropped, so without it the menu offers text
+    // the user can no longer see highlighted:
+    QString selection = establishSelectedText() ? getSelectedText(QChar::Space).simplified() : QString();
+    // The profile marking is added after the filters have run, so a selection
+    // that starts at the beginning of a line would otherwise contain a prefix
+    // that no message can ever match:
+    static const QRegularExpression profileTag(qsl("^\\[(?:[A-Z]|\\?|\\x{2731})\\]\\s*"));
+    selection.remove(profileTag);
+
+    QMenu menu(this);
+
+    auto* pActionCopy = menu.addAction(tr("Copy"));
+    pActionCopy->setEnabled(!selection.isEmpty());
+    connect(pActionCopy, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
+
+    if (!selection.isEmpty()) {
+        //: Central Debug Console right-click action, %1 is the text the user selected
+        auto* pActionFilter = menu.addAction(tr("Show only lines containing \"%1\"").arg(selection.left(40)));
+        connect(pActionFilter, &QAction::triggered, this, [selection]() {
+            TDebug::setTextFilter(selection, TDebug::textFilterCaseSensitivity());
+            if (mudlet::smpDebugFilterBar) {
+                mudlet::smpDebugFilterBar->refreshTextFilter();
+            }
+        });
+    }
+
+    if (!TDebug::textFilter().isEmpty()) {
+        auto* pActionClearFilter = menu.addAction(tr("Stop filtering by text"));
+        connect(pActionClearFilter, &QAction::triggered, this, []() {
+            TDebug::setTextFilter(QString(), TDebug::textFilterCaseSensitivity());
+            if (mudlet::smpDebugFilterBar) {
+                mudlet::smpDebugFilterBar->refreshTextFilter();
+            }
+        });
+    }
+
+    menu.addSeparator();
+    // The search strip is hidden until asked for, so this is where people find
+    // out it exists at all:
+    //: Central Debug Console right-click action that reveals its search box
+    auto* pActionFind = menu.addAction(tr("Find..."));
+    pActionFind->setShortcut(QKeySequence::Find);
+    connect(pActionFind, &QAction::triggered, this, [this]() {
+        mpConsole->showSearchBar();
+    });
+
+    //: Central Debug Console right-click action that empties it
+    connect(menu.addAction(tr("Clear console")), &QAction::triggered, this, [this]() {
+        if (mudlet::smpDebugFilterBar) {
+            // Goes through the toolbar so its "N messages held" label keeps up:
+            mudlet::smpDebugFilterBar->slot_clear();
+        } else {
+            mpConsole->clear();
+            TDebug::discardPausedMessages();
+        }
+    });
+
+    menu.exec(event->globalPos());
     event->accept();
 }
 

@@ -26,7 +26,7 @@ jobs:
         include:
           - language: cpp
             buildname: 'CodeQL'
-            qt: '6.9.0'
+            qt: '6.11.1'
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 10
@@ -53,7 +53,8 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw73
-        cache: true
+        # uncached for the same reason as the step below
+        cache: false
         modules: qt5compat qtmultimedia qtwebsockets qthttpserver
 
     - name: (Linux/macOS) Install Qt
@@ -62,7 +63,14 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        cache: true
+        # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
+        # and a copy per runner image, module set and ref took over 40% of the
+        # repository's 10GB cache quota - more than every ccache put together.
+        # Fetching it afresh costs 25-35s a job. Leaving it cached cost far more
+        # than that, because a quota with no headroom has GitHub evicting by
+        # least-recently-used, and a dropped branch ccache is a 20 minute cold
+        # rebuild rather than a 30 second download.
+        cache: false
         modules: qt5compat qtmultimedia qtwebsockets qthttpserver
 
     - name: Restore Boost cache
@@ -88,7 +96,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4.37.6
+      uses: github/codeql-action/init@v4.37.8
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
@@ -122,7 +130,7 @@ jobs:
         # wherever it is installed, and a cache hit would hide the compilation
         # from CodeQL's tracer. The runner images do not ship ccache, so leaving
         # it out of this list is enough to keep it out of the build.
-        sudo apt-get install libsecret-1-dev pkg-config pcre2-utils expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+        sudo apt-get install libsecret-1-dev pkg-config pcre2-utils libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libassimp-dev libpcre2-dev libpugixml-dev libsqlite3-dev libyajl-dev libhunspell-dev liblua5.1-0-dev libonig-dev libboost-dev qtkeychain-qt6-dev -y
 
         # switch to GCC that supports C++20 while retaining support for older OS's
@@ -154,11 +162,14 @@ jobs:
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
+          -DBUILD_TESTING=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        # ninja's default of cores + 2 exhausts this runner's memory
+        CMAKE_BUILD_PARALLEL_LEVEL: 3
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4.37.6
+      uses: github/codeql-action/analyze@v4.37.8
       with:
         category: "/language:${{ matrix.language }}"
         upload: false
@@ -173,6 +184,6 @@ jobs:
         output: sarif-results/${{ matrix.language }}.sarif
 
     - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v4.37.6
+      uses: github/codeql-action/upload-sarif@v4.37.8
       with:
         sarif_file: sarif-results/${{ matrix.language }}.sarif

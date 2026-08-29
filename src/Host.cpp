@@ -34,11 +34,13 @@
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "mapInfoContributorManager.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -278,8 +280,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
+    // cTelnet is declared ahead of the members reset() clears (mMxpProcessor,
+    // mMSSPTlsPort, mIsRemoteEchoingActive and friends), so it cannot do this from
+    // its own constructor - at that point those members do not exist yet.
+    mTelnet.reset();
+
     TDebug::addHost(this, mHostName);
-    setDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal));
+    setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
     // The "autolog" sentinel file controls whether logging the game's text as
     // plain text or HTML is immediately resumed on profile loading. Do not
@@ -447,6 +454,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     startMapAutosave(interval);
 
     mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
+
+    // Built here, at the end of the constructor, rather than on first use: the
+    // model's buffer snapshots this Host's colours, so every one of them has to
+    // be initialised first. The view binds the buffer's back-pointer when it
+    // attaches (TConsole::TConsole) and unbinds it when it goes away, and
+    // TConsole::changeColors() refreshes the snapshot as it does so.
+    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
 }
 
 Host::~Host()
@@ -827,9 +841,11 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     const int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
-    if (mudlet::smDebugMode && s == nullptr) {
-        //: This error message will appear when the xml file inside the module zip cannot be updated for some reason.
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".").arg(filename_xml, zipName, zip_strerror(zipFile));
+    if (s == nullptr) {
+        // Not a TDebug: this runs on a worker thread, which must not touch a
+        // profile's console.
+        qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open xml file \"" << filename_xml
+                                       << "\" inside the module to update it, error: \"" << zip_strerror(zipFile) << "\"";
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
 
@@ -840,10 +856,7 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     }
 
     if (err == -1) {
-        if (mudlet::smDebugMode && err == -1) {
-            //: This error message will appear when a module is saved as package but cannot be done for some reason.
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".").arg(moduleName, zipName, zip_strerror(zipFile));
-        }
+        qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to save the module, error: \"" << zip_strerror(zipFile) << "\"";
         // Properly dispose of things after failing to zip_close(...) the
         // archive:
         zip_discard(zipFile);
@@ -969,6 +982,13 @@ void Host::resetProfile_phase2()
     // freshly-issued registry indices in the new state, which surfaces as
     // "attempt to call a number value" when label callbacks fire.
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    // Lua map info contributors cannot cross that swap either: each holds a
+    // reference in the state initLuaGlobals() closes below, and a callback that
+    // captures it. Left registered, the registering script's own re-run in
+    // compileAll() further down unrefs against the closed state, and one that
+    // nothing re-registers is called on it by every later map redraw. The
+    // scripts that registered them put them back against the new state.
+    mpMap->mMapInfoContributorManager->removeLuaContributors();
     mEventHandlerMap.clear();
     mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
@@ -1325,11 +1345,20 @@ QString Host::mediaLocationMSP() const
 }
 
 // Completely specifies the font for use in the main console and elsewhere:
-std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFontChange change)
 {
     const QFontMetrics metrics(font);
     if (metrics.averageCharWidth() == 0) {
         return {false, qsl("specified font is invalid (its letters have 0 width)")};
+    }
+
+    // Only an explicit new choice of family retires the stand-in, never a size or
+    // antialiasing tweak. The family cannot decide that for itself: while the
+    // stand-in is up the family on show IS the stand-in, so a user picking that
+    // very family and the preferences re-sending it because only the size or the
+    // antialiasing changed look exactly alike.
+    if (change == DisplayFontChange::UserChoice) {
+        mMissingDisplayFontFamily.clear();
     }
 
     if (mpConsole) {
@@ -1349,12 +1378,30 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     return {true, QString()};
 }
 
-// Also completely specifies the font for use in the main console and elsewhere:
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     QFont font;
-    font.fromString(fontData);
-    setDisplayFont(font);
+    // A description fromString() will not read leaves the font as constructed, which
+    // is the application's proportional UI font rather than a record of what the
+    // profile asked for. It rejects one that names no family, so that is covered too.
+    if (!font.fromString(fontData)) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the font in use is kept.";
+        return;
+    }
+
+    // <mDisplayFont> is written only by a profile's own save, and so reaches here
+    // twice: reading that save, before the one-shot check that stands a default in
+    // for a missing font, and again if such a save is installed as a package, which
+    // can be long after it. The second is a choice of family rather than an
+    // adjustment, so it retires the stand-in and becomes what gets saved. A family
+    // that is not installed retires nothing though - the check does not run a second
+    // time, so nothing would notice this one is missing too and the family the
+    // profile asked for would be forgotten in favour of one nobody has.
+    const auto resolved = resolveFontFamily(font.family());
+    const auto change = resolved.available ? DisplayFontChange::UserChoice : DisplayFontChange::Adjustment;
+    if (const auto [applied, error] = setDisplayFont(font, change); !applied) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" was refused: " << error;
+    }
 }
 
 void Host::setDisplayFontSize(int size)
@@ -1427,6 +1474,72 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     }
 
     return {fontName, QFont::Normal};
+}
+
+Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+{
+    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+    // The family as the font database spells it, not as it was typed: it is what
+    // ends up reported back by getFont() and remembered by the Geyser wrappers.
+    for (const QString& family : availableFonts) {
+        if (family.compare(requested, Qt::CaseInsensitive) == 0) {
+            return {family, QFont::Normal, true};
+        }
+    }
+
+    auto [baseName, weight] = parseFontNameAndStyle(requested);
+    if (baseName != requested) {
+        for (const QString& family : availableFonts) {
+            if (family.compare(baseName, Qt::CaseInsensitive) == 0) {
+                return {family, weight, true};
+            }
+        }
+    }
+
+    return {requested, QFont::Normal, false};
+}
+
+bool Host::substituteMissingDisplayFont()
+{
+    const QFont current = getDisplayFont();
+    const QString requestedFamily = current.family();
+    const auto resolved = resolveFontFamily(requestedFamily);
+
+    if (resolved.available && resolved.family.compare(requestedFamily, Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+
+    QFont font = current;
+    if (resolved.available) {
+        font.setFamily(resolved.family);
+        font.setWeight(resolved.weight);
+        setDisplayFont(font);
+        return true;
+    }
+
+    // Nothing stands in for the bundled default itself: on an installation where
+    // it failed to register there is no better font to move the profile to, and
+    // "missing, using itself instead" would only mislead
+    if (requestedFamily.compare(scmDefaultFontFamily, Qt::CaseInsensitive) == 0) {
+        qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the bundled default font \"" << scmDefaultFontFamily
+                                       << "\" is not registered, so nothing can stand in for it.";
+        return false;
+    }
+
+    font.setFamily(scmDefaultFontFamily);
+    setDisplayFont(font);
+    // Only this branch remembers anything: a "Family Style" name resolves to a
+    // base family that IS installed, so saving that name is no loss.
+    mMissingDisplayFontFamily = requestedFamily;
+
+    qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily
+                                   << "\" instead.";
+    //: %1 is the font family the profile asked for, %2 is the font Mudlet ships with and is using instead
+    postMessage(tr("[ WARN ]  - The font \"%1\" that this profile uses is not installed on this computer, so "
+                   "the default \"%2\" is being used instead. Install that font, or pick another one in the "
+                   "preferences, to stop this message.")
+                        .arg(requestedFamily, scmDefaultFontFamily));
+    return true;
 }
 
 // Now returns the total weight of the path
@@ -1912,6 +2025,97 @@ QList<int> Host::getStopWatchIds() const
     return ids;
 }
 
+std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
+{
+    return mpMainConsoleModel;
+}
+
+// Hot: the trigger engine reads the model for every character of a colour
+// pattern, so this hands back a reference rather than a shared_ptr copy - the
+// latter costs an atomic increment and decrement per call.
+TConsoleModel& Host::mainConsoleModel()
+{
+    return *mpMainConsoleModel;
+}
+
+// A colour trigger matching "the default colour" compares against the model's
+// pair, so it has to carry the profile's colours whether or not a console was
+// ever built to copy them over. Seeding them in the model's constructor would
+// not do - this Host still holds the built-in defaults at that point.
+void Host::refreshMainConsoleColors()
+{
+    mpMainConsoleModel->mFgColor = mFgColor;
+    mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->buffer.updateColors();
+}
+
+void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
+{
+    emit signal_loggingAnnouncement(isLogging, logFileName);
+}
+
+void Host::raiseLoggingStateChanged(const bool isLogging)
+{
+    emit signal_loggingStateChanged(isLogging);
+}
+
+// The per-line trigger orchestration used to live on the main-console widget
+// (TMainConsole::runTriggers). It drives model state only, so it runs here
+// against the core model and needs no view (#8681).
+void Host::runTriggers(int line)
+{
+    TConsoleModel& consoleModel = mainConsoleModel();
+    // Relocating this made it a public API anyone can hand any index to, and QT_NO_DEBUG is set in every build we produce, so QList::at() would read out of bounds silently:
+    if (line < 0 || line >= consoleModel.buffer.promptBuffer.size()) {
+        return;
+    }
+
+    // A trigger script can feed text back through the pipeline, re-entering this
+    // function; the rest of this pass would otherwise inherit whatever the nested
+    // one left behind and act on the fed line instead of its own.
+    const bool nested = getTriggerUnit()->processingDepth() > 0;
+    const QPoint previousUserCursor = consoleModel.mUserCursor;
+    const int previousEngineCursor = consoleModel.mEngineCursor;
+    const bool previousIsPromptLine = consoleModel.mIsPromptLine;
+    const QString previousLine = consoleModel.mCurrentLine;
+
+    consoleModel.mUserCursor.setY(line);
+    consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
+    consoleModel.mEngineCursor = line;
+    consoleModel.mUserCursor.setX(0);
+    consoleModel.mCurrentLine = consoleModel.buffer.line(line);
+    getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
+    // The matchers take the haystack by reference all the way down, so it must be
+    // a local: a nested pass reassigns mCurrentLine under them.
+    QString haystack = consoleModel.mCurrentLine;
+    haystack.append('\n');
+
+    if (TDebug::wants(TDebug::Category::GameLine)) {
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
+        // haystack already ends in a newline - adding another leaves a
+        // blank row under every single game line:
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << haystack >> this;
+    }
+    incomingStreamProcessor(haystack, line);
+
+    if (nested) {
+        // Only a nested pass restores: at the top level a script's moveCursor()
+        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
+        // a saved index can by now point past the end.
+        const int lastLine = consoleModel.buffer.getLastLineNumber();
+        consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
+        consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
+        consoleModel.mIsPromptLine = previousIsPromptLine;
+        consoleModel.mCurrentLine = previousLine;
+        getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, previousLine);
+    } else {
+        consoleModel.mIsPromptLine = false;
+    }
+
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
+}
+
 void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
@@ -2279,6 +2483,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             _dir = QDir(newpath);
         }
+        // make any fonts in the package available to Mudlet for use - before the
+        // XML below is imported, because the scripts in it run as they are read
+        // in and one of them may well want to use a font the package brought
+        if (thing != enums::PackageModuleType::ModuleSync) {
+            installPackageFonts(packageName);
+        }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
@@ -2322,6 +2532,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // for a module whose name is already in mInstalledModules on the way in
         // (profile loading, and installModule() over a stale entry, both do that).
         if (!registeredFromArchive) {
+            // the fonts were registered up front for the scripts' sake, and nothing
+            // got installed that could own them - take them back out again
+            mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
             // Only ever remove the folder this install made, and only if it is
             // inside the profile: the package name can come out empty (a file
             // called ".mpackage"), name a folder of the user's ("map"), or be
@@ -2371,11 +2584,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
-
-    // make any fonts in the package available to Mudlet for use
-    if (thing != enums::PackageModuleType::ModuleSync) {
-        installPackageFonts(packageName);
-    }
 
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
@@ -2605,6 +2813,15 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
+    // The fonts this package brought went out with it, so a display font that
+    // came from it is now missing and Qt would quietly render some other family
+    // instead. It has to sit past the reinstall above: uninstalling a module
+    // that shares a package's name puts that package and its fonts straight
+    // back, and moving the profile off the font in between would stick, since
+    // nothing moves it back on again. Past removeDir() too, because changing the
+    // font runs the profile's sysSettingChanged handlers.
+    substituteMissingDisplayFont();
+
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
     // not to try to write to disk a package/module that just got uninstalled and removed from memory
     mDeferredSaveTimer.start(0ms);
@@ -2755,8 +2972,8 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
         break;
     }
 
-    if (mudlet::smDebugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Error) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> this;
     }
 
     lua_pop(L, -1);
@@ -3411,7 +3628,7 @@ bool Host::getMMCPShowSnoopInMainConsole()
     return mMMCPShowSnoopInMainConsole;
 }
 
-QString Host::getSpellDic()
+QString Host::getSpellDic() const
 {
     if (!mSpellDic.isEmpty()) {
         return mSpellDic;
@@ -3427,12 +3644,11 @@ QString Host::getSpellDic()
 
 void Host::setSpellDic(const QString& newDict)
 {
-    bool isChanged = false;
-    if (!newDict.isEmpty() && mSpellDic != newDict) {
-        mSpellDic = newDict;
-        isChanged = true;
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
     }
-    if (isChanged && mpConsole) {
+    mSpellDic = newDict;
+    if (mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
     }
 }
@@ -3923,6 +4139,14 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
 {
     if (!mpConsole) {
         return {false, QString()};
+    }
+
+    // the parent window has to be one: TMainConsole::createLabel puts a label
+    // whose parent it cannot find into the main window instead, which is not
+    // anywhere the caller asked for
+    const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
+    if (!wantsMainWindow && !mpConsole->mDockWidgetMap.contains(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     auto pL = mpConsole->mLabelMap.value(name);
@@ -4647,6 +4871,13 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
+    // The file is read through a throwaway QMovie: the label's own must not take
+    // the path, and the gif tracker must not be given a movie to count, before
+    // the file is known to be one
+    if (const QMovie candidate(moviePath); !candidate.isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+
     auto myMovie = pL->mpMovie;
     if (!myMovie) {
         myMovie = new QMovie();
@@ -4657,11 +4888,6 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     }
 
     myMovie->setFileName(moviePath);
-
-    if (!myMovie->isValid()) {
-        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
-    }
-
     myMovie->stop();
     pL->setMovie(myMovie);
     myMovie->start();
@@ -4736,19 +4962,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     }
 
     if (pL) {
-        QString styleSheet = pL->styleSheet();
-        QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
-        if (styleSheet.contains(qsl("background-color"))) {
-            QRegularExpression re("background-color:[^;]*;");
-            styleSheet.replace(re, newColor);
-        } else {
-            if (!styleSheet.isEmpty() && !styleSheet.endsWith('\n')) {
-                styleSheet.append('\n');
-            }
-            styleSheet.append(newColor);
-        }
-
-        pL->setStyleSheet(styleSheet);
+        pL->setBackgroundColor(QColor(r, g, b, alpha));
         return true;
     }
 
@@ -5426,6 +5640,15 @@ QFont Host::getDisplayFont()
     }
 
     return mTempDisplayFont.value();
+}
+
+QFont Host::getDisplayFontForSaving()
+{
+    QFont font = getDisplayFont();
+    if (!mMissingDisplayFontFamily.isEmpty()) {
+        font.setFamily(mMissingDisplayFontFamily);
+    }
+    return font;
 }
 
 QFont Host::getAndClearTempDisplayFont()

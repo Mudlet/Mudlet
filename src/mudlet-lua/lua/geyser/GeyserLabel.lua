@@ -253,22 +253,37 @@ function Geyser.Label:processFormatString(format)
   end
 end
 
---- Sets the font face for the label, use empty string to clear the font and use css/default. Returns true if the font changed, nil+error if not.
+--- Sets the font face for the label, use empty string to clear the font and use css/default.
+-- Returns true whenever it was given a string: an installed family, or a "Family Style"
+-- name, is applied to the label's widget font and remembered as the font database spells
+-- it, while a name the database does not list is passed on to the markup for Qt to
+-- substitute for, with a warning through debugc(). Only a font that is not a string is
+-- refused, with nil+error, and leaves the current font alone. A font inherited from
+-- a label used as a prototype was never set on this label's widget, so it reaches the
+-- markup only - self.font and getFont(self.name) can differ for that one case.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
-  local af = getAvailableFonts()
-  if not (af[font] or font == "") then
-    local err = "Geyser.Label:setFont(): attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\n"
-    err = err .. "In the meantime, we will use a similar font which isn't the one you asked for but we hope is close enough"
-    debugc(err)
+  if type(font) ~= "string" then
+    local err = "font must be a string, got " .. type(font)
+    debugc("Geyser.Label:setFont(): " .. err .. "; the label keeps its current font")
+    return nil, err
+  end
+  if font ~= "" then
+    -- setFont() resolves the name the way it does for every other window (an
+    -- installed family, or a "Family Style" name split into base family and
+    -- weight) and applies it to the label's own widget font
+    local ok, err = setFont(self.name, font)
+    if ok then
+      -- the family as the font database spells it, so what is remembered here and
+      -- what the widget was given cannot drift apart
+      font = getFont(self.name)
+    else
+      debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options. Letting Qt pick the closest match it has")
+    end
   end
   self.font = font
-  -- Apply the profile's antialiasing settings to the label for static font compatibility
-  -- Use existing setFont() function with label name - this handles static fonts and antialiasing
-  if font ~= "" then
-    setFont(self.name, font)
-  end
   self:echo()
+  return true
 end
 
 --- return the size hint (the suggested size) of the label
@@ -439,11 +454,6 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
-  -- Apply the profile's antialiasing settings to the label when font size changes
-  -- Use existing setFont() function - it will preserve the font family and apply antialiasing
-  if self.font and self.font ~= "" then
-    setFont(self.name, self.font)
-  end
   self:echo()
 end
 
@@ -1003,7 +1013,19 @@ function Geyser.Label:new (cons, container)
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
-  me:echo()
+  -- the constraints table is copied wholesale, so a font entry lands in me.font
+  -- without ever reaching the label; clear it first and put it back through
+  -- setFont(), which echoes for itself when it takes the font, and does not when
+  -- it refuses a font that is not a string. Nothing is written to me.font when
+  -- the constraints carry no font: an own field would shadow a prototype's.
+  if cons.font ~= nil then
+    me.font = ""
+    if not me:setFont(cons.font) then
+      me:echo()
+    end
+  else
+    me:echo()
+  end
 
   -- Set up mouse hover as the callback if we have one
   if cons.nestflyout then
@@ -1344,7 +1366,7 @@ function Geyser.Label:findMenuElement(name, parent, findParent)
     end
     if type(item) == "table" then
       local itemParent = menu[i-1]
-      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent])
+      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent], findParent)
       if element then
         return element, menuTable
       end
@@ -1405,12 +1427,24 @@ end
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional)
+-- @param index of the new menu item (optional). Not usable together with a nested
+--        parent: an item is named for the parent it sits in, so the index lookup
+--        misses and raises.
+-- @return true, or false plus a message when the item cannot be added
 function Geyser.Label:addMenuLabel(name, parent, index)
+  if type(name) ~= "string" then
+    return false, "addMenuLabel: needs the name of the item to add as a string, got "..type(name)
+  end
+
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
 
-  if parent and not menuParent then
-    error ("showMenuLabel: Couldn't find menu parent "..parent)
+  -- findMenuElement reports failure as nil plus a message, so the second return
+  -- is a string rather than nil when it fails and cannot be tested for absence -
+  -- the element is what has to be checked. With findParent set it only answers
+  -- for a parent that is followed by a submenu table, so a parent declared
+  -- without one lands here as well: appending to it has nowhere to go.
+  if parent and not menuElement then
+    return false, "addMenuLabel: Couldn't find menu parent "..parent
   end
 
   menuElement = menuElement or self.rightClickMenu
@@ -1433,6 +1467,8 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   if index then
     self:changeMenuIndex(parent..name, index)
   end
+
+  return true
 end
 
 --- changes a right click menu items index
