@@ -340,6 +340,10 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
+# DebugConsoleFilterTest creates a fresh profile per test method, so it needs a longer timeout -
+# it timed out against the default 60s on the macOS x86_64 runner
+set_tests_properties(DebugConsoleFilterTest PROPERTIES TIMEOUT 300)
+
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
