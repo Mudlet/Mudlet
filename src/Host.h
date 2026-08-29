@@ -587,12 +587,16 @@ private:
     // through mainConsoleModel()/sharedMainConsoleModel().
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
 
-    // Read during the construction of the members below, so it has to be
-    // declared - and therefore initialised - ahead of them. cTelnet::postMessage()
-    // asks isClosingDown() to decide whether a message can be delivered or must be
-    // stacked up, and TLuaInterpreter's constructor posts the Lua module loading
-    // messages through it, so this is read while Host is still being built. The
-    // same shape as the reset() call #10229 moved out of cTelnet's constructor.
+    // Initialised ahead of mLuaInterpreter below, whose construction reads it:
+    // initLuaGlobals() posts a message for each Lua module that fails to load, and
+    // Host::postMessage() hands that to cTelnet::postMessage(), which asks
+    // isClosingDown() whether to flush what it has stacked up. Declaration order is
+    // what decides initialisation order, the access specifier between them is not.
+    //
+    // mpConsole's position carries the same weight: it is null for the whole of
+    // construction, so that guard returns before reaching the rest of the function,
+    // which reads members declared much later - mBgColor among them. Same class of
+    // bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
 
 public:
