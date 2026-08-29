@@ -44,6 +44,7 @@
 
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
@@ -103,7 +104,14 @@ private slots:
     void cleanup()
     {
         // The latch is process-global, so a case that sets it must not leave it
-        // standing for the next one
+        // standing for the next one. So is the load state, and on a machine
+        // that has libvosk installed that is the one which carries: every case
+        // here shares a process, an earlier one calling initialize() leaves
+        // sLibraryLoaded standing, and libraryAvailable() then answers from
+        // that cache without re-running the probe the next case is about. The
+        // order is stt.reloadLibrary()'s - release first, then lift the latch,
+        // since a refused release would leave the flags it reads still set.
+        VoskRecognizer::resetLibraryLoadState();
         VoskRecognizer::unloadLibraryByRequest(false);
     }
 
@@ -252,6 +260,76 @@ private slots:
         QCOMPARE(stripped.size(), 2);
         QCOMPARE(stripped.first().toMap().value(qsl("word")).toString(), qsl("dragon"));
         QCOMPARE(stripped.first().toMap().value(qsl("start")).toDouble(), 2.50);
+    }
+
+    // docs/stt-api.md allows dropping only what was not spoken. A result the
+    // decoder never produced, and one whose bytes do not parse, both used to
+    // leave the transcription empty - which is the path "nothing was said"
+    // takes - so a phrase the engine had already accepted was discarded with
+    // no event and no log line, indistinguishable to the player from a
+    // microphone that heard nothing.
+    void aResultThatCannotBeReadIsReportedRatherThanDropped()
+    {
+        QJsonObject result;
+        QString reason;
+
+        QVERIFY2(!VoskRecognizer::parseEngineResult(nullptr, result, reason), "a result the decoder never produced was read as a transcription");
+        QVERIFY2(!reason.isEmpty(), "nothing was said about the missing result");
+
+        reason.clear();
+        QVERIFY2(!VoskRecognizer::parseEngineResult(R"({"text":)", result, reason), "truncated JSON was read as a transcription");
+        QVERIFY2(!reason.isEmpty(), "nothing was said about the unreadable result");
+
+        reason.clear();
+        QVERIFY2(!VoskRecognizer::parseEngineResult("[]", result, reason), "a JSON array was read as a result object");
+        QVERIFY2(!reason.isEmpty(), "nothing was said about the unexpected shape");
+
+        reason.clear();
+        QVERIFY2(VoskRecognizer::parseEngineResult(R"({"text":"the dragon attacks"})", result, reason), qPrintable(reason));
+        QCOMPARE(result.value(qsl("text")).toString(), qsl("the dragon attacks"));
+    }
+
+    // Every setting Mudlet keeps lives in the Mudlet.ini inside its config
+    // directory. A default-constructed QSettings is a different store - native
+    // format keyed by the organisation and application names - which ignores
+    // the redirected config directory that portable mode is, and carries the
+    // application name in its path, so a release build and a public test build
+    // would not read each other's choice of model.
+    void theSelectedModelIsReadFromMudletsOwnSettings()
+    {
+        const QString modelsDir = VoskRecognizer::modelsDirectoryPath();
+        // Two installed models, so which one is named proves where the answer
+        // came from: getBestAvailableModel() scores the English one higher, and
+        // it is what a selection has to be able to override
+        QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-en-us-0.15/am").arg(modelsDir)));
+        QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-fr-0.22/am").arg(modelsDir)));
+
+        auto* pSettings = mudlet::getQSettings();
+        QVERIFY(pSettings);
+        pSettings->beginGroup(qsl("SpeechRecognition"));
+        pSettings->remove(qsl("selectedModel"));
+        pSettings->endGroup();
+
+        QCOMPARE(QDir(VoskRecognizer::getSelectedModelPath()).dirName(), qsl("vosk-model-small-en-us-0.15"));
+        QVERIFY(VoskRecognizer::missingSelectedModel().isEmpty());
+
+        pSettings->beginGroup(qsl("SpeechRecognition"));
+        pSettings->setValue(qsl("selectedModel"), qsl("vosk-model-small-fr-0.22"));
+        pSettings->endGroup();
+        QVERIFY2(QDir(VoskRecognizer::getSelectedModelPath()).dirName() == qsl("vosk-model-small-fr-0.22"), "the chosen model was not read back from the settings Mudlet writes");
+
+        // The substitution notice stt.init() raises hangs off this, so a read
+        // from the wrong store leaves it unreachable however the key was set
+        pSettings->beginGroup(qsl("SpeechRecognition"));
+        pSettings->setValue(qsl("selectedModel"), qsl("vosk-model-that-was-deleted"));
+        pSettings->endGroup();
+        QCOMPARE(VoskRecognizer::missingSelectedModel(), qsl("vosk-model-that-was-deleted"));
+
+        pSettings->beginGroup(qsl("SpeechRecognition"));
+        pSettings->remove(qsl("selectedModel"));
+        pSettings->endGroup();
+        QVERIFY(QDir(qsl("%1/vosk-model-small-en-us-0.15").arg(modelsDir)).removeRecursively());
+        QVERIFY(QDir(qsl("%1/vosk-model-small-fr-0.22").arg(modelsDir)).removeRecursively());
     }
 };
 

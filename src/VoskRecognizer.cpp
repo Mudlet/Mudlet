@@ -579,6 +579,44 @@ void VoskRecognizer::emitFinalResult(const QJsonObject& resultObject, QString te
     }
 }
 
+/*static*/ bool VoskRecognizer::parseEngineResult(const char* json, QJsonObject& result, QString& failureReason)
+{
+    if (!json) {
+        //: Shown when the speech engine accepted a phrase and then returned no transcription for it
+        failureReason = tr("The speech engine returned no result for what it just heard.");
+        return false;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument doc = QJsonDocument::fromJson(QByteArray(json), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        //: Shown when the speech engine's output cannot be read back; %1 is the parser's reason
+        failureReason = tr("The speech engine's result could not be read: %1").arg(parseError.errorString());
+        return false;
+    }
+
+    if (!doc.isObject()) {
+        //: Shown when the speech engine's output parses but is not the structure a transcription is read from
+        failureReason = tr("The speech engine's result was not in the expected form.");
+        return false;
+    }
+
+    result = doc.object();
+    return true;
+}
+
+bool VoskRecognizer::decodedResult(const char* json, QJsonObject& result)
+{
+    QString failureReason;
+    if (parseEngineResult(json, result, failureReason)) {
+        return true;
+    }
+
+    qWarning().noquote() << "VoskRecognizer:" << failureReason;
+    emit errorOccurred(failureReason);
+    return false;
+}
+
 void VoskRecognizer::stopListening()
 {
     if (state() != State::Listening) {
@@ -590,10 +628,8 @@ void VoskRecognizer::stopListening()
     mpCapture->stop();
 
     if (mVoskRecognizer) {
-        const char* resultJson = s_vosk_recognizer_final_result(mVoskRecognizer);
-        if (resultJson) {
-            const QJsonDocument doc = QJsonDocument::fromJson(QByteArray(resultJson));
-            const QJsonObject obj = doc.object();
+        QJsonObject obj;
+        if (decodedResult(s_vosk_recognizer_final_result(mVoskRecognizer), obj)) {
             const QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
@@ -687,10 +723,8 @@ void VoskRecognizer::slot_pcmReady(const QByteArray& pcmData)
 
     if (result > 0) {
         // We have a complete utterance
-        const char* resultJson = s_vosk_recognizer_result(mVoskRecognizer);
-        if (resultJson) {
-            const QJsonDocument doc = QJsonDocument::fromJson(QByteArray(resultJson));
-            const QJsonObject obj = doc.object();
+        QJsonObject obj;
+        if (decodedResult(s_vosk_recognizer_result(mVoskRecognizer), obj)) {
             const QString text = obj.value(QLatin1String("text")).toString().trimmed();
             if (!text.isEmpty()) {
                 const bool isSingleWord = !text.contains(QLatin1Char(' '));
@@ -953,12 +987,30 @@ QString VoskRecognizer::getBestAvailableModel()
     return bestModel;
 }
 
+// Every other setting Mudlet keeps goes through mudlet::getQSettings(), which
+// is the located Mudlet.ini inside the config directory. A default-constructed
+// QSettings is a different store entirely - native format under the
+// organisation and application names, so ~/.config/Mudlet/Mudlet.conf on Linux
+// and the registry on Windows. That store ignores portable mode, which is the
+// whole point of redirecting the config directory, and its path carries the
+// application name, so a release build and a public test build would not read
+// each other's choice of model.
+static QString selectedModelName()
+{
+    QSettings* pSettings = mudlet::self() ? mudlet::getQSettings() : nullptr;
+    if (!pSettings) {
+        return QString();
+    }
+
+    pSettings->beginGroup(qsl("SpeechRecognition"));
+    const QString selectedModel = pSettings->value(qsl("selectedModel")).toString();
+    pSettings->endGroup();
+    return selectedModel;
+}
+
 QString VoskRecognizer::getSelectedModelPath()
 {
-    QSettings settings;
-    settings.beginGroup(qsl("SpeechRecognition"));
-    const QString selectedModel = settings.value(qsl("selectedModel")).toString();
-    settings.endGroup();
+    const QString selectedModel = selectedModelName();
 
     if (!selectedModel.isEmpty()) {
         const QString modelPath = modelsDirectoryPath() + QDir::separator() + selectedModel;
@@ -978,10 +1030,7 @@ QString VoskRecognizer::getSelectedModelPath()
 
 QString VoskRecognizer::missingSelectedModel()
 {
-    QSettings settings;
-    settings.beginGroup(qsl("SpeechRecognition"));
-    const QString selectedModel = settings.value(qsl("selectedModel")).toString();
-    settings.endGroup();
+    const QString selectedModel = selectedModelName();
 
     if (selectedModel.isEmpty() || QDir(modelsDirectoryPath() + QDir::separator() + selectedModel).exists()) {
         return QString();

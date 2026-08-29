@@ -168,6 +168,13 @@ public:
     static bool leadingWordIsPhantom(const QJsonArray& words);
     static QVariantList wordsFromResult(const QJsonArray& words, bool skipLeading);
 
+    // Reads one of the decoder's result strings into an object. Answers false
+    // with a reason when there is nothing to read - a null pointer, or bytes
+    // that do not parse into an object. Both used to leave the transcription
+    // empty, which is the same path "nothing was said" takes, so an utterance
+    // the engine had already accepted vanished with no event and no log line.
+    static bool parseEngineResult(const char* json, QJsonObject& result, QString& failureReason);
+
 private slots:
     // Consumes 16kHz mono Int16 PCM from the shared capture component
     void slot_pcmReady(const QByteArray& pcmData);
@@ -195,6 +202,10 @@ private:
     // struck from it. resultObject is the whole JSON object Vosk returned, text
     // its already trimmed "text" field.
     void emitFinalResult(const QJsonObject& resultObject, QString text);
+    // parseEngineResult(), with the refusal reported through errorOccurred():
+    // docs/stt-api.md allows dropping only what was not spoken, so anything
+    // else the caller loses has to speak.
+    bool decodedResult(const char* json, QJsonObject& result);
 
     QString mModelPath;
     QString mCurrentLanguage;
