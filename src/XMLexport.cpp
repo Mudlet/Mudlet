@@ -31,7 +31,6 @@
 #include "CredentialManager.h"
 #include "TAction.h"
 #include "TAlias.h"
-#include "TConsole.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTimer.h"
@@ -39,6 +38,7 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include <QRegularExpression>
 #include <QVersionNumber>
 #include <QtConcurrentRun>
 #include <QFutureWatcher>
@@ -47,6 +47,7 @@
 #include <QMetaEnum>
 
 #include <sstream>
+#include <QApplication>
 #include <utility>
 
 XMLexport::XMLexport(Host* pH)

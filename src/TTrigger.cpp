@@ -26,16 +26,36 @@
 
 
 #include "Host.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
+#include "TLuaInterpreter.h"
 #include "TMatchState.h"
 #include "TMedia.h"
-#include "mudlet.h"
+#include "TMediaData.h"
+#include "TriggerUnit.h"
+#include "TMainConsole.h"
+#include <QByteArray>
+#include <QChar>
+#include <QDebug>
+#include <QDir>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QMultiMap>
+#include <QPair>
 #include <QRegularExpression>
+#include <QScopedPointer>
+#include <QSharedPointer>
+#include <QStringView>
+#include <QVector>
 
 #include <cassert>
+#include <cstdint>
+#include <deque>
+#include <new>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
