@@ -654,7 +654,6 @@ jobs:
           exit 1
         fi
         echo "MUDLET_TEST_TELNET_DIR=${telnet_dir}" >> "${GITHUB_ENV}"
-        echo "MUDLET_TEST_REQUIRE_TELNET_FIXTURE=1" >> "${GITHUB_ENV}"
         echo "telnet fixture ready on port $(cat "${telnet_dir}/port")"
 
     - name: (Linux/macOS) Start MMCP peer fixture for Lua tests
@@ -696,6 +695,7 @@ jobs:
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         MUDLET_TEST_REQUIRE_MMCP_PEER: 1
+        MUDLET_TEST_REQUIRE_TELNET_FIXTURE: 1
         # Qt Multimedia runs a player here even without an audio device, so a
         # media effect spec that cannot play is a regression rather than an
         # environment quirk. macOS runners start no player at all, so the gate
@@ -744,6 +744,7 @@ jobs:
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         MUDLET_TEST_REQUIRE_MMCP_PEER: 1
+        MUDLET_TEST_REQUIRE_TELNET_FIXTURE: 1
         # No MUDLET_TEST_REQUIRE_MEDIA: Qt Multimedia starts no player on the
         # macOS runners, so the media effect specs pend here by design.
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
@@ -758,6 +759,15 @@ jobs:
         cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
         echo "--- frames it captured ---"
         cat "${{runner.temp}}/mudlet-discord-frames.jsonl" 2>/dev/null || true
+
+    - name: (Linux/macOS) Show the telnet fixture log on failure
+      if: failure() && matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        echo "--- telnet fixture log ---"
+        cat "${{runner.temp}}/telnet-fixture.log" 2>/dev/null || true
+        echo "--- what it captured ---"
+        cat "${{runner.temp}}/mudlet-telnet-fixture/capture.json" 2>/dev/null || true
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'

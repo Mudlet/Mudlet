@@ -123,8 +123,8 @@ FIXTURE_PIDS+=($!)
 for _ in $(seq 1 50); do [ -s "$peer_dir/port" ] && break; sleep 0.1; done
 [ -s "$peer_dir/port" ] || { echo "mmcp fixture failed"; cat "$TMP/mmcp.log"; exit 1; }
 
-# 4. silent recording game server. Never negotiates, so the specs that connect to
-# it see the connected-but-unnegotiated state a package's connect handler runs in.
+# 4. silent recording game server (ephemeral port); never negotiates, so specs
+# see the connected-but-unnegotiated state.
 telnet_dir="$TMP/telnet-server"
 mkdir -p "$telnet_dir"
 MUDLET_TEST_TELNET_DIR="$telnet_dir" nohup python3 "$WS/CI/telnet-fixture-server.py" > "$TMP/telnet.log" 2>&1 &

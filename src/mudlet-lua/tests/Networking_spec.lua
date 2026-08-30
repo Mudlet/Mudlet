@@ -8,13 +8,14 @@
 -- function returns when its precondition (a connection, a peer, an enabled
 -- protocol, an available API) is not met.
 --
--- The download, HTTP and MMCP families are the exception: their infrastructure
--- can be stood up locally, so their real effects are checked against the
--- fixture server in CI/http-fixture-server.py (ephemeral port in
--- MUDLET_TEST_HTTP_PORT) and the scripted chat peer in CI/mmcp-peer.py
--- (handover directory in MUDLET_TEST_MMCP_DIR). Both skip cleanly when absent
--- so the suite still passes without them. Nothing here mocks a real API
--- function.
+-- The download, HTTP, MMCP and MSDP families are the exception: their
+-- infrastructure can be stood up locally, so their real effects are checked
+-- against the fixture server in CI/http-fixture-server.py (ephemeral port in
+-- MUDLET_TEST_HTTP_PORT), the scripted chat peer in CI/mmcp-peer.py (handover
+-- directory in MUDLET_TEST_MMCP_DIR) and the silent game server in
+-- CI/telnet-fixture-server.py (handover directory in MUDLET_TEST_TELNET_DIR).
+-- All skip cleanly when absent so the suite still passes without them. Nothing
+-- here mocks a real API function.
 
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
@@ -2049,9 +2050,8 @@ end)
 -- The connected-but-unnegotiated state, which nothing else in the suite can
 -- reach: it runs with --offline, so every other send guard is only ever checked
 -- in its disconnected form. CI/telnet-fixture-server.py accepts the connection
--- and then stays silent, so no telnet option is ever negotiated and MSDP stays
--- disabled for as long as the connection lives.
-describe("sendMSDP against a game server that has not negotiated MSDP", function()
+-- and then stays silent, so no telnet option is ever negotiated.
+describe("sending protocol data to a game server that has not negotiated", function()
   local telnetDir = os.getenv("MUDLET_TEST_TELNET_DIR")
   local fixtureRequired = os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE")
 
@@ -2069,8 +2069,8 @@ describe("sendMSDP against a game server that has not negotiated MSDP", function
     return contents
   end
 
-  -- The fixture writes its port only once it is accepting, so a readable port
-  -- file means it is up.
+  -- The fixture writes its port only once it is accepting, and removes it on the
+  -- way out, so a readable port file means it is up.
   local function serverPort()
     if not telnetDir then
       return nil
@@ -2095,7 +2095,7 @@ describe("sendMSDP against a game server that has not negotiated MSDP", function
     return true
   end
 
-  local function wireHex()
+  local function capture()
     local raw = readFile(telnetDir .. "/capture.json")
     if not raw or raw == "" then
       return nil
@@ -2104,7 +2104,17 @@ describe("sendMSDP against a game server that has not negotiated MSDP", function
     if not ok or type(decoded) ~= "table" then
       return nil
     end
-    return decoded.received
+    return decoded
+  end
+
+  local function connectionCount()
+    local seen = capture()
+    return seen and seen.connections or 0
+  end
+
+  local function wireHex()
+    local seen = capture()
+    return seen and seen.received
   end
 
   local function waitUntil(predicate, timeoutMs)
@@ -2123,41 +2133,57 @@ describe("sendMSDP against a game server that has not negotiated MSDP", function
     return isConnected
   end
 
-  local function sawSubnegotiation()
-    local hex = wireHex()
-    return hex ~= nil and hex:find(SUBNEGOTIATION, 1, true) ~= nil
+  -- The kernel completes the handshake from the listen backlog before the
+  -- fixture calls accept(), so Mudlet can be connected and writing while the
+  -- capture still holds the previous connection's bytes. accept() clears them
+  -- and bumps the counter in one write, so a count past the one noted before
+  -- connecting is what makes these bytes this connection's.
+  local function sawSubnegotiation(before)
+    local seen = capture()
+    return seen ~= nil and seen.connections > before and contains(seen.received, SUBNEGOTIATION)
   end
+
+  local msdpNegotiated, protocolHandler
 
   before_each(function()
     disconnect()
+    waitUntil(function() return not connected() end, 2000)
+    msdpNegotiated = false
+    protocolHandler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      if protocol == "MSDP" then
+        msdpNegotiated = true
+      end
+    end)
   end)
 
   -- Leaving the socket open would hand the next spec file a connected profile,
   -- which several of them assume they do not have.
   after_each(function()
+    killAnonymousEventHandler(protocolHandler)
     disconnect()
-    waitUntil(function() return not connected() end, 2000)
+    assert.is_true(waitUntil(function() return not connected() end, 2000),
+                   "the telnet fixture connection outlived the spec")
   end)
 
   it("puts the subnegotiation on the wire while MSDP is still unnegotiated", function()
     if serverUnavailable() then return end
+    local before = connectionCount()
     connectToServer("127.0.0.1", serverPort())
     assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
 
     local ok, err = sendMSDP("REPORT", "HEALTH")
     assert.is_true(ok, "sendMSDP refused a connected socket: " .. tostring(err))
-    assert.is_true(waitUntil(sawSubnegotiation, 2000),
+    assert.is_true(waitUntil(function() return sawSubnegotiation(before) end, 2000),
                    "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+    assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
   end)
 
   it("is usable from a sysConnectionEvent handler, which runs before negotiation", function()
     if serverUnavailable() then return end
 
     -- What a package's connect handler does: subscribe to the variables it
-    -- wants as soon as the connection comes up. sysConnectionEvent is raised on
-    -- TCP connect, before the server has had any chance to offer MSDP, so a
-    -- guard that demanded a negotiated protocol here rejected every one of
-    -- those subscriptions - silently, since nothing reads sendMSDP's return.
+    -- wants. sysConnectionEvent is raised on TCP connect, before the server can
+    -- offer MSDP.
     local ran, result, failure = false, nil, nil
     local handler = registerAnonymousEventHandler("sysConnectionEvent", function()
       result, failure = sendMSDP("REPORT", "HEALTH")
@@ -2165,10 +2191,28 @@ describe("sendMSDP against a game server that has not negotiated MSDP", function
     end)
     finally(function() killAnonymousEventHandler(handler) end)
 
+    local before = connectionCount()
     connectToServer("127.0.0.1", serverPort())
     assert.is_true(waitUntil(function() return ran end, 5000), "the sysConnectionEvent handler never ran")
     assert.is_true(result, "sendMSDP refused inside sysConnectionEvent: " .. tostring(failure))
-    assert.is_true(waitUntil(sawSubnegotiation, 2000),
+    assert.is_true(waitUntil(function() return sawSubnegotiation(before) end, 2000),
                    "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+    assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
+  end)
+
+  -- sendGMCP and sendATCP keep the check sendMSDP does without: theirs has been
+  -- there since 2018 and packages are written around it.
+  it("still refuses sendGMCP and sendATCP, whose enabled-checks are wanted", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local gmcp, gmcpErr = sendGMCP("Core.Hello")
+    assert.is_nil(gmcp)
+    assert.is_true(contains(gmcpErr, "GMCP is not currently enabled"), tostring(gmcpErr))
+
+    local atcp, atcpErr = sendATCP("Core.Hello")
+    assert.is_nil(atcp)
+    assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
   end)
 end)

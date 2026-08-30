@@ -1,51 +1,35 @@
 #!/usr/bin/env python3
 """Silent, recording game server for Mudlet's busted networking specs.
 
-Mudlet only reaches its "connected" state by way of a real socket, and several
-guards in the Lua API distinguish connected from disconnected. Specs run with
---offline, so without a server on the other end that branch is unreachable and
-those guards can only ever be checked in their disconnected form. This fixture
-is the other end.
+Specs run with --offline, so the connected branch of the Lua API's send guards
+is otherwise unreachable. This fixture is the other end of a real socket.
 
-Two properties make it useful, and both are deliberate:
+It never negotiates: it accepts and then says nothing, so every telnet option
+Mudlet offers goes unanswered and MSDP, GMCP and the rest stay disabled for the
+life of the connection. That is the state under test - sysConnectionEvent is
+raised on TCP connect, which is what a package's connect handler sees.
 
-  It never negotiates. It accepts the connection and then says nothing at all,
-  so every telnet option Mudlet offers goes unanswered. MSDP, GMCP and the rest
-  therefore stay disabled for as long as the connection lives. That is not a
-  limitation to work around - it is the state under test. sysConnectionEvent is
-  raised on TCP connect, before any negotiation has happened, so it is exactly
-  what a package's connect handler sees, and a guard that demands a negotiated
-  protocol there rejects work a real server would have accepted.
+Channels, inside the directory named by ``MUDLET_TEST_TELNET_DIR``:
 
-  It records. Everything Mudlet writes is kept as hex, so a spec can assert on
-  the actual bytes rather than on a return value that merely claims they were
-  sent.
+  port          the listening port, written once the socket is accepting.
+                Ephemeral: CI jobs and parallel worktrees would collide.
+  capture.json  ``received`` is hex, cleared on each new connection; rewritten
+                atomically so a reader never gets a torn file.
 
-Channels, all inside the directory named by ``MUDLET_TEST_TELNET_DIR`` (one
-environment variable, read by both this process and the specs):
-
-  port          the OS-assigned listening port, written once the socket is
-                accepting. Ephemeral rather than a fixed one: CI jobs and
-                parallel local worktrees would collide.
-  capture.json  what this server has seen, rewritten atomically after every
-                change so a reader never gets a torn file.
-
-A spec reads ``received`` (hex, oldest first) and looks for its own bytes in the
-tail past whatever length it noted beforehand. Connections are served one at a
-time; a new one replaces the old and clears the buffer, with ``connections``
-counting them so a spec can tell a reconnect from a stall.
+The kernel completes the handshake from the listen backlog before accept() runs,
+so a connected client can be writing while ``received`` still holds the previous
+connection's bytes. accept() clears it and bumps ``connections`` in the same
+write, so a spec that notes the count before connecting can tell the two apart.
 """
 
 import json
 import os
 import selectors
+import signal
 import socket
 import sys
 
-# Enough for the negotiation Mudlet opens with plus anything a spec sends, while
-# still bounding the capture file over a whole suite run.
 MAX_CAPTURE_BYTES = 65536
-POLL_SECONDS = 0.01
 
 
 class TelnetServer:
@@ -93,8 +77,8 @@ class TelnetServer:
         connection.setblocking(False)
         connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         if self.connection is not None:
-            # One connection at a time: an earlier one that never went away
-            # would keep appending to the same buffer a later spec is reading.
+            # One at a time: a stale connection would keep appending to the
+            # buffer a later spec is reading.
             self.close_connection()
         self.connection = connection
         self.selector.register(connection, selectors.EVENT_READ)
@@ -141,7 +125,7 @@ class TelnetServer:
         self.write_port()
         print("telnet fixture listening on 127.0.0.1:%d" % self.port, flush=True)
         while True:
-            for key, _ in self.selector.select(POLL_SECONDS):
+            for key, _ in self.selector.select():
                 if key.fileobj is self.listener:
                     self.accept()
                 elif key.fileobj is self.connection:
@@ -156,8 +140,8 @@ class TelnetServer:
         os.replace(tmp_path, self.port_path)
 
     def forget_port(self):
-        # The specs read the port file to decide whether there is a server worth
-        # connecting to, so one that is going away has to take it with it.
+        # A port file outliving the server sends the specs at a dead socket, so
+        # they fail with "never connected" instead of "no fixture running".
         try:
             os.remove(self.port_path)
         except OSError:
@@ -170,6 +154,9 @@ def main():
         print("MUDLET_TEST_TELNET_DIR is not set", file=sys.stderr)
         return 1
     os.makedirs(directory, exist_ok=True)
+    # Both consumers stop the fixture with SIGTERM, whose default handler would
+    # skip the cleanup below.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     server = TelnetServer(directory)
     try:
         server.run()

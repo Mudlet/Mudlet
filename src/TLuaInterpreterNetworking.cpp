@@ -334,7 +334,6 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
-    // Check connection status first (most common issue)
     if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
         return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending ATCP"));
     }
@@ -385,7 +384,6 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
-    // Check connection status first (most common issue)
     if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
         return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending GMCP"));
     }
@@ -492,8 +490,8 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending MSDP"));
     }
 
-    // Deliberately no isMSDPEnabled() check: sysConnectionEvent fires before telnet
-    // negotiation, so requiring it here silently drops packages' variable subscriptions.
+    // No isMSDPEnabled() check, unlike sendGMCP/sendATCP: sysConnectionEvent fires
+    // before negotiation, so one here silently drops packages' subscriptions.
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
