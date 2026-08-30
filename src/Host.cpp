@@ -44,7 +44,7 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
-#include "TLabel.h"
+#include "TLabelModel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapViewManager.h"
@@ -72,7 +72,6 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QKeyEvent>
-#include <QMovie>
 #include <QNetworkProxy>
 #include <QRandomGenerator>
 #include <QRegularExpression>
@@ -976,7 +975,7 @@ void Host::resetProfile_phase2()
     mKeyUnit.doCleanup();
     mActionUnit.doCleanup();
     mpConsole->resetMainConsole();
-    // Drain queued DeferredDelete events so old TLabel destructors run their
+    // Drain queued DeferredDelete events so old labels' models run their
     // luaL_unref against the still-live Lua state. Without this, those unrefs
     // execute after initLuaGlobals() has swapped in a new state and corrupt
     // freshly-issued registry indices in the new state, which surfaces as
@@ -4032,8 +4031,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     }
 
     //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
+    if (mWindowRegistry.hasLabel(name)) {
         return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
@@ -4174,14 +4172,13 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
+    const bool labelExists = mWindowRegistry.hasLabel(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (!pL && !pC) {
-        pL = mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
-        if (pL) {
+    if (!labelExists && !pC) {
+        if (mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough)) {
             return {true, QString()};
         }
-    } else if (pL) {
+    } else if (labelExists) {
         return {false, qsl("label '%1' already exists").arg(name)};
     } else if (pC) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
@@ -4195,13 +4192,7 @@ bool Host::setClickthrough(const QString& name, bool clickthrough)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setClickThrough(clickthrough);
-        return true;
-    }
-
-    return false;
+    return mpConsole->setLabelClickThrough(name, clickthrough);
 }
 
 bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
@@ -4210,13 +4201,7 @@ bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setStyleSheet(styleSheet);
-        return true;
-    }
-
-    return false;
+    return mpConsole->setLabelStyleSheet(name, styleSheet).first;
 }
 
 bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline)
@@ -4225,13 +4210,7 @@ bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QSt
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setLinkStyle(linkColor, linkVisitedColor, underline);
-        return true;
-    }
-
-    return false;
+    return mpConsole->setLabelLinkStyle(name, linkColor, linkVisitedColor, underline);
 }
 
 bool Host::resetLinkStyle(const QString& name)
@@ -4240,13 +4219,7 @@ bool Host::resetLinkStyle(const QString& name)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->resetLinkStyle();
-        return true;
-    }
-
-    return false;
+    return mpConsole->resetLabelLinkStyle(name);
 }
 
 bool Host::clearVisitedLinks(const QString& name)
@@ -4255,13 +4228,7 @@ bool Host::clearVisitedLinks(const QString& name)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->clearVisitedLinks();
-        return true;
-    }
-
-    return false;
+    return mpConsole->clearLabelVisitedLinks(name);
 }
 
 void Host::hideMudletsVariables()
@@ -4321,14 +4288,12 @@ bool Host::showWindow(const QString& name)
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
     // check labels first as they are shown/hidden more often
-    if (pL) {
-        pL->show();
-        return true;
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->showLabel(name);
     }
 
     if (pC) {
@@ -4367,15 +4332,13 @@ bool Host::hideWindow(const QString& name)
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
 
     // check labels first as they are shown/hidden more often
-    if (pL) {
-        pL->hide();
-        return true;
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->hideLabel(name);
     }
 
     if (pC) {
@@ -4411,16 +4374,14 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
 
-    if (pL) {
-        pL->resize(x1, y1);
-        return true;
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->resizeLabel(name, x1, y1);
     }
 
     if (pC && !pD) {
@@ -4463,16 +4424,14 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
 
-    if (pL) {
-        pL->move(x1, y1);
-        return true;
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->moveLabel(name, x1, y1);
     }
 
     if (pC && !pD) {
@@ -4531,7 +4490,6 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     }
 
     //children
-    auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
@@ -4556,13 +4514,8 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pW = pSW->widget();
     }
 
-    if (pL) {
-        pL->setParent(pW);
-        pL->move(x1, y1);
-        if (show) {
-            pL->show();
-        }
-        return {true, QString()};
+    if (mWindowRegistry.hasLabel(name)) {
+        return {mpConsole->reparentLabel(windowname, name, x1, y1, show), QString()};
     }
 
     if (pC) {
@@ -4733,18 +4686,13 @@ bool Host::echoWindow(const QString& name, const QString& text)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->print(text);
         return true;
     }
 
-    if (pL) {
-        pL->setText(text);
-        return true;
-    }
-    return false;
+    return mpConsole->setLabelText(name, text);
 }
 
 bool Host::pasteWindow(const QString& name)
@@ -4793,9 +4741,9 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setClick(func);
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setClick(func);
         return true;
     }
     return false;
@@ -4807,9 +4755,9 @@ bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setDoubleClick(func);
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setDoubleClick(func);
         return true;
     }
     return false;
@@ -4821,9 +4769,9 @@ bool Host::setLabelReleaseCallback(const QString& name, const int func)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setRelease(func);
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setRelease(func);
         return true;
     }
     return false;
@@ -4835,9 +4783,9 @@ bool Host::setLabelMoveCallback(const QString& name, const int func)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setMove(func);
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setMove(func);
         return true;
     }
     return false;
@@ -4849,9 +4797,9 @@ bool Host::setLabelWheelCallback(const QString& name, const int func)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setWheel(func);
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setWheel(func);
         return true;
     }
     return false;
@@ -4863,9 +4811,9 @@ bool Host::setLabelOnEnter(const QString& name, const int func)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setEnter(func);
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setEnter(func);
         return true;
     }
     return false;
@@ -4877,9 +4825,9 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
         return false;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setLeave(func);
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setLeave(func);
         return true;
     }
     return false;
@@ -4891,32 +4839,11 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, QString()};
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (!pL) {
+    if (!mWindowRegistry.hasLabel(name)) {
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
-    // The file is read through a throwaway QMovie: the label's own must not take
-    // the path, and the gif tracker must not be given a movie to count, before
-    // the file is known to be one
-    if (const QMovie candidate(moviePath); !candidate.isValid()) {
-        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
-    }
-
-    auto myMovie = pL->mpMovie;
-    if (!myMovie) {
-        myMovie = new QMovie();
-        mGifTracker.registerGif(myMovie);
-        myMovie->setCacheMode(QMovie::CacheAll);
-        pL->mpMovie = myMovie;
-        myMovie->setParent(pL);
-    }
-
-    myMovie->setFileName(moviePath);
-    myMovie->stop();
-    pL->setMovie(myMovie);
-    myMovie->start();
-    return {true, QString()};
+    return mpConsole->setLabelMovie(name, moviePath);
 }
 
 QSize Host::calcFontSize(const QString& windowName)
@@ -4980,18 +4907,12 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pL = mpConsole->mLabelMap.value(name);
     if (pC) {
         pC->setConsoleBgColor(r, g, b, alpha);
         return true;
     }
 
-    if (pL) {
-        pL->setBackgroundColor(QColor(r, g, b, alpha));
-        return true;
-    }
-
-    return false;
+    return mpConsole->setLabelBackgroundColor(name, QColor(r, g, b, alpha));
 }
 
 std::optional<QColor> Host::getBackgroundColor(const QString& name) const
@@ -5001,16 +4922,11 @@ std::optional<QColor> Host::getBackgroundColor(const QString& name) const
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pL = mpConsole->mLabelMap.value(name);
     if (pC) {
         return {pC->mBgColor};
     }
 
-    if (pL) {
-        return {pL->palette().color(QPalette::Window)};
-    }
-
-    return {};
+    return mpConsole->getLabelBackgroundColor(name);
 }
 
 bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, bool fullWindow)
@@ -5038,11 +4954,8 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
         return true;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        const QPixmap bgPixmap(imgPath);
-        pL->setPixmap(bgPixmap);
-        return true;
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->setLabelBackgroundImage(name, imgPath);
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
@@ -5068,10 +4981,8 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
         return true;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->clear();
-        return true;
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->resetLabelBackgroundImage(name);
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
@@ -5330,7 +5241,7 @@ std::optional<QString> Host::windowType(const QString& name) const
         return {QLatin1String("main")};
     }
 
-    if (mpConsole->mLabelMap.contains(name)) {
+    if (mWindowRegistry.hasLabel(name)) {
         return {qsl("label")};
     }
 
@@ -5389,8 +5300,8 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
         // functions cannot disagree.
         return {QRect(QPoint(0, 0), mpConsole->getMainWindowSize())};
     }
-    if (auto pL = mpConsole->mLabelMap.value(name)) {
-        return {QRect(pL->pos(), pL->size())};
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->getLabelGeometry(name);
     }
     if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
         if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
@@ -5427,8 +5338,8 @@ std::optional<bool> Host::windowVisible(const QString& name) const
         // this function looks past
         return {true};
     }
-    if (auto pL = mpConsole->mLabelMap.value(name)) {
-        return {pL->isVisibleTo(mpConsole)};
+    if (mWindowRegistry.hasLabel(name)) {
+        return mpConsole->getLabelVisible(name);
     }
     if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
         if (auto pD = mpConsole->mDockWidgetMap.value(name)) {

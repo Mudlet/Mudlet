@@ -74,7 +74,7 @@ public:
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
     std::pair<bool, QString> getUserWindowTitle(const QString& name) const;
     bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
-    TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
@@ -95,8 +95,30 @@ public:
     std::optional<QString> getLabelToolTip(const QString& name) const;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
-    bool setBackgroundImage(const QString& name, const QString& path);
-    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    // The by-name label operations core reaches this view through: it locates a
+    // label in the window registry and asks for it by name, never taking the
+    // widget. Each reports failure for a name that is not a label's.
+    bool setLabelClickThrough(const QString& name, bool clickThrough);
+    bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
+    bool resetLabelLinkStyle(const QString& name);
+    bool clearLabelVisitedLinks(const QString& name);
+    bool showLabel(const QString& name);
+    bool hideLabel(const QString& name);
+    bool resizeLabel(const QString& name, int width, int height);
+    bool moveLabel(const QString& name, int x, int y);
+    bool reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show);
+    bool setLabelText(const QString& name, const QString& text);
+    std::pair<bool, QString> setLabelMovie(const QString& name, const QString& moviePath);
+    bool setLabelBackgroundColor(const QString& name, const QColor& color);
+    std::optional<QColor> getLabelBackgroundColor(const QString& name) const;
+    bool setLabelBackgroundImage(const QString& name, const QString& path);
+    bool resetLabelBackgroundImage(const QString& name);
+    std::optional<QRect> getLabelGeometry(const QString& name) const;
+    std::optional<bool> getLabelVisible(const QString& name) const;
+    // For the view-side callers that still work on the widget itself. An accessor
+    // rather than the open map, so that inserting and removing entries stays in
+    // this class, which is what keeps the window registry in step with it.
+    TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
     void showStatistics();
@@ -139,7 +161,6 @@ public:
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TTextBox*> mTextBoxMap;
-    QMap<QString, TLabel*> mLabelMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
     mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
@@ -185,6 +206,12 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+
+    // The view's half of the label bookkeeping; the core's half is the Host's
+    // window registry, which this class registers into and deregisters from
+    // wherever it adds to or takes from this map. Private so that pairing cannot
+    // be broken from outside - reach a widget through labelWidget().
+    QMap<QString, TLabel*> mLabelMap;
 
     // Names the dictionary mpHunspell_system was last built for. Assigned before
     // the load is attempted and never rolled back, so a dictionary whose files

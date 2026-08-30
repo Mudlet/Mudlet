@@ -527,11 +527,11 @@ private slots:
     auto [ok, msg] = mpHost->createLabel(qsl("main"), qsl("test_label"), 0, 0,
                                          100, 100, true, false);
     QVERIFY2(ok, qPrintable(msg));
-    QVERIFY(mpHost->mpConsole->mLabelMap.contains(qsl("test_label")));
+    QVERIFY(mpHost->mpConsole->labelWidget(qsl("test_label")));
 
     performReset();
 
-    QVERIFY2(!mpHost->mpConsole->mLabelMap.contains(qsl("test_label")),
+    QVERIFY2(!mpHost->mpConsole->labelWidget(qsl("test_label")),
              "Label should be removed after reset");
   }
 
@@ -762,7 +762,7 @@ private slots:
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 
     for (int i = 1; i <= kNumLabels; ++i) {
-      auto *pL = mpHost->mpConsole->mLabelMap.value(qsl("cb_label_%1").arg(i));
+      auto *pL = mpHost->mpConsole->labelWidget(qsl("cb_label_%1").arg(i));
       QVERIFY2(pL, qPrintable(qsl("post-reset label cb_label_%1 missing").arg(i)));
       QMouseEvent ev(QEvent::MouseButtonPress, QPointF(1, 1), QPointF(1, 1),
                      QPointF(1, 1), Qt::LeftButton, Qt::LeftButton,
