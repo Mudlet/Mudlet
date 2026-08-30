@@ -193,13 +193,16 @@ public:
 
         const Capabilities can = capabilities();
         if (!can.biasing && !can.grammar) {
+            mVocabularyApplied = false;
             return VocabularyResult::Unsupported;
         }
-        if (!changed) {
-            // Already in effect; nothing to rebuild
+        if (!changed && mVocabularyApplied) {
+            // Already in effect and the last attempt succeeded; nothing to rebuild
             return VocabularyResult::Applied;
         }
-        return applyVocabulary(words);
+        const VocabularyResult result = applyVocabulary(words);
+        mVocabularyApplied = (result == VocabularyResult::Applied);
+        return result;
     }
 
     // What was last offered, applied or not. A backend reads this when a model
@@ -288,10 +291,6 @@ protected:
         return VocabularyResult::Failed;
     }
 
-    // Retained by setVocabulary() for every backend, so none has to remember
-    // to keep words it could not use yet
-    QStringList mVocabulary;
-
     // The engine's half of the three above, reached only once the state rules
     // have allowed it. A backend never re-checks the state to decide whether
     // it should run.
@@ -337,6 +336,16 @@ signals:
 
 private:
     State mState = State::Uninitialized;
+
+    // Retained by setVocabulary() for every backend, so none has to remember
+    // to keep words it could not use yet
+    QStringList mVocabulary;
+
+    // Whether the words in mVocabulary are what the backend is currently
+    // biased toward. A repeat offer short-circuits to Applied only when this
+    // is true - a backend that last answered Failed must be given another
+    // chance, not agreement it never earned.
+    bool mVocabularyApplied = false;
 };
 
 #endif // MUDLET_SPEECHRECOGNIZER_H

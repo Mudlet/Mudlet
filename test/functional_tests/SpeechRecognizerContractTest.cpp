@@ -57,6 +57,52 @@
 
 #include <optional>
 
+namespace {
+
+// Minimal stand-in for a backend that can bias. No in-tree backend can yet -
+// VoskRecognizer hardcodes biasing/grammar to false - so setVocabulary()'s
+// short-circuit around a failed applyVocabulary() has nothing else to run
+// against. Only the pure virtuals need real bodies; capabilities() and
+// applyVocabulary() are the two calls the test actually cares about.
+class BiasingStubRecognizer : public SpeechRecognizer
+{
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities can;
+        can.biasing = true;
+        return can;
+    }
+
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("BiasingStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    // Test-controlled outcome and call count, so the fix's short-circuit can
+    // be proven both ways: it must not skip a re-apply while the backend is
+    // still failing, and it must skip one once the backend has succeeded.
+    VocabularyResult mNextApplyResult = VocabularyResult::Failed;
+    int mApplyCallCount = 0;
+
+protected:
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+
+    VocabularyResult applyVocabulary(const QStringList& words) override
+    {
+        Q_UNUSED(words)
+        ++mApplyCallCount;
+        return mNextApplyResult;
+    }
+};
+
+} // namespace
+
 class SpeechRecognizerContractTest : public QObject
 {
     Q_OBJECT
@@ -265,6 +311,38 @@ private slots:
         // Offered again unchanged: still Unsupported here, and still held
         QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Unsupported);
         QCOMPARE(recognizer.vocabulary(), words);
+    }
+
+    // setVocabulary()'s short-circuit for an unchanged offer must answer
+    // Applied only when the last actual attempt succeeded - not merely
+    // because the words match what was offered before. A backend that keeps
+    // answering Failed for the same words must be asked again, not agreed
+    // with, and once it does succeed a further unchanged offer must not
+    // trigger a redundant re-apply.
+    void aFailedApplyIsNotShortCircuitedIntoApplied()
+    {
+        BiasingStubRecognizer recognizer;
+        QVERIFY2(recognizer.supportsBiasing(), "this case needs a backend that can bias");
+
+        const QStringList words{qsl("kill"), qsl("look"), qsl("inventory")};
+
+        recognizer.mNextApplyResult = SpeechRecognizer::VocabularyResult::Failed;
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(recognizer.mApplyCallCount, 1);
+
+        // Same words offered again while still failing: must not be agreed
+        // with as if they were in effect
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(recognizer.mApplyCallCount, 2);
+
+        // The backend recovers; the same words now succeed
+        recognizer.mNextApplyResult = SpeechRecognizer::VocabularyResult::Applied;
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Applied);
+        QCOMPARE(recognizer.mApplyCallCount, 3);
+
+        // Offered again unchanged: short-circuits now, so no redundant re-apply
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Applied);
+        QCOMPARE(recognizer.mApplyCallCount, 3);
     }
 
     // Reported as the place to install a model into, so it has to be a place
