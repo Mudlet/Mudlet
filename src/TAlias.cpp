@@ -24,10 +24,26 @@
 #include "TAlias.h"
 
 
+#include "AliasUnit.h"
 #include "Host.h"
-#include "TConsole.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+#include "utils.h"
+
+#include <QByteArray>
+#include <QColor>
+#include <QDebug>
+#include <QMap>
+#include <QMultiMap>
+#include <QPair>
+#include <QSharedPointer>
+
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <list>
+#include <string>
+#include <utility>
 
 static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 {

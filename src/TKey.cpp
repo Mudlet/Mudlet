@@ -25,8 +25,19 @@
 
 
 #include "Host.h"
+#include "KeyUnit.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+#include "utils.h"
+
+#include <QColor>
+#include <QDebug>
+#include <QFlags>
+#include <QMap>
+#include <QMultiMap>
+#include <QObject>
+
+#include <list>
 
 TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>(parent)

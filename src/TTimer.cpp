@@ -26,9 +26,20 @@
 
 #include "Host.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+#include "TimerUnit.h"
+#include "utils.h"
 
+#include <QColor>
+#include <QDebug>
+#include <QMap>
+#include <QMultiMap>
 #include <QScopeGuard>
+#include <QSet>
+#include <QTimer>
+#include <QVariant>
+
+#include <list>
 
 const char* TTimer::scmProperty_HostName = "HostName";
 const char* TTimer::scmProperty_TTimerId = "TTimerId";

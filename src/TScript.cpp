@@ -27,9 +27,14 @@
 #include "Host.h"
 #include "ScriptUnit.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
 
+#include <QColor>
+#include <QMap>
 #include <QScopeGuard>
+
+#include <list>
+#include <utility>
 
 TScript::TScript(TScript* parent, Host* pHost)
 : Tree<TScript>(parent)
