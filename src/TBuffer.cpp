@@ -32,6 +32,7 @@
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "THyperlinkSelectionManager.h"
+#include "TPrintSink.h"
 #include "TStringUtils.h"
 #include "TTextEdit.h"
 #include "UntrustedText.h"
@@ -1674,10 +1675,8 @@ void TBuffer::flushPendingDestinationContent()
     }
 
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
-        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
-
-        if (destConsole && destConsole != mpHost->mpConsole) {
-            destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+        if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
+            destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
             mMudLine.clear();
             mMudBuffer.clear();
         }
@@ -1727,11 +1726,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
 
     // Check if there's an active MXP DEST - route to destination frame
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
-        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
-        if (destConsole && destConsole != mpHost->mpConsole) {
+        if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
             flushPendingServerWrapJoin();
             if (!mMudLine.isEmpty()) {
-                destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
             }
             mMudLine.clear();
             mMudBuffer.clear();

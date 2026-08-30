@@ -435,6 +435,7 @@ set(mudlet_HDRS
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TPrintSink.h
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
