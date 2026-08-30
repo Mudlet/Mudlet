@@ -66,6 +66,28 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
+    -- #4175: selectString() only searches the current line and answers -1 for
+    -- text that is not on it, which is truthy in Lua - so the "string not found"
+    -- error never fired and characters were taken from whichever line the cursor
+    -- was on. A multiline trigger reaches this whenever it copies an earlier
+    -- line's multimatches, since it fires with the cursor on the last one.
+    it("Should not copy the current line when asked for text that is not on it", function()
+      decho("testconsole", "<0,255,0>copy4175first<r>\n")
+      decho("testconsole", "<255,0,0>copy4175second and longer<r>\n")
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      assert.are.equal(-1, selectString("testconsole", "copy4175first", 1))
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      local ok, err = pcall(copy2decho, "testconsole", "copy4175first")
+      assert.is_false(ok, "copy2decho returned instead of reporting the text was not found")
+      assert.is_truthy(tostring(err):find("copy2decho: string not found", 1, true),
+        "unexpected error: " .. tostring(err))
+
+      -- the cursor outlives the test and the cases below read it
+      moveCursor("testconsole", 0, 0)
+    end)
+
     -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
     -- it("Should copy2decho text with italics, bold, and underline", function()
     --   local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
