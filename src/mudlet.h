@@ -92,6 +92,7 @@ class dlgTriggerEditor;
 class Host;
 class MudletInstanceCoordinator;
 class ShortcutManager;
+class SpeechRecognizer;
 class TConsole;
 class TDebugFilterBar;
 class TDetachedWindow;
@@ -233,6 +234,16 @@ public:
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
+    // Speech-to-text bridge: creates the single shared recognizer on first use
+    // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
+    // events; all routing and UI policy lives in packages consuming them.
+    void initSpeechRecognition();
+    SpeechRecognizer* speechRecognizer() const;
+    // Raise one sysSTT* event on the active profile. Public because the stt.*
+    // bindings refuse before a recognizer exists - with no engine installed
+    // there is no object to emit through, and "refusals speak" has to hold
+    // there too or a consumer cannot tell "no engine" from "nothing said yet".
+    void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -736,6 +747,9 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
+    // The single shared speech recognizer (one microphone, one decoder);
+    // created lazily by initSpeechRecognition()
+    QPointer<SpeechRecognizer> mpSpeechRecognizer;
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
