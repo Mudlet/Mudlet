@@ -69,15 +69,58 @@ public:
     // Start listening for speech input from the microphone.
     // Emits partialResult() as speech is recognized in real-time.
     // Emits finalResult() when an utterance is complete.
-    virtual void startListening() = 0;
+    // Not virtual: which states may start, and what a refusal says, are the
+    // same for every engine, and each backend had grown its own copy - one of
+    // which had drifted into moving to Error on a refusal. A backend
+    // implements doStartListening() and inherits the rules.
+    void startListening()
+    {
+        if (state() != State::Ready) {
+            // Every refusal but "already listening" and "already starting"
+            // reports why: this returns void, so silence reads to the caller
+            // as a successful start. The state is left alone - a refusal is
+            // not a fault, and docs/stt-api.md says a refusal may arrive
+            // without a state change.
+            if (state() == State::Uninitialized) {
+                //: Shown when speech recognition is asked to listen before a language model is loaded
+                emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
+            } else if (state() == State::Error) {
+                //: Shown when speech recognition is asked to listen while it is in an error state
+                emit errorOccurred(tr("Speech recognition is in an error state - reload the model before listening again."));
+            } else if (state() == State::Processing) {
+                //: Shown when speech recognition is asked to listen while still transcribing the previous phrase
+                emit errorOccurred(tr("Speech recognition is still processing the previous phrase."));
+            }
+            return;
+        }
+        doStartListening();
+    }
 
-    // Stop listening and process any remaining audio.
-    // Will emit finalResult() with any pending recognition.
-    virtual void stopListening() = 0;
+    // Finalises the pending utterance, emitting finalResult() with whatever
+    // is pending. Only Listening has one to finalise.
+    void stopListening()
+    {
+        if (state() != State::Listening) {
+            return;
+        }
+        doStopListening();
+    }
 
-    // Cancel listening without processing remaining audio.
-    // No finalResult() will be emitted.
-    virtual void cancel() = 0;
+    // Abandons what is in flight without finalising it; no finalResult() is
+    // emitted. Starting counts: a request still waiting on a permission
+    // dialog has no audio to abandon, but leaving it pending means answering
+    // the dialog later opens the microphone after the caller asked to stop.
+    void cancel()
+    {
+        if (state() == State::Starting) {
+            setState(State::Ready);
+            return;
+        }
+        if (state() != State::Listening && state() != State::Processing) {
+            return;
+        }
+        doCancel();
+    }
 
     // Stop listening automatically after this many milliseconds of continuous
     // silence, finalising the utterance as stopListening() would. 0 (the
@@ -213,6 +256,13 @@ public:
     virtual Sensitivity sensitivity() const = 0;
 
 protected:
+    // The engine's half of the three above, reached only once the state rules
+    // have allowed it. A backend never re-checks the state to decide whether
+    // it should run.
+    virtual void doStartListening() = 0;
+    virtual void doStopListening() = 0;
+    virtual void doCancel() = 0;
+
     // Move to a new state, announcing it only when it differs from the
     // current one. Backends transition through this rather than assigning, so
     // no consumer sees a stateChanged that changed nothing, or misses one

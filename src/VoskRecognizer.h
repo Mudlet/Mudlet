@@ -64,9 +64,9 @@ public:
 
     // SpeechRecognizer interface implementation
     bool initialize(const QString& modelPath) override;
-    void startListening() override;
-    void stopListening() override;
-    void cancel() override;
+    void doStartListening() override;
+    void doStopListening() override;
+    void doCancel() override;
     void setSilenceTimeout(int msec) override;
     int silenceTimeout() const override;
     // Vosk delivers per-word confidence and timing; it has no biasing, and

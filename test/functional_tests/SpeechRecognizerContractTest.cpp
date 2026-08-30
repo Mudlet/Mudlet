@@ -219,6 +219,34 @@ private slots:
         QCOMPARE(spy.count(), 1);
     }
 
+    // docs/stt-api.md: "refusal messages can arrive without a state change".
+    // A start refused for want of a model is a refusal, not a fault - the
+    // recognizer is exactly as usable afterwards as before, so moving it to
+    // Error told a package driving its controls from state to offer a reload
+    // of a model that was never loaded. The rule lives in the base class so
+    // every backend refuses the same way, and this pins it there.
+    void aRefusedStartLeavesTheStateAlone()
+    {
+        VoskRecognizer recognizer;
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QSignalSpy states(&recognizer, &SpeechRecognizer::stateChanged);
+        QVERIFY(errors.isValid());
+        QVERIFY(states.isValid());
+
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        recognizer.startListening();
+        QCOMPARE(errors.count(), 1);
+        QVERIFY2(states.isEmpty(), "a refusal is not a fault, so it must not announce a state change");
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+
+        // Nothing is listening, so there is nothing to stop or abandon, and
+        // neither call may say anything about it
+        recognizer.stopListening();
+        recognizer.cancel();
+        QCOMPARE(errors.count(), 1);
+        QVERIFY(states.isEmpty());
+    }
+
     // Reported as the place to install a model into, so it has to be a place
     // that exists. A made-up default named a directory the user never created,
     // and the "install a model" message was unreachable behind it.
