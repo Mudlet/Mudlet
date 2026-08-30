@@ -316,9 +316,11 @@ public:
     static inline QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
 
     // Stamped on lines that continue an earlier one, and compared against to
-    // decide whether a line starts a paragraph - so it has to stay distinct from
-    // anything smTimeStampFormat can produce, and has to be the same length, as
-    // that length is what the timestamp gutter is sized from:
+    // decide whether a line starts a paragraph, so it has to stay distinct from
+    // anything smTimeStampFormat can produce. It also has to render to the same
+    // width: layoutLine() paints whatever string the time buffer holds, then
+    // advances its column accounting by smTimeStampFormat.size(), so a stamp of
+    // another width shifts the text origin and the mouse-to-column mapping:
     static inline QString smBlankTimeStamp = qsl("------------ ");
 
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);

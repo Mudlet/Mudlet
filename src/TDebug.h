@@ -90,9 +90,10 @@ public:
     static const Categories csmNoisyCategories;
     static const Categories csmAllCategories;
 
-    // The master switch that every category filter sits under - nothing is
-    // reported at all while this is false. It is read once per processed line,
-    // so it stays a bare variable rather than gaining an accessor:
+    // The master switch that every wants() test sits under. It does not gate
+    // passesFilters(), and a handful of messages - the profile-started line and
+    // the identifier table in changeHostName() - are emitted without a wants()
+    // guard, so they appear whatever this is set to:
     inline static bool smDebugMode = false;
 
 private:

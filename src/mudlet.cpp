@@ -2183,7 +2183,7 @@ void mudlet::loadMaps()
     TBuffer::smTimeStampFormat = tr("hh:mm:ss.zzz ");
     /*: This represents the format of the timestamps shown for lines that do not
  have a timestamp in a console that is showing them. If localised this
- should be set to the same format and length as the timeStampFormat:*/
+ should be set to the same format and length as TBuffer::smTimeStampFormat:*/
     TBuffer::smBlankTimeStamp = tr("------------ ");
 }
 
@@ -3674,7 +3674,7 @@ bool mudlet::saveWindowLayout()
         const QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
         if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            ofs.setVersion(scmQDataStreamFormat_5_12);
         }
         ofs << layoutData;
         if (!layoutFile.commit()) {
@@ -3710,7 +3710,7 @@ bool mudlet::loadWindowLayout()
             QByteArray layoutData;
             QDataStream ifs(&layoutFile);
             if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+                ifs.setVersion(scmQDataStreamFormat_5_12);
             }
             ifs >> layoutData;
             layoutFile.close();
@@ -3750,7 +3750,7 @@ bool mudlet::saveFloatingDockGeometries()
 
     QDataStream ofs(&geoFile);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        ofs.setVersion(scmQDataStreamFormat_5_12);
     }
 
     QMap<QString, QByteArray> geometries;
@@ -3787,7 +3787,7 @@ void mudlet::restoreFloatingDockGeometries()
 
     QDataStream ifs(&geoFile);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        ifs.setVersion(scmQDataStreamFormat_5_12);
     }
 
     QMap<QString, QByteArray> geometries;
@@ -5579,7 +5579,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
     QDataStream ifs(&file);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        ifs.setVersion(scmQDataStreamFormat_5_12);
     }
     QString ret;
 

@@ -22,6 +22,7 @@
  ***************************************************************************/
 
 
+#include "TBuffer.h"
 #include "TDebug.h"
 
 #include "TConsole.h"
