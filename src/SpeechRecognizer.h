@@ -304,8 +304,11 @@ protected:
 
     // Corrects mVocabularyApplied when a backend changes what is applied
     // outside setVocabulary() - see applyVocabulary()'s comment. Kept minimal
-    // on purpose: it only clears the flag, because the one case that cannot be
-    // handled by calling setVocabulary() itself is invalidation, not reapplication.
+    // on purpose: it only clears the flag. Reapplication needs this call
+    // before calling setVocabulary(vocabulary()), not that call alone: the
+    // words have not changed, so setVocabulary() alone would short-circuit on
+    // whatever mVocabularyApplied last said - true or not - and the model just
+    // loaded would never be asked at all.
     void clearAppliedVocabulary() { mVocabularyApplied = false; }
 
     // The engine's half of the three above, reached only once the state rules

@@ -42,6 +42,7 @@
 
 #include <QtTest/QtTest>
 
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QSettings>
@@ -50,7 +51,9 @@
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
+#include "SpeechRecognizerFactory.h"
 #include "VoskRecognizer.h"
 #include "mudlet.h"
 
@@ -507,6 +510,62 @@ private slots:
 
         QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("dragon"), none), "a word that is not a filler word was discarded");
         QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("i attack"), none), "a phrase was discarded as though it were a lone filler word");
+    }
+
+    // The model directory chooses the engine, so stt.init(path) needs no
+    // second argument and a package that installed one engine's models never
+    // has to name it. A layout that matches nothing is Auto rather than a
+    // guess: guessing wrong loads a decoder against the wrong graph and fails
+    // deep inside the library instead of here.
+    void theModelDirectoryChoosesTheEngine()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+
+        // A Vosk model is a directory holding an "am" subdirectory
+        const QString voskDir = qsl("%1/vosk-model-small-en-us-0.15").arg(dir.path());
+        QVERIFY(QDir().mkpath(qsl("%1/am").arg(voskDir)));
+        QCOMPARE(SpeechRecognizerFactory::backendForModelDir(voskDir), SpeechRecognizerFactory::Backend::Vosk);
+
+        // A sherpa streaming transducer model is three .onnx files plus tokens.txt
+        const QString sherpaDir = qsl("%1/sherpa-onnx-streaming-zipformer-en").arg(dir.path());
+        QVERIFY(QDir().mkpath(sherpaDir));
+        for (const QString& name : {qsl("encoder.onnx"), qsl("decoder.onnx"), qsl("joiner.onnx"), qsl("tokens.txt")}) {
+            QFile file(qsl("%1/%2").arg(sherpaDir, name));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.close();
+        }
+        QCOMPARE(SpeechRecognizerFactory::backendForModelDir(sherpaDir), SpeechRecognizerFactory::Backend::Sherpa);
+
+        const QString emptyDir = qsl("%1/nothing-in-here").arg(dir.path());
+        QVERIFY(QDir().mkpath(emptyDir));
+        QCOMPARE(SpeechRecognizerFactory::backendForModelDir(emptyDir), SpeechRecognizerFactory::Backend::Auto);
+    }
+
+    // Round-trips through the settings string, because a backend chosen by the
+    // player is written to Mudlet.ini and read back on the next run: an
+    // identifier that does not survive the trip silently reverts their choice.
+    void aBackendIdentifierSurvivesTheRoundTrip()
+    {
+        for (const auto backend : {SpeechRecognizerFactory::Backend::Vosk, SpeechRecognizerFactory::Backend::Sherpa}) {
+            const QString identifier = SpeechRecognizerFactory::backendIdentifier(backend);
+            QVERIFY2(!identifier.isEmpty(), "a backend the player can choose needs a name to store");
+            QCOMPARE(SpeechRecognizerFactory::backendFromIdentifier(identifier), backend);
+        }
+        QCOMPARE(SpeechRecognizerFactory::backendFromIdentifier(qsl("not-an-engine")), SpeechRecognizerFactory::Backend::Auto);
+    }
+
+    // sherpa reports biasing only when the loaded model can actually be
+    // biased, which needs bpe.vocab - the text "piece score" file, NOT the
+    // bpe.model binary that model packages ship. Claiming biasing without it
+    // makes setVocabulary() answer Applied over a decoder that scores nothing.
+    void sherpaClaimsNoBiasingBeforeAModelIsLoaded()
+    {
+        SherpaRecognizer recognizer;
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        QVERIFY2(!recognizer.capabilities().biasing, "biasing is a property of the loaded model, and none is loaded");
+        QCOMPARE(recognizer.setVocabulary({qsl("kill"), qsl("look")}), SpeechRecognizer::VocabularyResult::Unsupported);
+        QVERIFY2(recognizer.vocabulary().size() == 2, "the words must be kept for a model that can bias later");
     }
 };
 

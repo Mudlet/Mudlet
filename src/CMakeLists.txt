@@ -118,6 +118,7 @@ set(mudlet_SRCS
     SecureStringUtils.cpp
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
+    SherpaRecognizer.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
@@ -370,6 +371,7 @@ set(mudlet_HDRS
     SecureStringUtils.h
     SelectionRectangleHandler.h
     SentryWrapper.h
+    SherpaRecognizer.h
     ShortcutsManager.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
