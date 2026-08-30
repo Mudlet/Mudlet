@@ -238,9 +238,9 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
-    // Where an element named as the destination of setWindow()/createLabel() is
-    // parented into. Resolved the same way for every kind of element, so that
-    // the reparenting operations cannot disagree about what "main" means.
+    // Where reparentLabel() and reparentWindow() parent an element named as a
+    // setWindow() destination, shared so the two cannot disagree about what
+    // "main" means.
     QWidget* parentWidgetFor(const QString& windowname) const;
 
     // The view's half of the label, sub-console and dock bookkeeping; the core's

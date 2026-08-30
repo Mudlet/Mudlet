@@ -73,6 +73,7 @@ struct TConsoleModel
 
     // The count is the distance between the two arguments, not the difference
     // between an inclusive pair, so lines(n, n) is empty rather than one line.
+    // Not const because TBuffer::line() hands out a mutable QString&.
     QStringList lines(int from, int to);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.

@@ -1403,9 +1403,47 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(!host->windowType(userWindowName).has_value(), "Host still reports a window type for the deleted user window.");
     }
 
+    // A miniconsole created into a user window is parented into that window's
+    // dock, so deleting the window destroys it as a Qt child - nothing takes its
+    // name out of the registry along the way, and no close event reaches it
+    // either. ~TConsole's deregistration is the only thing that clears it.
+    void test_deletingAUserWindowDeregistersTheMiniConsolesInsideIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString userWindowName = qsl("registryNestingUserWindow");
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        QVERIFY2(host->windowRegistry().hasDockWidget(userWindowName), "Creating a user window registered no dock widget.");
+
+        const QString nestedName = qsl("registryNestedMini");
+        const auto [nested, nestedMessage] = host->createMiniConsole(userWindowName, nestedName, 0, 0, 40, 40);
+        QVERIFY2(nested, qPrintable(nestedMessage));
+        const QPointer<TConsole> nestedWidget = host->mpConsole->subConsoleWidget(nestedName);
+        QVERIFY2(nestedWidget, "Creating a miniconsole inside a user window left no widget in the console's own map.");
+        QCOMPARE(host->windowType(nestedName), std::optional<QString>(qsl("miniconsole")));
+        QVERIFY2(!host->windowRegistry().hasDockWidget(nestedName), "A miniconsole inside a user window was registered as having a dock of its own.");
+
+        const auto [windowDeleted, windowDeleteMessage] = host->mpConsole->deleteMiniConsole(userWindowName);
+        QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
+        QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its own model in the profile's window registry.");
+
+        // Still registered at this point, because the dock is only queued for
+        // deletion. That is what makes the assertion after the wait a test of
+        // the destructor's deregistration and of nothing else.
+        QVERIFY2(host->windowRegistry().hasSubConsole(nestedName), "Deleting a user window deregistered the miniconsole inside it before the widget was destroyed.");
+
+        QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5000);
+        QVERIFY2(!host->windowRegistry().hasSubConsole(nestedName), "Destroying a user window left the miniconsole inside it in the profile's window registry.");
+        QVERIFY2(!host->windowType(nestedName).has_value(), "Host still reports a window type for a miniconsole destroyed with the user window it was in.");
+    }
+
     // Resetting the profile destroys every sub-console the console built without
     // going anywhere near deleteMiniConsole(), so that path has to clear the
-    // registry as well - and it walks its own map while the closes empty it.
+    // registry as well - and it walks its own map while the removals empty it.
     void test_resettingTheMainConsoleDeregistersItsSubConsoles()
     {
         startProfile();

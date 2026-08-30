@@ -58,10 +58,7 @@
 #include <QVideoWidget>
 
 namespace {
-// The widget's type flags are a view-side concept; the registry records the
-// window kind instead. Anything that is not one of the three kinds a
-// sub-console can be maps to Other, which is what leaves Host::windowType() -
-// rather than registration - to decide what an impossible type means.
+// See TWindowRegistry::SubConsoleKind for what Other is for.
 TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType type)
 {
     switch (type) {
@@ -1007,8 +1004,7 @@ bool TMainConsole::moveLabel(const QString& name, int x, int y)
     return true;
 }
 
-// A scroll box wins over a user window of the same name, which is the order
-// Host::setWindow() resolved its destination in.
+// A scroll box wins over a user window of the same name.
 QWidget* TMainConsole::parentWidgetFor(const QString& windowname) const
 {
     QWidget* pW = mpMainFrame;
@@ -1151,7 +1147,8 @@ void TMainConsole::closeSubConsole(const QString& name)
         mudlet::self()->removeDockWidget(pD);
     }
 
-    // Takes the name out of both maps by way of TConsole::closeEvent()
+    // Takes the name out of both maps by way of TConsole::closeEvent() - during
+    // shutdown, the only time this runs; outside it close() only hides.
     pC->close();
 }
 
@@ -1226,8 +1223,8 @@ bool TMainConsole::moveSubConsole(const QString& name, int x, int y)
     return true;
 }
 
-// The non-label half of setWindow()'s dispatch, tried in the order it used, so
-// that a name held by two kinds of element still moves the same one.
+// The non-label half of setWindow()'s dispatch, tried in a fixed order, so that
+// a name held by two kinds of element always moves the same one.
 bool TMainConsole::reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show)
 {
     QWidget* pW = parentWidgetFor(windowname);

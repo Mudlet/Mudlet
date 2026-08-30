@@ -49,10 +49,9 @@ class TWindowRegistry
 public:
     // What a sub-console name was created as. The view's TConsole::ConsoleType
     // is a widget-side flag set, so the kind is recorded here at registration
-    // instead. Other covers a console registered as none of the three kinds a
-    // sub-console can be, which nothing does today - it exists so that a caller
-    // asking what kind a name is gets the same answer it always did rather than
-    // registration having to decide what an impossible type means.
+    // instead. Other covers a console that is none of the three kinds a
+    // sub-console can be, which leaves Host::windowType() - rather than
+    // registration - to decide what an impossible type means.
     enum class SubConsoleKind { MiniConsole, UserWindow, Buffer, Other };
 
     void registerLabel(const QString& name, TLabelModel* pModel) { mLabels.insert(name, pModel); }
@@ -96,9 +95,8 @@ public:
     }
 
     // A detached snapshot, which is what makes it safe to act on each name in
-    // turn even when acting on one removes others - Host::closeChildren() closes
-    // every sub-console, and closing a user window takes its own entry and its
-    // dock's out from under the walk.
+    // turn even when acting on a name removes its entry mid-walk -
+    // Host::closeChildren() closes every sub-console.
     QStringList subConsoleNames() const { return QStringList(mSubConsoles.keys()); }
 
     // Dock widgets are indexed by name alone. Everything core asks of one is

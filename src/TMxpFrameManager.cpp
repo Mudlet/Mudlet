@@ -167,7 +167,6 @@ bool TMxpFrameManager::closeFrame(const QString& name)
             // Remove the tab from the parent's tab widget
             parentTabWidget->removeTab(tabIndex);
 
-            // Clean up console registration
             if (mpHost && mpHost->mpConsole) {
                 mpHost->mpConsole->deregisterSubConsole(name);
                 mpHost->mpConsole->deregisterDockWidget(name);
@@ -720,7 +719,6 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         console->setStyleSheet(qsl("QWidget { border: 1px solid #444444; }"));
     }
 
-    // Register console
     mainConsole->registerSubConsole(frame->name, console);
 
     // Force layout to calculate sizes
@@ -860,7 +858,6 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
         console->setScrolling(false);
     }
 
-    // Register console in map
     mainConsole->registerSubConsole(frame->name, console);
 
     // Add as new tab - if this is the first child tab, select it
@@ -1052,7 +1049,6 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     frameBgColor = frameBgColor.lighter(115);
     console->setBgColor(frameBgColor);
 
-    // Register console
     mainConsole->registerSubConsole(frame->name, console);
 
     // Optionally switch to the new tab
