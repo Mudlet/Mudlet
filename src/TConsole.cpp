@@ -2238,6 +2238,19 @@ void TConsole::printFormatted(const QString& text, const std::vector<TChar>& for
     }
 }
 
+// Deliberately the bare buffer clear the DEST redirect has always done, not
+// TConsole::clear() - that would also reset the scrollbar, drop the selection,
+// and repaint, which the redirect never did.
+void TConsole::discardAll()
+{
+    buffer.clear();
+}
+
+void TConsole::discardLastLine()
+{
+    buffer.clearLastLine();
+}
+
 void TConsole::printSystemMessage(const QString& msg)
 {
     const QString txt = tr("System Message: %1").arg(msg);

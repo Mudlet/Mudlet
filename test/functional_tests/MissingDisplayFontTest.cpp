@@ -289,6 +289,9 @@ private:
 private slots:
     void initTestCase()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled fonts this registers - the family it falls back to, and the one it renames for a package to supply - are not in the resources");
+#else
         QVERIFY(mConfigDir.isValid());
         QVERIFY(mSaveDir.isValid());
         QVERIFY(mArchiveDir.isValid());
@@ -312,6 +315,7 @@ private slots:
         QVERIFY(mpHost);
 
         QVERIFY2(!mudlet::self()->getAvailableFonts().contains(mMissingFamily, Qt::CaseInsensitive), "the stand-in for an uninstalled font turns out to be installed");
+#endif
     }
 
     // Registered per case rather than once for the class, because a couple of
