@@ -184,7 +184,7 @@ void TDetachedWindow::setupUI()
         QString displayText = mCurrentProfileName;
 
         // Apply CDC identifier prefix if debug mode is active
-        if (mudlet::smDebugMode) {
+        if (TDebug::smDebugMode) {
             auto pMudlet = mudlet::self();
             if (pMudlet) {
                 Host* pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
@@ -1443,7 +1443,7 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     QString displayText = profileName;
 
     // Apply CDC identifier prefix if debug mode is active (like main window does)
-    if (mudlet::smDebugMode && pHost) {
+    if (TDebug::smDebugMode && pHost) {
         QString debugTag = TDebug::getTag(pHost);
 
         if (!debugTag.isEmpty()) {
@@ -3148,7 +3148,7 @@ void TDetachedWindow::refreshTabBar()
             QString displayText = profileName;
 
             // Apply CDC identifier prefix if debug mode is active
-            if (mudlet::smDebugMode) {
+            if (TDebug::smDebugMode) {
                 auto pMudlet = mudlet::self();
                 Host* pHost = pMudlet ? pMudlet->getHostManager().getHost(profileName) : nullptr;
                 if (pHost) {

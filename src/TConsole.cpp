@@ -989,7 +989,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
         hide();
         mudlet::smpDebugArea->setVisible(false);
-        mudlet::smDebugMode = false;
+        TDebug::smDebugMode = false;
         mudlet::self()->refreshTabBar();
         event->ignore();
         return;

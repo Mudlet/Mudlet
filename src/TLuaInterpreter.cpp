@@ -3420,7 +3420,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
             e = "Lua error:";
             e += lua_tostring(L, -1);
         }
-        if (mudlet::smDebugMode) {
+        if (TDebug::smDebugMode) {
             qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
         }
         const QString _n = "error in Lua code";
@@ -3468,7 +3468,7 @@ QString TLuaInterpreter::formatLuaCode(const QString& code)
             e = "Lua error:";
             e += lua_tostring(L, 1);
         }
-        if (mudlet::smDebugMode) {
+        if (TDebug::smDebugMode) {
             qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
         }
         const QString objectName = "error in Lua code";
@@ -4345,7 +4345,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
     if (lua_isfunction(L, -1)) {
         lua_pushnil(L);
         lua_setglobal(L, name.toUtf8().constData());
-    } else if (mudlet::smDebugMode) {
+    } else if (TDebug::smDebugMode) {
         qWarning() << "LUA: ERROR deleting " << name << ", it is not a function as expected";
     }
     lua_settop(L, callerStackTop);

@@ -65,7 +65,7 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
 
 /* static */ bool TDebug::wants(const Category category)
 {
-    return mudlet::smDebugMode && smEnabledCategories.testFlag(category);
+    return smDebugMode && smEnabledCategories.testFlag(category);
 }
 
 /* static */ void TDebug::setEnabledCategories(const Categories categories)
@@ -470,7 +470,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     localMessage << qsl("Profile '%1' started.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black, Category::System);
     tableMessage << TDebug::displayNewTable() >> nullptr;
-    if (mudlet::smDebugMode) {
+    if (smDebugMode) {
         // Can't use TTabBar::applyPrefixToDisplayedText(hostName, newIdentifier.second)
         // here as the profile's tab has not been added to the tabbar yet.
         // Instead arrange for all the tabs to be refreshed when we are next

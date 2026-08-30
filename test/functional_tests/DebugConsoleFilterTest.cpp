@@ -527,7 +527,7 @@ private slots:
         // A profile muted by a test that failed part way through would
         // otherwise silence whatever runs next:
         TDebug::enableAllHosts();
-        mudlet::smDebugMode = false;
+        TDebug::smDebugMode = false;
 
         delete mpServer;
         mpServer = nullptr;
@@ -544,7 +544,7 @@ private:
         auto* host = mudlet::self()->getActiveHost();
 
         mudlet::self()->attachDebugArea(host->getName());
-        mudlet::smDebugMode = true;
+        TDebug::smDebugMode = true;
         // Drain anything the profile emitted while starting up, so each test
         // only sees what it wrote itself:
         TDebug::flushMessageQueue();
