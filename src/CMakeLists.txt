@@ -463,6 +463,7 @@ set(mudlet_HDRS
     VarUnit.h
     widechar_width.h
     WideComboBox.h
+    WidgetUtils.h
     XMLexport.h
     XMLimport.h)
 

@@ -54,6 +54,7 @@
 #include "EditorMoveItemCommand.h"
 #include "EditorToggleActiveCommand.h"
 #include "mudlet.h"
+#include "WidgetUtils.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
 
@@ -1421,7 +1422,7 @@ dlgTriggerEditor::~dlgTriggerEditor()
     // of the item fields has the keyboard focus then emits editingFinished()
     // into one of the slot_saveProperty_...() slots when this object is no
     // longer a valid receiver (#9574)
-    utils::disconnectChildSignals(this);
+    WidgetUtils::disconnectChildSignals(this);
     // The undo stacks are not in this widget's child tree - the edbee one hangs
     // off a parentless CharTextDocument - so disconnect them by hand:
     if (mpTextUndoStack) {
@@ -1903,7 +1904,7 @@ void dlgTriggerEditor::readSettings()
 
     // Use smart positioning instead of blindly restoring saved position
     // This ensures the dialog opens on the same screen as the active profile
-    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    WidgetUtils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
 
@@ -9900,7 +9901,7 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
 
     // Always reposition the dialog to the correct screen when shown
     // This ensures it follows the active profile, especially after reattachment
-    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    WidgetUtils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
 }
 
 void dlgTriggerEditor::changeView(EditorViewType view)
