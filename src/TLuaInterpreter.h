@@ -799,6 +799,7 @@ public:
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
     void freeLuaRegistryIndex(int index);
+    int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
 
     // Called from Host::raiseEvent(), to unblock a waitForEvent() on that event.
