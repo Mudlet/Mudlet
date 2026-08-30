@@ -25,10 +25,17 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TLuaInterpreter.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QLatin1String>
+#include <QMutableSetIterator>
 #include <QScopeGuard>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
