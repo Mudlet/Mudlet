@@ -138,13 +138,14 @@ void TTimer::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
     }
-    for (auto timer : *mpMyChildrenList) {
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         timer->compile();
     }
 }
@@ -153,12 +154,13 @@ void TTimer::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
-    for (auto timer : *mpMyChildrenList) {
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         timer->compileAll();
     }
 }
@@ -240,7 +242,7 @@ void TTimer::execute()
 
     if (isTemporary()) {
         if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.call_luafunction(this);
+            mpHost->mLuaInterpreter.call_luafunction(this, mName);
         } else {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
@@ -253,7 +255,8 @@ void TTimer::execute()
     }
 
     if ((!isFolder() && hasChildren()) || (isOffsetTimer())) {
-        for (auto timer : *mpMyChildrenList) {
+        for (auto* timerNode : *mpMyChildrenList) {
+            auto* timer = static_cast<TTimer*>(timerNode);
             if (timer->isOffsetTimer()) {
                 timer->enableTimer(timer->getID());
             }
@@ -310,7 +313,8 @@ void TTimer::enableTimer(int id)
     }
 
     if (isFolder()) {
-        for (auto timer : *mpMyChildrenList) {
+        for (auto* timerNode : *mpMyChildrenList) {
+            auto* timer = static_cast<TTimer*>(timerNode);
             if (!timer->isOffsetTimer()) {
                 timer->enableTimer(timer->getID());
             }
@@ -325,7 +329,8 @@ void TTimer::disableTimer(int id)
         mpQTimer->stop();
     }
 
-    for (auto timer : *mpMyChildrenList) {
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         if (!timer->isOffsetTimer() && timer->shouldBeActive()) {
             timer->disableTimer(timer->getID());
         }
@@ -346,7 +351,8 @@ void TTimer::enableTimer()
         }
     }
     if (!isOffsetTimer()) {
-        for (auto timer : *mpMyChildrenList) {
+        for (auto* timerNode : *mpMyChildrenList) {
+            auto* timer = static_cast<TTimer*>(timerNode);
             if (!timer->isOffsetTimer()) {
                 timer->enableTimer();
             }
@@ -358,7 +364,8 @@ void TTimer::disableTimer()
 {
     deactivate();
     mpQTimer->stop();
-    for (auto timer : *mpMyChildrenList) {
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         timer->disableTimer();
     }
 }
@@ -378,7 +385,8 @@ void TTimer::enableTimer(const QString& name)
     }
 
     if (!isOffsetTimer()) {
-        for (auto timer : *mpMyChildrenList) {
+        for (auto* timerNode : *mpMyChildrenList) {
+            auto* timer = static_cast<TTimer*>(timerNode);
             timer->enableTimer(timer->getName());
         }
     }
@@ -391,7 +399,8 @@ void TTimer::disableTimer(const QString& name)
         mpQTimer->stop();
     }
 
-    for (auto timer : *mpMyChildrenList) {
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         timer->disableTimer(timer->getName());
     }
 }

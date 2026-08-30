@@ -412,6 +412,25 @@ public slots:
 
 
 private:
+    // Puts the per-room search state back to its defaults at the given room
+    // count, sizing it to match.
+    void resetSearchState(const std::size_t roomCount);
+
+    // A* from start to goal, leaving the route in mSearchPredecessor - see the
+    // definition for why this exists rather than boost::astar_search().
+    bool searchGraph(const vertex start, const vertex goal);
+
+    // Per-room search state, kept between searches instead of being rebuilt for
+    // each one. The first three hold one entry per room and are refilled by
+    // initGraph(); mSearchTouched is instead a list of just the rooms the last
+    // search wrote to, which is what lets the next one restore the defaults
+    // without walking the whole map. initGraph() must put all four back in step
+    // with the graph, for the reason given there.
+    std::vector<vertex> mSearchPredecessor;
+    std::vector<cost> mSearchDistance;
+    std::vector<quint8> mSearchState;
+    std::vector<vertex> mSearchTouched;
+
     // Held for the whole of a map operation that pumps the event loop, so that
     // mapOperationInProgress() can tell anything re-entered from that pump that
     // this map is on the stack. Nested operations are counted, not flagged: an

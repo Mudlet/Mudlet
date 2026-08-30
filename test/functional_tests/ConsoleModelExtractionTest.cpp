@@ -595,7 +595,7 @@ private slots:
 
     // The same XML arrives as a package import into a live profile, and there
     // the model on its own is not enough - the view has to be restyled with it,
-    // or text in the new foreground lands on the old background.
+    // or the console keeps painting the old background behind the panes.
     void test_importingColoursIntoALiveProfileRestylesTheView()
     {
         pinTheFixtureColoursAreNotTheDefaults();
@@ -613,6 +613,70 @@ private slots:
         QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
         QVERIFY2(host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground),
                  qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
+        // changeColors() leaves the buffer's copy of the colours to
+        // refreshMainConsoleColors(), so this walks that hand-off with a view
+        // present:
+        QCOMPARE(plainStamp(host->mainConsoleModel().buffer).background(), mProfileBgColor);
+    }
+
+    // The server can redefine the sixteen ANSI colours (<OSC>P) and reset them
+    // again (<OSC>R), and the buffer stamps text from its own copy of them
+    // rather than from the Host's - so both paths have to refresh that copy
+    // whether or not there is a console to refresh it.
+    void test_ansiPaletteRedefinitionReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor redefinedRed(0x12, 0x34, 0x56);
+        QVERIFY2(host->mRed != redefinedRed, "The profile's red is already the redefined one, so the assertions on it cannot fail.");
+        QCOMPARE(ansiRedStamp(model->buffer), QColor(QColorConstants::DarkRed));
+
+        // <OSC>P<colour number><RRGGBB><BEL> - the xterm palette redefinition,
+        // hex throughout, so this makes colour 1 (red) #123456
+        std::string refused = "\x1b]P1123456\x07";
+        model->buffer.translateToPlainText(refused, true);
+        QVERIFY2(host->mRed != redefinedRed, "A server redefined the palette although the profile forbids it.");
+
+        host->setMayRedefineColors(true);
+        std::string redefine = "\x1b]P1123456\x07";
+        model->buffer.translateToPlainText(redefine, true);
+        QCOMPARE(host->mRed, redefinedRed);
+        QCOMPARE(ansiRedStamp(model->buffer), redefinedRed);
+
+        std::string reset = "\x1b]R\x07";
+        model->buffer.translateToPlainText(reset, true);
+        QCOMPARE(host->mRed, QColor(QColorConstants::DarkRed));
+        QCOMPARE(ansiRedStamp(model->buffer), QColor(QColorConstants::DarkRed));
+    }
+
+    // setBackgroundColor with no window name targets the main console: it
+    // writes the profile's background itself and leaves the view to carry that
+    // into the model. This pins that the model and the buffer's copy of the
+    // colours still get it when there is no view to route it through.
+    void test_scriptedBackgroundColourReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor scriptedBackground(0x11, 0x22, 0x33);
+        QVERIFY2(host->mBgColor != scriptedBackground, "The profile already carries the scripted background, so the assertions below cannot fail.");
+
+        runLua(host, qsl("setBackgroundColor(0x11, 0x22, 0x33)"));
+
+        QCOMPARE(host->mBgColor, scriptedBackground);
+        QCOMPARE(model->mBgColor, scriptedBackground);
+        QCOMPARE(plainStamp(model->buffer).background(), scriptedBackground);
     }
 
     // A profile is loaded and saved before it has a view, so the name of the
@@ -703,6 +767,249 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         delete mudlet::self();
+    }
+
+    // Every one of these Lua functions used to reach through Host::mpConsole
+    // without checking it, so calling any of them on a profile whose window had
+    // been closed took the whole client down with it. None of them can do what
+    // it was asked here, so each has to report that instead.
+    void test_viewOnlyUiFunctionsReportWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        runLua(host, qsl(R"LUA(
+noViewProblems = {}
+
+-- nil or false plus a reason, which is what a Mudlet Lua function answers when
+-- the thing it was handed does not exist
+local function expectRefusal(name, ...)
+    local first, second = ...
+    if first ~= nil and first ~= false then
+        table.insert(noViewProblems, name .. ' returned ' .. tostring(first))
+    elseif type(second) ~= 'string' or second == '' then
+        table.insert(noViewProblems, name .. ' gave no reason')
+    end
+end
+
+-- functions that answer a plain value rather than reporting a failure
+local function expectValue(name, expected, ...)
+    local first = ...
+    if first ~= expected then
+        table.insert(noViewProblems, name .. ' returned ' .. tostring(first) .. ' rather than ' .. tostring(expected))
+    end
+end
+
+-- an invalid selection has always returned no values at all
+local function expectNothing(name, ...)
+    if select('#', ...) ~= 0 then
+        table.insert(noViewProblems, name .. ' returned ' .. tostring((...)))
+    end
+end
+
+expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
+expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
+expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
+expectRefusal('deleteMiniConsole', deleteMiniConsole('noViewMc'))
+expectRefusal('deleteScrollBox', deleteScrollBox('noViewSb'))
+expectRefusal('createTextEdit', createTextEdit('noViewTe', 0, 0, 100, 20))
+expectRefusal('deleteTextEdit', deleteTextEdit('noViewTe'))
+expectRefusal('getTextEditText', getTextEditText('noViewTe'))
+expectRefusal('setTextEditText', setTextEditText('noViewTe', 'x'))
+expectRefusal('clearTextEdit', clearTextEdit('noViewTe'))
+expectRefusal('setTextEditReadOnly', setTextEditReadOnly('noViewTe', true))
+expectRefusal('setTextEditPlaceholder', setTextEditPlaceholder('noViewTe', 'p'))
+expectRefusal('setTextEditStyleSheet', setTextEditStyleSheet('noViewTe', ''))
+expectRefusal('setTextEditFont', setTextEditFont('noViewTe', 'Courier'))
+expectRefusal('setTextEditFontSize', setTextEditFontSize('noViewTe', 10))
+expectRefusal('setTextEditTabMovesFocus', setTextEditTabMovesFocus('noViewTe', true))
+expectRefusal('getBorderColor', getBorderColor())
+expectRefusal('setBorderColor', setBorderColor(1, 2, 3))
+expectRefusal('getLabelSizeHint', getLabelSizeHint('noViewLbl'))
+expectRefusal('getLabelStyleSheet', getLabelStyleSheet('noViewLbl'))
+expectRefusal('setLabelStyleSheet', setLabelStyleSheet('noViewLbl', ''))
+expectRefusal('getLabelToolTip', getLabelToolTip('noViewLbl'))
+expectRefusal('setLabelToolTip', setLabelToolTip('noViewLbl', 't'))
+expectRefusal('setLabelCursor', setLabelCursor('noViewLbl', 0))
+expectRefusal('setLabelCustomCursor', setLabelCustomCursor('noViewLbl', '/nowhere.png'))
+expectRefusal('getLabelText', getLabelText('noViewLbl'))
+expectRefusal('clearCmdLine', clearCmdLine())
+expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
+expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
+expectRefusal('getMousePosition', getMousePosition())
+expectRefusal('getMainWindowSize', getMainWindowSize())
+expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
+expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
+expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
+expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
+expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
+expectRefusal('setTextFormat', setTextFormat('main', 0, 0, 0, 255, 255, 255, false, false, false))
+expectRefusal('isAnsiBgColor', isAnsiBgColor(1))
+expectRefusal('isAnsiFgColor', isAnsiFgColor(1))
+
+expectValue('hasFocus', false, hasFocus())
+expectValue('lowerWindow', false, lowerWindow('noViewUw'))
+expectValue('raiseWindow', false, raiseWindow('noViewUw'))
+
+expectNothing('getBgColor', getBgColor())
+expectNothing('getFgColor', getFgColor())
+
+noViewReport = table.concat(noViewProblems, '; ')
+)LUA"));
+
+        QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+    }
+
+    // The Hunspell handles and the profile's word set are the view's, not the
+    // model's, so every spelling function reached through Host::mpConsole for
+    // them and took the client down with it once the window had been closed.
+    void test_spellingFunctionsReportWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        // Five of the seven calls answer "no user dictionary enabled" before they ever
+        // reach the view, so without one they would report a refusal here
+        // whether the guard existed or not.
+        bool hasUserDictionary = false;
+        bool hasSharedDictionary = false;
+        host->getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
+        QVERIFY2(hasUserDictionary, "The profile has no user dictionary, so the dictionary functions never reach the view.");
+        destroyTheView(host);
+
+        runLua(host, qsl(R"LUA(
+noViewSpellProblems = {}
+
+-- nil plus a reason naming the missing window, which is what these answer when
+-- the view holding the dictionaries has gone
+local function expectRefusal(name, ...)
+    local first, second = ...
+    if first ~= nil then
+        table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first))
+    elseif type(second) ~= 'string' or not second:find('main window', 1, true) then
+        table.insert(noViewSpellProblems, name .. ' gave the reason ' .. tostring(second))
+    end
+end
+
+expectRefusal('addWordToDictionary', addWordToDictionary('noviewword'))
+expectRefusal('removeWordFromDictionary', removeWordFromDictionary('noviewword'))
+expectRefusal('getDictionaryWordList', getDictionaryWordList())
+expectRefusal('spellCheckWord', spellCheckWord('noviewword'))
+expectRefusal('spellCheckWord user', spellCheckWord('noviewword', true))
+expectRefusal('spellSuggestWord', spellSuggestWord('noviewword'))
+expectRefusal('spellSuggestWord user', spellSuggestWord('noviewword', true))
+
+noViewSpellReport = table.concat(noViewSpellProblems, '; ')
+)LUA"));
+
+        QCOMPARE(luaGlobalString(host, "noViewSpellReport"), QString());
+    }
+
+    // selectCaptureGroup() only reaches the view from inside a trigger that
+    // captured something, and a selection needs a widget to live in - so with no
+    // window it has to answer the -1 it already answers for a group that is not
+    // there.
+    void test_selectCaptureGroupAnswersMinusOneWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        runLua(host,
+               qsl("captureGroupResult = 'the trigger did not run'\n"
+                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(1))]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+
+        host->runTriggers(appendModelLine(model->buffer, qsl("NoViewCapture alpha")));
+
+        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("-1"));
+    }
+
+    // The main console's background is the model's, so a script can still read
+    // back what it set with no window in between.
+    void test_backgroundColourRoundTripsThroughTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor scriptedBackground(0x44, 0x55, 0x66);
+        QVERIFY2(host->mBgColor != scriptedBackground, "The profile already carries the scripted background, so the assertions below cannot fail.");
+        runLua(host,
+               qsl("setBackgroundColor(0x44, 0x55, 0x66)\n"
+                   "readBackR, readBackG, readBackB, readBackA = getBackgroundColor()\n"));
+
+        QCOMPARE(model->mBgColor, scriptedBackground);
+        QCOMPARE(luaGlobalNumber(host, "readBackR"), 0x44);
+        QCOMPARE(luaGlobalNumber(host, "readBackG"), 0x55);
+        QCOMPARE(luaGlobalNumber(host, "readBackB"), 0x66);
+        QCOMPARE(luaGlobalNumber(host, "readBackA"), 255);
+    }
+
+    // The command line's colours live on Host, and the widget only caches them -
+    // TConsole re-reads both when one is built. So with no window the write still
+    // has somewhere to land and still reports success.
+    void test_commandLineColoursReachTheProfileWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        const QColor scriptedBackground(0x12, 0x34, 0x56, 255);
+        const QColor scriptedForeground(0x65, 0x43, 0x21, 255);
+        QVERIFY2(host->mCommandBgColor != scriptedBackground, "The profile already carries the scripted command line background.");
+        QVERIFY2(host->mCommandFgColor != scriptedForeground, "The profile already carries the scripted command line foreground.");
+
+        runLua(host,
+               qsl("commandColoursSet = tostring(setCommandBackgroundColor(0x12, 0x34, 0x56))\n"
+                   "  .. ',' .. tostring(setCommandForegroundColor(0x65, 0x43, 0x21))\n"));
+
+        QCOMPARE(luaGlobalString(host, "commandColoursSet"), qsl("true,true"));
+        QCOMPARE(host->mCommandBgColor, scriptedBackground);
+        QCOMPARE(host->mCommandFgColor, scriptedForeground);
+    }
+
+    // wrapLine() rewrites the buffer, which is the model's, and the wrap width it
+    // has to use is the one the buffer carries - not the profile's, which the view
+    // only copies in when it restyles.
+    void test_wrapLineRewrapsTheModelBufferWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QString longLine = qsl("alpha bravo charlie delta echo foxtrot golf hotel");
+        const int wrappedLine = appendModelLine(model->buffer, longLine);
+        QCOMPARE(model->buffer.line(wrappedLine), longLine);
+        const int linesBefore = model->buffer.getLastLineNumber();
+
+        // narrower than the profile's own width, so reading the wrap settings
+        // from anywhere but the buffer leaves the line alone
+        model->buffer.setWrapAt(20);
+        model->buffer.setWrapIndent(0);
+        model->buffer.setWrapHangingIndent(0);
+        QVERIFY2(host->mWrapAt > longLine.size(), "The profile wraps narrower than the test line, so this cannot tell the two widths apart.");
+
+        runLua(host, qsl("wrapLine('main', %1)").arg(wrappedLine));
+
+        QVERIFY2(model->buffer.getLastLineNumber() > linesBefore, "wrapLine() did not rewrap the model's buffer.");
+        QVERIFY2(model->buffer.line(wrappedLine).size() <= 20, qPrintable(qsl("The rewrapped line is wider than the buffer's wrap width: '%1'").arg(model->buffer.line(wrappedLine))));
+        QVERIFY2(joinedBuffer(model->buffer).contains(longLine), "Rewrapping the model's buffer lost the line's text.");
     }
 
 private:
@@ -796,6 +1103,38 @@ private:
         const QString line = text + QChar::LineFeed;
         buffer.append(line, 0, line.size(), fgColor, bgColor, TChar::None, 0);
         return buffer.getLastLineNumber() - 1;
+    }
+
+    // Utility function feeding one unstyled line and handing back the character
+    // it was stamped with, which carries the buffer's own copy of the profile's
+    // colours - as long as no earlier feed left SGR state latched in this
+    // buffer. A blank TChar back means the line never landed; it is spelled out
+    // because TChar's no-argument constructor is explicit, which rules out
+    // `return {}`, and it is white on black - so a caller expecting either of
+    // those cannot tell a miss from a pass.
+    TChar plainStamp(TBuffer& buffer)
+    {
+        std::string plainText = "Model stamp\n";
+        buffer.translateToPlainText(plainText, true);
+        const int line = buffer.getLastLineNumber() - 1;
+        if (line < 0 || buffer.buffer.at(line).empty()) {
+            return TChar();
+        }
+        return buffer.buffer.at(line).at(0);
+    }
+
+    // Utility function feeding one SGR-red line and handing back the colour it
+    // was stamped with, which is the buffer's copy of red rather than the
+    // Host's. An invalid colour back means the line never landed.
+    QColor ansiRedStamp(TBuffer& buffer)
+    {
+        std::string redText = "\x1b[31mPalette red\n";
+        buffer.translateToPlainText(redText, true);
+        const int line = buffer.getLastLineNumber() - 1;
+        if (line < 0 || buffer.buffer.at(line).empty()) {
+            return {};
+        }
+        return buffer.buffer.at(line).at(0).foreground();
     }
 
     // Utility function: a model that was never given the profile's colours holds

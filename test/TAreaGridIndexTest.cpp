@@ -35,8 +35,8 @@
  * - rebuild (per-Z): populates, overwrites prior Z level, does not affect other Z levels
  * - rebuild (full): populates all Z levels, overwrites previous state, empty map -> isEmpty
  * - roomsAt: existing cell, non-existent cell (no crash), stable empty reference
- * - roomsInViewport: all in, some out, empty Z, multiple rooms per cell, inclusive edges
- * - roomsInViewportWithCollisions: solo rooms, colliding rooms, out-of-viewport exclusion, empty Z
+ * - roomsInViewport: all in, some out, empty Z, multiple rooms per cell, inclusive edges, narrow range over a wide index
+ * - roomsInViewportWithCollisions: solo rooms, colliding rooms, out-of-viewport exclusion, empty Z, narrow range over a wide index
  * - isEmpty / clear / size
  * - Integration: add + full rebuild + remove + move
  */
@@ -62,7 +62,7 @@ private slots:
         TAreaGridIndex idx;
         idx.addRoom(1, 0, 2, 2);
         idx.addRoom(2, 0, 2, 2);
-        const QSet<int>& cell = idx.roomsAt(0, 2, 2);
+        const TAreaGridIndex::RoomIds& cell = idx.roomsAt(0, 2, 2);
         QVERIFY(cell.contains(1));
         QVERIFY(cell.contains(2));
         QCOMPARE(cell.size(), 2);
@@ -265,8 +265,10 @@ private slots:
         TAreaGridIndex idx;
         idx.addRoom(7, 2, 10, 20);
         idx.addRoom(8, 2, 10, 20);
-        const QSet<int> expected = {7, 8};
-        QCOMPARE(idx.roomsAt(2, 10, 20), expected);
+        const TAreaGridIndex::RoomIds& cell = idx.roomsAt(2, 10, 20);
+        QCOMPARE(cell.size(), 2);
+        QVERIFY(cell.contains(7));
+        QVERIFY(cell.contains(8));
     }
 
     void roomsAt_nonExistentCell_returnsEmptySet()
@@ -281,9 +283,9 @@ private slots:
     {
         TAreaGridIndex idx;
         // Two calls to a non-existent cell must return references to the same
-        // static empty set (no dangling references).
-        const QSet<int>& ref1 = idx.roomsAt(77, 1, 2);
-        const QSet<int>& ref2 = idx.roomsAt(77, 1, 2);
+        // static empty cell (no dangling references).
+        const TAreaGridIndex::RoomIds& ref1 = idx.roomsAt(77, 1, 2);
+        const TAreaGridIndex::RoomIds& ref2 = idx.roomsAt(77, 1, 2);
         QVERIFY(&ref1 == &ref2);
         QVERIFY(ref1.isEmpty());
     }
@@ -364,6 +366,26 @@ private slots:
         QCOMPARE(visited.size(), 4);
     }
 
+    // A query narrower than the index has columns takes the other of the two
+    // ways through the range, probing the wanted columns rather than walking
+    // every key, so it needs its own case.
+    void roomsInViewport_narrowRangeOverWideIndex_onlyWantedCellsReturned()
+    {
+        TAreaGridIndex idx;
+        for (int x = 0; x < 50; ++x) {
+            if (x == 11) {
+                continue; // a gap, so an empty column is asked for as well
+            }
+            idx.addRoom(x + 1, 0, x, 0);
+        }
+        idx.addRoom(1000, 0, 10, 7); // a wanted column, but outside the Y range
+
+        const QList<int> result = idx.roomsInViewport(0, 10, 12, 0, 0);
+        const QSet<int> visited(result.constBegin(), result.constEnd());
+
+        QCOMPARE(visited, QSet<int>({11, 13}));
+    }
+
     // -------------------------------------------------------------------------
     // roomsInViewportWithCollisions
     // -------------------------------------------------------------------------
@@ -435,6 +457,30 @@ private slots:
 
         const auto result = idx.roomsInViewportWithCollisions(99, 0, 10, 0, 10);
         QVERIFY(result.isEmpty());
+    }
+
+    void roomsInViewportWithCollisions_narrowRangeOverWideIndex_onlyWantedCellsReturned()
+    {
+        TAreaGridIndex idx;
+        for (int x = 0; x < 50; ++x) {
+            if (x == 11) {
+                continue; // a gap, so an empty column is asked for as well
+            }
+            idx.addRoom(x + 1, 0, x, 0);
+        }
+        idx.addRoom(2000, 0, 12, 0); // shares a cell with room 13
+        idx.addRoom(1000, 0, 10, 7); // a wanted column, but outside the Y range
+
+        const auto result = idx.roomsInViewportWithCollisions(0, 10, 12, 0, 0);
+        QMap<int, bool> idToCollision;
+        for (const auto& [id, collision] : result) {
+            idToCollision[id] = collision;
+        }
+
+        QCOMPARE(idToCollision.keys(), QList<int>({11, 13, 2000}));
+        QVERIFY(!idToCollision[11]);
+        QVERIFY(idToCollision[13]);
+        QVERIFY(idToCollision[2000]);
     }
 
     // -------------------------------------------------------------------------

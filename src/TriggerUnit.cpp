@@ -54,7 +54,8 @@ TriggerUnit::~TriggerUnit()
         trigger->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
-            for (auto child : *t->mpMyChildrenList) {
+            for (auto* childNode : *t->mpMyChildrenList) {
+                auto* child = static_cast<TTrigger*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -77,8 +78,9 @@ void TriggerUnit::resetStats()
 
 void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
 {
-    std::list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
-    for (auto trigger : *childrenList) {
+    std::list<Tree<TTrigger>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* triggerNode : *childrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         _uninstall(trigger, packageName);
         uninstallList.append(trigger);
     }
@@ -604,8 +606,9 @@ bool TriggerUnit::killTrigger(const QString& name)
 
 void TriggerUnit::assembleReport(TTrigger* pItem)
 {
-    std::list<TTrigger*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TTrigger>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TTrigger*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;

@@ -3777,8 +3777,9 @@ void dlgProfilePreferences::populateScriptsList()
 // adds trigger name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
-    for (auto trigger : *childTriggers) {
+    std::list<Tree<TTrigger>*>* childTriggers = pTriggerParent->getChildrenList();
+    for (auto* triggerNode : *childTriggers) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         if (!trigger->getScript().isEmpty()) {
             items.push_back({trigger->getName(), qsl("trigger"), trigger->getID()});
         }
@@ -3792,8 +3793,9 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
 // adds alias name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
-    for (auto alias : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pAliasParent->getChildrenList();
+    for (auto* aliasNode : *childrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         if (!alias->getScript().isEmpty()) {
             items.push_back({alias->getName(), qsl("alias"), alias->getID()});
         }
@@ -3807,8 +3809,9 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
 // adds timer name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
-    for (auto timer : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pTimerParent->getChildrenList();
+    for (auto* timerNode : *childrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         if (!timer->getScript().isEmpty()) {
             items.push_back({timer->getName(), qsl("timer"), timer->getID()});
         }
@@ -3822,8 +3825,9 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
 // adds key name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pKeyParent->getChildrenList();
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         if (!key->getScript().isEmpty()) {
             items.push_back({key->getName(), qsl("key"), key->getID()});
         }
@@ -3837,8 +3841,9 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
 // adds script name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
-    for (auto script : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pScriptParent->getChildrenList();
+    for (auto* scriptNode : *childrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         if (!script->getScript().isEmpty()) {
             items.push_back({script->getName(), qsl("script"), script->getID()});
         }
@@ -3852,8 +3857,9 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
 // adds action name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    std::list<TAction*>* childrenList = pActionParent->getChildrenList();
-    for (auto action : *childrenList) {
+    std::list<Tree<TAction>*>* childrenList = pActionParent->getChildrenList();
+    for (auto* actionNode : *childrenList) {
+        auto* action = static_cast<TAction*>(actionNode);
         if (!action->getScript().isEmpty()) {
             items.push_back({action->getName(), qsl("button"), action->getID()});
         }
@@ -5212,7 +5218,7 @@ void dlgProfilePreferences::slot_changeInvertMapZoom(const bool state)
     mudlet::self()->setInvertMapZoom(state);
 }
 
-bool dlgProfilePreferences::updateDisplayFont()
+bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
     if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
         return false;
@@ -5253,7 +5259,7 @@ bool dlgProfilePreferences::updateDisplayFont()
 
     // update the display properly when font or size or antiAliasing selections
     // change.
-    mpHost->setDisplayFont(displayFont);
+    mpHost->setDisplayFont(displayFont, change);
 
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
@@ -5281,21 +5287,23 @@ void dlgProfilePreferences::cancelShortcutCaptures()
 
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    if (!mpHost.isNull() && updateDisplayFont()) {
+    // Only fires from QFontComboBox::currentFontChanged, so the family really is
+    // one the user just picked out of the list
+    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
 }
 
 void dlgProfilePreferences::slot_displayFontSizeChanged()
 {
-    if (!mpHost.isNull() && updateDisplayFont()) {
+    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::Adjustment)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
     }
 }
 
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
-    updateDisplayFont();
+    updateDisplayFont(Host::DisplayFontChange::Adjustment);
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
