@@ -44,6 +44,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "constants.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -114,7 +115,7 @@ private:
         }
         QDataStream out(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            out.setVersion(constants::qDataStreamFormat_5_12);
         }
         return map()->serialize(out, saveVersion) && file.commit();
     }
@@ -271,7 +272,7 @@ private slots:
         QVERIFY(file.open(QIODevice::WriteOnly));
         QDataStream out(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            out.setVersion(constants::qDataStreamFormat_5_12);
         }
         const int impossibleVersion = map()->mVersion + 1;
         out << impossibleVersion;

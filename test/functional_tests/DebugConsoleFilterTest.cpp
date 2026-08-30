@@ -27,6 +27,7 @@
 #include "TDebug.h"
 #include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
+#include "constants.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -302,7 +303,7 @@ private slots:
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
         TDebug::setPaused(true);
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "timed message\n" >> host;
-        const QString arrivalTime = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        const QString arrivalTime = QTime::currentTime().toString(constants::timeStampFormat);
 
         QTest::qWait(1200);
         TDebug::setPaused(false);

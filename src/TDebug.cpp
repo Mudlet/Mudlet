@@ -27,6 +27,7 @@
 #include "TConsole.h"
 #include "TDebugFilterBar.h"
 #include "TTabBar.h"
+#include "constants.h"
 #include "mudlet.h"
 
 #include <chrono>
@@ -291,7 +292,7 @@ bool TDebug::passesFilters(const Host* pHost)
             smPausedQueue.dequeue();
             ++smPausedDroppedCount;
         }
-        smPausedQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(mudlet::smTimeStampFormat)));
+        smPausedQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(constants::timeStampFormat)));
         return;
     }
 

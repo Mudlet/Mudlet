@@ -48,6 +48,7 @@
 #include "TTabBar.h"
 #include "TUiTour.h"
 #include "XMLimport.h"
+#include "constants.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
@@ -2180,11 +2181,11 @@ void mudlet::loadMaps()
  in a console and might require translation for a few locales; the content
  is as per QDateTime::toString(...) and needs to follow the rules for that
  function as well as being suitable for the translation locale.*/
-    smTimeStampFormat = tr("hh:mm:ss.zzz ");
+    constants::timeStampFormat = tr("hh:mm:ss.zzz ");
     /*: This represents the format of the timestamps shown for lines that do not
  have a timestamp in a console that is showing them. If localised this
- should be set to the same format and length as the smTimeStampFormat:*/
-    smBlankTimeStamp = tr("------------ ");
+ should be set to the same format and length as the timeStampFormat:*/
+    constants::blankTimeStamp = tr("------------ ");
 }
 
 // migrates the Central Debug Console to the next available host, if any
@@ -3674,7 +3675,7 @@ bool mudlet::saveWindowLayout()
         const QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
         if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(scmQDataStreamFormat_5_12);
+            ofs.setVersion(constants::qDataStreamFormat_5_12);
         }
         ofs << layoutData;
         if (!layoutFile.commit()) {
@@ -3710,7 +3711,7 @@ bool mudlet::loadWindowLayout()
             QByteArray layoutData;
             QDataStream ifs(&layoutFile);
             if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                ifs.setVersion(scmQDataStreamFormat_5_12);
+                ifs.setVersion(constants::qDataStreamFormat_5_12);
             }
             ifs >> layoutData;
             layoutFile.close();
@@ -3750,7 +3751,7 @@ bool mudlet::saveFloatingDockGeometries()
 
     QDataStream ofs(&geoFile);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(scmQDataStreamFormat_5_12);
+        ofs.setVersion(constants::qDataStreamFormat_5_12);
     }
 
     QMap<QString, QByteArray> geometries;
@@ -3787,7 +3788,7 @@ void mudlet::restoreFloatingDockGeometries()
 
     QDataStream ifs(&geoFile);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
+        ifs.setVersion(constants::qDataStreamFormat_5_12);
     }
 
     QMap<QString, QByteArray> geometries;
@@ -5579,7 +5580,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
     QDataStream ifs(&file);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
+        ifs.setVersion(constants::qDataStreamFormat_5_12);
     }
     QString ret;
 

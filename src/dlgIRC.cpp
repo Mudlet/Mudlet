@@ -25,6 +25,7 @@
 
 #include "dlgIRC.h"
 #include "Host.h"
+#include "constants.h"
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
@@ -782,7 +783,7 @@ QString dlgIRC::readAppDefaultIrcNick()
     if (opened) {
         QDataStream ifs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            ifs.setVersion(constants::qDataStreamFormat_5_12);
         }
         ifs >> rstr;
         file.close();
@@ -797,7 +798,7 @@ void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
     if (opened) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            ofs.setVersion(constants::qDataStreamFormat_5_12);
         }
         ofs << nick;
         if (!file.commit()) {
