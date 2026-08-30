@@ -34,6 +34,7 @@
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
+#include "TScrollBox.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
