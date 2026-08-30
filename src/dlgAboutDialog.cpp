@@ -1468,8 +1468,8 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                        APACHE2_Body));                         // 49 - OpenSSL3 body APACHE2 - not translatable
 #endif
 
-    license_3rdParty_texts.append(qsl("<hr>%48")
-                                  .arg(speechBackendsHeader));                 // 48 - speech recognition backends - translatable
+    license_3rdParty_texts.append(qsl("<hr>%50")
+                                  .arg(speechBackendsHeader));                 // 50 - speech recognition backends - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

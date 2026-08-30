@@ -6,7 +6,7 @@
 # socket in the state feedTelnet() needs.
 #
 # Usage: .claude/scripts/run-lua-tests.sh [path-to-mudlet-binary]
-# Defaults to the linux-debug-nosan build. A binary built in another worktree
+# Defaults to the linux-debug build. A binary built in another worktree
 # works too: src/mudlet-lua is read from disk at startup, so a change confined
 # to it needs no build of its own. Only the Lua is this worktree's - the C++,
 # and everything compiled into the binary's Qt resources (src/packages/*, and

@@ -664,7 +664,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_CSI_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI SGR sequences:
-#   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI OSC sequences:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_OSC_PROCESSING)
