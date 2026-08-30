@@ -992,18 +992,30 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     {
         // QJsonObject keeps its keys sorted, so every insert moves everything after it:
         // uncapped, this table took 4675ms to render, all of it on Mudlet's only thread.
-        const WalkTiming timing = timeWalk(qsl("local t = {} for i = 1, 400000 do t['key'..i] = i end "));
+        // Both of these are past the key cap, so the walk breaks off after the same 20000
+        // keys either way and the wider one costs no more. That comparison is what makes
+        // the case, not a millisecond budget: a sanitised CI runner spends longer on a
+        // capped walk than this machine does on an uncapped one, so no one number is both
+        // loose enough to pass there and tight enough to fail here.
+        const WalkTiming capped = timeWalk(qsl("local t = {} for i = 1, 40000 do t['key'..i] = i end "));
+        const WalkTiming tenTimesWider = timeWalk(qsl("local t = {} for i = 1, 400000 do t['key'..i] = i end "));
 
-        QVERIFY(timing.ok);
-        QVERIFY2(timing.addedMs < 2000, qPrintable(qsl("the walk added %1ms").arg(timing.addedMs)));
+        QVERIFY(capped.ok);
+        QVERIFY(tenTimesWider.ok);
+        QVERIFY2(tenTimesWider.addedMs < 3 * capped.addedMs + 100, qPrintable(qsl("ten times the keys took %1ms to walk against %2ms").arg(tenTimesWider.addedMs).arg(capped.addedMs)));
     }
 
     void testALongArrayIsCutShortQuicklyAndIsStillAnArray()
     {
-        const WalkTiming timing = timeWalk(qsl("local t = {} for i = 1, 2000000 do t[i] = i end "));
+        // Both are past the node cap, so the walk stops after the same 200000 entries and
+        // the longer one costs no more - see the wide-table case above for why the two are
+        // weighed against each other rather than against a millisecond budget.
+        const WalkTiming capped = timeWalk(qsl("local t = {} for i = 1, 400000 do t[i] = i end "));
+        const WalkTiming fiveTimesLonger = timeWalk(qsl("local t = {} for i = 1, 2000000 do t[i] = i end "));
 
-        QVERIFY(timing.ok);
-        QVERIFY2(timing.addedMs < 2000, qPrintable(qsl("the walk added %1ms").arg(timing.addedMs)));
+        QVERIFY(capped.ok);
+        QVERIFY(fiveTimesLonger.ok);
+        QVERIFY2(fiveTimesLonger.addedMs < 3 * capped.addedMs + 100, qPrintable(qsl("five times the entries took %1ms to walk against %2ms").arg(fiveTimesLonger.addedMs).arg(capped.addedMs)));
 
         // A table too big to walk through in full is still a list. Giving up on that and
         // rendering it as {"1":1, "10":10, "100":100} both reads wrong to a model and,
