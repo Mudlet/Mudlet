@@ -636,6 +636,27 @@ jobs:
         echo "MUDLET_TEST_DISCORD_LIB_PATH=${{github.workspace}}/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
         echo "fake Discord IPC server ready in ${runtime_dir}"
 
+    - name: (Linux/macOS) Start telnet fixture for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        telnet_dir="${{runner.temp}}/mudlet-telnet-fixture"
+        rm -rf "${telnet_dir}"
+        mkdir -p "${telnet_dir}"
+        MUDLET_TEST_TELNET_DIR="${telnet_dir}" nohup python3 "${{github.workspace}}/CI/telnet-fixture-server.py" > "${{runner.temp}}/telnet-fixture.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${telnet_dir}/port" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${telnet_dir}/port" ]; then
+          echo "telnet fixture failed to start" >&2
+          cat "${{runner.temp}}/telnet-fixture.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_TELNET_DIR=${telnet_dir}" >> "${GITHUB_ENV}"
+        echo "MUDLET_TEST_REQUIRE_TELNET_FIXTURE=1" >> "${GITHUB_ENV}"
+        echo "telnet fixture ready on port $(cat "${telnet_dir}/port")"
+
     - name: (Linux/macOS) Start MMCP peer fixture for Lua tests
       if: matrix.run_tests == 'true'
       shell: bash

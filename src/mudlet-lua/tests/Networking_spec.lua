@@ -2045,3 +2045,130 @@ describe("getNetworkLatency", function()
     assert.equals(0, latency)
   end)
 end)
+
+-- The connected-but-unnegotiated state, which nothing else in the suite can
+-- reach: it runs with --offline, so every other send guard is only ever checked
+-- in its disconnected form. CI/telnet-fixture-server.py accepts the connection
+-- and then stays silent, so no telnet option is ever negotiated and MSDP stays
+-- disabled for as long as the connection lives.
+describe("sendMSDP against a game server that has not negotiated MSDP", function()
+  local telnetDir = os.getenv("MUDLET_TEST_TELNET_DIR")
+  local fixtureRequired = os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE")
+
+  -- IAC SB MSDP MSDP_VAR "REPORT" MSDP_VAL "HEALTH" IAC SE, which is what
+  -- sendMSDP("REPORT", "HEALTH") is defined to put on the wire.
+  local SUBNEGOTIATION = "fffa45015245504f5254024845414c5448fff0"
+
+  local function readFile(path)
+    local handle = io.open(path, "r")
+    if not handle then
+      return nil
+    end
+    local contents = handle:read("*a")
+    handle:close()
+    return contents
+  end
+
+  -- The fixture writes its port only once it is accepting, so a readable port
+  -- file means it is up.
+  local function serverPort()
+    if not telnetDir then
+      return nil
+    end
+    local raw = readFile(telnetDir .. "/port")
+    return raw and tonumber(raw:match("%d+"))
+  end
+
+  local function serverUnavailable()
+    local reason
+    if not serverPort() then
+      reason = "telnet fixture not running (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+    elseif type(yajl) ~= "table" then
+      reason = "the yajl Lua module is unavailable, so the fixture's capture file cannot be read"
+    else
+      return false
+    end
+    if fixtureRequired then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but " .. reason .. " (MUDLET_TEST_TELNET_DIR=" .. tostring(telnetDir) .. ")")
+    end
+    pending(reason)
+    return true
+  end
+
+  local function wireHex()
+    local raw = readFile(telnetDir .. "/capture.json")
+    if not raw or raw == "" then
+      return nil
+    end
+    local ok, decoded = pcall(yajl.to_value, raw)
+    if not ok or type(decoded) ~= "table" then
+      return nil
+    end
+    return decoded.received
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    local step = 20
+    for _ = 1, math.ceil((timeoutMs or 5000) / step) do
+      if predicate() then
+        return true
+      end
+      pumpEvents(step)
+    end
+    return predicate()
+  end
+
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  local function sawSubnegotiation()
+    local hex = wireHex()
+    return hex ~= nil and hex:find(SUBNEGOTIATION, 1, true) ~= nil
+  end
+
+  before_each(function()
+    disconnect()
+  end)
+
+  -- Leaving the socket open would hand the next spec file a connected profile,
+  -- which several of them assume they do not have.
+  after_each(function()
+    disconnect()
+    waitUntil(function() return not connected() end, 2000)
+  end)
+
+  it("puts the subnegotiation on the wire while MSDP is still unnegotiated", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local ok, err = sendMSDP("REPORT", "HEALTH")
+    assert.is_true(ok, "sendMSDP refused a connected socket: " .. tostring(err))
+    assert.is_true(waitUntil(sawSubnegotiation, 2000),
+                   "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+  end)
+
+  it("is usable from a sysConnectionEvent handler, which runs before negotiation", function()
+    if serverUnavailable() then return end
+
+    -- What a package's connect handler does: subscribe to the variables it
+    -- wants as soon as the connection comes up. sysConnectionEvent is raised on
+    -- TCP connect, before the server has had any chance to offer MSDP, so a
+    -- guard that demanded a negotiated protocol here rejected every one of
+    -- those subscriptions - silently, since nothing reads sendMSDP's return.
+    local ran, result, failure = false, nil, nil
+    local handler = registerAnonymousEventHandler("sysConnectionEvent", function()
+      result, failure = sendMSDP("REPORT", "HEALTH")
+      ran = true
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(function() return ran end, 5000), "the sysConnectionEvent handler never ran")
+    assert.is_true(result, "sendMSDP refused inside sysConnectionEvent: " .. tostring(failure))
+    assert.is_true(waitUntil(sawSubnegotiation, 2000),
+                   "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+  end)
+end)

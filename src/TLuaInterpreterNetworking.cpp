@@ -488,14 +488,12 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
-    // Check connection status first (most common issue)
     if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
         return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending MSDP"));
     }
 
-    if (!host.mTelnet.isMSDPEnabled()) {
-        return warnArgumentValue(L, __func__, qsl("MSDP is not currently enabled"));
-    }
+    // Deliberately no isMSDPEnabled() check: sysConnectionEvent fires before telnet
+    // negotiation, so requiring it here silently drops packages' variable subscriptions.
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
