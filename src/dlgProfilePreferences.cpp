@@ -165,6 +165,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(checkBox_enableMCPServer, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
     connect(spinBox_mcpServerPort, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
     connect(pushButton_connectClaudeDesktop, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectClaudeDesktop);
+    connect(pushButton_connectChatGpt, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectChatGpt);
     connect(pushButton_copyMCPServerAddress, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_copyMCPServerAddress);
     slot_updateMCPServerEndpoint();
 #else
@@ -1382,7 +1383,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -4837,13 +4838,13 @@ void dlgProfilePreferences::slot_connectClaudeDesktop()
         QString message = tr("Done - restart Claude Desktop and Mudlet will appear among its connectors.");
         if (!checkBox_enableMCPServer->isChecked() || mudlet::self()->mcpEndpoint().isEmpty()) {
             message.append(QChar::Space);
-            //: Appended to the Claude Desktop success message when the server checkbox above it is not on yet.
+            //: Appended to either connect button's success message when the server checkbox above it is not on yet.
             message.append(tr("Also tick the checkbox above and press Save, or it will find nobody to talk to."));
         }
         label_mcpConnectResult->setText(message);
         break;
     }
-    case TMCPBridge::ConnectOutcome::NoClaudeDesktop: {
+    case TMCPBridge::ConnectOutcome::NoClientApp: {
         const QString dir = TMCPBridge::claudeDesktopConfigDir();
         if (dir.isEmpty()) {
             //: Shown beneath the AI assistant settings when the location Claude Desktop keeps its settings in could not be worked out at all. Claude Desktop is a product name, leave it as-is.
@@ -4859,13 +4860,48 @@ void dlgProfilePreferences::slot_connectClaudeDesktop()
         label_mcpConnectResult->setText(tr("Could not work out where this Mudlet is installed, so Claude Desktop was not told how to launch it."));
         break;
     case TMCPBridge::ConnectOutcome::ConfigUnreadable:
-        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be understood. %1 is the file's location.
-        label_mcpConnectResult->setText(tr("Claude Desktop's settings file could not be understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be read or understood. %1 is the file's location.
+        label_mcpConnectResult->setText(tr("Claude Desktop's settings file could not be read or understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
                                                 .arg(TMCPBridge::claudeDesktopConfigFilePath()));
         break;
     case TMCPBridge::ConnectOutcome::WriteFailed:
-        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be written. %1 is the file's location.
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
         label_mcpConnectResult->setText(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    }
+}
+
+void dlgProfilePreferences::slot_connectChatGpt()
+{
+    switch (TMCPBridge::connectCodex()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        //: Shown beneath the AI assistant settings after Mudlet was added to the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+        QString message = tr("Done - restart ChatGPT (or Codex) and Mudlet will appear among its connectors.");
+        if (!checkBox_enableMCPServer->isChecked() || mudlet::self()->mcpEndpoint().isEmpty()) {
+            message.append(QChar::Space);
+            //: Appended to either connect button's success message when the server checkbox above it is not on yet.
+            message.append(tr("Also tick the checkbox above and press Save, or it will find nobody to talk to."));
+        }
+        label_mcpConnectResult->setText(message);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClientApp:
+        //: Shown beneath the AI assistant settings when the folder the ChatGPT desktop app and Codex keep their settings in does not exist. %1 is the folder Mudlet looked for, ChatGPT and Codex are product names - leave them as-is.
+        label_mcpConnectResult->setText(
+                tr("ChatGPT does not look installed - there is no %1. Install the ChatGPT desktop app or Codex and use it once, then try again.").arg(TMCPBridge::codexConfigDir()));
+        break;
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. ChatGPT is a product name, leave it as-is.
+        label_mcpConnectResult->setText(tr("Could not work out where this Mudlet is installed, so ChatGPT was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the settings file shared by the ChatGPT desktop app and Codex could not be read or understood. %1 is the file's location.
+        label_mcpConnectResult->setText(
+                tr("ChatGPT's settings file could not be read or understood, so it was left untouched. Check %1 for problems and try again.").arg(TMCPBridge::codexConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        label_mcpConnectResult->setText(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::codexConfigFilePath()));
         break;
     }
 }

@@ -83,6 +83,33 @@ private slots:
     void refreshRepointsStaleEntry();
     void refreshLeavesCurrentEntryAlone();
 
+    void codexEntryEscapesStrings();
+    void codexEntryFollowsXdgConfigHome();
+    void codexMergeIntoEmptyConfig();
+    void codexMergeKeepsUserToml();
+    void codexMergeIgnoresHeaderInsideString();
+    void codexMergeIgnoresHeaderInsideArray();
+    void codexMergeRefusesUnterminatedString();
+    void codexMergeRefusesDottedEntry();
+    void codexMergeRefusesInvalidUtf8();
+    void codexMergeAcceptsByteOrderMark();
+    void codexMergeKeepsMudletExtras();
+    void codexMergeKeepsUserEnvSpellings();
+    void codexMergeDropsXdgValueContinuations();
+    void codexMergeIsIdempotent();
+    void codexMergeWholeFileLiteral();
+    void codexConnectWithoutDir();
+    void codexConnectRefusesGarbageConfig();
+    void codexConnectReportsWriteFailure();
+    void codexConnectWritesConfig();
+    void codexRefreshUntouchedWithoutOptIn();
+    void codexRefreshLeavesRepurposedEntry();
+    void codexRefreshLeavesUnscannableAlone();
+    void codexRefreshRepointsStaleEntry();
+    void codexRefreshRepointsMultiLineArgs();
+    void codexRefreshLeavesCommentedBridgeAlone();
+    void codexRefreshLeavesCurrentEntryAlone();
+
     void bridgeAnswersOverPipes();
     void bridgeReportsMudletGone();
     void wrongTokenSurfacesAsError();
@@ -477,13 +504,68 @@ struct ScopedClaudeConfigDirRedirect
         return file.readAll();
     }
 };
+
+// Points the Codex config functions into a temp dir via CODEX_HOME, Codex's own
+// override for where its configuration lives, so no test can touch the real user's
+// ~/.codex/config.toml.
+struct ScopedCodexRedirect
+{
+    QTemporaryDir tempDir;
+    QByteArray savedCodexHome = qgetenv("CODEX_HOME");
+    QByteArray savedXdg = qgetenv("XDG_CONFIG_HOME");
+    QByteArray savedHome = qgetenv("HOME");
+    QByteArray savedAppImage = qgetenv("APPIMAGE");
+    QString codexDir;
+    QString xdgDir;
+
+    ScopedCodexRedirect()
+    : codexDir(qsl("%1/codex-home").arg(tempDir.path()))
+    , xdgDir(qsl("%1/xdg-config").arg(tempDir.path()))
+    {
+        qputenv("CODEX_HOME", codexDir.toUtf8());
+        // Pinned so the XDG_CONFIG_HOME env entry the merge writes is deterministic
+        // whatever machine the test runs on.
+        qputenv("XDG_CONFIG_HOME", xdgDir.toUtf8());
+        // Pinned too: were CODEX_HOME ever ignored, the fallback would be ~/.codex,
+        // and no test may reach the real one.
+        qputenv("HOME", tempDir.path().toUtf8());
+        // With it set, mudletBinaryPath would name the AppImage instead of this test
+        // binary.
+        qunsetenv("APPIMAGE");
+    }
+
+    ~ScopedCodexRedirect()
+    {
+        ScopedClaudeConfigDirRedirect::restore("CODEX_HOME", savedCodexHome);
+        ScopedClaudeConfigDirRedirect::restore("XDG_CONFIG_HOME", savedXdg);
+        ScopedClaudeConfigDirRedirect::restore("HOME", savedHome);
+        ScopedClaudeConfigDirRedirect::restore("APPIMAGE", savedAppImage);
+    }
+
+    bool createCodexDir() const { return QDir().mkpath(codexDir); }
+
+    bool writeConfig(const QByteArray& contents) const
+    {
+        QFile file(TMCPBridge::codexConfigFilePath());
+        return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(contents) == contents.size();
+    }
+
+    QByteArray readConfig() const
+    {
+        QFile file(TMCPBridge::codexConfigFilePath());
+        if (!file.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        return file.readAll();
+    }
+};
 } // namespace
 
 void TMCPBridgeTest::connectWithoutClaudeDir()
 {
     ScopedClaudeConfigDirRedirect redirect;
     QVERIFY(redirect.tempDir.isValid());
-    QCOMPARE(TMCPBridge::connectClaudeDesktop(), TMCPBridge::ConnectOutcome::NoClaudeDesktop);
+    QCOMPARE(TMCPBridge::connectClaudeDesktop(), TMCPBridge::ConnectOutcome::NoClientApp);
     // Creating the folder would make the next attempt claim the app is installed.
     QVERIFY(!QFileInfo::exists(TMCPBridge::claudeDesktopConfigDir()));
 }
@@ -548,8 +630,503 @@ void TMCPBridgeTest::refreshLeavesCurrentEntryAlone()
     const QByteArray current = TMCPBridge::mergeClaudeDesktopConfig(QByteArray(), TMCPBridge::claudeDesktopEntry(TMCPBridge::mudletBinaryPath()), ok);
     QVERIFY(ok);
     QVERIFY(redirect.writeConfig(current));
+    // Backdated an hour so a rewrite's fresh timestamp is unmistakable on any
+    // filesystem, however coarse its clock.
+    {
+        QFile file(TMCPBridge::claudeDesktopConfigFilePath());
+        QVERIFY(file.open(QIODevice::ReadWrite));
+        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-3600), QFileDevice::FileModificationTime));
+    }
+    const QDateTime written = QFileInfo(TMCPBridge::claudeDesktopConfigFilePath()).lastModified();
     TMCPBridge::refreshClaudeDesktopEntry();
-    // Byte-identical: a semantic no-op must not churn the file on every startup.
+    // A semantic no-op must not rewrite the file on every startup, so even the
+    // timestamp stays put - a byte compare alone would miss an identical rewrite.
+    QCOMPARE(QFileInfo(TMCPBridge::claudeDesktopConfigFilePath()).lastModified(), written);
+    QCOMPARE(redirect.readConfig(), current);
+}
+
+void TMCPBridgeTest::codexEntryEscapesStrings()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // A Windows-flavoured path: every backslash and quote must come out escaped, or
+    // Codex reads a different path than the one Mudlet lives at.
+    const QString entry = TMCPBridge::codexEntryToml(qsl(R"(C:\Program Files\Mudlet "beta"\mudlet.exe)"));
+    QVERIFY2(entry.contains(qsl(R"(command = "C:\\Program Files\\Mudlet \"beta\"\\mudlet.exe")")), qPrintable(entry));
+    QVERIFY(entry.startsWith(qsl("[mcp_servers.mudlet]\n")));
+    QVERIFY(entry.contains(qsl("args = [\"--mcp-bridge\"]\n")));
+}
+
+void TMCPBridgeTest::codexEntryFollowsXdgConfigHome()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    const QString withXdg = TMCPBridge::codexEntryToml(qsl("/usr/bin/mudlet"));
+    QVERIFY2(withXdg.contains(qsl("[mcp_servers.mudlet.env]\nXDG_CONFIG_HOME = \"%1\"").arg(redirect.xdgDir)), qPrintable(withXdg));
+    qunsetenv("XDG_CONFIG_HOME");
+    const QString withoutXdg = TMCPBridge::codexEntryToml(qsl("/usr/bin/mudlet"));
+    QVERIFY2(!withoutXdg.contains(qsl("[mcp_servers.mudlet.env]")), qPrintable(withoutXdg));
+}
+
+void TMCPBridgeTest::codexMergeIntoEmptyConfig()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    bool ok = false;
+    const QByteArray merged = TMCPBridge::mergeCodexConfig(QByteArray(), qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    QCOMPARE(QString::fromUtf8(merged), TMCPBridge::codexEntryToml(qsl("/usr/bin/mudlet")));
+}
+
+void TMCPBridgeTest::codexMergeKeepsUserToml()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    const QByteArray original = "# my servers\n"
+                                "model = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.mudlet]\n"
+                                "command = \"/old/gone/mudlet\"\n"
+                                "args = [\"--mcp-bridge\"]\n"
+                                "\n"
+                                "[mcp_servers.mudlet.env]\n"
+                                "XDG_CONFIG_HOME = \"/old/xdg\"\n"
+                                "MY_VAR = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.other]\n"
+                                "command = \"npx\"  # user's comment\n";
+    bool ok = false;
+    const QString merged = QString::fromUtf8(TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok));
+    QVERIFY(ok);
+    QVERIFY2(merged.contains(qsl("# my servers\nmodel = \"kept\"\n")), qPrintable(merged));
+    QVERIFY2(merged.contains(qsl("command = \"npx\"  # user's comment\n")), qPrintable(merged));
+    QVERIFY2(!merged.contains(qsl("/old/gone/mudlet")), qPrintable(merged));
+    // The stale XDG_CONFIG_HOME is Mudlet's to replace; MY_VAR is the user's to keep.
+    QVERIFY2(!merged.contains(qsl("/old/xdg")), qPrintable(merged));
+    QVERIFY2(merged.contains(qsl("XDG_CONFIG_HOME = \"%1\"\nMY_VAR = \"kept\"\n").arg(redirect.xdgDir)), qPrintable(merged));
+    // Replaced in place, once - not removed there and appended again at the end.
+    QCOMPARE(merged.count(qsl("[mcp_servers.mudlet]")), qsizetype(1));
+    QVERIFY(merged.indexOf(qsl("[mcp_servers.mudlet]")) < merged.indexOf(qsl("[mcp_servers.other]")));
+}
+
+void TMCPBridgeTest::codexMergeIgnoresHeaderInsideString()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    const QByteArray original = "[mcp_servers.other]\n"
+                                "command = \"npx\"\n"
+                                "notes = \"\"\"\n"
+                                "[mcp_servers.mudlet]\n"
+                                "not a real section, just text\n"
+                                "\"\"\"\n";
+    bool ok = false;
+    const QByteArray merged = TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    // The header-shaped line is string content: the other server keeps it, and the
+    // real mudlet section lands at the end.
+    QCOMPARE(QString::fromUtf8(merged), QString::fromUtf8(original) + QChar::LineFeed + TMCPBridge::codexEntryToml(qsl("/usr/bin/mudlet")));
+}
+
+void TMCPBridgeTest::codexMergeIgnoresHeaderInsideArray()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    const QByteArray original = "[mcp_servers.other]\n"
+                                "command = \"npx\"\n"
+                                "\n"
+                                "[mcp_servers.mudlet]\n"
+                                "command = \"/old/gone/mudlet\"\n"
+                                "args = [\n"
+                                "\"--mcp-bridge\",\n"
+                                "[\"nested\"],\n"
+                                "]\n";
+    bool ok = false;
+    const QString merged = QString::fromUtf8(TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok));
+    QVERIFY(ok);
+    // A multi-line array's continuation lines are values, not section headers: the
+    // nested-array line must not stop the old entry's replacement partway through
+    // and leave stray array remnants behind.
+    QCOMPARE(merged, qsl("[mcp_servers.other]\ncommand = \"npx\"\n\n") + TMCPBridge::codexEntryToml(qsl("/usr/bin/mudlet")));
+}
+
+void TMCPBridgeTest::codexMergeRefusesUnterminatedString()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    bool ok = true;
+    const QByteArray merged = TMCPBridge::mergeCodexConfig("[mcp_servers.other]\nnotes = \"\"\"\nstill open", qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(!ok);
+    QVERIFY(merged.isEmpty());
+}
+
+void TMCPBridgeTest::codexMergeRefusesDottedEntry()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // A mudlet entry spelled without its own [section] would survive a section-level
+    // replace and then clash with the appended table, so the merge must refuse both
+    // spellings rather than write an invalid config.
+    bool ok = true;
+    QVERIFY(TMCPBridge::mergeCodexConfig("mcp_servers.mudlet.command = \"/old/mudlet\"\n", qsl("/usr/bin/mudlet"), ok).isEmpty());
+    QVERIFY(!ok);
+    ok = true;
+    QVERIFY(TMCPBridge::mergeCodexConfig("[mcp_servers]\nmudlet = { command = \"/old/mudlet\" }\n", qsl("/usr/bin/mudlet"), ok).isEmpty());
+    QVERIFY(!ok);
+    // TOML permits whitespace around a dotted key's dots; the same entry with spaced
+    // dots must be recognised, not slip past as an unrelated key.
+    ok = true;
+    QVERIFY(TMCPBridge::mergeCodexConfig("mcp_servers . mudlet . command = \"/old/mudlet\"\n", qsl("/usr/bin/mudlet"), ok).isEmpty());
+    QVERIFY(!ok);
+    ok = true;
+    QVERIFY(TMCPBridge::mergeCodexConfig("[mcp_servers]\n\"mudlet\" . command = \"/old/mudlet\"\n", qsl("/usr/bin/mudlet"), ok).isEmpty());
+    QVERIFY(!ok);
+}
+
+void TMCPBridgeTest::codexMergeRefusesInvalidUtf8()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // Re-encoding a file that is not UTF-8 would corrupt every byte outside ASCII,
+    // so the merge must walk away from it whole.
+    bool ok = true;
+    QVERIFY(TMCPBridge::mergeCodexConfig("bad = \"\xC0\x80\"\n", qsl("/usr/bin/mudlet"), ok).isEmpty());
+    QVERIFY(!ok);
+}
+
+void TMCPBridgeTest::codexMergeAcceptsByteOrderMark()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // PowerShell and Notepad prepend a BOM; a file that reads back fine must not be
+    // refused over it, and the BOM must survive the write byte for byte.
+    const QByteArray original = QByteArray("\xEF\xBB\xBF") + "model = \"o3\"\n";
+    bool ok = false;
+    const QByteArray once = TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    QVERIFY2(once.startsWith("\xEF\xBB\xBF"), once.constData());
+    QVERIFY2(QString::fromUtf8(once).contains(qsl("model = \"o3\"\n")), once.constData());
+    QVERIFY2(QString::fromUtf8(once).contains(qsl("[mcp_servers.mudlet]\n")), once.constData());
+    const QByteArray twice = TMCPBridge::mergeCodexConfig(once, qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    QCOMPARE(twice, once);
+}
+
+void TMCPBridgeTest::codexMergeKeepsMudletExtras()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // Codex reads plenty Mudlet never writes - enabled, timeouts, per-tool tables -
+    // so only command, args and the env XDG_CONFIG_HOME are Mudlet's to rebuild.
+    const QByteArray original = "[mcp_servers.mudlet]\n"
+                                "command = \"/old/gone/mudlet\"\n"
+                                "startup_timeout_sec = 30  # slow laptop\n"
+                                "args = [\"--mcp-bridge\"]\n"
+                                "enabled = true\n"
+                                "\n"
+                                "[mcp_servers.mudlet.tools]\n"
+                                "enabled = [\"send\"]\n";
+    bool ok = false;
+    const QString merged = QString::fromUtf8(TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok));
+    QVERIFY(ok);
+    QVERIFY2(merged.contains(qsl("startup_timeout_sec = 30  # slow laptop\n")), qPrintable(merged));
+    QVERIFY2(merged.contains(qsl("enabled = true\n")), qPrintable(merged));
+    QVERIFY2(merged.contains(qsl("[mcp_servers.mudlet.tools]\nenabled = [\"send\"]\n")), qPrintable(merged));
+    QVERIFY2(merged.contains(qsl("command = \"/usr/bin/mudlet\"\n")), qPrintable(merged));
+    QVERIFY2(!merged.contains(qsl("/old/gone/mudlet")), qPrintable(merged));
+    QVERIFY2(merged.contains(qsl("[mcp_servers.mudlet.env]\nXDG_CONFIG_HOME = \"%1\"\n").arg(redirect.xdgDir)), qPrintable(merged));
+}
+
+void TMCPBridgeTest::codexMergeKeepsUserEnvSpellings()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+
+    // An inline env table cannot be added to - TOML forbids extending one - so it
+    // stays exactly as written, even at the cost of not recording XDG_CONFIG_HOME.
+    bool ok = false;
+    const QString inlineEnv = QString::fromUtf8(TMCPBridge::mergeCodexConfig("[mcp_servers.mudlet]\n"
+                                                                             "command = \"/old/gone/mudlet\"\n"
+                                                                             "args = [\"--mcp-bridge\"]\n"
+                                                                             "env = { MY_VAR = \"kept\" }\n",
+                                                                             qsl("/usr/bin/mudlet"),
+                                                                             ok));
+    QVERIFY(ok);
+    QVERIFY2(inlineEnv.contains(qsl("env = { MY_VAR = \"kept\" }\n")), qPrintable(inlineEnv));
+    QVERIFY2(!inlineEnv.contains(qsl("XDG_CONFIG_HOME")), qPrintable(inlineEnv));
+    QVERIFY2(!inlineEnv.contains(qsl("[mcp_servers.mudlet.env]")), qPrintable(inlineEnv));
+
+    // Dotted env keys take the fresh XDG_CONFIG_HOME in their own spelling: a
+    // [mcp_servers.mudlet.env] header would declare their table a second time.
+    const QString dotted = QString::fromUtf8(TMCPBridge::mergeCodexConfig("[mcp_servers.mudlet]\n"
+                                                                          "command = \"/old/gone/mudlet\"\n"
+                                                                          "args = [\"--mcp-bridge\"]\n"
+                                                                          "env.XDG_CONFIG_HOME = \"/old/xdg\"\n"
+                                                                          "env.MY_VAR = \"kept\"\n",
+                                                                          qsl("/usr/bin/mudlet"),
+                                                                          ok));
+    QVERIFY(ok);
+    QVERIFY2(dotted.contains(qsl("env.XDG_CONFIG_HOME = \"%1\"\nenv.MY_VAR = \"kept\"\n").arg(redirect.xdgDir)), qPrintable(dotted));
+    QVERIFY2(!dotted.contains(qsl("/old/xdg")), qPrintable(dotted));
+    QVERIFY2(!dotted.contains(qsl("[mcp_servers.mudlet.env]")), qPrintable(dotted));
+
+    // With no XDG_CONFIG_HOME among them yet, the fresh entry joins their spelling.
+    const QString dottedNoXdg = QString::fromUtf8(TMCPBridge::mergeCodexConfig("[mcp_servers.mudlet]\n"
+                                                                               "command = \"/old/gone/mudlet\"\n"
+                                                                               "args = [\"--mcp-bridge\"]\n"
+                                                                               "env.MY_VAR = \"kept\"\n",
+                                                                               qsl("/usr/bin/mudlet"),
+                                                                               ok));
+    QVERIFY(ok);
+    QVERIFY2(dottedNoXdg.contains(qsl("args = [\"--mcp-bridge\"]\nenv.XDG_CONFIG_HOME = \"%1\"\nenv.MY_VAR = \"kept\"\n").arg(redirect.xdgDir)), qPrintable(dottedNoXdg));
+    QVERIFY2(!dottedNoXdg.contains(qsl("[mcp_servers.mudlet.env]")), qPrintable(dottedNoXdg));
+}
+
+void TMCPBridgeTest::codexMergeDropsXdgValueContinuations()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // A stale XDG_CONFIG_HOME spelled as a multi-line string must vanish whole:
+    // dropping just its first line would orphan the rest inside the fresh entry.
+    const QByteArray original = "[mcp_servers.mudlet]\n"
+                                "command = \"/old/gone/mudlet\"\n"
+                                "args = [\"--mcp-bridge\"]\n"
+                                "\n"
+                                "[mcp_servers.mudlet.env]\n"
+                                "XDG_CONFIG_HOME = \"\"\"\n"
+                                "/old/xdg\"\"\"\n"
+                                "MY_VAR = \"kept\"\n";
+    bool ok = false;
+    const QString merged = QString::fromUtf8(TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok));
+    QVERIFY(ok);
+    QCOMPARE(merged, TMCPBridge::codexEntryToml(qsl("/usr/bin/mudlet")) + qsl("MY_VAR = \"kept\"\n"));
+}
+
+void TMCPBridgeTest::codexMergeIsIdempotent()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // Startup refresh runs on every launch, so a merge of its own output must be a
+    // fixed point - any drift would churn the file daily.
+    const QByteArray original = "model = \"o3\"\n"
+                                "\n"
+                                "[mcp_servers.mudlet]\n"
+                                "command = \"/old/gone/mudlet\"\n"
+                                "args = [\"--mcp-bridge\"]\n"
+                                "enabled = true\n"
+                                "\n"
+                                "[mcp_servers.mudlet.env]\n"
+                                "MY_VAR = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.other]\n"
+                                "command = \"npx\"\n";
+    bool ok = false;
+    const QByteArray once = TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    const QByteArray twice = TMCPBridge::mergeCodexConfig(once, qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    QCOMPARE(QString::fromUtf8(twice), QString::fromUtf8(once));
+}
+
+void TMCPBridgeTest::codexMergeWholeFileLiteral()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // One byte-exact picture of a whole merged file, where the contains-checks above
+    // could each pass with the pieces in a wrong order.
+    bool ok = false;
+    const QString merged = QString::fromUtf8(TMCPBridge::mergeCodexConfig("# global\n"
+                                                                          "model = \"o3\"\n"
+                                                                          "\n"
+                                                                          "[mcp_servers.mudlet]\n"
+                                                                          "command = \"/old/gone/mudlet\"\n"
+                                                                          "args = [\"--mcp-bridge\"]\n"
+                                                                          "enabled = true\n",
+                                                                          qsl("/usr/bin/mudlet"),
+                                                                          ok));
+    QVERIFY(ok);
+    QCOMPARE(merged,
+             qsl("# global\n"
+                 "model = \"o3\"\n"
+                 "\n"
+                 "[mcp_servers.mudlet]\n"
+                 "command = \"/usr/bin/mudlet\"\n"
+                 "args = [\"--mcp-bridge\"]\n"
+                 "enabled = true\n"
+                 "\n"
+                 "[mcp_servers.mudlet.env]\n"
+                 "XDG_CONFIG_HOME = \"%1\"\n")
+                     .arg(redirect.xdgDir));
+}
+
+void TMCPBridgeTest::codexConnectWithoutDir()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::NoClientApp);
+    // Creating the folder would make the next attempt claim the app is installed.
+    QVERIFY(!QFileInfo::exists(redirect.codexDir));
+
+    // A plain file squatting on the directory's name is not an installed app either;
+    // treating it as one would end in a config write into nowhere.
+    QFile squatter(redirect.codexDir);
+    QVERIFY(squatter.open(QIODevice::WriteOnly));
+    squatter.close();
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::NoClientApp);
+}
+
+void TMCPBridgeTest::codexConnectRefusesGarbageConfig()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    const QByteArray garbage = "[mcp_servers.other]\nnotes = \"\"\"\nstill open";
+    QVERIFY(redirect.writeConfig(garbage));
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::ConfigUnreadable);
+    QCOMPARE(redirect.readConfig(), garbage);
+}
+
+void TMCPBridgeTest::codexConnectReportsWriteFailure()
+{
+#if defined(Q_OS_WIN32)
+    QSKIP("POSIX permission bits do not make a directory unwritable on Windows");
+#else
+    if (geteuid() == 0) {
+        QSKIP("root writes into read-only directories regardless of their permissions");
+    }
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    QVERIFY(QFile::setPermissions(redirect.codexDir, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::WriteFailed);
+    QVERIFY(QFile::setPermissions(redirect.codexDir, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+#endif
+}
+
+void TMCPBridgeTest::codexConnectWritesConfig()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::Written);
+    const QByteArray first = redirect.readConfig();
+    QCOMPARE(QString::fromUtf8(first), TMCPBridge::codexEntryToml(TMCPBridge::mudletBinaryPath()));
+    // A second press must not duplicate the section or churn the bytes.
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::Written);
+    QCOMPARE(redirect.readConfig(), first);
+}
+
+void TMCPBridgeTest::codexRefreshUntouchedWithoutOptIn()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+
+    // No config file at all: refresh must not conjure one up.
+    TMCPBridge::refreshCodexEntry();
+    QVERIFY(!QFileInfo::exists(TMCPBridge::codexConfigFilePath()));
+
+    // A config without a mudlet entry belongs to the user's other servers alone.
+    QVERIFY(redirect.createCodexDir());
+    const QByteArray original = "[mcp_servers.other]\ncommand = \"npx\"\n";
+    QVERIFY(redirect.writeConfig(original));
+    TMCPBridge::refreshCodexEntry();
+    QCOMPARE(redirect.readConfig(), original);
+}
+
+void TMCPBridgeTest::codexRefreshLeavesRepurposedEntry()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    const QByteArray original = "[mcp_servers.mudlet]\ncommand = \"/opt/something-else\"\nargs = [\"--other\"]\n";
+    QVERIFY(redirect.writeConfig(original));
+    TMCPBridge::refreshCodexEntry();
+    QCOMPARE(redirect.readConfig(), original);
+}
+
+void TMCPBridgeTest::codexRefreshLeavesUnscannableAlone()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    // The mudlet entry looks stale, but the file as a whole cannot be scanned
+    // faithfully - refresh must not touch what it cannot vouch for.
+    const QByteArray original = "[mcp_servers.mudlet]\ncommand = \"/old/gone/mudlet\"\nargs = [\"--mcp-bridge\"]\n"
+                                "\n"
+                                "[mcp_servers.other]\nnotes = \"\"\"\nstill open";
+    QVERIFY(redirect.writeConfig(original));
+    TMCPBridge::refreshCodexEntry();
+    QCOMPARE(redirect.readConfig(), original);
+}
+
+void TMCPBridgeTest::codexRefreshRepointsStaleEntry()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    QVERIFY(redirect.writeConfig("[mcp_servers.filesystem]\ncommand = \"npx\"\n"
+                                 "\n"
+                                 "[mcp_servers.mudlet]\ncommand = \"/old/gone/mudlet\"\nargs = [\"--mcp-bridge\"]\n"
+                                 "\n"
+                                 "[mcp_servers.mudlet.env]\nMY_VAR = \"kept\"\n"));
+    TMCPBridge::refreshCodexEntry();
+    // The fresh XDG_CONFIG_HOME lands under the kept env header, with the user's own
+    // variable following it.
+    const QString expected = qsl("[mcp_servers.filesystem]\ncommand = \"npx\"\n\n") + TMCPBridge::codexEntryToml(TMCPBridge::mudletBinaryPath()) + qsl("MY_VAR = \"kept\"\n");
+    QCOMPARE(QString::fromUtf8(redirect.readConfig()), expected);
+}
+
+void TMCPBridgeTest::codexRefreshRepointsMultiLineArgs()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    // The bridge argument sits on a continuation line of a multi-line array; the
+    // entry is still the bridge's own and a stale path in it must still be repaired.
+    QVERIFY(redirect.writeConfig("[mcp_servers.mudlet]\ncommand = \"/old/gone/mudlet\"\nargs = [\n\"--mcp-bridge\",\n]\n"));
+    TMCPBridge::refreshCodexEntry();
+    const QString merged = QString::fromUtf8(redirect.readConfig());
+    QVERIFY2(!merged.contains(qsl("/old/gone/mudlet")), qPrintable(merged));
+    QVERIFY2(merged.contains(TMCPBridge::mudletBinaryPath()), qPrintable(merged));
+}
+
+void TMCPBridgeTest::codexRefreshLeavesCommentedBridgeAlone()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+
+    // --mcp-bridge in a trailing comment is not the bridge's own entry.
+    const QByteArray commented = "[mcp_servers.mudlet]\ncommand = \"/opt/other\"\nargs = [\"--other\"]  # not --mcp-bridge any more\n";
+    QVERIFY(redirect.writeConfig(commented));
+    TMCPBridge::refreshCodexEntry();
+    QCOMPARE(redirect.readConfig(), commented);
+
+    // Neither is another flag that merely starts with it.
+    const QByteArray prefixed = "[mcp_servers.mudlet]\ncommand = \"/opt/other\"\nargs = [\"--mcp-bridge-plus\"]\n";
+    QVERIFY(redirect.writeConfig(prefixed));
+    TMCPBridge::refreshCodexEntry();
+    QCOMPARE(redirect.readConfig(), prefixed);
+}
+
+void TMCPBridgeTest::codexRefreshLeavesCurrentEntryAlone()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::Written);
+    const QByteArray current = redirect.readConfig();
+    // Backdated an hour so a rewrite's fresh timestamp is unmistakable on any
+    // filesystem, however coarse its clock.
+    {
+        QFile file(TMCPBridge::codexConfigFilePath());
+        QVERIFY(file.open(QIODevice::ReadWrite));
+        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-3600), QFileDevice::FileModificationTime));
+    }
+    const QDateTime written = QFileInfo(TMCPBridge::codexConfigFilePath()).lastModified();
+    TMCPBridge::refreshCodexEntry();
+    // A semantic no-op must not rewrite the file on every startup, so even the
+    // timestamp stays put - a byte compare alone would miss an identical rewrite.
+    QCOMPARE(QFileInfo(TMCPBridge::codexConfigFilePath()).lastModified(), written);
     QCOMPARE(redirect.readConfig(), current);
 }
 

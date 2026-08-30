@@ -23,6 +23,7 @@
 #include <QJsonObject>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 class QNetworkAccessManager;
 
@@ -71,7 +72,7 @@ public:
     static bool replyLocally(const QJsonObject& message, QJsonObject& reply, QJsonObject& clientCapabilities);
     static QJsonObject forwardEnvelope(const QJsonObject& message, const QJsonObject& clientCapabilities);
 
-    enum class ConnectOutcome { Written, NoClaudeDesktop, NoBinaryPath, ConfigUnreadable, WriteFailed };
+    enum class ConnectOutcome { Written, NoClientApp, NoBinaryPath, ConfigUnreadable, WriteFailed };
 
     // Registers `mudlet --mcp-bridge` in Claude Desktop's settings file, keeping every
     // other setting - though the file is re-serialised, so its key order and spacing
@@ -89,6 +90,23 @@ public:
     // Returns the file contents to write; ok comes back false when existingConfig is
     // present but not a JSON object, in which case nothing must be written over it.
     static QByteArray mergeClaudeDesktopConfig(const QByteArray& existingConfig, const QJsonObject& entry, bool& ok);
+
+    // The same registration for the ChatGPT desktop app, whose MCP settings live (as
+    // of 2026-08) in Codex's config.toml - under ~/.codex, or $CODEX_HOME when set -
+    // shared with the Codex CLI and IDE extension, so one write covers all three.
+    static ConnectOutcome connectCodex();
+    static void refreshCodexEntry();
+
+    static QString codexConfigDir();
+    static QString codexConfigFilePath();
+    static QString codexEntryToml(const QString& command);
+    // Returns the file contents to write. Unlike the Claude side this edits the file
+    // line by line - Qt has no TOML parser - rebuilding only what Mudlet owns in the
+    // [mcp_servers.mudlet] entry (command, args, the XDG_CONFIG_HOME env value) while
+    // keeping the user's other keys, sub-tables and comments, and leaving every byte
+    // outside the entry alone. ok comes back false when the file holds a shape this
+    // cannot edit safely, in which case nothing must be written.
+    static QByteArray mergeCodexConfig(const QByteArray& existingConfig, const QString& command, bool& ok);
 
 private:
     explicit TMCPBridge(const QString& configDir);

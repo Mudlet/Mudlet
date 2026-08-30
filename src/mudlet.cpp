@@ -3336,6 +3336,7 @@ void mudlet::readLateSettings(const QSettings& settings)
         TMCPBridge::removeDiscoveryFileIfStale(confPath);
     }
     TMCPBridge::refreshClaudeDesktopEntry();
+    TMCPBridge::refreshCodexEntry();
 #endif
     if (settings.contains(qsl("debugConsole/categories"))) {
         // Only categories Mudlet still knows about, so that a category retired

@@ -157,6 +157,7 @@ private slots:
 #ifdef INCLUDE_MCPSERVER
     void slot_updateMCPServerEndpoint();
     void slot_connectClaudeDesktop();
+    void slot_connectChatGpt();
     void slot_copyMCPServerAddress();
 #endif
     void slot_changeAutomaticUpdates(const bool);
