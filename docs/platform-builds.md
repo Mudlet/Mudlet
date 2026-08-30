@@ -58,11 +58,11 @@ Some sanitizers are available on Windows (Address and UndefinedBehaviour).
 
 Sanitizers are available but not enabled on every build; the environmental variable
 `WITH_SANITIZERS` is the master switch (defaults to `NO`) - if it is set to `YES`
-the environmental variable `MUDLET_SANTIZERS` needs to be set to one (or more,
+the environmental variable `MUDLET_SANITIZERS` needs to be set to one (or more,
 separated by semi-colons) of the sanitizers to include.
 
 Use the `-asan` / `-tsan` / `-ubsan` presets or pass something in the second of
-those variables, e.g. `MUDLET_SANITIZER="address;undefined"` as prefix to the commandline
+those variables, e.g. `MUDLET_SANITIZERS="address;undefined"` as prefix to the commandline
 that calls `cmake`. Invalid sanitizers or combinations will be detected and cause
 `cmake` to generate an error. The default preset (without one of those suffixes)
 does not include any sanitizer; however the `CMakePresets.json` file
