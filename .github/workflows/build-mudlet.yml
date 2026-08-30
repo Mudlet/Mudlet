@@ -323,8 +323,8 @@ jobs:
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.ref_name }}
-        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-development
+        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'asan' || 'plain' }}-${{ github.ref_name }}
+        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'asan' || 'plain' }}-development
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'

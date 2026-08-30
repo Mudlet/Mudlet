@@ -414,9 +414,9 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     for (const QString& dropThis : dontSpeak) {
         if (inputText.contains(dropThis)) {
             inputText.replace(dropThis, QString());
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::LuaWarning)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaWarning) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
             }
         }
     }
@@ -482,9 +482,9 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     for (const QString& dropThis : dontSpeak) {
         if (textToSay.contains(dropThis)) {
             textToSay.replace(dropThis, QString());
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::LuaWarning)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaWarning) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
             }
         }
     }

@@ -29,6 +29,7 @@
 
 #include "TBuffer.h"
 #include "TConsoleModel.h"
+#include "TPrintSink.h"
 
 #include <QDataStream>
 #include <QElapsedTimer>
@@ -41,10 +42,10 @@
 
 #include <hunspell/hunspell.h>
 
-#include <deque>
 #include <list>
 #include <map>
 #include <memory>
+#include <vector>
 
 // This contains the details of a font that we might want to maintain a record
 // of, independently of a QFont instance:
@@ -159,7 +160,9 @@ class TSplitter;
 class dlgNotepad;
 
 
-class TConsole : public QWidget
+// TPrintSink is the write-only face core code redirects output to; QWidget
+// stays first so moc sees the QObject base it needs.
+class TConsole : public QWidget, public TPrintSink
 {
     Q_OBJECT
 
@@ -270,8 +273,15 @@ public:
     void scrollUp(int lines);
     void print(const QString& msg);
     void print(const char*);
-    void print(const QString& msg, QColor fgColor, QColor bgColor);
-    void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    // timeStampOverride is for content being replayed after being held back -
+    // it keeps the time the text arrived instead of the time it is shown:
+    void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
+    // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
+    // until its right-click menu asks for it:
+    void showSearchBar();
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
+    void discardAll() override;
+    void discardLastLine() override;
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
@@ -279,6 +289,9 @@ public:
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
+    // Repaint just the lines the current selection covers, for the callers that
+    // change their text where it stands instead of appending new text.
+    void markSelectionDirty();
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     void setFontSize(int);
     void setFontName(const QString& fontName);
@@ -344,6 +357,9 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
+    // The Central Debug Console's find bar, floating over the bottom right of
+    // the console itself:
+    QPointer<QWidget> mpFindBar;
 
     // The buffer, cursor/prompt state and fg/bg colours live in a core
     // TConsoleModel reached through model(). For the main console that model is
@@ -367,7 +383,10 @@ public:
     QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    QColor mSystemMessageBgColor = mBgColor;
+    // Not mBgColor: captured once and never updated, so it only ever held the
+    // built-in default - which the model can now have replaced with the
+    // profile's before the console is built.
+    QColor mSystemMessageBgColor = QColorConstants::Black;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
@@ -470,8 +489,11 @@ private slots:
     void slot_clearSearchResults();
     void slot_hyperlinkVisibilityChanged();
     void focusOnSearchResultAndAnnounce(int searchX, int searchY);
+    void hideSearchBar();
 
 private:
+    void createFindBar();
+    void positionFindBar();
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();

@@ -51,7 +51,7 @@ private:
     QTextCharFormat groupFormat;
     QTextCharFormat quantifierFormat;
 
-    bool highlightingEnabled;
+    bool highlightingEnabled = false;
     void applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule);
 };
 

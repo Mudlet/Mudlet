@@ -68,6 +68,11 @@ public:
     void drawForeground(QPainter&, const QRect&);
     void showNewLines();
     void forceUpdate();
+    // Records that the text of these buffer lines changed where it stands,
+    // rather than the whole screen being untrustworthy. Unlike forceUpdate()
+    // this keeps the scroll shortcut: the rows the lines land on simply join
+    // the band that gets redrawn.
+    void markLinesDirty(const int firstLine, const int lastLine);
     void needUpdate(int, int);
     void scrollTo(int);
     void scrollH(int);
@@ -126,6 +131,7 @@ public:
     int mOldCaretColumn = 0;
 
     friend class CopyAsImageTest;
+    friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class TTextEditBlinkTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
@@ -189,6 +195,12 @@ private:
     int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
+    // Coalescing replacement for update() on the paths that new output drives.
+    // Those paints run inside the receive loop, so one per network packet
+    // delays the next packet; capping them at one per csmPaintPaceMs lets a
+    // flood put several packets' worth of text into a single frame. An
+    // invalid rect means the whole widget.
+    void scheduleUpdate(const QRect& rect = QRect());
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
     bool hasSelectedText() const;
@@ -270,6 +282,15 @@ private:
     int mScreenHeight;
     // currently viewed screen area
     QPixmap mScreenMap;
+    // What each paint draws into, swapped with mScreenMap once the frame is
+    // finished. Two buffers rather than one because a QPixmap shared with
+    // mScreenMap would deep-copy itself the moment a QPainter opened on it,
+    // which is exactly the full-surface copy this reuse exists to avoid.
+    QPixmap mRenderBuffer;
+    // Buffer lines whose text changed where it stands, so the cached screen
+    // cannot be trusted for the rows they land on. -1 for "none pending".
+    int mDirtyFirstLine = -1;
+    int mDirtyLastLine = -1;
     int mScreenWidth = 100;
     int mScreenOffset = 0;
     int mMaxHRange = 0;
@@ -280,6 +301,14 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
+    // Maximum of one repaint per csmPaintPaceMs is allowed via scheduleUpdate().
+    static constexpr int csmPaintPaceMs = 16; // ~60 fps cap
+    QTimer* mpPaintPacer = nullptr;
+    // Restarted by each paintEvent(), so scheduleUpdate() can tell how much of
+    // the current frame's window is left.
+    QElapsedTimer mSincePaint;
+    // What the deferred repaint has to cover once the pacer fires.
+    QRegion mPendingPaintRegion;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will

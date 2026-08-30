@@ -47,7 +47,8 @@ ActionUnit::~ActionUnit()
     for (auto action : mActionRootNodeList) {
         action->mpHost = nullptr;
         std::function<void(TAction*)> nullifyChildren = [&nullifyChildren](TAction* a) {
-            for (auto child : *a->mpMyChildrenList) {
+            for (auto* childNode : *a->mpMyChildrenList) {
+                auto* child = static_cast<TAction*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -61,8 +62,9 @@ ActionUnit::~ActionUnit()
 
 void ActionUnit::_uninstall(TAction* pChild, const QString& packageName)
 {
-    std::list<TAction*>* childrenList = pChild->mpMyChildrenList;
-    for (auto action : *childrenList) {
+    std::list<Tree<TAction>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* actionNode : *childrenList) {
+        auto* action = static_cast<TAction*>(actionNode);
         _uninstall(action, packageName);
         uninstallList.append(action);
     }
@@ -375,7 +377,8 @@ void ActionUnit::regenerateToolBars()
             continue; // skip over any root action node that is NOT going to be a TToolBar.
         }
         if (!action->mPackageName.isEmpty()) {
-            for (auto& childAction : *action->mpMyChildrenList) {
+            for (auto* childActionNode : *action->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
                 QPointer<TToolBar> pTB = nullptr;
                 for (auto& toolBar : mToolBarList) {
                     if (toolBar == childAction->mpToolBar) {
@@ -439,27 +442,28 @@ void ActionUnit::regenerateEasyButtonBars()
         if (!rootAction->mPackageName.isEmpty()) {
             // It has a package name so it is actually the parent
             // module/package item rather than the actual ToolBar
-            for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
+            for (auto* childActionNode : *rootAction->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
-                    if (easyButtonBar == (*childActionIterator)->mpEasyButtonBar) {
+                    if (easyButtonBar == childAction->mpEasyButtonBar) {
                         pTB = easyButtonBar;
                         break;
                     }
                 }
                 if (!pTB) {
-                    pTB = new TEasyButtonBar(rootAction, (*childActionIterator)->getName(), mpHost->mpConsole->mpTopToolBar);
+                    pTB = new TEasyButtonBar(rootAction, childAction->getName(), mpHost->mpConsole->mpTopToolBar);
                     mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
                     mEasyButtonBarList.emplace_back(pTB);
-                    (*childActionIterator)->mpEasyButtonBar = pTB; // needed for drag&drop
+                    childAction->mpEasyButtonBar = pTB; // needed for drag&drop
                 }
-                if ((*childActionIterator)->mOrientation == 1) {
+                if (childAction->mOrientation == 1) {
                     pTB->setVerticalOrientation();
                 } else {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar(*childActionIterator, pTB);
-                (*childActionIterator)->mpEasyButtonBar = pTB;
+                constructToolbar(childAction, pTB);
+                childAction->mpEasyButtonBar = pTB;
                 pTB->setStyleSheet(pTB->mpTAction->css);
             }
             continue; //rootAction package
@@ -511,7 +515,8 @@ TAction* ActionUnit::findEasyButtonBarAction(const QString& name)
             continue;
         }
         if (!rootAction->mPackageName.isEmpty()) {
-            for (auto& childAction : *rootAction->mpMyChildrenList) {
+            for (auto* childActionNode : *rootAction->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
                 if (childAction->mLocation != 4 && childAction->getName() == name) {
                     return childAction;
                 }
@@ -536,7 +541,8 @@ bool ActionUnit::namesAFloatingToolBar(const QString& name)
         if (rootAction->mPackageName.isEmpty()) {
             continue;
         }
-        for (auto& childAction : *rootAction->mpMyChildrenList) {
+        for (auto* childActionNode : *rootAction->mpMyChildrenList) {
+            auto* childAction = static_cast<TAction*>(childActionNode);
             if (childAction->mLocation == 4 && childAction->getName() == name) {
                 return true;
             }
@@ -558,7 +564,8 @@ std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const
             if (rootAction->mLocation == 4 || rootAction->mPackageName.isEmpty() || rootAction->getName() != name) {
                 continue;
             }
-            for (auto& childAction : *rootAction->mpMyChildrenList) {
+            for (auto* childActionNode : *rootAction->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
                 if (childAction->mLocation != 4) {
                     childAction->setIsActive(active);
                     found = true;
