@@ -86,6 +86,13 @@ int luaopen_yajl(lua_State*);
 }
 
 
+// A Host outlives its main console: closing a profile's window destroys the view
+// while triggers, the buffer, logging and Lua all keep running. The live
+// Hunspell handles and the user dictionary's word set belong to that view, so
+// the spelling functions have to report this rather than dereference what is
+// gone.
+static const char* no_main_window_value = "the profile has no main window";
+
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
 {
@@ -7147,6 +7154,9 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     QPair<bool, QString> const result = host.mpConsole->addWordToSet(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
@@ -7167,6 +7177,9 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     QPair<bool, QString> const result = host.mpConsole->removeWordFromSet(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
@@ -7196,6 +7209,9 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
@@ -7235,6 +7251,9 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     char** wordList;
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
@@ -7279,6 +7298,9 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     // This may stall if this is accessing the shared user dictionary and that
     // is being updated by another profile, but it should eventually return...
     // We must keep a local reference/copy of the value returned because the
