@@ -168,8 +168,9 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
 )
 
-# Sound, music and video, text-to-speech, and the rich presence published to Discord
+# Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
