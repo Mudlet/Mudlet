@@ -175,13 +175,36 @@ public:
     };
     Q_ENUM(VocabularyResult)
 
-    // Supply vocabulary for biasing or grammar constraint. The default
-    // matches the default capabilities: nothing applied, because nothing can be.
-    virtual VocabularyResult setVocabulary(const QStringList& words)
+    // Supply vocabulary for biasing or grammar constraint.
+    //
+    // Not virtual: the capability decides whether this backend can take words
+    // at all, so the answer and the capability cannot disagree - a backend
+    // advertising biasing and answering Unsupported for ever, or refusing
+    // words it claims to accept, are both unrepresentable now. A backend that
+    // can take them overrides applyVocabulary() and never sees Unsupported.
+    VocabularyResult setVocabulary(const QStringList& words)
     {
-        Q_UNUSED(words)
-        return VocabularyResult::Unsupported;
+        // Held whatever the answer below is. Which models can be biased is
+        // only known once one is loaded, so words offered while an unbiasable
+        // model is loaded would otherwise be lost, and a later switch to a
+        // model that can bias would compile in nothing.
+        const bool changed = (mVocabulary != words);
+        mVocabulary = words;
+
+        const Capabilities can = capabilities();
+        if (!can.biasing && !can.grammar) {
+            return VocabularyResult::Unsupported;
+        }
+        if (!changed) {
+            // Already in effect; nothing to rebuild
+            return VocabularyResult::Applied;
+        }
+        return applyVocabulary(words);
     }
+
+    // What was last offered, applied or not. A backend reads this when a model
+    // loads, to bias toward words that arrived while it could not.
+    const QStringList& vocabulary() const { return mVocabulary; }
 
     // Level of the audio last received from the microphone, 0.0 to 1.0, or 0
     // while not listening. Reported so a consumer can tell a phrase the engine
@@ -256,6 +279,19 @@ public:
     virtual Sensitivity sensitivity() const = 0;
 
 protected:
+    // Take the words, for a backend whose capabilities say it can. Answers
+    // Applied or Failed only - setVocabulary() has already ruled out the third
+    // case, so a backend never has to reason about it.
+    virtual VocabularyResult applyVocabulary(const QStringList& words)
+    {
+        Q_UNUSED(words)
+        return VocabularyResult::Failed;
+    }
+
+    // Retained by setVocabulary() for every backend, so none has to remember
+    // to keep words it could not use yet
+    QStringList mVocabulary;
+
     // The engine's half of the three above, reached only once the state rules
     // have allowed it. A backend never re-checks the state to decide whether
     // it should run.

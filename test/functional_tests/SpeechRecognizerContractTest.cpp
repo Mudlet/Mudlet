@@ -247,6 +247,26 @@ private slots:
         QVERIFY(states.isEmpty());
     }
 
+    // Which models can be biased is only known once one is loaded, so words a
+    // package offers while an unbiasable model is loaded - or before any is -
+    // would be lost, and a later switch to a model that can bias would compile
+    // in nothing. The base class keeps them for every backend, so none has to
+    // remember to. Vosk cannot bias at all, which is what makes it the right
+    // backend to prove the words survive an Unsupported answer.
+    void wordsOfferedToABackendThatCannotUseThemAreStillKept()
+    {
+        VoskRecognizer recognizer;
+        QVERIFY2(!recognizer.supportsBiasing() && !recognizer.supportsGrammar(), "this case needs a backend that cannot take vocabulary");
+
+        const QStringList words{qsl("kill"), qsl("look"), qsl("inventory")};
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Unsupported);
+        QCOMPARE(recognizer.vocabulary(), words);
+
+        // Offered again unchanged: still Unsupported here, and still held
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Unsupported);
+        QCOMPARE(recognizer.vocabulary(), words);
+    }
+
     // Reported as the place to install a model into, so it has to be a place
     // that exists. A made-up default named a directory the user never created,
     // and the "install a model" message was unreachable behind it.
