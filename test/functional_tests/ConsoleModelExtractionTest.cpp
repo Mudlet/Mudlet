@@ -1441,6 +1441,44 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(!host->windowType(nestedName).has_value(), "Host still reports a window type for a miniconsole destroyed with the user window it was in.");
     }
 
+    // Nothing removes that miniconsole from the console's own map - the map is
+    // never told its Qt child went away - so the entry has to read back as null
+    // rather than as the address of a freed console. Held as a raw pointer the
+    // map hands that address out, the by-name operations below write through
+    // it, and the name is unusable for ever after because every create path
+    // sees the entry and refuses.
+    void test_aDeadNestedMiniConsoleIsASafeMissInTheViewMap()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString userWindowName = qsl("registryStaleUserWindow");
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        const QString nestedName = qsl("registryStaleNestedMini");
+        const auto [nested, nestedMessage] = host->createMiniConsole(userWindowName, nestedName, 0, 0, 40, 40);
+        QVERIFY2(nested, qPrintable(nestedMessage));
+        const QPointer<TConsole> nestedWidget = host->mpConsole->subConsoleWidget(nestedName);
+        QVERIFY2(nestedWidget, "Creating a miniconsole inside a user window left no widget in the console's own map.");
+
+        const auto [windowDeleted, windowDeleteMessage] = host->mpConsole->deleteMiniConsole(userWindowName);
+        QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
+        QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5000);
+
+        // First, because the ones after it act on whatever this hands back
+        QVERIFY2(!host->mpConsole->subConsoleWidget(nestedName), "The console's own map still hands out a miniconsole destroyed with the user window it was in.");
+        QVERIFY2(!host->mpConsole->moveSubConsole(nestedName, 5, 6), "Moving a destroyed miniconsole by name reported success.");
+        QVERIFY2(!host->mpConsole->showSubConsole(nestedName), "Showing a destroyed miniconsole by name reported success.");
+        QVERIFY2(!host->mpConsole->getSubConsoleGeometry(nestedName).has_value(), "A destroyed miniconsole still reported a geometry.");
+
+        const auto [recreated, recreateMessage] = host->createMiniConsole(QString(), nestedName, 0, 0, 40, 40);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a miniconsole destroyed with its user window could not be used again: %1").arg(recreateMessage)));
+        QVERIFY2(host->mpConsole->subConsoleWidget(nestedName), "The replacement miniconsole is not in the console's own map.");
+        QVERIFY2(host->windowRegistry().hasSubConsole(nestedName), "The replacement miniconsole is not in the profile's window registry.");
+    }
+
     // Resetting the profile destroys every sub-console the console built without
     // going anywhere near deleteMiniConsole(), so that path has to clear the
     // registry as well - and it walks its own map while the removals empty it.

@@ -350,7 +350,7 @@ QString TMainConsole::getCurrentLine(const std::string& buf)
 
 bool TMainConsole::createBuffer(const QString& name)
 {
-    if (!mSubConsoleMap.contains(name)) {
+    if (!subConsoleWidget(name)) {
         auto pC = new TConsole(mpHost, name, Buffer);
         registerSubConsole(name, pC);
         pC->setContentsMargins(0, 0, 0, 0);
@@ -1161,7 +1161,7 @@ void TMainConsole::changeSubConsoleColors(const QString& name)
 
 bool TMainConsole::showSubConsole(const QString& name)
 {
-    if (!mSubConsoleMap.contains(name)) {
+    if (!subConsoleWidget(name)) {
         return false;
     }
     if (auto pD = mDockWidgetMap.value(name)) {
@@ -1173,7 +1173,7 @@ bool TMainConsole::showSubConsole(const QString& name)
 
 bool TMainConsole::hideSubConsole(const QString& name)
 {
-    if (!mSubConsoleMap.contains(name)) {
+    if (!subConsoleWidget(name)) {
         return false;
     }
     if (auto pD = mDockWidgetMap.value(name)) {
@@ -1703,14 +1703,16 @@ void TMainConsole::setProfileName(const QString& newName)
 {
     TConsole::setProfileName(newName);
 
-    for (const auto pC : std::as_const(mSubConsoleMap)) {
-        pC->setProfileName(newName);
+    for (const auto& pC : std::as_const(mSubConsoleMap)) {
+        if (pC) {
+            pC->setProfileName(newName);
+        }
     }
 }
 
 void TMainConsole::refreshSubconsoles()
 {
-    for (const auto pC : std::as_const(mSubConsoleMap)) {
+    for (const auto& pC : std::as_const(mSubConsoleMap)) {
         if (pC) {
             pC->refreshView();
         }
@@ -2339,7 +2341,7 @@ void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
     QWidget* targetWidget = mLabelMap.value(target);
 
     if (!targetWidget) {
-        targetWidget = mSubConsoleMap.value(target);
+        targetWidget = subConsoleWidget(target);
         if (targetWidget) {
             widgetType = TMediaData::MediaWidgetWindow;
         }

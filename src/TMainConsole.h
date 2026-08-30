@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TScrollBox.h"
 #include <QFile>
+#include <QPointer>
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
@@ -249,7 +250,12 @@ private:
     // that pairing cannot be broken from outside - reach a widget through
     // labelWidget(), subConsoleWidget() or dockWidget().
     QMap<QString, TLabel*> mLabelMap;
-    QMap<QString, TConsole*> mSubConsoleMap;
+    // QPointer values because a sub-console can die as a Qt child without this
+    // class hearing about it: a miniconsole created into a user window belongs
+    // to that window's dock, and deleting the window takes it along. The entry
+    // then reads back as null instead of as freed memory, which turns every
+    // lookup on the dead name into a miss and lets the name be used again.
+    QMap<QString, QPointer<TConsole>> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
 
     // Names the dictionary mpHunspell_system was last built for. Assigned before
