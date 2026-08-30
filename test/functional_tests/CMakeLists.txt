@@ -137,7 +137,10 @@ set(MAP_GROUP_TEST_SOURCES
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
+    DualPackageModuleTest.cpp
+    ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageSelfRemovalTest.cpp
 )

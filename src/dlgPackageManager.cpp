@@ -152,7 +152,10 @@ void dlgPackageManager::downloadRepositoryIndex()
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
     QNetworkReply* reply = manager->get(request);
-    QFile* file = new QFile(outputPath);
+    // Parented so that closing the dialog before the download has finished takes
+    // it with it: the handler below is the only other thing that deletes it, and
+    // the reply that would call it is a grandchild of this dialog.
+    QFile* file = new QFile(outputPath, this);
 
     if (!file->open(QIODevice::WriteOnly)) {
         file->deleteLater();
@@ -466,13 +469,21 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
                     if (mpHost) {
                         // Uninstall existing package first if this is an update
+                        bool readyToInstall = true;
                         if (mpHost->mInstalledPackages.contains(packageName)) {
-                            mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
+                            readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
+                            if (!readyToInstall) {
+                                // installing over a package still listed as installed
+                                // fails as "already installed", so the update would go
+                                // missing without ever being named as a failure
+                                failedPackages << packageName;
+                                qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
+                            }
                         }
-                        if (mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
+                        if (readyToInstall && mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
                             // the next install would be postponed behind this save, and the loop deletes the file it needs
                             mpHost->waitForProfileSave();
-                        } else {
+                        } else if (readyToInstall) {
                             failedPackages << packageName;
                             qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
                         }
@@ -643,17 +654,54 @@ void dlgPackageManager::slot_openPackageWebsite()
     mudlet::self()->openWebPage(qsl("https://packages.mudlet.org/packages#pkg-") + currentItem->text());
 }
 
+// Returns what to tell the user about the removals that did not happen, empty
+// when they all did. Separate from the slot so the wording can be tested: the
+// dialog has no Lua entry point and the box below blocks.
+QString dlgPackageManager::removePackages(const QStringList& packageNames)
+{
+    QStringList refusedWhileSaving;
+    QStringList noLongerInstalled;
+    for (const QString& package : packageNames) {
+        if (mpHost->uninstallPackage(package, enums::PackageModuleType::Package)) {
+            continue;
+        }
+        // A save in progress is the refusal the user can do something about. The
+        // other one is a package that has gone since the row was drawn - a
+        // sibling in this very selection can take it away from its sysUninstall
+        // handler - and the listing rebuild uninstallPackage() does clears that
+        // up, rather than blaming a save that is not running.
+        if (mpHost->currentlySavingProfile()) {
+            refusedWhileSaving << package;
+        } else {
+            noLongerInstalled << package;
+        }
+    }
+
+    QStringList sentences;
+    if (!refusedWhileSaving.isEmpty()) {
+        //: %1 is a comma separated list of the packages that are still installed
+        sentences << tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedWhileSaving.join(qsl(", ")));
+    }
+    if (!noLongerInstalled.isEmpty()) {
+        //: %1 is a comma separated list of the packages that turned out not to be installed any more
+        sentences << tr("These are no longer installed, so there was nothing to remove: %1.").arg(noLongerInstalled.join(qsl(", ")));
+    }
+    return sentences.join(qsl(" "));
+}
+
 void dlgPackageManager::slot_removePackages()
 {
     const QList<QListWidgetItem*> selectedItems = packageList->selectedItems();
-    QStringList removePackages;
+    QStringList selectedPackages;
 
     for (QListWidgetItem* item : selectedItems) {
-        removePackages << item->text();
+        selectedPackages << item->text();
     }
 
-    for (const QString& package : std::as_const(removePackages)) {
-        mpHost->uninstallPackage(package, enums::PackageModuleType::Package);
+    const QString msg = removePackages(selectedPackages);
+    if (!msg.isEmpty()) {
+        //: Title of the dialog that says why a package the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), msg);
     }
 
     populatePackagesWithUpdates();
