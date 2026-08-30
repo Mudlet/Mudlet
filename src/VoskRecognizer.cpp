@@ -446,7 +446,7 @@ void VoskRecognizer::doStartListening()
         // on the main thread already. Use QPointer to safely handle the case where
         // VoskRecognizer is destroyed before the permission callback arrives.
         //
-        // Starting first, so the guard at the top of this function refuses a
+        // Starting first, so SpeechRecognizer::startListening() refuses a
         // second request while the player is still looking at the first one -
         // two dialogs, then two callbacks, the later of which would rebuild
         // the recognizer and restart capture underneath the earlier.

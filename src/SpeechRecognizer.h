@@ -285,15 +285,50 @@ protected:
     // Take the words, for a backend whose capabilities say it can. Answers
     // Applied or Failed only - setVocabulary() has already ruled out the third
     // case, so a backend never has to reason about it.
+    //
+    // mVocabularyApplied is kept in sync by setVocabulary() alone; this method
+    // never touches it. A backend that reapplies the retained vocabulary()
+    // itself - typically when a model loads, per vocabulary()'s comment -
+    // should do that by calling the inherited setVocabulary(vocabulary())
+    // rather than this method directly, so the flag is set correctly as a
+    // side effect. A backend whose model swap instead invalidates a bias
+    // already in effect, without immediately reapplying it, must call
+    // clearAppliedVocabulary() itself - otherwise the flag still says the old
+    // bias holds, and the next identical offer is wrongly short-circuited into
+    // Applied against a model that was never given the words.
     virtual VocabularyResult applyVocabulary(const QStringList& words)
     {
         Q_UNUSED(words)
         return VocabularyResult::Failed;
     }
 
+    // Corrects mVocabularyApplied when a backend changes what is applied
+    // outside setVocabulary() - see applyVocabulary()'s comment. Kept minimal
+    // on purpose: it only clears the flag, because the one case that cannot be
+    // handled by calling setVocabulary() itself is invalidation, not reapplication.
+    void clearAppliedVocabulary() { mVocabularyApplied = false; }
+
     // The engine's half of the three above, reached only once the state rules
-    // have allowed it. A backend never re-checks the state to decide whether
-    // it should run.
+    // above have allowed entry: a backend never re-checks the state to decide
+    // whether one of these may begin.
+    //
+    // That covers entry only. A doStartListening() that must wait on something
+    // outside this process - permission, a device becoming ready - returns
+    // while still Starting and finishes the work later, in its own callback or
+    // slot. By the time that continuation runs, cancel() may already have
+    // moved the state back to Ready without telling it: cancel() called during
+    // Starting is handled entirely by the base above and never reaches
+    // doCancel(). A continuation therefore has no other way to learn the
+    // request was withdrawn, and must check state() == Starting itself before
+    // opening a microphone or otherwise acting - releasing there anything it
+    // had already acquired while Starting, since no doCancel() call is coming
+    // to release it.
+    //
+    // doStartListening() must also leave the recognizer in a terminal state,
+    // itself or through its continuation, before the request is done: Listening
+    // once audio is flowing, Starting while a continuation is still pending, or
+    // Error/Ready on failure. Ending while still Ready reports a failed start
+    // to the Lua layer over an engine that may in fact be running.
     virtual void doStartListening() = 0;
     virtual void doStopListening() = 0;
     virtual void doCancel() = 0;

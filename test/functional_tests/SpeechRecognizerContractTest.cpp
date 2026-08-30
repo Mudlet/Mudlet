@@ -50,6 +50,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "SpeechRecognizer.h"
 #include "VoskRecognizer.h"
 #include "mudlet.h"
 
@@ -70,7 +71,7 @@ public:
     Capabilities capabilities() const override
     {
         Capabilities can;
-        can.biasing = true;
+        can.biasing = mBiasingSupported;
         return can;
     }
 
@@ -87,6 +88,10 @@ public:
     // still failing, and it must skip one once the backend has succeeded.
     VocabularyResult mNextApplyResult = VocabularyResult::Failed;
     int mApplyCallCount = 0;
+
+    // Flipped off to prove a backend with neither biasing nor grammar is
+    // never asked to apply anything at all, not merely told Unsupported.
+    bool mBiasingSupported = true;
 
 protected:
     void doStartListening() override {}
@@ -343,6 +348,27 @@ private slots:
         // Offered again unchanged: short-circuits now, so no redundant re-apply
         QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Applied);
         QCOMPARE(recognizer.mApplyCallCount, 3);
+
+        // A different word list must still re-apply even though the last
+        // attempt succeeded - the short-circuit is for an unchanged offer,
+        // not for a backend that is currently in a good mood
+        const QStringList otherWords{qsl("cast"), qsl("quaff")};
+        QCOMPARE(recognizer.setVocabulary(otherWords), SpeechRecognizer::VocabularyResult::Applied);
+        QCOMPARE(recognizer.mApplyCallCount, 4);
+    }
+
+    // setVocabulary() must not call through to a backend that has said it can
+    // do nothing with vocabulary - Unsupported has to mean the words were
+    // never handed over, not merely that nothing came back from doing so.
+    void unsupportedVocabularyNeverReachesTheBackend()
+    {
+        BiasingStubRecognizer recognizer;
+        recognizer.mBiasingSupported = false;
+        QVERIFY2(!recognizer.supportsBiasing() && !recognizer.supportsGrammar(), "this case needs a backend that cannot take vocabulary");
+
+        const QStringList words{qsl("kill"), qsl("look"), qsl("inventory")};
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Unsupported);
+        QCOMPARE(recognizer.mApplyCallCount, 0);
     }
 
     // Reported as the place to install a model into, so it has to be a place

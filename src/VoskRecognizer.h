@@ -64,9 +64,6 @@ public:
 
     // SpeechRecognizer interface implementation
     bool initialize(const QString& modelPath) override;
-    void doStartListening() override;
-    void doStopListening() override;
-    void doCancel() override;
     void setSilenceTimeout(int msec) override;
     int silenceTimeout() const override;
     // Vosk delivers per-word confidence and timing; it has no biasing, and
@@ -181,6 +178,14 @@ public:
     // Public for the same reason as the two above: it decides whether a word
     // the player said survives, and "i" is a MUD player's inventory command.
     static bool loneFillerWordWasNotSpoken(const QString& text, const std::optional<double>& confidence);
+
+protected:
+    // SpeechRecognizer declares these protected: a holder of a concrete
+    // VoskRecognizer* must go through startListening()/stopListening()/
+    // cancel() like every other caller, not reach around the state machine.
+    void doStartListening() override;
+    void doStopListening() override;
+    void doCancel() override;
 
 private slots:
     // Consumes 16kHz mono Int16 PCM from the shared capture component
