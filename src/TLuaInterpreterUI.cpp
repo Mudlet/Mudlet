@@ -4338,21 +4338,40 @@ int TLuaInterpreter::addCommand(lua_State* L)
     }
 
     mudlet::CommandRequest request;
-    auto stringField = [L](const char* field) -> QString {
+    // Leaving a field out and giving it the wrong type are different mistakes:
+    // the first asks for nothing, the second asks for something and is ignored.
+    // menuPath is the one that bites, because the path is conceptually a list
+    // and the sibling surfaces field really does take one, so menuPath =
+    // {"Speech", "Voices"} is an easy thing to write and used to place the
+    // command at the top of Extensions without a word. Numbers are left alone:
+    // lua_isstring() accepts them, so shortcut = 12345 still reaches the
+    // sequence parser and is refused there for what it actually is.
+    QString wrongField;
+    QString wrongType;
+    auto stringField = [&](const char* field) -> QString {
         lua_getfield(L, 1, field);
-        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        QString value;
+        if (lua_isstring(L, -1)) {
+            value = QString::fromUtf8(lua_tostring(L, -1));
+        } else if (!lua_isnoneornil(L, -1) && wrongField.isEmpty()) {
+            wrongField = QString::fromUtf8(field);
+            wrongType = QString::fromUtf8(luaL_typename(L, -1));
+        }
         lua_pop(L, 1);
         return value;
     };
 
     request.name = stringField("name");
-    if (request.name.isEmpty()) {
-        return warnArgumentValue(L, __func__, "a command needs a name to show");
-    }
     request.icon = stringField("icon");
     request.tooltip = stringField("tooltip");
     request.menuPath = stringField("menuPath");
     request.shortcut = stringField("shortcut");
+    if (!wrongField.isEmpty()) {
+        return warnArgumentValue(L, __func__, qsl("%1 has to be a string and this one is a %2").arg(wrongField, wrongType));
+    }
+    if (request.name.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a command needs a name to show");
+    }
 
     // surfaces is a list rather than a single word, so a client that grows
     // another surface takes another entry rather than a new spelling of "both".
@@ -4382,17 +4401,38 @@ int TLuaInterpreter::addCommand(lua_State* L)
     } else if (lua_istable(L, -1)) {
         lua_pushnil(L);
         while (lua_next(L, -2) != 0) {
-            const QString surface = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+            // A list of names, so a key/value table such as {menu = true} is a
+            // mistake worth naming by type: a boolean has no string form, so
+            // quoting the value would send the package looking for a surface
+            // named by the empty string
+            if (!lua_isstring(L, -1)) {
+                const QString type = QString::fromUtf8(luaL_typename(L, -1));
+                lua_pop(L, 3);
+                return warnArgumentValue(L, __func__, qsl("surfaces has to be a list of surface names and this one holds a %1 - use surfaces = {'menu', 'toolbar'}").arg(type));
+            }
+            const QString surface = QString::fromUtf8(lua_tostring(L, -1));
             if (!nameSurface(surface)) {
                 lua_pop(L, 3);
                 return warnArgumentValue(L, __func__, qsl("'%1' is not a surface this client has - use 'menu' or 'toolbar'").arg(surface));
             }
             lua_pop(L, 1);
         }
+        // An empty list asks for the command to go nowhere, which no package
+        // can have meant - and silently treating it as "both" would place a
+        // command in the two places it just said it did not want
+        if (!named) {
+            lua_pop(L, 1);
+            return warnArgumentValue(L, __func__, "surfaces is empty, so there is nowhere to put the command - name 'menu', 'toolbar', or leave surfaces out for both");
+        }
+    } else if (!lua_isnoneornil(L, -1)) {
+        const QString type = QString::fromUtf8(luaL_typename(L, -1));
+        lua_pop(L, 1);
+        return warnArgumentValue(L, __func__, qsl("surfaces has to be a surface name or a list of them, not a %1 - use 'menu' or 'toolbar'").arg(type));
     }
     lua_pop(L, 1);
 
-    // Naming nothing means "wherever this client puts commands", which is both
+    // Leaving surfaces out means "wherever this client puts commands", which is
+    // both. Naming it and naming nothing in it is refused above.
     if (!named) {
         request.surfaces = mudlet::CommandSurface::Both;
     } else if (wantsMenu && wantsToolbar) {

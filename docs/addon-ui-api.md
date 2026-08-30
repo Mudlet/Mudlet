@@ -6,10 +6,10 @@ client places it: the same command can appear as a menu entry and a toolbar
 button, and pressing either raises one event carrying one id.
 
 That follows what Mudlet already does with its own commands - Triggers,
-Mapper, Notepad and 16 others exist on both surfaces and are kept in step -
-and it is what makes the API implementable by clients other than desktop
-Mudlet. "Here is a command" maps onto whatever chrome a client has; "here is
-a toolbar button" does not.
+Mapper, Notepad and most of the rest exist on both surfaces and are kept in
+step - and it is what makes the API implementable by clients other than
+desktop Mudlet. "Here is a command" maps onto whatever chrome a client has;
+"here is a toolbar button" does not.
 
 Commands are identified by the numeric id returned at creation - names and
 labels carry no identity and may repeat freely. Every command belongs to the
@@ -23,7 +23,7 @@ local id = addCommand{
   icon     = "/path/icon.png",    -- filesystem path, Qt resource path, or theme name
   tooltip  = "Configure voices",
   menuPath = "Speech",            -- position within Extensions; "Speech/Voices" nests
-  shortcut = "Ctrl+Alt+S",        -- menu only
+  shortcut = "Ctrl+Alt+P",        -- needs the menu item, so not with surfaces = "toolbar"
   surfaces = {"menu", "toolbar"}, -- omit for every surface this client places commands on
 }
 ```
@@ -34,36 +34,56 @@ bare string. Omitting it means "wherever this client puts commands", which on
 desktop Mudlet is the menu and the toolbar.
 
 `addCommand` returns an id, or `nil, error` explaining why the command could
-not be placed - an unparseable or already-taken shortcut, a `menuPath` part
-that names an existing command of this profile's, or every surface it asked
-for being hidden.
+not be placed. The reasons are:
+
+- `name` is missing, so the command has nothing to show
+- a field was given a value Mudlet cannot read as the type it expects -
+  `menuPath = {"Speech"}`, say - rather than being left out. A number is read
+  as a string, so `menuPath = 12345` places a submenu of that name
+- every surface it asked for is hidden (see *The main toolbar is hidden by
+  default* below)
+- a `shortcut` or a `menuPath` was given alongside `surfaces = "toolbar"`,
+  where there is no menu item for either to attach to
+- a `shortcut` was given while the menu bar is hidden, so it could never fire
+- the `shortcut` is not a key sequence Qt understands, is longer than the four
+  steps Qt can hold, or is one already taken - by Mudlet, or by a command of
+  this or another profile
+- a `menuPath` part names an existing command of this profile's, or the
+  command's own name is already a submenu of this profile's in the menu it
+  would land in
+- `surfaces` names something other than `"menu"` or `"toolbar"`, or is an
+  empty list - which asks for the command to go nowhere
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
 | `addCommand{...}` | id \| `nil, error` | As above. The first toolbar command also adds a separator dividing addon commands from Mudlet's own. |
-| `removeCommand(id)` | boolean | Removes the command from every surface. Emptied `menuPath` submenus and the separator go with it; add/remove cycles leave no residue. |
+| `removeCommand(id)` | boolean | Removes the command from every surface. Emptied `menuPath` submenus go with it, and the separator once the last toolbar command does; add/remove cycles leave no residue. |
 | `enableCommand(id)` | boolean | Enables it on every surface. |
 | `disableCommand(id)` | boolean | Disables it on every surface. |
 | `setCommandChecked(id, checked)` | boolean | Sets a checkmark (the command becomes checkable on first use), on every surface. A checkable command activated by the user stays in step across surfaces: the state the pressed surface reached is the state the others take, before `sysCommandClicked` is raised. |
 | `setCommandIcon(id, icon)` | boolean | Replaces the icon; path rules as above. |
-| `setCommandTooltip(id, tooltip)` | boolean | Replaces the tooltip. Package text is escaped, so `<` and `&` show as typed - in labels too, where a bare `&` would otherwise be read as a keyboard mnemonic and vanish from the text. |
+| `setCommandTooltip(id, tooltip)` | boolean | Replaces the tooltip; an empty string takes it away, leaving the menu item to fall back on its own label as every other menu item does. Package text is escaped, so `<` and `&` show as typed - in labels too, where a bare `&` would otherwise be read as a keyboard mnemonic and vanish from the text. |
 | `setCommandPulse(id, enabled[, color1, color2, interval])` | boolean \| `nil, error` | Toolbar-only refinement: a two-colour background pulse (defaults `#ff4444`/`#cc0000`, 500ms). Refuses a colour the client cannot parse, and an `interval` below 1ms. |
 
-**Finding the menu:** the Extensions menu lives in Mudlet's menu bar - on
-macOS that is the system menu bar at the top of the screen, not the Mudlet
-window. It is created on first use and hides itself while empty.
+**Finding the menu:** the Extensions menu lives inside Mudlet's Options
+menu - on macOS that is in the system menu bar at the top of the screen, not
+the Mudlet window. It is created on first use and hides itself while empty.
 
 **The main toolbar is hidden by default.** A command is refused when every
 surface it asked for is hidden - the toolbar alone while the toolbar is off,
 the menu alone while the menu bar is off, or either default while both are.
 A command on both surfaces is reachable as long as one bar is showing, which
-is why that is the default.
+is why that is the default. A `shortcut` is the exception to "one bar is
+enough": it hangs on the menu item, so it needs the menu bar itself.
 
 **Menu placement is per profile.** `menuPath` submenus and the label rule
-below are decided by the calling profile's own commands. Two profiles may use
-the same path or the same label, and whether a package can place a command
-never depends on which other profiles happen to be open - a package cannot see
-another profile's labels, so it could not act on a refusal naming one.
+above are decided by the calling profile's own commands. Two profiles may use
+the same path or the same label, and neither can see or clear the other's -
+which is why a refusal never names one.
+
+Shortcuts are the exception: a key sequence belongs to the window, so two
+profiles cannot hold the same one at once. The second is refused, without
+being told whose command has it.
 
 **Detached profiles keep their own chrome.** A profile detached into its own
 window builds its own menu bar and toolbar, and commands are not mirrored into

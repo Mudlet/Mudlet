@@ -145,12 +145,25 @@ private:
         return luaGlobalNumber(pHost, qsl("_addonId"));
     }
 
-    // The reason a refused command gave, which is the half a package can act on
+    // The reason a refused command gave, which is the half a package can act on.
+    // A chunk that could not run at all is not a refusal and must not read like
+    // one: returning its Lua error here would let a broken binding satisfy an
+    // assertion about the wording of a refusal.
     QString refusalReason(Host* pHost, const QString& fields) const
     {
         const QString error = runLua(pHost, qsl("_addonId, _addonWhy = addCommand{%1}").arg(fields));
         if (!error.isNull()) {
-            return error;
+            qWarning() << "addCommand did not run:" << error;
+            return QString();
+        }
+        // A request that was accepted has no reason to give and has left a
+        // command on the surfaces for every later case to trip over, so it is
+        // taken away again and reported as the empty string it really is.
+        const int placedId = luaGlobalNumber(pHost, qsl("_addonId"));
+        if (placedId > 0) {
+            qWarning() << "addCommand placed the command instead of refusing it:" << fields;
+            runLua(pHost, qsl("removeCommand(%1)").arg(placedId));
+            return QString();
         }
         return luaGlobalString(pHost, qsl("_addonWhy"));
     }
@@ -192,16 +205,40 @@ private:
         return !answer;
     }
 
-    QToolButton* toolbarButtonNamed(const QString& name) const { return mudlet::self()->findChild<QToolButton*>(qsl("addon_%1").arg(name)); }
+    // On the main toolbar rather than merely somewhere in the window: a button
+    // built but never added is still findable by name, and looks from here
+    // exactly like one the player can press.
+    QToolButton* toolbarButtonNamed(const QString& name) const
+    {
+        QToolButton* pButton = mudlet::self()->findChild<QToolButton*>(qsl("addon_%1").arg(name));
+        if (!pButton) {
+            return nullptr;
+        }
+        for (const QWidget* pParent = pButton->parentWidget(); pParent; pParent = pParent->parentWidget()) {
+            if (pParent == mudlet::self()->mpMainToolBar) {
+                return pButton;
+            }
+        }
+        return nullptr;
+    }
 
     // Menu items carry no object name, so they are found the way a user finds
-    // them - by the text on them
+    // them - by the text on them, and only inside the menu they are documented
+    // to appear in. Every command's item sits in Extensions or a submenu of it,
+    // and Extensions hangs off Options, so walking up from the item is what
+    // separates a placed command from one whose action exists but is parented
+    // somewhere the player will never open.
     QAction* menuActionNamed(const QString& name) const
     {
         const QList<QAction*> actions = mudlet::self()->findChildren<QAction*>();
         for (QAction* action : actions) {
-            if (!action->menu() && action->text() == name) {
-                return action;
+            if (action->menu() || action->text() != name) {
+                continue;
+            }
+            for (const QWidget* pParent = qobject_cast<QWidget*>(action->parent()); pParent; pParent = pParent->parentWidget()) {
+                if (pParent == mudlet::self()->menuOptions) {
+                    return action;
+                }
             }
         }
         return nullptr;
@@ -278,6 +315,37 @@ private slots:
         } else {
             qputenv("XDG_CONFIG_HOME", mSavedXdgConfigHome);
         }
+    }
+
+    // The clash check only runs when a package asks for a key, and a package
+    // on another profile can hold one when the search is switched on: the
+    // menu carries every profile's commands, so this clash crosses profiles
+    // even though a package can never see it coming. Qt answers an ambiguous
+    // shortcut by disabling both, so the profile that switched the search on
+    // has to be told - without being told whose command it was, which is the
+    // other package's business and nothing this profile can act on.
+    void test_theSearchSaysSoWhenAnotherProfilesCommandHoldsItsKey()
+    {
+        runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
+        QTest::qWait(100ms);
+
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileF3', menuPath = 'ClashTest', shortcut = 'F3'"));
+        QVERIFY2(commandId > 0, "F3 could not be taken even with the search off");
+
+        // on the second profile because that is the visible one: a
+        // Qt::WindowShortcut candidate has to be visible to be ambiguous at
+        // all, and a console on a background tab is not
+        runLua(mpSecondHost, qsl("clearWindow()"));
+        runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', true)"));
+        QTest::qWait(200ms);
+        runLua(mpSecondHost, qsl("_clashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
+        const QString text = luaGlobalString(mpSecondHost, qsl("_clashText"));
+
+        runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(text.contains(QKeySequence(Qt::Key_F3).toString(QKeySequence::NativeText)), qPrintable(qsl("the search took F3 from another profile's command without saying so: %1").arg(text)));
+        QVERIFY2(!text.contains(qsl("OtherProfileF3")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
     }
 
     // docs/addon-ui-api.md gives the click event the id as addCommand returned
@@ -465,9 +533,29 @@ private slots:
         QTest::qWait(100ms);
     }
 
-    // The same clash from the other side: a submenu exists, and a command tries
-    // to take its label. The review said the duplicate happened in either
-    // order, and the first fix only closed one of them.
+    // Two profiles share one window, so a key a package asks for can be held by
+    // a command another profile placed. That still has to be a refusal, but the
+    // holder's name belongs to a profile this package cannot see and could not
+    // act on if it could.
+    void test_aShortcutHeldByAnotherProfileIsRefusedWithoutNamingIt()
+    {
+        const int firstId = addCommand(mpFirstHost, qsl("name = 'PrivateToFirst', menuPath = 'Keys', shortcut = 'Ctrl+Alt+J'"));
+        QVERIFY2(firstId > 0, "the first profile could not take a free shortcut");
+
+        const QString why = refusalReason(mpSecondHost, qsl("name = 'WantsIt', menuPath = 'Keys', shortcut = 'Ctrl+Alt+J'"));
+        QVERIFY2(!why.isEmpty(), "the other profile was handed a key already in use, which disables both");
+        // pinned to the sequence: any other reason the command could be turned
+        // down would satisfy a bare non-empty check while the clash went unseen
+        QVERIFY2(why.contains(QKeySequence(qsl("Ctrl+Alt+J")).toString(QKeySequence::NativeText)), qPrintable(qsl("refused, but not over the shortcut: %1").arg(why)));
+        QVERIFY2(!why.contains(qsl("PrivateToFirst")), qPrintable(qsl("the refusal names a command belonging to another profile: %1").arg(why)));
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(firstId)));
+        QTest::qWait(100ms);
+    }
+
+    // The same clash from the other side: the submenu exists first and a
+    // command tries to take its label. Refusing only the other order leaves the
+    // menu showing one label twice, once as an item and once as a submenu.
     void test_aCommandCannotTakeASubmenusLabel()
     {
         const int nestedId = addCommand(mpFirstHost, qsl("name = 'Alice', menuPath = 'Voices'"));
@@ -663,6 +751,62 @@ private slots:
         QVERIFY2(why.contains(qsl("Speech")), qPrintable(qsl("the refusal does not name the clash: %1").arg(why)));
 
         QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(leafId)));
+        QTest::qWait(100ms);
+    }
+
+    // A shortcut hangs on the menu item, and a hidden menu bar takes the item
+    // out of reach with it. Mudlet's own sequences are moved onto standalone
+    // QShortcuts when that happens, but a package's cannot be, so accepting one
+    // hands back an id for a key that can never fire.
+    void test_aShortcutIsRefusedWhileTheMenuBarIsHidden()
+    {
+        const enums::controlsVisibility restoreToolbar = mudlet::self()->toolBarVisibility();
+        const enums::controlsVisibility restoreMenuBar = mudlet::self()->menuBarVisibility();
+
+        // the toolbar carries the command, so only the shortcut is in question
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        mudlet::self()->setMenuBarVisibility(enums::visibleNever);
+        const QString why = refusalReason(mpFirstHost, qsl("name = 'Silent', shortcut = 'Ctrl+Alt+F8'"));
+        QVERIFY2(!why.isEmpty(), "a shortcut was accepted with the menu bar hidden, so it could never fire");
+
+        mudlet::self()->setMenuBarVisibility(enums::visibleAlways);
+        const int audibleId = addCommand(mpFirstHost, qsl("name = 'Audible', shortcut = 'Ctrl+Alt+F8'"));
+        QVERIFY2(audibleId > 0, "the same shortcut was refused with the menu bar showing");
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(audibleId)));
+
+        mudlet::self()->setToolBarVisibility(restoreToolbar);
+        mudlet::self()->setMenuBarVisibility(restoreMenuBar);
+        QTest::qWait(100ms);
+    }
+
+    // Package tooltips are wrapped in a paragraph so an unescaped '<' cannot
+    // eat the rest of them. Wrapping nothing produced "<p></p>", which is not
+    // an empty string, so Qt hovered an empty box over a command that had asked
+    // for no tooltip at all - and over one whose tooltip had been taken away.
+    // Passing nothing through instead leaves Qt to its usual fallback, which is
+    // what the rest of Mudlet's actions already do.
+    void test_aCommandWithNoTooltipShowsNoEmptyBox()
+    {
+        const QString emptyBox = qsl("<p></p>");
+        const int id = addCommand(mpFirstHost, qsl("name = 'Bare', menuPath = 'Quiet'"));
+        QVERIFY2(id > 0, "the command was not placed");
+
+        QAction* pAction = menuActionNamed(qsl("Bare"));
+        QVERIFY2(pAction, "the menu item was not found");
+        QVERIFY2(pAction->toolTip() != emptyBox, "the menu item hovers an empty tooltip box");
+
+        QToolButton* pButton = toolbarButtonNamed(qsl("Bare"));
+        QVERIFY2(pButton, "the toolbar button was not found");
+        QVERIFY2(pButton->toolTip() != emptyBox, "the button hovers an empty tooltip box");
+
+        // and taking a tooltip away has to leave nothing behind either
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("setCommandTooltip(%1, 'Something')").arg(id)));
+        QVERIFY(pAction->toolTip().contains(qsl("Something")));
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("setCommandTooltip(%1, '')").arg(id)));
+        QVERIFY2(pAction->toolTip() != emptyBox, "clearing the tooltip left an empty box behind");
+        QVERIFY2(pButton->toolTip() != emptyBox, "clearing the tooltip left an empty box on the button");
+
+        QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(id)));
         QTest::qWait(100ms);
     }
 };

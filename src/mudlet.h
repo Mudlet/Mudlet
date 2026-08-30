@@ -348,9 +348,15 @@ public:
     bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
     // Every command a profile placed, dropped when it closes or resets
     void removeAddonCommandsForHost(Host* pHost);
+    // Which add-on commands hold this key, named as the player reads them.
+    // The clash check only runs when a package asks for a key, and Mudlet's
+    // own bindings can appear afterwards - the buffer search is switched on
+    // long after a package has taken F3 - at which point Qt disables both.
+    // A command belonging to another profile is reported without its name:
+    // that is the other package's business and nothing this profile can act
+    // on, the same rule addonShortcutUsable() follows.
+    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
     void applyToolBarStyleToAddonCommands();
-
-    // Addon menu item management
 
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:
@@ -824,21 +830,18 @@ private:
         QPointer<QAction> toolbarAction;
         QPointer<QAction> menuAction;
         QPointer<QTimer> pulseTimer;
-        QString name;
-        QString menuPath;
         QPointer<Host> pHost;
         bool pulseState = false;
         QString pulseColor1;
         QString pulseColor2;
     };
-    // One sequence for every command, so an id names one thing or nothing
     QMenu* addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error);
-    bool addonShortcutUsable(const QKeySequence& sequence, QString& error) const;
+    bool addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const;
     static QString addonTooltip(const QString& tooltip);
     // Qt reads '&' in a QAction's or QToolButton's text as a mnemonic, so a
     // package's "Fish & Chips" draws without the ampersand and steals Alt+Space.
-    // Only the displayed strings are doubled; the raw name stays the identity
-    // the label-clash checks compare.
+    // The clash checks compare labels after doubling, so a path part is put
+    // through this before being matched against what a menu already holds.
     static QString addonLabel(const QString& name);
     // The inverse, for a message rather than a surface: a refusal quoting Qt's
     // mnemonic syntax names a label that appears nowhere on screen.
@@ -852,6 +855,7 @@ private:
     void mirrorAddonCommandChecked(int commandId, bool checked);
 
     QMap<int, AddonCommand> mAddonCommands;
+    // One sequence for every command, so an id names one thing or nothing
     int mNextAddonCommandId = 1;
     QAction* mpAddonToolbarSeparator = nullptr;
     QPointer<QMenu> mpAddonsMenu;
