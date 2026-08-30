@@ -4459,6 +4459,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         return;
     }
 
+    bool serverDeclinedBaseUi = false;
     if (transcodedMsg.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
@@ -4494,21 +4495,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         }
 
         // Raw Telnet carries a version and a url and nothing else, so only the
-        // JSON form can decline. The same event an installed interface package
-        // raises is used, with no package named: the decline is the game
-        // claiming the screen space for its own interface, which is exactly the
-        // statement that event already makes.
-        //
-        // The starter UI builds its dock on the first game data it recognises
-        // rather than on install, so a decline arriving before that data leaves
-        // the dock never built - which is why a game wanting none of it should
-        // send this ahead of its first vitals.
-        if (!rawTelnet && parseGUIBaseUiDeclinedFromJSON(document.object())) {
-            TEvent event{};
-            event.mArgumentList.append(qsl("sysServerGuiInstalled"));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mpHost->raiseEvent(event);
-        }
+        // JSON form can decline; the event itself is raised at the end of this
+        // function, once setGMCPTable() has run, so a handler reading
+        // gmcp.Client.GUI sees the decline it is being told about.
+        serverDeclinedBaseUi = !rawTelnet && parseGUIBaseUiDeclinedFromJSON(document.object());
 
         handleGUIPackageInstallationAndUpgrade(document);
 
@@ -4538,6 +4528,25 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+
+    // A game that brings its own interface can decline the built-in starter UI
+    // up front with Client.GUI {"baseui": false}. The same event an installed
+    // interface package raises is used, with no package named: the decline is
+    // the game claiming the screen space for its own interface, which is
+    // exactly the statement that event already makes. Raised only now, after
+    // setGMCPTable() above, so handlers read the gmcp table this message built
+    // - the package-install path fires it after the table update too.
+    //
+    // The starter UI builds its dock on the first game data it recognises
+    // rather than on install, so a decline arriving before that data leaves
+    // the dock never built - which is why a game wanting none of it should
+    // send this ahead of its first vitals.
+    if (serverDeclinedBaseUi) {
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 }
 
 void cTelnet::setMSSPVariables(const QByteArray& msg)
