@@ -539,12 +539,18 @@ void TMCPBridge::refreshClaudeDesktopEntry()
         // is already there.
         return;
     }
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "TMCPBridge::refreshClaudeDesktopEntry() WARNING - could not read" << path << "to check whether its Mudlet entry is current";
-        return;
+    // The read handle is let go here: Windows refuses the rename QSaveFile::commit()
+    // makes while anything still holds the destination open, so keeping it would fail
+    // every rewrite below.
+    QByteArray raw;
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "TMCPBridge::refreshClaudeDesktopEntry() WARNING - could not read" << path << "to check whether its Mudlet entry is current";
+            return;
+        }
+        raw = file.readAll();
     }
-    const QByteArray raw = file.readAll();
     const QJsonDocument doc = QJsonDocument::fromJson(raw);
     if (!doc.isObject()) {
         qWarning() << "TMCPBridge::refreshClaudeDesktopEntry() WARNING -" << path << "does not hold a JSON object, so its Mudlet entry cannot be checked";
@@ -1055,12 +1061,17 @@ void TMCPBridge::refreshCodexEntry()
         // is already there.
         return;
     }
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "TMCPBridge::refreshCodexEntry() WARNING - could not read" << path << "to check whether its Mudlet entry is current";
-        return;
+    // Closed before the rewrite below for the same reason as in
+    // refreshClaudeDesktopEntry().
+    QByteArray raw;
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "TMCPBridge::refreshCodexEntry() WARNING - could not read" << path << "to check whether its Mudlet entry is current";
+            return;
+        }
+        raw = file.readAll();
     }
-    const QByteArray raw = file.readAll();
     QList<TomlLine> lines;
     if (!scanToml(raw, lines)) {
         qWarning() << "TMCPBridge::refreshCodexEntry() WARNING -" << path << "could not be understood, so its Mudlet entry cannot be checked";
