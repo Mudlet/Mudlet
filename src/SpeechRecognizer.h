@@ -288,10 +288,15 @@ protected:
     //
     // mVocabularyApplied is kept in sync by setVocabulary() alone; this method
     // never touches it. A backend that reapplies the retained vocabulary()
-    // itself - typically when a model loads, per vocabulary()'s comment -
-    // should do that by calling the inherited setVocabulary(vocabulary())
-    // rather than this method directly, so the flag is set correctly as a
-    // side effect. A backend whose model swap instead invalidates a bias
+    // itself - typically when a model loads, per vocabulary()'s comment - has
+    // two ways to record that, and which one is right depends on whether the
+    // reapply actually did anything: a backend that must rebuild to bias a
+    // newly loaded model calls the inherited setVocabulary(vocabulary()), so
+    // the flag is set as a side effect of that real work; a backend that
+    // already baked vocabulary() in as part of loading - nothing left to do -
+    // calls noteVocabularyApplied() instead, since routing that through
+    // setVocabulary() would pay for a second, redundant reload just to flip a
+    // bookkeeping flag. A backend whose model swap instead invalidates a bias
     // already in effect, without immediately reapplying it, must call
     // clearAppliedVocabulary() itself - otherwise the flag still says the old
     // bias holds, and the next identical offer is wrongly short-circuited into
@@ -310,6 +315,13 @@ protected:
     // whatever mVocabularyApplied last said - true or not - and the model just
     // loaded would never be asked at all.
     void clearAppliedVocabulary() { mVocabularyApplied = false; }
+
+    // The other half of the pair above: for a backend that applied
+    // vocabulary() as an unavoidable side effect of work it was doing anyway
+    // (typically loading a model), and has nothing left to do beyond recording
+    // that it happened. See applyVocabulary()'s comment for when this is the
+    // right call instead of setVocabulary(vocabulary()).
+    void noteVocabularyApplied() { mVocabularyApplied = true; }
 
     // The engine's half of the three above, reached only once the state rules
     // above have allowed entry: a backend never re-checks the state to decide

@@ -19,9 +19,9 @@
 
 #include "SpeechRecognizerFactory.h"
 
-#include "utils.h"
 #include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
+#include "utils.h"
 #include "VoskRecognizer.h"
 
 #include <QDir>

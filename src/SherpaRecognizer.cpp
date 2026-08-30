@@ -539,11 +539,20 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     }
 
     // Whether this engine can bias was just decided by the model that loaded,
-    // so anyone who read the capabilities before now is holding stale answers
-    emit capabilitiesChanged(capabilities());
+    // so anyone who read the capabilities before now may be holding a stale
+    // answer - announced only if this one actually differs from it
+    announceCapabilitiesIfChanged();
 
     setState(State::Ready);
     return true;
+}
+
+void SherpaRecognizer::announceCapabilitiesIfChanged()
+{
+    if (const Capabilities current = capabilities(); !(current == mAnnouncedCapabilities)) {
+        mAnnouncedCapabilities = current;
+        emit capabilitiesChanged(current);
+    }
 }
 
 bool SherpaRecognizer::initialize(const QString& modelPath)
@@ -554,19 +563,23 @@ bool SherpaRecognizer::initialize(const QString& modelPath)
 
     // vocabulary() may hold words offered before this model could bias them,
     // or while a different model was loaded. loadModel() above already baked
-    // them into this model's config using whatever it found, but
-    // mVocabularyApplied has not caught up - it is base-class bookkeeping
-    // touched only by setVocabulary(), which nothing above just called.
-    // clearAppliedVocabulary() first is required, not optional: without it,
-    // setVocabulary(vocabulary()) sees an unchanged offer and, if the flag
-    // happens to still say Applied from whatever model was loaded before this
-    // one, short-circuits into agreeing without ever asking this model.
-    if (!vocabulary().isEmpty()) {
+    // them into this model's config using whatever it found - so there is
+    // nothing left to apply, only mVocabularyApplied's bookkeeping to correct.
+    // noteVocabularyApplied() records that directly rather than going through
+    // setVocabulary(vocabulary()): that call would reach applyVocabulary(),
+    // which reloads the model to bias it - a second, byte-identical load of
+    // what loadModel() just built, for a multi-hundred-MB model paid on every
+    // stt.init() that holds a vocabulary. clearAppliedVocabulary() otherwise:
+    // this model cannot bias, so whatever the flag said about the previous one
+    // no longer applies, and a later identical offer must not be told Applied
+    // against a model that never received it.
+    if (mSupportsBiasing) {
+        noteVocabularyApplied();
+    } else {
         clearAppliedVocabulary();
-        setVocabulary(vocabulary());
     }
 
-    return true;
+    return state() == State::Ready;
 }
 
 void SherpaRecognizer::doStartListening()
@@ -838,8 +851,17 @@ void SherpaRecognizer::releaseSherpaResources()
 
 void SherpaRecognizer::releaseResources()
 {
+    // Same reason as initialize()/loadModel() stopping it before reloading: the
+    // device has to go before the decoder, or a caller is left with a live
+    // microphone it has no way to close
+    mpCapture->stop();
     releaseSherpaResources();
+    // capabilities() already answers false for biasing once mRecognizer is
+    // gone, but these are cleared too rather than leaning on that gate alone
+    mSupportsBiasing = false;
+    mBpeVocabPath.clear();
     setState(State::Uninitialized);
+    announceCapabilitiesIfChanged();
 }
 
 SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStringList& words)
@@ -850,9 +872,14 @@ SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStri
     //
     // The word list is built into the decoder when the recognizer is created,
     // so a model already loaded has to be rebuilt to bias toward a new one.
-    // Calls loadModel() directly rather than initialize(): initialize()'s own
-    // tail reapplies vocabulary() by calling back into this same function, and
-    // going through initialize() here would recurse into that tail forever.
+    // Calls loadModel() directly rather than initialize(): loadModel() is the
+    // whole job (rebuild, report Applied/Failed via its return); initialize()
+    // wraps that with a vocabulary-applied bookkeeping fix of its own, which
+    // setVocabulary() - our caller - is about to redo anyway from the result
+    // returned below. Going through initialize() would just repeat that for
+    // no effect, and once did something worse: an earlier version of that
+    // wrapper wrote the bookkeeping fix by calling back into setVocabulary(),
+    // which reached this function again and recursed without terminating.
     if (state() == State::Ready && !mModelPath.isEmpty()) {
         return loadModel(mModelPath) ? VocabularyResult::Applied : VocabularyResult::Failed;
     }

@@ -567,6 +567,37 @@ private slots:
         QCOMPARE(recognizer.setVocabulary({qsl("kill"), qsl("look")}), SpeechRecognizer::VocabularyResult::Unsupported);
         QVERIFY2(recognizer.vocabulary().size() == 2, "the words must be kept for a model that can bias later");
     }
+
+    // capabilities().biasing and modelPath() must answer from the live handle,
+    // not from mSupportsBiasing/mModelPath alone: those are set by loadModel()
+    // before the recognizer handle exists and releaseResources() does not
+    // erase them, so without the gate both would go on reporting a model that
+    // is no longer loaded. This pins the gate on a recognizer that never
+    // successfully loaded a model at all - the strongest case reachable
+    // without the sherpa-onnx library actually installed, since only a real,
+    // successful load ever sets mSupportsBiasing true or mModelPath non-empty
+    // in the first place. See task-1-report.md's fix-up entry for the manual
+    // verification (with the real library and a real bpe.vocab model) that
+    // covers the load-then-release case this cannot.
+    void sherpaCapabilitiesAndModelPathClearOnRelease()
+    {
+        SherpaRecognizer recognizer;
+        QVERIFY(recognizer.modelPath().isEmpty());
+        QVERIFY(recognizer.currentLanguage().isEmpty());
+        QVERIFY2(!recognizer.capabilities().biasing, "biasing was claimed with no model ever loaded");
+
+        // Fails at the very first guard (no library here) without ever
+        // touching mModelPath/mSupportsBiasing - releaseResources() must still
+        // leave a consistent, empty answer rather than assume it has anything to undo
+        QVERIFY(!recognizer.initialize(qsl("/definitely/not/a/model/path/for/testing")));
+        recognizer.releaseResources();
+
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        QVERIFY2(recognizer.modelPath().isEmpty(), "a model path survived releaseResources()");
+        QVERIFY2(recognizer.currentLanguage().isEmpty(), "a language survived releaseResources()");
+        QVERIFY2(!recognizer.capabilities().biasing, "biasing was still claimed after releaseResources()");
+        QVERIFY2(!recognizer.hasLiveNativeResources(), "releaseResources() left native handles behind");
+    }
 };
 
 #include "SpeechRecognizerContractTest.moc"

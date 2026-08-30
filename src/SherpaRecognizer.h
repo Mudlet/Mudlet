@@ -55,12 +55,17 @@ public:
     bool initialize(const QString& modelPath) override;
     // Read from the model rather than fixed for the engine: biasing needs the
     // model's own sub-word vocabulary, so the same engine can bias one model
-    // and not the next. Announced through capabilitiesChanged() when a model
-    // loads, because a consumer that read them once would otherwise not know.
+    // and not the next. Gated on mRecognizer, not just on mSupportsBiasing/
+    // mBpeVocabPath: those are set once a model directory is found to carry
+    // bpe.vocab, before the recognizer is actually created, and releasing the
+    // recognizer does not clear them - so without the gate this would go on
+    // claiming biasing for a model that is no longer loaded. Announced through
+    // capabilitiesChanged() when this answer changes, because a consumer that
+    // read them once would otherwise not know.
     Capabilities capabilities() const override
     {
         Capabilities answer;
-        answer.biasing = mSupportsBiasing;
+        answer.biasing = mRecognizer && mSupportsBiasing;
         answer.onDevice = true;
         return answer;
     }
@@ -73,9 +78,14 @@ public:
     float audioLevel() const override { return listening() ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override { return mRecognizer || mStream; }
     void releaseResources() override;
-    QString modelPath() const override { return mModelPath; }
+    // Gated on the live handle rather than answering from a remembered
+    // string, the way VoskRecognizer::modelPath() is and for the same reason
+    // (see its comment): a package reads this to decide whether setup already
+    // happened, so it must not name a model that failed to load or has just
+    // been freed.
+    QString modelPath() const override { return mRecognizer ? mModelPath : QString(); }
 
-    QString currentLanguage() const override { return mCurrentLanguage; }
+    QString currentLanguage() const override { return mRecognizer ? mCurrentLanguage : QString(); }
     bool setLanguage(const QString& languageCode) override;
 
     QString backendName() const override { return qsl("sherpa-onnx"); }
@@ -113,9 +123,9 @@ public:
     static bool looksLikeModelDir(const QString& modelPath);
 
 protected:
-    // Take the retained vocabulary and rebuild the decoder toward it. See
-    // applyVocabulary()'s override for why this goes through loadModel()
-    // rather than initialize().
+    // Take the retained vocabulary and rebuild the decoder toward it. See the
+    // .cpp definition for why this goes through loadModel() rather than
+    // initialize().
     VocabularyResult applyVocabulary(const QStringList& words) override;
 
 private slots:
@@ -130,11 +140,10 @@ private:
 
     // The entire job of loading (or reloading) a model, including baking in
     // vocabulary() for whatever bias support the model turns out to have.
-    // initialize() wraps this with a vocabulary reapply pass; applyVocabulary()
-    // calls this directly instead of initialize(), because initialize()'s own
-    // reapply pass ends by calling setVocabulary(), which would call back into
-    // applyVocabulary() and recurse forever if applyVocabulary() called
-    // initialize() instead of this.
+    // initialize() wraps this with a vocabulary-applied bookkeeping fix that
+    // applyVocabulary() would only have to redo (its own caller,
+    // setVocabulary(), does that from applyVocabulary()'s return value), so
+    // applyVocabulary() calls this directly instead of initialize().
     bool loadModel(const QString& modelPath);
 
     // Release sherpa-onnx resources
@@ -150,6 +159,12 @@ private:
     // Find an installed model path for a given language code
     QString findModelPathForLanguage(const QString& languageCode) const;
 
+    // Re-read capabilities() and emit capabilitiesChanged() only when the
+    // answer actually moved, the way VoskRecognizer::announceCapabilitiesIfChanged()
+    // does: a consumer told docs/stt-api.md's promise to re-read rather than
+    // cache capabilities should not also see a signal fire for no change.
+    void announceCapabilitiesIfChanged();
+
     // Member variables
     QString mModelPath;
     QString mCurrentLanguage;
@@ -158,11 +173,18 @@ private:
 
     // Words to bias recognition toward, and the model's sub-word vocabulary
     // they are tokenised with. Both are needed before biasing can be claimed.
+    // Reset on release alongside mRecognizer - capabilities() also gates on
+    // mRecognizer, so this and that are kept redundant on purpose rather than
+    // relying on the gate alone.
     QString mBpeVocabPath;
     bool mSupportsBiasing = false;
     // Whether this model's units are written in upper case, which decides the
     // case biasing words have to be given in to match them
     bool mUppercaseTokens = false;
+
+    // What capabilities() last reported, so announceCapabilitiesIfChanged()
+    // can tell a real change from a re-read of the same answer
+    Capabilities mAnnouncedCapabilities;
 
     // Consecutive silent audio chunks, used to tell a genuine lull from the
     // moment speech is starting. Chunks arrive every 50ms.
