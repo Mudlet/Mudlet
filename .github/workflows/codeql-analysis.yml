@@ -100,10 +100,6 @@ jobs:
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
-        # 1.5GB per commit, and this runs on every push to development, so it
-        # held 59% of the repository's 10GB quota and evicted the branch ccache
-        # entries a cold build costs 20 minutes to rebuild. It only pays off
-        # when a run reuses an earlier commit's extraction, which these do not.
         trap-caching: false
         # If you wish to specify custom queries, you can do so here or in a config file.
         # By default, queries listed here will override any specified in a config file.

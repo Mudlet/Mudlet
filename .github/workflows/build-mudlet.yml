@@ -323,11 +323,6 @@ jobs:
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
-        # Two ubuntu-22.04 legs agree on every other part of this key and only
-        # one builds with -DUSE_SANITIZER=Address, so the asan/plain segment is
-        # what stops them sharing an entry and overwriting each other's objects.
-        # It repeats that flag's condition rather than reading enable_asan alone
-        # so that a tagged build, which drops the sanitizer, keys as plain.
         key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'asan' || 'plain' }}-${{ github.ref_name }}
         restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'asan' || 'plain' }}-development
 
