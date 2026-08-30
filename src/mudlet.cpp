@@ -55,7 +55,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "MMCPServer.h"
-#include "WidgetUtils.h"
+#include "widgetutils.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
@@ -1625,7 +1625,7 @@ void mudlet::slot_moduleManager()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    WidgetUtils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
 }
 
 bool mudlet::openWebPage(const QString& path)
@@ -1665,7 +1665,7 @@ void mudlet::slot_packageManager()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    WidgetUtils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
 }
 
 void mudlet::slot_packageExporter()
@@ -1685,7 +1685,7 @@ void mudlet::slot_packageExporter()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    WidgetUtils::forceRepositionDialogOnParentScreen(d, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(d, referenceWidget);
 }
 
 // Qt reports several inactive states - suspended, hidden, and plain inactive -
@@ -3626,7 +3626,7 @@ void mudlet::slot_showEditorDialog()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    WidgetUtils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
 }
 
 void mudlet::slot_showTriggerDialog()
@@ -3660,7 +3660,7 @@ void mudlet::slot_showTriggerDialog()
     });
 
     // Position dialog on the same screen as the main window for better multi-monitor UX
-    WidgetUtils::positionDialogOnParentScreen(pEditor, this);
+    widgetutils::positionDialogOnParentScreen(pEditor, this);
 
     pEditor->slot_showTriggers();
     pEditor->raise();
@@ -4070,7 +4070,7 @@ void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
     // that restores its position after being shown
     QWidget* hostConsole = pHost ? pHost->mpConsole : nullptr;
     QWidget* referenceWidget = hostConsole ? hostConsole : this;
-    WidgetUtils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
 
 void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
@@ -4655,7 +4655,7 @@ void mudlet::slot_notes()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    WidgetUtils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
 }
 
 void mudlet::slot_profileDiscord()

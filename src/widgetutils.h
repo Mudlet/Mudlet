@@ -28,7 +28,7 @@
 
 // Widget-level helpers, kept apart from utils.h so that the model-side code
 // which needs qsl() does not drag Qt Widgets in with it.
-class WidgetUtils
+class widgetutils
 {
 public:
     // Call this in the destructor of a window class that connects any of its

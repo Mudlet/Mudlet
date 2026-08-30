@@ -46,7 +46,7 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "MMCP.h"
-#include "WidgetUtils.h"
+#include "widgetutils.h"
 #include "utils.h"
 
 #include <chrono>
@@ -401,7 +401,7 @@ dlgProfilePreferences::~dlgProfilePreferences()
     // that has the keyboard focus then emits its editingFinished() - the chat
     // name field and the shortcut editors both act on that one - when this
     // object is no longer a valid receiver (#9574)
-    WidgetUtils::disconnectChildSignals(this);
+    widgetutils::disconnectChildSignals(this);
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()

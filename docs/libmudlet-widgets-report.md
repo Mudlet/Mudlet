@@ -87,7 +87,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TFeatureCallout.cpp` | 4 | 12 | QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget |
 | `TLabel.cpp` | 0 | 16 | QWidget, QLabel |
 | `main.cpp` | 3 | 12 | QCheckBox, QMessageBox, QSplashScreen, QApplication |
-| `WidgetUtils.h` | 2 | 13 | QApplication, QWidget |
+| `widgetutils.h` | 2 | 13 | QApplication, QWidget |
 | `dlgNotepad.h` | 0 | 14 | QLabel, QLineEdit, QPlainTextEdit, QToolButton, QMainWindow, QWidget |
 | `dlgMapper.h` | 0 | 13 | QFrame, QLabel, QProgressBar, QPushButton, QWidget, QMenu |
 | `TDebugFilterBar.h` | 1 | 12 | QToolBar, QLabel, QLineEdit, QMenu, QToolButton, QWidget |
