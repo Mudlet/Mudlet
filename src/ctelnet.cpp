@@ -4336,6 +4336,23 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json)
     return url;
 }
 
+// A game that brings its own interface can tell Mudlet up front not to activate
+// the built-in starter UI, with Client.GUI {"baseui": false} - useful when that
+// interface is not delivered as a Client.GUI package, or to keep the starter UI
+// down without waiting for the package download. The string "false" is taken
+// too, for the same reason the version field above takes a number: some games'
+// GMCP serializers can only spell values as strings.
+bool cTelnet::parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json)
+{
+    const auto baseUiJSON = json.value(qsl("baseui"));
+
+    if (baseUiJSON.isBool()) {
+        return !baseUiJSON.toBool();
+    }
+
+    return baseUiJSON.isString() && !baseUiJSON.toString().trimmed().compare(qsl("false"), Qt::CaseInsensitive);
+}
+
 // Helper function to download and install the GUI package
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url)
 {
@@ -4474,6 +4491,23 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
             rawTelnet = true;
             document = QJsonDocument(QJsonObject{{"version", version}, {"url", url}});
+        }
+
+        // Raw Telnet carries a version and a url and nothing else, so only the
+        // JSON form can decline. The same event an installed interface package
+        // raises is used, with no package named: the decline is the game
+        // claiming the screen space for its own interface, which is exactly the
+        // statement that event already makes.
+        //
+        // The starter UI builds its dock on the first game data it recognises
+        // rather than on install, so a decline arriving before that data leaves
+        // the dock never built - which is why a game wanting none of it should
+        // send this ahead of its first vitals.
+        if (!rawTelnet && parseGUIBaseUiDeclinedFromJSON(document.object())) {
+            TEvent event{};
+            event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(event);
         }
 
         handleGUIPackageInstallationAndUpgrade(document);
