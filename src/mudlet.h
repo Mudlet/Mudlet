@@ -168,6 +168,10 @@ public:
     //          the XML format used to store it - prior to this embedding such
     //          codes would break or destroy the script that used it.
     inline static const QString scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
+    // A constant equivalent to QDataStream::Qt_5_12 needed in several places
+    // which can't be pulled from Qt as it is not going to be defined for older
+    // versions:
+    static const int scmQDataStreamFormat_5_12 = 18;
     // The Qt runtime version is needed in various places but as it is a constant
     // during the application run it is easiest to define it as one once:
     inline static const QVersionNumber scmRunTimeQtVersion = QVersionNumber::fromString(QLatin1String(qVersion()));

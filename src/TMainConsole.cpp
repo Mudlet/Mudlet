@@ -36,7 +36,6 @@
 #include "TRoomDB.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
-#include "constants.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "GifTracker.h"
@@ -1430,7 +1429,7 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
 
     QDataStream out(&file_map);
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        out.setVersion(constants::qDataStreamFormat_5_12);
+        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
 
     bool saved = mpHost->mpMap->serialize(out, saveVersion);

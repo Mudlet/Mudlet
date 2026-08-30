@@ -31,7 +31,6 @@
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
-#include "constants.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -264,7 +263,7 @@ private slots:
         copyAsImage(pane);
         const QImage image = QApplication::clipboard()->image();
         QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard with timestamps showing");
-        QCOMPARE(image.width(), widthWithoutTimestamps + constants::timeStampFormat.size() * pane->mFontWidth);
+        QCOMPARE(image.width(), widthWithoutTimestamps + TBuffer::smTimeStampFormat.size() * pane->mFontWidth);
     }
 
     void test_contextMenuOffersNoSelectionOnlyEntriesWithoutSelection()

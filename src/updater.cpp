@@ -18,7 +18,6 @@
  ***************************************************************************/
 
 #include "updater.h"
-#include "constants.h"
 #include "mudlet.h"
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
@@ -756,7 +755,7 @@ void Updater::recordUpdateTime() const
 
     QDataStream ofs(&file);
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(constants::qDataStreamFormat_5_12);
+        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ofs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     if (!file.commit()) {
@@ -782,7 +781,7 @@ void Updater::recordUpdatedVersion() const
 
     QDataStream ofs(&file);
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(constants::qDataStreamFormat_5_12);
+        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     // The full version (including any -ptb suffix) so shouldShowChangelog()
     // can tell whether the running version actually changed:
@@ -814,7 +813,7 @@ bool Updater::shouldShowChangelog()
     }
     QDataStream ifs(&file);
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(constants::qDataStreamFormat_5_12);
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs >> updateTimestamp;
     file.close();
@@ -860,7 +859,7 @@ QString Updater::readPreviousVersionFile(const bool removeAfterRead) const
     }
     QDataStream ifs(&file);
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(constants::qDataStreamFormat_5_12);
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs >> previousVersion;
     file.close();

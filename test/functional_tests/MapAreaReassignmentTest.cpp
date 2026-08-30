@@ -49,7 +49,6 @@
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
-#include "constants.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -198,7 +197,7 @@ private:
         }
         QDataStream out(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(constants::qDataStreamFormat_5_12);
+            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         if (!map()->serialize(out, map()->mDefaultVersion)) {
             return false;

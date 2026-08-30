@@ -32,7 +32,6 @@
 #include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
-#include "constants.h"
 #include "dlgMapper.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
@@ -1715,7 +1714,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
         // we want to force to be used but we cannot use the enum directly
         // because it will not be defined in older versions of the Qt
         // library when the code is compilated:
-        ifs.setVersion(constants::qDataStreamFormat_5_12);
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs >> version;
     if ((version < 1) || (version > 127)) {
@@ -2161,7 +2160,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     int otherProfileVersion = 0;
     QDataStream ifs(&file);
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(constants::qDataStreamFormat_5_12);
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs >> otherProfileVersion;
 

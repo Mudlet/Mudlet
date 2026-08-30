@@ -58,7 +58,6 @@
 #include "TMapViewManager.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
-#include "constants.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
@@ -557,7 +556,7 @@ private slots:
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(constants::qDataStreamFormat_5_12);
+            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());
@@ -582,7 +581,7 @@ private slots:
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(constants::qDataStreamFormat_5_12);
+            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());

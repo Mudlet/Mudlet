@@ -27,7 +27,6 @@
 #include "TConsole.h"
 
 
-#include "constants.h"
 #include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
@@ -872,7 +871,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
             // getColumnCount() rounds up where the renderer truncates, and the
             // timestamp gutter is drawn outside the wrapped text, so both have
             // to come off or the tail of every full-width line is cut:
-            const int gutter = showTimeStamps() ? constants::timeStampFormat.size() : 0;
+            const int gutter = showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0;
             setWrapAt(qMax(40, columns - gutter - 1));
         });
     }
@@ -1094,7 +1093,7 @@ void TConsole::slot_toggleReplayRecording()
             return;
         }
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            mReplayStream.setVersion(constants::qDataStreamFormat_5_12);
+            mReplayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
@@ -3231,7 +3230,7 @@ void TConsole::raiseMudletResizeEvent()
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentList.append(QString::number(characterDimensions.height()));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentList.append(QString::number(mShowTimeStamps ? constants::timeStampFormat.size() : 0));
+    mudletEvent.mArgumentList.append(QString::number(mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(mudletEvent);
 }

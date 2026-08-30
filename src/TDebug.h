@@ -90,10 +90,9 @@ public:
     static const Categories csmNoisyCategories;
     static const Categories csmAllCategories;
 
-    // The master switch that every category filter sits under: nothing is
-    // reported at all while this is false. Read on the per-line trigger path, so
-    // it stays a plain variable rather than anything with an accessor - and it
-    // has to be "inline" to satisfy the ODR (One Definition Rule):
+    // The master switch that every category filter sits under - nothing is
+    // reported at all while this is false. It is read once per processed line,
+    // so it stays a bare variable rather than gaining an accessor:
     inline static bool smDebugMode = false;
 
 private:

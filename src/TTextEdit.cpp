@@ -36,7 +36,6 @@
 #include "TEvent.h"
 #include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
-#include "constants.h"
 #include "mudlet.h"
 #include "utils.h"
 #include "widechar_width.h"
@@ -533,7 +532,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
             // by the mouse...
             cursor.setX(cursor.x() + layoutGrapheme(layout, cursor, c, 0, lineNumber, timeStampStyle));
         }
-        currentSize += constants::timeStampFormat.size();
+        currentSize += TBuffer::smTimeStampFormat.size();
     }
 
     //get the longest line
@@ -1849,7 +1848,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             // Do an additional check if we need to establish whether we are
             // over just the timestamp part of the line:
             if (Q_UNLIKELY(isOverTimeStamp && mpConsole->showTimeStamps() && indexOfChar == 0)) {
-                if ((mouseX + offset) < (constants::timeStampFormat.size() * mFontWidth)) {
+                if ((mouseX + offset) < (TBuffer::smTimeStampFormat.size() * mFontWidth)) {
                     // The mouse position is actually over the timestamp region
                     // to the left of the main text:
                     *isOverTimeStamp = true;
@@ -1860,7 +1859,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             //mCursorX relevant for horizontal scrollbars
             //Otherwise the value is always 0
             if (mpConsole->showTimeStamps()) {
-                rightX = (constants::timeStampFormat.size() + column - mCursorX) * mFontWidth;
+                rightX = (TBuffer::smTimeStampFormat.size() + column - mCursorX) * mFontWidth;
             } else {
                 rightX = (column - mCursorX) * mFontWidth;
             }
@@ -2453,7 +2452,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     for (int y = firstLine, total = lastLine + 1; y < total; ++y) {
         const QString lineText{mpBuffer->lineBuffer.at(y)};
         // Will accumulate the width in pixels of the current line:
-        auto lineWidth{(mpConsole->showTimeStamps() ? constants::timeStampFormat.size() : 0) * mFontWidth};
+        auto lineWidth{(mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0) * mFontWidth};
         // Accumulated width in "normal" width characters:
         int column{};
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
@@ -2474,7 +2473,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             // The timestamp is (currently) 13 "normal width" characters
             // but that might not always be the case in some future I18n
             // situations:
-            lineWidth = (mpConsole->showTimeStamps() ? constants::timeStampFormat.size() + column : column) * mFontWidth;
+            lineWidth = (mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() + column : column) * mFontWidth;
             indexOfChar = nextBoundary;
         }
         largestLine = std::max(static_cast<int>(lineWidth), largestLine);

@@ -311,6 +311,16 @@ public:
     // limit on how many characters a single echo can accept for performance reasons
     static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
+    // The format of the per-line timestamp, as per QDateTime::toString(). It is
+    // translatable, so it is overwritten once at startup and fixed thereafter:
+    static inline QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
+
+    // Stamped on lines that continue an earlier one, and compared against to
+    // decide whether a line starts a paragraph - so it has to stay distinct from
+    // anything smTimeStampFormat can produce, and has to be the same length, as
+    // that length is what the timestamp gutter is sized from:
+    static inline QString smBlankTimeStamp = qsl("------------ ");
+
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     ~TBuffer();
     TBuffer(const TBuffer& other);

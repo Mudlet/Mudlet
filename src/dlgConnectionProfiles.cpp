@@ -31,7 +31,6 @@
 #include "LuaInterface.h"
 #include "TGameDetails.h"
 #include "XMLimport.h"
-#include "constants.h"
 #include "mudlet.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
@@ -1278,7 +1277,7 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     if (success) {
         QDataStream ifs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(constants::qDataStreamFormat_5_12);
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ifs >> ret;
         file.close();
@@ -1296,7 +1295,7 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(constants::qDataStreamFormat_5_12);
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
         if (!file.commit()) {

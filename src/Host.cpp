@@ -25,7 +25,6 @@
 
 #include "Host.h"
 
-#include "constants.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -3152,7 +3151,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(constants::qDataStreamFormat_5_12);
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
         if (!file.commit()) {
@@ -3175,7 +3174,7 @@ QString Host::readProfileData(const QString& item)
     if (success) {
         QDataStream ifs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(constants::qDataStreamFormat_5_12);
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ifs >> ret;
         file.close();

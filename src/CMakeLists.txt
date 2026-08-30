@@ -293,7 +293,6 @@ set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
-    constants.h
     CredentialManager.h
     ctelnet.h
     CustomLineDrawContextMenuHandler.h
