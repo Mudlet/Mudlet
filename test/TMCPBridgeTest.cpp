@@ -1086,7 +1086,9 @@ void TMCPBridgeTest::codexRefreshRepointsMultiLineArgs()
     TMCPBridge::refreshCodexEntry();
     const QString merged = QString::fromUtf8(redirect.readConfig());
     QVERIFY2(!merged.contains(qsl("/old/gone/mudlet")), qPrintable(merged));
-    QVERIFY2(merged.contains(TMCPBridge::mudletBinaryPath()), qPrintable(merged));
+    // Against the written form, not the bare path: a Windows path goes into TOML with
+    // its backslashes escaped, so the string that comes back never contains the other.
+    QVERIFY2(merged.contains(TMCPBridge::codexEntryToml(TMCPBridge::mudletBinaryPath())), qPrintable(merged));
 }
 
 void TMCPBridgeTest::codexRefreshLeavesCommentedBridgeAlone()
