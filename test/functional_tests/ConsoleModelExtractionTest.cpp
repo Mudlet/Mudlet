@@ -1019,8 +1019,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
 
     // A label's core-side handle is its TLabelModel in the profile's window
     // registry. Core has no widget map to consult, so a creation that filled
-    // only the console's own map would leave every by-name lookup in Host blind
-    // to the label.
+    // only the console's own map would leave the registry-answered lookups in
+    // Host blind to the label.
     void test_creatingALabelRegistersItsModel()
     {
         startProfile();
@@ -1042,7 +1042,6 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QCOMPARE(widget->model().mName, labelName);
         QCOMPARE(widget->model().mpHost.data(), host);
 
-        // The members the widget kept are the model's fields, not copies of them
         QCOMPARE(&widget->mName, &widget->model().mName);
         QCOMPARE(&widget->mClickFunction, &widget->model().mClickFunction);
         QCOMPARE(&widget->mLinkColor, &widget->model().mLinkColor);

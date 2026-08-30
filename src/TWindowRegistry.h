@@ -36,8 +36,8 @@ class TLabelModel;
 // it destroys it. TMainConsole's own QMap<QString, TLabel*> stays as the view's
 // half of that pair, and remains its only way to reach a widget by name.
 //
-// Labels are the first of the six named-window kinds to move here; the rest
-// follow with the same calls against their own model type.
+// Only labels are indexed here so far; the other named-window kinds still live
+// solely in the view's maps.
 class TWindowRegistry
 {
 public:

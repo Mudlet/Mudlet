@@ -27,16 +27,15 @@
 
 class Host;
 
-// The per-label data model: the slice of former TLabel state that needs no
-// widget. Splitting it out is what lets the core (Host) hold a handle to a named
-// label without holding a QLabel, which is the point of the Widgets-free core
-// (#8681).
+// The per-label data model: the slice of a label's state that needs no widget.
+// Holding it apart is what lets the core (Host) hold a handle to a named label
+// without holding a QLabel, which is the point of the Widgets-free core (#8681).
 //
 // A label is view-owned, so its model is owned by its TLabel (reached through
-// TLabel::model()); the widget keeps the former members as references aliasing
-// the model, so the existing accesses across the codebase are unchanged. The
-// core's window registry indexes these models by name and does NOT own them -
-// see TWindowRegistry.
+// TLabel::model()); the widget exposes same-named members as references aliasing
+// the model, so widget-side code reads and writes the model directly. The core's
+// window registry indexes these models by name and does NOT own them - see
+// TWindowRegistry.
 struct TLabelModel
 {
     // Defined out of line: mpHost is a QPointer, which needs Host complete.
@@ -76,9 +75,8 @@ struct TLabelModel
     QString mLinkVisitedColor;
     bool mLinkUnderline = true;
     QSet<QString> mVisitedLinks;
-    // What setBackgroundColor() was last given. Not what the label paints with:
-    // a stylesheet or a palette change can move that on without coming through
-    // here, which is why Host::getBackgroundColor() still asks the widget.
+    // What setBackgroundColor() was last given; a label restyled with its own
+    // background-color stylesheet paints something else.
     QColor mBackgroundColor;
 
 private:

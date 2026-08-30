@@ -4183,7 +4183,7 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
     } else if (pC) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
-    return {false, QString()};
+    return {false, qsl("label '%1' already exists").arg(name)};
 }
 
 bool Host::setClickthrough(const QString& name, bool clickthrough)
@@ -4515,7 +4515,10 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     }
 
     if (mWindowRegistry.hasLabel(name)) {
-        return {mpConsole->reparentLabel(windowname, name, x1, y1, show), QString()};
+        if (mpConsole->reparentLabel(windowname, name, x1, y1, show)) {
+            return {true, QString()};
+        }
+        return {false, qsl("element '%1' not found").arg(name)};
     }
 
     if (pC) {

@@ -67,11 +67,11 @@ public:
     void clearVisitedLinks();
     TLabelModel& model() { return *mpModel; }
 
-    // The label's identity, callback registry indexes, link colouring and
-    // background colour live in a core TLabelModel this label owns and the
-    // profile's TWindowRegistry indexes by name. The members below are references
-    // aliasing the model, so the accesses to them across the codebase are
-    // unchanged - which is why the model has to stay declared ahead of them all.
+    // The members below are references initialised from *mpModel in declaration
+    // order, so the model has to stay declared ahead of them all. They alias the
+    // label's identity, callback registry indexes, link colouring and background
+    // colour, which live in the core TLabelModel this label owns and the
+    // profile's TWindowRegistry indexes by name.
     std::unique_ptr<TLabelModel> mpModel;
     QPointer<Host>& mpHost;
     QString& mName;

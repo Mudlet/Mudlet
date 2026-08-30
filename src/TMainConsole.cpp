@@ -961,9 +961,8 @@ bool TMainConsole::moveLabel(const QString& name, int x, int y)
     return true;
 }
 
-// Resolves the destination window the same way Host::setWindow() still does for
-// the elements it moves itself; the two converge as the other window kinds
-// follow labels into the registry.
+// Resolves the destination window the same way Host::setWindow() does for the
+// elements it moves itself, so the two have to be kept in step.
 bool TMainConsole::reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show)
 {
     auto pL = mLabelMap.value(name);
@@ -1043,8 +1042,9 @@ std::optional<QColor> TMainConsole::getLabelBackgroundColor(const QString& name)
     if (!pL) {
         return {};
     }
-    // The painted colour, not the model's: a stylesheet or a palette change can
-    // move it on without going through setBackgroundColor()
+    // Answered from the palette, as this API always has; TLabel re-stamps it with
+    // the last set colour across restyles, so a caller's own background-color
+    // stylesheet can paint something this does not report
     return {pL->palette().color(QPalette::Window)};
 }
 

@@ -95,9 +95,9 @@ public:
     std::optional<QString> getLabelToolTip(const QString& name) const;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
-    // The by-name label operations core reaches this view through: it locates a
-    // label in the window registry and asks for it by name, never taking the
-    // widget. Each reports failure for a name that is not a label's.
+    // The label operations Host forwards to this view by name, never by widget;
+    // each resolves the name against the view's own map and reports failure for a
+    // name that is not a label's.
     bool setLabelClickThrough(const QString& name, bool clickThrough);
     bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
     bool resetLabelLinkStyle(const QString& name);
@@ -115,9 +115,9 @@ public:
     bool resetLabelBackgroundImage(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
-    // For the view-side callers that still work on the widget itself. An accessor
-    // rather than the open map, so that inserting and removing entries stays in
-    // this class, which is what keeps the window registry in step with it.
+    // For callers that need the widget itself. An accessor rather than the open
+    // map, so that inserting and removing entries stays in this class, which is
+    // what keeps the window registry in step with it.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();

@@ -85,6 +85,10 @@ void TLabelModel::setLeave(const int func)
 
 void TLabelModel::releaseFunc(const int existingFunction, const int newFunction)
 {
+    if (!mpHost) {
+        return;
+    }
+
     if (newFunction != existingFunction) {
         mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
     }
