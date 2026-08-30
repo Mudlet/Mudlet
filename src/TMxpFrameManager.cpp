@@ -169,8 +169,8 @@ bool TMxpFrameManager::closeFrame(const QString& name)
 
             // Clean up console registration
             if (mpHost && mpHost->mpConsole) {
-                mpHost->mpConsole->mSubConsoleMap.remove(name);
-                mpHost->mpConsole->mDockWidgetMap.remove(name);
+                mpHost->mpConsole->deregisterSubConsole(name);
+                mpHost->mpConsole->deregisterDockWidget(name);
             }
 
             // Remove from hierarchy
@@ -196,8 +196,8 @@ bool TMxpFrameManager::closeFrame(const QString& name)
     }
 
     if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->mSubConsoleMap.remove(name);
-        mpHost->mpConsole->mDockWidgetMap.remove(name);
+        mpHost->mpConsole->deregisterSubConsole(name);
+        mpHost->mpConsole->deregisterDockWidget(name);
     }
 
     removeFrameFromHierarchy(frame);
@@ -721,7 +721,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     }
 
     // Register console
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Force layout to calculate sizes
     containerWidget->layout()->activate();
@@ -861,7 +861,7 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
     }
 
     // Register console in map
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Add as new tab - if this is the first child tab, select it
     // (The parent frame's own tab at index 0 is typically unused for content)
@@ -1053,7 +1053,7 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     console->setBgColor(frameBgColor);
 
     // Register console
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Optionally switch to the new tab
     tabWidget->setCurrentIndex(tabIndex);

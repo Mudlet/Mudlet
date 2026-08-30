@@ -19,6 +19,7 @@
 
 #include <QFile>
 #include <QImage>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -183,7 +184,7 @@ private slots:
         QVERIFY2(host->mpConsole, "The active host has no main console.");
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('modelWindow')\n"));
-        auto* subConsole = host->mpConsole->mSubConsoleMap.value(qsl("modelWindow"));
+        auto* subConsole = host->mpConsole->subConsoleWidget(qsl("modelWindow"));
         QVERIFY2(subConsole, "The user window was not created.");
 
         QVERIFY2(&subConsole->model() != &host->mainConsoleModel(), "A user window must not share the main console's model.");
@@ -410,7 +411,7 @@ private slots:
         // A user window's own text must not be interleaved into the game log -
         // TBuffer::log() runs for every buffer and only the main one may write.
         runLua(host, qsl("openUserWindow('logSpy')\n"));
-        auto* subConsole = console->mSubConsoleMap.value(qsl("logSpy"));
+        auto* subConsole = console->subConsoleWidget(qsl("logSpy"));
         QVERIFY2(subConsole, "The user window was not created.");
         // Two lines, because log() holds each one back until the next commits:
         // with only one the leak would still be sitting in the sub-console
@@ -1229,7 +1230,7 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         // resolve as well, and the label has to end up parented to it
         const QString userWindowName = qsl("registryOpsWindow");
         runLua(host, qsl("openUserWindow('%1')\n").arg(userWindowName));
-        auto* dockWidget = host->mpConsole->mDockWidgetMap.value(userWindowName);
+        auto* dockWidget = host->mpConsole->dockWidget(userWindowName);
         QVERIFY2(dockWidget, "The user window to move the label into was not created.");
 
         const auto [moved, moveMessage] = host->setWindow(userWindowName, labelName, 5, 6, true);
@@ -1290,6 +1291,423 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(!widget->pixmap().isNull(), "setBackgroundImage() did not reach the widget.");
         QVERIFY2(host->resetBackgroundImage(labelName, false), "resetBackgroundImage() did not find the label.");
         QVERIFY2(widget->pixmap().isNull(), "resetBackgroundImage() did not reach the widget.");
+    }
+
+    // Each of the three things a sub-console can be has to reach the registry
+    // with its own model and the kind it was created as, and only a user window
+    // brings a dock with it.
+    void test_creatingSubConsolesRegistersTheirModels()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniName = qsl("registryMini");
+        const QString userWindowName = qsl("registryUserWindow");
+        const QString bufferName = qsl("registryBuffer");
+        QVERIFY2(!host->windowRegistry().hasSubConsole(miniName), "The registry claims a sub-console that was never created.");
+
+        const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 10, 20, 100, 50);
+        QVERIFY2(mini, qPrintable(miniMessage));
+        TConsole* miniWidget = host->mpConsole->subConsoleWidget(miniName);
+        QVERIFY2(miniWidget, "Creating a miniconsole left the console's own widget map empty.");
+        QVERIFY2(host->windowRegistry().hasSubConsole(miniName), "Creating a miniconsole registered no model in the profile's window registry.");
+        QCOMPARE(host->windowRegistry().subConsoleModel(miniName), &miniWidget->model());
+        QCOMPARE(host->windowRegistry().subConsoleKind(miniName), std::optional<TWindowRegistry::SubConsoleKind>(TWindowRegistry::SubConsoleKind::MiniConsole));
+        QVERIFY2(!host->windowRegistry().hasDockWidget(miniName), "A miniconsole was registered as having a dock widget.");
+        QCOMPARE(host->windowType(miniName), std::optional<QString>(qsl("miniconsole")));
+
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        TConsole* userWindowWidget = host->mpConsole->subConsoleWidget(userWindowName);
+        QVERIFY2(userWindowWidget, "Creating a user window left the console's own widget map empty.");
+        QCOMPARE(host->windowRegistry().subConsoleModel(userWindowName), &userWindowWidget->model());
+        QCOMPARE(host->windowRegistry().subConsoleKind(userWindowName), std::optional<TWindowRegistry::SubConsoleKind>(TWindowRegistry::SubConsoleKind::UserWindow));
+        QVERIFY2(host->windowRegistry().hasDockWidget(userWindowName), "Creating a user window registered no dock widget.");
+        QCOMPARE(host->windowType(userWindowName), std::optional<QString>(qsl("userwindow")));
+
+        QVERIFY2(host->createBuffer(bufferName), "createBuffer() refused a name that was not in use.");
+        TConsole* bufferWidget = host->mpConsole->subConsoleWidget(bufferName);
+        QVERIFY2(bufferWidget, "Creating a buffer left the console's own widget map empty.");
+        QCOMPARE(host->windowRegistry().subConsoleModel(bufferName), &bufferWidget->model());
+        QCOMPARE(host->windowRegistry().subConsoleKind(bufferName), std::optional<TWindowRegistry::SubConsoleKind>(TWindowRegistry::SubConsoleKind::Buffer));
+        QVERIFY2(!host->windowRegistry().hasDockWidget(bufferName), "A buffer was registered as having a dock widget.");
+        QCOMPARE(host->windowType(bufferName), std::optional<QString>(qsl("buffer")));
+
+        // Each carries a model of its own, and none of them is the main
+        // console's - a registry that handed out one shared model would satisfy
+        // every check above
+        QVERIFY2(host->windowRegistry().subConsoleModel(miniName) != &host->mainConsoleModel(), "A miniconsole registered the main console's model.");
+        QVERIFY2(host->windowRegistry().subConsoleModel(miniName) != host->windowRegistry().subConsoleModel(userWindowName), "Two sub-consoles registered the same model.");
+        QVERIFY2(host->windowRegistry().subConsoleModel(miniName) != host->windowRegistry().subConsoleModel(bufferName), "Two sub-consoles registered the same model.");
+    }
+
+    // Deleting a sub-console has to take its model - and, for a user window, its
+    // dock - back out, or the name stays taken. The delete is deferred, so the
+    // destructor runs after a replacement may already hold the name.
+    void test_deletingASubConsoleDeregistersItsModel()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniName = qsl("registryDeletedMini");
+        const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
+        QVERIFY2(mini, qPrintable(miniMessage));
+        const TConsoleModel* firstModel = host->windowRegistry().subConsoleModel(miniName);
+        QVERIFY2(firstModel, "Creating a miniconsole registered no model in the profile's window registry.");
+        const QPointer<TConsole> firstWidget = host->mpConsole->subConsoleWidget(miniName);
+        QVERIFY2(firstWidget, "Creating a miniconsole left no widget in the console's own map.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(miniName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QVERIFY2(!host->windowRegistry().hasSubConsole(miniName), "Deleting a miniconsole left its model in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().subConsoleModel(miniName), "Deleting a miniconsole left a stale model handle in the profile's window registry.");
+        QVERIFY2(!host->windowType(miniName).has_value(), "Host still reports a window type for the deleted miniconsole.");
+
+        const auto [recreated, recreateMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a deleted miniconsole could not be used again: %1").arg(recreateMessage)));
+        const TConsoleModel* secondModel = host->windowRegistry().subConsoleModel(miniName);
+        QVERIFY2(secondModel, "The replacement miniconsole registered no model.");
+        QVERIFY2(secondModel != firstModel, "The replacement miniconsole registered the model of the one it replaced.");
+        const QPointer<TConsole> secondWidget = host->mpConsole->subConsoleWidget(miniName);
+
+        // deleteMiniConsole() only defers the widget's destruction, so the first
+        // console's destructor runs from here - after its replacement has taken
+        // the name. Deregistration is identity-checked for exactly this. Waiting
+        // on the widget itself rather than on a fixed delay, because the whole
+        // point of the assertion below is that the destructor has already run.
+        QTRY_VERIFY_WITH_TIMEOUT(firstWidget.isNull(), 5000);
+        QVERIFY2(host->windowRegistry().subConsoleModel(miniName) == secondModel,
+                 qPrintable(qsl("The deferred destruction of a deleted miniconsole evicted the replacement that had taken its name: registered %1, expected %2, the deleted one was %3, the console's "
+                                "own widget map holds %4, the replacement widget is %5.")
+                                    .arg(QString::number(reinterpret_cast<quintptr>(host->windowRegistry().subConsoleModel(miniName)), 16),
+                                         QString::number(reinterpret_cast<quintptr>(secondModel), 16),
+                                         QString::number(reinterpret_cast<quintptr>(firstModel), 16),
+                                         QString::number(reinterpret_cast<quintptr>(host->mpConsole->subConsoleWidget(miniName)), 16),
+                                         secondWidget.isNull() ? qsl("destroyed") : qsl("alive"))));
+        QVERIFY2(host->mpConsole->subConsoleWidget(miniName), "The replacement miniconsole lost its widget.");
+
+        // A user window goes the same way, and has to surrender its dock too
+        const QString userWindowName = qsl("registryDeletedUserWindow");
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        QVERIFY2(host->windowRegistry().hasDockWidget(userWindowName), "Creating a user window registered no dock widget.");
+
+        const auto [windowDeleted, windowDeleteMessage] = host->mpConsole->deleteMiniConsole(userWindowName);
+        QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
+        QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its model in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().hasDockWidget(userWindowName), "Deleting a user window left its dock in the profile's window registry.");
+        QVERIFY2(!host->windowType(userWindowName).has_value(), "Host still reports a window type for the deleted user window.");
+    }
+
+    // Resetting the profile destroys every sub-console the console built without
+    // going anywhere near deleteMiniConsole(), so that path has to clear the
+    // registry as well - and it walks its own map while the closes empty it.
+    void test_resettingTheMainConsoleDeregistersItsSubConsoles()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniName = qsl("registryResetMini");
+        const QString userWindowName = qsl("registryResetUserWindow");
+        const QString bufferName = qsl("registryResetBuffer");
+        const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
+        QVERIFY2(mini, qPrintable(miniMessage));
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        QVERIFY2(host->createBuffer(bufferName), "createBuffer() refused a name that was not in use.");
+
+        host->mpConsole->resetMainConsole();
+
+        QVERIFY2(!host->windowRegistry().hasSubConsole(miniName), "Resetting the main console left a miniconsole in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Resetting the main console left a user window in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().hasSubConsole(bufferName), "Resetting the main console left a buffer in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().hasDockWidget(userWindowName), "Resetting the main console left a user window's dock in the profile's window registry.");
+
+        const auto [recreated, recreateMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a sub-console the reset destroyed could not be used again: %1").arg(recreateMessage)));
+    }
+
+    // Closing the profile takes the console down and every sub-console with it.
+    // Host outlives that, and walks the registry to close them: the walk reads a
+    // detached snapshot of the names because closing a user window takes both its
+    // own entry and its dock's out from under it.
+    void test_destroyingTheViewDeregistersItsSubConsoles()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniName = qsl("registryOrphanedMini");
+        const QString userWindowName = qsl("registryOrphanedUserWindow");
+        const QString bufferName = qsl("registryOrphanedBuffer");
+        const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
+        QVERIFY2(mini, qPrintable(miniMessage));
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        QVERIFY2(host->createBuffer(bufferName), "createBuffer() refused a name that was not in use.");
+        const QStringList before = host->windowRegistry().subConsoleNames();
+        QVERIFY2(before.contains(miniName) && before.contains(userWindowName) && before.contains(bufferName),
+                 qPrintable(qsl("Not every sub-console reached the registry to start with: %1").arg(before.join(QChar::Space))));
+
+        destroyTheView(host);
+
+        const QStringList after = host->windowRegistry().subConsoleNames();
+        QVERIFY2(!after.contains(miniName), "Destroying the console left a miniconsole in the profile's window registry, pointing at a model that has gone.");
+        QVERIFY2(!after.contains(userWindowName), "Destroying the console left a user window in the profile's window registry, pointing at a model that has gone.");
+        QVERIFY2(!after.contains(bufferName), "Destroying the console left a buffer in the profile's window registry, pointing at a model that has gone.");
+        QVERIFY2(!host->windowRegistry().hasDockWidget(userWindowName), "Destroying the console left a user window's dock in the profile's window registry.");
+    }
+
+    // The names accessor is the primitive every walk-and-close caller relies on,
+    // so it has to hand back a list that survives what the walk does to the
+    // registry underneath it.
+    void test_subConsoleNamesAreADetachedSnapshot()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString firstName = qsl("registrySnapshotOne");
+        const QString secondName = qsl("registrySnapshotTwo");
+        const auto [first, firstMessage] = host->createMiniConsole(QString(), firstName, 0, 0, 40, 40);
+        QVERIFY2(first, qPrintable(firstMessage));
+        const auto [second, secondMessage] = host->openWindow(secondName, false, false, qsl("f"));
+        QVERIFY2(second, qPrintable(secondMessage));
+
+        const QStringList names = host->windowRegistry().subConsoleNames();
+        QVERIFY2(names.contains(firstName) && names.contains(secondName), qPrintable(qsl("Not every sub-console reached the snapshot: %1").arg(names.join(QChar::Space))));
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(secondName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QVERIFY2(!host->windowRegistry().hasSubConsole(secondName), "Deleting the user window left it in the registry, so the snapshot is not being tested against a real removal.");
+        QVERIFY2(names.contains(firstName) && names.contains(secondName), "Removing a sub-console changed a snapshot of the names that had already been taken.");
+    }
+
+    // Host answers "is there a sub-console called this, and what is it" from the
+    // registry alone, including every refusal that turns on the name being taken.
+    void test_coreSubConsoleLookupsReadTheRegistry()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniName = qsl("registryLookupMini");
+        const QString userWindowName = qsl("registryLookupUserWindow");
+        const QString bufferName = qsl("registryLookupBuffer");
+        const QString absentName = qsl("registryNoSuchWindow");
+        const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 10, 20, 100, 50);
+        QVERIFY2(mini, qPrintable(miniMessage));
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        QVERIFY2(host->createBuffer(bufferName), "createBuffer() refused a name that was not in use.");
+
+        QCOMPARE(host->windowGeometry(miniName), std::optional<QRect>(QRect(10, 20, 100, 50)));
+        QCOMPARE(host->windowVisible(miniName), std::optional<bool>(true));
+        QCOMPARE(host->findConsole(miniName).data(), host->mpConsole->subConsoleWidget(miniName));
+
+        // The name is taken, and every one of these refusals is the registry's
+        // answer rather than a widget lookup
+        QVERIFY2(!host->createBuffer(bufferName), "A second buffer was created under a name already in use.");
+        const auto [secondWindow, secondWindowMessage] = host->createMiniConsole(QString(), userWindowName, 0, 0, 10, 10);
+        QVERIFY2(!secondWindow, "A miniconsole was created under the name of an existing user window.");
+        QCOMPARE(secondWindowMessage, qsl("miniconsole/userwindow '%1' already exists").arg(userWindowName));
+        const auto [label, labelMessage] = host->createLabel(QString(), miniName, 0, 0, 10, 10, true, false);
+        QVERIFY2(!label, "A label was created under the name of an existing miniconsole.");
+        QCOMPARE(labelMessage, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(miniName));
+        const auto [moved, moveMessage] = host->setWindow(qsl("main"), userWindowName, 0, 0, true);
+        QVERIFY2(!moved, "setWindow() agreed to move the base of a floating user window.");
+        QCOMPARE(moveMessage, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(userWindowName));
+
+        // Reusing a miniconsole's name moves and resizes the one that is there,
+        // and says so rather than reporting success
+        const auto [reused, reuseMessage] = host->createMiniConsole(QString(), miniName, 30, 40, 60, 70);
+        QVERIFY2(!reused, "Reusing a miniconsole's name reported the creation of a second one.");
+        QCOMPARE(reuseMessage, qsl("miniconsole '%1' already exists, moving/resizing '%1'").arg(miniName));
+        QCOMPARE(host->windowGeometry(miniName), std::optional<QRect>(QRect(30, 40, 60, 70)));
+
+        // getLines() reads the model the registry holds, with no widget in between
+        QVERIFY2(host->echoWindow(bufferName, qsl("registry buffer line")), "echoWindow() did not find the buffer.");
+        const auto [gotLines, lines] = host->getLines(bufferName, 0, 2);
+        QVERIFY2(gotLines, qPrintable(lines.join(QChar::Space)));
+        QVERIFY2(lines.join(QChar::Space).contains(qsl("registry buffer line")), qPrintable(qsl("getLines() did not read the buffer's own model: %1").arg(lines.join(QChar::Space))));
+
+        QVERIFY2(!host->windowType(absentName).has_value(), "Host reports a window type for a sub-console that was never created.");
+        QVERIFY2(!host->windowGeometry(absentName).has_value(), "Host reports a geometry for a sub-console that was never created.");
+        QVERIFY2(!host->windowVisible(absentName).has_value(), "Host reports a visibility for a sub-console that was never created.");
+        QVERIFY2(!host->findConsole(absentName), "findConsole() found a sub-console that was never created.");
+        QVERIFY2(!host->showWindow(absentName), "showWindow() found a sub-console that was never created.");
+        QVERIFY2(!host->closeWindow(absentName), "closeWindow() found a sub-console that was never created.");
+        QVERIFY2(!host->pasteWindow(absentName), "pasteWindow() found a sub-console that was never created.");
+        QCOMPARE(host->calcFontSize(absentName), QSize(-1, -1));
+        const auto [absentLines, absentMessage] = host->getLines(absentName, 0, 1);
+        QVERIFY2(!absentLines, "getLines() found a sub-console that was never created.");
+        QCOMPARE(absentMessage, QStringList({qsl("mini console, user window or buffer '%1' not found").arg(absentName)}));
+    }
+
+    // Core reaches a sub-console only by name: Host hands the console the name
+    // and the console resolves it against its own widget map. A forwarder that
+    // reported success without acting would leave the widget untouched, so each
+    // named operation is checked on the widget rather than on its return value.
+    void test_namedSubConsoleOpsReachTheWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniName = qsl("registryOpsMini");
+        const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 10, 20, 100, 50);
+        QVERIFY2(mini, qPrintable(miniMessage));
+        TConsole* widget = host->mpConsole->subConsoleWidget(miniName);
+        QVERIFY2(widget, "Creating a miniconsole left the console's own widget map empty.");
+        QWidget* const mainParent = widget->parentWidget();
+        QVERIFY2(mainParent, "The miniconsole was created with no parent.");
+
+        QVERIFY2(host->echoWindow(miniName, qsl("registry echo")), "echoWindow() did not find the miniconsole.");
+        QVERIFY2(joinedBuffer(widget->buffer).contains(qsl("registry echo")), "echoWindow() did not reach the miniconsole's buffer.");
+
+        QVERIFY2(host->moveWindow(miniName, 33, 44), "moveWindow() did not find the miniconsole.");
+        QCOMPARE(widget->pos(), QPoint(33, 44));
+
+        QVERIFY2(host->resizeWindow(miniName, 120, 60), "resizeWindow() did not find the miniconsole.");
+        QCOMPARE(widget->size(), QSize(120, 60));
+        QCOMPARE(host->windowGeometry(miniName), std::optional<QRect>(QRect(33, 44, 120, 60)));
+
+        QVERIFY2(host->hideWindow(miniName), "hideWindow() did not find the miniconsole.");
+        QVERIFY2(widget->isHidden(), "hideWindow() left the miniconsole showing.");
+        QVERIFY2(host->showWindow(miniName), "showWindow() did not find the miniconsole.");
+        QVERIFY2(!widget->isHidden(), "showWindow() left the miniconsole hidden.");
+        QVERIFY2(host->closeWindow(miniName), "closeWindow() did not find the miniconsole.");
+        QVERIFY2(widget->isHidden(), "closeWindow() left the miniconsole showing.");
+        QVERIFY2(host->showWindow(miniName), "showWindow() did not find the miniconsole.");
+
+        QVERIFY2(host->pasteWindow(miniName), "pasteWindow() did not find the miniconsole.");
+
+        const QSize fontSize = host->calcFontSize(miniName);
+        QVERIFY2(fontSize.width() > 0 && fontSize.height() > 0, "calcFontSize() did not measure the miniconsole's own pane.");
+
+        QVERIFY2(host->setBackgroundColor(miniName, 12, 34, 56, 255), "setBackgroundColor() did not find the miniconsole.");
+        QCOMPARE(widget->mBgColor, QColor(12, 34, 56, 255));
+        QCOMPARE(host->getBackgroundColor(miniName), std::optional<QColor>(QColor(12, 34, 56, 255)));
+
+        QVERIFY2(host->setCommandBackgroundColor(miniName, 1, 2, 3, 255), "setCommandBackgroundColor() did not find the miniconsole.");
+        QCOMPARE(widget->mCommandBgColor, QColor(1, 2, 3, 255));
+        QVERIFY2(host->setCommandForegroundColor(miniName, 4, 5, 6, 255), "setCommandForegroundColor() did not find the miniconsole.");
+        QCOMPARE(widget->mCommandFgColor, QColor(4, 5, 6, 255));
+
+        QString imagePath = writeTestImage();
+        QVERIFY2(!imagePath.isEmpty(), "Could not write the image to hand to setBackgroundImage().");
+        QVERIFY2(host->setBackgroundImage(miniName, imagePath, 1, false), "setBackgroundImage() did not find the miniconsole.");
+        QCOMPARE(widget->mBgImageMode, 1);
+        QCOMPARE(widget->mBgImagePath, imagePath);
+        QVERIFY2(host->resetBackgroundImage(miniName, false), "resetBackgroundImage() did not find the miniconsole.");
+        QCOMPARE(widget->mBgImageMode, 0);
+
+        // setWindow() is the one named operation with a destination to resolve as
+        // well, and the miniconsole has to end up parented to it
+        const QString userWindowName = qsl("registryOpsHostWindow");
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        TDockWidget* dockWidget = host->mpConsole->dockWidget(userWindowName);
+        QVERIFY2(dockWidget, "The user window to move the miniconsole into was not created.");
+
+        const auto [moved, moveMessage] = host->setWindow(userWindowName, miniName, 5, 6, true);
+        QVERIFY2(moved, qPrintable(moveMessage));
+        QCOMPARE(widget->parentWidget(), dockWidget->widget());
+        QCOMPARE(widget->pos(), QPoint(5, 6));
+
+        const auto [movedBack, moveBackMessage] = host->setWindow(qsl("main"), miniName, 7, 8, true);
+        QVERIFY2(movedBack, qPrintable(moveBackMessage));
+        QCOMPARE(widget->parentWidget(), mainParent);
+        QCOMPARE(widget->pos(), QPoint(7, 8));
+    }
+
+    // A user window is moved, resized, shown and read back through its dock
+    // rather than through the console inside it, so every named operation has to
+    // fold the dock in behind the same name.
+    void test_namedUserWindowOpsReachItsDock()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString userWindowName = qsl("registryDockOpsWindow");
+        const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, true, qsl("r"));
+        QVERIFY2(userWindow, qPrintable(userWindowMessage));
+        TDockWidget* dockWidget = host->mpConsole->dockWidget(userWindowName);
+        QVERIFY2(dockWidget, "Creating a user window left the console's own dock map empty.");
+        TConsole* widget = host->mpConsole->subConsoleWidget(userWindowName);
+        QVERIFY2(widget, "Creating a user window left the console's own widget map empty.");
+        QVERIFY2(!dockWidget->isFloating(), "The user window was asked to dock on the right but came up floating, so floating it is not a change.");
+
+        // Resizing has to float the dock first: a docked one is sized by the main
+        // window's layout
+        QVERIFY2(host->resizeWindow(userWindowName, 320, 240), "resizeWindow() did not find the user window.");
+        QVERIFY2(dockWidget->isFloating(), "resizeWindow() left the user window docked, where its size is not its own.");
+        QCOMPARE(dockWidget->size(), QSize(320, 240));
+
+        // and the geometry read back is the dock's, not the console's
+        QVERIFY2(QRect(widget->pos(), widget->size()) != QRect(dockWidget->pos(), dockWidget->size()),
+                 "The user window's console and its dock have the same geometry, so reading the wrong one cannot be detected.");
+        QCOMPARE(host->windowGeometry(userWindowName), std::optional<QRect>(QRect(dockWidget->pos(), dockWidget->size())));
+
+        QVERIFY2(host->hideWindow(userWindowName), "hideWindow() did not find the user window.");
+        QVERIFY2(dockWidget->isHidden(), "hideWindow() left the user window's dock showing.");
+        QCOMPARE(host->windowVisible(userWindowName), std::optional<bool>(false));
+        QVERIFY2(host->showWindow(userWindowName), "showWindow() did not find the user window.");
+        QVERIFY2(!dockWidget->isHidden(), "showWindow() left the user window's dock hidden.");
+        QCOMPARE(host->windowVisible(userWindowName), std::optional<bool>(true));
+
+        // The profile's stylesheet reaches every dock by way of the console
+        const QString styleSheet = qsl("QDockWidget { border: 2px solid #123456; }");
+        QVERIFY2(host->setProfileStyleSheet(styleSheet), "setProfileStyleSheet() was refused.");
+        QCOMPARE(dockWidget->styleSheet(), styleSheet);
+
+        // and the layout-changed flag is raised and cleared on the dock, by name.
+        // Floating the dock above already raised it, so that is cleared first.
+        host->commitLayoutUpdates();
+        QVERIFY2(!dockWidget->property("layoutChanged").toBool(), "Committing the layout updates left the dock's flag raised.");
+        host->setDockLayoutUpdated(userWindowName);
+        QVERIFY2(dockWidget->property("layoutChanged").toBool(), "setDockLayoutUpdated() did not reach the dock widget.");
+        QVERIFY2(host->commitLayoutUpdates(), "commitLayoutUpdates() did not report the dock's raised flag.");
+        QVERIFY2(!dockWidget->property("layoutChanged").toBool(), "commitLayoutUpdates() left the dock's flag raised.");
+    }
+
+    // Every profile's sub-consoles are restyled when the application palette
+    // changes, and that walk reads the registry rather than the view's map.
+    void test_changingAllHostColoursWalksEverySubConsole()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniName = qsl("registryRecolouredMini");
+        const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
+        QVERIFY2(mini, qPrintable(miniMessage));
+        TConsole* widget = host->mpConsole->subConsoleWidget(miniName);
+        QVERIFY2(widget, "Creating a miniconsole left the console's own widget map empty.");
+        QVERIFY2(widget->mpMainDisplay, "The miniconsole has no display to restyle.");
+
+        QVERIFY2(host->setBackgroundColor(miniName, 12, 34, 56, 255), "setBackgroundColor() did not find the miniconsole.");
+        const QString sentinel = qsl("QWidget#MainDisplay{background-color: rgba(0,0,0,0);}");
+        widget->mpMainDisplay->setStyleSheet(sentinel);
+
+        mudlet::self()->getHostManager().changeAllHostColour(host);
+
+        QVERIFY2(widget->mpMainDisplay->styleSheet() != sentinel, "Changing every host's colours did not reach the miniconsole.");
+        QVERIFY2(widget->mpMainDisplay->styleSheet().contains(qsl("12,34,56")),
+                 qPrintable(qsl("The miniconsole was restyled with something other than its own background colour: %1").arg(widget->mpMainDisplay->styleSheet())));
     }
 
 private:

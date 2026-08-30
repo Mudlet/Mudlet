@@ -2956,7 +2956,8 @@ bool mudlet::saveFloatingDockGeometries()
             continue;
         }
         const auto hostName = pHost->getName();
-        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
+        for (const QString& name : pHost->mpConsole->dockWidgetNames()) {
+            auto pDockWidget = pHost->mpConsole->dockWidget(name);
             if (pDockWidget && pDockWidget->isFloating()) {
                 const QString key = qsl("%1/%2").arg(hostName, name);
                 geometries[key] = pDockWidget->saveGeometry();
@@ -2996,7 +2997,8 @@ void mudlet::restoreFloatingDockGeometries()
             continue;
         }
         const auto hostName = pHost->getName();
-        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
+        for (const QString& name : pHost->mpConsole->dockWidgetNames()) {
+            auto pDockWidget = pHost->mpConsole->dockWidget(name);
             if (!pDockWidget || !pDockWidget->isFloating()) {
                 continue;
             }

@@ -30,6 +30,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QString>
+#include <QStringList>
 #include <QTextStream>
 
 class Host;
@@ -69,6 +70,10 @@ struct TConsoleModel
     // filename format) is profile-wide, so it only acts on the Host's own main
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
+
+    // The count is the distance between the two arguments, not the difference
+    // between an inclusive pair, so lines(n, n) is empty rather than one line.
+    QStringList lines(int from, int to);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;

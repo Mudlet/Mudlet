@@ -584,19 +584,10 @@ void Host::closeChildren()
         mpEditorDialog = nullptr;
     }
 
-    for (const QString& consoleName : mpConsole->mSubConsoleMap.keys()) {
-        // Only user-windows will be in this map:
-        auto pD = mpConsole->mDockWidgetMap.value(consoleName);
-        // All User TConsole's will be in this map:
-        auto pC = mpConsole->mSubConsoleMap.value(consoleName);
-        if (pD) {
-            // This undocks the widget
-            mudlet::self()->removeDockWidget(pD);
-        }
-
-        // This will remove both what pD and pC point at from their respective
-        // QMaps:
-        pC->close();
+    // A snapshot of the names rather than a live walk: closing one takes its own
+    // entry - and, for a user window, its dock's - out of the registry.
+    for (const QString& consoleName : mWindowRegistry.subConsoleNames()) {
+        mpConsole->closeSubConsole(consoleName);
     }
 
     if (mpNotePad) {
@@ -3996,7 +3987,7 @@ QPointer<TConsole> Host::findConsole(QString name)
         // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
         return &*mpConsole;
     }
-    return mpConsole->mSubConsoleMap.value(name);
+    return mpConsole->subConsoleWidget(name);
 }
 
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
@@ -4011,13 +4002,13 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
         return qMakePair(true, mpConsole->getLines(lineFrom, lineTo));
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(windowName);
-    if (!pC) {
+    auto pModel = mWindowRegistry.subConsoleModel(windowName);
+    if (!pModel) {
         QStringList failMessage;
         failMessage << qsl("mini console, user window or buffer '%1' not found").arg(windowName);
         return qMakePair(false, failMessage);
     }
-    return qMakePair(true, pC->getLines(lineFrom, lineTo));
+    return qMakePair(true, pModel->lines(lineFrom, lineTo));
 }
 
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
@@ -4036,8 +4027,8 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     }
 
     auto hostName(getName());
-    auto console = mpConsole->mSubConsoleMap.value(name);
-    auto dockwidget = mpConsole->mDockWidgetMap.value(name);
+    auto console = mpConsole->subConsoleWidget(name);
+    auto dockwidget = mpConsole->dockWidget(name);
 
     if (!console && !dockwidget) {
         // The name is not used in either the QMaps of all user created TConsole
@@ -4046,7 +4037,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
         dockwidget->setContentsMargins(0, 0, 0, 0);
         dockwidget->setWindowTitle(name);
-        mpConsole->mDockWidgetMap.insert(name, dockwidget);
+        mpConsole->registerDockWidget(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
         console = new TConsole(this, name, TConsole::UserWindow, dockwidget->widget());
@@ -4055,7 +4046,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget->setTConsole(console);
         console->layerCommandLine->hide();
         console->setScrollBarVisible(false);
-        mpConsole->mSubConsoleMap.insert(name, console);
+        mpConsole->registerSubConsole(name, console);
         dockwidget->setStyleSheet(mProfileStyleSheet);
         mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
         console->setFontSize(10);
@@ -4116,24 +4107,18 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
         return {false, QString()};
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pW = mpConsole->mDockWidgetMap.value(name);
-    if (!pC) {
-        pC = mpConsole->createMiniConsole(windowname, name, x, y, width, height);
-        if (pC) {
-            pC->setFontSize(12);
+    if (!mWindowRegistry.hasSubConsole(name)) {
+        if (mpConsole->createMiniConsole(windowname, name, x, y, width, height)) {
             return {true, QString()};
         }
-    } else if (pC) {
+    } else if (!mWindowRegistry.hasDockWidget(name)) {
         // CHECK: The absence of an explicit return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
         // This part was causing problems with UserWindows
-        if (!pW) {
-            pC->resize(width, height);
-            pC->move(x, y);
-            return {false, qsl("miniconsole '%1' already exists, moving/resizing '%1'").arg(name)};
-        }
+        mpConsole->resizeSubConsole(name, width, height);
+        mpConsole->moveSubConsole(name, x, y);
+        return {false, qsl("miniconsole '%1' already exists, moving/resizing '%1'").arg(name)};
     }
     return {false, qsl("miniconsole/userwindow '%1' already exists").arg(name)};
 }
@@ -4168,19 +4153,19 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
     // whose parent it cannot find into the main window instead, which is not
     // anywhere the caller asked for
     const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
-    if (!wantsMainWindow && !mpConsole->mDockWidgetMap.contains(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
+    if (!wantsMainWindow && !mWindowRegistry.hasDockWidget(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     const bool labelExists = mWindowRegistry.hasLabel(name);
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (!labelExists && !pC) {
+    const bool subConsoleExists = mWindowRegistry.hasSubConsole(name);
+    if (!labelExists && !subConsoleExists) {
         if (mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough)) {
             return {true, QString()};
         }
     } else if (labelExists) {
         return {false, qsl("label '%1' already exists").arg(name)};
-    } else if (pC) {
+    } else if (subConsoleExists) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
     return {false, qsl("label '%1' already exists").arg(name)};
@@ -4261,12 +4246,8 @@ bool Host::createBuffer(const QString& name)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (!pC) {
-        pC = mpConsole->createBuffer(name);
-        if (pC) {
-            return true;
-        }
+    if (!mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->createBuffer(name);
     }
     return false;
 }
@@ -4287,7 +4268,6 @@ bool Host::showWindow(const QString& name)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
@@ -4296,15 +4276,8 @@ bool Host::showWindow(const QString& name)
         return mpConsole->showLabel(name);
     }
 
-    if (pC) {
-        auto pD = mpConsole->mDockWidgetMap.value(name);
-        if (pD) {
-            pD->update();
-            pD->show();
-            // TODO: conside refactoring TConsole::showWindow(name) so that there is a TConsole::showWindow() that can be called directly on the TConsole concerned?
-            return mpConsole->showWindow(name);
-        }
-        return mpConsole->showWindow(name);
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->showSubConsole(name);
     }
 
     if (pS) {
@@ -4331,7 +4304,6 @@ bool Host::hideWindow(const QString& name)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
@@ -4341,13 +4313,8 @@ bool Host::hideWindow(const QString& name)
         return mpConsole->hideLabel(name);
     }
 
-    if (pC) {
-        auto pD = mpConsole->mDockWidgetMap.value(name);
-        if (pD) {
-            pD->hide();
-            pD->update();
-        }
-        return mpConsole->hideWindow(name);
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->hideSubConsole(name);
     }
 
     if (pS) {
@@ -4374,8 +4341,6 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
@@ -4384,20 +4349,8 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return mpConsole->resizeLabel(name, x1, y1);
     }
 
-    if (pC && !pD) {
-        // NOT a floatable/dockable "user window"
-        pC->resize(x1, y1);
-        return true;
-    }
-
-    if (pC && pD) {
-        if (!pD->isFloating()) {
-            // Undock a docked window
-            pD->setFloating(true);
-        }
-
-        pD->resize(x1, y1);
-        return true;
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->resizeSubConsole(name, x1, y1);
     }
 
     if (pS) {
@@ -4424,8 +4377,6 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     auto pT = mpConsole->mTextBoxMap.value(name);
@@ -4434,22 +4385,8 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return mpConsole->moveLabel(name, x1, y1);
     }
 
-    if (pC && !pD) {
-        // NOT a floatable/dockable "user window"
-        pC->move(x1, y1);
-        pC->mOldX = x1;
-        pC->mOldY = y1;
-        return true;
-    }
-
-    if (pC && pD) {
-        if (!pD->isFloating()) {
-            // Undock a docked window
-            pD->setFloating(true);
-        }
-
-        pD->move(x1, y1);
-        return true;
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->moveSubConsole(name, x1, y1);
     }
 
     if (pS) {
@@ -4476,8 +4413,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {false, QString()};
     }
     //checks - for reasons why the indicated thing might not be moved to the indicated destination
-    auto pDCheck = mpConsole->mDockWidgetMap.value(name);
-    if (pDCheck) {
+    if (mWindowRegistry.hasDockWidget(name)) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
     }
     if (mpConsole->mpDockableMapWidget) {
@@ -4489,29 +4425,10 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         }
     }
 
-    //children
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pM = mpConsole->mpMapper;
-    auto pN = mpConsole->mSubCommandLineMap.value(name);
-    auto pS = mpConsole->mScrollBoxMap.value(name);
-    auto pT = mpConsole->mTextBoxMap.value(name);
-    //parents
-    auto pW = mpConsole->mpMainFrame;
-    auto pD = mpConsole->mDockWidgetMap.value(windowname);
-    auto pSW = mpConsole->mScrollBoxMap.value(windowname);
-
-    if (!pSW && !pD && windowname.compare(QLatin1String("main"), Qt::CaseInsensitive)) {
+    if (!mpConsole->mScrollBoxMap.value(windowname) && !mWindowRegistry.hasDockWidget(windowname) && windowname.compare(QLatin1String("main"), Qt::CaseInsensitive)) {
         // Third argument is non-zero (i.e. true) if the window name is NOT
         // the given string:
         return {false, qsl("window '%1' not found").arg(windowname)};
-    }
-
-    if (pD) {
-        pW = pD->widget();
-    }
-
-    if (pSW) {
-        pW = pSW->widget();
     }
 
     if (mWindowRegistry.hasLabel(name)) {
@@ -4521,50 +4438,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {false, qsl("element '%1' not found").arg(name)};
     }
 
-    if (pC) {
-        pC->setParent(pW);
-        pC->move(x1, y1);
-        pC->mOldX = x1;
-        pC->mOldY = y1;
-        if (show) {
-            pC->show();
-        }
-        return {true, QString()};
-    }
-
-    if (pS) {
-        pS->setParent(pW);
-        pS->move(x1, y1);
-        if (show) {
-            pS->show();
-        }
-        return {true, QString()};
-    }
-
-    if (pN) {
-        pN->setParent(pW);
-        pN->move(x1, y1);
-        if (show) {
-            pN->show();
-        }
-        return {true, QString()};
-    }
-
-    if (pT) {
-        pT->setParent(pW);
-        pT->move(x1, y1);
-        if (show) {
-            pT->show();
-        }
-        return {true, QString()};
-    }
-
-    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
-        pM->setParent(pW);
-        pM->move(x1, y1);
-        if (show) {
-            pM->show();
-        }
+    if (mpConsole->reparentWindow(windowname, name, x1, y1, show)) {
         return {true, QString()};
     }
 
@@ -4671,14 +4545,10 @@ bool Host::closeWindow(const QString& name)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        auto pD = mpConsole->mDockWidgetMap.value(name);
-        if (pD) {
-            pD->hide();
-            pD->update();
-        }
-        return mpConsole->hideWindow(name);
+    // Unlike hideWindow() this one is deaf to labels, scroll boxes, command
+    // lines and text boxes - only a sub-console can be closed by name
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->hideSubConsole(name);
     }
     return false;
 }
@@ -4689,13 +4559,7 @@ bool Host::echoWindow(const QString& name, const QString& text)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->print(text);
-        return true;
-    }
-
-    return mpConsole->setLabelText(name, text);
+    return mpConsole->printWindow(name, text);
 }
 
 bool Host::pasteWindow(const QString& name)
@@ -4704,12 +4568,7 @@ bool Host::pasteWindow(const QString& name)
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->pasteWindow(mpConsole->mClipboard);
-        return true;
-    }
-    return false;
+    return mpConsole->pasteToSubConsole(name);
 }
 
 bool Host::setCmdLineAction(const QString& name, const int func)
@@ -4860,14 +4719,7 @@ QSize Host::calcFontSize(const QString& windowName)
         return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(windowName);
-    if (!pC) {
-        return QSize(-1, -1);
-    }
-
-    Q_ASSERT_X(pC->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
-    QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
-    return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
+    return mpConsole->subConsoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)
@@ -4893,9 +4745,7 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
         mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
     }
 
-    for (auto& dockWidget : mpConsole->mDockWidgetMap) {
-        dockWidget->setStyleSheet(styleSheet);
-    }
+    mpConsole->setDockWidgetStyleSheets(styleSheet);
     if (this == mudlet::self()->mpCurrentActiveHost) {
         mudlet::self()->setGlobalStyleSheet(styleSheet);
     }
@@ -4909,9 +4759,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setConsoleBgColor(r, g, b, alpha);
+    if (mpConsole->setSubConsoleBackgroundColor(name, QColor(r, g, b, alpha))) {
         return true;
     }
 
@@ -4924,9 +4772,8 @@ std::optional<QColor> Host::getBackgroundColor(const QString& name) const
         return {};
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return {pC->mBgColor};
+    if (auto pModel = mWindowRegistry.subConsoleModel(name)) {
+        return {pModel->mBgColor};
     }
 
     return mpConsole->getLabelBackgroundColor(name);
@@ -4961,12 +4808,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
         return mpConsole->setLabelBackgroundImage(name, imgPath);
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setConsoleBackgroundImage(imgPath, mode);
-        return true;
-    }
-    return false;
+    return mpConsole->setSubConsoleBackgroundImage(name, imgPath, mode);
 }
 
 bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
@@ -4988,13 +4830,7 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
         return mpConsole->resetLabelBackgroundImage(name);
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->resetConsoleBackgroundImage();
-        return true;
-    }
-
-    return false;
+    return mpConsole->resetSubConsoleBackgroundImage(name);
 }
 
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
@@ -5003,12 +4839,7 @@ bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, i
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setCommandBgColor(r, g, b, alpha);
-        return true;
-    }
-    return false;
+    return mpConsole->setSubConsoleCommandBackgroundColor(name, QColor(r, g, b, alpha));
 }
 
 bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha)
@@ -5017,12 +4848,7 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
         return false;
     }
 
-    auto pC = mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setCommandFgColor(r, g, b, alpha);
-        return true;
-    }
-    return false;
+    return mpConsole->setSubConsoleCommandForegroundColor(name, QColor(r, g, b, alpha));
 }
 
 // Returns true when a script has claimed the built-in map buttons for this
@@ -5163,9 +4989,8 @@ void Host::setDockLayoutUpdated(const QString& name)
         return;
     }
 
-    auto pD = mpConsole->mDockWidgetMap.value(name);
-    if (Q_LIKELY(pD) && !mDockLayoutChanges.contains(name)) {
-        pD->setProperty("layoutChanged", QVariant(true));
+    if (Q_LIKELY(mWindowRegistry.hasDockWidget(name)) && !mDockLayoutChanges.contains(name)) {
+        mpConsole->setDockLayoutChanged(name);
         mDockLayoutChanges.append(name);
     }
 }
@@ -5185,9 +5010,7 @@ bool Host::commitLayoutUpdates(bool flush)
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
         for (const auto& dockedConsoleName : std::as_const(mDockLayoutChanges)) {
-            auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
-            if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
-                pD->setProperty("layoutChanged", QVariant(false));
+            if (mpConsole->clearDockLayoutChanged(dockedConsoleName)) {
                 updated = true;
             }
         }
@@ -5248,24 +5071,15 @@ std::optional<QString> Host::windowType(const QString& name) const
         return {qsl("label")};
     }
 
-    auto pWindow = mpConsole->mSubConsoleMap.value(name);
-    if (pWindow) {
-        switch (pWindow->getType()) {
-        case TConsole::UserWindow:
+    if (const auto kind = mWindowRegistry.subConsoleKind(name)) {
+        switch (*kind) {
+        case TWindowRegistry::SubConsoleKind::UserWindow:
             return {qsl("userwindow")};
-        case TConsole::Buffer:
+        case TWindowRegistry::SubConsoleKind::Buffer:
             return {qsl("buffer")};
-        case TConsole::SubConsole:
+        case TWindowRegistry::SubConsoleKind::MiniConsole:
             return {qsl("miniconsole")};
-        case TConsole::UnknownType:
-            [[fallthrough]];
-        case TConsole::CentralDebugConsole:
-            [[fallthrough]];
-        case TConsole::ErrorConsole:
-            [[fallthrough]];
-        case TConsole::MainConsole:
-            [[fallthrough]];
-        default:
+        case TWindowRegistry::SubConsoleKind::Other:
             Q_UNREACHABLE();
             return {};
         }
@@ -5306,11 +5120,8 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
     if (mWindowRegistry.hasLabel(name)) {
         return mpConsole->getLabelGeometry(name);
     }
-    if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
-        if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
-            return {QRect(pD->pos(), pD->size())};
-        }
-        return {QRect(pC->pos(), pC->size())};
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->getSubConsoleGeometry(name);
     }
     if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
         return {QRect(pS->pos(), pS->size())};
@@ -5344,11 +5155,8 @@ std::optional<bool> Host::windowVisible(const QString& name) const
     if (mWindowRegistry.hasLabel(name)) {
         return mpConsole->getLabelVisible(name);
     }
-    if (auto pC = mpConsole->mSubConsoleMap.value(name)) {
-        if (auto pD = mpConsole->mDockWidgetMap.value(name)) {
-            return {pD->isVisibleTo(mpConsole)};
-        }
-        return {pC->isVisibleTo(mpConsole)};
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return mpConsole->getSubConsoleVisible(name);
     }
     if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
         return {pS->isVisibleTo(mpConsole)};

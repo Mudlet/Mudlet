@@ -433,7 +433,7 @@ set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 450)
+set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 600)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
