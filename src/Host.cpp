@@ -51,7 +51,6 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
@@ -4129,15 +4128,13 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
         return {false, QString()};
     }
 
-    auto pS = mpConsole->mScrollBoxMap.value(name);
-    if (!pS) {
-        pS = mpConsole->createScrollBox(windowname, name, x, y, width, height);
-        if (pS) {
+    if (!mWindowRegistry.hasScrollBox(name)) {
+        if (mpConsole->createScrollBox(windowname, name, x, y, width, height)) {
             return {true, QString()};
         }
-    } else if (pS) {
-        pS->resize(width, height);
-        pS->move(x, y);
+    } else {
+        mpConsole->resizePlainWindow(name, width, height);
+        mpConsole->movePlainWindow(name, x, y);
         return {false, qsl("scrollBox '%1' already exists, moving/resizing '%1'").arg(name)};
     }
     return {false, qsl("scrollBox '%1' already exists").arg(name)};
@@ -4153,7 +4150,7 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
     // whose parent it cannot find into the main window instead, which is not
     // anywhere the caller asked for
     const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
-    if (!wantsMainWindow && !mWindowRegistry.hasDockWidget(windowname) && !mpConsole->mScrollBoxMap.contains(windowname)) {
+    if (!wantsMainWindow && !mWindowRegistry.hasDockWidget(windowname) && !mWindowRegistry.hasScrollBox(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
@@ -4268,9 +4265,6 @@ bool Host::showWindow(const QString& name)
         return false;
     }
 
-    auto pN = mpConsole->mSubCommandLineMap.value(name);
-    auto pS = mpConsole->mScrollBoxMap.value(name);
-    auto pT = mpConsole->mTextBoxMap.value(name);
     // check labels first as they are shown/hidden more often
     if (mWindowRegistry.hasLabel(name)) {
         return mpConsole->showLabel(name);
@@ -4280,19 +4274,8 @@ bool Host::showWindow(const QString& name)
         return mpConsole->showSubConsole(name);
     }
 
-    if (pS) {
-        pS->show();
-        return true;
-    }
-
-    if (pN) {
-        pN->show();
-        return true;
-    }
-
-    if (pT) {
-        pT->show();
-        return true;
+    if (mWindowRegistry.hasPlainWindow(name)) {
+        return mpConsole->showPlainWindow(name);
     }
 
     return false;
@@ -4304,10 +4287,6 @@ bool Host::hideWindow(const QString& name)
         return false;
     }
 
-    auto pN = mpConsole->mSubCommandLineMap.value(name);
-    auto pS = mpConsole->mScrollBoxMap.value(name);
-    auto pT = mpConsole->mTextBoxMap.value(name);
-
     // check labels first as they are shown/hidden more often
     if (mWindowRegistry.hasLabel(name)) {
         return mpConsole->hideLabel(name);
@@ -4317,19 +4296,8 @@ bool Host::hideWindow(const QString& name)
         return mpConsole->hideSubConsole(name);
     }
 
-    if (pS) {
-        pS->hide();
-        return true;
-    }
-
-    if (pN) {
-        pN->hide();
-        return true;
-    }
-
-    if (pT) {
-        pT->hide();
-        return true;
+    if (mWindowRegistry.hasPlainWindow(name)) {
+        return mpConsole->hidePlainWindow(name);
     }
 
     return false;
@@ -4341,10 +4309,6 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return false;
     }
 
-    auto pN = mpConsole->mSubCommandLineMap.value(name);
-    auto pS = mpConsole->mScrollBoxMap.value(name);
-    auto pT = mpConsole->mTextBoxMap.value(name);
-
     if (mWindowRegistry.hasLabel(name)) {
         return mpConsole->resizeLabel(name, x1, y1);
     }
@@ -4353,19 +4317,8 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return mpConsole->resizeSubConsole(name, x1, y1);
     }
 
-    if (pS) {
-        pS->resize(x1, y1);
-        return true;
-    }
-
-    if (pN) {
-        pN->resize(x1, y1);
-        return true;
-    }
-
-    if (pT) {
-        pT->resize(x1, y1);
-        return true;
+    if (mWindowRegistry.hasPlainWindow(name)) {
+        return mpConsole->resizePlainWindow(name, x1, y1);
     }
 
     return false;
@@ -4377,10 +4330,6 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return false;
     }
 
-    auto pN = mpConsole->mSubCommandLineMap.value(name);
-    auto pS = mpConsole->mScrollBoxMap.value(name);
-    auto pT = mpConsole->mTextBoxMap.value(name);
-
     if (mWindowRegistry.hasLabel(name)) {
         return mpConsole->moveLabel(name, x1, y1);
     }
@@ -4389,19 +4338,8 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return mpConsole->moveSubConsole(name, x1, y1);
     }
 
-    if (pS) {
-        pS->move(x1, y1);
-        return true;
-    }
-
-    if (pN) {
-        pN->move(x1, y1);
-        return true;
-    }
-
-    if (pT) {
-        pT->move(x1, y1);
-        return true;
+    if (mWindowRegistry.hasPlainWindow(name)) {
+        return mpConsole->movePlainWindow(name, x1, y1);
     }
 
     return false;
@@ -4425,7 +4363,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         }
     }
 
-    if (!mpConsole->mScrollBoxMap.value(windowname) && !mWindowRegistry.hasDockWidget(windowname) && windowname.compare(QLatin1String("main"), Qt::CaseInsensitive)) {
+    if (!mWindowRegistry.hasScrollBox(windowname) && !mWindowRegistry.hasDockWidget(windowname) && windowname.compare(QLatin1String("main"), Qt::CaseInsensitive)) {
         // Third argument is non-zero (i.e. true) if the window name is NOT
         // the given string:
         return {false, qsl("window '%1' not found").arg(windowname)};
@@ -4576,12 +4514,7 @@ bool Host::setCmdLineAction(const QString& name, const int func)
     if (!mpConsole) {
         return false;
     }
-    auto pN = mpConsole->mSubCommandLineMap.value(name);
-    if (pN) {
-        pN->setAction(func);
-        return true;
-    }
-    return false;
+    return mpConsole->setCommandLineAction(name, func);
 }
 
 bool Host::resetCmdLineAction(const QString& name)
@@ -4589,12 +4522,7 @@ bool Host::resetCmdLineAction(const QString& name)
     if (!mpConsole) {
         return false;
     }
-    auto pN = mpConsole->mSubCommandLineMap.value(name);
-    if (pN) {
-        pN->resetAction();
-        return true;
-    }
-    return false;
+    return mpConsole->resetCommandLineAction(name);
 }
 
 bool Host::setLabelClickCallback(const QString& name, const int func)
@@ -5085,15 +5013,15 @@ std::optional<QString> Host::windowType(const QString& name) const
         }
     }
 
-    if (mpConsole->mScrollBoxMap.contains(name)) {
+    if (mWindowRegistry.hasScrollBox(name)) {
         return {qsl("scrollbox")};
     }
 
-    if (mpConsole->mSubCommandLineMap.contains(name)) {
+    if (mWindowRegistry.hasCommandLine(name)) {
         return {qsl("commandline")};
     }
 
-    if (mpConsole->mTextBoxMap.contains(name)) {
+    if (mWindowRegistry.hasTextBox(name)) {
         return {qsl("textedit")};
     }
 
@@ -5123,14 +5051,8 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
     if (mWindowRegistry.hasSubConsole(name)) {
         return mpConsole->getSubConsoleGeometry(name);
     }
-    if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
-        return {QRect(pS->pos(), pS->size())};
-    }
-    if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
-        return {QRect(pN->pos(), pN->size())};
-    }
-    if (auto pT = mpConsole->mTextBoxMap.value(name)) {
-        return {QRect(pT->pos(), pT->size())};
+    if (mWindowRegistry.hasPlainWindow(name)) {
+        return mpConsole->getPlainWindowGeometry(name);
     }
 
     return {};
@@ -5158,14 +5080,8 @@ std::optional<bool> Host::windowVisible(const QString& name) const
     if (mWindowRegistry.hasSubConsole(name)) {
         return mpConsole->getSubConsoleVisible(name);
     }
-    if (auto pS = mpConsole->mScrollBoxMap.value(name)) {
-        return {pS->isVisibleTo(mpConsole)};
-    }
-    if (auto pN = mpConsole->mSubCommandLineMap.value(name)) {
-        return {pN->isVisibleTo(mpConsole)};
-    }
-    if (auto pT = mpConsole->mTextBoxMap.value(name)) {
-        return {pT->isVisibleTo(mpConsole)};
+    if (mWindowRegistry.hasPlainWindow(name)) {
+        return mpConsole->getPlainWindowVisible(name);
     }
 
     return {};

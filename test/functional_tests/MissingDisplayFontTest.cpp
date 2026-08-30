@@ -518,7 +518,7 @@ private slots:
         QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createTextEdit('main', 'mdfTextEdit', 0, 0, 100, 50)")));
-        auto* pTextEdit = pHost->mpConsole->mTextBoxMap.value(qsl("mdfTextEdit"));
+        auto* pTextEdit = pHost->mpConsole->textBoxWidget(qsl("mdfTextEdit"));
         QVERIFY2(pTextEdit, "the test text edit was not created");
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1 Bold')").arg(mOtherBundledFamily)));

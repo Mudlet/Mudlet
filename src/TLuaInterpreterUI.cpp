@@ -144,7 +144,7 @@ static bool isMain(const QString& name)
     ({                                                                                                                                                                                                 \
         const QString& name_ = (ARG_name);                                                                                                                                                             \
         auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_));                                                                 \
+        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->subCommandLineWidget(name_));                                                                     \
         if (!cmdLine_) {                                                                                                                                                                               \
             lua_pushnil(ARG_L);                                                                                                                                                                        \
             lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
@@ -652,7 +652,7 @@ int TLuaInterpreter::getTextEditText(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -671,7 +671,7 @@ int TLuaInterpreter::setTextEditText(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -687,7 +687,7 @@ int TLuaInterpreter::clearTextEdit(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -707,7 +707,7 @@ int TLuaInterpreter::setTextEditReadOnly(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -727,7 +727,7 @@ int TLuaInterpreter::setTextEditPlaceholder(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -747,7 +747,7 @@ int TLuaInterpreter::setTextEditStyleSheet(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -767,7 +767,7 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -796,7 +796,7 @@ int TLuaInterpreter::setTextEditFontSize(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -818,7 +818,7 @@ int TLuaInterpreter::setTextEditTabMovesFocus(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
