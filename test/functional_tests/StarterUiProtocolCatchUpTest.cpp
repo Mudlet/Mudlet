@@ -33,6 +33,7 @@
 // of this waits on a clock.
 
 #include <QTemporaryDir>
+#include <tuple>
 #include <QtTest/QtTest>
 
 #include "PortableModeTestHelper.h"
@@ -128,6 +129,30 @@ private slots:
 
         QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil")), "a dock was built for a game that has sent nothing to put in it");
         QVERIFY2(luaTrue(host, qsl("not BaseUI.sawGmcpVitals")), "the package recorded GMCP vitals it was never sent");
+    }
+
+    // gmcp is filled in place and never cleared, and msdp is never torn down, so
+    // on a profile whose connection has ended they still describe whoever that
+    // connection left behind. Catching up on them there would present a finished
+    // session as current, which is worse than the wait this change removes.
+    void test_installingWhileDisconnectedPaintsNothingFromTheLastConnection()
+    {
+        Host* host = startProfileWithoutTheStarterUi();
+        QVERIFY(host);
+        QVERIFY(runLua(host, qsl("gmcp.Char = { Vitals = { hp = 3600, maxhp = 3600, mp = 3400, maxmp = 3400 } }")));
+
+        host->mTelnet.disconnectIt();
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return !std::get<2>(host->mTelnet.getConnectionInfo());
+                         },
+                         3000),
+                 "the connection to the stub never went down, so this says nothing about a disconnected profile");
+
+        QVERIFY(installTheStarterUi(host));
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil")), "the dock was built out of vitals the ended connection left behind");
+        QVERIFY2(luaTrue(host, qsl("not BaseUI.sawGmcpVitals")), "vitals from an ended connection were recorded as this connection's");
     }
 
 private:

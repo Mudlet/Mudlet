@@ -2646,13 +2646,21 @@ onEvent("gmcp.room.info", "BaseUI.checkMapData")
 -- sends nothing: gmcp is created empty and only filled once data arrives, and
 -- msdp is not created at all until the first MSDP variable lands. What is sent
 -- is only what the handlers themselves would have sent.
-if type(gmcp) == "table" and next(gmcp) then
-  BaseUI.enableChannelCapture(nil, "GMCP")
-  BaseUI.updateVitals()
-end
-if type(msdp) == "table" then
-  BaseUI.enableMsdpVitals(nil, "MSDP")
-  BaseUI.updateMsdpVitals()
+--
+-- Only while a connection is actually up, though. Neither global is ever cleared
+-- - gmcp is filled in place, and msdp is never torn down - so on a disconnected
+-- profile they still describe whoever the last connection left behind, and
+-- painting them would present a finished session as current.
+local _, _, connected = getConnectionInfo()
+if connected then
+  if type(gmcp) == "table" and next(gmcp) then
+    BaseUI.enableChannelCapture(nil, "GMCP")
+    BaseUI.updateVitals()
+  end
+  if type(msdp) == "table" then
+    BaseUI.enableMsdpVitals(nil, "MSDP")
+    BaseUI.updateMsdpVitals()
+  end
 end</script>
 			<eventHandlerList />
 		</Script>
