@@ -4969,6 +4969,59 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="3">
+           <layout class="QHBoxLayout" name="hLayout_mcpServerButtons">
+            <item>
+             <widget class="QPushButton" name="pushButton_connectClaudeDesktop">
+              <property name="toolTip">
+               <string extracomment="Tooltip on the button that registers Mudlet in the Claude Desktop application's settings.">&lt;p&gt;Adds Mudlet to Claude Desktop's settings so its AI assistant can control Mudlet. Restart Claude Desktop afterwards to pick it up - from then on it finds Mudlet on its own, whenever both are running.&lt;/p&gt;</string>
+              </property>
+              <property name="accessibleDescription">
+               <string extracomment="Screen reader description of the button that registers Mudlet in the Claude Desktop application's settings.">Adds Mudlet to Claude Desktop's settings so its AI assistant can control Mudlet. Restart Claude Desktop afterwards to pick it up - from then on it finds Mudlet on its own, whenever both are running.</string>
+              </property>
+              <property name="text">
+               <string extracomment="Label of the button that registers Mudlet in the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.">Connect Claude Desktop</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_copyMCPServerAddress">
+              <property name="toolTip">
+               <string extracomment="Tooltip on the button that copies the MCP server's address to the clipboard.">&lt;p&gt;Copies the server's address, including its access token, for pasting into another AI assistant. The token changes every time Mudlet starts.&lt;/p&gt;</string>
+              </property>
+              <property name="accessibleDescription">
+               <string extracomment="Screen reader description of the button that copies the MCP server's address to the clipboard.">Copies the server's address, including its access token, for pasting into another AI assistant. The token changes every time Mudlet starts.</string>
+              </property>
+              <property name="text">
+               <string extracomment="Label of the button that copies the MCP server's address to the clipboard.">Copy address</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="hSpacer_mcpServerButtons">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="4" column="0" colspan="3">
+           <widget class="QLabel" name="label_mcpConnectResult">
+            <property name="text">
+             <string notr="true"/>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

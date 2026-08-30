@@ -49,7 +49,10 @@
 #include "utils.h"
 
 #ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
 #include "TMCPServer.h"
+#include <QClipboard>
+#include <QGuiApplication>
 #endif
 
 #include <chrono>
@@ -161,6 +164,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     spinBox_mcpServerPort->setValue(pMudlet->mcpServerPort());
     connect(checkBox_enableMCPServer, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
     connect(spinBox_mcpServerPort, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(pushButton_connectClaudeDesktop, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectClaudeDesktop);
+    connect(pushButton_copyMCPServerAddress, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_copyMCPServerAddress);
     slot_updateMCPServerEndpoint();
 #else
     groupBox_mcpServer->hide();
@@ -1377,7 +1382,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -4783,6 +4788,10 @@ void dlgProfilePreferences::slot_updateMCPServerEndpoint()
     const quint16 port = static_cast<quint16>(spinBox_mcpServerPort->value());
     const QString liveEndpoint = pMudlet->mcpEndpoint();
 
+    // The clipboard can only carry an address that exists, and one only exists while
+    // the server is up.
+    pushButton_copyMCPServerAddress->setEnabled(!liveEndpoint.isEmpty());
+
     if (!checkBox_enableMCPServer->isChecked()) {
         // Unticking the box changes nothing until Save, so check whether anything is still
         // listening before saying nothing can reach Mudlet - the port is open until then.
@@ -4818,6 +4827,61 @@ void dlgProfilePreferences::slot_updateMCPServerEndpoint()
     // an address that nothing is answering on yet.
     //: %1 is a URL the user pastes into their AI assistant, e.g. http://127.0.0.1:11235/mcp
     label_mcpServerEndpoint->setText(tr("Press Save to start listening on %1").arg(endpoint));
+}
+
+void dlgProfilePreferences::slot_connectClaudeDesktop()
+{
+    switch (TMCPBridge::connectClaudeDesktop()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        //: Shown beneath the AI assistant settings after Mudlet was added to the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.
+        QString message = tr("Done - restart Claude Desktop and Mudlet will appear among its connectors.");
+        if (!checkBox_enableMCPServer->isChecked() || mudlet::self()->mcpEndpoint().isEmpty()) {
+            message.append(QChar::Space);
+            //: Appended to the Claude Desktop success message when the server checkbox above it is not on yet.
+            message.append(tr("Also tick the checkbox above and press Save, or it will find nobody to talk to."));
+        }
+        label_mcpConnectResult->setText(message);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClaudeDesktop: {
+        const QString dir = TMCPBridge::claudeDesktopConfigDir();
+        if (dir.isEmpty()) {
+            //: Shown beneath the AI assistant settings when the location Claude Desktop keeps its settings in could not be worked out at all. Claude Desktop is a product name, leave it as-is.
+            label_mcpConnectResult->setText(tr("Could not work out where Claude Desktop keeps its settings on this system."));
+            break;
+        }
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings folder does not exist. %1 is the folder Mudlet looked for, claude.com/download is a URL - leave it as-is.
+        label_mcpConnectResult->setText(tr("Claude Desktop does not look installed - there is no %1. Install it from claude.com/download and open it once, then try again.").arg(dir));
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. Claude Desktop is a product name, leave it as-is.
+        label_mcpConnectResult->setText(tr("Could not work out where this Mudlet is installed, so Claude Desktop was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be understood. %1 is the file's location.
+        label_mcpConnectResult->setText(tr("Claude Desktop's settings file could not be understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
+                                                .arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be written. %1 is the file's location.
+        label_mcpConnectResult->setText(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    }
+}
+
+void dlgProfilePreferences::slot_copyMCPServerAddress()
+{
+    const QString endpoint = mudlet::self()->mcpEndpoint();
+    if (endpoint.isEmpty()) {
+        // The button disables itself while the server is down, but a stop can race the click.
+        //: Shown beneath the AI assistant settings when the Copy address button is pressed while the server is not running.
+        label_mcpConnectResult->setText(tr("There is no address to copy while the server is off."));
+        return;
+    }
+    QGuiApplication::clipboard()->setText(endpoint);
+    //: Shown beneath the AI assistant settings after the Copy address button is pressed.
+    label_mcpConnectResult->setText(tr("Address copied - paste it into your AI assistant."));
 }
 #endif
 

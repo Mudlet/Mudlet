@@ -41,7 +41,9 @@
 #include "TFeatureCallout.h"
 #include "TMap.h"
 #ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
 #include "TMCPServer.h"
+#include <QScopeGuard>
 #endif
 #include "TMedia.h"
 #include "TGameDetails.h"
@@ -3327,7 +3329,13 @@ void mudlet::readLateSettings(const QSettings& settings)
             // shows the state, and a retry from there does report the reason.
             qWarning() << "mudlet::readLateSettings(...) WARNING - the MCP server could not start:" << mcpError;
         }
+    } else {
+        // A crash can leave last session's discovery file behind, pointing the bridge
+        // at a port something else may hold by now - but another running Mudlet may be
+        // serving on it right now, so only a file nobody answers for goes.
+        TMCPBridge::removeDiscoveryFileIfStale(confPath);
     }
+    TMCPBridge::refreshClaudeDesktopEntry();
 #endif
     if (settings.contains(qsl("debugConsole/categories"))) {
         // Only categories Mudlet still knows about, so that a category retired
@@ -3492,6 +3500,21 @@ bool mudlet::setMCPEnabled(const bool enabled, const quint16 port, QString& erro
 {
     mEnableMCP = enabled;
     mMCPServerPort = port;
+
+    // However this call turns out, the discovery file has to end up matching reality:
+    // it is how `mudlet --mcp-bridge` finds (or learns not to look for) the server.
+    const auto syncDiscoveryFile = qScopeGuard([this]() {
+        if (mpMCPServer && mpMCPServer->running()) {
+            if (!TMCPBridge::writeDiscoveryFile(confPath, mpMCPServer->getPort(), mpMCPServer->authToken())) {
+                qWarning() << "mudlet::setMCPEnabled(...) WARNING - could not write the MCP discovery file at" << TMCPBridge::discoveryFilePath(confPath)
+                           << "so `mudlet --mcp-bridge` will not find this Mudlet";
+            }
+        } else {
+            // Some other Mudlet instance may own the file - this one failing to bind the
+            // port (or shutting down beside it) must not cut that instance off.
+            TMCPBridge::removeDiscoveryFileIfStale(confPath);
+        }
+    });
 
     if (!enabled) {
         if (mpMCPServer) {
@@ -5586,6 +5609,8 @@ mudlet::~mudlet()
     // but only once this destructor body has finished.
     if (mpMCPServer) {
         mpMCPServer->stopServer();
+        // Stale-only, as a second Mudlet instance may be the one the file describes.
+        TMCPBridge::removeDiscoveryFileIfStale(confPath);
     }
 #endif
     if (mpHunspell_sharedDictionary) {
