@@ -2,9 +2,9 @@
 #define MUDLET_WIDGETUTILS_H
 
 /***************************************************************************
- *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@hey.com            *
- *   Copyright (C) 2021, 2023, 2025-2026 by Stephen Lyons                  *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2025-2026 by Vadim Peretokin                            *
+ *                                          - vadim.peretokin@mudlet.org   *
+ *   Copyright (C) 2025 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,7 +23,10 @@
  ***************************************************************************/
 
 #include <QApplication>
+#include <QPoint>
+#include <QRect>
 #include <QScreen>
+#include <QSize>
 #include <QWidget>
 
 // Widget-level helpers, kept apart from utils.h so that the model-side code
