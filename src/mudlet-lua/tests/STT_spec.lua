@@ -104,8 +104,15 @@ describe("stt bridge", function()
     it("names the engine it would use", function()
       -- Asserting "non-empty or the string none" was a test that could not
       -- fail, since every string is one or the other. The contract worth
-      -- holding is that the name is one this build actually has.
-      assert.are.equal("Vosk", stt.getInfo().backend)
+      -- holding is that the name is one this build actually has - and that it
+      -- is empty rather than a guess before any engine has been built, since
+      -- this key names whichever engine is loaded rather than a fixed value.
+      local backend = stt.getInfo().backend
+      assert.is_string(backend)
+      if backend ~= "" then
+        assert.is_truthy(backend == "Vosk" or backend == "sherpa-onnx" or backend == "Apple Speech",
+                         "backend should name an engine this build has, got: " .. backend)
+      end
     end)
   end)
 

@@ -80,6 +80,21 @@ static void reportSpeechRefusal(const QString& message)
     }
 }
 
+// Every directory a dynamically-loaded engine could have been installed into,
+// across all of them rather than Vosk's alone. A reader told where Mudlet
+// looked has to be told where it looked for the engine they installed, and on
+// a sherpa-only machine that was never any of the paths this used to name.
+static QStringList speechLibrarySearchPaths()
+{
+    QStringList paths = SherpaRecognizer::librarySearchPaths();
+    for (const QString& path : VoskRecognizer::librarySearchPaths()) {
+        if (!paths.contains(path)) {
+            paths.append(path);
+        }
+    }
+    return paths;
+}
+
 // The message for a call that needs an engine when there is none. "failed to
 // create speech recognizer" described the symptom of a missing library rather
 // than the library, and sent people looking for a fault in Mudlet.
@@ -88,7 +103,7 @@ static QString noEngineMessage()
     if (VoskRecognizer::libraryUnloadedByRequest()) {
         return qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before using speech recognition again");
     }
-    return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(VoskRecognizer::librarySearchPaths().join(qsl(", ")));
+    return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
 
 // words follows a symbol resolved from the library, so unloading or reloading it
@@ -113,6 +128,25 @@ static bool speechEngineAvailable()
     return !SpeechRecognizerFactory::availableBackends().isEmpty() || SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
 }
 
+// Which backend the on-demand initSpeechRecognition() calls below should ask
+// for, so that what stt.available() counts and what those calls can actually
+// build are the same set. Auto resolves through availableBackends(), which
+// deliberately omits the model-less macOS backend - so on a Mac with neither
+// Vosk nor sherpa installed an eager Auto built nothing and stt.start()
+// refused with "the speech engine library is not installed" while
+// stt.available() answered true. Naming Platform in exactly that case is what
+// closes that gap; the backend genuinely works there once stt.init() has run.
+static SpeechRecognizerFactory::Backend onDemandSpeechBackend()
+{
+    if (!SpeechRecognizerFactory::availableBackends().isEmpty()) {
+        return SpeechRecognizerFactory::Backend::Auto;
+    }
+    if (SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+        return SpeechRecognizerFactory::Backend::Platform;
+    }
+    return SpeechRecognizerFactory::Backend::Auto;
+}
+
 // Which model-based backend's on-disk install paths answer stt.getModelPath(),
 // stt.getLibraryPath() and getInfo().searchPaths: whichever is actually loaded
 // when it is one of these two, the auto-preferred installed backend otherwise,
@@ -133,6 +167,14 @@ static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(mudlet* pMudle
 
     const auto backends = SpeechRecognizerFactory::availableBackends();
     return backends.isEmpty() ? SpeechRecognizerFactory::Backend::Vosk : backends.first();
+}
+
+// The directory stt.getModelPath() answers with: the same engine choice, so a
+// refusal telling a package where to install a model never names a directory
+// other than the one the API told it to use.
+static QString speechModelsDirectory(mudlet* pMudlet)
+{
+    return modelBasedBackendForPaths(pMudlet) == SpeechRecognizerFactory::Backend::Sherpa ? SherpaRecognizer::modelsDirectoryPath() : VoskRecognizer::modelsDirectoryPath();
 }
 
 // Whether a startListening() request was accepted. The call returns nothing
@@ -179,7 +221,21 @@ int TLuaInterpreter::sttInit(lua_State* L)
         backend = SpeechRecognizerFactory::backendForModelDir(modelPath);
     } else {
         usedDefaultModel = true;
-        modelPath = SpeechRecognizerFactory::defaultModelPath();
+        // Asked of every installed engine rather than only the preferred one.
+        // Auto resolves through availableBackends().first(), where sherpa now
+        // sorts ahead of Vosk, so a machine carrying the sherpa library but
+        // only Vosk models on disk got an empty answer and a refusal - having
+        // loaded that same Vosk model quite happily before sherpa existed. The
+        // engine is pinned to whichever one's model was actually found, so a
+        // model and a decoder from different engines can never be paired.
+        for (const SpeechRecognizerFactory::Backend candidate : SpeechRecognizerFactory::availableBackends()) {
+            const QString candidateModelPath = SpeechRecognizerFactory::defaultModelPath(candidate);
+            if (!candidateModelPath.isEmpty()) {
+                modelPath = candidateModelPath;
+                backend = candidate;
+                break;
+            }
+        }
         if (modelPath.isEmpty()) {
             // Two different problems wore one message: defaultModelPath() is
             // empty whenever no backend is available, which is the case when
@@ -195,15 +251,14 @@ int TLuaInterpreter::sttInit(lua_State* L)
                     useModelLessBackend = true;
                     backend = SpeechRecognizerFactory::Backend::Platform;
                 } else {
-                    const QString message =
-                            VoskRecognizer::libraryUnloadedByRequest()
-                                    ? qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model")
-                                    : qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(VoskRecognizer::librarySearchPaths().join(qsl(", ")));
+                    const QString message = VoskRecognizer::libraryUnloadedByRequest()
+                                                    ? qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model")
+                                                    : qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
                     reportSpeechRefusal(message);
                     return warnArgumentValue(L, funcName, message);
                 }
             } else {
-                const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(VoskRecognizer::modelsDirectoryPath());
+                const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(speechModelsDirectory(mudlet::self()));
                 reportSpeechRefusal(message);
                 return warnArgumentValue(L, funcName, message);
             }
@@ -266,7 +321,7 @@ int TLuaInterpreter::sttStart(lua_State* L)
     // before stt.init() finds nothing and reports the library as missing on a
     // machine where stt.getInfo().available is true. Every setter already
     // builds it here for the same reason.
-    pMudlet->initSpeechRecognition();
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
 
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
@@ -348,7 +403,7 @@ int TLuaInterpreter::sttToggle(lua_State* L)
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition();
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
 
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer || !pRecognizer->initialized()) {
@@ -436,10 +491,11 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
 
     // Asked of the recognizer once one exists, so the name cannot drift from
-    // the backend actually running; before that there is only one backend this
-    // build can create, and naming it is what lets a package decide anything.
+    // the backend actually running. Empty before that: this build can create
+    // three backends now, and naming one of them on the strength of nothing
+    // would be the fixed value docs/stt-api.md says this key is not.
     lua_pushstring(L, "backend");
-    lua_pushstring(L, pRecognizer ? pRecognizer->backendName().toUtf8().constData() : "Vosk");
+    lua_pushstring(L, pRecognizer ? pRecognizer->backendName().toUtf8().constData() : "");
     lua_settable(L, -3);
 
     lua_pushstring(L, "available");
@@ -538,8 +594,7 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
 // Returns the path as a string.
 int TLuaInterpreter::sttGetModelPath(lua_State* L)
 {
-    const bool sherpa = modelBasedBackendForPaths(mudlet::self()) == SpeechRecognizerFactory::Backend::Sherpa;
-    const QString path = sherpa ? SherpaRecognizer::modelsDirectoryPath() : VoskRecognizer::modelsDirectoryPath();
+    const QString path = speechModelsDirectory(mudlet::self());
     lua_pushstring(L, path.toUtf8().constData());
     return 1;
 }
@@ -640,7 +695,7 @@ int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
         return warnArgumentValue(L, "stt.setSilenceTimeout", "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition();
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
@@ -679,7 +734,7 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         return warnArgumentValue(L, "stt.setSensitivity", "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition();
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
@@ -730,7 +785,7 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
         return warnArgumentValue(L, "stt.setVocabulary", "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition();
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();

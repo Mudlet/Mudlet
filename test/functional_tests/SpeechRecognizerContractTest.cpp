@@ -593,9 +593,9 @@ private slots:
     // successfully loaded a model at all - the strongest case reachable
     // without the sherpa-onnx library actually installed, since only a real,
     // successful load ever sets mSupportsBiasing true or mModelPath non-empty
-    // in the first place. See task-1-report.md's fix-up entry for the manual
-    // verification (with the real library and a real bpe.vocab model) that
-    // covers the load-then-release case this cannot.
+    // in the first place. The load-then-release case this cannot reach was
+    // verified by hand against the real sherpa-onnx library and a model
+    // carrying a real bpe.vocab.
     void sherpaCapabilitiesAndModelPathClearOnRelease()
     {
         SherpaRecognizer recognizer;

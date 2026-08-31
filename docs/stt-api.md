@@ -28,9 +28,9 @@ Design contract, before the tables:
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
-| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. A `modelPath` chooses its engine by the directory's own layout — a Vosk model and a sherpa-onnx model are never confused, even on a machine with both engines installed — falling back to the install-preference order only when the layout matches neither. With no argument, uses the default installed model; if no model-based engine is installed but a model-less one is (the built-in macOS backend today), that one is used instead, with nothing to install. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds. |
+| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. A `modelPath` chooses its engine by the directory's own layout — a Vosk model and a sherpa-onnx model are never confused, even on a machine with both engines installed — falling back to the install-preference order only when the layout matches neither. That choice is made **once per session**: the recognizer is built on the first `stt.init()` (or on the first other call that needs one) and reused from then on, and `stt.close()` releases its resources without discarding it. A later `stt.init()` with a model belonging to the *other* engine therefore loads it into the engine already built, which will refuse it. Restart the client to switch engines. With no argument, uses the default installed model; if no model-based engine is installed but a model-less one is (the built-in macOS backend today), that one is used instead, with nothing to install. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds. |
 | `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client that must ask permission first reports `starting`, and the outcome arrives as `sysSTTStateChanged`. A request refused outright — no model, a phrase still processing, a microphone that will not open, permission already denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening, or while `starting`, succeeds without asking twice. |
-| `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. Stopping when nothing is listening succeeds; stopping in `error` returns `nil` and a message, since "stopped" and "was never running because it failed" are different answers. |
+| `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult`, and the state reaches `ready`. Whether it has got there by the time the call returns depends on the engine, the way `start()`'s `starting` does: Vosk and sherpa-onnx decode the remainder inside the call, so the state is already `ready`; the built-in macOS backend returns while still `processing` and settles when its recognition task reports back (or after its finalise timeout), with `sysSTTStateChanged` announcing it. A package must not assume the first shape — `stt.stop()` immediately followed by `stt.start()`, and two `stt.toggle()` calls in quick succession, are **refused on macOS**, because starting from `processing` is refused. Wait for `sysSTTStateChanged` to report `ready`. Stopping when nothing is listening succeeds; stopping in `error` returns `nil` and a message, since "stopped" and "was never running because it failed" are different answers. |
 | `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
 | `stt.close()` | `true` | Release the model and native resources; state returns to `uninitialized`. Safe when nothing is initialized. |
 | `stt.available()` | boolean | Some engine — Vosk, sherpa-onnx, or the built-in macOS backend — is present and loadable. False is the normal state on a machine with nothing installed and no built-in backend for this platform. |
@@ -67,9 +67,13 @@ mapped module, and that restriction applies just as much to sherpa-onnx's
 library as to Vosk's. Until the binding layer is made engine-aware, replacing
 an installed sherpa-onnx library on Windows requires quitting Mudlet first.
 The built-in macOS backend loads no library at all, so neither call has
-anything to act on for it — expect `reloadLibrary()`/`unloadLibrary()` to be
-no-ops with respect to that backend rather than errors naming it specifically,
-since both calls only ever know about the Vosk loader.
+anything to act on for it — but neither is a no-op either. Both refuse while
+the recognizer is listening, is initialized, or holds live native resources,
+and a loaded Apple recognizer is all three, so they return `false` with
+"cannot unload the speech recognition library while it is in use, close speech
+recognition first" — a refusal driven by a backend the Vosk loader knows
+nothing about. A loaded sherpa-onnx recognizer blocks a Vosk unload in exactly
+the same way. Call `stt.close()` first if the intent really is to unload Vosk.
 
 `stt.available()` / `getInfo().available`, `stt.getModelPath()`,
 `stt.getLibraryPath()`, and `getInfo().searchPaths` answer for whichever
@@ -166,7 +170,9 @@ A JSON array, one object per word of the accompanying final result:
 [{"word": "quick", "conf": 1.0, "start": 0.75, "end": 1.02}, ...]
 ```
 
-`conf` is 0–1; `start`/`end` are seconds on the session's audio clock. The
+`conf` is 0–1; `start`/`end` are seconds within the utterance, not on a clock
+that runs for the whole listening session — the built-in macOS backend builds a
+fresh recognition request per utterance and its timestamps restart with it. The
 timings are load-bearing: a word whose span covers pooled silence rather than
 speech is how decoder hallucinations are told apart from spoken words, so an
 implementation that cannot supply real timings must not claim the `words`

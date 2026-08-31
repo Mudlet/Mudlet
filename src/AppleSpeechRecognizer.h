@@ -26,6 +26,8 @@
 #include <QElapsedTimer>
 #include <QString>
 
+#include <memory>
+
 class SpeechAudioCapture;
 
 // The Objective-C objects this backend holds - the recognizer, the request it
@@ -156,7 +158,9 @@ private:
 
     float calculateAudioLevel(const QByteArray& data) const;
 
-    AppleSpeechSession* mpSession = nullptr;
+    // Owned outright; ~AppleSpeechRecognizer() is defined in the .mm, where
+    // AppleSpeechSession is complete, so the opaque declaration above is enough
+    std::unique_ptr<AppleSpeechSession> mpSession;
 
     // Shared microphone capture and resampling; delivers ready-to-decode PCM
     SpeechAudioCapture* mpCapture = nullptr;

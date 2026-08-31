@@ -69,9 +69,6 @@ public:
         answer.onDevice = true;
         return answer;
     }
-    void doStartListening() override;
-    void doStopListening() override;
-    void doCancel() override;
     void setSilenceTimeout(int msec) override;
     int silenceTimeout() const override;
 
@@ -123,6 +120,13 @@ public:
     static bool looksLikeModelDir(const QString& modelPath);
 
 protected:
+    // SpeechRecognizer declares these protected: a holder of a concrete
+    // SherpaRecognizer* must go through startListening()/stopListening()/
+    // cancel() like every other caller, not reach around the state machine.
+    void doStartListening() override;
+    void doStopListening() override;
+    void doCancel() override;
+
     // Take the retained vocabulary and rebuild the decoder toward it. See the
     // .cpp definition for why this goes through loadModel() rather than
     // initialize().

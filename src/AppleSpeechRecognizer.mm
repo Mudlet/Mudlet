@@ -85,9 +85,6 @@ AppleSpeechRecognizer::~AppleSpeechRecognizer()
     cancel();
     mpCapture->stop();
     cancelTask();
-    mpSession->recognizer = nil;
-    delete mpSession;
-    mpSession = nullptr;
 }
 
 bool AppleSpeechRecognizer::initialize(const QString& modelPath)
@@ -418,12 +415,10 @@ bool AppleSpeechRecognizer::beginRecognitionTask()
                                  }
                              }
                              QString failure;
+                             bool failedWithoutSayingWhy = false;
                              if (error) {
                                  failure = QString::fromNSString(error.localizedDescription);
-                                 if (failure.isEmpty()) {
-                                     //: Shown when macOS speech recognition stopped and gave no reason
-                                     failure = AppleSpeechRecognizer::tr("macOS speech recognition stopped without saying why.");
-                                 }
+                                 failedWithoutSayingWhy = failure.isEmpty();
                              }
                              if (!result && !error) {
                                  return;
@@ -432,7 +427,16 @@ bool AppleSpeechRecognizer::beginRecognitionTask()
                                  if (!weakThis) {
                                      return;
                                  }
-                                 weakThis->handleRecognition(generation, text, finalUtterance, wordDetails, failure);
+                                 QString reported = failure;
+                                 if (failedWithoutSayingWhy) {
+                                     // Translated here rather than above: tr()
+                                     // belongs on the main thread, and above it
+                                     // was also paid for callbacks the early
+                                     // return goes on to discard
+                                     //: Shown when macOS speech recognition stopped and gave no reason
+                                     reported = AppleSpeechRecognizer::tr("macOS speech recognition stopped without saying why.");
+                                 }
+                                 weakThis->handleRecognition(generation, text, finalUtterance, wordDetails, reported);
                              });
                          }];
 
