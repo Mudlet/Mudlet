@@ -22,6 +22,7 @@
 #include <QCoreApplication>
 #include <QThread>
 
+#include <array>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -99,8 +100,8 @@ constexpr size_t cMaxPooledPerClass = 256;
 // Zero initialised and with no destructor on purpose: states are closed at
 // shutdown in whatever order Qt tears Mudlet down, and this has to keep working
 // through all of it.
-void* sFreeLists[cClassCount + 1];
-size_t sPooledCounts[cClassCount + 1];
+std::array<void*, cClassCount + 1> sFreeLists;
+std::array<size_t, cClassCount + 1> sPooledCounts;
 
 inline size_t sizeClass(const size_t size)
 {
@@ -127,11 +128,15 @@ inline void* allocate(const size_t nsize)
 
 inline void release(void* ptr, const size_t osize)
 {
-    if (osize > cLargestClass || sPooledCounts[sizeClass(osize)] >= cMaxPooledPerClass) {
+    if (osize > cLargestClass) {
         std::free(ptr);
         return;
     }
     const size_t index = sizeClass(osize);
+    if (sPooledCounts[index] >= cMaxPooledPerClass) {
+        std::free(ptr);
+        return;
+    }
     *reinterpret_cast<void**>(ptr) = sFreeLists[index];
     sFreeLists[index] = ptr;
     ++sPooledCounts[index];
